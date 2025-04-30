@@ -150,7 +150,7 @@ class CustomGraphicsView(
         )
 
     def on_recenter_grid_signal(self):
-        """Center the grid in the viewport while placing the active grid area at the center."""
+        """Center the grid in the viewport with the active grid area's CENTER at the grid origin."""
         # 1. Calculate center of viewport
         viewport_size = self.viewport().size()
         viewport_center_x = viewport_size.width() / 2
@@ -161,14 +161,22 @@ class CustomGraphicsView(
         self.canvas_offset = QPointF(-viewport_center_x, -viewport_center_y)
         self.save_canvas_offset()
 
-        # 3. Set active grid area to be at scene (0,0)
-        # This means its absolute position will be (0,0), placing it at viewport center
-        self.update_active_grid_settings("pos_x", 0)
-        self.update_active_grid_settings("pos_y", 0)
-        self.settings.setValue("active_grid_pos_x", 0)
-        self.settings.setValue("active_grid_pos_y", 0)
+        # 3. Calculate the position needed to center the active grid area on the origin (0,0)
+        # We want the CENTER of the active grid area to be at (0,0), not its top-left corner
+        grid_width = self.active_grid_settings.width
+        grid_height = self.active_grid_settings.height
 
-        # 4. Update all display positions based on new offset
+        # Position needs to be negative half-dimensions to center it
+        pos_x = -grid_width / 2
+        pos_y = -grid_height / 2
+
+        # 4. Set active grid area to this centered position
+        self.update_active_grid_settings("pos_x", int(pos_x))
+        self.update_active_grid_settings("pos_y", int(pos_y))
+        self.settings.setValue("active_grid_pos_x", int(pos_x))
+        self.settings.setValue("active_grid_pos_y", int(pos_y))
+
+        # 5. Update all display positions based on new offset
         self.updateImagePositions()
         self.update_active_grid_area_position()
         self.do_draw(force_draw=True)
