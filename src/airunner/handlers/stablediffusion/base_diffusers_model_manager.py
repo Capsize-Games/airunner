@@ -819,6 +819,8 @@ class BaseDiffusersModelManager(BaseModelManager):
                 code = EngineResponseCode.IMAGE_GENERATED
             except PipeNotLoadedException as e:
                 self.logger.error(e)
+            except InterruptedException as e:
+                code = EngineResponseCode.INTERRUPTED
             except Exception as e:
                 code = EngineResponseCode.ERROR
                 error_message = f"Error generating image: {e}"
@@ -1926,7 +1928,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             "height": int(self.application_settings.working_height),
             "clip_skip": int(self.image_request.clip_skip),
             "num_inference_steps": int(self.image_request.steps),
-            "callback_on_step_end": self._callback,
+            "callback_on_step_end": self.__interrupt_callback,
             "generator": self.generator,
         }
 
@@ -2094,4 +2096,12 @@ class BaseDiffusersModelManager(BaseModelManager):
             SignalCode.SD_PROGRESS_SIGNAL,
             {"step": _i, "total": self.image_request.steps},
         )
-        return {}
+        return callback_kwargs
+
+    def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
+        if self.do_interrupt_image_generation:
+            self.do_interrupt_image_generation = False
+            raise InterruptedException()
+        else:
+            self._callback(_pipe, _i, _t, callback_kwargs)
+        return callback_kwargs
