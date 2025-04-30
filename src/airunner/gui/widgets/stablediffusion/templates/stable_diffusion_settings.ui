@@ -71,19 +71,6 @@
        <property name="verticalSpacing">
         <number>10</number>
        </property>
-       <item row="9" column="0" colspan="2">
-        <widget class="QCheckBox" name="use_compel">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Use Compel</string>
-         </property>
-        </widget>
-       </item>
        <item row="10" column="1">
         <spacer name="verticalSpacer">
          <property name="orientation">
@@ -97,8 +84,160 @@
          </property>
         </spacer>
        </item>
-       <item row="3" column="0">
-        <widget class="QGroupBox" name="groupBox">
+       <item row="7" column="0" colspan="2">
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <property name="spacing">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="SliderWidget" name="scale_widget" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="label_text" stdset="0">
+            <string>Guidance Scale</string>
+           </property>
+           <property name="current_value" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>10000</number>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>100.000000000000000</double>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <double>0.010000000000000</double>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string notr="true">generator_settings.scale</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="SliderWidget" name="steps_widget" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="label_text" stdset="0">
+            <string>Steps</string>
+           </property>
+           <property name="current_value" stdset="0">
+            <number>0</number>
+           </property>
+           <property name="slider_maximum" stdset="0">
+            <number>200</number>
+           </property>
+           <property name="spinbox_maximum" stdset="0">
+            <double>200.000000000000000</double>
+           </property>
+           <property name="display_as_float" stdset="0">
+            <bool>false</bool>
+           </property>
+           <property name="spinbox_single_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="spinbox_page_step" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="spinbox_minimum" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="slider_minimum" stdset="0">
+            <number>1</number>
+           </property>
+           <property name="settings_property" stdset="0">
+            <string notr="true">generator_settings.steps</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="9" column="0" colspan="2">
+        <widget class="QCheckBox" name="use_compel">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Use Compel</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0" colspan="2">
+        <widget class="SliderWidget" name="clip_skip_slider_widget" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="label_text" stdset="0">
+          <string>Clip Skip</string>
+         </property>
+         <property name="current_value" stdset="0">
+          <number>0</number>
+         </property>
+         <property name="slider_maximum" stdset="0">
+          <number>11</number>
+         </property>
+         <property name="spinbox_maximum" stdset="0">
+          <double>12.000000000000000</double>
+         </property>
+         <property name="display_as_float" stdset="0">
+          <bool>false</bool>
+         </property>
+         <property name="spinbox_single_step" stdset="0">
+          <number>1</number>
+         </property>
+         <property name="spinbox_page_step" stdset="0">
+          <number>1</number>
+         </property>
+         <property name="spinbox_minimum" stdset="0">
+          <number>0</number>
+         </property>
+         <property name="slider_minimum" stdset="0">
+          <number>0</number>
+         </property>
+         <property name="settings_property" stdset="0">
+          <string notr="true">generator_settings.clip_skip</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBox_2">
          <property name="font">
           <font>
            <pointsize>10</pointsize>
@@ -106,29 +245,23 @@
           </font>
          </property>
          <property name="title">
-          <string>Custom path</string>
+          <string>Model</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_7">
+         <layout class="QGridLayout" name="gridLayout_4">
           <item row="0" column="0">
-           <widget class="QLineEdit" name="custom_model"/>
-          </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="browse_button">
-            <property name="maximumSize">
-             <size>
-              <width>80</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Browse</string>
+           <widget class="QComboBox" name="model">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
            </widget>
           </item>
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
+       <item row="1" column="0" colspan="2">
         <widget class="QGroupBox" name="groupBox_3">
          <property name="font">
           <font>
@@ -139,8 +272,8 @@
          <property name="title">
           <string>Pipeline</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_6">
-          <item row="0" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
            <widget class="QComboBox" name="pipeline">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -153,8 +286,8 @@
          </layout>
         </widget>
        </item>
-       <item row="4" column="0">
-        <widget class="QGroupBox" name="groupBox_5">
+       <item row="0" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBox_4">
          <property name="font">
           <font>
            <pointsize>10</pointsize>
@@ -162,21 +295,11 @@
           </font>
          </property>
          <property name="title">
-          <string>Scheduler</string>
+          <string>Version</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_3">
+         <layout class="QGridLayout" name="gridLayout_5">
           <item row="0" column="0">
-           <widget class="QComboBox" name="scheduler">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="cursor">
-             <cursorShape>ArrowCursor</cursorShape>
-            </property>
-           </widget>
+           <widget class="QComboBox" name="version"/>
           </item>
          </layout>
         </widget>
@@ -204,49 +327,6 @@
          <property name="property_name" stdset="0">
           <string>generator_settings.random_seed</string>
          </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_2">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="title">
-          <string>Model</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_4">
-          <item row="0" column="0">
-           <widget class="QComboBox" name="model">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_4">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="title">
-          <string>Version</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_5">
-          <item row="0" column="0">
-           <widget class="QComboBox" name="version"/>
-          </item>
-         </layout>
         </widget>
        </item>
        <item row="6" column="0" colspan="2">
@@ -348,144 +428,64 @@
          </item>
         </layout>
        </item>
-       <item row="8" column="0" colspan="2">
-        <widget class="SliderWidget" name="clip_skip_slider_widget" native="true">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+       <item row="3" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBox">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+           <bold>true</bold>
+          </font>
          </property>
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
+         <property name="title">
+          <string>Custom path</string>
          </property>
-         <property name="label_text" stdset="0">
-          <string>Clip Skip</string>
-         </property>
-         <property name="current_value" stdset="0">
-          <number>0</number>
-         </property>
-         <property name="slider_maximum" stdset="0">
-          <number>11</number>
-         </property>
-         <property name="spinbox_maximum" stdset="0">
-          <double>12.000000000000000</double>
-         </property>
-         <property name="display_as_float" stdset="0">
-          <bool>false</bool>
-         </property>
-         <property name="spinbox_single_step" stdset="0">
-          <number>1</number>
-         </property>
-         <property name="spinbox_page_step" stdset="0">
-          <number>1</number>
-         </property>
-         <property name="spinbox_minimum" stdset="0">
-          <number>0</number>
-         </property>
-         <property name="slider_minimum" stdset="0">
-          <number>0</number>
-         </property>
-         <property name="settings_property" stdset="0">
-          <string notr="true">generator_settings.clip_skip</string>
-         </property>
+         <layout class="QGridLayout" name="gridLayout_7">
+          <item row="0" column="0">
+           <widget class="QLineEdit" name="custom_model"/>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="browse_button">
+            <property name="maximumSize">
+             <size>
+              <width>80</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Browse</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
-       <item row="7" column="0" colspan="2">
-        <layout class="QVBoxLayout" name="verticalLayout_3">
-         <property name="spacing">
-          <number>10</number>
+       <item row="4" column="0" colspan="2">
+        <widget class="QGroupBox" name="groupBox_5">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+           <bold>true</bold>
+          </font>
          </property>
-         <item>
-          <widget class="SliderWidget" name="scale_widget" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="label_text" stdset="0">
-            <string>Guidance Scale</string>
-           </property>
-           <property name="current_value" stdset="0">
-            <number>0</number>
-           </property>
-           <property name="slider_maximum" stdset="0">
-            <number>10000</number>
-           </property>
-           <property name="spinbox_maximum" stdset="0">
-            <double>100.000000000000000</double>
-           </property>
-           <property name="display_as_float" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="spinbox_single_step" stdset="0">
-            <double>0.010000000000000</double>
-           </property>
-           <property name="spinbox_page_step" stdset="0">
-            <double>0.010000000000000</double>
-           </property>
-           <property name="settings_property" stdset="0">
-            <string notr="true">generator_settings.scale</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="SliderWidget" name="steps_widget" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="label_text" stdset="0">
-            <string>Steps</string>
-           </property>
-           <property name="current_value" stdset="0">
-            <number>0</number>
-           </property>
-           <property name="slider_maximum" stdset="0">
-            <number>200</number>
-           </property>
-           <property name="spinbox_maximum" stdset="0">
-            <double>200.000000000000000</double>
-           </property>
-           <property name="display_as_float" stdset="0">
-            <bool>false</bool>
-           </property>
-           <property name="spinbox_single_step" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="spinbox_page_step" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="spinbox_minimum" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="slider_minimum" stdset="0">
-            <number>1</number>
-           </property>
-           <property name="settings_property" stdset="0">
-            <string notr="true">generator_settings.steps</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+         <property name="title">
+          <string>Scheduler</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="0">
+           <widget class="QComboBox" name="scheduler">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="cursor">
+             <cursorShape>ArrowCursor</cursorShape>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </item>
       </layout>
      </widget>
