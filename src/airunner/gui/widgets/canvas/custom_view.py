@@ -76,6 +76,7 @@ class CustomGraphicsView(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
             SignalCode.RECENTER_GRID_SIGNAL: self.on_recenter_grid_signal,
+            SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL: self.on_canvas_image_updated_signal,
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
@@ -505,3 +506,13 @@ class CustomGraphicsView(
         """
         self.scene.leaveEvent(event)
         super().leaveEvent(event)
+
+    def on_canvas_image_updated_signal(self, *args):
+        """Handler for when images are updated or added to the canvas.
+        Ensures that newly generated images respect the current pan position.
+        """
+        # Update image positions based on current canvas offset
+        self.updateImagePositions()
+
+        # Ensure the scene updates to show the new image correctly
+        self.update_scene()
