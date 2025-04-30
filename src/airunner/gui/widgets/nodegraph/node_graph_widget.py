@@ -67,6 +67,7 @@ class NodeGraphWidget(BaseWidget):
             SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL: self._on_node_execution_completed,
         }
         super().__init__(*args, **kwargs)
+        self.splitters = ["splitter"]
         self.q_settings = get_qsettings()
         self.graph = CustomNodeGraph()
         self.viewer = self.graph.widget
@@ -83,8 +84,7 @@ class NodeGraphWidget(BaseWidget):
 
         self.framepack_worker = create_worker(FramePackWorker)
 
-        # if self.current_workflow_id is None:
-        #     self._add_start_node()
+        self.ui.splitter.splitterMoved.connect(self.save_state)
 
     @property
     def current_workflow_id(self) -> Optional[int]:
