@@ -40,6 +40,7 @@ from airunner.gui.widgets.canvas.draggables.draggable_pixmap import (
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.handlers.stablediffusion.rect import Rect
 from airunner.handlers.stablediffusion.image_response import ImageResponse
+from airunner.utils.settings.get_qsettings import get_qsettings
 
 
 class CustomScene(
@@ -59,6 +60,7 @@ class CustomScene(
         super().__init__()
         self.last_export_path = None
         self._target_size = None
+        self.settings = get_qsettings()
 
         # Add a variable to store the last mouse position
         self.last_pos = None
@@ -772,6 +774,8 @@ class CustomScene(
                 is_outpaint=is_outpaint,
                 outpaint_box_rect=outpaint_box_rect,
             )
+            # Emit signal to notify the view to update image positions
+            self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
 
     def _resize_image(self, image: Image) -> Image:
         if image is None:
@@ -802,6 +806,9 @@ class CustomScene(
             self.logger.warning("Image is None, unable to add to scene")
             return
 
+        # Get the current canvas offset from the view
+        canvas_offset = self.get_canvas_offset()
+
         if outpaint_box_rect:
             if is_outpaint:
                 image, root_point, _pivot_point = self._handle_outpaint(
@@ -809,12 +816,22 @@ class CustomScene(
                 )
             else:
                 root_point = QPoint(outpaint_box_rect.x, outpaint_box_rect.y)
+
             if self.item:
-                self.item.setPos(root_point.x(), root_point.y())
-                # Store original position when adding image
-                self._original_item_positions[self.item] = QPointF(
-                    root_point.x(), root_point.y()
-                )
+                # Store the absolute position (without offset) in the tracking dictionary
+                absolute_pos = QPointF(root_point.x(), root_point.y())
+                self._original_item_positions[self.item] = absolute_pos
+
+                # Apply canvas offset to position the item correctly from the start
+                visible_pos_x = absolute_pos.x() - canvas_offset.x()
+                visible_pos_y = absolute_pos.y() - canvas_offset.y()
+                self.item.setPos(visible_pos_x, visible_pos_y)
+        else:
+            # For images without a specific position, store position (0,0) as original
+            # and apply canvas offset immediately
+            if self.item:
+                self._original_item_positions[self.item] = QPointF(0, 0)
+                self.item.setPos(-canvas_offset.x(), -canvas_offset.y())
 
         # self._set_current_active_image(image)
         q_image = ImageQt.ImageQt(image)
@@ -826,6 +843,18 @@ class CustomScene(
         else:
             # If there's no item yet, create one first
             self.set_item(q_image, z_index=5)
+
+            # For new items, initialize their position accounting for canvas offset
+            if outpaint_box_rect:
+                absolute_pos = QPointF(root_point.x(), root_point.y())
+                self._original_item_positions[self.item] = absolute_pos
+
+                visible_pos_x = absolute_pos.x() - canvas_offset.x()
+                visible_pos_y = absolute_pos.y() - canvas_offset.y()
+                self.item.setPos(visible_pos_x, visible_pos_y)
+            else:
+                self._original_item_positions[self.item] = QPointF(0, 0)
+                self.item.setPos(-canvas_offset.x(), -canvas_offset.y())
 
         self.update()
         self.initialize_image(image)
@@ -884,7 +913,7 @@ class CustomScene(
 
         new_image_a.paste(
             outpainted_image,
-            (int(outpaint_box_rect.x), int(outpaint_box_rect.y)),
+            (int(outpaint_box_rect.x), int(outpaint_box_rect.y())),
         )
         new_image_b.paste(
             existing_image_copy,
@@ -1006,31 +1035,37 @@ class CustomScene(
         filtered_image = filter_object.filter(image)
         return filtered_image
 
-    # def update_image_position(self, canvas_offset):
-    #     """Update the position of image items in the scene based on the canvas offset."""
-    #     if not self.item:
-    #         return
+    def update_image_position(self, canvas_offset):
+        """Update the position of image items in the scene based on the canvas offset."""
+        if not self.item:
+            return
 
-    #     # Store the original position if we haven't already
-    #     if self.item not in self._original_item_positions:
-    #         self._original_item_positions[self.item] = self.item.pos()
+        # Store the original position if we haven't already
+        if self.item not in self._original_item_positions:
+            self._original_item_positions[self.item] = self.item.pos()
 
-    #     # Get the original position
-    #     original_pos = self._original_item_positions[self.item]
+        # Get the original position
+        original_pos = self._original_item_positions[self.item]
 
-    #     # Calculate and set the new position
-    #     new_x = original_pos.x() - canvas_offset.x()
-    #     new_y = original_pos.y() - canvas_offset.y()
+        # Calculate and set the new position
+        new_x = original_pos.x() - canvas_offset.x()
+        new_y = original_pos.y() - canvas_offset.y()
 
-    #     # Before changing position, prepare the item for geometry change
-    #     self.item.prepareGeometryChange()
-    #     self.item.setPos(new_x, new_y)
+        # Before changing position, prepare the item for geometry change
+        self.item.prepareGeometryChange()
+        self.item.setPos(new_x, new_y)
 
-    #     # Make sure the item is visible and in focus
-    #     self.item.setVisible(True)
-    #     self.item.setZValue(5)  # Priority rendering
+        # Make sure the item is visible and in focus
+        self.item.setVisible(True)
+        self.item.setZValue(5)  # Priority rendering
 
-    #     # Update the entire viewport to ensure image is visible even at negative coordinates
-    #     self.invalidate(
-    #         self._extended_viewport_rect, QGraphicsScene.SceneLayer.ItemLayer
-    #     )
+        # Update the entire viewport to ensure image is visible even at negative coordinates
+        self.invalidate(
+            self._extended_viewport_rect, QGraphicsScene.SceneLayer.ItemLayer
+        )
+
+    def get_canvas_offset(self):
+        """Get the current canvas offset from the parent view if available."""
+        if self.views() and hasattr(self.views()[0], "canvas_offset"):
+            return self.views()[0].canvas_offset
+        return QPointF(0, 0)
