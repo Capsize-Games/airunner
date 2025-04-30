@@ -165,8 +165,8 @@ class CustomGraphicsView(
 
         # 3. Calculate the position needed to center the active grid area on the origin (0,0)
         # We want the CENTER of the active grid area to be at (0,0), not its top-left corner
-        grid_width = self.active_grid_settings.width
-        grid_height = self.active_grid_settings.height
+        grid_width = self.application_settings.working_width
+        grid_height = self.application_settings.working_height
 
         # Position needs to be negative half-dimensions to center it
         pos_x = -grid_width / 2
@@ -408,12 +408,12 @@ class CustomGraphicsView(
             absolute_x = (
                 viewport_center_x
                 + self.canvas_offset.x()
-                - (self.active_grid_settings.width / 2)
+                - (self.application_settings.working_width / 2)
             )
             absolute_y = (
                 viewport_center_y
                 + self.canvas_offset.y()
-                - (self.active_grid_settings.height / 2)
+                - (self.application_settings.working_height / 2)
             )
 
             # Save this initial absolute position
