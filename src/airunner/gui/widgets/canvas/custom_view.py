@@ -31,7 +31,7 @@ class CustomGraphicsView(
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.setMouseTracking(True)
-
+        self._initialized = False
         self._scene: Optional[CustomScene] = None
         self._canvas_color: str = "#000000"
         self.current_background_color: Optional[QColor] = None
@@ -526,6 +526,10 @@ class CustomGraphicsView(
 
         # Show the active grid area using loaded offset
         self.show_active_grid_area()
+
+        if not self._initialized:
+            self._initialized = True
+            self.on_recenter_grid_signal()
 
     def set_canvas_color(
         self,
