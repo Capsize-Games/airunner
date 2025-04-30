@@ -87,7 +87,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.3.2",
+    version="4.3.3",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
