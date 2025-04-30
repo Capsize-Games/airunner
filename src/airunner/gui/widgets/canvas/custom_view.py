@@ -428,7 +428,7 @@ class CustomGraphicsView(
     def handle_pan_canvas(self, event: QMouseEvent):
         if self._middle_mouse_pressed:
             delta = event.pos() - self.last_pos
-            self.canvas_offset += delta
+            self.canvas_offset -= delta
             self.last_pos = event.pos()
             self.update_active_grid_area_position()
             self.updateImagePositions()
