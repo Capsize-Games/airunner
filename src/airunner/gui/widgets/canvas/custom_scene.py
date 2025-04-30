@@ -818,25 +818,25 @@ class CustomScene(
                     outpaint_box_rect, image
                 )
             else:
+                # This is the key part - ensure we use the absolute position from outpaint_box_rect
+                # exactly as provided, which should match the active grid area's absolute position
                 root_point = QPoint(outpaint_box_rect.x, outpaint_box_rect.y)
 
             if self.item:
-                # Store the absolute position (without offset) in the tracking dictionary
+                # Store the absolute position without any adjustments
                 absolute_pos = QPointF(root_point.x(), root_point.y())
                 self._original_item_positions[self.item] = absolute_pos
 
-                # Apply canvas offset to position the item correctly from the start
+                # Calculate display position by subtracting current canvas offset
                 visible_pos_x = absolute_pos.x() - canvas_offset.x()
                 visible_pos_y = absolute_pos.y() - canvas_offset.y()
                 self.item.setPos(visible_pos_x, visible_pos_y)
         else:
-            # For images without a specific position, store position (0,0) as original
-            # and apply canvas offset immediately
+            # For images without a specific position, store position (0,0) as absolute
             if self.item:
                 self._original_item_positions[self.item] = QPointF(0, 0)
                 self.item.setPos(-canvas_offset.x(), -canvas_offset.y())
 
-        # self._set_current_active_image(image)
         q_image = ImageQt.ImageQt(image)
 
         # Use updateImage method instead of setPixmap
