@@ -13,12 +13,10 @@ from PySide6.QtGui import (
     QDropEvent,
     QImageReader,
     QDragMoveEvent,
-    QMouseEvent,
 )
-from PySide6.QtGui import QPixmap, QPainter
+from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QGraphicsScene,
-    QGraphicsItem,
     QFileDialog,
     QGraphicsSceneMouseEvent,
     QMessageBox,
@@ -31,7 +29,6 @@ from airunner.settings import (
     AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
 )
 from airunner.utils import is_windows
-from airunner.utils.application import snap_to_grid
 from airunner.utils.image import (
     export_image,
     convert_binary_to_image,
@@ -542,7 +539,8 @@ class CustomScene(
             self.painter.end()
         self.current_active_image = None
         self.image = None
-        self.initialize_image()
+        del self.item
+        self.item = None
 
     def set_image(self, pil_image: Image = None):
         base64image = None
@@ -798,7 +796,7 @@ class CustomScene(
         :return:
         """
         # image = ImageOps.expand(image, border=border_size, fill=border_color)
-
+        print("add image to scene")
         if image is None:
             self.logger.warning("Image is None, unable to add to scene")
             return
@@ -810,11 +808,12 @@ class CustomScene(
                 )
             else:
                 root_point = QPoint(outpaint_box_rect.x, outpaint_box_rect.y)
-            self.item.setPos(root_point.x(), root_point.y())
-            # Store original position when adding image
-            self._original_item_positions[self.item] = QPointF(
-                root_point.x(), root_point.y()
-            )
+            if self.item:
+                self.item.setPos(root_point.x(), root_point.y())
+                # Store original position when adding image
+                self._original_item_positions[self.item] = QPointF(
+                    root_point.x(), root_point.y()
+                )
 
         # self._set_current_active_image(image)
         q_image = ImageQt.ImageQt(image)
@@ -825,7 +824,7 @@ class CustomScene(
             self.item.setZValue(0)
         else:
             # If there's no item yet, create one first
-            self.set_item(q_image, z_index=0)
+            self.set_item(q_image, z_index=5)
 
         self.update()
         self.initialize_image(image)
