@@ -150,18 +150,25 @@ class CustomGraphicsView(
         )
 
     def on_recenter_grid_signal(self):
-        """Reset canvas offset and move active grid area to origin (0,0)."""
-        # 1. Reset canvas offset to (0,0)
-        self.canvas_offset = QPointF(0, 0)
+        """Center the grid in the viewport while placing the active grid area at the center."""
+        # 1. Calculate center of viewport
+        viewport_size = self.viewport().size()
+        viewport_center_x = viewport_size.width() / 2
+        viewport_center_y = viewport_size.height() / 2
+
+        # 2. To center the grid origin (0,0) in the viewport, set canvas offset to negative viewport center
+        # This makes scene coordinate (0,0) appear at the center of the viewport
+        self.canvas_offset = QPointF(-viewport_center_x, -viewport_center_y)
         self.save_canvas_offset()
 
-        # 2. Move active grid area to (0,0)
+        # 3. Set active grid area to be at scene (0,0)
+        # This means its absolute position will be (0,0), placing it at viewport center
         self.update_active_grid_settings("pos_x", 0)
         self.update_active_grid_settings("pos_y", 0)
         self.settings.setValue("active_grid_pos_x", 0)
         self.settings.setValue("active_grid_pos_y", 0)
 
-        # 3. Update display positions based on the new offset and positions
+        # 4. Update all display positions based on new offset
         self.updateImagePositions()
         self.update_active_grid_area_position()
         self.do_draw(force_draw=True)
