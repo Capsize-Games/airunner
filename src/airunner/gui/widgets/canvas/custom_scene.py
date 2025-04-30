@@ -304,6 +304,8 @@ class CustomScene(
                 SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, message
             )
             self.display_gpu_memory_error(message)
+        elif code is EngineResponseCode.INTERRUPTED:
+            pass
         elif code is EngineResponseCode.IMAGE_GENERATED:
             image_response: Optional[ImageResponse] = data.get("message", None)
             if image_response is None:
