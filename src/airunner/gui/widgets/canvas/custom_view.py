@@ -44,7 +44,9 @@ class CustomGraphicsView(
         self._scene_is_active: bool = False
         self.last_pos: QPoint = self.zero_point
         self.zoom_handler: ZoomHandler = ZoomHandler()
-        self.canvas_offset = self.zero_point
+        self.canvas_offset = QPointF(
+            0, 0
+        )  # Explicitly use QPointF, not QPoint
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
 
@@ -82,8 +84,8 @@ class CustomGraphicsView(
             self.register(k, v)
 
     @property
-    def zero_point(self) -> QPoint:
-        return QPoint(0, 0)
+    def zero_point(self) -> QPointF:
+        return QPointF(0, 0)  # Return QPointF instead of QPoint
 
     def load_canvas_offset(self):
         """Load the canvas offset from QSettings."""
@@ -472,9 +474,52 @@ class CustomGraphicsView(
             self._last_viewport_size = new_size
 
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
+        """
+        Handle window resize events by adjusting canvas offsets to maintain center position.
+        """
+        # Store the old viewport center point in scene coordinates before resize
+        old_viewport_size = self._last_viewport_size
+        old_viewport_center_scene = self.mapToScene(
+            old_viewport_size.width() // 2, old_viewport_size.height() // 2
+        )
+
+        # Call the parent implementation
         super().resizeEvent(event)
-        self.scene.update()
-        self.do_draw(force_draw=True, size=event.size())
+
+        # Get new viewport size
+        new_size = event.size()
+
+        # Calculate new viewport center in scene coordinates
+        new_viewport_center_scene = self.mapToScene(
+            new_size.width() // 2, new_size.height() // 2
+        )
+
+        # Calculate the adjustment needed to maintain the same center
+        if (
+            self._last_viewport_size.width() > 0
+            and self._last_viewport_size.height() > 0
+        ):
+            # Calculate the delta between old and new scene centers
+            delta_x = (
+                new_viewport_center_scene.x() - old_viewport_center_scene.x()
+            )
+            delta_y = (
+                new_viewport_center_scene.y() - old_viewport_center_scene.y()
+            )
+
+            # Adjust canvas offset to maintain the same center point
+            self.canvas_offset -= QPointF(delta_x, delta_y)
+            self.save_canvas_offset()
+
+            # Update all positions with the new offset
+            self.updateImagePositions()
+            self.update_active_grid_area_position()
+
+        # Update stored viewport size
+        self._last_viewport_size = new_size
+
+        # Redraw with the updated offset
+        self.do_draw(force_draw=True, size=new_size)
 
     def showEvent(self, event):
         super().showEvent(event)
