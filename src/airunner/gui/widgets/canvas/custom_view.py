@@ -31,7 +31,7 @@ class CustomGraphicsView(
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.setMouseTracking(True)
-
+        self._initialized = False
         self._scene: Optional[CustomScene] = None
         self._canvas_color: str = "#000000"
         self.current_background_color: Optional[QColor] = None
@@ -44,7 +44,9 @@ class CustomGraphicsView(
         self._scene_is_active: bool = False
         self.last_pos: QPoint = self.zero_point
         self.zoom_handler: ZoomHandler = ZoomHandler()
-        self.canvas_offset = self.zero_point
+        self.canvas_offset = QPointF(
+            0, 0
+        )  # Explicitly use QPointF, not QPoint
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
 
@@ -82,14 +84,16 @@ class CustomGraphicsView(
             self.register(k, v)
 
     @property
-    def zero_point(self) -> QPoint:
-        return QPoint(0, 0)
+    def zero_point(self) -> QPointF:
+        return QPointF(0, 0)  # Return QPointF instead of QPoint
 
     def load_canvas_offset(self):
         """Load the canvas offset from QSettings."""
-        x = self.settings.value("canvas_offset_x", 0, type=float)
-        y = self.settings.value("canvas_offset_y", 0, type=float)
-        self.canvas_offset = QPointF(x, y)
+        x = self.settings.value("canvas_offset_x", 0.0)  # Default to 0
+        y = self.settings.value("canvas_offset_y", 0.0)  # Default to 0
+        self.canvas_offset = QPointF(float(x), float(y))
+
+        # Update positions after loading offset
         self.update_active_grid_area_position()
         self.updateImagePositions()
         self.do_draw()
@@ -148,11 +152,43 @@ class CustomGraphicsView(
         )
 
     def on_recenter_grid_signal(self):
-        self.canvas_offset = self.zero_point
+        """Center the grid in the viewport with the active grid area's CENTER at the grid origin."""
+        # 1. Calculate center of viewport
+        viewport_size = self.viewport().size()
+        viewport_center_x = viewport_size.width() / 2
+        viewport_center_y = viewport_size.height() / 2
+
+        # 2. To center the grid origin (0,0) in the viewport, set canvas offset to negative viewport center
+        # This makes scene coordinate (0,0) appear at the center of the viewport
+        self.canvas_offset = QPointF(-viewport_center_x, -viewport_center_y)
         self.save_canvas_offset()
+
+        # 3. Calculate the position needed to center the active grid area on the origin (0,0)
+        # We want the CENTER of the active grid area to be at (0,0), not its top-left corner
+        grid_width = self.active_grid_settings.width
+        grid_height = self.active_grid_settings.height
+
+        # Position needs to be negative half-dimensions to center it
+        pos_x = -grid_width / 2
+        pos_y = -grid_height / 2
+
+        # 4. Set active grid area to this centered position
+        self.update_active_grid_settings("pos_x", int(pos_x))
+        self.update_active_grid_settings("pos_y", int(pos_y))
+        self.settings.setValue("active_grid_pos_x", int(pos_x))
+        self.settings.setValue("active_grid_pos_y", int(pos_y))
+
+        # 5. If there's an image in the scene, update its position to match the active grid area
+        if self.scene and hasattr(self.scene, "item") and self.scene.item:
+            # Store the same absolute position for the image as we did for the active grid area
+            self.scene._original_item_positions[self.scene.item] = QPointF(
+                pos_x, pos_y
+            )
+
+        # 6. Update all display positions based on new offset
         self.updateImagePositions()
         self.update_active_grid_area_position()
-        self.do_draw()
+        self.do_draw(force_draw=True)
 
     def on_mask_generator_worker_response_signal(self, message: dict):
         mask = message["mask"]
@@ -186,14 +222,17 @@ class CustomGraphicsView(
         if (self.drawing or not self.initialized) and not force_draw:
             return
         self.drawing = True
-        self.set_scene_rect()
+        self.set_scene_rect()  # Set scene rect based on viewport
+
+        # Clear existing grid lines first
+        self.clear_lines()
+
+        # Draw grid if enabled
         if self.grid_settings.show_grid:
             self.draw_grid(size=size)
-            self.clear_lines()
-            self.draw_grid(size=size)
-        else:
-            self.clear_lines()
-        self.show_active_grid_area()
+        # Removed redundant clear/draw
+
+        self.show_active_grid_area()  # Ensure active grid is shown/positioned correctly
         self.update_scene()
         self.drawing = False
 
@@ -201,10 +240,14 @@ class CustomGraphicsView(
         if not self.__can_draw_grid:
             return
 
-        if self.line_group is None:
-            self.line_group = QGraphicsItemGroup()
+        # Ensure any existing line group is removed from the scene and deleted
+        self.clear_lines()
 
-        if self.line_group.scene() != self.scene:
+        # Create a fresh line group
+        self.line_group = QGraphicsItemGroup()
+
+        # Add the new line group to the scene
+        if self.scene:
             self.scene.addItem(self.line_group)
 
         cell_size = self.grid_settings.cell_size
@@ -228,33 +271,28 @@ class CustomGraphicsView(
             self.grid_settings.line_width,
         )
 
-        # Create or reuse vertical lines
+        # Create vertical lines
         for i in range(num_vertical_lines):
             x = i * cell_size - offset_x
-            if i < len(self.line_group.childItems()):
-                line = self.line_group.childItems()[i]
-                line.setLine(x, 0, x, scene_height)
-                line.setVisible(True)
-                line.setPen(pen)
-            else:
-                line = QGraphicsLineItem(x, 0, x, scene_height)
-                self.line_group.addToGroup(line)
+            line = QGraphicsLineItem(x, 0, x, scene_height)
+            line.setPen(pen)
+            self.line_group.addToGroup(line)
 
-        # Create or reuse horizontal lines
+        # Create horizontal lines
         for i in range(num_horizontal_lines):
             y = i * cell_size - offset_y
-            index = i + num_vertical_lines
-            if index < len(self.line_group.childItems()):
-                line = self.line_group.childItems()[index]
-                line.setLine(0, y, scene_width, y)
-                line.setVisible(True)
-                line.setPen(pen)
-            else:
-                line = QGraphicsLineItem(0, y, scene_width, y)
-                self.line_group.addToGroup(line)
+            line = QGraphicsLineItem(0, y, scene_width, y)
+            line.setPen(pen)
+            self.line_group.addToGroup(line)
 
     def clear_lines(self):
-        self.remove_scene_item(self.line_group)
+        if self.line_group is not None:
+            # Remove the line group from the scene
+            if self.line_group.scene() == self.scene:
+                self.scene.removeItem(self.line_group)
+
+            # Delete the line group completely
+            self.line_group = None
 
     def register_line_data(self, lines_data):
         for line_data in lines_data:
@@ -287,90 +325,129 @@ class CustomGraphicsView(
 
     def draw_selected_area(self):
         """
-        Draw the selected active grid area container
+        Draw the selected active grid area container after user selection.
         """
-        # Handle any active selections
         selection_start_pos = self.scene.selection_start_pos
         selection_stop_pos = self.scene.selection_stop_pos
 
-        # This will clear the active grid area while a selection is being made
+        # If selection is in progress, hide the grid area
         if selection_stop_pos is None and selection_start_pos is not None:
             if self.active_grid_area:
                 self.remove_scene_item(self.active_grid_area)
                 self.active_grid_area = None
             return
 
-        # this will update the active grid area in the settings
+        # If selection finished, update settings and show grid area
         if selection_start_pos is not None and selection_stop_pos is not None:
-            rect = QRect(selection_start_pos, selection_stop_pos)
+            rect = QRect(selection_start_pos, selection_stop_pos).normalized()
 
-            # Ensure width and height ar divisible by 8
-            width = rect.width()
-            height = rect.height()
-            if width % 8 != 0:
-                width -= width % 8
-            if height % 8 != 0:
-                height -= height % 8
+            # Calculate width/height (ensure divisibility by 8, min size)
+            width = max(
+                self.grid_settings.cell_size, rect.width() - (rect.width() % 8)
+            )
+            height = max(
+                self.grid_settings.cell_size,
+                rect.height() - (rect.height() % 8),
+            )
 
-            cell_size = self.grid_settings.cell_size
-            if width < cell_size:
-                width = cell_size
-            if height < cell_size:
-                height = cell_size
+            # Calculate the ABSOLUTE top-left position based on selection + current offset
+            absolute_x = rect.left() + self.canvas_offset.x()
+            absolute_y = rect.top() + self.canvas_offset.y()
 
-            # Apply canvas offset to the position to maintain relative positioning
-            x = rect.x() + self.canvas_offset.x()
-            y = rect.y() + self.canvas_offset.y()
+            # Update settings with the new absolute position and size
+            self.update_active_grid_settings("pos_x", int(round(absolute_x)))
+            self.update_active_grid_settings("pos_y", int(round(absolute_y)))
+            # Also update persistent QSettings
+            self.settings.setValue("active_grid_pos_x", int(round(absolute_x)))
+            self.settings.setValue("active_grid_pos_y", int(round(absolute_y)))
+            self.settings.sync()
 
-            self.update_active_grid_settings("pos_x", x)
-            self.update_active_grid_settings("pos_y", y)
+            # Update size settings (these might not need offset adjustment)
             self.update_generator_settings("width", width)
             self.update_generator_settings("height", height)
             self.update_application_settings("working_width", width)
             self.update_application_settings("working_height", height)
 
-            # Clear the selection from the scene
+            # Clear the temporary selection rectangle from the scene
             self.scene.clear_selection()
-        self.show_active_grid_area()
+
+        # Ensure the active grid area is shown/updated at the new position
+        self.show_active_grid_area()  # This will create/add if needed and set correct display pos
         self.emit_signal(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
 
     def show_active_grid_area(self):
         if not self.__do_show_active_grid_area:
+            # Ensure it's removed if disabled
+            if self.active_grid_area:
+                self.remove_scene_item(self.active_grid_area)
+                self.active_grid_area = None
             return
 
-        # Create an ActiveGridArea object if it doesn't exist
-        # and add it to the scene
+        # Create if it doesn't exist
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea()
-            self.active_grid_area.setZValue(10)
+            self.active_grid_area.setZValue(10)  # Ensure high visibility
             self.scene.addItem(self.active_grid_area)
+            # Connect the signal emitted by the updated update_position
+            self.active_grid_area.register(
+                SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED,
+                self.update_active_grid_area_position,  # Call view's update method
+            )
 
-            # Load the absolute position directly from QSettings if available
-            absolute_x = self.settings.value("active_grid_pos_x", None)
-            absolute_y = self.settings.value("active_grid_pos_y", None)
+        # Get the stored absolute position (defaults to 0,0 if not found)
+        # Use active_grid_settings as the primary source, QSettings as fallback/persistence
+        absolute_x = self.active_grid_settings.pos_x
+        absolute_y = self.active_grid_settings.pos_y
 
-            # If we have saved positions in QSettings, use them
-            if absolute_x is not None and absolute_y is not None:
-                # Convert to appropriate types
-                absolute_x = float(absolute_x)
-                absolute_y = float(absolute_y)
+        # If settings are somehow None (e.g., first run), default and save
+        if absolute_x is None or absolute_y is None:
+            # Default to centering in the initial view, considering the initial offset
+            viewport_center_x = self.viewport().width() / 2
+            viewport_center_y = self.viewport().height() / 2
+            # Calculate absolute position needed to appear centered with current offset
+            absolute_x = (
+                viewport_center_x
+                + self.canvas_offset.x()
+                - (self.active_grid_settings.width / 2)
+            )
+            absolute_y = (
+                viewport_center_y
+                + self.canvas_offset.y()
+                - (self.active_grid_settings.height / 2)
+            )
 
-                # Calculate relative position by subtracting canvas offset
-                pos_x = absolute_x - self.canvas_offset.x()
-                pos_y = absolute_y - self.canvas_offset.y()
+            # Save this initial absolute position
+            self.update_active_grid_settings("pos_x", int(round(absolute_x)))
+            self.update_active_grid_settings("pos_y", int(round(absolute_y)))
+            self.settings.setValue("active_grid_pos_x", int(round(absolute_x)))
+            self.settings.setValue("active_grid_pos_y", int(round(absolute_y)))
+            self.settings.sync()
 
-                # Set position directly and update settings for consistency
-                if self.active_grid_area:
-                    self.active_grid_area.setPos(pos_x, pos_y)
-                self.update_active_grid_settings("pos_x", absolute_x)
-                self.update_active_grid_settings("pos_y", absolute_y)
-            else:
-                # Fall back to the settings from the database if QSettings don't have values
-                pos = self.active_grid_settings.pos
-                pos_x = pos[0] - self.canvas_offset.x()
-                pos_y = pos[1] - self.canvas_offset.y()
-                if self.active_grid_area:
-                    self.active_grid_area.setPos(pos_x, pos_y)
+        # Calculate and set the display position
+        display_x = absolute_x - self.canvas_offset.x()
+        display_y = absolute_y - self.canvas_offset.y()
+        self.active_grid_area.setPos(display_x, display_y)
+
+    def update_active_grid_area_position(
+        self, _message=None
+    ):  # Accept optional message from signal
+        if self.active_grid_area:
+            # Read the definitive absolute position from settings
+            absolute_x = self.active_grid_settings.pos_x
+            absolute_y = self.active_grid_settings.pos_y
+
+            # Handle potential None values (shouldn't happen after show_active_grid_area)
+            if absolute_x is None:
+                absolute_x = 0
+            if absolute_y is None:
+                absolute_y = 0
+
+            # Calculate the display position based on the current canvas offset
+            display_x = absolute_x - self.canvas_offset.x()
+            display_y = absolute_y - self.canvas_offset.y()
+
+            # Set the item's display position
+            self.active_grid_area.setPos(display_x, display_y)
 
     def on_zoom_level_changed_signal(self):
         transform = self.zoom_handler.on_zoom_level_changed()
@@ -389,19 +466,70 @@ class CustomGraphicsView(
             self._last_viewport_size = new_size
 
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
+        """
+        Handle window resize events by adjusting canvas offsets to maintain center position.
+        """
+        # Store the old viewport center point in scene coordinates before resize
+        old_viewport_size = self._last_viewport_size
+        old_viewport_center_scene = self.mapToScene(
+            old_viewport_size.width() // 2, old_viewport_size.height() // 2
+        )
+
+        # Call the parent implementation
         super().resizeEvent(event)
-        self.scene.update()
-        self.do_draw(force_draw=True, size=event.size())
+
+        # Get new viewport size
+        new_size = event.size()
+
+        # Calculate new viewport center in scene coordinates
+        new_viewport_center_scene = self.mapToScene(
+            new_size.width() // 2, new_size.height() // 2
+        )
+
+        # Calculate the adjustment needed to maintain the same center
+        if (
+            self._last_viewport_size.width() > 0
+            and self._last_viewport_size.height() > 0
+        ):
+            # Calculate the delta between old and new scene centers
+            delta_x = (
+                new_viewport_center_scene.x() - old_viewport_center_scene.x()
+            )
+            delta_y = (
+                new_viewport_center_scene.y() - old_viewport_center_scene.y()
+            )
+
+            # Adjust canvas offset to maintain the same center point
+            self.canvas_offset -= QPointF(delta_x, delta_y)
+            self.save_canvas_offset()
+
+            # Update all positions with the new offset
+            self.updateImagePositions()
+            self.update_active_grid_area_position()
+
+        # Update stored viewport size
+        self._last_viewport_size = new_size
+
+        # Redraw with the updated offset
+        self.do_draw(force_draw=True, size=new_size)
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.setContentsMargins(0, 0, 0, 0)
-        self.do_draw(True)
-        self.scene.initialize_image()
+        # Load offset first
         self.load_canvas_offset()
+
+        # Set up the scene (grid, etc.)
+        self.do_draw(True)
+        self.scene.initialize_image()  # Ensure image uses loaded offset
         self.toggle_drag_mode()
         self.set_canvas_color(self.scene)
+
+        # Show the active grid area using loaded offset
         self.show_active_grid_area()
+
+        if not self._initialized:
+            self._initialized = True
+            self.on_recenter_grid_signal()
 
     def set_canvas_color(
         self,
@@ -427,12 +555,19 @@ class CustomGraphicsView(
 
     def handle_pan_canvas(self, event: QMouseEvent):
         if self._middle_mouse_pressed:
-            delta = event.pos() - self.last_pos
-            self.canvas_offset -= delta
+            delta = (
+                event.pos() - self.last_pos
+            )  # Delta in viewport coordinates
+            # Update canvas offset (absolute scene coordinate of viewport top-left)
+            self.canvas_offset -= (
+                delta  # Subtracting viewport delta moves the scene opposite
+            )
             self.last_pos = event.pos()
+
+            # Update display positions based on the NEW offset
             self.update_active_grid_area_position()
-            self.updateImagePositions()
-            self.do_draw()
+            self.updateImagePositions()  # Ensure this also uses absolute pos - offset
+            self.do_draw()  # Redraw grid lines relative to new offset
 
     def update_active_grid_area_position(self):
         if self.active_grid_area:
