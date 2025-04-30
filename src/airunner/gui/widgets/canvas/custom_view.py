@@ -240,10 +240,14 @@ class CustomGraphicsView(
         if not self.__can_draw_grid:
             return
 
-        if self.line_group is None:
-            self.line_group = QGraphicsItemGroup()
+        # Ensure any existing line group is removed from the scene and deleted
+        self.clear_lines()
 
-        if self.line_group.scene() != self.scene:
+        # Create a fresh line group
+        self.line_group = QGraphicsItemGroup()
+
+        # Add the new line group to the scene
+        if self.scene:
             self.scene.addItem(self.line_group)
 
         cell_size = self.grid_settings.cell_size
@@ -267,40 +271,28 @@ class CustomGraphicsView(
             self.grid_settings.line_width,
         )
 
-        # Create or reuse vertical lines
+        # Create vertical lines
         for i in range(num_vertical_lines):
             x = i * cell_size - offset_x
-            if i < len(self.line_group.childItems()):
-                line = self.line_group.childItems()[i]
-                line.setLine(x, 0, x, scene_height)
-                line.setVisible(True)
-                line.setPen(pen)
-            else:
-                line = QGraphicsLineItem(x, 0, x, scene_height)
-                self.line_group.addToGroup(line)
+            line = QGraphicsLineItem(x, 0, x, scene_height)
+            line.setPen(pen)
+            self.line_group.addToGroup(line)
 
-        # Create or reuse horizontal lines
+        # Create horizontal lines
         for i in range(num_horizontal_lines):
             y = i * cell_size - offset_y
-            index = i + num_vertical_lines
-            if index < len(self.line_group.childItems()):
-                line = self.line_group.childItems()[index]
-                line.setLine(0, y, scene_width, y)
-                line.setVisible(True)
-                line.setPen(pen)
-            else:
-                line = QGraphicsLineItem(0, y, scene_width, y)
-                self.line_group.addToGroup(line)
+            line = QGraphicsLineItem(0, y, scene_width, y)
+            line.setPen(pen)
+            self.line_group.addToGroup(line)
 
     def clear_lines(self):
         if self.line_group is not None:
-            # Explicitly remove the group from the scene if it's added
+            # Remove the line group from the scene
             if self.line_group.scene() == self.scene:
                 self.scene.removeItem(self.line_group)
-            # Optionally, destroy the group to free resources if it won't be reused immediately
-            # self.line_group = None
-        # Always create a new group in draw_grid to ensure clean state
-        # self.line_group = QGraphicsItemGroup() # Moved to draw_grid
+
+            # Delete the line group completely
+            self.line_group = None
 
     def register_line_data(self, lines_data):
         for line_data in lines_data:
