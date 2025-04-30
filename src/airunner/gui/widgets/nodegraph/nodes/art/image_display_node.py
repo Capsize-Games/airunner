@@ -82,6 +82,7 @@ class ImageDisplayNode(BaseArtNode):
 
         # Input port for ImageResponse object
         self.add_input("image_response")
+        self.add_output("image")
 
         # Create and add the custom wrapper widget to the node using NodeGraphQt's API
         self.image_widget = ImageDisplayWidget(self.view, name="image_display")
@@ -113,4 +114,4 @@ class ImageDisplayNode(BaseArtNode):
 
         # Return empty dict as this node primarily displays data
         # Execution flow is handled by the graph executor via exec ports
-        return {}
+        return {"image": pil_image}
