@@ -251,6 +251,7 @@ class EngineResponseCode(Enum):
     CLEAR_MEMORY = 1000
     NSFW_CONTENT_DETECTED = 1100
     INSUFFICIENT_GPU_MEMORY = 1200
+    INTERRUPTED = 1300
 
 
 class Scheduler(Enum):
