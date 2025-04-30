@@ -2,7 +2,7 @@ from typing import Optional
 
 from PIL.ImageQt import QImage
 
-from PySide6.QtCore import QRect, QPoint
+from PySide6.QtCore import QRect, QPoint, QPointF
 from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, Qt
 from PySide6.QtWidgets import QGraphicsItem
 
@@ -10,6 +10,7 @@ from airunner.enums import SignalCode, CanvasToolName
 from airunner.gui.widgets.canvas.draggables.draggable_pixmap import (
     DraggablePixmap,
 )
+from airunner.utils.application.snap_to_grid import snap_to_grid
 
 
 class ActiveGridArea(DraggablePixmap):
@@ -27,6 +28,11 @@ class ActiveGridArea(DraggablePixmap):
         self._outer_border_pen: Optional[QPen] = None
         self._border_color: Optional[QColor] = None
         self._border_brush: Optional[QBrush] = None
+        # For drag tracking
+        self.initial_mouse_scene_pos = None
+        self.initial_item_abs_pos = None
+        self.mouse_press_pos = None
+
         super().__init__(QPixmap())
         self.render_fill()
         painter = self.draw_border()
@@ -35,24 +41,6 @@ class ActiveGridArea(DraggablePixmap):
         self.register(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.render_fill
         )
-
-    def update_position(
-        self,
-        x: Optional[int] = None,
-        y: Optional[int] = None,
-        save: bool = True,
-    ):
-        super().update_position(x, y, save)
-        if save and x is not None and y is not None:
-            self.update_active_grid_settings("pos_x", x)
-            self.update_active_grid_settings("pos_y", y)
-            # Also add canvas offset to get the absolute position
-            absolute_x = x + self.canvas_offset_x
-            absolute_y = y + self.canvas_offset_y
-            # Store absolute position in settings
-            self.settings.setValue("active_grid_pos_x", absolute_x)
-            self.settings.setValue("active_grid_pos_y", absolute_y)
-            self.settings.sync()  # Force immediate write to ensure settings are saved
 
     @property
     def rect(self):
@@ -143,29 +131,121 @@ class ActiveGridArea(DraggablePixmap):
     def change_border_opacity(self, value):
         pass
 
-    mouse_press_pos = None
-
     def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.mouse_press_pos = event.pos()
-
-    def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
+        # Handle drag initiation
         if (
-            self.mouse_press_pos
+            event.button() == Qt.MouseButton.LeftButton
             and self.current_tool is CanvasToolName.ACTIVE_GRID_AREA
-            and (
-                self.mouse_press_pos.x() != event.pos().x()
-                or self.mouse_press_pos.y() != event.pos().y()
-            )
         ):
-            self.emit_signal(SignalCode.GENERATE_MASK)
-        self.mouse_press_pos = None
+            # Store the initial scene position of the mouse
+            self.initial_mouse_scene_pos = event.scenePos()
+
+            # Store current absolute position from settings
+            abs_x = self.active_grid_settings.pos_x
+            abs_y = self.active_grid_settings.pos_y
+            if abs_x is None:
+                abs_x = 0
+            if abs_y is None:
+                abs_y = 0
+            self.initial_item_abs_pos = QPointF(abs_x, abs_y)
+
+            # Also store item-relative position for release check
+            self.mouse_press_pos = event.pos()
+            event.accept()
+        else:
+            # Not dragging this item, let base class handle
+            super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self.current_tool not in [
-            CanvasToolName.ACTIVE_GRID_AREA,
-        ]:
-            return
-        super().mouseMoveEvent(event)
+        # Only handle drag if we initiated one on this item
+        if (
+            self.current_tool is CanvasToolName.ACTIVE_GRID_AREA
+            and self.initial_mouse_scene_pos is not None
+        ):
+            # Calculate delta from initial press in scene coordinates
+            delta = event.scenePos() - self.initial_mouse_scene_pos
+
+            # Calculate new proposed absolute position
+            proposed_abs_x = self.initial_item_abs_pos.x() + delta.x()
+            proposed_abs_y = self.initial_item_abs_pos.y() + delta.y()
+
+            # Apply grid snapping
+            snapped_abs_x, snapped_abs_y = snap_to_grid(
+                self.grid_settings, proposed_abs_x, proposed_abs_y
+            )
+
+            # During drag, only update display position - we'll save settings on mouseRelease
+            try:
+                view = self.scene().views()[0]
+                canvas_offset = view.canvas_offset
+            except (AttributeError, IndexError):
+                canvas_offset = QPointF(0, 0)
+
+            # Set visual position directly for smooth performance
+            display_x = snapped_abs_x - canvas_offset.x()
+            display_y = snapped_abs_y - canvas_offset.y()
+            self.setPos(display_x, display_y)
+
+            # Store current snapped position for release handler to use
+            self._current_snapped_pos = (
+                int(snapped_abs_x),
+                int(snapped_abs_y),
+            )
+
+            # Accept the event to prevent further processing
+            event.accept()
+        else:
+            # Not our drag, let base class handle
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if (
+            self.current_tool is CanvasToolName.ACTIVE_GRID_AREA
+            and self.initial_mouse_scene_pos is not None
+        ):
+            # Reset drag tracking
+            has_moved = False
+            if self.mouse_press_pos:
+                has_moved = (
+                    self.mouse_press_pos.x() != event.pos().x()
+                    or self.mouse_press_pos.y() != event.pos().y()
+                )
+
+            self.initial_mouse_scene_pos = None
+            self.initial_item_abs_pos = None
+            self.mouse_press_pos = None
+
+            # Emit signal if we moved
+            if has_moved:
+                self.emit_signal(SignalCode.GENERATE_MASK)
+                self.emit_signal(
+                    SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED
+                )
+
+                # Save the snapped absolute position
+                if (
+                    int(self._current_snapped_pos[0])
+                    != self.active_grid_settings.pos_x
+                    or int(self._current_snapped_pos[1])
+                    != self.active_grid_settings.pos_y
+                ):
+                    # Update DB settings
+                    self.update_active_grid_settings(
+                        "pos_x", int(self._current_snapped_pos[0])
+                    )
+                    self.update_active_grid_settings(
+                        "pos_y", int(self._current_snapped_pos[1])
+                    )
+                    # Update persistent settings
+                    self.settings.setValue(
+                        "active_grid_pos_x", int(self._current_snapped_pos[0])
+                    )
+                    self.settings.setValue(
+                        "active_grid_pos_y", int(self._current_snapped_pos[1])
+                    )
+
+            # Accept the event
+            event.accept()
+        else:
+            # Not our drag, let base class handle
+            super().mouseReleaseEvent(event)
