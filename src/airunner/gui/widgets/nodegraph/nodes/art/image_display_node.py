@@ -21,11 +21,11 @@ class ImageDisplayWidget(NodeBaseWidget):
     ):
         super().__init__(parent, name, label)
         # Create the QLabel widget that will actually display the image
-        label = QLabel("No Image")
-        label.setAlignment(Qt.AlignCenter)
-        label.setMinimumSize(512, 512)
+        self.image_label = QLabel("No Image")
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_label.setMinimumSize(512, 512)
         # This is the key part - set the QLabel as the custom widget
-        self.set_custom_widget(label)
+        self.set_custom_widget(self.image_label)
         # Store the last value for get_value() to return
         self._value = None
 
@@ -67,14 +67,12 @@ class ImageDisplayWidget(NodeBaseWidget):
 
     def set_pixmap(self, pixmap):
         """Set the pixmap to display"""
-        if self.widget():
-            self.widget().setPixmap(pixmap)
+        self.image_label.setPixmap(pixmap)
 
     def set_text(self, text):
         """Set text to display when no image is available"""
-        if self.widget():
-            self.widget().setText(text)
-            
+        self.image_label.setText(text)
+
 
 class ImageDisplayNode(BaseArtNode):
     NODE_NAME = "Image Display"
@@ -86,7 +84,7 @@ class ImageDisplayNode(BaseArtNode):
         self.add_input("image_response")
 
         # Create and add the custom wrapper widget to the node using NodeGraphQt's API
-        self.image_widget = ImageDisplayWidget(name="image_display")
+        self.image_widget = ImageDisplayWidget(self.view, name="image_display")
         self.add_custom_widget(self.image_widget)
 
     def execute(self, input_data):
