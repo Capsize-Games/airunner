@@ -84,6 +84,9 @@ class CanvasWidget(BaseWidget):
         )
         set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
 
+        # Save splitter state when splitter panels are resized
+        self.ui.canvas_splitter.splitterMoved.connect(self.save_state)
+
     @property
     def current_tool(self):
         return CanvasToolName(self.application_settings.current_tool)
