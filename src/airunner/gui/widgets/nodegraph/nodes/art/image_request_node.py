@@ -7,7 +7,12 @@ from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
     BaseArtNode,
 )
 from airunner.handlers.stablediffusion.image_request import ImageRequest
-from airunner.enums import ImagePreset, QualityEffects, Scheduler, StableDiffusionVersion
+from airunner.enums import (
+    ImagePreset,
+    QualityEffects,
+    Scheduler,
+    StableDiffusionVersion,
+)
 
 
 class ImageRequestNode(BaseArtNode):
@@ -100,12 +105,6 @@ class ImageRequestNode(BaseArtNode):
                 "name": "custom_path",
                 "value": "",
                 "widget_type": NodePropWidgetEnum.QLINE_EDIT,
-                "tab": "model",
-            },
-            {
-                "name": "custom_path_button",
-                "value": "Browse",
-                "widget_type": NodePropWidgetEnum.BUTTON,
                 "tab": "model",
             },
             {
@@ -206,37 +205,37 @@ class ImageRequestNode(BaseArtNode):
             },
             {
                 "name": "crops_coords_top_left",
-                "value": {"x": 0, "y": 0},
+                "value": (0, 0),
                 "widget_type": NodePropWidgetEnum.VECTOR2,
                 "tab": "advanced",
             },
             {
                 "name": "original_size",
-                "value": {"width": 512, "height": 512},
+                "value": (512, 512),
                 "widget_type": NodePropWidgetEnum.VECTOR2,
                 "tab": "advanced",
             },
             {
                 "name": "target_size",
-                "value": {"width": 1024, "height": 1024},
+                "value": (1024, 1024),
                 "widget_type": NodePropWidgetEnum.VECTOR2,
                 "tab": "advanced",
             },
             {
                 "name": "negative_crops_coords_top_left",
-                "value": {"x": 0, "y": 0},
+                "value": (0, 0),
                 "widget_type": NodePropWidgetEnum.VECTOR2,
                 "tab": "advanced",
             },
             {
                 "name": "negative_original_size",
-                "value": {"width": 512, "height": 512},
+                "value": (512, 512),
                 "widget_type": NodePropWidgetEnum.VECTOR2,
                 "tab": "advanced",
             },
             {
                 "name": "negative_target_size",
-                "value": {"width": 512, "height": 512},
+                "value": (1024, 1024),
                 "widget_type": NodePropWidgetEnum.VECTOR2,
                 "tab": "advanced",
             },
