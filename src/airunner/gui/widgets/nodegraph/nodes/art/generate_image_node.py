@@ -7,6 +7,7 @@ from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.enums import SignalCode
 from airunner.handlers.stablediffusion.image_response import ImageResponse
+from NodeGraphQt.constants import NodePropWidgetEnum
 
 
 class GenerateImageNode(BaseArtNode):
@@ -31,6 +32,12 @@ class GenerateImageNode(BaseArtNode):
         )
         self.image_response_port = self.add_output(
             "image_response", display_name=True
+        )
+        self.create_property(
+            "unload_after_generation",
+            True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+            tab="basic",
         )
 
     def _generate_image(self, image_request: ImageRequest):
@@ -82,7 +89,9 @@ class GenerateImageNode(BaseArtNode):
                 "output_data": output_data,  # Include the output data in the signal
             },
         )
-        self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
+
+        if self.get_property("unload_after_generation"):
+            self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
 
     def execute(self, input_data: Dict):
         """
