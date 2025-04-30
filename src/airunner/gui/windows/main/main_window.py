@@ -1495,8 +1495,8 @@ class MainWindow(
         QApplication.processEvents()
 
     def _generate_drawingpad_mask(self):
-        width = self.active_grid_settings.width
-        height = self.active_grid_settings.height
+        width = self.application_settings.working_width
+        height = self.application_settings.working_height
         img = Image.new("RGB", (width, height), (0, 0, 0))
         base64_image = convert_image_to_binary(img)
 
