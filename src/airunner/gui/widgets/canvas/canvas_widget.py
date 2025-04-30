@@ -53,6 +53,7 @@ class CanvasWidget(BaseWidget):
             SignalCode.TOGGLE_GRID: self.on_toggle_grid_signal,
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
         }
+        self._initialized: bool = False
         super().__init__(*args, **kwargs)
         self.splitters = ["canvas_splitter"]
         current_tool = self.current_tool
@@ -184,8 +185,10 @@ class CanvasWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        QTimer.singleShot(100, lambda: self.do_draw(force_draw=True))
-        self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
+        if not self._initialized:
+            self._initialized = True
+            QTimer.singleShot(100, lambda: self.do_draw(force_draw=True))
+            self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
 
     def on_canvas_update_cursor_signal(self, message: dict):
         event = message.get("event", None)

@@ -57,6 +57,7 @@ class CustomScene(
         self.painter = None
         self.image: Optional[QImage] = None
         self.item: Optional[DraggablePixmap] = None
+        self._image_initialized: bool = False
         super().__init__()
         self.last_export_path = None
         self._target_size = None
@@ -398,7 +399,9 @@ class CustomScene(
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.initialize_image()
+        if not self._image_initialized:
+            self._image_initialized = True
+            self.initialize_image()
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
