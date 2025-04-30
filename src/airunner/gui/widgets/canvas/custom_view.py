@@ -176,7 +176,14 @@ class CustomGraphicsView(
         self.settings.setValue("active_grid_pos_x", int(pos_x))
         self.settings.setValue("active_grid_pos_y", int(pos_y))
 
-        # 5. Update all display positions based on new offset
+        # 5. If there's an image in the scene, update its position to match the active grid area
+        if self.scene and hasattr(self.scene, "item") and self.scene.item:
+            # Store the same absolute position for the image as we did for the active grid area
+            self.scene._original_item_positions[self.scene.item] = QPointF(
+                pos_x, pos_y
+            )
+
+        # 6. Update all display positions based on new offset
         self.updateImagePositions()
         self.update_active_grid_area_position()
         self.do_draw(force_draw=True)
