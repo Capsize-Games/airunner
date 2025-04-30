@@ -796,7 +796,6 @@ class CustomScene(
         :return:
         """
         # image = ImageOps.expand(image, border=border_size, fill=border_color)
-        print("add image to scene")
         if image is None:
             self.logger.warning("Image is None, unable to add to scene")
             return
