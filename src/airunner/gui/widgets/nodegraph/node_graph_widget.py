@@ -97,6 +97,10 @@ class NodeGraphWidget(BaseWidget):
         self.q_settings.sync()
 
     @Slot()
+    def on_new_button_clicked(self):
+        self.new_workflow()
+
+    @Slot()
     def on_play_button_clicked(self):
         self.run_workflow()
 
@@ -136,6 +140,13 @@ class NodeGraphWidget(BaseWidget):
         self.ui.progressBar.setRange(0, 1)
         self.ui.progressBar.setValue(1)
         self.ui.progressBar.reset()
+
+    def new_workflow(self):
+        """Create a new workflow, clearing the current graph and variables."""
+        self.clear_graph()
+        self.current_workflow_id = None
+        self._register_graph()
+        self.logger.info("New workflow created.")
 
     def run_workflow(self):
         self.start_progress_bar()
