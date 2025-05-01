@@ -21,85 +21,71 @@ class LLMBranchNode(BaseLLMNode):
     """
 
     NODE_NAME = "Branch"
-
     EXEC_TRUE_PORT_NAME = "True"  # Internal name
     EXEC_FALSE_PORT_NAME = "False"  # Internal name
-
     has_exec_out_port = False
+    has_exec_in_port = True
+    _input_ports = [
+        dict(name="condition", display_name="Condition"),
+        dict(name="llm_request", display_name="LLM Request"),
+        dict(name="llm_prompt", display_name="LLM Prompt"),
+    ]
+    _output_ports = [
+        dict(name=EXEC_TRUE_PORT_NAME, display_name="True"),
+        dict(name=EXEC_FALSE_PORT_NAME, display_name="False"),
+    ]
+    _properties = [
+        dict(
+            name="condition",
+            value="Check if the following is true: the sky is blue.",
+            widget_type=NodePropWidgetEnum.QTEXT_EDIT,
+            tab="condition",
+        ),
+        dict(
+            name="system_prompt",
+            value="You are a logical assistant. Your task is to evaluate a condition and respond ONLY with 'TRUE' or 'FALSE'. Nothing else.",
+            widget_type=NodePropWidgetEnum.QTEXT_EDIT,
+            tab="settings",
+        ),
+        dict(
+            name="model_type",
+            value="Local Model",
+            items=["Local Model", "OpenAI", "Anthropic", "OpenRouter"],
+            widget_type=NodePropWidgetEnum.QCOMBO_BOX,
+            tab="settings",
+        ),
+        dict(
+            name="model_name",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
+            tab="settings",
+        ),
+        dict(
+            name="use_mock",
+            value=False,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
+            tab="settings",
+        ),
+        dict(
+            name="timeout_seconds",
+            value=5,
+            widget_type=NodePropWidgetEnum.INT,
+            tab="settings",
+        ),
+    ]
 
     def __init__(self):
         self.signal_handlers = {
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self._on_llm_text_streamed,
         }
         super().__init__()
-
         self.model._graph_item = self
-        self.add_input("condition", display_name=True)
-        self.add_input("llm_request", display_name=True)
-        self.add_input("llm_prompt", display_name=True)
-        self.add_output(
-            self.EXEC_TRUE_PORT_NAME,  # Internal name used for code reference
-            multi_output=False,  # Only one connection allowed
-            display_name=True,  # Show the name
-            painter_func=self._draw_exec_port,  # Use execution port style
-        )
-        self.add_output(
-            name=self.EXEC_FALSE_PORT_NAME,  # Internal name used for code reference
-            multi_output=False,  # Only one connection allowed
-            display_name=True,  # Show the name
-            painter_func=self._draw_exec_port,  # Use execution port style
-        )
-
-        # State variables for async LLM evaluation
         self._current_response = None
         self._accumulated_response_text = ""
         self._condition_result = None
         self._execution_pending = False
         self._waiting_for_llm = False
         self._exec_data = {}
-
-        self.create_property(
-            "condition",
-            value="Check if the following is true: the sky is blue.",
-            widget_type=NodePropWidgetEnum.QTEXT_EDIT.value,
-            tab="condition",
-        )
-
-        self.create_property(
-            "system_prompt",
-            value="You are a logical assistant. Your task is to evaluate a condition and respond ONLY with 'TRUE' or 'FALSE'. Nothing else.",
-            widget_type=NodePropWidgetEnum.QTEXT_EDIT.value,
-            tab="settings",
-        )
-
-        self.create_property(
-            "model_type",
-            value="Local Model",
-            items=["Local Model", "OpenAI", "Anthropic", "OpenRouter"],
-            widget_type=NodePropWidgetEnum.QCOMBO_BOX.value,
-            tab="settings",
-        )
-
-        self.create_property(
-            "model_name",
-            value="",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
-            tab="settings",
-        )
-
-        self.create_property(
-            "use_mock",
-            value=False,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
-            tab="settings",
-        )
-
-        self.create_property(
-            "timeout_seconds",
-            value=5,
-            widget_type=NodePropWidgetEnum.INT.value,
-            tab="settings",
-        )
 
     # Ensure this node's properties are shown when it's selected
     def on_selected(self):

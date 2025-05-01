@@ -15,26 +15,13 @@ class WhileLoopNode(BaseLogicNode):
     """
 
     NODE_NAME = "While Loop"
-
-    def __init__(self):
-        super().__init__()
-
-        # Add condition input port
-        self.add_input("Condition", display_name=True)
-
-        # Add loop body execution output port (triggers for each iteration)
-        self.add_output(
-            self.LOOP_BODY_PORT_NAME,
-            display_name=True,
-            painter_func=self._draw_exec_port,
-        )
-
-        # Add completed execution output port (triggers when loop finishes)
-        self.add_output(
-            self.COMPLETED_PORT_NAME,
-            display_name=True,
-            painter_func=self._draw_exec_port,
-        )
+    _input_ports = [
+        dict(name="Condition", display_name="Condition"),
+    ]
+    _output_ports = [
+        dict(name="Loop Body", display_name="Loop Body"),
+        dict(name="Completed", display_name="Completed"),
+    ]
 
     def execute(self, input_data):
         """

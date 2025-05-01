@@ -17,10 +17,9 @@ class PromptBuilderNode(BaseArtNode):
     NODE_NAME = "Prompt Builder"
     has_exec_in_port: bool = False
     has_exec_out_port: bool = False
-
-    def __init__(self):
-        super().__init__()
-        self.add_output("prompt", display_name=True)
+    _output_ports = [
+        dict(name="prompt", display_name="Prompt"),
+    ]
 
     def execute(self, input_data: Dict):
         return {

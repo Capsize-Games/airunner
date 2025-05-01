@@ -26,240 +26,233 @@ class ImageRequestNode(BaseArtNode):
     NODE_NAME = "Image Request"
     has_exec_in_port = False
     has_exec_out_port = False
-
-    def __init__(self):
-        super().__init__()
-
-        # Add inputs for ImageRequest parameters
-        self.add_input("pipeline_action", display_name=True)
-        self.add_input("generator_name", display_name=True)
-        self.add_input("prompt", display_name=True)
-        self.add_input("negative_prompt", display_name=True)
-        self.add_input("second_prompt", display_name=True)
-        self.add_input("second_negative_prompt", display_name=True)
-        self.add_input("random_seed", display_name=True)
-        self.add_input("model_path", display_name=True)
-        self.add_input("custom_path", display_name=True)
-        self.add_input("scheduler", display_name=True)
-        self.add_input("version", display_name=True)
-        self.add_input("use_compel", display_name=True)
-        self.add_input("steps", display_name=True)
-        self.add_input("ddim_eta", display_name=True)
-        self.add_input("scale", display_name=True)
-        self.add_input("seed", display_name=True)
-        self.add_input("strength", display_name=True)
-        self.add_input("n_samples", display_name=True)
-        self.add_input("clip_skip", display_name=True)
-        self.add_input("lora_scale", display_name=True)
-        self.add_input("image_width", display_name=True)
-        self.add_input("image_height", display_name=True)
-        self.add_input("image_preset", display_name=True)
-
-        # Add output port for the ImageRequest object
-        self.add_output("image_request")
-        scheduler_values = [scheduler.value for scheduler in Scheduler]
-        props = [
-            {
-                "name": "pipeline_action",
-                "value": "txt2img",
-                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
-                "tab": "basic",
-            },
-            {
-                "name": "generator_name",
-                "value": "stablediffusion",
-                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
-                "tab": "basic",
-            },
-            {
-                "name": "prompt",
-                "value": "",
-                "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
-                "tab": "prompt",
-            },
-            {
-                "name": "negative_prompt",
-                "value": "",
-                "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
-                "tab": "prompt",
-            },
-            {
-                "name": "second_prompt",
-                "value": "",
-                "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
-                "tab": "prompt",
-            },
-            {
-                "name": "second_negative_prompt",
-                "value": "",
-                "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
-                "tab": "prompt",
-            },
-            {
-                "name": "model_path",
-                "value": "",
-                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
-                "tab": "model",
-            },
-            {
-                "name": "custom_path",
-                "value": "",
-                "widget_type": NodePropWidgetEnum.QLINE_EDIT,
-                "tab": "model",
-            },
-            {
-                "name": "scheduler",
-                "value": Scheduler.DPM_PP_2M_SDE_K.value,
-                "items": scheduler_values,
-                "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
-                "tab": "model",
-            },
-            {
-                "name": "version",
-                "value": StableDiffusionVersion.SDXL1_0.value,
-                "items": [version.value for version in StableDiffusionVersion],
-                "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
-                "tab": "model",
-            },
-            {
-                "name": "random_seed",
-                "value": True,
-                "widget_type": NodePropWidgetEnum.QCHECK_BOX,
-                "tab": "generation",
-            },
-            {
-                "name": "use_compel",
-                "value": True,
-                "widget_type": NodePropWidgetEnum.QCHECK_BOX,
-                "tab": "prompt",
-            },
-            {
-                "name": "steps",
-                "value": 20,
-                "widget_type": NodePropWidgetEnum.INT,
-                "range": (1, 150),
-                "tab": "generation",
-            },
-            {
-                "name": "seed",
-                "value": 42,
-                "widget_type": NodePropWidgetEnum.INT,
-                "range": (0, 2147483647),
-                "tab": "generation",
-            },
-            {
-                "name": "n_samples",
-                "value": 1,
-                "widget_type": NodePropWidgetEnum.INT,
-                "range": (1, 8),
-                "tab": "generation",
-            },
-            {
-                "name": "clip_skip",
-                "value": 0,
-                "widget_type": NodePropWidgetEnum.INT,
-                "range": (0, 12),
-                "tab": "advanced",
-            },
-            {
-                "name": "image_width",
-                "value": 512,
-                "widget_type": NodePropWidgetEnum.INT,
-                "range": (64, 2048),
-                "tab": "generation",
-            },
-            {
-                "name": "image_height",
-                "value": 512,
-                "widget_type": NodePropWidgetEnum.INT,
-                "range": (64, 2048),
-                "tab": "generation",
-            },
-            {
-                "name": "ddim_eta",
-                "value": 0.5,
-                "widget_type": NodePropWidgetEnum.FLOAT,
-                "range": (0.0, 1.0),
-                "tab": "advanced",
-            },
-            {
-                "name": "scale",
-                "value": 7.5,
-                "widget_type": NodePropWidgetEnum.FLOAT,
-                "range": (1.0, 30.0),
-                "tab": "generation",
-            },
-            {
-                "name": "strength",
-                "value": 0.5,
-                "widget_type": NodePropWidgetEnum.FLOAT,
-                "range": (0.0, 1.0),
-                "tab": "generation",
-            },
-            {
-                "name": "lora_scale",
-                "value": 1.0,
-                "widget_type": NodePropWidgetEnum.FLOAT,
-                "range": (0.0, 2.0),
-                "tab": "advanced",
-            },
-            {
-                "name": "crops_coords_top_left",
-                "value": (0, 0),
-                "widget_type": NodePropWidgetEnum.VECTOR2,
-                "tab": "advanced",
-            },
-            {
-                "name": "original_size",
-                "value": (512, 512),
-                "widget_type": NodePropWidgetEnum.VECTOR2,
-                "tab": "advanced",
-            },
-            {
-                "name": "target_size",
-                "value": (1024, 1024),
-                "widget_type": NodePropWidgetEnum.VECTOR2,
-                "tab": "advanced",
-            },
-            {
-                "name": "negative_crops_coords_top_left",
-                "value": (0, 0),
-                "widget_type": NodePropWidgetEnum.VECTOR2,
-                "tab": "advanced",
-            },
-            {
-                "name": "negative_original_size",
-                "value": (512, 512),
-                "widget_type": NodePropWidgetEnum.VECTOR2,
-                "tab": "advanced",
-            },
-            {
-                "name": "negative_target_size",
-                "value": (1024, 1024),
-                "widget_type": NodePropWidgetEnum.VECTOR2,
-                "tab": "advanced",
-            },
-        ]
-
-        for prop in props:
-            self.create_property(
-                prop["name"],
-                prop["value"],
-                widget_type=prop["widget_type"].value,
-                tab=prop["tab"],
-                range=prop.get("range"),
-                items=prop.get("items"),
-            )
-
-        # Enum parameter using built-in combo box
-        preset_values = [preset.name for preset in ImagePreset]
-        self.create_property(
-            "image_preset",
-            ImagePreset.NONE.name,
-            items=preset_values,
-            widget_type=NodePropWidgetEnum.QCOMBO_BOX.value,
-            tab="generation",
-        )
+    _input_ports = [
+        dict(name="pipeline_action", display_name="Pipeline Action"),
+        dict(name="generator_name", display_name="Generator Name"),
+        dict(name="prompt", display_name="Prompt"),
+        dict(name="negative_prompt", display_name="Negative Prompt"),
+        dict(name="second_prompt", display_name="Second Prompt"),
+        dict(
+            name="second_negative_prompt",
+            display_name="Second Negative Prompt",
+        ),
+        dict(name="random_seed", display_name="Random Seed"),
+        dict(name="model_path", display_name="Model Path"),
+        dict(name="custom_path", display_name="Custom Path"),
+        dict(name="scheduler", display_name="Scheduler"),
+        dict(name="version", display_name="Version"),
+        dict(name="use_compel", display_name="Use Compel"),
+        dict(name="steps", display_name="Steps"),
+        dict(name="ddim_eta", display_name="DDIM Eta"),
+        dict(name="scale", display_name="Scale"),
+        dict(name="seed", display_name="Seed"),
+        dict(name="strength", display_name="Strength"),
+        dict(name="n_samples", display_name="Number of Samples"),
+        dict(name="clip_skip", display_name="Clip Skip"),
+        dict(name="lora_scale", display_name="Lora Scale"),
+        dict(name="image_width", display_name="Image Width"),
+        dict(name="image_height", display_name="Image Height"),
+        dict(name="image_preset", display_name="Image Preset"),
+    ]
+    _output_ports = [
+        dict(name="image_request", display_name="Image Request"),
+    ]
+    _properties = [
+        {
+            "name": "pipeline_action",
+            "value": "txt2img",
+            "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+            "tab": "basic",
+        },
+        {
+            "name": "generator_name",
+            "value": "stablediffusion",
+            "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+            "tab": "basic",
+        },
+        {
+            "name": "prompt",
+            "value": "",
+            "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
+            "tab": "prompt",
+        },
+        {
+            "name": "negative_prompt",
+            "value": "",
+            "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
+            "tab": "prompt",
+        },
+        {
+            "name": "second_prompt",
+            "value": "",
+            "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
+            "tab": "prompt",
+        },
+        {
+            "name": "second_negative_prompt",
+            "value": "",
+            "widget_type": NodePropWidgetEnum.QTEXT_EDIT,
+            "tab": "prompt",
+        },
+        {
+            "name": "model_path",
+            "value": "",
+            "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+            "tab": "model",
+        },
+        {
+            "name": "custom_path",
+            "value": "",
+            "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+            "tab": "model",
+        },
+        {
+            "name": "scheduler",
+            "value": Scheduler.DPM_PP_2M_SDE_K.value,
+            "items": [scheduler.value for scheduler in Scheduler],
+            "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
+            "tab": "model",
+        },
+        {
+            "name": "version",
+            "value": StableDiffusionVersion.SDXL1_0.value,
+            "items": [version.value for version in StableDiffusionVersion],
+            "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
+            "tab": "model",
+        },
+        {
+            "name": "random_seed",
+            "value": True,
+            "widget_type": NodePropWidgetEnum.QCHECK_BOX,
+            "tab": "generation",
+        },
+        {
+            "name": "use_compel",
+            "value": True,
+            "widget_type": NodePropWidgetEnum.QCHECK_BOX,
+            "tab": "prompt",
+        },
+        {
+            "name": "steps",
+            "value": 20,
+            "widget_type": NodePropWidgetEnum.INT,
+            "range": (1, 150),
+            "tab": "generation",
+        },
+        {
+            "name": "seed",
+            "value": 42,
+            "widget_type": NodePropWidgetEnum.INT,
+            "range": (0, 2147483647),
+            "tab": "generation",
+        },
+        {
+            "name": "n_samples",
+            "value": 1,
+            "widget_type": NodePropWidgetEnum.INT,
+            "range": (1, 8),
+            "tab": "generation",
+        },
+        {
+            "name": "clip_skip",
+            "value": 0,
+            "widget_type": NodePropWidgetEnum.INT,
+            "range": (0, 12),
+            "tab": "advanced",
+        },
+        {
+            "name": "image_width",
+            "value": 512,
+            "widget_type": NodePropWidgetEnum.INT,
+            "range": (64, 2048),
+            "tab": "generation",
+        },
+        {
+            "name": "image_height",
+            "value": 512,
+            "widget_type": NodePropWidgetEnum.INT,
+            "range": (64, 2048),
+            "tab": "generation",
+        },
+        {
+            "name": "ddim_eta",
+            "value": 0.5,
+            "widget_type": NodePropWidgetEnum.FLOAT,
+            "range": (0.0, 1.0),
+            "tab": "advanced",
+        },
+        {
+            "name": "scale",
+            "value": 7.5,
+            "widget_type": NodePropWidgetEnum.FLOAT,
+            "range": (1.0, 30.0),
+            "tab": "generation",
+        },
+        {
+            "name": "strength",
+            "value": 0.5,
+            "widget_type": NodePropWidgetEnum.FLOAT,
+            "range": (0.0, 1.0),
+            "tab": "generation",
+        },
+        {
+            "name": "lora_scale",
+            "value": 1.0,
+            "widget_type": NodePropWidgetEnum.FLOAT,
+            "range": (0.0, 2.0),
+            "tab": "advanced",
+        },
+        {
+            "name": "crops_coords_top_left",
+            "value": (0, 0),
+            "widget_type": NodePropWidgetEnum.VECTOR2,
+            "tab": "advanced",
+        },
+        {
+            "name": "original_size",
+            "value": (512, 512),
+            "widget_type": NodePropWidgetEnum.VECTOR2,
+            "tab": "advanced",
+        },
+        {
+            "name": "target_size",
+            "value": (1024, 1024),
+            "widget_type": NodePropWidgetEnum.VECTOR2,
+            "tab": "advanced",
+        },
+        {
+            "name": "negative_crops_coords_top_left",
+            "value": (0, 0),
+            "widget_type": NodePropWidgetEnum.VECTOR2,
+            "tab": "advanced",
+        },
+        {
+            "name": "negative_original_size",
+            "value": (512, 512),
+            "widget_type": NodePropWidgetEnum.VECTOR2,
+            "tab": "advanced",
+        },
+        {
+            "name": "negative_target_size",
+            "value": (1024, 1024),
+            "widget_type": NodePropWidgetEnum.VECTOR2,
+            "tab": "advanced",
+        },
+        {
+            "name": "quality_effects",
+            "value": QualityEffects.STANDARD,
+            "items": [effect.value for effect in QualityEffects],
+            "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
+            "tab": "advanced",
+        },
+        {
+            "name": "image_preset",
+            "value": ImagePreset.NONE.name,
+            "items": [preset.name for preset in ImagePreset],
+            "widget_type": NodePropWidgetEnum.QCOMBO_BOX,
+            "tab": "advanced",
+        },
+    ]
 
     def on_widget_button_clicked(self, prop_name, value):
         """

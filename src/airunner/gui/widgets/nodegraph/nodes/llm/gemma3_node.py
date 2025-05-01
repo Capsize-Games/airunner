@@ -14,6 +14,46 @@ class Gemma3Node(BaseLLMNode):
     __identifier__ = "LLM.Gemma3Node"
     has_exec_in_port = True
     has_exec_out_port = True
+    _input_ports = [
+        dict(name="messages", display_name="Messages"),
+        dict(name="prompt", display_name="Prompt"),
+        dict(name="system_prompt", display_name="System Prompt"),
+        dict(name="image", display_name="Image"),
+        dict(name="llm_request", display_name="LLM Request"),
+    ]
+    _output_ports = [
+        dict(name="response", display_name="Response"),
+        dict(name="model_info", display_name="Model Info"),
+    ]
+    _properties = [
+        dict(
+            name="max_new_tokens",
+            value=100,
+            widget_type=NodePropWidgetEnum.INT,
+            range=(1, 2048),
+            tab="generation",
+        ),
+        dict(
+            name="model_id",
+            value="google/gemma-3-4b-it",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
+            tab="model",
+        ),
+        dict(
+            name="temperature",
+            value=0.7,
+            widget_type=NodePropWidgetEnum.FLOAT,
+            range=(0.0, 2.0),
+            tab="generation",
+        ),
+        dict(
+            name="repetition_penalty",
+            value=1.1,
+            widget_type=NodePropWidgetEnum.FLOAT,
+            range=(1.0, 2.0),
+            tab="generation",
+        ),
+    ]
 
     def __init__(self):
         self.signal_handlers = {
@@ -23,46 +63,6 @@ class Gemma3Node(BaseLLMNode):
         self._accumulated_response_text = ""
         self._current_llm_response = None
         self._model_manager = None
-
-        # Input ports
-        self.add_input("messages", display_name=True)
-        self.add_input("prompt", display_name=True)
-        self.add_input("system_prompt", display_name=True)
-        self.add_input("image", display_name=True)
-        self.add_input("llm_request", display_name=True)
-
-        # Output ports
-        self.add_output("response", display_name=True)
-        self.add_output("model_info", display_name=True)
-
-        # Properties
-        self.create_property(
-            "max_new_tokens",
-            100,
-            widget_type=NodePropWidgetEnum.INT.value,
-            range=(1, 2048),
-            tab="generation",
-        )
-        self.create_property(
-            "model_id",
-            "google/gemma-3-4b-it",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
-            tab="model",
-        )
-        self.create_property(
-            "temperature",
-            0.7,
-            widget_type=NodePropWidgetEnum.FLOAT.value,
-            range=(0.0, 2.0),
-            tab="generation",
-        )
-        self.create_property(
-            "repetition_penalty",
-            1.1,
-            widget_type=NodePropWidgetEnum.FLOAT.value,
-            range=(1.0, 2.0),
-            tab="generation",
-        )
 
     def _get_model_manager(self) -> Gemma3Manager:
         """
