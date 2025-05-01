@@ -275,8 +275,6 @@ class BrushScene(CustomScene):
             self.initialize_image()
             self.emit_signal(SignalCode.MASK_UPDATED)
 
-        return super()._handle_left_mouse_release(event)
-
     def set_mask(self):
         mask = None
         if self.drawing_pad_settings.mask_layer_enabled:
