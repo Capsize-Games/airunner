@@ -347,7 +347,7 @@ class InputImage(BaseWidget):
                 model.image = base_64_image
                 model.save()
             else:
-                self._update_current_settings("image", base_64_image)
+                self.update_current_settings("image", base_64_image)
             # After saving, reload to ensure UI is in sync
             self.load_image_from_settings()
 
