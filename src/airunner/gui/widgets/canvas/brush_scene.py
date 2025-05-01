@@ -161,26 +161,15 @@ class BrushScene(CustomScene):
             # Create a QPainterPath object
             self.path = QPainterPath()
 
-        # Get canvas offset from parent view
-        view = self.views()[0]
-        canvas_offset = (
-            view.canvas_offset
-            if hasattr(view, "canvas_offset")
-            else QPointF(0, 0)
-        )
-
         if not self.start_pos:
             return
 
-        # Convert scene coordinates to image coordinates by applying canvas_offset
-        image_start_pos = QPointF(
-            self.start_pos.x() + canvas_offset.x(),
-            self.start_pos.y() + canvas_offset.y(),
+        # Use scene coordinates minus image item position for image coordinates
+        item_pos = (
+            self.active_item.pos() if self.active_item else QPointF(0, 0)
         )
-        image_last_pos = QPointF(
-            self.last_pos.x() + canvas_offset.x(),
-            self.last_pos.y() + canvas_offset.y(),
-        )
+        image_start_pos = self.start_pos - item_pos
+        image_last_pos = self.last_pos - item_pos
 
         # Move to start position in image coordinates
         self.path.moveTo(image_start_pos)
