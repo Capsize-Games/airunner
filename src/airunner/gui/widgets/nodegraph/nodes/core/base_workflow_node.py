@@ -1,7 +1,9 @@
+from typing import List, Dict, Any, Union
 from PySide6.QtGui import QPolygonF, QPen, QBrush
 from PySide6.QtCore import QPointF, Qt
 
 from NodeGraphQt import BaseNode
+from NodeGraphQt.constants import NodePropWidgetEnum
 
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
@@ -12,19 +14,39 @@ class BaseWorkflowNode(
     SettingsMixin,
     BaseNode,
 ):
-    # Base identifier for easier registration and type checking
+    """
+    Base class for all workflow nodes in the application.
+    This class provides a structure for defining input and output ports,
+    properties, and execution logic for nodes in the workflow.
+    It also includes methods for handling connections and disconnections
+    between nodes.
+    The class is designed to be subclassed for specific node types.
+    It provides a default implementation for the execute method,
+    which can be overridden in subclasses to define specific behavior.
+    """
+
+    """
+    Set the following attributes in subclasses:
+    - __identifier__: Unique identifier for the node
+    - _input_ports: List of dictionaries defining input ports
+    - _output_ports: List of dictionaries defining output ports
+    - _properties: List of dictionaries defining properties
+    """
     __identifier__ = "airunner.workflow.nodes.BaseWorkflowNode"
+    _input_ports: List[Dict[str, Any]] = []
+    _output_ports: List[Dict[str, Any]] = []
+    _properties: List[Dict[str, Any]] = []
+
     # Execution port constants
-    EXEC_IN_PORT_NAME = "exec_in"
-    EXEC_OUT_PORT_NAME = "exec_out"
+    EXEC_IN_PORT_NAME: str = "exec_in"
+    EXEC_OUT_PORT_NAME: str = "exec_out"
     has_exec_in_port: bool = True
     has_exec_out_port: bool = True
 
-    _input_ports = []
-    _output_ports = []
-    _properties = []
-    _registered_input_ports = {}
-    _registered_output_ports = {}
+    # Store registered input and output ports
+    # to avoid re-adding them
+    _registered_input_ports: Dict[str, Any] = {}
+    _registered_output_ports: Dict[str, Any] = {}
 
     def __init__(self):
         super().__init__()
@@ -52,22 +74,24 @@ class BaseWorkflowNode(
                 painter_func=self._draw_exec_port,
             )
         for port in self._input_ports:
-            self._registered_input_ports[port["name"]] = self.add_input(
-                port["name"],
-                display_name=port.get("display_name", True),
-            )
+            # Ensure display_name is a boolean if present
+            if "display_name" in port and not isinstance(
+                port["display_name"], bool
+            ):
+                port["display_name"] = bool(port["display_name"])
+            self._registered_input_ports[port["name"]] = self.add_input(**port)
         for port in self._output_ports:
+            # Ensure display_name is a boolean if present
+            if "display_name" in port and not isinstance(
+                port["display_name"], bool
+            ):
+                port["display_name"] = bool(port["display_name"])
             self._registered_output_ports[port["name"]] = self.add_output(
-                port["name"],
-                display_name=port.get("display_name", True),
+                **port
             )
         for prop in self._properties:
-            self.create_property(
-                prop["name"],
-                prop["value"],
-                widget_type=prop.get("widget_type", None),
-                tab=prop.get("tab", "basic"),
-            )
+            prop["widget_type"] = prop["widget_type"].value
+            self.create_property(**prop)
 
     def on_input_connected(self, in_port, out_port):
         """
