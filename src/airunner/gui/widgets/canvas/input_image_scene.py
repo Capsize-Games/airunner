@@ -126,6 +126,6 @@ class InputImageScene(BrushScene):
 
         # No need to call super() as we don't want the BrushScene behavior
         # but we do want the signal
-        self.emit_signal(self.current_settings._meta.db_table + "_updated")
+        self.emit_signal(self.current_settings.__tablename__ + "_updated")
 
         return True  # Event handled

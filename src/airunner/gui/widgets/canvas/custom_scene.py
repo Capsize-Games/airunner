@@ -466,6 +466,7 @@ class CustomScene(
         if event.button() == Qt.MouseButton.RightButton:
             self.right_mouse_button_pressed = False
         else:
+            self._handle_left_mouse_release(event)
             super(CustomScene, self).mouseReleaseEvent(event)
         self._handle_cursor(event)
 
@@ -1002,6 +1003,9 @@ class CustomScene(
             self.start_pos = event.scenePos()
         except AttributeError:
             self.logger.error("Failed to get scenePos from left click event")
+
+    def _handle_left_mouse_release(self, event):
+        pass
 
     def _handle_cursor(self, event, apply_cursor: bool = True):
         self.emit_signal(
