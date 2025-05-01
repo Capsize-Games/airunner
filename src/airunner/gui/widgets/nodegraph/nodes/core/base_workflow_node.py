@@ -239,3 +239,53 @@ class BaseWorkflowNode(
     # Helper to get data from a specific input port name
     def get_input_data(self, port_name, input_data, default=None):
         return input_data.get(port_name, default)
+
+    def on_pause(self):
+        """
+        Called when the workflow is paused.
+        Override in subclasses to implement custom pause behavior.
+        This method is called on each node when the workflow is paused.
+        """
+        try:
+            # Log pause action using logger if available, otherwise fallback to print
+            if hasattr(self, "logger"):
+                self.logger.debug(f"Node '{self.name()}' paused.")
+            else:
+                self.logger.info(f"Node '{self.name()}' paused.")
+        except Exception as e:
+            self.logger.info(
+                f"Error in on_pause for node '{self.name()}': {e}"
+            )
+
+    def on_stop(self):
+        """
+        Called when the workflow is stopped.
+        Override in subclasses to implement custom stop behavior.
+        This method is called on each node when the workflow is stopped.
+        Use this to cancel any async operations or clean up resources.
+        """
+        try:
+            # Log stop action using logger if available, otherwise fallback to print
+            if hasattr(self, "logger"):
+                self.logger.debug(f"Node '{self.name()}' stopped.")
+            else:
+                self.logger.info(f"Node '{self.name()}' stopped.")
+        except Exception as e:
+            self.logger.info(f"Error in on_stop for node '{self.name()}': {e}")
+
+    def on_resume(self):
+        """
+        Called when the workflow is resumed after being paused.
+        Override in subclasses to implement custom resume behavior.
+        This method is called on each node when the workflow is resumed.
+        """
+        try:
+            # Log resume action using logger if available, otherwise fallback to print
+            if hasattr(self, "logger"):
+                self.logger.debug(f"Node '{self.name()}' resumed.")
+            else:
+                self.logger.info(f"Node '{self.name()}' resumed.")
+        except Exception as e:
+            self.logger.info(
+                f"Error in on_resume for node '{self.name()}': {e}"
+            )

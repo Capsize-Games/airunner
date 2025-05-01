@@ -84,6 +84,7 @@ class NodeGraphWidget(BaseWidget):
             self._perform_load(self.current_workflow_id)
 
         self.framepack_worker = create_worker(FramePackWorker)
+        self.stop_progress_bar()
 
     @property
     def current_workflow_id(self) -> Optional[int]:
@@ -127,14 +128,29 @@ class NodeGraphWidget(BaseWidget):
     def on_clear_button_clicked(self):
         self.clear_graph()
 
+    def start_progress_bar(self):
+        self.ui.progressBar.setRange(0, 0)
+        self.ui.progressBar.setValue(0)
+
+    def stop_progress_bar(self):
+        self.ui.progressBar.setRange(0, 1)
+        self.ui.progressBar.setValue(1)
+        self.ui.progressBar.reset()
+
     def run_workflow(self):
+        self.start_progress_bar()
         self.emit_signal(SignalCode.RUN_WORKFLOW_SIGNAL, {"graph": self.graph})
 
     def pause_workflow(self):
-        print("TODO: PAUSE WORKFLOW")
+        self.emit_signal(
+            SignalCode.PAUSE_WORKFLOW_SIGNAL, {"graph": self.graph}
+        )
 
     def stop_workflow(self):
-        print("TODO: STOP WORKFLOW")
+        self.stop_progress_bar()
+        self.emit_signal(
+            SignalCode.STOP_WORKFLOW_SIGNAL, {"graph": self.graph}
+        )
 
     def save_workflow(self):
         """Shows a dialog to save the workflow, allowing creation of a new one or overwriting an existing one."""
@@ -1377,3 +1393,4 @@ class NodeGraphWidget(BaseWidget):
 
     def _on_node_execution_completed(self, data: Dict):
         self.node_graph_worker.add_to_queue(data)
+        self.stop_progress_bar()

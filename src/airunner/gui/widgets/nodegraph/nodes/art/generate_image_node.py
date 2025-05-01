@@ -122,3 +122,7 @@ class GenerateImageNode(BaseArtNode):
         # Return None to indicate the node execution is pending
         # The NodeGraphWorker will pause execution until NODE_EXECUTION_COMPLETED_SIGNAL
         return None
+
+    def on_stop(self):
+        super().on_stop()
+        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
