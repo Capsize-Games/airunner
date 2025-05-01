@@ -16,32 +16,15 @@ class ReverseForEachLoopNode(BaseLogicNode):
     """
 
     NODE_NAME = "Reverse For Each Loop"
-
-    def __init__(self):
-        super().__init__()
-
-        # Add array input port
-        self.add_input("Array", display_name=True)
-
-        # Add array element output port
-        self.add_output("Array Element", display_name=True)
-
-        # Add array index output port
-        self.add_output("Array Index", display_name=True)
-
-        # Add loop body execution output port (triggers for each iteration)
-        self.add_output(
-            self.LOOP_BODY_PORT_NAME,
-            display_name=True,
-            painter_func=self._draw_exec_port,
-        )
-
-        # Add completed execution output port (triggers when loop finishes)
-        self.add_output(
-            self.COMPLETED_PORT_NAME,
-            display_name=True,
-            painter_func=self._draw_exec_port,
-        )
+    _input_ports = [
+        dict(name="Array", display_name="Array"),
+    ]
+    _output_ports = [
+        dict(name="Array Element", display_name="Array Element"),
+        dict(name="Array Index", display_name="Array Index"),
+        dict(name="Loop Body", display_name="Loop Body"),
+        dict(name="Completed", display_name="Completed"),
+    ]
 
     def execute(self, input_data):
         """
