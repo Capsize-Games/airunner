@@ -1,3 +1,5 @@
+from NodeGraphQt.constants import NodePropWidgetEnum
+
 from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import (
     BaseLLMNode,
 )
@@ -5,14 +7,20 @@ from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import (
 
 class AgentActionNode(BaseLLMNode):
     NODE_NAME = "Agent Action"
-
-    def __init__(self):
-        super().__init__()
-        # Default ports - can be customized via properties or methods
-        self.add_input("in_message")
-        self.add_output("out_message")
-        # Add a text input widget to specify the action class/name
-        self.add_text_input("action_name", "Action Name", tab="widgets")
+    _input_ports = [
+        dict(name="in_message", display_name="Input Message"),
+    ]
+    _output_ports = [
+        dict(name="out_message", display_name="Output Message"),
+    ]
+    _properties = [
+        dict(
+            name="action_name",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
+            tab="action",
+        ),
+    ]
 
     # Override execute for AgentAction specific logic (placeholder)
     def execute(self, input_data):

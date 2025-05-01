@@ -16,74 +16,63 @@ class LoraNode(BaseArtNode):
     """
 
     NODE_NAME = "Lora"
-
-    def __init__(self):
-        super().__init__()
-
-        # Add inputs for Lora parameters
-        self.add_input("name", display_name=True)
-        self.add_input("scale", display_name=True)
-        self.add_input("enabled", display_name=True)
-        self.add_input("loaded", display_name=True)
-        self.add_input("trigger_word", display_name=True)
-        self.add_input("path", display_name=True)
-        self.add_input("version", display_name=True)
-
-        # Add output port for the Lora dictionary
-        self.add_output("lora_config")
-
-        # String parameters
-        self.create_property(
-            "lora_name",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+    _input_ports = [
+        dict(name="name", display_name="Name"),
+        dict(name="scale", display_name="Scale"),
+        dict(name="enabled", display_name="Enabled"),
+        dict(name="loaded", display_name="Loaded"),
+        dict(name="trigger_word", display_name="Trigger Word"),
+        dict(name="path", display_name="Path"),
+        dict(name="version", display_name="Version"),
+    ]
+    _output_ports = [
+        dict(name="lora_config", display_name="Lora Config"),
+    ]
+    _properties = [
+        dict(
+            name="lora_name",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        self.create_property(
-            "trigger_word",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="trigger_word",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        self.create_property(
-            "path",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="path",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        self.create_property(
-            "version",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="version",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        # Integer parameters
-        self.create_property(
-            "scale",
-            0,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="scale",
+            value=0,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 100),
             tab="basic",
-        )
-
-        # Boolean parameters
-        self.create_property(
-            "enabled",
-            False,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="enabled",
+            value=False,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="basic",
-        )
-
-        self.create_property(
-            "loaded",
-            False,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="loaded",
+            value=False,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="basic",
-        )
+        ),
+    ]
 
     def execute(self, input_data: Dict):
         """
