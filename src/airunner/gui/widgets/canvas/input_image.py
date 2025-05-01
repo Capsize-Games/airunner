@@ -122,14 +122,33 @@ class InputImage(BaseWidget):
             self.load_image_from_settings()
 
     def update_current_settings(self, key, value):
+        settings_updated = False
+        settings_class = None
+        settings_property_name = None
+
         if self.settings_key == "controlnet_settings":
             self.update_controlnet_settings(key, value)
+            settings_class = self.controlnet_settings.__class__
+            settings_property_name = "controlnet_settings"
+            settings_updated = True
         elif self.settings_key == "image_to_image_settings":
             self.update_image_to_image_settings(key, value)
+            settings_class = self.image_to_image_settings.__class__
+            settings_property_name = "image_to_image_settings"
+            settings_updated = True
         elif self.settings_key == "outpaint_settings":
             self.update_outpaint_settings(key, value)
+            settings_class = self.outpaint_settings.__class__
+            settings_property_name = "outpaint_settings"
+            settings_updated = True
         elif self.settings_key == "drawing_pad_settings":
             self.update_drawing_pad_settings(key, value)
+            settings_class = self.drawing_pad_settings.__class__
+            settings_property_name = "drawing_pad_settings"
+            settings_updated = True
+
+        # REMOVED: Cache clearing logic moved to load_image_from_grid
+
         self.emit_signal(
             SignalCode.INPUT_IMAGE_SETTINGS_CHANGED,
             {"section": self.settings_key, "setting": key, "value": value},
@@ -227,10 +246,50 @@ class InputImage(BaseWidget):
             )
 
     def load_image_from_grid(self, forced=False):
-        if not forced and not self.current_settings.use_grid_image_as_input:
+        # Explicitly clear cache before reading settings to ensure lock status is fresh
+        settings_property_name = None
+        if self.settings_key == "image_to_image_settings":
+            settings_property_name = "image_to_image_settings"
+        elif self.settings_key == "controlnet_settings":
+            settings_property_name = "controlnet_settings"
+        elif self.settings_key == "outpaint_settings":
+            settings_property_name = "outpaint_settings"
+        # Add other relevant settings keys if necessary
+
+        if settings_property_name:
+            prop = getattr(type(self), settings_property_name, None)
+            if (
+                prop
+                and hasattr(prop, "fget")
+                and hasattr(prop.fget, "cache_clear")
+            ):
+                try:
+                    prop.fget.cache_clear()
+                    self.logger.debug(
+                        f"Cleared cache for {settings_property_name} before check"
+                    )
+                except Exception as e:
+                    self.logger.error(
+                        f"Failed to clear cache for {settings_property_name}: {e}"
+                    )
+
+        # Check lock *before* updating settings
+        current_settings = (
+            self.current_settings
+        )  # Read potentially fresh settings
+        if not forced and current_settings.lock_input_image:
+            self.logger.debug(
+                f"Input image locked for {self.settings_key}, skipping update from grid."
+            )
             return
-        if not forced and self.current_settings.lock_input_image:
+        if not forced and not current_settings.use_grid_image_as_input:
+            self.logger.debug(
+                f"use_grid_image_as_input is false for {self.settings_key}, skipping update from grid."
+            )
             return
+
+        # If not locked and use_grid is true, proceed with update
+        self.logger.debug(f"Updating {self.settings_key} image from grid.")
         self.update_current_settings("image", self.drawing_pad_settings.image)
         self.load_image_from_settings()
 
@@ -263,10 +322,6 @@ class InputImage(BaseWidget):
             self.logger.warning("Image is None, unable to add to scene")
             return
 
-        # Resize the image to maintain aspect ratio, but not exceed 512x512
-        max_size = (512, 512)
-        image.thumbnail(max_size, Image.Resampling.LANCZOS)
-
         # Convert PIL image to QImage
         qimage = ImageQt(image)
 
@@ -276,7 +331,9 @@ class InputImage(BaseWidget):
             if self._scene.image != qimage:
                 # Update with the new image
                 self._scene.image = qimage
-                self._scene.initialize_image(image)
+                self._scene.initialize_image(
+                    image
+                )  # Pass the original PIL image
             # Always set scene rect to image
             if self._scene.item and hasattr(self._scene.item, "boundingRect"):
                 rect = self._scene.item.boundingRect()

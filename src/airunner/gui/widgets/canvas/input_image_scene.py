@@ -1,3 +1,4 @@
+from typing import Dict
 from PIL.Image import Image
 from PIL import ImageQt
 from PySide6.QtGui import QPainter, QColor, Qt
@@ -129,3 +130,8 @@ class InputImageScene(BrushScene):
         self.emit_signal(self.current_settings.__tablename__ + "_updated")
 
         return True  # Event handled
+
+    def _handle_image_generated_signal(self, data: Dict):
+        if self.current_settings.lock_input_image:
+            return
+        super()._handle_image_generated_signal(data)
