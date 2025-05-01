@@ -86,7 +86,6 @@ from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.handlers.stablediffusion.rect import Rect
 from diffusers import SchedulerMixin
-import time
 
 
 class BaseDiffusersModelManager(BaseModelManager):
@@ -559,6 +558,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         prompt = self.image_request.prompt
         prompt_preset = self.prompt_preset
 
+        prompt = PromptWeightBridge.convert(prompt)
+        prompt_preset = PromptWeightBridge.convert(prompt_preset)
+
         # Format the prompt
         formatted_prompt = None
         if self.do_join_prompts:
@@ -580,22 +582,18 @@ class BaseDiffusersModelManager(BaseModelManager):
         return formatted_prompt
 
     @property
-    def second_prompt(self) -> str:
-        return ""
-
-    @property
     def negative_prompt(self) -> str:
         prompt = self.image_request.negative_prompt
+        prompt = PromptWeightBridge.convert(prompt)
         negative_prompt_preset = self.negative_prompt_preset
+        negative_prompt_preset = PromptWeightBridge.convert(
+            negative_prompt_preset
+        )
 
         if negative_prompt_preset != "":
             prompt = f'("{prompt}", "{negative_prompt_preset}").and()'
 
         return prompt
-
-    @property
-    def second_negative_prompt(self) -> str:
-        return ""
 
     @property
     def config_path(self) -> str:
@@ -1804,90 +1802,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._generator = None
 
     def _load_prompt_embeds(self):
-        if not self.use_compel:
-            if self._compel_proc is not None:
-                self._unload_compel()
-            return
-
-        if self._compel_proc is None:
-            self.logger.debug(
-                "Compel proc is not loading - attempting to load"
-            )
-            self._load_compel()
-
-        prompt = self.prompt
-        negative_prompt = self.negative_prompt
-        second_prompt = self.second_prompt
-        second_negative_prompt = self.second_negative_prompt
-
-        if (
-            self._current_prompt != prompt
-            or self._current_negative_prompt != negative_prompt
-            or self._current_prompt_2 != second_prompt
-            or self._current_negative_prompt_2 != second_negative_prompt
-        ):
-            self._current_prompt = prompt
-            self._current_negative_prompt = negative_prompt
-            self._current_prompt_2 = second_prompt
-            self._current_negative_prompt_2 = second_negative_prompt
-            self._unload_prompt_embeds()
-
-        if (
-            self._prompt_embeds is None
-            or self._negative_prompt_embeds is None
-            or self._pooled_prompt_embeds is None
-            or self._negative_pooled_prompt_embeds is None
-        ):
-            self.logger.debug("Loading prompt embeds")
-
-            if prompt != "" and second_prompt != "":
-                compel_prompt = f'("{prompt}", "{second_prompt}").and()'
-            elif prompt != "" and second_prompt == "":
-                compel_prompt = prompt
-            elif prompt == "" and second_prompt != "":
-                compel_prompt = second_prompt
-            else:
-                compel_prompt = ""
-
-            if negative_prompt != "" and second_negative_prompt != "":
-                compel_negative_prompt = (
-                    f'("{negative_prompt}", "{second_negative_prompt}").and()'
-                )
-            elif negative_prompt != "" and second_negative_prompt == "":
-                compel_negative_prompt = negative_prompt
-            elif negative_prompt == "" and second_negative_prompt != "":
-                compel_negative_prompt = second_negative_prompt
-            else:
-                compel_negative_prompt = ""
-
-            (
-                prompt_embeds,
-                pooled_prompt_embeds,
-                negative_prompt_embeds,
-                negative_pooled_prompt_embeds,
-            ) = self._build_conditioning_tensors(
-                compel_prompt, compel_negative_prompt
-            )
-
-            [prompt_embeds, negative_prompt_embeds] = (
-                self._compel_proc.pad_conditioning_tensors_to_same_length(
-                    [prompt_embeds, negative_prompt_embeds]
-                )
-            )
-
-            self._prompt_embeds = prompt_embeds
-            self._negative_prompt_embeds = negative_prompt_embeds
-            self._pooled_prompt_embeds = pooled_prompt_embeds
-            self._negative_pooled_prompt_embeds = negative_pooled_prompt_embeds
-
-            if self._prompt_embeds is not None:
-                self._prompt_embeds.half().to(self._device)
-            if self._negative_prompt_embeds is not None:
-                self._negative_prompt_embeds.half().to(self._device)
-            if self._pooled_prompt_embeds is not None:
-                self._pooled_prompt_embeds.half().to(self._device)
-            if self._negative_pooled_prompt_embeds is not None:
-                self._negative_pooled_prompt_embeds.half().to(self._device)
+        """
+        Override this method to load the prompt embeds.
+        """
 
     def _build_conditioning_tensors(
         self, compel_prompt, compel_negative_prompt
