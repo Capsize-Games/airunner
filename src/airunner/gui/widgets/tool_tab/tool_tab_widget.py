@@ -11,7 +11,6 @@ class ToolTabWidget(BaseWidget):
     widget_class_ = Ui_tool_tab_widget
 
     def __init__(self, *args, **kwargs):
-        self.splitters = []
         super().__init__(*args, **kwargs)
         self.ui.tool_tab_widget_container.currentChanged.connect(
             self.on_tool_tab_widget_container_currentChanged

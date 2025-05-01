@@ -54,8 +54,8 @@ class CanvasWidget(BaseWidget):
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
         }
         self._initialized: bool = False
+        self._splitters = ["canvas_splitter"]
         super().__init__(*args, **kwargs)
-        self.splitters = ["canvas_splitter"]
         current_tool = self.current_tool
         show_grid = self.grid_settings.show_grid
 
@@ -84,9 +84,6 @@ class CanvasWidget(BaseWidget):
             self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER
         )
         set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
-
-        # Save splitter state when splitter panels are resized
-        self.ui.canvas_splitter.splitterMoved.connect(self.save_state)
 
     @property
     def current_tool(self):
