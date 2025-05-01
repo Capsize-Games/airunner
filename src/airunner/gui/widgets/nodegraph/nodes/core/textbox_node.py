@@ -10,8 +10,6 @@ from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
 
 class TextboxNode(BaseCoreNode):
     NODE_NAME = "Textbox"
-    has_exec_in_port: bool = False
-    has_exec_out_port: bool = False
 
     def __init__(self):
         super().__init__()
