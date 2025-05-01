@@ -1,0 +1,26 @@
+services:
+  airunner_windows_package:
+    container_name: windows_package
+    image: airunner-windows-builder
+    build:
+      context: ../..
+      dockerfile: package/windows/Dockerfile
+      args:
+        WINE_UID: "${HOST_UID:-1000}"
+        WINE_GID: "${HOST_GID:-1000}"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    stdin_open: true
+    tty: true
+    entrypoint: [] # Override entrypoint for interactive use or specific commands
+    volumes:
+      - ../..:/app # Mount the project root into the container's /app directory
+    working_dir: /app
+    environment:
+      - WINEPREFIX=/home/wineuser/.wine
+      - WINEARCH=win64
+      - WINEDEBUG=-all
+      - BUTLER_API_KEY=${BUTLER_API_KEY} # Pass through Butler API key if needed for uploads
+      - DEV_ENV=0 # Set environment type if needed by the build script
+      - AIRUNNER_ENVIRONMENT="prod"
+      - PYTHONOPTIMIZE=0
+    # Add any necessary device mappings or capabilities if required (e.g., for GPU access within Wine, though unlikely needed for packaging)

@@ -36,6 +36,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
     FramePackNode,
     VideoNode,
     Gemma3Node,
+    PromptBuilderNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -66,8 +67,8 @@ class NodeGraphWidget(BaseWidget):
         self.signal_handlers = {
             SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL: self._on_node_execution_completed,
         }
+        self._splitters = ["splitter"]
         super().__init__(*args, **kwargs)
-        self.splitters = ["splitter"]
         self.q_settings = get_qsettings()
         self.graph = CustomNodeGraph()
         self.viewer = self.graph.widget
@@ -83,8 +84,6 @@ class NodeGraphWidget(BaseWidget):
             self._perform_load(self.current_workflow_id)
 
         self.framepack_worker = create_worker(FramePackWorker)
-
-        self.ui.splitter.splitterMoved.connect(self.save_state)
 
     @property
     def current_workflow_id(self) -> Optional[int]:
@@ -366,6 +365,7 @@ class NodeGraphWidget(BaseWidget):
             FramePackNode,
             VideoNode,
             Gemma3Node,
+            PromptBuilderNode,
         ]:
             self.graph.register_node(node_cls)
 

@@ -9,8 +9,8 @@ from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsLineItem
 from airunner.data.models import DrawingPadSettings
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.utils.image import (
-    convert_binary_to_image, 
-    convert_image_to_binary
+    convert_binary_to_image,
+    convert_image_to_binary,
 )
 from airunner.gui.widgets.canvas.custom_scene import CustomScene
 
@@ -27,7 +27,7 @@ class BrushScene(CustomScene):
             self._brush_color,
             self.brush_settings.size,
             Qt.PenStyle.SolidLine,
-            Qt.PenCapStyle.RoundCap
+            Qt.PenCapStyle.RoundCap,
         )
         self.mask_item = None
         self.mask_image: ImageQt = None
@@ -36,7 +36,9 @@ class BrushScene(CustomScene):
         self._is_erasing = False
         self._do_generate_image = False
 
-        self.register(SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.on_brush_color_changed)
+        self.register(
+            SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.on_brush_color_changed
+        )
 
     @property
     def active_image(self):
@@ -85,7 +87,11 @@ class BrushScene(CustomScene):
         super().initialize_image(image)
         self.stop_painter()
         self.set_mask()
-        self.set_painter(self.mask_image if self.drawing_pad_settings.mask_layer_enabled else self.image)
+        self.set_painter(
+            self.mask_image
+            if self.drawing_pad_settings.mask_layer_enabled
+            else self.image
+        )
 
     def drawBackground(self, painter, rect):
         if self.painter is None:
@@ -98,16 +104,15 @@ class BrushScene(CustomScene):
                     self._erase_at(self.painter)
         super().drawBackground(painter, rect)
 
-    def rotate_image(
-        self,
-        angle: float
-    ):
+    def rotate_image(self, angle: float):
         mask_updated = False
         mask = self.drawing_pad_settings.mask
         if mask is not None:
             mask = convert_binary_to_image(mask)
             mask = mask.rotate(angle, expand=True)
-            self.update_drawing_pad_settings("mask", convert_image_to_binary(mask))
+            self.update_drawing_pad_settings(
+                "mask", convert_image_to_binary(mask)
+            )
             mask_updated = True
         super().rotate_image(angle)
         if mask_updated:
@@ -115,16 +120,12 @@ class BrushScene(CustomScene):
 
     def _draw_at(self, painter=None):
         self._create_line(
-            drawing=True,
-            painter=painter,
-            color=self.active_color
+            drawing=True, painter=painter, color=self.active_color
         )
 
     def _erase_at(self, painter=None):
         self._create_line(
-            erasing=True,
-            painter=painter,
-            color=self.active_eraser_color
+            erasing=True, painter=painter, color=self.active_eraser_color
         )
 
     def _create_line(
@@ -132,9 +133,11 @@ class BrushScene(CustomScene):
         drawing: bool = False,
         erasing: bool = False,
         painter: QPainter = None,
-        color: QColor = None
+        color: QColor = None,
     ):
-        if (drawing and not self._is_drawing) or (erasing and not self._is_erasing):
+        if (drawing and not self._is_drawing) or (
+            erasing and not self._is_erasing
+        ):
             self._is_drawing = drawing
             self._is_erasing = erasing
 
@@ -160,32 +163,40 @@ class BrushScene(CustomScene):
 
         # Get canvas offset from parent view
         view = self.views()[0]
-        canvas_offset = view.canvas_offset if hasattr(view, 'canvas_offset') else QPointF(0, 0)
-        
+        canvas_offset = (
+            view.canvas_offset
+            if hasattr(view, "canvas_offset")
+            else QPointF(0, 0)
+        )
+
         if not self.start_pos:
             return
 
         # Convert scene coordinates to image coordinates by applying canvas_offset
-        image_start_pos = QPointF(self.start_pos.x() + canvas_offset.x(), 
-                                  self.start_pos.y() + canvas_offset.y())
-        image_last_pos = QPointF(self.last_pos.x() + canvas_offset.x(), 
-                                 self.last_pos.y() + canvas_offset.y())
-        
+        image_start_pos = QPointF(
+            self.start_pos.x() + canvas_offset.x(),
+            self.start_pos.y() + canvas_offset.y(),
+        )
+        image_last_pos = QPointF(
+            self.last_pos.x() + canvas_offset.x(),
+            self.last_pos.y() + canvas_offset.y(),
+        )
+
         # Move to start position in image coordinates
         self.path.moveTo(image_start_pos)
-        
+
         # Create control point in image coordinates
         control_point = QPointF(
             (image_start_pos.x() + image_last_pos.x()) * 0.5,
-            (image_start_pos.y() + image_last_pos.y()) * 0.5
+            (image_start_pos.y() + image_last_pos.y()) * 0.5,
         )
-        
+
         # Draw quadratic curve to end position in image coordinates
         self.path.quadTo(control_point, image_last_pos)
-        
+
         # Draw the path
         painter.drawPath(self.path)
-        
+
         # Update start position for next segment
         self.start_pos = self.last_pos
 
@@ -199,26 +210,30 @@ class BrushScene(CustomScene):
 
     def create_line(self, event):
         scene_pt = event.scenePos()
-        
+
         # Get canvas offset from parent view
         view = self.views()[0]
-        canvas_offset = view.canvas_offset if hasattr(view, 'canvas_offset') else QPointF(0, 0)
-        
+        canvas_offset = (
+            view.canvas_offset
+            if hasattr(view, "canvas_offset")
+            else QPointF(0, 0)
+        )
+
         # Apply canvas offset to convert scene coordinates to image coordinates
         x = scene_pt.x() + canvas_offset.x()
         y = scene_pt.y() + canvas_offset.y()
-        
-        new_line = QGraphicsLineItem(
-            x, y,
-            x + 10, y + 10
-        )
+
+        new_line = QGraphicsLineItem(x, y, x + 10, y + 10)
         self.addItem(new_line)
 
     def _handle_left_mouse_press(self, event):
         # Use scenePos() so this matches the scene's offset
         self.draw_button_down = True
         self.start_pos = event.scenePos()
-        if self.drawing_pad_settings.mask_layer_enabled and self.mask_image is None:
+        if (
+            self.drawing_pad_settings.mask_layer_enabled
+            and self.mask_image is None
+        ):
             self._create_mask_image()
         elif self.is_brush_or_eraser:
             self._add_image_to_undo()
@@ -235,20 +250,22 @@ class BrushScene(CustomScene):
         if self.drawing_pad_settings.mask_layer_enabled:
             mask_image: Image = ImageQt.fromqimage(self.mask_image)
             # Ensure mask is fully opaque
-            mask_image = mask_image.convert("L").point(lambda p: 255 if p > 128 else 0)
+            mask_image = mask_image.convert("L").point(
+                lambda p: 255 if p > 128 else 0
+            )
             base_64_image = convert_image_to_binary(mask_image)
             drawing_pad_settings.mask = base_64_image
         else:
             image = ImageQt.fromqimage(self.active_image)
             base_64_image = convert_image_to_binary(image)
             drawing_pad_settings.image = base_64_image
-            if ((
-                self.current_tool is CanvasToolName.BRUSH or
-                self.current_tool is CanvasToolName.ERASER
-            )):
+            if (
+                self.current_tool is CanvasToolName.BRUSH
+                or self.current_tool is CanvasToolName.ERASER
+            ):
                 self.emit_signal(SignalCode.GENERATE_MASK)
         drawing_pad_settings.save()
-        
+
         self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
         if self.drawing_pad_settings.mask_layer_enabled:
             self.initialize_image()
@@ -277,8 +294,15 @@ class BrushScene(CustomScene):
 
             # Apply the adjust_alpha function to each pixel
             new_alpha = [
-                adjust_alpha(r.getpixel((x, y)), g.getpixel((x, y)), b.getpixel((x, y)), alpha.getpixel((x, y))) for y
-                in range(mask.height) for x in range(mask.width)]
+                adjust_alpha(
+                    r.getpixel((x, y)),
+                    g.getpixel((x, y)),
+                    b.getpixel((x, y)),
+                    alpha.getpixel((x, y)),
+                )
+                for y in range(mask.height)
+                for x in range(mask.width)
+            ]
             alpha.putdata(new_alpha)
             mask.putalpha(alpha)
 
@@ -286,7 +310,9 @@ class BrushScene(CustomScene):
             self.mask_image = q_mask
             if self.mask_item is None:
                 self.mask_item = QGraphicsPixmapItem(QPixmap.fromImage(q_mask))
-                self.mask_item.setZValue(2)  # Ensure the mask is above the image
+                self.mask_item.setZValue(
+                    2
+                )  # Ensure the mask is above the image
                 self.addItem(self.mask_item)
             else:
                 self.mask_item.setPixmap(QPixmap.fromImage(q_mask))
@@ -301,12 +327,14 @@ class BrushScene(CustomScene):
         mask_image = PIL.Image.new(
             "RGBA",
             (
-                self.active_grid_settings.width,
-                self.active_grid_settings.height
+                self.application_settings.working_width,
+                self.application_settings.working_height,
             ),
-            (0, 0, 0, 255)
+            (0, 0, 0, 255),
         )
-        self.update_drawing_pad_settings("mask", convert_image_to_binary(mask_image))
+        self.update_drawing_pad_settings(
+            "mask", convert_image_to_binary(mask_image)
+        )
         self.mask_image = ImageQt.ImageQt(mask_image)
         self.initialize_image()
         self.emit_signal(SignalCode.MASK_UPDATED)
