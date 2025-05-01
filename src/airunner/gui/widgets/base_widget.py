@@ -68,6 +68,14 @@ class BaseWidget(AbstractBaseWidget):
         self.worker_class_map: Dict = {}
         self.initialize_ui()
 
+        for splitter_name in self.splitters:
+            try:
+                splitter = getattr(self.ui, splitter_name)
+                if splitter:
+                    splitter.splitterMoved.connect(self.save_state)
+            except AttributeError:
+                pass
+
     @property
     def splitters(self) -> List[str]:
         """
@@ -149,7 +157,6 @@ class BaseWidget(AbstractBaseWidget):
         """
         Callback for the QUIT_APPLICATION signal.
         """
-        self.save_state()
 
     def set_icons(self):
         """
