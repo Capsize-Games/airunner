@@ -16,64 +16,55 @@ class EmbeddingNode(BaseArtNode):
     """
 
     NODE_NAME = "Embedding"
-
-    def __init__(self):
-        super().__init__()
-
-        # Add inputs for Embedding parameters
-        self.add_input("name", display_name=True)
-        self.add_input("path", display_name=True)
-        self.add_input("version", display_name=True)
-        self.add_input("tags", display_name=True)
-        self.add_input("active", display_name=True)
-        self.add_input("trigger_word", display_name=True)
-
-        # Add output port for the Embedding dictionary
-        self.add_output("embedding_config")
-
-        # String parameters
-        self.create_property(
-            "embedding_name",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+    _input_ports = [
+        dict(name="name", display_name="Name"),
+        dict(name="path", display_name="Path"),
+        dict(name="version", display_name="Version"),
+        dict(name="tags", display_name="Tags"),
+        dict(name="active", display_name="Active"),
+        dict(name="trigger_word", display_name="Trigger Word"),
+    ]
+    _output_ports = [
+        dict(name="embedding_config", display_name="Embedding Config"),
+    ]
+    _properties = [
+        dict(
+            name="embedding_name",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        self.create_property(
-            "path",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="path",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        self.create_property(
-            "version",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="version",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        self.create_property(
-            "tags",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="tags",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        self.create_property(
-            "trigger_word",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="trigger_word",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        # Boolean parameters
-        self.create_property(
-            "active",
-            False,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="active",
+            value=False,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="basic",
-        )
+        ),
+    ]
 
     def execute(self, input_data: Dict):
         """

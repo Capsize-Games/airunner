@@ -11,7 +11,6 @@ from PySide6.QtCore import (
     Qt,
     Signal,
     QTimer,
-    QSize,
     QThread,
     QMutex,
     QWaitCondition,
@@ -27,18 +26,16 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QVideoSink
 from PySide6.QtMultimediaWidgets import QVideoWidget
-from PySide6.QtGui import QPixmap, QImage
+from PySide6.QtGui import QPixmap
 
 # NodeGraphQt imports
 from NodeGraphQt import NodeBaseWidget, Port
 from NodeGraphQt.constants import NodePropWidgetEnum
 
 # Airunner imports
-from airunner.enums import SignalCode
 from airunner.gui.widgets.nodegraph.nodes.core.base_workflow_node import (
     BaseWorkflowNode,
 )
-from airunner.utils.application.get_logger import get_logger
 
 
 class VideoFrameExtractor(QThread):
@@ -359,12 +356,24 @@ class VideoNode(BaseWorkflowNode):
     title: ClassVar[str] = "Video Player"
     type_name: ClassVar[str] = "video_player"
     category: ClassVar[str] = "Display"
+    _input_ports = [
+        dict(name="video_path", display_name=True),
+    ]
+    _output_ports = [
+        dict(name="frame", display_name=True),
+    ]
+    _properties = [
+        dict(
+            name="video_path",
+            value="",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
+            tab="settings",
+        ),
+    ]
 
     def __init__(self):
         """Initialize the VideoNode."""
         super().__init__()
-        self._setup_ports()
-        self._setup_properties()
 
         # Create the video player widget
         self.video_widget = VideoPlayerWidget(self.view, name="video_player")
@@ -381,24 +390,6 @@ class VideoNode(BaseWorkflowNode):
             value = self.get_property("video_path")
             if value:
                 self.video_widget.set_path(value)
-
-    def _setup_ports(self):
-        """Set up the input and output ports for the node."""
-        # Input port for video path
-        self.add_input("video_path", display_name=True)
-
-        # Output port for the extracted frame
-        self.add_output("frame", display_name=True)
-
-    def _setup_properties(self):
-        """Set up the configurable properties for the node."""
-        # Add a property for direct path input
-        self.create_property(
-            "video_path",
-            "",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
-            tab="settings",
-        )
 
     def _on_property_changed(self, prop_name, value):
         """Handle property changes in the node."""
