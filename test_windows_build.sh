@@ -41,6 +41,32 @@ cleanup() {
   log_result "Cleanup completed"
 }
 
+build_image() {
+  log_result "Building the Wine Docker image for Windows packaging"
+  log_result "This may take a while due to the multi-stage build process..."
+  # Adding --progress=plain to see more detailed output
+  # Adding --no-cache to ensure a clean build each time
+  DOCKER_BUILDKIT=1 docker compose -f "$COMPOSE_FILE" build --progress=plain --no-cache $SERVICE_NAME || log_error "Wine Docker image build failed"
+  # Check if the image was built (basic check)
+  IMAGE_NAME=$(grep 'image:' "$COMPOSE_FILE" | head -n 1 | awk '{print $2}')
+  if docker image inspect "$IMAGE_NAME" &> /dev/null; then
+      log_result "✅ Wine Docker image '$IMAGE_NAME' built successfully"
+  else
+      log_error "❌ Wine Docker image '$IMAGE_NAME' not found after build attempt"
+  fi
+}
+
+test_wine_python() {
+  log_result "Testing Wine Python installation..."
+  # Simple test to verify Python and pip work
+  docker compose -f "$COMPOSE_FILE" run --rm $SERVICE_NAME xvfb-run -a wine64 C:\\Python310\\python.exe -c "print('Python is working in Wine')" || log_error "Python test failed in Wine"
+  log_result "✅ Python in Wine is working"
+  
+  # Also test PyInstaller
+  docker compose -f "$COMPOSE_FILE" run --rm $SERVICE_NAME xvfb-run -a wine64 C:\\Python310\\Scripts\\pyinstaller.exe --version || log_error "PyInstaller test failed in Wine"
+  log_result "✅ PyInstaller in Wine is working"
+}
+
 # Register cleanup function to run on exit (excluding the --remove-images flag initially)
 trap cleanup EXIT
 
@@ -57,14 +83,12 @@ fi
 
 # Test 1: Build the Wine Docker image
 log_result "Test 1: Building the Wine Docker image for Windows packaging"
-docker compose -f "$COMPOSE_FILE" build $SERVICE_NAME || log_error "Wine Docker image build failed"
-# Check if the image was built (basic check)
-IMAGE_NAME=$(grep 'image:' "$COMPOSE_FILE" | head -n 1 | awk '{print $2}')
-if docker image inspect "$IMAGE_NAME" &> /dev/null; then
-    log_result "✅ Wine Docker image '$IMAGE_NAME' built successfully"
-else
-    log_error "❌ Wine Docker image '$IMAGE_NAME' not found after build attempt"
-fi
+log_result "This will take some time as it's a multi-stage build with several components"
+build_image
+
+# Test 1.5: Test if Python is working in Wine
+log_result "Test 1.5: Verifying Python works in Wine"
+test_wine_python
 
 # Test 2: Run the PyInstaller build script inside the container
 log_result "Test 2: Running PyInstaller build script via Wine in Docker"
