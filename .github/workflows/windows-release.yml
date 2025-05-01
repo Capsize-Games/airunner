@@ -1,0 +1,89 @@
+name: Windows Release Build
+
+on:
+  release:
+    types: [published] # Trigger when a new release is published
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_PROJECT_NAME: airunner_win_build # Avoid conflicts with other compose projects
+
+jobs:
+  buildWindows:
+    runs-on: ubuntu-latest # Use GitHub-hosted runner
+    permissions:
+      contents: write # Needed to upload release assets
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # No login needed if not pushing the builder image, but good practice if you might later
+      # - name: Login to GitHub Container Registry
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.repository_owner }}
+      #     password: ${{ secrets.CR_PAT }} # Use a Personal Access Token (PAT)
+
+      - name: Set environment variables for Docker Compose
+        run: |
+          echo "HOST_UID=$(id -u)" >> $GITHUB_ENV
+          echo "HOST_GID=$(id -g)" >> $GITHUB_ENV
+
+      - name: Create .env file for Docker Compose
+        run: |
+          echo "HOST_UID=$(id -u)" > .env
+          echo "HOST_GID=$(id -g)" >> .env
+          # Add any other build-time secrets or variables needed by compose/dockerfile
+          # Example: echo "SOME_SECRET=${{ secrets.SOME_SECRET }}" >> .env
+
+      - name: Build Wine Docker Image
+        run: |
+          docker compose -f package/windows/docker-compose.yml build airunner_windows_package
+
+      - name: Run PyInstaller Build Script in Container
+        run: |
+          # Ensure the build script is executable
+          chmod +x pyinstaller/build_windows.sh
+          # Run the build using docker compose run
+          # This mounts the local project directory into the container
+          docker compose -f package/windows/docker-compose.yml run --rm airunner_windows_package ./pyinstaller/build_windows.sh
+
+      - name: Prepare Release Artifact Name
+        id: artifact_name
+        run: |
+          # Get version from setup.py or define statically
+          # VERSION=$(python -c "import setuptools; config = setuptools.config.read_configuration('setup.cfg'); print(config['metadata']['version'])")
+          # Using a placeholder version for now, replace with actual version logic
+          VERSION="latest" # Or extract from git tag: ${GITHUB_REF_NAME}
+          ARTIFACT_FILENAME="airunner-windows-${VERSION}.zip"
+          echo "filename=${ARTIFACT_FILENAME}" >> $GITHUB_OUTPUT
+
+      - name: Archive Windows Build Output
+        run: |
+          # The output is expected in dist/airunner_windows relative to the project root
+          cd dist
+          zip -r ../${{ steps.artifact_name.outputs.filename }} airunner_windows
+          cd ..
+
+      - name: Upload Windows Build Artifact to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./${{ steps.artifact_name.outputs.filename }}
+          asset_name: ${{ steps.artifact_name.outputs.filename }}
+          asset_content_type: application/zip
+
+      - name: Clean up Docker
+        if: always()
+        run: |
+          echo "Cleaning up Docker resources..."
+          docker compose -f package/windows/docker-compose.yml down --volumes --remove-orphans || true # Stop and remove containers/networks/volumes
+          docker system prune -af # Remove build cache and unused images

@@ -10,14 +10,16 @@ from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
 
 class TextboxNode(BaseCoreNode):
     NODE_NAME = "Textbox"
-    has_exec_in_port: bool = False
-    has_exec_out_port: bool = False
+    _input_ports = [
+        {"name": "prompt", "display_name": True},
+    ]
+    _output_ports = [
+        {"name": "prompt", "display_name": True},
+    ]
 
     def __init__(self):
         super().__init__()
         self.text_box = None
-        self.in_prompt_port = self.add_input("prompt")
-        self.out_prompt_port = self.add_output("prompt")
         self.add_multiline_textbox("prompt", "Prompt", tab="settings")
 
     def execute(self, input_data):
