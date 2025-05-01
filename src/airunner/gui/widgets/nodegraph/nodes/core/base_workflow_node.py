@@ -1,9 +1,8 @@
-from typing import List, Dict, Any, Union
-from PySide6.QtGui import QPolygonF, QPen, QBrush
+from typing import List, Dict, Any
+from PySide6.QtGui import QPolygonF, QBrush
 from PySide6.QtCore import QPointF, Qt
 
 from NodeGraphQt import BaseNode
-from NodeGraphQt.constants import NodePropWidgetEnum
 
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
