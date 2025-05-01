@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QPushButton, QSizePolicy,
-    QSpacerItem, QSplitter, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QProgressBar, QPushButton,
+    QSizePolicy, QSpacerItem, QSplitter, QWidget)
 
 from airunner.gui.widgets.nodegraph.variables_panel import VariablesPanelWidget
 import airunner.feather_rc
@@ -143,6 +143,12 @@ class Ui_node_graph_widget(object):
         self.splitter.addWidget(self.palette)
 
         self.gridLayout_5.addWidget(self.splitter, 1, 0, 1, 1)
+
+        self.progressBar = QProgressBar(node_graph_widget)
+        self.progressBar.setObjectName(u"progressBar")
+        self.progressBar.setValue(24)
+
+        self.gridLayout_5.addWidget(self.progressBar, 2, 0, 1, 1)
 
 
         self.retranslateUi(node_graph_widget)
