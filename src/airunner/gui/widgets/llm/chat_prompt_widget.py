@@ -47,7 +47,7 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.LLM_TOKEN_SIGNAL: self.on_token_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
         }
-        self.splitters = ["chat_prompt_splitter"]
+        self._splitters = ["chat_prompt_splitter"]
         super().__init__()
         self.token_buffer = []
         self.ui_update_timer = QTimer(self)
