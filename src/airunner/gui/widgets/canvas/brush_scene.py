@@ -239,29 +239,42 @@ class BrushScene(CustomScene):
     def _handle_left_mouse_release(self, event) -> bool:
         self.draw_button_down = False
         drawing_pad_settings = DrawingPadSettings.objects.first()
+
+        # First get the correct image
         if self.drawing_pad_settings.mask_layer_enabled:
+            # For mask layer
             mask_image: Image = ImageQt.fromqimage(self.mask_image)
             # Ensure mask is fully opaque
             mask_image = mask_image.convert("L").point(
                 lambda p: 255 if p > 128 else 0
             )
             base_64_image = convert_image_to_binary(mask_image)
+            # Update both database object and in-memory settings with the same base64 image
             drawing_pad_settings.mask = base_64_image
+            self.update_drawing_pad_settings("mask", base_64_image)
         else:
+            # For normal image layer
             image = ImageQt.fromqimage(self.active_image)
             base_64_image = convert_image_to_binary(image)
+            # Update both database object and in-memory settings with the same base64 image
             drawing_pad_settings.image = base_64_image
+            self.update_drawing_pad_settings("image", base_64_image)
+
             if (
                 self.current_tool is CanvasToolName.BRUSH
                 or self.current_tool is CanvasToolName.ERASER
             ):
                 self.emit_signal(SignalCode.GENERATE_MASK)
+
+        # Ensure changes are saved to database
         drawing_pad_settings.save()
 
+        # Emit signals to refresh related UI
         self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
         if self.drawing_pad_settings.mask_layer_enabled:
             self.initialize_image()
             self.emit_signal(SignalCode.MASK_UPDATED)
+
         return super()._handle_left_mouse_release(event)
 
     def set_mask(self):
