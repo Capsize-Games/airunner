@@ -82,6 +82,7 @@ class ImageDisplayNode(BaseArtNode):
 
         # Input port for ImageResponse object
         self.add_input("image_response")
+        self.add_output("image")
 
         # Create and add the custom wrapper widget to the node using NodeGraphQt's API
         self.image_widget = ImageDisplayWidget(self.view, name="image_display")
@@ -89,7 +90,7 @@ class ImageDisplayNode(BaseArtNode):
 
     def execute(self, input_data):
         image_response = self.get_input_data("image_response", input_data)
-
+        pil_image = None
         if isinstance(image_response, ImageResponse) and image_response.images:
             # Display the first image from the list
             pil_image = image_response.images[0]
@@ -102,8 +103,8 @@ class ImageDisplayNode(BaseArtNode):
                 # Scale pixmap to fit the label while maintaining aspect ratio
                 scaled_pixmap = pixmap.scaled(
                     self.image_widget.widget().size(),
-                    Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
                 )
                 self.image_widget.set_pixmap(scaled_pixmap)
             else:
@@ -113,4 +114,5 @@ class ImageDisplayNode(BaseArtNode):
 
         # Return empty dict as this node primarily displays data
         # Execution flow is handled by the graph executor via exec ports
-        return {}
+        if pil_image:
+            return {"image": pil_image}
