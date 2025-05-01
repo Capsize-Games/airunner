@@ -16,32 +16,15 @@ class ForLoopNode(BaseLogicNode):
     """
 
     NODE_NAME = "For Loop"
-
-    def __init__(self):
-        super().__init__()
-
-        # Add first index input port
-        self.add_input("First Index", display_name=True)
-
-        # Add last index input port
-        self.add_input("Last Index", display_name=True)
-
-        # Add current index output port
-        self.add_output("Index", display_name=True)
-
-        # Add loop body execution output port (triggers for each iteration)
-        self.add_output(
-            self.LOOP_BODY_PORT_NAME,
-            display_name=True,
-            painter_func=self._draw_exec_port,
-        )
-
-        # Add completed execution output port (triggers when loop finishes)
-        self.add_output(
-            self.COMPLETED_PORT_NAME,
-            display_name=True,
-            painter_func=self._draw_exec_port,
-        )
+    _input_ports = [
+        dict(name="First Index", display_name="First Index"),
+        dict(name="Last Index", display_name="Last Index"),
+    ]
+    _output_ports = [
+        dict(name="Index", display_name="Index"),
+        dict(name="Loop Body", display_name="Loop Body"),
+        dict(name="Completed", display_name="Completed"),
+    ]
 
     def execute(self, input_data):
         """

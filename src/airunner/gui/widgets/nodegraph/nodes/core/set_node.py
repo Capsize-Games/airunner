@@ -37,6 +37,14 @@ class SetNode(BaseCoreNode):
     _output_ports = [
         {"name": "value", "display_name": True},
     ]
+    _properties = [
+        {
+            "name": "variable_value",
+            "value": None,
+            "widget_type": NodePropWidgetEnum.QLINE_EDIT,
+            "tab": "Variable",
+        }
+    ]
 
     def __init__(self):
         super().__init__()
@@ -46,11 +54,6 @@ class SetNode(BaseCoreNode):
         self.value_input_port = None
         self.value_output_port = None
         self.value_property_name = "variable_value"
-        self.create_property(
-            self.value_property_name,
-            None,
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
-        )
         if hasattr(self, "view"):
             if hasattr(self.view, "get_input_text") and callable(
                 getattr(self.view, "get_input_text")
