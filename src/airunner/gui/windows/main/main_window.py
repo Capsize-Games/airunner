@@ -220,7 +220,6 @@ class MainWindow(
             SignalCode.APPLICATION_RESET_PATHS_SIGNAL: self.on_reset_paths_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
-            SignalCode.HISTORY_UPDATED: self.on_history_updated,
             SignalCode.REFRESH_STYLESHEET_SIGNAL: self.on_theme_changed_signal,
             SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL: self.on_ai_models_save_or_update_signal,
             SignalCode.NAVIGATE_TO_URL: self.on_navigate_to_url,
@@ -1336,10 +1335,6 @@ class MainWindow(
 
     def on_keyboard_shortcuts_updated(self):
         self._set_keyboard_shortcuts()
-
-    def on_history_updated(self, data):
-        self.ui.actionUndo.setEnabled(data["undo"] != 0)
-        self.ui.actionRedo.setEnabled(data["redo"] != 0)
 
     def _set_keyboard_shortcuts(self):
         quit_key = ShortcutKeys.objects.filter_by_first(display_name="Quit")
