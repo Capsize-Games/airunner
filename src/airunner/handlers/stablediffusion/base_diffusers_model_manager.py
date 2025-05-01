@@ -702,10 +702,8 @@ class BaseDiffusersModelManager(BaseModelManager):
             }
 
             if self.controlnet_enabled:
-                print("SETTING CONTROLNET", self.controlnet)
                 kwargs["controlnet"] = self.controlnet
             else:
-                print("CONTROLNET IS NOT ENABLED")
                 kwargs.pop("controlnet", None)
 
             kwargs = {
