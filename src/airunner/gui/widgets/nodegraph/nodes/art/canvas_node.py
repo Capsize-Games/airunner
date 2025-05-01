@@ -3,15 +3,15 @@ from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
 )
 from airunner.enums import SignalCode
 
+
 class CanvasNode(BaseArtNode):
     NODE_NAME = "Canvas Node"
-
-    def __init__(self):
-        super().__init__()
-
-        # Input port for ImageResponse object
-        self.add_input("image_response_in")
-        self.add_output("image_response_out")
+    _input_ports = [
+        dict(name="image_response", display_name="Image Response"),
+    ]
+    _output_ports = [
+        dict(name="image_response_out", display_name="Image Response Out"),
+    ]
 
     def execute(self, input_data):
         image_response = self.get_input_data("image_response", input_data)

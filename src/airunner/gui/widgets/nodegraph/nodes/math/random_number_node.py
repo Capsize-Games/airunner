@@ -10,34 +10,29 @@ class RandomNumberNode(BaseMathNode):
     NODE_NAME = "Random Number Generator"
     has_exec_in_port = False
     has_exec_out_port = False
-
-    def __init__(self):
-        super().__init__()
-
-        # Inputs for min and max values
-        self.add_input("min")
-        self.add_input("max")
-
-        # Output for the random number
-        self.add_output("random_value")
-
-        # Add default min value using NodeGraphQt's built-in integer widget
-        self.create_property(
-            "default_min",
-            0,
-            widget_type=NodePropWidgetEnum.INT.value,
+    _input_ports = [
+        dict(name="min", display_name="Min Value"),
+        dict(name="max", display_name="Max Value"),
+    ]
+    _output_ports = [
+        dict(name="random_value", display_name="Random Value"),
+    ]
+    _properties = [
+        dict(
+            name="default_min",
+            value=0,
+            widget_type=NodePropWidgetEnum.INT,
             range=(-1000, 1000),
             tab="settings",
-        )
-
-        # Add default max value using NodeGraphQt's built-in integer widget
-        self.create_property(
-            "default_max",
-            100,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="default_max",
+            value=100,
+            widget_type=NodePropWidgetEnum.INT,
             range=(-1000, 1000),
             tab="settings",
-        )
+        ),
+    ]
 
     def execute(self, input_data):
         # Get input values or use defaults from property widgets

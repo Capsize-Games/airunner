@@ -20,165 +20,146 @@ class LLMRequestNode(BaseLLMNode):
     NODE_NAME = "LLM Request"
     has_exec_in_port: bool = False
     has_exec_out_port: bool = False
-
-    def __init__(self):
-        super().__init__()
-
-        # Add inputs for all LLMRequest parameters
-        self.add_input("do_sample", display_name=True)
-        self.add_input("early_stopping", display_name=True)
-        self.add_input("eta_cutoff", display_name=True)
-        self.add_input("length_penalty", display_name=True)
-        self.add_input("max_new_tokens", display_name=True)
-        self.add_input("min_length", display_name=True)
-        self.add_input("no_repeat_ngram_size", display_name=True)
-        self.add_input("num_beams", display_name=True)
-        self.add_input("num_return_sequences", display_name=True)
-        self.add_input("repetition_penalty", display_name=True)
-        self.add_input("temperature", display_name=True)
-        self.add_input("top_k", display_name=True)
-        self.add_input("top_p", display_name=True)
-        self.add_input("use_cache", display_name=True)
-        self.add_input("do_tts_reply", display_name=True)
-        self.add_input("decoder_start_token_id", display_name=True)
-        self.add_input("use_memory", display_name=True)
-
-        # Add output port for the LLMRequest object
-        self.add_output("llm_request")
-
-        # Boolean parameters using built-in checkbox widget
-        self.create_property(
-            "do_sample",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+    _input_ports = [
+        dict(name="do_sample", display_name="Do Sample"),
+        dict(name="early_stopping", display_name="Early Stopping"),
+        dict(name="eta_cutoff", display_name="ETA Cutoff"),
+        dict(name="length_penalty", display_name="Length Penalty"),
+        dict(name="max_new_tokens", display_name="Max New Tokens"),
+        dict(name="min_length", display_name="Min Length"),
+        dict(name="no_repeat_ngram_size", display_name="No Repeat Ngram Size"),
+        dict(name="num_beams", display_name="Num Beams"),
+        dict(name="num_return_sequences", display_name="Num Return Sequences"),
+        dict(name="repetition_penalty", display_name="Repetition Penalty"),
+        dict(name="temperature", display_name="Temperature"),
+        dict(name="top_k", display_name="Top K"),
+        dict(name="top_p", display_name="Top P"),
+        dict(name="use_cache", display_name="Use Cache"),
+        dict(name="do_tts_reply", display_name="Do TTS Reply"),
+        dict(
+            name="decoder_start_token_id",
+            display_name="Decoder Start Token ID",
+        ),
+        dict(name="use_memory", display_name="Use Memory"),
+    ]
+    _output_ports = [
+        dict(name="llm_request", display_name="LLM Request"),
+    ]
+    _properties = [
+        dict(
+            name="do_sample",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="generation",
-        )
-
-        self.create_property(
-            "early_stopping",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="early_stopping",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="generation",
-        )
-
-        self.create_property(
-            "use_cache",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="use_cache",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="generation",
-        )
-
-        self.create_property(
-            "do_tts_reply",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="do_tts_reply",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="generation",
-        )
-
-        # Integer parameters using built-in integer widget
-        self.create_property(
-            "eta_cutoff",
-            200,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="eta_cutoff",
+            value=200,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 1000),
             tab="advanced",
-        )
-
-        self.create_property(
-            "max_new_tokens",
-            200,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="max_new_tokens",
+            value=200,
+            widget_type=NodePropWidgetEnum.INT,
             range=(1, 2048),
             tab="generation",
-        )
-
-        self.create_property(
-            "min_length",
-            1,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="min_length",
+            value=1,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 100),
             tab="generation",
-        )
-
-        self.create_property(
-            "no_repeat_ngram_size",
-            2,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="no_repeat_ngram_size",
+            value=2,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 10),
             tab="advanced",
-        )
-
-        self.create_property(
-            "num_beams",
-            1,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="num_beams",
+            value=1,
+            widget_type=NodePropWidgetEnum.INT,
             range=(1, 10),
             tab="generation",
-        )
-
-        self.create_property(
-            "num_return_sequences",
-            1,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="num_return_sequences",
+            value=1,
+            widget_type=NodePropWidgetEnum.INT,
             range=(1, 5),
             tab="generation",
-        )
-
-        self.create_property(
-            "top_k",
-            50,
-            widget_type=NodePropWidgetEnum.INT.value,
-            range=(0, 100),
-            tab="advanced",
-        )
-
-        self.create_property(
-            "decoder_start_token_id",
-            None,  # Default to None
-            widget_type=NodePropWidgetEnum.INT.value,
-            range=(-1, 100000),  # Allow -1 or None equivalent for optionality
-            tab="advanced",
-        )
-
-        self.create_property(
-            "use_memory",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
-            tab="advanced",
-        )
-
-        # Float parameters using built-in float widget
-        self.create_property(
-            "length_penalty",
-            1.0,
-            widget_type=NodePropWidgetEnum.FLOAT.value,
+        ),
+        dict(
+            name="repetition_penalty",
+            value=1.0,
+            widget_type=NodePropWidgetEnum.FLOAT,
             range=(0.0, 5.0),
             tab="advanced",
-        )
-
-        self.create_property(
-            "repetition_penalty",
-            1.0,
-            widget_type=NodePropWidgetEnum.FLOAT.value,
-            range=(0.0, 5.0),
-            tab="advanced",
-        )
-
-        self.create_property(
-            "temperature",
-            1.0,
-            widget_type=NodePropWidgetEnum.FLOAT.value,
+        ),
+        dict(
+            name="temperature",
+            value=1.0,
+            widget_type=NodePropWidgetEnum.FLOAT,
             range=(0.0, 2.0),
             tab="generation",
-        )
-
-        self.create_property(
-            "top_p",
-            0.9,
-            widget_type=NodePropWidgetEnum.FLOAT.value,
+        ),
+        dict(
+            name="top_k",
+            value=50,
+            widget_type=NodePropWidgetEnum.INT,
+            range=(0, 100),
+            tab="advanced",
+        ),
+        dict(
+            name="top_p",
+            value=0.9,
+            widget_type=NodePropWidgetEnum.FLOAT,
             range=(0.0, 1.0),
             tab="advanced",
-        )
+        ),
+        dict(
+            name="decoder_start_token_id",
+            value=None,  # Default to None
+            widget_type=NodePropWidgetEnum.INT,
+            range=(-1, 100000),  # Allow -1 or None equivalent for optionality
+            tab="advanced",
+        ),
+        dict(
+            name="use_memory",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
+            tab="advanced",
+        ),
+        dict(
+            name="use_tts_reply",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
+            tab="advanced",
+        ),
+    ]
 
     def execute(self, input_data: Dict):
         """
