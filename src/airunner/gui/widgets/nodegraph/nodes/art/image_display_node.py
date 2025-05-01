@@ -90,7 +90,7 @@ class ImageDisplayNode(BaseArtNode):
 
     def execute(self, input_data):
         image_response = self.get_input_data("image_response", input_data)
-
+        pil_image = None
         if isinstance(image_response, ImageResponse) and image_response.images:
             # Display the first image from the list
             pil_image = image_response.images[0]
@@ -103,8 +103,8 @@ class ImageDisplayNode(BaseArtNode):
                 # Scale pixmap to fit the label while maintaining aspect ratio
                 scaled_pixmap = pixmap.scaled(
                     self.image_widget.widget().size(),
-                    Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
                 )
                 self.image_widget.set_pixmap(scaled_pixmap)
             else:
@@ -114,4 +114,5 @@ class ImageDisplayNode(BaseArtNode):
 
         # Return empty dict as this node primarily displays data
         # Execution flow is handled by the graph executor via exec ports
-        return {"image": pil_image}
+        if pil_image:
+            return {"image": pil_image}
