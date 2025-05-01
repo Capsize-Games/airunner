@@ -18,26 +18,16 @@ echo "Cleaning previous builds..."
 rm -rf ${DIST_PATH}/airunner_windows
 rm -rf ${BUILD_PATH}/airunner
 
-# Run PyInstaller using Wine
+# Run PyInstaller using Wine with xvfb to provide virtual display
 # The paths inside the spec file assume the context of the Wine environment
-# Make sure WINEPREFIX and other Wine env vars are set correctly by the Docker environment
 echo "Running PyInstaller via Wine..."
-wine pyinstaller --noconfirm --distpath ${DIST_PATH} --workpath ${BUILD_PATH} ${SPEC_FILE}
+xvfb-run -a wine64 C:\\Python310\\Scripts\\pyinstaller.exe --noconfirm --distpath ${DIST_PATH} --workpath ${BUILD_PATH} ${SPEC_FILE}
 
 echo "PyInstaller Windows build completed."
 echo "Output located in ${DIST_PATH}/airunner_windows"
 
-# Optional: Add steps here to create an installer (e.g., using Inno Setup within Wine)
-# Example:
-# if [ -f "setup.iss" ]; then
-#   echo "Creating installer using Inno Setup..."
-#   wine "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
-#   echo "Installer created."
-# fi
-
-# Optional: Add steps to copy additional files if needed
-# Example:
-# echo "Copying additional files..."
-# cp some_other_file.txt ${DIST_PATH}/airunner_windows/
+# Copy any additional required files to the output directory
+echo "Copying additional files to output directory..."
+# Add any necessary cp commands here if needed
 
 echo "Build script finished."
