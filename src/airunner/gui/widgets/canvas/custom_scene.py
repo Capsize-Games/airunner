@@ -310,20 +310,7 @@ class CustomScene(
         elif code is EngineResponseCode.INTERRUPTED:
             pass
         elif code is EngineResponseCode.IMAGE_GENERATED:
-            image_response: Optional[ImageResponse] = data.get("message", None)
-            if image_response is None:
-                self.logger.error("No message received from engine")
-                return
-            images = image_response.images
-            if len(images) == 0:
-                self.logger.debug("No images received from engine")
-            elif image_response:
-                outpaint_box_rect = image_response.active_rect
-                self._create_image(
-                    image=images[0].convert("RGBA"),
-                    is_outpaint=image_response.is_outpaint,
-                    outpaint_box_rect=outpaint_box_rect,
-                )
+            self._handle_image_generated_signal(data)
         else:
             self.logger.error(f"Unhandled response code: {code}")
 
@@ -331,6 +318,22 @@ class CustomScene(
 
         if callback:
             callback(data)
+    
+    def _handle_image_generated_signal(self, data: Dict):
+        image_response: Optional[ImageResponse] = data.get("message", None)
+        if image_response is None:
+            self.logger.error("No message received from engine")
+            return
+        images = image_response.images
+        if len(images) == 0:
+            self.logger.debug("No images received from engine")
+        elif image_response:
+            outpaint_box_rect = image_response.active_rect
+            self._create_image(
+                image=images[0].convert("RGBA"),
+                is_outpaint=image_response.is_outpaint,
+                outpaint_box_rect=outpaint_box_rect,
+            )
 
     def display_gpu_memory_error(self, message: str):
         msg_box = QMessageBox()
