@@ -20,6 +20,14 @@ class RunLLMNode(BaseLLMNode):
     """
 
     NODE_NAME = "Run LLM"
+    _input_ports = [
+        dict(name="llm_request", display_name="LLM Request"),
+        dict(name="prompt", display_name="Prompt"),
+    ]
+    _output_ports = [
+        dict(name="llm_response", display_name="LLM Response"),
+        dict(name="llm_message", display_name="LLM Message"),
+    ]
 
     def __init__(self):
         self.signal_handlers = {
@@ -28,14 +36,6 @@ class RunLLMNode(BaseLLMNode):
         super().__init__()
         self._accumulated_response_text = ""
         self._current_llm_response = None
-
-        # Input port for the LLMRequest
-        self.add_input("llm_request", display_name=True)
-        self.add_input("prompt", display_name=True)
-
-        # Output port for the LLMResponse
-        self.llm_response_port = self.add_output("llm_response")
-        self.llm_message_port = self.add_output("llm_message")
 
         # Add settings for LLM execution
         self.add_combo_menu(

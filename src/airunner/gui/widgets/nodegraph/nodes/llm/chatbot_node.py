@@ -22,368 +22,322 @@ class ChatbotNode(BaseLLMNode):
     """
 
     NODE_NAME = "Chatbot"
-
-    def __init__(self):
-        super().__init__()
-
-        # Add inputs for Chatbot parameters
-        self.add_input("name", display_name=True)
-        self.add_input("botname", display_name=True)
-        self.add_input("use_personality", display_name=True)
-        self.add_input("use_mood", display_name=True)
-        self.add_input("use_guardrails", display_name=True)
-        self.add_input("use_system_instructions", display_name=True)
-        self.add_input("use_datetime", display_name=True)
-        self.add_input("assign_names", display_name=True)
-        self.add_input("bot_personality", display_name=True)
-        self.add_input("prompt_template", display_name=True)
-        self.add_input("use_tool_filter", display_name=True)
-        self.add_input("use_gpu", display_name=True)
-        self.add_input("skip_special_tokens", display_name=True)
-        self.add_input("sequences", display_name=True)
-        self.add_input("seed", display_name=True)
-        self.add_input("random_seed", display_name=True)
-        self.add_input("model_version", display_name=True)
-        self.add_input("model_type", display_name=True)
-        self.add_input("dtype", display_name=True)
-        self.add_input("return_result", display_name=True)
-        self.add_input("guardrails_prompt", display_name=True)
-        self.add_input("system_instructions", display_name=True)
-        self.add_input("top_p", display_name=True)
-        self.add_input("min_length", display_name=True)
-        self.add_input("max_new_tokens", display_name=True)
-        self.add_input("repetition_penalty", display_name=True)
-        self.add_input("do_sample", display_name=True)
-        self.add_input("early_stopping", display_name=True)
-        self.add_input("num_beams", display_name=True)
-        self.add_input("temperature", display_name=True)
-        self.add_input("ngram_size", display_name=True)
-        self.add_input("top_k", display_name=True)
-        self.add_input("eta_cutoff", display_name=True)
-        self.add_input("num_return_sequences", display_name=True)
-        self.add_input("decoder_start_token_id", display_name=True)
-        self.add_input("use_cache", display_name=True)
-        self.add_input("length_penalty", display_name=True)
-        self.add_input("backstory", display_name=True)
-        self.add_input("use_backstory", display_name=True)
-        self.add_input("use_weather_prompt", display_name=True)
-        self.add_input("gender", display_name=True)
-        self.add_input("voice_id", display_name=True)
-
-        # Add output port for the Chatbot dictionary
-        self.add_output("chatbot_config")
-
-        # String parameters
-        self.create_property(
-            "chatbot_name",
-            "Chatbot",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+    _input_ports = [
+        dict(name="name", display_name="Name"),
+        dict(name="botname", display_name="Bot Name"),
+        dict(name="use_personality", display_name="Use Personality"),
+        dict(name="use_mood", display_name="Use Mood"),
+        dict(name="use_guardrails", display_name="Use Guardrails"),
+        dict(
+            name="use_system_instructions",
+            display_name="Use System Instructions",
+        ),
+        dict(name="use_datetime", display_name="Use DateTime"),
+        dict(name="assign_names", display_name="Assign Names"),
+        dict(name="bot_personality", display_name="Bot Personality"),
+        dict(name="prompt_template", display_name="Prompt Template"),
+        dict(name="use_tool_filter", display_name="Use Tool Filter"),
+        dict(name="use_gpu", display_name="Use GPU"),
+        dict(name="skip_special_tokens", display_name="Skip Special Tokens"),
+        dict(name="sequences", display_name="Sequences"),
+        dict(name="seed", display_name="Seed"),
+        dict(name="random_seed", display_name="Random Seed"),
+        dict(name="model_version", display_name="Model Version"),
+        dict(name="model_type", display_name="Model Type"),
+        dict(name="dtype", display_name="Data Type"),
+        dict(name="return_result", display_name="Return Result"),
+        dict(name="guardrails_prompt", display_name="Guardrails Prompt"),
+        dict(name="system_instructions", display_name="System Instructions"),
+        dict(name="top_p", display_name="Top P"),
+        dict(name="min_length", display_name="Min Length"),
+        dict(name="max_new_tokens", display_name="Max New Tokens"),
+        dict(name="repetition_penalty", display_name="Repetition Penalty"),
+        dict(name="do_sample", display_name="Do Sample"),
+        dict(name="early_stopping", display_name="Early Stopping"),
+        dict(name="num_beams", display_name="Num Beams"),
+        dict(name="temperature", display_name="Temperature"),
+        dict(name="ngram_size", display_name="Ngram Size"),
+        dict(name="top_k", display_name="Top K"),
+        dict(name="eta_cutoff", display_name="Eta Cutoff"),
+        dict(name="num_return_sequences", display_name="Num Return Sequences"),
+        dict(
+            name="decoder_start_token_id",
+            display_name="Decoder Start Token ID",
+        ),
+        dict(name="use_cache", display_name="Use Cache"),
+        dict(name="length_penalty", display_name="Length Penalty"),
+        dict(name="backstory", display_name="Backstory"),
+        dict(name="use_backstory", display_name="Use Backstory"),
+        dict(name="use_weather_prompt", display_name="Use Weather Prompt"),
+        dict(name="gender", display_name="Gender"),
+        dict(name="voice_id", display_name="Voice ID"),
+    ]
+    _output_ports = [
+        dict(name="chatbot_config", display_name="Chatbot Config"),
+    ]
+    _properties = [
+        dict(
+            name="chatbot_name",
+            value="Chatbot",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        self.create_property(
-            "botname",
-            "Computer",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="botname",
+            value="Computer",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        self.create_property(
-            "bot_personality",
-            "happy. He loves {{ username }}",
-            widget_type=NodePropWidgetEnum.QTEXT_EDIT.value,
+        ),
+        dict(
+            name="bot_personality",
+            value="happy. He loves {{ username }}",
+            widget_type=NodePropWidgetEnum.QTEXT_EDIT,
             tab="personality",
-        )
-
-        self.create_property(
-            "prompt_template",
-            "Mistral 7B Instruct: Default Chatbot",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="prompt_template",
+            value="Mistral 7B Instruct: Default Chatbot",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="basic",
-        )
-
-        self.create_property(
-            "model_version",
-            AIRUNNER_DEFAULT_LLM_HF_PATH,
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="model_version",
+            value=AIRUNNER_DEFAULT_LLM_HF_PATH,
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="model",
-        )
-
-        self.create_property(
-            "model_type",
-            "llm",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="model_type",
+            value="llm",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="model",
-        )
-
-        self.create_property(
-            "dtype",
-            "4bit",
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="dtype",
+            value="4bit",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="model",
-        )
-
-        self.create_property(
-            "guardrails_prompt",
-            AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
-            widget_type=NodePropWidgetEnum.QTEXT_EDIT.value,
+        ),
+        dict(
+            name="guardrails_prompt",
+            value=AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
+            widget_type=NodePropWidgetEnum.QTEXT_EDIT,
             tab="prompts",
-        )
-
-        self.create_property(
-            "system_instructions",
-            AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
-            widget_type=NodePropWidgetEnum.QTEXT_EDIT.value,
+        ),
+        dict(
+            name="system_instructions",
+            value=AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
+            widget_type=NodePropWidgetEnum.QTEXT_EDIT,
             tab="prompts",
-        )
-
-        self.create_property(
-            "backstory",
-            "",
-            widget_type=NodePropWidgetEnum.QTEXT_EDIT.value,
+        ),
+        dict(
+            name="backstory",
+            value="",
+            widget_type=NodePropWidgetEnum.QTEXT_EDIT,
             tab="personality",
-        )
-
-        self.create_property(
-            "gender",
-            Gender.MALE.value,
-            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+        ),
+        dict(
+            name="gender",
+            value="male",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT,
             tab="voice",
-        )
-
-        # Boolean parameters
-        self.create_property(
-            "use_personality",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="use_mood",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="personality",
-        )
-
-        self.create_property(
-            "use_mood",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
-            tab="personality",
-        )
-
-        self.create_property(
-            "use_guardrails",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="use_guardrails",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="prompts",
-        )
-
-        self.create_property(
-            "use_system_instructions",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="use_system_instructions",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="prompts",
-        )
-
-        self.create_property(
-            "use_datetime",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="use_datetime",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="basic",
-        )
-
-        self.create_property(
-            "assign_names",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="assign_names",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="basic",
-        )
-
-        self.create_property(
-            "use_tool_filter",
-            False,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="use_tool_filter",
+            value=False,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="advanced",
-        )
-
-        self.create_property(
-            "use_gpu",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="use_gpu",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="model",
-        )
-
-        self.create_property(
-            "skip_special_tokens",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="skip_special_tokens",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="model",
-        )
-
-        self.create_property(
-            "random_seed",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="random_seed",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="generation",
-        )
-
-        self.create_property(
-            "return_result",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="return_result",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="basic",
-        )
-
-        self.create_property(
-            "do_sample",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="do_sample",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="generation",
-        )
-
-        self.create_property(
-            "early_stopping",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="early_stopping",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="generation",
-        )
-
-        self.create_property(
-            "use_cache",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="use_cache",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="model",
-        )
-
-        self.create_property(
-            "use_backstory",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="use_backstory",
+            value=True,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="personality",
-        )
-
-        self.create_property(
-            "use_weather_prompt",
-            False,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+        ),
+        dict(
+            name="use_weather_prompt",
+            value=False,
+            widget_type=NodePropWidgetEnum.QCHECK_BOX,
             tab="prompts",
-        )
-
-        # Integer parameters
-        self.create_property(
-            "sequences",
-            1,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="sequences",
+            value=1,
+            widget_type=NodePropWidgetEnum.INT,
             range=(1, 10),
             tab="generation",
-        )
-
-        self.create_property(
-            "seed",
-            42,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="seed",
+            value=42,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 999999),
             tab="generation",
-        )
-
-        self.create_property(
-            "top_p",
-            900,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="top_p",
+            value=900,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 1000),
             tab="generation",
-        )
-
-        self.create_property(
-            "min_length",
-            1,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="min_length",
+            value=1,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 100),
             tab="generation",
-        )
-
-        self.create_property(
-            "max_new_tokens",
-            1000,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="max_new_tokens",
+            value=1000,
+            widget_type=NodePropWidgetEnum.INT,
             range=(1, 2048),
             tab="generation",
-        )
-
-        self.create_property(
-            "repetition_penalty",
-            100,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="repetition_penalty",
+            value=100,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 200),
             tab="generation",
-        )
-
-        self.create_property(
-            "num_beams",
-            1,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="num_beams",
+            value=1,
+            widget_type=NodePropWidgetEnum.INT,
             range=(1, 10),
             tab="generation",
-        )
-
-        self.create_property(
-            "temperature",
-            1000,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="temperature",
+            value=1000,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 2000),
             tab="generation",
-        )
-
-        self.create_property(
-            "ngram_size",
-            2,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="ngram_size",
+            value=2,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 10),
             tab="generation",
-        )
-
-        self.create_property(
-            "top_k",
-            10,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="top_k",
+            value=10,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 100),
             tab="generation",
-        )
-
-        self.create_property(
-            "eta_cutoff",
-            10,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="eta_cutoff",
+            value=10,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 100),
             tab="advanced",
-        )
-
-        self.create_property(
-            "num_return_sequences",
-            1,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="num_return_sequences",
+            value=1,
+            widget_type=NodePropWidgetEnum.INT,
             range=(1, 5),
             tab="generation",
-        )
-
-        self.create_property(
-            "decoder_start_token_id",
-            None,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="decoder_start_token_id",
+            value=None,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 1000),
             tab="advanced",
-        )
-
-        self.create_property(
-            "length_penalty",
-            100,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="length_penalty",
+            value=100,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 200),
             tab="generation",
-        )
-
-        self.create_property(
-            "voice_id",
-            None,
-            widget_type=NodePropWidgetEnum.INT.value,
+        ),
+        dict(
+            name="voice_id",
+            value=None,
+            widget_type=NodePropWidgetEnum.INT,
             range=(0, 1000),
             tab="voice",
-        )
+        ),
+    ]
 
     def execute(self, input_data: Dict):
         """
