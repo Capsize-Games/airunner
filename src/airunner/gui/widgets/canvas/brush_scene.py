@@ -205,8 +205,11 @@ class BrushScene(CustomScene):
 
         pixmap = QPixmap.fromImage(active_image)
 
-        # save the image
-        self.active_item.setPixmap(pixmap)
+        # save the image - use updateImage if setPixmap is not available
+        if hasattr(self.active_item, "setPixmap"):
+            self.active_item.setPixmap(pixmap)
+        elif hasattr(self.active_item, "updateImage"):
+            self.active_item.updateImage(active_image)
 
     def create_line(self, event):
         scene_pt = event.scenePos()
