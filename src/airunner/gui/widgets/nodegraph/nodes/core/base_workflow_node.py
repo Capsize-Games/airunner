@@ -20,8 +20,21 @@ class BaseWorkflowNode(
     has_exec_in_port: bool = True
     has_exec_out_port: bool = True
 
+    _input_ports = []
+    _output_ports = []
+    _properties = []
+    _registered_input_ports = {}
+    _registered_output_ports = {}
+
     def __init__(self):
         super().__init__()
+        self._initialize_ports()
+
+        # Connect to the connection changed signals
+        if hasattr(self.graph, "connection_changed"):
+            self.graph.connection_changed.connect(self._on_connection_changed)
+
+    def _initialize_ports(self):
         # Add standard execution ports
         # Allow only one connection for execution ports (1-to-1)
         if self.has_exec_in_port:
@@ -38,10 +51,23 @@ class BaseWorkflowNode(
                 display_name=False,
                 painter_func=self._draw_exec_port,
             )
-
-        # Connect to the connection changed signals
-        if hasattr(self.graph, "connection_changed"):
-            self.graph.connection_changed.connect(self._on_connection_changed)
+        for port in self._input_ports:
+            self._registered_input_ports[port["name"]] = self.add_input(
+                port["name"],
+                display_name=port.get("display_name", True),
+            )
+        for port in self._output_ports:
+            self._registered_output_ports[port["name"]] = self.add_output(
+                port["name"],
+                display_name=port.get("display_name", True),
+            )
+        for prop in self._properties:
+            self.create_property(
+                prop["name"],
+                prop["value"],
+                widget_type=prop.get("widget_type", None),
+                tab=prop.get("tab", "basic"),
+            )
 
     def on_input_connected(self, in_port, out_port):
         """

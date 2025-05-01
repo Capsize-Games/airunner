@@ -1,4 +1,3 @@
-import time
 from typing import Dict
 
 from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
@@ -16,6 +15,23 @@ class GenerateImageNode(BaseArtNode):
     """
 
     NODE_NAME = "Generate Image"
+    _input_ports = [
+        {"name": "controlnet", "display_name": True},
+        {"name": "image_to_image", "display_name": True},
+        {"name": "image_request", "display_name": True},
+    ]
+    _output_ports = [
+        {"name": "image_response", "display_name": True},
+        {"name": "image", "display_name": True},
+    ]
+    _propertes = [
+        {
+            "name": "unload_after_generation",
+            "value": True,
+            "widget_type": NodePropWidgetEnum.QCHECK_BOX.value,
+            "tab": "basic",
+        }
+    ]
 
     def __init__(self):
         self.signal_handlers = {
@@ -23,22 +39,6 @@ class GenerateImageNode(BaseArtNode):
         }
         self._pending_request = False
         super().__init__()
-        self.image_request_port = self.add_input(
-            "image_request", display_name=True
-        )
-        self.controlnet_port = self.add_input("controlnet", display_name=True)
-        self.image_to_image_port = self.add_input(
-            "image_to_image", display_name=True
-        )
-        self.image_response_port = self.add_output(
-            "image_response", display_name=True
-        )
-        self.create_property(
-            "unload_after_generation",
-            True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
-            tab="basic",
-        )
 
     def _generate_image(self, image_request: ImageRequest):
         # Store the current node ID with the request to identify this node
