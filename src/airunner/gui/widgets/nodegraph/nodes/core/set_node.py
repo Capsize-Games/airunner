@@ -26,9 +26,17 @@ class SetNode(BaseCoreNode):
     - The output port passes the set value to the next node
     - When executed, the selected variable will be updated with the input value
     """
+
     NODE_NAME = "Set Variable"
     has_exec_in_port: bool = True
     has_exec_out_port: bool = True
+    _input_ports = [
+        {"name": "variable", "display_name": True},
+        {"name": "value", "display_name": True},
+    ]
+    _output_ports = [
+        {"name": "value", "display_name": True},
+    ]
 
     def __init__(self):
         super().__init__()
@@ -43,11 +51,6 @@ class SetNode(BaseCoreNode):
             None,
             widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
         )
-        self.variable_input_port = self.add_input(
-            "variable", display_name=True
-        )
-        self.value_input_port = self.add_input("value", display_name=True)
-        self.value_output_port = self.add_output("value", display_name=True)
         if hasattr(self, "view"):
             if hasattr(self.view, "get_input_text") and callable(
                 getattr(self.view, "get_input_text")
@@ -160,9 +163,7 @@ class SetNode(BaseCoreNode):
                     )
                     self._on_variable_connected(connected_node)
 
-    def _on_variable_connected(
-        self, variable_node, variable
-    ):
+    def _on_variable_connected(self, variable_node, variable):
         """Process a connection to a variable node.
 
         Args:
