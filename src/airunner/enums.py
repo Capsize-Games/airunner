@@ -223,6 +223,8 @@ class SignalCode(Enum):
     ENABLE_WORKFLOWS_TOGGLED = enum.auto()
     SEND_IMAGE_TO_CANVAS_SIGNAL = enum.auto()
     RUN_WORKFLOW_SIGNAL = enum.auto()
+    STOP_WORKFLOW_SIGNAL = enum.auto()
+    PAUSE_WORKFLOW_SIGNAL = enum.auto()
     INPUT_IMAGE_SETTINGS_CHANGED = enum.auto()
 
     # Video generation signals
