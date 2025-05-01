@@ -31,6 +31,7 @@ from PySide6.QtGui import QPixmap, QImage
 
 # NodeGraphQt imports
 from NodeGraphQt import NodeBaseWidget, Port
+from NodeGraphQt.constants import NodePropWidgetEnum
 
 # Airunner imports
 from airunner.enums import SignalCode
@@ -166,7 +167,7 @@ class VideoPlayerWidget(NodeBaseWidget):
 
         # Current frame preview
         self.frame_preview = QLabel("No Frame")
-        self.frame_preview.setAlignment(Qt.AlignCenter)
+        self.frame_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.frame_preview.setMinimumSize(200, 200)
 
         # Add video widget to layout
@@ -180,7 +181,7 @@ class VideoPlayerWidget(NodeBaseWidget):
         self.play_button.clicked.connect(self._toggle_play)
 
         # Timeline slider
-        self.timeline_slider = QSlider(Qt.Horizontal)
+        self.timeline_slider = QSlider(Qt.Orientation.Horizontal)
         self.timeline_slider.setRange(
             0, 1000
         )  # Use 0-1000 for percentage precision
@@ -267,7 +268,9 @@ class VideoPlayerWidget(NodeBaseWidget):
             # Scale for preview
             preview_size = self.frame_preview.size()
             scaled_pixmap = pixmap.scaled(
-                preview_size, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                preview_size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
             )
 
             # Display the frame
@@ -278,7 +281,7 @@ class VideoPlayerWidget(NodeBaseWidget):
 
     def _handle_playback_state(self, state):
         """Handle media player state changes"""
-        if state == QMediaPlayer.PlayingState:
+        if state == QMediaPlayer.PlaybackState.PlayingState:
             self.play_button.setText("Pause")
             self._is_playing = True
             self._update_timer.start()
@@ -391,7 +394,10 @@ class VideoNode(BaseWorkflowNode):
         """Set up the configurable properties for the node."""
         # Add a property for direct path input
         self.create_property(
-            "video_path", "", widget_type="line_edit", tab="settings"
+            "video_path",
+            "",
+            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
+            tab="settings",
         )
 
     def _on_property_changed(self, prop_name, value):

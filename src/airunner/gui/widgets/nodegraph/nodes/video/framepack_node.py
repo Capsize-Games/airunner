@@ -78,37 +78,37 @@ class FramePackNode(BaseWorkflowNode):
         self.create_property(
             "duration",
             5.0,
-            widget_type=NodePropWidgetEnum.QDOUBLESPIN_BOX.value,
+            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
             tab="settings",
         )
         self.create_property(
             "steps",
             20,
-            widget_type=NodePropWidgetEnum.QSPIN_BOX.value,
+            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
             tab="settings",
         )
         self.create_property(
             "guidance_scale",
             4.0,
-            widget_type=NodePropWidgetEnum.QDOUBLESPIN_BOX.value,
+            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
             tab="settings",
         )
         self.create_property(
             "cfg",
             7.5,
-            widget_type=NodePropWidgetEnum.QDOUBLESPIN_BOX.value,
+            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
             tab="settings",
         )
         self.create_property(
             "seed",
             42,
-            widget_type=NodePropWidgetEnum.QSPIN_BOX.value,
+            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
             tab="settings",
         )
         self.create_property(
             "use_random_seed",
             True,
-            widget_type=NodePropWidgetEnum.QCHECK_BOX.value,
+            widget_type=NodePropWidgetEnum.QLINE_EDIT.value,
             tab="settings",
         )
 
