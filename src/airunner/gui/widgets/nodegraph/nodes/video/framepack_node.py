@@ -137,7 +137,6 @@ class FramePackNode(BaseWorkflowNode):
             else None
         )
         if input_image is None:
-            self.logger.error("No input image provided")
             return {"error": "No input image provided", "video": None}
 
         # Get property values
