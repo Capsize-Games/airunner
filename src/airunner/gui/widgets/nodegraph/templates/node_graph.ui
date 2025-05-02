@@ -62,37 +62,65 @@
       <property name="verticalSpacing">
        <number>0</number>
       </property>
-      <item row="0" column="8">
-       <widget class="QPushButton" name="load_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
+      <item row="0" column="4">
+       <widget class="QPushButton" name="new_button">
         <property name="toolTip">
-         <string>Load workflow</string>
+         <string>New workflow</string>
         </property>
         <property name="text">
          <string/>
         </property>
         <property name="icon">
          <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/folder.svg</normaloff>:/dark/icons/feather/dark/folder.svg</iconset>
+          <normaloff>:/dark/icons/feather/dark/file-plus.svg</normaloff>:/dark/icons/feather/dark/file-plus.svg</iconset>
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QPushButton" name="pause_button">
+      <item row="0" column="8">
+       <widget class="QPushButton" name="delete_button">
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
         </property>
         <property name="toolTip">
-         <string>Pause workflow</string>
+         <string>Delete workflow</string>
         </property>
         <property name="text">
          <string/>
         </property>
         <property name="icon">
          <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/pause-circle.svg</normaloff>:/dark/icons/feather/dark/pause-circle.svg</iconset>
+          <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="stop_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Stop workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/stop-circle.svg</normaloff>:/dark/icons/feather/dark/stop-circle.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QPushButton" name="clear_button">
+        <property name="toolTip">
+         <string>Clear workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/x-circle.svg</normaloff>:/dark/icons/feather/dark/x-circle.svg</iconset>
         </property>
        </widget>
       </item>
@@ -113,67 +141,20 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="9">
-       <widget class="QPushButton" name="delete_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="toolTip">
-         <string>Delete workflow</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="7">
-       <widget class="QPushButton" name="edit_button">
+       <widget class="QPushButton" name="load_button">
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
         </property>
         <property name="toolTip">
-         <string>Edit workflow</string>
+         <string>Load workflow</string>
         </property>
         <property name="text">
          <string/>
         </property>
         <property name="icon">
          <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/edit.svg</normaloff>:/dark/icons/feather/dark/edit.svg</iconset>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="3">
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>729</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="0" column="2">
-       <widget class="QPushButton" name="stop_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="toolTip">
-         <string>Stop workflow</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/stop-circle.svg</normaloff>:/dark/icons/feather/dark/stop-circle.svg</iconset>
+          <normaloff>:/dark/icons/feather/dark/folder.svg</normaloff>:/dark/icons/feather/dark/folder.svg</iconset>
         </property>
        </widget>
       </item>
@@ -194,31 +175,33 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="6">
-       <widget class="QPushButton" name="clear_button">
-        <property name="toolTip">
-         <string>Clear workflow</string>
+      <item row="0" column="3">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
-        <property name="text">
-         <string/>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>729</width>
+          <height>20</height>
+         </size>
         </property>
-        <property name="icon">
-         <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/x-circle.svg</normaloff>:/dark/icons/feather/dark/x-circle.svg</iconset>
-        </property>
-       </widget>
+       </spacer>
       </item>
-      <item row="0" column="4">
-       <widget class="QPushButton" name="new_button">
+      <item row="0" column="1">
+       <widget class="QPushButton" name="pause_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
         <property name="toolTip">
-         <string>New workflow</string>
+         <string>Pause workflow</string>
         </property>
         <property name="text">
          <string/>
         </property>
         <property name="icon">
          <iconset resource="../../../resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/file-plus.svg</normaloff>:/dark/icons/feather/dark/file-plus.svg</iconset>
+          <normaloff>:/dark/icons/feather/dark/pause-circle.svg</normaloff>:/dark/icons/feather/dark/pause-circle.svg</iconset>
         </property>
        </widget>
       </item>
@@ -291,159 +274,13 @@
  <resources>
   <include location="../../../resources/feather.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>pause_button</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_pause_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>55</x>
-     <y>17</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>61</x>
-     <y>-12</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>play_button</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_play_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>28</x>
-     <y>16</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>35</x>
-     <y>-11</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>stop_button</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_stop_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>97</x>
-     <y>24</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>152</x>
-     <y>2</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>save_button</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_save_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1170</x>
-     <y>25</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1113</x>
-     <y>-11</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>clear_button</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_clear_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1206</x>
-     <y>27</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1201</x>
-     <y>-13</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>edit_button</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_edit_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1239</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1242</x>
-     <y>-13</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>load_button</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_load_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1280</x>
-     <y>23</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1276</x>
-     <y>-2</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>delete_button</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_delete_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1311</x>
-     <y>19</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1054</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>new_button</sender>
-   <signal>clicked()</signal>
-   <receiver>node_graph_widget</receiver>
-   <slot>on_new_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>1148</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1330</x>
-     <y>1</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>on_play_button_clicked()</slot>
   <slot>on_pause_button_clicked()</slot>
   <slot>on_stop_button_clicked()</slot>
   <slot>on_save_button_clicked()</slot>
   <slot>on_edit_button_clicked()</slot>
-  <slot>on_load_button_clicked()</slot>
   <slot>on_delete_button_clicked()</slot>
   <slot>on_clear_button_clicked()</slot>
   <slot>on_new_button_clicked()</slot>

@@ -1075,7 +1075,6 @@ class MainWindow(
         )
 
     def on_toggle_tts(self, data: Dict = None, val=None):
-        print("ON TOGGLE TTS", data, val)
         if val is None:
             val = data.get(
                 "enabled", not self.application_settings.tts_enabled
