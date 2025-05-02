@@ -37,6 +37,9 @@ class InputImage(BaseWidget):
         self.ui.strength_slider_widget.setProperty(
             "settings_property", f"{self.settings_key}.strength"
         )
+        self.ui.strength_slider_widget.setProperty(
+            f"{self.settings_key}.strength", self.current_settings.strength
+        )
         self._scene = None
         self.setup_scene()
         self.load_image_from_settings()
