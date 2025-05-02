@@ -38,7 +38,6 @@ class SignalCode(Enum):
     RAG_RELOAD_INDEX_SIGNAL = "rag_reload_index_signal"
     ENABLE_BRUSH_TOOL_SIGNAL = "enable_brush_tool_signal"
     ENABLE_ERASER_TOOL_SIGNAL = "enable_eraser_tool_signal"
-    ENABLE_SELECTION_TOOL_SIGNAL = "enable_selection_tool_signal"
     ENABLE_MOVE_TOOL_SIGNAL = "enable_move_tool_signal"
     INTERRUPT_PROCESS_SIGNAL = "interrupt_process_signal"
     INTERRUPT_IMAGE_GENERATION_SIGNAL = "interrupt_image_generation_signal"
