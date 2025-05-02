@@ -1490,8 +1490,6 @@ class BaseAgent(
         self._log_system_prompt(
             action, system_prompt, rag_system_prompt, llm_request
         )
-        print("x" * 100)
-        print("system_prompt", system_prompt)
         self._update_system_prompt(system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._update_memory_settings()
