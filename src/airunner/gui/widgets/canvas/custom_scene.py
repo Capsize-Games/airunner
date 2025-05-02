@@ -1014,6 +1014,8 @@ class CustomScene(
         return image
 
     def _apply_filter(self, _filter_object: ImageFilter.Filter):
+        if self.settings_key != "drawing_pad_settings":
+            return
         self._add_image_to_undo(self.image_backup)
         self.previewing_filter = False
         self.image_backup = None
@@ -1027,6 +1029,8 @@ class CustomScene(
         return image
 
     def _preview_filter(self, image: Image, filter_object: ImageFilter.Filter):
+        if self.settings_key != "drawing_pad_settings":
+            return
         if not image:
             return
         if not self.previewing_filter:
