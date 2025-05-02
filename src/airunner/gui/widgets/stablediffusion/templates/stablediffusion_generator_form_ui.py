@@ -147,6 +147,7 @@ class Ui_stablediffusion_generator_form(object):
         self.sdxl_settings_container.setObjectName(u"sdxl_settings_container")
         self.sdxl_settings = QVBoxLayout(self.sdxl_settings_container)
         self.sdxl_settings.setObjectName(u"sdxl_settings")
+        self.sdxl_settings.setContentsMargins(0, 0, 0, 0)
         self.use_refiner_checkbox = QCheckBox(self.sdxl_settings_container)
         self.use_refiner_checkbox.setObjectName(u"use_refiner_checkbox")
 
