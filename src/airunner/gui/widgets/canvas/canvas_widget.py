@@ -146,10 +146,6 @@ class CanvasWidget(BaseWidget):
         )
 
     @Slot(bool)
-    def on_mask_button_toggled(self, val: bool):
-        self.drawing_pad_settings.mask_layer_enabled = val
-
-    @Slot(bool)
     def on_active_grid_area_button_toggled(self, val: bool):
         self.emit_signal(
             SignalCode.TOGGLE_TOOL,
