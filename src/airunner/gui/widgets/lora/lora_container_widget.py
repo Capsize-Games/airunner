@@ -1,7 +1,7 @@
 import os
 
-from PySide6.QtCore import Slot, QSize, QThread
-from PySide6.QtWidgets import QWidget, QSizePolicy
+from PySide6.QtCore import Slot, QSize, QThread, QTimer
+from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.models import scan_path_for_lora
@@ -152,17 +152,32 @@ class LoraContainerWidget(BaseWidget):
         # remove spacer from end of self.ui.scrollAreaWidgetContents.layout()
         if self.spacer:
             self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
+            self.spacer.setParent(None)  # Fully remove from parent
+            self.spacer.deleteLater()  # Schedule for deletion
+            self.spacer = None  # Clear reference
 
     def add_spacer(self):
         # add spacer to end of self.ui.scrollAreaWidgetContents.layout()
-        if not self.spacer:
-            self.spacer = QWidget()
-            self.spacer.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-            )
-        else:
-            self.remove_spacer()
+        self.remove_spacer()  # Always remove old spacer first
+
+        # Create a new visible spacer widget with clear visual presence
+        self.spacer = QWidget()
+        self.spacer.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        self.spacer.setMinimumHeight(100)  # Make it substantially taller
+
+        # Add to layout
         self.ui.scrollAreaWidgetContents.layout().addWidget(self.spacer)
+
+        # Force layout update to ensure spacer takes effect
+        self.ui.scrollAreaWidgetContents.layout().update()
+        QApplication.processEvents()
+
+        # Schedule another layout update after events are processed
+        QTimer.singleShot(
+            50, lambda: self.ui.scrollAreaWidgetContents.layout().update()
+        )
 
     def _add_lora(self, lora):
         if lora is None:
