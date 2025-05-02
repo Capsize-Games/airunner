@@ -1958,6 +1958,12 @@ class BaseDiffusersModelManager(BaseModelManager):
                     "strength": self.outpaint_settings.strength / 100.0,
                 }
             )
+        elif self.is_img2img:
+            data.update(
+                {
+                    "strength": self.image_to_image_settings.strength / 100.0,
+                }
+            )
         return data
 
     @staticmethod
