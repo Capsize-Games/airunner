@@ -1,7 +1,7 @@
 from typing import Optional, Dict
 
 from PySide6 import QtGui
-from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QTimer, QSize
+from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QSize
 from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen
 from PySide6.QtWidgets import (
     QGraphicsView,
