@@ -57,7 +57,9 @@ class BaseWorkflowNode(BaseNode):
             and hasattr(self.graph, "connection_changed")
         ):
             self.graph.connection_changed.connect(self._on_connection_changed)
-        self.widget = self.widget_class_()
+        # Only instantiate widget if widget_class_ is defined
+        if self.widget_class_:
+            self.widget = self.widget_class_()
 
     def _initialize_ports(self):
         # Add standard execution ports
