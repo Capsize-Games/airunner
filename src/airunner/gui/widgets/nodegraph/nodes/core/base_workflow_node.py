@@ -4,14 +4,12 @@ from PySide6.QtCore import QPointF, Qt
 
 from NodeGraphQt import BaseNode
 
-from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.gui.widgets.base_widget import BaseWidget
 
 
 class BaseWorkflowNode(
-    MediatorMixin,
-    SettingsMixin,
     BaseNode,
+    BaseWidget,
 ):
     """
     Base class for all workflow nodes in the application.
@@ -47,12 +45,19 @@ class BaseWorkflowNode(
     _registered_input_ports: Dict[str, Any] = {}
     _registered_output_ports: Dict[str, Any] = {}
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        BaseWidget.__init__(self, *args, **kwargs)
+
+        # Initialize ports specific to BaseWorkflowNode
         self._initialize_ports()
 
-        # Connect to the connection changed signals
-        if hasattr(self.graph, "connection_changed"):
+        # Connect signals (ensure graph exists)
+        if (
+            hasattr(self, "graph")
+            and self.graph
+            and hasattr(self.graph, "connection_changed")
+        ):
             self.graph.connection_changed.connect(self._on_connection_changed)
 
     def _initialize_ports(self):
