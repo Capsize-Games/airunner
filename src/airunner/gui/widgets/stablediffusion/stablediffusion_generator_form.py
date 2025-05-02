@@ -695,7 +695,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
 
     @Slot(str)
-    def on_negative_crops_coords_top_left_x_textChanged(self, val: str):
+    def on_negative_crops_coord_top_left_x_textChanged(self, val: str):
         val = 0 if val == "" or val is None else val
         negative_crops_coords_top_left = (
             self.generator_settings.negative_crops_coords_top_left
@@ -707,7 +707,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
 
     @Slot(str)
-    def on_negative_crops_coords_top_left_y_textChanged(self, val: str):
+    def on_negative_crops_coord_top_left_y_textChanged(self, val: str):
         val = 0 if val == "" or val is None else val
         negative_crops_coords_top_left = (
             self.generator_settings.negative_crops_coords_top_left
