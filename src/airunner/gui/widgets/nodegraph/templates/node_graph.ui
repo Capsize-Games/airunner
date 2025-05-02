@@ -280,7 +280,6 @@
   <slot>on_pause_button_clicked()</slot>
   <slot>on_stop_button_clicked()</slot>
   <slot>on_save_button_clicked()</slot>
-  <slot>on_edit_button_clicked()</slot>
   <slot>on_delete_button_clicked()</slot>
   <slot>on_clear_button_clicked()</slot>
   <slot>on_new_button_clicked()</slot>
