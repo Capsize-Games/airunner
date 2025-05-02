@@ -318,7 +318,7 @@ class CustomScene(
 
         if callback:
             callback(data)
-    
+
     def _handle_image_generated_signal(self, data: Dict):
         image_response: Optional[ImageResponse] = data.get("message", None)
         if image_response is None:
@@ -835,11 +835,6 @@ class CustomScene(
                 visible_pos_x = absolute_pos.x() - canvas_offset.x()
                 visible_pos_y = absolute_pos.y() - canvas_offset.y()
                 self.item.setPos(visible_pos_x, visible_pos_y)
-        else:
-            # For images without a specific position, store position (0,0) as absolute
-            if self.item:
-                self._original_item_positions[self.item] = QPointF(0, 0)
-                self.item.setPos(-canvas_offset.x(), -canvas_offset.y())
 
         q_image = ImageQt.ImageQt(image)
 
@@ -859,9 +854,6 @@ class CustomScene(
                 visible_pos_x = absolute_pos.x() - canvas_offset.x()
                 visible_pos_y = absolute_pos.y() - canvas_offset.y()
                 self.item.setPos(visible_pos_x, visible_pos_y)
-            else:
-                self._original_item_positions[self.item] = QPointF(0, 0)
-                self.item.setPos(-canvas_offset.x(), -canvas_offset.y())
 
         self.update()
         self.initialize_image(image)
