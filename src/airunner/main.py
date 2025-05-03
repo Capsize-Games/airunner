@@ -13,7 +13,8 @@ Do not change the order of the imports.
 from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 import os
 
-if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
+#if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
+if False is True:
     from facehuggershield.huggingface import activate
 
     airunner_path = os.path.join(

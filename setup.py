@@ -55,8 +55,8 @@ extras_require = {
         "EbookLib==0.18",
         "html2text==2024.2.26",
         "rake_nltk==1.0.6",
-        "tf-keras==2.18.0",
-        "peft==0.14.0",
+        # "tf-keras==2.18.0", # Removed as it causes issues on Windows with dlopenflags
+        "peft==0.15.2",
         "lxml_html_clean==0.4.1",
         # "flash_attn==2.7.4.post1",
         # Summarizations (basic)
@@ -100,7 +100,7 @@ setup(
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "src"},
     packages=find_packages("src"),
-    python_requires=">=3.10.8,<3.11",
+    python_requires=">=3.10.11,<3.11.0",
     install_requires=[
         "torch",
         "torchvision",
