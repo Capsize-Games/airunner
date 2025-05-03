@@ -634,38 +634,6 @@
  </resources>
  <connections>
   <connection>
-   <sender>generate_button</sender>
-   <signal>clicked()</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_generate_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>539</x>
-     <y>814</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>705</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>interrupt_button</sender>
-   <signal>clicked()</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_interrupt_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>575</x>
-     <y>814</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>745</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>pushButton</sender>
    <signal>clicked()</signal>
    <receiver>stablediffusion_generator_form</receiver>
@@ -736,8 +704,8 @@
    <slot>on_use_refiner_checkbox_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>30</x>
-     <y>483</y>
+     <x>29</x>
+     <y>503</y>
     </hint>
     <hint type="destinationlabel">
      <x>-3</x>
@@ -816,8 +784,6 @@
   <slot>handle_model_changed(QString)</slot>
   <slot>handle_scheduler_changed(QString)</slot>
   <slot>toggle_variation(bool)</slot>
-  <slot>handle_generate_button_clicked()</slot>
-  <slot>handle_interrupt_button_clicked()</slot>
   <slot>action_clicked_button_save_prompts()</slot>
   <slot>save_settings()</slot>
   <slot>handle_pipeline_changed(QString)</slot>
