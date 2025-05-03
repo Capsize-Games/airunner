@@ -14,7 +14,7 @@ extras_require = {
         "nodegraphqt==0.6.38",
     ],
     "linux": [  # Linux-specific dependencies
-        "faiss-gpu==1.7.2",
+        # "faiss-gpu==1.7.2",
         "tensorrt==10.9.0.34",
     ],
     "dev": [  # Development dependencies
@@ -77,6 +77,7 @@ extras_require = {
 
 extras_require["all"] = []
 extras_require["all_dev"] = []
+extras_require["windows"] = []
 
 for k, v in extras_require.items():
     if k == "all":
@@ -84,6 +85,7 @@ for k, v in extras_require.items():
     if k != "dev":
         extras_require["all"].extend(v)
     extras_require["all_dev"].extend(v)
+    extras_require["windows"].extend(v if k != "linux" else [])
 
 setup(
     name="airunner",
@@ -98,7 +100,7 @@ setup(
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "src"},
     packages=find_packages("src"),
-    python_requires=">=3.10.12,<3.11",
+    python_requires=">=3.10.8,<3.11",
     install_requires=[
         "torch",
         "torchvision",
