@@ -2,6 +2,8 @@ from typing import List, Type, Optional, Dict, Any
 
 from sqlalchemy.orm import joinedload
 
+from PySide6.QtWidgets import QApplication
+
 from airunner.data.models import (
     Chatbot,
     AIModels,
@@ -74,6 +76,10 @@ class SettingsMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        app = QApplication.instance()
+        if app:
+            self.api = app.api
 
     @property
     def session_manager(self):
