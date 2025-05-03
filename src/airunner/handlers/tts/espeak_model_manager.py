@@ -73,21 +73,34 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Load and initialize the Espeak engine.
         """
+        # If already loading or loaded, don't attempt to reinitialize
+        if self.model_status in [ModelStatus.LOADING, ModelStatus.LOADED]:
+            return
+
         self.logger.debug("Initializing espeak")
-        self.unload()
+        # Don't call unload() here as it triggers the cycle
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
-        self._engine = pyttsx3.init()
-        self._initialize()
-        self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
+        try:
+            self._engine = pyttsx3.init()
+            self._initialize()
+            self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
+        except Exception as e:
+            self.logger.error(f"Failed to initialize espeak: {e}")
+            self._engine = None
+            self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
 
     def unload(self):
         """
         Unload the Espeak engine and release resources.
         """
+        # If already unloading or unloaded, don't try again
+        if self.model_status in [ModelStatus.UNLOADED]:
+            return
+
         self.logger.debug("Unloading espeak")
-        self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
-        self._engine = None
         self.change_model_status(ModelType.TTS, ModelStatus.UNLOADED)
+        self._engine = None
+        # No need to change status again after setting it to UNLOADED
 
     def unblock_tts_generator_signal(self):
         """
@@ -105,17 +118,34 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Initialize the Espeak engine with settings.
         """
-        voice = self.voice
-        if self.espeak_settings and self.gender != self.espeak_settings.gender:
-            if self.gender == "Male":
-                voice = "male1"
-            else:
-                self.gender == "Female"
-                voice = "female1"
-        elif not self.espeak_settings:
-            self.logger.warning("Espeak settings are not defined.")
-        self._engine.setProperty("rate", float(self.rate))
-        self._engine.setProperty("volume", self.volume / 100.0)
-        self._engine.setProperty("pitch", float(self.pitch))
-        self._engine.setProperty("voice", f"{voice}")
-        self._engine.setProperty("language", self.language)
+        if not self._engine:
+            self.logger.error(
+                "Engine not initialized before calling _initialize"
+            )
+            return
+
+        try:
+            voice = self.voice
+            if (
+                self.espeak_settings
+                and self.gender != self.espeak_settings.gender
+            ):
+                if self.gender == "Male":
+                    voice = "male1"
+                else:
+                    self.gender == "Female"
+                    voice = "female1"
+            elif not self.espeak_settings:
+                self.logger.warning("Espeak settings are not defined.")
+
+            # Configure the engine properties
+            self._engine.setProperty("rate", float(self.rate))
+            self._engine.setProperty("volume", self.volume / 100.0)
+            self._engine.setProperty("pitch", float(self.pitch))
+            self._engine.setProperty("voice", f"{voice}")
+            self._engine.setProperty("language", self.language)
+        except Exception as e:
+            self.logger.error(
+                f"Error initializing espeak engine properties: {e}"
+            )
+            # Don't set state to failed here as the engine is created but properties failed

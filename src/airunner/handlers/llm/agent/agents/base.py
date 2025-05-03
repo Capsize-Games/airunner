@@ -143,7 +143,10 @@ class BaseAgent(
 
     @property
     def rag_mode_enabled(self) -> bool:
-        return self.rag_enabled and self.action is LLMActionType.PERFORM_RAG_SEARCH
+        return (
+            self.rag_enabled
+            and self.action is LLMActionType.PERFORM_RAG_SEARCH
+        )
 
     @property
     def conversation_summaries(self) -> str:
@@ -1224,12 +1227,10 @@ class BaseAgent(
         if (
             type(self.chat_store) is DatabaseChatStore and not self.use_memory
         ) or (type(self.chat_store) is SimpleChatStore and self.use_memory):
-            print("clearing", self.use_memory)
             self.chat_memory = None
             self.chat_store = None
         self.chat_engine._memory = self.chat_memory
         self.chat_engine_tool.chat_engine = self.chat_engine
-        print("memory settings are now", type(self.chat_store))
 
     def _perform_tool_call(self, action: LLMActionType, **kwargs):
         if action is LLMActionType.CHAT:
@@ -1561,13 +1562,10 @@ class BaseAgent(
 
     def do_interrupt_process(self):
         if self.do_interrupt:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {
-                    "response": LLMResponse(
-                        name=self.botname,
-                    )
-                },
+            self.api.send_llm_text_streamed_signal(
+                LLMResponse(
+                    name=self.botname,
+                )
             )
         return self.do_interrupt
 
@@ -1580,17 +1578,13 @@ class BaseAgent(
         do_tts_reply: bool = True,
     ):
         if response != self._complete_response and not do_not_display:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {
-                    "response": LLMResponse(
-                        message=response,
-                        is_first_message=is_first_message,
-                        is_end_of_message=is_last_message,
-                        name=self.botname,
-                        node_id=self.llm_request.node_id,
-                    ),
-                    "do_tts_reply": do_tts_reply,
-                },
+            self.api.send_llm_text_streamed_signal(
+                LLMResponse(
+                    message=response,
+                    is_first_message=is_first_message,
+                    is_end_of_message=is_last_message,
+                    name=self.botname,
+                    node_id=self.llm_request.node_id,
+                )
             )
         self._complete_response += response
