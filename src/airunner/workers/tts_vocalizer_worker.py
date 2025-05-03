@@ -40,7 +40,8 @@ class TTSVocalizerWorker(Worker):
         return self.chatbot_voice_model_type == TTSModel.ESPEAK.value
 
     def on_interrupt_process_signal(self):
-        self.stream.abort()
+        if self.stream is not None:
+            self.stream.abort()
         self.accept_message = False
         self.queue = Queue()
 
