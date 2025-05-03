@@ -144,14 +144,6 @@ def set_default_shortcut_keys():
                 "signal": SignalCode.ENABLE_MOVE_TOOL_SIGNAL.value
             },
             {
-                "display_name": "Select Tool",
-                "text": "S",
-                "key": QtCore.Qt.Key.Key_S.value,
-                "modifiers": QtCore.Qt.KeyboardModifier.NoModifier.value,
-                "description": "Select tool key. Responsible for selecting the select tool.",
-                "signal": SignalCode.ENABLE_SELECTION_TOOL_SIGNAL.value
-            },
-            {
                 "display_name": "Interrupt",
                 "text": "Shift+Ctrl+I",
                 "key": QtCore.Qt.Key.Key_I.value,
