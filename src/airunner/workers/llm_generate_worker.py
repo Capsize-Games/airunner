@@ -8,7 +8,7 @@ from airunner.handlers.llm.llm_model_manager import LLMModelManager
 from airunner.handlers.llm.openrouter_model_manager import (
     OpenRouterModelManager,
 )
-from airunner.handlers.llm.gemma3_model_manager import Gemma3Manager
+# from airunner.handlers.llm.gemma3_model_manager import Gemma3Manager
 from airunner.enums import ModelService
 
 
@@ -32,7 +32,7 @@ class LLMGenerateWorker(Worker):
         }
         self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
         self._local_model_manager: Optional[LLMModelManager] = None
-        self._gemma3_model_manager: Optional[Gemma3Manager] = None
+        # self._gemma3_model_manager: Optional[Gemma3Manager] = None
         self._model_manager: Optional[Type[LLMModelManager]] = None
         super().__init__()
         self._llm_thread = None
@@ -44,11 +44,11 @@ class LLMGenerateWorker(Worker):
             == ModelService.OPENROUTER.value
         )
 
-    @property
-    def use_gemma3(self) -> bool:
-        # Check if the model path contains "gemma-3" to identify Gemma3 models
-        model_path = self.llm_generator_settings.model_version or ""
-        return "gemma-3" in model_path.lower()
+    # @property
+    # def use_gemma3(self) -> bool:
+    #     # Check if the model path contains "gemma-3" to identify Gemma3 models
+    #     model_path = self.llm_generator_settings.model_version or ""
+    #     return "gemma-3" in model_path.lower()
 
     @property
     def openrouter_model_manager(self) -> OpenRouterModelManager:
@@ -66,19 +66,19 @@ class LLMGenerateWorker(Worker):
             )
         return self._local_model_manager
 
-    @property
-    def gemma3_model_manager(self) -> Gemma3Manager:
-        if not self._gemma3_model_manager:
-            self._gemma3_model_manager = Gemma3Manager()
-        return self._gemma3_model_manager
+    # @property
+    # def gemma3_model_manager(self) -> Gemma3Manager:
+    #     if not self._gemma3_model_manager:
+    #         self._gemma3_model_manager = Gemma3Manager()
+    #     return self._gemma3_model_manager
 
     @property
     def model_manager(self) -> Type[LLMModelManager]:
         if self._model_manager is None:
             if self.use_openrouter:
                 self._model_manager = self.openrouter_model_manager
-            elif self.use_gemma3:
-                self._model_manager = self.gemma3_model_manager
+            # elif self.use_gemma3:
+            #     self._model_manager = self.gemma3_model_manager
             else:
                 self._model_manager = self.local_model_manager
         return self._model_manager
