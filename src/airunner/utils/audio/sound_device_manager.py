@@ -16,6 +16,8 @@ class SoundDeviceManager:
         self._out_stream = None
         self._selected_input_device = None
         self._selected_output_device = None
+        # Add lock to prevent race conditions when multiple workers access the streams
+        self._initialized = False
 
     @property
     def in_stream(self):
@@ -24,6 +26,10 @@ class SoundDeviceManager:
     @property
     def out_stream(self):
         return self._out_stream
+
+    @property
+    def initialized(self):
+        return self._initialized
 
     def get_devices(self) -> Dict:
         """Get all available audio devices."""
@@ -41,15 +47,43 @@ class SoundDeviceManager:
         self, device_name: str, kind: str = None
     ) -> Optional[int]:
         """Get the index of a device by name and kind."""
-        devices = sd.query_devices()
-        default_device = "pulse" if device_name == "" else device_name
+        try:
+            devices = sd.query_devices()
+            default_device = "pulse" if device_name == "" else device_name
 
-        for device in devices:
-            if kind and device.get("max_" + kind + "_channels", 0) <= 0:
-                continue
-            if device["name"] == default_device:
-                return device["index"]
-        return None
+            # Try to find exact match first
+            for device in devices:
+                if kind and device.get("max_" + kind + "_channels", 0) <= 0:
+                    continue
+                if device["name"] == default_device:
+                    return device["index"]
+
+            # If no exact match, try substring match as fallback
+            for device in devices:
+                if kind and device.get("max_" + kind + "_channels", 0) <= 0:
+                    continue
+                if default_device.lower() in device["name"].lower():
+                    self.logger.debug(f"Using partial match: {device['name']}")
+                    return device["index"]
+
+            # Last resort - use system default
+            if kind == "input":
+                default_idx = sd.default.device[0]
+                self.logger.debug(
+                    f"Using system default input device index: {default_idx}"
+                )
+                return default_idx
+            elif kind == "output":
+                default_idx = sd.default.device[1]
+                self.logger.debug(
+                    f"Using system default output device index: {default_idx}"
+                )
+                return default_idx
+
+            return None
+        except Exception as e:
+            self.logger.error(f"Error getting device index: {e}")
+            return None
 
     def initialize_input_stream(
         self,
@@ -70,11 +104,18 @@ class SoundDeviceManager:
             )
             self._in_stream.start()
             self.logger.info(
-                f"Input stream initialized with device: {device_name}"
+                f"Input stream initialized with device: {device_name} (index: {device_index})"
             )
+            self._initialized = True
             return True
         except sd.PortAudioError as e:
             self.logger.error(f"Failed to initialize input stream: {e}")
+            self._in_stream = None
+            return False
+        except Exception as e:
+            self.logger.error(
+                f"Unexpected error initializing input stream: {e}"
+            )
             self._in_stream = None
             return False
 
@@ -97,11 +138,18 @@ class SoundDeviceManager:
             )
             self._out_stream.start()
             self.logger.info(
-                f"Output stream initialized with device: {device_name}"
+                f"Output stream initialized with device: {device_name} (index: {device_index})"
             )
+            self._initialized = True
             return True
         except sd.PortAudioError as e:
             self.logger.error(f"Failed to initialize output stream: {e}")
+            self._out_stream = None
+            return False
+        except Exception as e:
+            self.logger.error(
+                f"Unexpected error initializing output stream: {e}"
+            )
             self._out_stream = None
             return False
 
@@ -174,6 +222,10 @@ class SoundDeviceManager:
                 return self._in_stream.read(frames)
             except sd.PortAudioError as e:
                 self.logger.error(f"Error reading from input stream: {e}")
+            except Exception as e:
+                self.logger.error(
+                    f"Unexpected error reading from input stream: {e}"
+                )
         return None, False
 
     def _stop_input_stream(self):
@@ -182,6 +234,9 @@ class SoundDeviceManager:
             try:
                 self._in_stream.stop()
                 self._in_stream.close()
+                self.logger.debug(
+                    "Input stream stopped and closed successfully"
+                )
             except Exception as e:
                 self.logger.error(f"Error stopping input stream: {e}")
             self._in_stream = None
@@ -192,6 +247,9 @@ class SoundDeviceManager:
             try:
                 self._out_stream.stop()
                 self._out_stream.close()
+                self.logger.debug(
+                    "Output stream stopped and closed successfully"
+                )
             except Exception as e:
                 self.logger.error(f"Error stopping output stream: {e}")
             self._out_stream = None
@@ -200,3 +258,4 @@ class SoundDeviceManager:
         """Stop all audio streams."""
         self._stop_input_stream()
         self._stop_output_stream()
+        self._initialized = False

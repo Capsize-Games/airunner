@@ -135,8 +135,13 @@ class AudioCaptureWorker(Worker):
                                 "Sending audio to audio_processor_worker"
                             )
                             self.emit_signal(
-                                SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
-                                {"item": b"".join(recording)},
+                                SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL,
+                                {
+                                    "callback": lambda _recording=recording: self.emit_signal(
+                                        SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
+                                        {"item": b"".join(_recording)},
+                                    )
+                                },
                             )
                             recording = []
                             is_receiving_input = False
@@ -169,17 +174,83 @@ class AudioCaptureWorker(Worker):
         samplerate = 16000  # self.stt_settings.fs
         channels = self.stt_settings.channels
 
-        self.api.sounddevice_manager.initialize_input_stream(
+        # Close any existing streams first to avoid conflicts
+        if self.api.sounddevice_manager.in_stream:
+            self.logger.debug(
+                "Closing existing input stream before initializing a new one"
+            )
+            self.api.sounddevice_manager._stop_input_stream()
+
+        # Log available input devices to help with debugging
+        try:
+            import sounddevice as sd
+
+            devices = sd.query_devices()
+            input_devices = [
+                d for d in devices if d.get("max_input_channels", 0) > 0
+            ]
+            self.logger.debug(
+                f"Available input devices: {[d['name'] for d in input_devices]}"
+            )
+            self.logger.debug(
+                f"Selected recording device: {self.recording_device}"
+            )
+        except Exception as e:
+            self.logger.error(f"Error querying audio devices: {e}")
+
+        # Initialize input stream with better error handling
+        success = self.api.sounddevice_manager.initialize_input_stream(
             samplerate=samplerate,
             channels=channels,
             device_name=self.recording_device,
         )
 
+        if success:
+            self.logger.info(
+                f"Successfully initialized input stream with device: {self.recording_device}"
+            )
+        else:
+            self.logger.error(
+                f"Failed to initialize input stream with device: {self.recording_device}"
+            )
+            # Try with default device as fallback
+            self.logger.warning("Attempting to initialize with default device")
+            success = self.api.sounddevice_manager.initialize_input_stream(
+                samplerate=samplerate,
+                channels=channels,
+                device_name="",  # Empty string should use system default
+            )
+            if success:
+                self.logger.info(
+                    "Successfully initialized input stream with default device"
+                )
+            else:
+                self.logger.error(
+                    "Failed to initialize input stream with default device"
+                )
+
         # Initialize playback stream if needed
         if self._use_playback_stream:
             device_name = self.sound_settings.playback_device or "pulse"
-            self.api.sounddevice_manager.initialize_output_stream(
-                samplerate=samplerate,
-                channels=channels,
-                device_name=device_name,
+            self.logger.debug(
+                f"Initializing monitoring playback stream with device: {device_name}"
             )
+            playback_success = (
+                self.api.sounddevice_manager.initialize_output_stream(
+                    samplerate=samplerate,
+                    channels=channels,
+                    device_name=device_name,
+                )
+            )
+            if not playback_success:
+                self.logger.error(
+                    f"Failed to initialize playback stream with device: {device_name}"
+                )
+
+        # Verify stream status
+        if self.api.sounddevice_manager.in_stream:
+            self.logger.debug("Input stream is now active and ready")
+        else:
+            self.logger.error("Input stream failed to initialize properly")
+
+        return self.api.sounddevice_manager.in_stream is not None
