@@ -14,7 +14,11 @@ from airunner.enums import (
 from airunner.workers.worker import Worker
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.settings import AIRUNNER_TTS_ON, AIRUNNER_ENABLE_OPEN_VOICE
-from airunner.handlers.tts.tts_request import TTSRequest, EspeakTTSRequest
+from airunner.handlers.tts.tts_request import (
+    OpenVoiceTTSRequest,
+    TTSRequest,
+    EspeakTTSRequest,
+)
 
 
 class TTSGeneratorWorker(Worker):
@@ -275,6 +279,8 @@ class TTSGeneratorWorker(Worker):
 
         model_type = TTSModel(model)
 
+        self.logger.debug(f"self.tts: {self.tts} | model_type: {model_type}")
+
         response = None
         if self.tts:
             tts_req: Optional[Type[TTSRequest]] = None
@@ -286,7 +292,7 @@ class TTSGeneratorWorker(Worker):
             elif (
                 AIRUNNER_ENABLE_OPEN_VOICE and model_type is TTSModel.OPENVOICE
             ):
-                tts_req = TTSRequest(
+                tts_req = OpenVoiceTTSRequest(
                     message=message, gender=self.chatbot.gender
                 )
             else:
