@@ -1,18 +1,13 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Type
 from PySide6.QtGui import QPolygonF, QBrush
 from PySide6.QtCore import QPointF, Qt
 
 from NodeGraphQt import BaseNode
 
-from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.gui.widgets.base_widget import BaseWidget
 
 
-class BaseWorkflowNode(
-    MediatorMixin,
-    SettingsMixin,
-    BaseNode,
-):
+class BaseWorkflowNode(BaseNode):
     """
     Base class for all workflow nodes in the application.
     This class provides a structure for defining input and output ports,
@@ -35,6 +30,8 @@ class BaseWorkflowNode(
     _input_ports: List[Dict[str, Any]] = []
     _output_ports: List[Dict[str, Any]] = []
     _properties: List[Dict[str, Any]] = []
+    widget_class_: Type[BaseWidget] = None
+    widget: BaseWidget = None
 
     # Execution port constants
     EXEC_IN_PORT_NAME: str = "exec_in"
@@ -47,13 +44,22 @@ class BaseWorkflowNode(
     _registered_input_ports: Dict[str, Any] = {}
     _registered_output_ports: Dict[str, Any] = {}
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Initialize ports specific to BaseWorkflowNode
         self._initialize_ports()
 
-        # Connect to the connection changed signals
-        if hasattr(self.graph, "connection_changed"):
+        # Connect signals (ensure graph exists)
+        if (
+            hasattr(self, "graph")
+            and self.graph
+            and hasattr(self.graph, "connection_changed")
+        ):
             self.graph.connection_changed.connect(self._on_connection_changed)
+        # Only instantiate widget if widget_class_ is defined
+        if self.widget_class_:
+            self.widget = self.widget_class_()
 
     def _initialize_ports(self):
         # Add standard execution ports
@@ -98,7 +104,7 @@ class BaseWorkflowNode(
         Ensures exec_in port only maintains one connection.
         """
         super().on_input_connected(in_port, out_port)
-        if in_port.name() == self.EXEC_IN_PORT_NAME:
+        if in_port and in_port.name() == self.EXEC_IN_PORT_NAME:
             # Disconnect any other connections to this exec_in port except the new one
             for connected_port in in_port.connected_ports():
                 if connected_port != out_port:

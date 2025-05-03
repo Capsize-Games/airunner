@@ -32,7 +32,7 @@ class Ui_lora_container(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout.setContentsMargins(10, 10, 10, 10)
         self.pushButton = QPushButton(lora_container)
         self.pushButton.setObjectName(u"pushButton")
 
@@ -48,7 +48,7 @@ class Ui_lora_container(object):
         self.lora_scroll_area.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 583, 672))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 563, 652))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setHorizontalSpacing(0)
@@ -68,7 +68,7 @@ class Ui_lora_container(object):
         self.label = QLabel(lora_container)
         self.label.setObjectName(u"label")
         font1 = QFont()
-        font1.setBold(True)
+        font1.setBold(False)
         self.label.setFont(font1)
 
         self.horizontalLayout_2.addWidget(self.label)

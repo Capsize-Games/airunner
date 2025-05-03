@@ -37,6 +37,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
     VideoNode,
     Gemma3Node,
     PromptBuilderNode,
+    SchedulerNode,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -119,10 +120,6 @@ class NodeGraphWidget(BaseWidget):
     @Slot()
     def on_load_button_clicked(self):
         self.load_workflow()
-
-    @Slot()
-    def on_edit_button_clicked(self):
-        self.edit_workflow()
 
     @Slot()
     def on_delete_button_clicked(self):
@@ -393,6 +390,7 @@ class NodeGraphWidget(BaseWidget):
             VideoNode,
             Gemma3Node,
             PromptBuilderNode,
+            SchedulerNode,
         ]:
             self.graph.register_node(node_cls)
 

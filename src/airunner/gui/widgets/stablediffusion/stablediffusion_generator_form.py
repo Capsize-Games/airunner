@@ -162,6 +162,14 @@ class StableDiffusionGeneratorForm(BaseWidget):
             or self._sd_version == StableDiffusionVersion.SDXL_TURBO.value
         )
 
+    @Slot()
+    def on_generate_button_clicked(self):
+        self.handle_generate_button_clicked()
+
+    @Slot()
+    def on_interrupt_button_clicked(self):
+        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
+
     def on_delete_prompt_clicked(self, data: Dict):
         prompt_id = data.get("prompt_id", None)
         if prompt_id is None:
@@ -695,7 +703,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
 
     @Slot(str)
-    def on_negative_crops_coords_top_left_x_textChanged(self, val: str):
+    def on_negative_crops_coord_top_left_x_textChanged(self, val: str):
         val = 0 if val == "" or val is None else val
         negative_crops_coords_top_left = (
             self.generator_settings.negative_crops_coords_top_left
@@ -707,7 +715,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
 
     @Slot(str)
-    def on_negative_crops_coords_top_left_y_textChanged(self, val: str):
+    def on_negative_crops_coord_top_left_y_textChanged(self, val: str):
         val = 0 if val == "" or val is None else val
         negative_crops_coords_top_left = (
             self.generator_settings.negative_crops_coords_top_left
@@ -721,10 +729,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
     @Slot(bool)
     def on_use_refiner_checkbox_toggled(self, val: bool):
         self.update_generator_settings("use_refiner", val)
-
-    @Slot()
-    def handle_interrupt_button_clicked(self):
-        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
     def generate(self, data=None):
         if self.generator_settings.random_seed:

@@ -46,7 +46,11 @@ class CustomNodeGraph(MediatorMixin, SettingsMixin, NodeGraph):
             var_node = out_port.node()
             # Get the variable value
             variable = None
-            if hasattr(self, "widget_ref") and self.widget_ref:
+            if (
+                hasattr(self, "widget_ref")
+                and self.widget_ref
+                and hasattr(var_node, "variable_name")
+            ):
                 variable = self.widget_ref._find_variable_by_name(
                     var_node.variable_name
                 )

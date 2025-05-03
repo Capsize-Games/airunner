@@ -46,7 +46,7 @@ class BaseWidget(AbstractBaseWidget):
 
     widget_class_: Optional[object] = None
     icons: List[Optional[Tuple[str, str]]] = []
-    ui: Optional[object] = Optional[None]
+    ui: Optional[object] = None
     _splitters: List[str] = []
 
     def __init__(self, *args, **kwargs):

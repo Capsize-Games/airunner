@@ -15,16 +15,16 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="leftMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="horizontalSpacing">
     <number>0</number>
@@ -60,8 +60,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>583</width>
-        <height>672</height>
+        <width>563</width>
+        <height>652</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
@@ -113,7 +113,7 @@
         <widget class="QLabel" name="label">
          <property name="font">
           <font>
-           <bold>true</bold>
+           <bold>false</bold>
           </font>
          </property>
          <property name="text">
