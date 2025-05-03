@@ -139,6 +139,7 @@ class CustomScene(
             (SignalCode.HISTORY_CLEAR_SIGNAL, self.on_clear_history_signal),
             (SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal),
             (SignalCode.MASK_LAYER_TOGGLED, self.on_mask_layer_toggled),
+            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_settings_changed),
         ]:
             self.register(signal, handler)
 
@@ -302,23 +303,25 @@ class CustomScene(
             EngineResponseCode.INSUFFICIENT_GPU_MEMORY,
             EngineResponseCode.ERROR,
         ):
-            message = data.get("message")
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, message
-            )
-            self.display_gpu_memory_error(message)
+            if self.settings_key == "drawing_pad_settings":
+                message = data.get("message")
+                self.emit_signal(
+                    SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, message
+                )
+                self.display_gpu_memory_error(message)
         elif code is EngineResponseCode.INTERRUPTED:
             pass
         elif code is EngineResponseCode.IMAGE_GENERATED:
             self._handle_image_generated_signal(data)
         else:
-            self.logger.error(f"Unhandled response code: {code}")
+            if self.settings_key == "drawing_pad_settings":
+                self.logger.error(f"Unhandled response code: {code}")
 
-        self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
+        if self.settings_key == "drawing_pad_settings":
+            self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
+            if callback:
+                callback(data)
 
-        if callback:
-            callback(data)
-    
     def _handle_image_generated_signal(self, data: Dict):
         image_response: Optional[ImageResponse] = data.get("message", None)
         if image_response is None:
@@ -365,6 +368,13 @@ class CustomScene(
 
     def on_mask_layer_toggled(self):
         self.initialize_image()
+    
+    def on_settings_changed(self, data):
+        table = data["setting_name"]
+        column_name = data["column_name"]
+        value = data["value"]
+        #if table == "controlnet_settings" and column_name == "generated_image":
+
 
     def on_canvas_copy_image_signal(self):
         self._copy_image(self.current_active_image)
@@ -835,11 +845,6 @@ class CustomScene(
                 visible_pos_x = absolute_pos.x() - canvas_offset.x()
                 visible_pos_y = absolute_pos.y() - canvas_offset.y()
                 self.item.setPos(visible_pos_x, visible_pos_y)
-        else:
-            # For images without a specific position, store position (0,0) as absolute
-            if self.item:
-                self._original_item_positions[self.item] = QPointF(0, 0)
-                self.item.setPos(-canvas_offset.x(), -canvas_offset.y())
 
         q_image = ImageQt.ImageQt(image)
 
@@ -859,9 +864,6 @@ class CustomScene(
                 visible_pos_x = absolute_pos.x() - canvas_offset.x()
                 visible_pos_y = absolute_pos.y() - canvas_offset.y()
                 self.item.setPos(visible_pos_x, visible_pos_y)
-            else:
-                self._original_item_positions[self.item] = QPointF(0, 0)
-                self.item.setPos(-canvas_offset.x(), -canvas_offset.y())
 
         self.update()
         self.initialize_image(image)
@@ -1022,6 +1024,8 @@ class CustomScene(
         return image
 
     def _apply_filter(self, _filter_object: ImageFilter.Filter):
+        if self.settings_key != "drawing_pad_settings":
+            return
         self._add_image_to_undo(self.image_backup)
         self.previewing_filter = False
         self.image_backup = None
@@ -1035,6 +1039,8 @@ class CustomScene(
         return image
 
     def _preview_filter(self, image: Image, filter_object: ImageFilter.Filter):
+        if self.settings_key != "drawing_pad_settings":
+            return
         if not image:
             return
         if not self.previewing_filter:

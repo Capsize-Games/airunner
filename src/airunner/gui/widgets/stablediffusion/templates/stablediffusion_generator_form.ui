@@ -238,6 +238,18 @@
           <item row="1" column="0">
            <widget class="QWidget" name="sdxl_settings_container" native="true">
             <layout class="QVBoxLayout" name="sdxl_settings">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
              <item>
               <widget class="QCheckBox" name="use_refiner_checkbox">
                <property name="toolTip">
@@ -622,38 +634,6 @@
  </resources>
  <connections>
   <connection>
-   <sender>generate_button</sender>
-   <signal>clicked()</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_generate_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>539</x>
-     <y>814</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>705</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>interrupt_button</sender>
-   <signal>clicked()</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_interrupt_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>575</x>
-     <y>814</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>745</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>pushButton</sender>
    <signal>clicked()</signal>
    <receiver>stablediffusion_generator_form</receiver>
@@ -682,134 +662,6 @@
     <hint type="destinationlabel">
      <x>-3</x>
      <y>291</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>original_size_width</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_original_size_width_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>55</x>
-     <y>600</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-4</x>
-     <y>536</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>original_size_height</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_original_size_height_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>243</x>
-     <y>598</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-1</x>
-     <y>522</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>negative_original_size_width</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_negative_original_size_width_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>386</x>
-     <y>602</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>589</x>
-     <y>493</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>negative_original_size_height</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_negative_original_size_height_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>535</x>
-     <y>608</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>587</x>
-     <y>534</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>target_size_width</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_target_size_width_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>112</x>
-     <y>671</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-3</x>
-     <y>604</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>target_size_height</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_target_size_height_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>190</x>
-     <y>668</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-5</x>
-     <y>637</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>negative_target_size_width</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_negative_target_size_width_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>375</x>
-     <y>675</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>586</x>
-     <y>568</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>negative_target_size_height</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_negative_target_size_height_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>506</x>
-     <y>672</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>592</x>
-     <y>614</y>
     </hint>
    </hints>
   </connection>
@@ -852,8 +704,8 @@
    <slot>on_use_refiner_checkbox_toggled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>30</x>
-     <y>483</y>
+     <x>29</x>
+     <y>503</y>
     </hint>
     <hint type="destinationlabel">
      <x>-3</x>
@@ -925,70 +777,6 @@
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>crops_coords_top_left_x</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_crops_coords_top_left_x_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>98</x>
-     <y>734</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-2</x>
-     <y>782</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>crops_coords_top_left_y</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_crops_coords_top_left_y_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>227</x>
-     <y>733</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-8</x>
-     <y>821</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>negative_crops_coord_top_left_x</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_negative_crops_coords_top_left_x_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>399</x>
-     <y>736</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>587</x>
-     <y>644</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>negative_crops_coord_top_left_y</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_negative_crops_coords_top_left_y_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>459</x>
-     <y>737</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>587</x>
-     <y>699</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
  <slots>
   <slot>handle_prompt_changed()</slot>
@@ -996,8 +784,6 @@
   <slot>handle_model_changed(QString)</slot>
   <slot>handle_scheduler_changed(QString)</slot>
   <slot>toggle_variation(bool)</slot>
-  <slot>handle_generate_button_clicked()</slot>
-  <slot>handle_interrupt_button_clicked()</slot>
   <slot>action_clicked_button_save_prompts()</slot>
   <slot>save_settings()</slot>
   <slot>handle_pipeline_changed(QString)</slot>
@@ -1009,17 +795,5 @@
   <slot>past_conversations_clicked()</slot>
   <slot>handle_add_prompt_clicked()</slot>
   <slot>on_use_refiner_checkbox_toggled(bool)</slot>
-  <slot>on_original_size_width_textChanged(QString)</slot>
-  <slot>on_original_size_height_textChanged(QString)</slot>
-  <slot>on_negative_original_size_width_textChanged(QString)</slot>
-  <slot>on_negative_original_size_height_textChanged(QString)</slot>
-  <slot>on_target_size_width_textChanged(QString)</slot>
-  <slot>on_target_size_height_textChanged(QString)</slot>
-  <slot>on_negative_target_size_width_textChanged(QString)</slot>
-  <slot>on_negative_target_size_height_textChanged(QString)</slot>
-  <slot>on_crops_coords_top_left_x_textChanged(QString)</slot>
-  <slot>on_crops_coords_top_left_y_textChanged(QString)</slot>
-  <slot>on_negative_crops_coords_top_left_x_textChanged(QString)</slot>
-  <slot>on_negative_crops_coords_top_left_y_textChanged(QString)</slot>
  </slots>
 </ui>

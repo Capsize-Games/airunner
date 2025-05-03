@@ -28,9 +28,6 @@ class ReActAgentTool(ChatEngineTool):
         )
 
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
-        print("x" * 100)
-        print("ReActAgentTool.call")
-        print(args, kwargs)
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
         tool_choice = kwargs.get("tool_choice", None)

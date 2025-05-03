@@ -16,6 +16,10 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.initialize_form()
+        self._toggle_model_path_visibility(
+            self.llm_generator_settings.model_service
+            != ModelService.LOCAL.value
+        )
 
     @Slot(str)
     def on_model_path_textChanged(self, val: str):

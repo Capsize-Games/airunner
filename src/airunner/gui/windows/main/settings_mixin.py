@@ -838,13 +838,13 @@ class SettingsMixin:
     def get_chatbot_by_id(self, chatbot_id) -> Chatbot:
         if not self.settings_mixin_shared_instance.chatbot:
             try:
-                # Use the proper approach for eager loading with SQLAlchemy attributes
+                # Use string names for eager loading relationships
                 chatbot = Chatbot.objects.get(
                     pk=chatbot_id,
                     eager_load=[
-                        Chatbot.target_files,
-                        Chatbot.target_directories,
-                        Chatbot.voice_settings,
+                        "target_files",
+                        "target_directories",
+                        "voice_settings",
                         # We'll handle this special case in the base_manager.py
                         "voice_settings.settings",
                     ],
