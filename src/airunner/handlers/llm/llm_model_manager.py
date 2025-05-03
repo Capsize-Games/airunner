@@ -460,19 +460,19 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             )
 
             # Attempt to load adapter if available
-            try:
-                if os.path.exists(self.adapter_path):
-                    # Convert base model to PEFT format
-                    self._model = PeftModel.from_pretrained(
-                        self._model, self.adapter_path
-                    )
-                    self.logger.info(
-                        f"Loaded adapter from {self.adapter_path}"
-                    )
-            except Exception as e:
-                self.logger.error(
-                    f"Error loading adapter (continuing with base model): {e}"
-                )
+            # try:
+            #     if os.path.exists(self.adapter_path):
+            #         # Convert base model to PEFT format
+            #         self._model = PeftModel.from_pretrained(
+            #             self._model, self.adapter_path
+            #         )
+            #         self.logger.info(
+            #             f"Loaded adapter from {self.adapter_path}"
+            #         )
+            # except Exception as e:
+            #     self.logger.error(
+            #         f"Error loading adapter (continuing with base model): {e}"
+            #     )
 
         except Exception as e:
             self.logger.error(f"Error loading model: {e}")
