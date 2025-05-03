@@ -3,7 +3,7 @@ from PIL.Image import Image
 from PIL import ImageQt
 from PySide6.QtGui import QPainter, QColor, Qt
 
-from airunner.enums import CanvasToolName
+from airunner.enums import CanvasToolName, SignalCode
 from airunner.utils.image import (
     convert_binary_to_image,
     convert_image_to_binary,
@@ -120,6 +120,9 @@ class InputImageScene(BrushScene):
                 model = self.image_to_image_settings.__class__.objects.first()
                 model.image = base_64_image
                 model.save()
+
+            if self.drawing_pad_settings.enable_automatic_drawing:
+                self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
 
         # Clear drawing state
         self._is_drawing = False
