@@ -1,7 +1,7 @@
 import queue
 import re
 import threading
-from typing import Optional, Type
+from typing import Optional, Type, Dict
 
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import (
@@ -12,7 +12,6 @@ from airunner.enums import (
     QueueType,
 )
 from airunner.workers.worker import Worker
-from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.settings import AIRUNNER_TTS_ON, AIRUNNER_ENABLE_OPEN_VOICE
 from airunner.handlers.tts.tts_request import (
     OpenVoiceTTSRequest,
@@ -91,12 +90,16 @@ class TTSGeneratorWorker(Worker):
             self.paused = True
             self.tts.interrupt_process_signal()
 
-    def on_unblock_tts_generator_signal(self):
+    def on_unblock_tts_generator_signal(self, data: Optional[Dict]):
         if self.tts_enabled:
             self.logger.debug("Unblocking TTS generation...")
             self.do_interrupt = False
             self.paused = False
             self.tts.unblock_tts_generator_signal()
+        if data is not None:
+            callback = data.get("callback", None)
+            if callback is not None:
+                callback()
 
     def on_enable_tts_signal(self):
         if self.tts:

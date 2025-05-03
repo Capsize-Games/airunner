@@ -174,18 +174,22 @@ class SpeechT5ModelManager(TTSModelManager):
             and self._speaker_embeddings is not None
             and self.tokenizer is not None
         ):
-            # Explicitly move model and vocoder to the target device
+            # Explicitly move model and vocoder to the target device and dtype
             try:
                 if self.model:
                     self.logger.debug(
-                        f"Moving main model to device: {self.device}"
+                        f"Moving main model to device: {self.device} and dtype: {self.torch_dtype}"
                     )
                     self.model.to(self.device)
+                    for param in self.model.parameters():
+                        param.data = param.data.to(dtype=self.torch_dtype)
                 if self.vocoder:
                     self.logger.debug(
-                        f"Moving vocoder to device: {self.device}"
+                        f"Moving vocoder to device: {self.device} and dtype: {self.torch_dtype}"
                     )
                     self.vocoder.to(self.device)
+                    for param in self.vocoder.parameters():
+                        param.data = param.data.to(dtype=self.torch_dtype)
                 self._set_status_loaded()
                 self.logger.info("SpeechT5 models loaded successfully.")
             except Exception as e:
@@ -408,8 +412,8 @@ class SpeechT5ModelManager(TTSModelManager):
         # Use consistent device and dtype handling
         try:
             speaker_embeddings = self._speaker_embeddings.to(
-                self.torch_dtype
-            ).to(self.device)
+                dtype=self.torch_dtype, device=self.device
+            )
             vocoder = self.vocoder.to(self.torch_dtype).to(self.device)
 
             speech = self.model.generate(
@@ -435,22 +439,33 @@ class SpeechT5ModelManager(TTSModelManager):
         return None
 
     def _move_inputs_to_device(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        """Move input tensors to the appropriate device."""
+        """Move input tensors to the appropriate device. Only cast dtype if tensor is floating point."""
         try:
             device = self.device
+            dtype = self.torch_dtype
             for key in inputs:
                 if isinstance(inputs[key], torch.Tensor):
-                    inputs[key] = inputs[key].to(device)
+                    if torch.is_floating_point(inputs[key]):
+                        inputs[key] = inputs[key].to(
+                            device=device, dtype=dtype
+                        )
+                    else:
+                        inputs[key] = inputs[key].to(device=device)
                 elif isinstance(inputs[key], dict):
                     for subkey in inputs[key]:
                         if isinstance(inputs[key][subkey], torch.Tensor):
-                            inputs[key][subkey] = inputs[key][subkey].to(
-                                device
-                            )
-
+                            if torch.is_floating_point(inputs[key][subkey]):
+                                inputs[key][subkey] = inputs[key][subkey].to(
+                                    device=device, dtype=dtype
+                                )
+                            else:
+                                inputs[key][subkey] = inputs[key][subkey].to(
+                                    device=device
+                                )
         except Exception as e:
-            self.logger.error(f"Failed to move inputs to device: {str(e)}")
-
+            self.logger.error(
+                f"Failed to move inputs to device and dtype: {str(e)}"
+            )
         return inputs
 
     def unblock_tts_generator_signal(self):
