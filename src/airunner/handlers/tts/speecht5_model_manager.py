@@ -66,6 +66,10 @@ class SpeechT5ModelManager(TTSModelManager):
         self._paused = False
 
     @property
+    def status(self) -> ModelStatus:
+        return self.model_status.get(ModelType.TTS, ModelStatus.UNLOADED)
+
+    @property
     def speaker_embeddings_path(self) -> str:
         return os.path.join(
             self.path_settings.tts_model_path,
@@ -148,9 +152,9 @@ class SpeechT5ModelManager(TTSModelManager):
 
     # Refactored load/unload methods for better error handling
     def load(self, target_model=None):
-        if self.model_status is ModelStatus.LOADING:
+        if self.status is ModelStatus.LOADING:
             return
-        if self.model_status in (
+        if self.status in (
             ModelStatus.LOADED,
             ModelStatus.READY,
             ModelStatus.FAILED,
@@ -175,7 +179,7 @@ class SpeechT5ModelManager(TTSModelManager):
             self._set_status_failed()
 
     def unload(self):
-        if self.model_status is ModelStatus.LOADING:
+        if self.status is ModelStatus.LOADING:
             return
         self._set_status_loading()
         self.model = None
@@ -187,7 +191,7 @@ class SpeechT5ModelManager(TTSModelManager):
         self._set_status_unloaded()
 
     def generate(self, tts_request: Type[TTSRequest]):
-        if self.model_status is not ModelStatus.LOADED:
+        if self.status is not ModelStatus.LOADED:
             return None
         if self._do_interrupt or self._paused:
             return None
@@ -257,11 +261,11 @@ class SpeechT5ModelManager(TTSModelManager):
         self.logger.debug("Loading speaker embeddings...")
 
         try:
-            self._speaker_embeddings = torch.load(
-                self.speaker_embeddings_path
-            )
+            self._speaker_embeddings = torch.load(self.speaker_embeddings_path)
             if self.use_cuda and self._speaker_embeddings is not None:
-                self._speaker_embeddings = self._speaker_embeddings.to(torch.bfloat16).cuda()
+                self._speaker_embeddings = self._speaker_embeddings.to(
+                    torch.bfloat16
+                ).cuda()
 
         except Exception as e:
             self.logger.error("Failed to load speaker embeddings")
