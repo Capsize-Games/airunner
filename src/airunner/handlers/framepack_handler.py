@@ -79,11 +79,11 @@ class FramePackHandler(BaseModelManager):
     progress_update = Signal(
         int, str
     )  # Emits progress percentage and status message
-    _model_status = {
-        ModelType.VIDEO: ModelStatus.UNLOADED,
-    }
-
+    
     def __init__(self):
+        self._model_status = {
+            ModelType.VIDEO: ModelStatus.UNLOADED,
+        }
         super().__init__()
         # Initialize models and tokenizers as None
         self.text_encoder = None
