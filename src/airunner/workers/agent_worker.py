@@ -21,13 +21,13 @@ class AgentWorker(Worker):
             message["model"].generate(**message["kwargs"])
         except RuntimeError as e:
             self.logger.error(f"RuntimeError: {str(e)}")
-            self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {
-                "response": LLMResponse(
+            self.api.send_llm_text_streamed_signal(
+                LLMResponse(
                     is_first_message=True,
                     is_end_of_message=True,
                     name=message["botname"],
                 )
-            })
+            )
 
         except Exception as e:
             print("47 An error occurred in model.generate:")

@@ -83,6 +83,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self.app = QApplication.instance()
         if self.app is None:
             self.app = QApplication([])
+        self.app.api = self
 
     def run(self):
         """
