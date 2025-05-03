@@ -31,14 +31,12 @@ class WhisperModelManager(BaseModelManager):
     def __init__(self, *args, **kwargs):
         self.model_type = ModelType.STT
         self.model_class = "stt"
+        self._model_status = {
+            ModelType.STT: ModelStatus.UNLOADED,
+            ModelType.STT_PROCESSOR: ModelStatus.UNLOADED,
+            ModelType.STT_FEATURE_EXTRACTOR: ModelStatus.UNLOADED,
+        }
         super().__init__(*args, **kwargs)
-        self._model_status.update(
-            {
-                ModelType.STT: ModelStatus.UNLOADED,
-                ModelType.STT_PROCESSOR: ModelStatus.UNLOADED,
-                ModelType.STT_FEATURE_EXTRACTOR: ModelStatus.UNLOADED,
-            }
-        )
         self._lock = threading.Lock()
         self._model = None
         self._processor = None
