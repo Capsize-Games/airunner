@@ -147,7 +147,7 @@
              <number>0</number>
             </property>
             <property name="bottomMargin">
-             <number>0</number>
+             <number>1</number>
             </property>
             <item>
              <widget class="QPushButton" name="new_button">
@@ -174,7 +174,7 @@
                 <normaloff>:/light/icons/feather/light/file-plus.svg</normaloff>:/light/icons/feather/light/file-plus.svg</iconset>
               </property>
               <property name="flat">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -203,7 +203,7 @@
                 <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
               </property>
               <property name="flat">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -232,7 +232,7 @@
                 <normaloff>:/light/icons/feather/light/save.svg</normaloff>:/light/icons/feather/light/save.svg</iconset>
               </property>
               <property name="flat">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -271,7 +271,7 @@
                 <normaloff>:/light/icons/feather/light/target.svg</normaloff>:/light/icons/feather/light/target.svg</iconset>
               </property>
               <property name="flat">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -306,7 +306,7 @@
                <bool>true</bool>
               </property>
               <property name="flat">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -341,7 +341,7 @@
                <bool>true</bool>
               </property>
               <property name="flat">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -376,7 +376,7 @@
                <bool>true</bool>
               </property>
               <property name="flat">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -411,7 +411,7 @@
                <bool>true</bool>
               </property>
               <property name="flat">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -447,7 +447,7 @@
                 <normaloff>:/light/icons/feather/light/corner-up-left.svg</normaloff>:/light/icons/feather/light/corner-up-left.svg</iconset>
               </property>
               <property name="flat">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -476,7 +476,7 @@
                 <normaloff>:/light/icons/feather/light/corner-up-right.svg</normaloff>:/light/icons/feather/light/corner-up-right.svg</iconset>
               </property>
               <property name="flat">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>

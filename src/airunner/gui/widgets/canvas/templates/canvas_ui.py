@@ -75,7 +75,7 @@ class Ui_canvas(object):
         self.horizontalLayout_2 = QHBoxLayout(self.widget1)
         self.horizontalLayout_2.setSpacing(5)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(5, 0, 0, 0)
+        self.horizontalLayout_2.setContentsMargins(5, 0, 0, 1)
         self.new_button = QPushButton(self.widget1)
         self.new_button.setObjectName(u"new_button")
         self.new_button.setMinimumSize(QSize(30, 30))
@@ -84,7 +84,7 @@ class Ui_canvas(object):
         icon = QIcon()
         icon.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.new_button.setIcon(icon)
-        self.new_button.setFlat(True)
+        self.new_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.new_button)
 
@@ -96,7 +96,7 @@ class Ui_canvas(object):
         icon1 = QIcon()
         icon1.addFile(u":/light/icons/feather/light/folder.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.import_button.setIcon(icon1)
-        self.import_button.setFlat(True)
+        self.import_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.import_button)
 
@@ -108,7 +108,7 @@ class Ui_canvas(object):
         icon2 = QIcon()
         icon2.addFile(u":/light/icons/feather/light/save.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.export_button.setIcon(icon2)
-        self.export_button.setFlat(True)
+        self.export_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.export_button)
 
@@ -127,7 +127,7 @@ class Ui_canvas(object):
         icon3 = QIcon()
         icon3.addFile(u":/light/icons/feather/light/target.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.recenter_button.setIcon(icon3)
-        self.recenter_button.setFlat(True)
+        self.recenter_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.recenter_button)
 
@@ -140,7 +140,7 @@ class Ui_canvas(object):
         icon4.addFile(u":/light/icons/feather/light/object-selected-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.active_grid_area_button.setIcon(icon4)
         self.active_grid_area_button.setCheckable(True)
-        self.active_grid_area_button.setFlat(True)
+        self.active_grid_area_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.active_grid_area_button)
 
@@ -153,7 +153,7 @@ class Ui_canvas(object):
         icon5.addFile(u":/light/icons/feather/light/pencil-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.brush_button.setIcon(icon5)
         self.brush_button.setCheckable(True)
-        self.brush_button.setFlat(True)
+        self.brush_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.brush_button)
 
@@ -166,7 +166,7 @@ class Ui_canvas(object):
         icon6.addFile(u":/light/icons/feather/light/eraser-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.eraser_button.setIcon(icon6)
         self.eraser_button.setCheckable(True)
-        self.eraser_button.setFlat(True)
+        self.eraser_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.eraser_button)
 
@@ -179,7 +179,7 @@ class Ui_canvas(object):
         icon7.addFile(u":/light/icons/feather/light/grid.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.grid_button.setIcon(icon7)
         self.grid_button.setCheckable(True)
-        self.grid_button.setFlat(True)
+        self.grid_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.grid_button)
 
@@ -198,7 +198,7 @@ class Ui_canvas(object):
         icon8 = QIcon()
         icon8.addFile(u":/light/icons/feather/light/corner-up-left.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.undo_button.setIcon(icon8)
-        self.undo_button.setFlat(True)
+        self.undo_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.undo_button)
 
@@ -210,7 +210,7 @@ class Ui_canvas(object):
         icon9 = QIcon()
         icon9.addFile(u":/light/icons/feather/light/corner-up-right.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.redo_button.setIcon(icon9)
-        self.redo_button.setFlat(True)
+        self.redo_button.setFlat(False)
 
         self.horizontalLayout_2.addWidget(self.redo_button)
 

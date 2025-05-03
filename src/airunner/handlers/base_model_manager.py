@@ -58,10 +58,11 @@ class BaseModelManager(
 
     handler_type = HandlerType.TRANSFORMER
     model_type = None
-    _model_status: Dict = {}
 
     def __init__(self, *args, **kwargs):
         self.use_gpu = True
+        # Initialize _model_status as an instance attribute
+        self._model_status: Dict[ModelType, ModelStatus] = {}
         super().__init__()
         self._requested_action: ModelAction = ModelAction.NONE
         # Initialize instance status using the specific class's model_status definition

@@ -71,7 +71,7 @@ class API(App):
             },
         )
 
-    def send_tts_request(self, response: LLMResponse):
+    def send_llm_text_streamed_signal(self, response: LLMResponse):
         """
         Send a TTS request with the given response."
 
