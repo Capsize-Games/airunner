@@ -316,6 +316,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         return (
             self.controlnet_settings.enabled
             and self.application_settings.controlnet_enabled
+            and self.controlnet_settings.image is not None
         )
 
     @property

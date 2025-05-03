@@ -107,7 +107,7 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_7.setObjectName(u"gridLayout_7")
         self.gridLayout_7.setHorizontalSpacing(0)
         self.gridLayout_7.setVerticalSpacing(10)
-        self.gridLayout_7.setContentsMargins(10, 10, 0, 0)
+        self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
         self.lora_container_widget = LoraContainerWidget(self.tab_6)
         self.lora_container_widget.setObjectName(u"lora_container_widget")
 
@@ -120,7 +120,7 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_8.setObjectName(u"gridLayout_8")
         self.gridLayout_8.setHorizontalSpacing(0)
         self.gridLayout_8.setVerticalSpacing(10)
-        self.gridLayout_8.setContentsMargins(10, 10, 0, 0)
+        self.gridLayout_8.setContentsMargins(0, 0, 0, 0)
         self.embeddings_container_widget = EmbeddingsContainerWidget(self.tab_7)
         self.embeddings_container_widget.setObjectName(u"embeddings_container_widget")
 
