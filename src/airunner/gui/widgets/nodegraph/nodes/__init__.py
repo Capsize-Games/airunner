@@ -71,7 +71,7 @@ from airunner.gui.widgets.nodegraph.nodes.video.framepack_node import (
 from airunner.gui.widgets.nodegraph.nodes.video.video_player_node import (
     VideoNode,
 )
-from airunner.gui.widgets.nodegraph.nodes.llm.gemma3_node import Gemma3Node
+#from airunner.gui.widgets.nodegraph.nodes.llm.gemma3_node import Gemma3Node
 from airunner.gui.widgets.nodegraph.nodes.art.prompt_builder_node import (
     PromptBuilderNode,
 )
@@ -106,7 +106,7 @@ __all__ = [
     "GenerateImageNode",
     "FramePackNode",
     "VideoNode",
-    "Gemma3Node",
+    #"Gemma3Node",
     "PromptBuilderNode",
     "SchedulerNode",
 ]

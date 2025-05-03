@@ -35,7 +35,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
     GenerateImageNode,
     FramePackNode,
     VideoNode,
-    Gemma3Node,
+    #Gemma3Node,
     PromptBuilderNode,
     SchedulerNode,
 )
@@ -388,7 +388,7 @@ class NodeGraphWidget(BaseWidget):
             GenerateImageNode,
             FramePackNode,
             VideoNode,
-            Gemma3Node,
+            #Gemma3Node,
             PromptBuilderNode,
             SchedulerNode,
         ]:
