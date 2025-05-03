@@ -30,18 +30,17 @@ class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):
     target_model: ClassVar[Optional[str]] = None
     model_class: ClassVar[Optional[Type[PreTrainedModel]]] = None
     processor_class: ClassVar[Optional[Type[ProcessorMixin]]] = None
-    _model_status = {
-        ModelType.TTS: ModelStatus.UNLOADED,
-        ModelType.TTS_PROCESSOR: ModelStatus.UNLOADED,
-        ModelType.TTS_FEATURE_EXTRACTOR: ModelStatus.UNLOADED,
-        ModelType.TTS_VOCODER: ModelStatus.UNLOADED,
-        ModelType.TTS_SPEAKER_EMBEDDINGS: ModelStatus.UNLOADED,
-        ModelType.TTS_TOKENIZER: ModelStatus.UNLOADED,
-        ModelType.TTS_DATASET: ModelStatus.UNLOADED,
-    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._model_status = {
+            ModelType.TTS: ModelStatus.UNLOADED,
+            ModelType.TTS_PROCESSOR: ModelStatus.UNLOADED,
+            ModelType.TTS_FEATURE_EXTRACTOR: ModelStatus.UNLOADED,
+            ModelType.TTS_VOCODER: ModelStatus.UNLOADED,
+            ModelType.TTS_SPEAKER_EMBEDDINGS: ModelStatus.UNLOADED,
+            ModelType.TTS_TOKENIZER: ModelStatus.UNLOADED,
+        }
         self._tts_request: Optional[Type[TTSRequest]] = None
         self.model_type = ModelType.TTS
         self._engine = None
