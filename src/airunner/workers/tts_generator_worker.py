@@ -59,7 +59,12 @@ class TTSGeneratorWorker(Worker):
         if response.action is LLMActionType.GENERATE_IMAGE:
             return
 
-        if self.tts.model_status is not ModelStatus.LOADED:
+        # Initialize TTS if needed but avoid reloading if it's already in the process
+        if not self.tts or (
+            self.tts
+            and not self.tts.model_status
+            not in [ModelStatus.LOADED, ModelStatus.LOADING]
+        ):
             self._load_tts()
         elif self.do_interrupt and response and response.is_first_message:
             self.on_unblock_tts_generator_signal()
@@ -130,6 +135,13 @@ class TTSGeneratorWorker(Worker):
             self.logger.error("No TTS model found. Skipping initialization.")
             return
         model_type = TTSModel(model)
+        # Only re-instantiate if model type changed or tts is None
+        if self.tts and self._current_model == model:
+            self.logger.debug(
+                "TTS model already initialized and matches current model."
+            )
+            return
+        self._current_model = model
         if model_type is TTSModel.SPEECHT5:
             from airunner.handlers.tts.speecht5_model_manager import (
                 SpeechT5ModelManager,
@@ -149,6 +161,7 @@ class TTSGeneratorWorker(Worker):
 
             tts_model_manager_class_ = EspeakModelManager
         self.tts = tts_model_manager_class_()
+        self.logger.debug(f"Instantiated new TTS model manager: {self.tts}")
 
     def add_to_queue(self, message):
         if self.do_interrupt:
