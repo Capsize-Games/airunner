@@ -1,6 +1,7 @@
 import sounddevice as sd
 from typing import Optional, Dict, Any
 import logging
+import numpy as np
 
 
 class SoundDeviceManager:
@@ -108,10 +109,62 @@ class SoundDeviceManager:
         """Write audio data to the output stream."""
         if self._out_stream and self._out_stream.active:
             try:
+                # Make sure we're dealing with a numpy array
+                if not isinstance(data, np.ndarray):
+                    data = np.array(data)
+
+                # Log the audio statistics to help with debugging
+                self.logger.debug(
+                    f"Audio data stats before write: shape={data.shape}, dtype={data.dtype}, "
+                    + f"min={np.min(data) if data.size > 0 else 'empty'}, "
+                    + f"max={np.max(data) if data.size > 0 else 'empty'}, "
+                    + f"mean={np.mean(data) if data.size > 0 else 'empty'}"
+                )
+
+                # If audio is too quiet (common with some models), amplify it
+                # Check if audio is very quiet
+                if data.size > 0 and np.abs(data).max() < 0.1:
+                    # Increase volume to a reasonable level
+                    amp_factor = (
+                        0.5 / np.abs(data).max()
+                        if np.abs(data).max() > 0
+                        else 1.0
+                    )
+                    data = data * amp_factor
+                    self.logger.debug(
+                        f"Amplified audio by factor {amp_factor}"
+                    )
+
+                # Ensure audio is in the correct format for the output stream
+                # PortAudio typically expects float32 data in the range [-1.0, 1.0]
+                if data.dtype != np.float32:
+                    data = data.astype(np.float32)
+
+                # Ensure we have the correct number of channels
+                if len(data.shape) == 1 and self._out_stream.channels > 1:
+                    # Convert mono to stereo/multichannel if needed
+                    data = np.tile(
+                        data.reshape(-1, 1), (1, self._out_stream.channels)
+                    )
+                    self.logger.debug(
+                        f"Converted mono to {self._out_stream.channels} channels"
+                    )
+
                 self._out_stream.write(data)
+                self.logger.debug("Successfully wrote data to output stream.")
                 return True
             except sd.PortAudioError as e:
-                self.logger.error(f"Error writing to output stream: {e}")
+                self.logger.error(
+                    f"PortAudioError writing to output stream: {e}"
+                )
+            except Exception as e:  # Catch other potential errors during write
+                self.logger.error(
+                    f"Unexpected error writing to output stream: {e}"
+                )
+        else:
+            self.logger.warning(
+                "Attempted to write to inactive/closed output stream."
+            )
         return False
 
     def read_from_input(self, frames: int) -> tuple:
