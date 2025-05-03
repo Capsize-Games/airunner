@@ -106,7 +106,20 @@ class AudioCaptureWorker(Worker):
                         chunk = np.mean(chunk, axis=1)
                 except sd.PortAudioError as e:
                     self.logger.error(f"PortAudioError: {e}")
-                    QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
+                    # When PortAudio has an error, close and reinitialize the stream
+                    self.logger.warning(
+                        "Attempting to recover from PortAudio error"
+                    )
+                    self._end_stream()
+                    QThread.msleep(
+                        500
+                    )  # Wait 500ms to let audio system recover
+                    self._initialize_stream()
+                    if not self.stream:
+                        self.logger.error(
+                            "Failed to recover audio stream, will retry later"
+                        )
+                        QThread.msleep(1000)  # Longer wait before retry
                     continue
                 except Exception as e:
                     self.logger.error(e)
@@ -162,13 +175,16 @@ class AudioCaptureWorker(Worker):
         self.logger.debug("Start listening")
         if self.stream is not None:
             self._end_stream()
+            # Add delay to allow audio system to fully release resources
+            QThread.msleep(500)
         self._initialize_stream()
         self.listening = True
 
     def _stop_listening(self):
         self.logger.debug("Stop listening")
         self.listening = False
-        self.running = False
+        # Do not set self.running = False here - it terminates the worker
+        # Allow proper cleanup to happen in the main loop
         self._end_stream()
         # self._capture_thread.join()
 
