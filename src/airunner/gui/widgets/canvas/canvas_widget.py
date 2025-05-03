@@ -22,30 +22,27 @@ class CanvasWidget(BaseWidget):
 
     widget_class_ = Ui_canvas
     icons = [
-        ("file-plus", "actionNew"),
-        ("folder", "actionImport"),
-        ("save", "actionExport"),
-        ("target", "recenter_Grid_Button"),
-        ("object-selected-icon", "actionToggle_Active_Grid_Area"),
-        ("pencil-icon", "actionToggle_Brush"),
-        ("eraser-icon", "actionToggle_Eraser"),
-        ("grid", "actionToggle_Grid"),
-        ("corner-up-left", "actionUndo"),
-        ("corner-up-right", "actionRedo"),
+        ("file-plus", "new_button"),
+        ("folder", "import_button"),
+        ("save", "export_button"),
+        ("target", "recenter_button"),
+        ("object-selected-icon", "active_grid_area_button"),
+        ("pencil-icon", "brush_button"),
+        ("eraser-icon", "eraser_button"),
+        ("grid", "grid_button"),
+        ("corner-up-left", "undo_button"),
+        ("corner-up-right", "redo_button"),
     ]
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
-            SignalCode.ENABLE_BRUSH_TOOL_SIGNAL: lambda _message: self.action_toggle_brush(
+            SignalCode.ENABLE_BRUSH_TOOL_SIGNAL: lambda _message: self.on_brush_button_toggled(
                 True
             ),
-            SignalCode.ENABLE_ERASER_TOOL_SIGNAL: lambda _message: self.action_toggle_eraser(
+            SignalCode.ENABLE_ERASER_TOOL_SIGNAL: lambda _message: self.on_eraser_button_toggled(
                 True
             ),
-            SignalCode.ENABLE_MOVE_TOOL_SIGNAL: lambda _message: self.action_toggle_active_grid_area(
-                True
-            ),
-            SignalCode.ENABLE_SELECTION_TOOL_SIGNAL: lambda _message: self.action_toggle_select(
+            SignalCode.ENABLE_MOVE_TOOL_SIGNAL: lambda _message: self.on_active_grid_area_button_toggled(
                 True
             ),
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_toggle_tool_signal,
@@ -69,21 +66,21 @@ class CanvasWidget(BaseWidget):
         self._grid_settings = {}
         self._active_grid_settings = {}
 
-        self.ui.actionToggle_Grid.blockSignals(True)
-        self.ui.actionToggle_Grid.setChecked(show_grid)
-        self.ui.actionToggle_Grid.blockSignals(False)
+        self.ui.grid_button.blockSignals(True)
+        self.ui.grid_button.setChecked(show_grid)
+        self.ui.grid_button.blockSignals(False)
 
         set_widget_state(
-            self.ui.actionToggle_Active_Grid_Area,
+            self.ui.grid_button,
             current_tool is CanvasToolName.ACTIVE_GRID_AREA,
         )
         set_widget_state(
-            self.ui.actionToggle_Brush, current_tool is CanvasToolName.BRUSH
+            self.ui.brush_button, current_tool is CanvasToolName.BRUSH
         )
         set_widget_state(
-            self.ui.actionToggle_Eraser, current_tool is CanvasToolName.ERASER
+            self.ui.eraser_button, current_tool is CanvasToolName.ERASER
         )
-        set_widget_state(self.ui.actionToggle_Grid, show_grid is True)
+        set_widget_state(self.ui.grid_button, show_grid is True)
 
     @property
     def current_tool(self):
@@ -107,53 +104,49 @@ class CanvasWidget(BaseWidget):
         self.update_application_settings("pivot_point_y", value.y())
 
     @Slot()
-    def action_recenter(self):
+    def on_recenter_button_clicked(self):
         self.emit_signal(SignalCode.RECENTER_GRID_SIGNAL)
 
     @Slot()
-    def action_new(self):
+    def on_new_button_clicked(self):
         self.emit_signal(SignalCode.CANVAS_CLEAR)
 
     @Slot()
-    def action_import(self):
+    def on_import_button_clicked(self):
         self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
 
     @Slot()
-    def action_export(self):
+    def on_export_button_clicked(self):
         self.emit_signal(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
 
     @Slot()
-    def action_undo(self):
+    def on_undo_button_clicked(self):
         self.emit_signal(SignalCode.UNDO_SIGNAL)
 
     @Slot()
-    def action_redo(self):
+    def on_redo_button_clicked(self):
         self.emit_signal(SignalCode.REDO_SIGNAL)
 
     @Slot(bool)
-    def action_toggle_grid(self, val: bool):
+    def on_grid_button_toggled(self, val: bool):
         self.update_grid_settings("show_grid", val)
 
     @Slot(bool)
-    def action_toggle_brush(self, val: bool):
+    def on_brush_button_toggled(self, val: bool):
         self.emit_signal(
             SignalCode.TOGGLE_TOOL,
             {"tool": CanvasToolName.BRUSH, "active": val},
         )
 
     @Slot(bool)
-    def action_toggle_eraser(self, val: bool):
+    def on_eraser_button_toggled(self, val: bool):
         self.emit_signal(
             SignalCode.TOGGLE_TOOL,
             {"tool": CanvasToolName.ERASER, "active": val},
         )
 
     @Slot(bool)
-    def action_toggle_mask(self, val: bool):
-        self.drawing_pad_settings.mask_layer_enabled = val
-
-    @Slot(bool)
-    def action_toggle_active_grid_area(self, val: bool):
+    def on_active_grid_area_button_toggled(self, val: bool):
         self.emit_signal(
             SignalCode.TOGGLE_TOOL,
             {"tool": CanvasToolName.ACTIVE_GRID_AREA, "active": val},
@@ -166,19 +159,19 @@ class CanvasWidget(BaseWidget):
         self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
 
     def on_toggle_grid_signal(self, message: dict):
-        self.ui.actionToggle_Grid.setChecked(message.get("show_grid", True))
+        self.ui.grid_button.setChecked(message.get("show_grid", True))
 
     def _update_action_buttons(self, tool, active):
-        self.ui.actionToggle_Active_Grid_Area.setChecked(
+        self.ui.active_grid_area_button.setChecked(
             tool is CanvasToolName.ACTIVE_GRID_AREA and active
         )
-        self.ui.actionToggle_Brush.setChecked(
+        self.ui.brush_button.setChecked(
             tool is CanvasToolName.BRUSH and active
         )
-        self.ui.actionToggle_Eraser.setChecked(
+        self.ui.eraser_button.setChecked(
             tool is CanvasToolName.ERASER and active
         )
-        self.ui.actionToggle_Grid.setChecked(self.grid_settings.show_grid)
+        self.ui.grid_button.setChecked(self.grid_settings.show_grid)
 
     def showEvent(self, event):
         super().showEvent(event)

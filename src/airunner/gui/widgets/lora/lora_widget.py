@@ -1,10 +1,11 @@
-
 from PySide6.QtCore import QTimer, Slot
 
 from airunner.data.models import Lora
 from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.lora.lora_trigger_word_widget import LoraTriggerWordWidget
+from airunner.gui.widgets.lora.lora_trigger_word_widget import (
+    LoraTriggerWordWidget,
+)
 from airunner.gui.widgets.lora.templates.lora_ui import Ui_lora
 
 
@@ -14,6 +15,7 @@ class LoraWidget(BaseWidget):
     It is responsible for displaying the lora's name, trigger words,
     and active status.
     """
+
     widget_class_ = Ui_lora
 
     def __init__(self, *args, **kwargs):
@@ -69,17 +71,14 @@ class LoraWidget(BaseWidget):
 
     @Slot()
     def action_clicked_button_deleted(self):
-        self.emit_signal(
-            SignalCode.LORA_DELETE_SIGNAL,
-            {
-                "lora_widget": self
-            }
-        )
+        self.emit_signal(SignalCode.LORA_DELETE_SIGNAL, {"lora_widget": self})
 
     def create_trigger_word_widgets(self, lora, defer=False):
         if defer:
             # Defer the creation of trigger word widgets
-            QTimer.singleShot(0, lambda: self._create_trigger_word_widgets(lora))
+            QTimer.singleShot(
+                0, lambda: self._create_trigger_word_widgets(lora)
+            )
         else:
             self._create_trigger_word_widgets(lora)
 

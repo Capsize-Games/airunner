@@ -150,7 +150,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QPushButton" name="actionNew">
+             <widget class="QPushButton" name="new_button">
               <property name="minimumSize">
                <size>
                 <width>30</width>
@@ -179,7 +179,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="actionImport">
+             <widget class="QPushButton" name="import_button">
               <property name="minimumSize">
                <size>
                 <width>30</width>
@@ -208,7 +208,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="actionExport">
+             <widget class="QPushButton" name="export_button">
               <property name="minimumSize">
                <size>
                 <width>30</width>
@@ -244,7 +244,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="recenter_Grid_Button">
+             <widget class="QPushButton" name="recenter_button">
               <property name="minimumSize">
                <size>
                 <width>30</width>
@@ -276,7 +276,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="actionToggle_Active_Grid_Area">
+             <widget class="QPushButton" name="active_grid_area_button">
               <property name="minimumSize">
                <size>
                 <width>30</width>
@@ -311,7 +311,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="actionToggle_Brush">
+             <widget class="QPushButton" name="brush_button">
               <property name="minimumSize">
                <size>
                 <width>30</width>
@@ -346,7 +346,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="actionToggle_Eraser">
+             <widget class="QPushButton" name="eraser_button">
               <property name="minimumSize">
                <size>
                 <width>30</width>
@@ -381,7 +381,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="actionToggle_Grid">
+             <widget class="QPushButton" name="grid_button">
               <property name="minimumSize">
                <size>
                 <width>30</width>
@@ -423,7 +423,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="actionUndo">
+             <widget class="QPushButton" name="undo_button">
               <property name="minimumSize">
                <size>
                 <width>30</width>
@@ -452,7 +452,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="actionRedo">
+             <widget class="QPushButton" name="redo_button">
               <property name="minimumSize">
                <size>
                 <width>30</width>
@@ -553,182 +553,10 @@
  <resources>
   <include location="../../../resources/feather.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>actionNew</sender>
-   <signal>clicked()</signal>
-   <receiver>canvas</receiver>
-   <slot>action_new()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>18</x>
-     <y>34</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>158</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionToggle_Eraser</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>canvas</receiver>
-   <slot>action_toggle_eraser(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>240</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>28</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionExport</sender>
-   <signal>clicked()</signal>
-   <receiver>canvas</receiver>
-   <slot>action_export()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>86</x>
-     <y>36</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>51</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionRedo</sender>
-   <signal>clicked()</signal>
-   <receiver>canvas</receiver>
-   <slot>action_redo()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>385</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>473</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionToggle_Grid</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>canvas</receiver>
-   <slot>action_toggle_grid(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>274</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>255</x>
-     <y>-15</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionToggle_Brush</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>canvas</receiver>
-   <slot>action_toggle_brush(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>206</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>39</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionUndo</sender>
-   <signal>clicked()</signal>
-   <receiver>canvas</receiver>
-   <slot>action_undo()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>351</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>299</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>recenter_Grid_Button</sender>
-   <signal>clicked()</signal>
-   <receiver>canvas</receiver>
-   <slot>action_recenter()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>134</x>
-     <y>31</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-5</x>
-     <y>199</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionImport</sender>
-   <signal>clicked()</signal>
-   <receiver>canvas</receiver>
-   <slot>action_import()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>49</x>
-     <y>35</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>109</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionToggle_Active_Grid_Area</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>canvas</receiver>
-   <slot>action_toggle_active_grid_area(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>172</x>
-     <y>42</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>13</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>toggle_controlnet(bool)</slot>
   <slot>toggle_drawing_pad(bool)</slot>
   <slot>toggle_outpaint(bool)</slot>
-  <slot>action_new()</slot>
-  <slot>action_import()</slot>
-  <slot>action_export()</slot>
-  <slot>action_redo()</slot>
-  <slot>action_undo()</slot>
-  <slot>action_toggle_brush(bool)</slot>
-  <slot>action_toggle_eraser(bool)</slot>
-  <slot>action_toggle_grid(bool)</slot>
-  <slot>action_toggle_active_grid_area(bool)</slot>
-  <slot>action_toggle_mask(bool)</slot>
-  <slot>action_recenter()</slot>
  </slots>
 </ui>
