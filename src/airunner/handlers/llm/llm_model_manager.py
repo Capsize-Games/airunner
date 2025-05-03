@@ -14,11 +14,11 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.enums import (
-    SignalCode,
     ModelType,
     ModelStatus,
     LLMActionType,
 )
+from airunner.utils import is_windows
 from airunner.settings import (
     AIRUNNER_MAX_SEED,
     AIRUNNER_LOCAL_FILES_ONLY,
@@ -459,20 +459,21 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 attn_implementation=self.attn_implementation,
             )
 
-            # Attempt to load adapter if available
-            # try:
-            #     if os.path.exists(self.adapter_path):
-            #         # Convert base model to PEFT format
-            #         self._model = PeftModel.from_pretrained(
-            #             self._model, self.adapter_path
-            #         )
-            #         self.logger.info(
-            #             f"Loaded adapter from {self.adapter_path}"
-            #         )
-            # except Exception as e:
-            #     self.logger.error(
-            #         f"Error loading adapter (continuing with base model): {e}"
-            #     )
+            if not is_windows():
+                # Attempt to load adapter if available
+                try:
+                    if os.path.exists(self.adapter_path):
+                        # Convert base model to PEFT format
+                        self._model = PeftModel.from_pretrained(
+                            self._model, self.adapter_path
+                        )
+                        self.logger.info(
+                            f"Loaded adapter from {self.adapter_path}"
+                        )
+                except Exception as e:
+                    self.logger.error(
+                        f"Error loading adapter (continuing with base model): {e}"
+                    )
 
         except Exception as e:
             self.logger.error(f"Error loading model: {e}")
