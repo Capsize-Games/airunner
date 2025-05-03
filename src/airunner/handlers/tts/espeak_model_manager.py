@@ -114,6 +114,11 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
                 voice = "female1"
         elif not self.espeak_settings:
             self.logger.warning("Espeak settings are not defined.")
+        if not self._engine:
+            self.load()
+        if not self._engine:
+            self.logger.error("Failed to load Espeak engine.")
+            return
         self._engine.setProperty("rate", float(self.rate))
         self._engine.setProperty("volume", self.volume / 100.0)
         self._engine.setProperty("pitch", float(self.pitch))

@@ -4,7 +4,13 @@ import threading
 from typing import Optional, Type
 
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
-from airunner.enums import SignalCode, TTSModel, ModelStatus, LLMActionType
+from airunner.enums import (
+    SignalCode,
+    TTSModel,
+    ModelStatus,
+    LLMActionType,
+    QueueType,
+)
 from airunner.workers.worker import Worker
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.settings import AIRUNNER_TTS_ON, AIRUNNER_ENABLE_OPEN_VOICE
@@ -17,6 +23,7 @@ class TTSGeneratorWorker(Worker):
     """
 
     tokens = []
+    queue_type = QueueType.GET_NEXT_ITEM
 
     def __init__(self, *args, **kwargs):
         self.tts = None
@@ -42,30 +49,26 @@ class TTSGeneratorWorker(Worker):
         ) or AIRUNNER_TTS_ON
 
     def on_llm_text_streamed_signal(self, data):
-        response = data.get("response", None)
-        do_tts_reply = data.get("do_tts_reply", True)
-        if not do_tts_reply:
-            return
-        if self.do_interrupt and response and response.is_first_message:
-            self.on_unblock_tts_generator_signal()
         if not self.tts_enabled:
             return
+        response = data.get("response", None)
 
-        llm_response: LLMResponse = data.get("response", None)
-        if not llm_response:
+        if not response:
             raise ValueError("No LLMResponse object found in data")
 
-        if llm_response.action is LLMActionType.GENERATE_IMAGE:
+        if response.action is LLMActionType.GENERATE_IMAGE:
             return
 
         if self.tts.model_status is not ModelStatus.LOADED:
             self._load_tts()
+        elif self.do_interrupt and response and response.is_first_message:
+            self.on_unblock_tts_generator_signal()
 
         self.add_to_queue(
             {
-                "message": llm_response.message.replace("</s>", "")
-                + ("." if llm_response.is_end_of_message else ""),
-                "is_end_of_message": llm_response.is_end_of_message,
+                "message": response.message.replace("</s>", "")
+                + ("." if response.is_end_of_message else ""),
+                "is_end_of_message": response.is_end_of_message,
             }
         )
 
@@ -161,9 +164,14 @@ class TTSGeneratorWorker(Worker):
         if self.do_interrupt:
             return
 
-        # Add the incoming tokens to the list
-        self.tokens.extend(data["message"])
-        finalize = data.get("finalize", False)
+        message = data.get("message", "")
+        is_end_of_message = data.get("is_end_of_message", False)
+
+        # Add the incoming message to the tokens list
+        if isinstance(message, str):
+            self.tokens.append(message)
+        else:
+            self.tokens.extend(message)
 
         # Convert the tokens to a string
         text = "".join(self.tokens)
@@ -177,12 +185,13 @@ class TTSGeneratorWorker(Worker):
         def word_count(s):
             return len(s.split())
 
-        if finalize:
+        if is_end_of_message:
+            # If this is the end of a message, generate the full text and clear tokens
             self._generate(text)
             self.play_queue_started = True
             self.tokens = []
         else:
-            # Split text at punctuation
+            # Split text at punctuation for incremental TTS
             punctuation = [".", "?", "!", ";", ":", "\n", ","]
             for p in punctuation:
                 if self.do_interrupt:
@@ -197,15 +206,20 @@ class TTSGeneratorWorker(Worker):
                         if p == ",":
                             if word_count(before) < 3 or word_count(after) < 3:
                                 continue  # Skip splitting if there are not enough words around the comma
-                        sentence = before
+                        sentence = (
+                            before + p
+                        )  # Include the punctuation in the sentence
                         self._generate(sentence)
                         self.play_queue_started = True
 
-                        # Convert the remaining string back to a list of tokens
+                        # Set tokens to the remaining text
                         remaining_text = after.strip()
                         if not self.do_interrupt:
-                            self.tokens = list(remaining_text)
+                            self.tokens = (
+                                [remaining_text] if remaining_text else []
+                            )
                             break
+
         if self.do_interrupt:
             self.on_interrupt_process_signal()
 
