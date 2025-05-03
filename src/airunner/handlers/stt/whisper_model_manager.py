@@ -44,10 +44,13 @@ class WhisperModelManager(BaseModelManager):
         self._feature_extractor = None
         self._sampling_rate = 16000
         self.audio_stream = None
+        self._device_map = (
+            "auto"  # Use automatic device mapping for all models
+        )
 
     @property
     def dtype(self):
-        return torch.bfloat16
+        return torch.float16 if torch.cuda.is_available() else torch.float32
 
     @property
     def stt_is_loading(self):
@@ -127,18 +130,23 @@ class WhisperModelManager(BaseModelManager):
 
     def _load_model(self):
         self.logger.debug(
-            f"Loading model from {self.model_path} to device {self.device}"
+            f"Loading model from {self.model_path} with device_map={self._device_map}"
         )
-        device = self.device
         try:
+            # Clean up any GPU memory before loading to avoid conflicts
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+            # Use device_map="auto" and avoid any explicit device placement
             self._model = WhisperForConditionalGeneration.from_pretrained(
                 self.model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.dtype,
                 use_safetensors=True,
                 force_download=False,
+                device_map=self._device_map,
+                low_cpu_mem_usage=False,  # Avoid issues with meta tensors
             )
-            self._model.to(device)
         except Exception as e:
             self.logger.error(f"Failed to load model: {e}")
             self.change_model_status(ModelType.STT, ModelStatus.FAILED)
@@ -151,8 +159,6 @@ class WhisperModelManager(BaseModelManager):
             self._processor = WhisperProcessor.from_pretrained(
                 model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                torch_dtype=self.dtype,
-                device_map=self.device,
             )
         except Exception as e:
             self.logger.error(f"Failed to load processor: {e}")
@@ -165,8 +171,6 @@ class WhisperModelManager(BaseModelManager):
             self._feature_extractor = WhisperFeatureExtractor.from_pretrained(
                 model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                torch_dtype=self.dtype,
-                device_map=self.device,
             )
         except Exception as e:
             self.logger.error(f"Failed to load feature extractor")
@@ -176,94 +180,74 @@ class WhisperModelManager(BaseModelManager):
     def _unload_model(self):
         del self._model
         self._model = None
-        clear_memory(self.device)
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     def _unload_processor(self):
         del self._processor
         self._processor = None
-        clear_memory(self.device)
 
     def _unload_feature_extractor(self):
         del self._feature_extractor
         self._feature_extractor = None
-        clear_memory(self.device)
 
     def _process_inputs(self, inputs: np.ndarray) -> str:
-        if not self._feature_extractor:
-            return ""
-        inputs = torch.from_numpy(inputs).to(torch.float32).to(self.device)
-
-        if torch.isnan(inputs).any():
-            raise NaNException
-
-        # Move inputs to CPU and ensure they are in float32 before
-        # passing to _feature_extractor
-        inputs = inputs.cpu().to(torch.float32)
-        inputs = self._feature_extractor(
-            inputs, sampling_rate=self._sampling_rate, return_tensors="pt"
-        )
-
-        if torch.isnan(inputs.input_features).any():
-            raise NaNException
-
-        inputs["input_features"] = (
-            inputs["input_features"].to(self.dtype).to(self.device)
-        )
-        if torch.isnan(inputs.input_features).any():
-            raise NaNException
-
-        transcription = self._run(inputs)
-        if transcription is None or "nan" in transcription:
-            raise NaNException
-
-        return transcription
-
-    def _run(self, inputs) -> str:
-        """
-        Run the model on the given inputs.
-        :param inputs: str - The transcription of the audio data.
-        :return:
-        """
-        self.logger.debug("Running model")
-        try:
-            input_tensor = inputs.input_features
-        except AttributeError:
-            self.logger.error("Input features not found in inputs")
+        """Process audio input array and return transcription"""
+        if not self._feature_extractor or not self._model:
             return ""
 
-        if torch.isnan(input_tensor).any():
-            raise NaNException
-
-        # Ensure input tensor is in the correct dtype
-        input_tensor = input_tensor.to(self.dtype).to(self.device)
-
-        data = dict(
-            input_features=input_tensor,
-            is_multilingual=self.whisper_settings.is_multilingual,
-            temperature=self.whisper_settings.temperature,
-            compression_ratio_threshold=self.whisper_settings.compression_ratio_threshold,
-            logprob_threshold=self.whisper_settings.logprob_threshold,
-            no_speech_threshold=self.whisper_settings.no_speech_threshold,
-            time_precision=self.whisper_settings.time_precision,
-        )
-
-        if self.whisper_settings.is_multilingual:
-            data["task"] = self.whisper_settings.task
-
         try:
-            generated_ids = self._model.generate(**data)
+            # Pre-process the audio on CPU first
+            self.logger.debug("Processing audio input")
+
+            # Convert numpy array to proper format
+            input_features = self._feature_extractor(
+                inputs, sampling_rate=self._sampling_rate, return_tensors="pt"
+            ).input_features
+
+            if torch.isnan(input_features).any():
+                raise NaNException("NaN values found in input features")
+
+            # Find model's device for placing tensors
+            model_device = next(self._model.parameters()).device
+
+            # Place features on the same device as model with correct dtype
+            input_features = input_features.to(
+                device=model_device, dtype=self.dtype
+            )
+
+            self.logger.debug(
+                f"Input features prepared on device: {input_features.device}"
+            )
+
+            # Call the model directly with the features
+            with torch.no_grad():
+                # Pass only the necessary arguments
+                result = self._model.generate(
+                    input_features=input_features,
+                    do_sample=True,
+                    temperature=self.whisper_settings.temperature,
+                    num_beams=1,
+                )
+
+            # Process the results
+            transcription = self.process_transcription(result)
+
+            if not transcription or "nan" in transcription:
+                return ""
+
+            return transcription
+
         except RuntimeError as e:
-            self.logger.error(f"Error in model generation: {e}")
+            self.logger.error(f"RuntimeError in audio processing: {e}")
+            if "device" in str(e).lower():
+                self.logger.error(
+                    f"Device mismatch detected. Model on: {model_device}"
+                )
             return ""
-
-        if generated_ids is None or torch.isnan(generated_ids).any():
-            raise NaNException
-
-        transcription = self.process_transcription(generated_ids)
-        if len(transcription) == 0 or len(transcription.split(" ")) == 1:
+        except Exception as e:
+            self.logger.error(f"Error in audio processing: {e}")
             return ""
-
-        return transcription
 
     def _send_transcription(self, transcription: str):
         """
@@ -275,10 +259,10 @@ class WhisperModelManager(BaseModelManager):
         )
 
     def process_transcription(self, generated_ids) -> str:
-        # Decode the generated ids
-        generated_ids = generated_ids.to("cpu").to(torch.float32)
+        # Move to CPU only for decoding
+        generated_ids_cpu = generated_ids.cpu()
         transcription = self._processor.batch_decode(
-            generated_ids, skip_special_tokens=True
+            generated_ids_cpu, skip_special_tokens=True
         )[0]
 
         # Remove leading and trailing whitespace

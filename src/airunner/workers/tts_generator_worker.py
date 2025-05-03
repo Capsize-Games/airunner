@@ -70,13 +70,14 @@ class TTSGeneratorWorker(Worker):
         )
 
     def on_interrupt_process_signal(self):
-        self.play_queue = []
-        self.play_queue_started = False
-        self.tokens = []
-        self.queue = queue.Queue()
-        self.do_interrupt = True
-        self.paused = True
-        self.tts.interrupt_process_signal()
+        if self.tts:
+            self.play_queue = []
+            self.play_queue_started = False
+            self.tokens = []
+            self.queue = queue.Queue()
+            self.do_interrupt = True
+            self.paused = True
+            self.tts.interrupt_process_signal()
 
     def on_unblock_tts_generator_signal(self):
         if self.tts_enabled:
