@@ -1,6 +1,6 @@
 import torch
 from abc import ABC, abstractmethod, ABCMeta
-from typing import Dict
+from typing import Dict, Optional
 
 from airunner.utils.memory import is_ampere_or_newer
 
@@ -58,11 +58,11 @@ class BaseModelManager(
 
     handler_type = HandlerType.TRANSFORMER
     model_type = None
+    _model_status: Optional[Dict[ModelType, ModelStatus]] = None
 
     def __init__(self, *args, **kwargs):
         self.use_gpu = True
         # Initialize _model_status as an instance attribute
-        self._model_status: Dict[ModelType, ModelStatus] = {}
         super().__init__()
         self._requested_action: ModelAction = ModelAction.NONE
         # Initialize instance status using the specific class's model_status definition
