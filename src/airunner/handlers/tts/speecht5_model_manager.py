@@ -66,6 +66,10 @@ class SpeechT5ModelManager(TTSModelManager):
         self._paused = False
 
     @property
+    def status(self) -> ModelStatus:
+        return self.model_status.get(ModelType.TTS, ModelStatus.UNLOADED)
+
+    @property
     def speaker_embeddings_path(self) -> str:
         return os.path.join(
             self.path_settings.tts_model_path,
@@ -148,9 +152,9 @@ class SpeechT5ModelManager(TTSModelManager):
 
     # Refactored load/unload methods for better error handling
     def load(self, target_model=None):
-        if self.model_status is ModelStatus.LOADING:
+        if self.status is ModelStatus.LOADING:
             return
-        if self.model_status in (
+        if self.status in (
             ModelStatus.LOADED,
             ModelStatus.READY,
             ModelStatus.FAILED,
@@ -170,12 +174,37 @@ class SpeechT5ModelManager(TTSModelManager):
             and self._speaker_embeddings is not None
             and self.tokenizer is not None
         ):
-            self._set_status_loaded()
+            # Explicitly move model and vocoder to the target device and dtype
+            try:
+                if self.model:
+                    self.logger.debug(
+                        f"Moving main model to device: {self.device} and dtype: {self.torch_dtype}"
+                    )
+                    self.model.to(self.device)
+                    for param in self.model.parameters():
+                        param.data = param.data.to(dtype=self.torch_dtype)
+                if self.vocoder:
+                    self.logger.debug(
+                        f"Moving vocoder to device: {self.device} and dtype: {self.torch_dtype}"
+                    )
+                    self.vocoder.to(self.device)
+                    for param in self.vocoder.parameters():
+                        param.data = param.data.to(dtype=self.torch_dtype)
+                self._set_status_loaded()
+                self.logger.info("SpeechT5 models loaded successfully.")
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to move models to device {self.device}: {e}"
+                )
+                self._set_status_failed()
         else:
+            self.logger.error(
+                "Failed to load one or more SpeechT5 components."
+            )
             self._set_status_failed()
 
     def unload(self):
-        if self.model_status is ModelStatus.LOADING:
+        if self.status is ModelStatus.LOADING:
             return
         self._set_status_loading()
         self.model = None
@@ -187,7 +216,7 @@ class SpeechT5ModelManager(TTSModelManager):
         self._set_status_unloaded()
 
     def generate(self, tts_request: Type[TTSRequest]):
-        if self.model_status is not ModelStatus.LOADED:
+        if self.status is not ModelStatus.LOADED:
             return None
         if self._do_interrupt or self._paused:
             return None
@@ -206,25 +235,29 @@ class SpeechT5ModelManager(TTSModelManager):
                 self.model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.torch_dtype,
-                device_map=self.device,
+                # Removed incorrect device_map argument
+                # device_map=self.device,
             )
-        except EnvironmentError as _e:
-            self.logger.error(f"Failed to load model {_e}")
+            self.logger.debug("Main model loaded.")
+        except Exception as e:  # Catch broader exceptions during loading
+            self.logger.error(f"Failed to load model: {e}")
+            self.model = None  # Ensure model is None on failure
 
     def _load_tokenizer(self):
         self.logger.debug("Loading tokenizer")
-
         try:
             self.tokenizer = self.tokenizer_class.from_pretrained(
-                self.model_path,
-                device_map=self.device,
-                torch_dtype=self.torch_dtype,
+                self.model_path,  # Correctly uses model_path for SpeechT5 tokenizer
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 trust_remote_code=False,
+                # Removed potentially incorrect arguments
+                # device_map=self.device,
+                # torch_dtype=self.torch_dtype,
             )
+            self.logger.debug("Tokenizer loaded.")
         except Exception as e:
-            self.logger.error("Failed to load tokenizer")
-            self.logger.error(e)
+            self.logger.error(f"Failed to load tokenizer: {e}")
+            self.tokenizer = None  # Ensure tokenizer is None on failure
 
     def _load_vocoder(self):
         self.logger.debug(f"Loading Vocoder {self.vocoder_path}")
@@ -233,43 +266,74 @@ class SpeechT5ModelManager(TTSModelManager):
                 self.vocoder_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.torch_dtype,
-                device_map=self.device,
+                # Removed incorrect device_map argument
+                # device_map=self.device,
             )
+            self.logger.debug("Vocoder loaded.")
         except Exception as e:
-            self.logger.error("Failed to load vocoder")
-            self.logger.error(e)
+            self.logger.error(f"Failed to load vocoder: {e}")
+            self.vocoder = None  # Ensure vocoder is None on failure
 
     def _load_processor(self):
-        self.logger.debug("Loading Procesor")
+        self.logger.debug("Loading Processor")
         if self.processor_class:
             try:
                 self.processor = self.processor_class.from_pretrained(
                     self.processor_path,
                     local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                    torch_dtype=self.torch_dtype,
-                    device_map=self.device,
+                    # Removed potentially incorrect arguments
+                    # torch_dtype=self.torch_dtype,
+                    # device_map=self.device,
                 )
+                self.logger.debug("Processor loaded.")
             except Exception as e:
-                self.logger.error("Failed to load processor")
-                self.logger.error(e)
+                self.logger.error(f"Failed to load processor: {e}")
+                self.processor = None  # Ensure processor is None on failure
+        else:
+            self.processor = None
 
     def _load_speaker_embeddings(self):
         self.logger.debug("Loading speaker embeddings...")
-
         try:
-            self._speaker_embeddings = torch.load(
-                self.speaker_embeddings_path
-            )
+            # Correctly load the embeddings file
+            embeddings_path = self.speaker_embeddings_path
+            if not os.path.exists(embeddings_path):
+                self.logger.error(
+                    f"Speaker embeddings file not found at: {embeddings_path}"
+                )
+                self._speaker_embeddings = None
+                return
+
+            self._speaker_embeddings = torch.load(embeddings_path)
             if self.use_cuda and self._speaker_embeddings is not None:
-                self._speaker_embeddings = self._speaker_embeddings.to(torch.bfloat16).cuda()
+                # Move embeddings to CUDA device with appropriate dtype
+                self._speaker_embeddings = self._speaker_embeddings.to(
+                    self.device
+                ).to(self.torch_dtype)
+                self.logger.debug("Speaker embeddings moved to CUDA.")
+            elif self._speaker_embeddings is not None:
+                # Ensure embeddings are on the correct device (CPU) and dtype
+                self._speaker_embeddings = self._speaker_embeddings.to(
+                    self.device
+                ).to(self.torch_dtype)
+                self.logger.debug("Speaker embeddings loaded to CPU.")
 
         except Exception as e:
-            self.logger.error("Failed to load speaker embeddings")
-            self.logger.error(e)
+            self.logger.error(
+                f"Failed to load or process speaker embeddings: {e}"
+            )
+            self._speaker_embeddings = (
+                None  # Ensure embeddings are None on failure
+            )
 
     @staticmethod
     def _extract_speaker_key(filename):
-        return filename.split("_")[2]
+        # Assuming filename format like 'speaker_id_utterance_id.wav' or similar
+        # Adjust this logic based on the actual filename structure in the dataset
+        parts = os.path.basename(filename).split("_")
+        if len(parts) >= 3:
+            return parts[2]  # Example: extract speaker id
+        return None  # Or handle cases where the format doesn't match
 
     def _load_dataset_by_speaker_key(
         self,
@@ -278,12 +342,45 @@ class SpeechT5ModelManager(TTSModelManager):
             DatasetDict, Dataset, IterableDatasetDict, IterableDataset
         ] = None,
     ) -> Optional[torch.Tensor]:
+        # This method seems designed to load a specific speaker's embedding from a dataset
+        # It wasn't directly involved in the original error, but let's ensure it's correct
+        if embeddings_dataset is None:
+            self.logger.warning(
+                "Embeddings dataset not provided to _load_dataset_by_speaker_key"
+            )
+            return None
+
         embeddings = None
-        for entry in embeddings_dataset:
-            speaker = self._extract_speaker_key(entry["filename"])
-            if speaker_key == speaker:
-                embeddings = torch.tensor(entry["xvector"]).unsqueeze(0)
-                break
+        try:
+            for entry in embeddings_dataset:
+                # Ensure 'filename' and 'xvector' keys exist in the dataset entry
+                if "filename" not in entry or "xvector" not in entry:
+                    self.logger.warning(
+                        f"Skipping dataset entry due to missing keys: {entry}"
+                    )
+                    continue
+
+                extracted_speaker = self._extract_speaker_key(
+                    entry["filename"]
+                )
+                if (
+                    extracted_speaker is not None
+                    and speaker_key == extracted_speaker
+                ):
+                    # Convert xvector to tensor and add batch dimension
+                    embeddings = torch.tensor(entry["xvector"]).unsqueeze(0)
+                    self.logger.debug(
+                        f"Found embeddings for speaker key: {speaker_key}"
+                    )
+                    break  # Found the speaker, exit loop
+            if embeddings is None:
+                self.logger.warning(
+                    f"Speaker key '{speaker_key}' not found in embeddings dataset."
+                )
+        except Exception as e:
+            self.logger.error(f"Error processing embeddings dataset: {e}")
+            return None
+
         return embeddings
 
     def reload_speaker_embeddings(self):
@@ -315,8 +412,8 @@ class SpeechT5ModelManager(TTSModelManager):
         # Use consistent device and dtype handling
         try:
             speaker_embeddings = self._speaker_embeddings.to(
-                self.torch_dtype
-            ).to(self.device)
+                dtype=self.torch_dtype, device=self.device
+            )
             vocoder = self.vocoder.to(self.torch_dtype).to(self.device)
 
             speech = self.model.generate(
@@ -342,22 +439,33 @@ class SpeechT5ModelManager(TTSModelManager):
         return None
 
     def _move_inputs_to_device(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        """Move input tensors to the appropriate device."""
+        """Move input tensors to the appropriate device. Only cast dtype if tensor is floating point."""
         try:
             device = self.device
+            dtype = self.torch_dtype
             for key in inputs:
                 if isinstance(inputs[key], torch.Tensor):
-                    inputs[key] = inputs[key].to(device)
+                    if torch.is_floating_point(inputs[key]):
+                        inputs[key] = inputs[key].to(
+                            device=device, dtype=dtype
+                        )
+                    else:
+                        inputs[key] = inputs[key].to(device=device)
                 elif isinstance(inputs[key], dict):
                     for subkey in inputs[key]:
                         if isinstance(inputs[key][subkey], torch.Tensor):
-                            inputs[key][subkey] = inputs[key][subkey].to(
-                                device
-                            )
-
+                            if torch.is_floating_point(inputs[key][subkey]):
+                                inputs[key][subkey] = inputs[key][subkey].to(
+                                    device=device, dtype=dtype
+                                )
+                            else:
+                                inputs[key][subkey] = inputs[key][subkey].to(
+                                    device=device
+                                )
         except Exception as e:
-            self.logger.error(f"Failed to move inputs to device: {str(e)}")
-
+            self.logger.error(
+                f"Failed to move inputs to device and dtype: {str(e)}"
+            )
         return inputs
 
     def unblock_tts_generator_signal(self):

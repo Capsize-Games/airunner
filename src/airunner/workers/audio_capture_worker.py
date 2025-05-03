@@ -1,7 +1,6 @@
 import queue
 import time
 
-import sounddevice as sd
 import numpy as np
 from PySide6.QtCore import QThread
 
@@ -24,7 +23,6 @@ class AudioCaptureWorker(Worker):
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.RECORDING_DEVICE_CHANGED: self.on_recording_device_changed_signal,
         }
-        self._selected_device = None
         super().__init__()
         self.listening: bool = False
         self.voice_input_start_time: time.time = None
@@ -32,10 +30,8 @@ class AudioCaptureWorker(Worker):
             self.stt_settings.chunk_duration
         )  # duration of chunks in milliseconds
         self.fs = self.stt_settings.fs
-        self.stream = None
-        self._use_playback_stream: bool = False
-        self.playback_stream = None
         self.running = False
+        self._use_playback_stream: bool = False
         self._audio_process_queue = queue.Queue()
 
     @property
@@ -43,18 +39,8 @@ class AudioCaptureWorker(Worker):
         """
         Get the recording device name from the sound settings.
         """
-        recording_deivce = self.sound_settings.recording_device
-        return recording_deivce if recording_deivce != "" else "pulse"
-
-    @property
-    def selected_device(self):
-        if self._selected_device is None:
-            devices = sd.query_devices()
-            for device in devices:
-                if device["name"] == self.recording_device:
-                    self._selected_device = device
-                    break
-        return self._selected_device
+        recording_device = self.sound_settings.recording_device
+        return recording_device if recording_device != "" else "pulse"
 
     def on_audio_capture_worker_response_signal(self, message: dict):
         item: np.ndarray = message["item"]
@@ -91,44 +77,44 @@ class AudioCaptureWorker(Worker):
         is_receiving_input = False
 
         while self.running:
-            while self.listening and self.running and self.stream:
+            while (
+                self.listening
+                and self.running
+                and self.api.sounddevice_manager.in_stream
+            ):
                 try:
                     # Use the actual sample rate from the stream if available
                     actual_fs = (
-                        self.stream.samplerate
-                        if hasattr(self.stream, "samplerate")
+                        self.api.sounddevice_manager.in_stream.samplerate
+                        if hasattr(
+                            self.api.sounddevice_manager.in_stream,
+                            "samplerate",
+                        )
                         else self.stt_settings.fs
                     )
-                    chunk, overflowed = self.stream.read(
-                        int(chunk_duration * actual_fs)
+                    frames = int(chunk_duration * actual_fs)
+                    chunk_data = self.api.sounddevice_manager.read_from_input(
+                        frames
                     )
+
+                    if chunk_data is None or chunk_data[0] is None:
+                        QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
+                        continue
+
+                    chunk, overflowed = chunk_data
                     if chunk.ndim > 1:
                         chunk = np.mean(chunk, axis=1)
-                except sd.PortAudioError as e:
-                    self.logger.error(f"PortAudioError: {e}")
-                    # When PortAudio has an error, close and reinitialize the stream
-                    self.logger.warning(
-                        "Attempting to recover from PortAudio error"
-                    )
-                    self._end_stream()
-                    QThread.msleep(
-                        500
-                    )  # Wait 500ms to let audio system recover
-                    self._initialize_stream()
-                    if not self.stream:
-                        self.logger.error(
-                            "Failed to recover audio stream, will retry later"
-                        )
-                        QThread.msleep(1000)  # Longer wait before retry
-                    continue
                 except Exception as e:
-                    self.logger.error(e)
+                    self.logger.error(f"Error reading from input stream: {e}")
                     QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
                     continue
 
-                if self.playback_stream:
+                if (
+                    self._use_playback_stream
+                    and self.api.sounddevice_manager.out_stream
+                ):
                     try:
-                        self.playback_stream.write(chunk)
+                        self.api.sounddevice_manager.write_to_output(chunk)
                     except Exception as e:
                         self.logger.error(f"Playback error: {e}")
 
@@ -149,8 +135,13 @@ class AudioCaptureWorker(Worker):
                                 "Sending audio to audio_processor_worker"
                             )
                             self.emit_signal(
-                                SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
-                                {"item": b"".join(recording)},
+                                SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL,
+                                {
+                                    "callback": lambda _recording=recording: self.emit_signal(
+                                        SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
+                                        {"item": b"".join(_recording)},
+                                    )
+                                },
                             )
                             recording = []
                             is_receiving_input = False
@@ -163,20 +154,8 @@ class AudioCaptureWorker(Worker):
             while not self.listening and self.running:
                 QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
 
-        # Stop playback stream
-        if self.playback_stream:
-            try:
-                self.playback_stream.stop()
-                self.playback_stream.close()
-            except Exception as e:
-                self.logger.error(f"Error stopping playback stream: {e}")
-
     def _start_listening(self):
         self.logger.debug("Start listening")
-        if self.stream is not None:
-            self._end_stream()
-            # Add delay to allow audio system to fully release resources
-            QThread.msleep(500)
         self._initialize_stream()
         self.listening = True
 
@@ -185,29 +164,9 @@ class AudioCaptureWorker(Worker):
         self.listening = False
         # Do not set self.running = False here - it terminates the worker
         # Allow proper cleanup to happen in the main loop
-        self._end_stream()
-        # self._capture_thread.join()
-
-    def _end_stream(self):
-        if self.stream:
-            self.logger.info("Stopping audio capture stream")
-            try:
-                self.stream.stop()
-            except Exception as e:
-                self.logger.error(e)
-            try:
-                self.stream.close()
-            except Exception as e:
-                self.logger.error(e)
-            try:
-                self.stream.abort()
-            except Exception as e:
-                self.logger.error(e)
-            self.stream = None
 
     def on_recording_device_changed_signal(self):
         self.logger.debug(f"Recording device changed")
-        self._end_stream()
         self._initialize_stream()
 
     def _initialize_stream(self):
@@ -215,36 +174,83 @@ class AudioCaptureWorker(Worker):
         samplerate = 16000  # self.stt_settings.fs
         channels = self.stt_settings.channels
 
-        if self.selected_device:
-            try:
-                self.stream = sd.InputStream(
-                    samplerate=samplerate,
-                    channels=channels,
-                    device=self.selected_device["index"],
-                )
-                device_name = self.selected_device["name"]
-                self.logger.info(
-                    f"Audio stream initialized with sample rate: {samplerate}, channels: {channels}, device: {device_name}"
-                )
-                self.stream.start()
-            except Exception as e:
-                self.logger.error(f"Failed to initialize audio stream: {e}")
-                self.stream = None
+        # Close any existing streams first to avoid conflicts
+        if self.api.sounddevice_manager.in_stream:
+            self.logger.debug(
+                "Closing existing input stream before initializing a new one"
+            )
+            self.api.sounddevice_manager._stop_input_stream()
+
+        # Log available input devices to help with debugging
+        try:
+            import sounddevice as sd
+
+            devices = sd.query_devices()
+            input_devices = [
+                d for d in devices if d.get("max_input_channels", 0) > 0
+            ]
+            self.logger.debug(
+                f"Available input devices: {[d['name'] for d in input_devices]}"
+            )
+            self.logger.debug(
+                f"Selected recording device: {self.recording_device}"
+            )
+        except Exception as e:
+            self.logger.error(f"Error querying audio devices: {e}")
+
+        # Initialize input stream with better error handling
+        success = self.api.sounddevice_manager.initialize_input_stream(
+            samplerate=samplerate,
+            channels=channels,
+            device_name=self.recording_device,
+        )
+
+        if success:
+            self.logger.info(
+                f"Successfully initialized input stream with device: {self.recording_device}"
+            )
         else:
             self.logger.error(
-                f"Recording device '{self.recording_device}' not found."
+                f"Failed to initialize input stream with device: {self.recording_device}"
             )
-            self.stream = None
-
-        # Initialize playback stream
-        self.playback_stream = None
-        if self._use_playback_stream:
-            try:
-                self.playback_stream = sd.OutputStream(
-                    samplerate=self.stream.samplerate,
-                    channels=self.stt_settings.channels,
+            # Try with default device as fallback
+            self.logger.warning("Attempting to initialize with default device")
+            success = self.api.sounddevice_manager.initialize_input_stream(
+                samplerate=samplerate,
+                channels=channels,
+                device_name="",  # Empty string should use system default
+            )
+            if success:
+                self.logger.info(
+                    "Successfully initialized input stream with default device"
                 )
-                self.playback_stream.start()
-            except Exception as e:
-                self.logger.error(f"Failed to initialize playback stream: {e}")
-                self.playback_stream = None
+            else:
+                self.logger.error(
+                    "Failed to initialize input stream with default device"
+                )
+
+        # Initialize playback stream if needed
+        if self._use_playback_stream:
+            device_name = self.sound_settings.playback_device or "pulse"
+            self.logger.debug(
+                f"Initializing monitoring playback stream with device: {device_name}"
+            )
+            playback_success = (
+                self.api.sounddevice_manager.initialize_output_stream(
+                    samplerate=samplerate,
+                    channels=channels,
+                    device_name=device_name,
+                )
+            )
+            if not playback_success:
+                self.logger.error(
+                    f"Failed to initialize playback stream with device: {device_name}"
+                )
+
+        # Verify stream status
+        if self.api.sounddevice_manager.in_stream:
+            self.logger.debug("Input stream is now active and ready")
+        else:
+            self.logger.error("Input stream failed to initialize properly")
+
+        return self.api.sounddevice_manager.in_stream is not None

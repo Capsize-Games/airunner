@@ -78,9 +78,6 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
     # Settings
     llm_settings: LLMSettings
-    _model_status = {
-        ModelType.LLM: ModelStatus.UNLOADED,
-    }
 
     def __init__(
         self,
@@ -99,6 +96,8 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         """
         self.local_agent_class_ = local_agent_class or LocalAgent
         super().__init__(*args, **kwargs)
+        # Initialize the instance status *after* the base class init
+        self._model_status = {ModelType.LLM: ModelStatus.UNLOADED}
         self.llm_settings = LLMSettings()
 
     @property
@@ -581,7 +580,6 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             self.load()
 
         # Generate response using chat agent
-        print("GENEARATING RESPONSE WITH CHAT AGENT", prompt)
         llm_request = llm_request or LLMRequest.from_default()
 
         # Call the appropriate chat agent method
@@ -609,13 +607,11 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         This helps clients know when a complete response has been delivered.
         """
         self.logger.debug("Sending final message")
-        llm_response = LLMResponse(
-            node_id=llm_request.node_id if llm_request else None,
-            is_end_of_message=True,
-        )
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-            {"response": llm_response},
+        self.api.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                is_end_of_message=True,
+            )
         )
 
     def _do_set_seed(self) -> None:
