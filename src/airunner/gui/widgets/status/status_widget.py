@@ -1,4 +1,3 @@
-
 import torch
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
@@ -10,9 +9,11 @@ from airunner.settings import AIRUNNER_ART_ENABLED
 
 class StatusWidget(BaseWidget):
     widget_class_ = Ui_status_widget
-    _model_status = {model_type: ModelStatus.UNLOADED for model_type in ModelType}
 
     def __init__(self, *args, **kwargs):
+        self._model_status = {
+            model_type: ModelStatus.UNLOADED for model_type in ModelType
+        }
         self.signal_handlers = {
             SignalCode.APPLICATION_STATUS_INFO_SIGNAL: self.on_status_info_signal,
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL: self.on_status_error_signal,
@@ -38,7 +39,10 @@ class StatusWidget(BaseWidget):
         self.safety_checker_status = ModelStatus.UNLOADED
         self.feature_extractor_status = ModelStatus.UNLOADED
 
-        if self.application_settings.nsfw_filter and self.application_settings.sd_enabled:
+        if (
+            self.application_settings.nsfw_filter
+            and self.application_settings.sd_enabled
+        ):
             self.safety_checker_status = ModelStatus.LOADING
             self.feature_extractor_status = ModelStatus.LOADING
 
@@ -53,14 +57,13 @@ class StatusWidget(BaseWidget):
         ]:
             if getattr(self.application_settings, item[1]):
                 self._model_status[item[0]] = ModelStatus.LOADING
-                self.update_model_status({
-                    "model": item[0],
-                    "status": ModelStatus.LOADING
-                })
-    
+                self.update_model_status(
+                    {"model": item[0], "status": ModelStatus.LOADING}
+                )
+
     def on_application_settings_changed(self):
         self.set_sd_status_text()
-    
+
     def set_sd_pipeline_label(self, data):
         if data["pipeline"]:
             self.ui.pipeline_label.setText(data["pipeline"])
@@ -74,41 +77,56 @@ class StatusWidget(BaseWidget):
         self.set_sd_status_text()
 
         if self.application_settings.sd_enabled:
-            self.on_model_status_changed_signal({
-                "model": ModelType.SD,
-                "status": self._model_status[ModelType.SD],
-                "path": ""
-            })
+            self.on_model_status_changed_signal(
+                {
+                    "model": ModelType.SD,
+                    "status": self._model_status[ModelType.SD],
+                    "path": "",
+                }
+            )
         if self.application_settings.controlnet_enabled:
-            self.on_model_status_changed_signal({
-                "model": ModelType.CONTROLNET,
-                "status": self._model_status[ModelType.CONTROLNET],
-                "path": ""
-            })
+            self.on_model_status_changed_signal(
+                {
+                    "model": ModelType.CONTROLNET,
+                    "status": self._model_status[ModelType.CONTROLNET],
+                    "path": "",
+                }
+            )
         if self.application_settings.llm_enabled:
-            self.on_model_status_changed_signal({
-                "model": ModelType.LLM,
-                "status": self._model_status[ModelType.LLM],
-                "path": ""
-            })
+            self.on_model_status_changed_signal(
+                {
+                    "model": ModelType.LLM,
+                    "status": self._model_status[ModelType.LLM],
+                    "path": "",
+                }
+            )
         if self.application_settings.tts_enabled:
-            self.on_model_status_changed_signal({
-                "model": ModelType.TTS,
-                "status": self._model_status[ModelType.TTS],
-                "path": ""
-            })
+            self.on_model_status_changed_signal(
+                {
+                    "model": ModelType.TTS,
+                    "status": self._model_status[ModelType.TTS],
+                    "path": "",
+                }
+            )
         if self.application_settings.stt_enabled:
-            self.on_model_status_changed_signal({
-                "model": ModelType.STT,
-                "status": self._model_status[ModelType.STT],
-                "path": ""
-            })
-        if self.application_settings.nsfw_filter and self.application_settings.sd_enabled:
-            self.on_model_status_changed_signal({
-                "model": ModelType.SAFETY_CHECKER,
-                "status": self._model_status[ModelType.SAFETY_CHECKER],
-                "path": ""
-            })
+            self.on_model_status_changed_signal(
+                {
+                    "model": ModelType.STT,
+                    "status": self._model_status[ModelType.STT],
+                    "path": "",
+                }
+            )
+        if (
+            self.application_settings.nsfw_filter
+            and self.application_settings.sd_enabled
+        ):
+            self.on_model_status_changed_signal(
+                {
+                    "model": ModelType.SAFETY_CHECKER,
+                    "status": self._model_status[ModelType.SAFETY_CHECKER],
+                    "path": "",
+                }
+            )
 
     def update_model_status(self, data):
         self._model_status[data["model"]] = data["status"]
@@ -180,7 +198,11 @@ class StatusWidget(BaseWidget):
         cuda_status = f"{'NVIDIA' if torch.cuda.is_available() else 'CPU'}"
 
         # Color by has_cuda red for disabled, green for enabled
-        color = StatusColors.LOADED if torch.cuda.is_available() else StatusColors.FAILED
+        color = (
+            StatusColors.LOADED
+            if torch.cuda.is_available()
+            else StatusColors.FAILED
+        )
         self.ui.cuda_status.setStyleSheet(
             "QLabel { color: " + color.value + "; }"
         )

@@ -442,17 +442,14 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 callback=lambda d: self.emit_signal(
                     SignalCode.LOAD_NON_SD_MODELS,
                     dict(
-                        callback=lambda _d: self.emit_signal(
-                            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                            {
-                                "response": LLMResponse(
-                                    message="Your image has been generated",
-                                    is_first_message=True,
-                                    is_end_of_message=True,
-                                    name=self.chatbot.name,
-                                    action=LLMActionType.GENERATE_IMAGE,
-                                )
-                            },
+                        callback=lambda _d: self.api.send_llm_text_streamed_signal(
+                            LLMResponse(
+                                message="Your image has been generated",
+                                is_first_message=True,
+                                is_end_of_message=True,
+                                name=self.chatbot.name,
+                                action=LLMActionType.GENERATE_IMAGE,
+                            )
                         )
                     ),
                 ),
