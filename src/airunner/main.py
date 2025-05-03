@@ -12,9 +12,13 @@ Do not change the order of the imports.
 ################################################################
 from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 import os
+from airunner.utils import is_windows
 
-#if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
-if False is True:
+"""
+Temporary fix for windows - Facehuggershield is not working correctly
+on windows at this time so we disable it.
+"""
+if not AIRUNNER_DISABLE_FACEHUGGERSHIELD and not is_windows():
     from facehuggershield.huggingface import activate
 
     airunner_path = os.path.join(
