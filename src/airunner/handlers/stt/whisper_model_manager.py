@@ -45,9 +45,9 @@ class WhisperModelManager(BaseModelManager):
         self._feature_extractor = None
         self._sampling_rate = 16000
         self.audio_stream = None
-        self._device_map = (
-            "auto"  # Use automatic device mapping for all models
-        )
+
+        # Determine device map strategy based on available hardware
+        self._device_map = "auto" if torch.cuda.is_available() else None
 
     @property
     def dtype(self):
@@ -137,16 +137,31 @@ class WhisperModelManager(BaseModelManager):
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
-            # Use device_map="auto" and avoid any explicit device placement
-            self._model = WhisperForConditionalGeneration.from_pretrained(
-                self.model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                torch_dtype=self.dtype,
-                use_safetensors=True,
-                force_download=False,
-                device_map=self._device_map,
-                low_cpu_mem_usage=False,  # Avoid issues with meta tensors
-            )
+            # Handle different loading scenarios based on available hardware
+            if torch.cuda.is_available():
+                # For CUDA, use device_map="auto" with low_cpu_mem_usage=True
+                self._model = WhisperForConditionalGeneration.from_pretrained(
+                    self.model_path,
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                    torch_dtype=self.dtype,
+                    use_safetensors=True,
+                    force_download=False,
+                    device_map=self._device_map,
+                    low_cpu_mem_usage=True,  # Fix for meta tensor issues
+                )
+            else:
+                # For CPU, load without device_map and with CPU optimization
+                self._model = WhisperForConditionalGeneration.from_pretrained(
+                    self.model_path,
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                    torch_dtype=self.dtype,
+                    use_safetensors=True,
+                    force_download=False,
+                    low_cpu_mem_usage=True,  # Fix for meta tensor issues
+                )
+                # Explicitly move to CPU in case it's needed
+                self._model = self._model.cpu()
+
         except Exception as e:
             self.logger.error(f"Failed to load model: {e}")
             self.change_model_status(ModelType.STT, ModelStatus.FAILED)

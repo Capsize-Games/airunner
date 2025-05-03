@@ -15,6 +15,7 @@ from airunner.utils.application.ui_loader import (
     load_ui_file,
     load_ui_from_string,
 )
+from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
 
 class API(App):
@@ -26,6 +27,7 @@ class API(App):
             SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
             SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
         }
+        self.sounddevice_manager = SoundDeviceManager()
         super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
         self.initialize_model_scanner()
 

@@ -25,12 +25,8 @@ class TTSVocalizerWorker(Worker):
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.PLAYBACK_DEVICE_CHANGED: self.on_playback_device_changed_signal,
         }
-        self._selected_device = None
         super().__init__()
         self.queue = Queue()
-        # check if speakers are available
-        self.stream = None
-        # self.start_stream()
         self.started = False
         self.do_interrupt = False
         self.accept_message = True
@@ -40,8 +36,7 @@ class TTSVocalizerWorker(Worker):
         return self.chatbot_voice_model_type == TTSModel.ESPEAK.value
 
     def on_interrupt_process_signal(self):
-        if self.stream is not None:
-            self.stream.abort()
+        self.stop_stream()
         self.accept_message = False
         self.queue = Queue()
 
@@ -49,7 +44,7 @@ class TTSVocalizerWorker(Worker):
         if self.application_settings.tts_enabled:
             self.logger.debug("Starting TTS stream...")
             self.accept_message = True
-            self.stream.start()
+            self.start_stream()
 
     def on_application_settings_changed_signal(self, data):
         if (
@@ -58,9 +53,8 @@ class TTSVocalizerWorker(Worker):
             and data.get("column_name", "") == "pitch"
         ):
             pitch = data.get("value", 0)
-            if self.stream is not None:
-                self.stream.abort()
-                self.start_stream(pitch)
+            self.stop_stream()
+            self.start_stream(pitch)
 
     def on_playback_device_changed_signal(self):
         self.logger.debug(f"Playback device changed")
@@ -70,21 +64,9 @@ class TTSVocalizerWorker(Worker):
     def stop_stream(self):
         if self.is_espeak:
             return
-        if self.stream:
-            self.logger.info("Stopping TTS vocalizer stream...")
-            try:
-                self.stream.stop()
-            except Exception as e:
-                self.logger.error(e)
-            try:
-                self.stream.close()
-            except Exception as e:
-                self.logger.error(e)
-            try:
-                self.stream.abort()
-            except Exception as e:
-                self.logger.error(e)
-            self.stream = None
+        self.logger.info("Stopping TTS vocalizer stream...")
+        if self.api.sounddevice_manager.out_stream:
+            self.api.sounddevice_manager._stop_output_stream()
 
     def start_stream(self, pitch: Optional[int] = None):
         if self.is_espeak:
@@ -104,41 +86,19 @@ class TTSVocalizerWorker(Worker):
                 self._initialize_stream(samplerate)
         except sd.PortAudioError as e:
             self.logger.error(f"Failed to start audio stream: {e}")
-            self.stream = None
 
     @property
     def playback_device(self):
         playback_device = self.sound_settings.playback_device
         return playback_device if playback_device != "" else "pulse"
 
-    @property
-    def selected_device(self):
-        if not self._selected_device:
-            devices = sd.query_devices()
-            for device in devices:
-                if device["name"] == self.playback_device:
-                    self._selected_device = device["index"]
-                    break
-        return self._selected_device
-
     def _initialize_stream(self, samplerate: int):
         self.logger.info(
             f"Initializing TTS stream with samplerate: {samplerate}"
         )
-        try:
-            if self.selected_device is not None:
-                self.stream = sd.OutputStream(
-                    samplerate=samplerate,
-                    channels=1,
-                    device=self.selected_device,
-                )
-                self.stream.start()
-            else:
-                self.logger.error("No valid playback device found.")
-                self.stream = None
-        except sd.PortAudioError as e:
-            self.logger.error(f"Failed to start audio stream: {e}")
-            self.stream = None
+        self.api.sounddevice_manager.initialize_output_stream(
+            samplerate=samplerate, channels=1, device_name=self.playback_device
+        )
 
     def on_tts_generator_worker_add_to_stream_signal(self, response: dict):
         if self.accept_message:
@@ -153,21 +113,17 @@ class TTSVocalizerWorker(Worker):
             self.logger.warning("item is none")
             return
 
-        if self.stream is None:
+        if self.api.sounddevice_manager.out_stream is None:
             self.start_stream()
             self.logger.warning("No speakers available")
             return
 
         # Write the item to the stream
-        if self.stream is not None and self.stream.active:
-            try:
-                self.stream.write(item)
-            except sd.PortAudioError:
-                self.logger.debug("PortAudioError")
-            except AttributeError:
-                self.logger.debug("stream is None")
+        if self.api.sounddevice_manager.out_stream:
+            success = self.api.sounddevice_manager.write_to_output(item)
+            if success:
+                self.started = True
 
-            self.started = True
         QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
 
     def handle_speech(self, generated_speech):
