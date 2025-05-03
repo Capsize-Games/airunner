@@ -139,6 +139,7 @@ class CustomScene(
             (SignalCode.HISTORY_CLEAR_SIGNAL, self.on_clear_history_signal),
             (SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal),
             (SignalCode.MASK_LAYER_TOGGLED, self.on_mask_layer_toggled),
+            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_settings_changed),
         ]:
             self.register(signal, handler)
 
@@ -302,22 +303,24 @@ class CustomScene(
             EngineResponseCode.INSUFFICIENT_GPU_MEMORY,
             EngineResponseCode.ERROR,
         ):
-            message = data.get("message")
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, message
-            )
-            self.display_gpu_memory_error(message)
+            if self.settings_key == "drawing_pad_settings":
+                message = data.get("message")
+                self.emit_signal(
+                    SignalCode.APPLICATION_STATUS_ERROR_SIGNAL, message
+                )
+                self.display_gpu_memory_error(message)
         elif code is EngineResponseCode.INTERRUPTED:
             pass
         elif code is EngineResponseCode.IMAGE_GENERATED:
             self._handle_image_generated_signal(data)
         else:
-            self.logger.error(f"Unhandled response code: {code}")
+            if self.settings_key == "drawing_pad_settings":
+                self.logger.error(f"Unhandled response code: {code}")
 
-        self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
-
-        if callback:
-            callback(data)
+        if self.settings_key == "drawing_pad_settings":
+            self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
+            if callback:
+                callback(data)
 
     def _handle_image_generated_signal(self, data: Dict):
         image_response: Optional[ImageResponse] = data.get("message", None)
@@ -365,6 +368,13 @@ class CustomScene(
 
     def on_mask_layer_toggled(self):
         self.initialize_image()
+    
+    def on_settings_changed(self, data):
+        table = data["setting_name"]
+        column_name = data["column_name"]
+        value = data["value"]
+        #if table == "controlnet_settings" and column_name == "generated_image":
+
 
     def on_canvas_copy_image_signal(self):
         self._copy_image(self.current_active_image)

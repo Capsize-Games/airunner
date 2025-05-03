@@ -405,8 +405,6 @@ class Ui_stablediffusion_generator_form(object):
         QWidget.setTabOrder(self.pushButton, self.stable_diffusion_generator_form)
 
         self.retranslateUi(stablediffusion_generator_form)
-        self.generate_button.clicked.connect(stablediffusion_generator_form.handle_generate_button_clicked)
-        self.interrupt_button.clicked.connect(stablediffusion_generator_form.handle_interrupt_button_clicked)
         self.pushButton.clicked.connect(stablediffusion_generator_form.action_clicked_button_save_prompts)
         self.add_prompt_button.clicked.connect(stablediffusion_generator_form.handle_add_prompt_clicked)
         self.image_presets.currentTextChanged.connect(stablediffusion_generator_form.handle_image_presets_changed)
