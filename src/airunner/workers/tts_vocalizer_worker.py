@@ -133,7 +133,8 @@ class TTSVocalizerWorker(Worker):
             self.logger.error(
                 f"Error querying device or starting audio stream: {e}"
             )
-            self.api.sounddevice_manager.out_stream = None
+            # Use the manager's method to stop the stream
+            self.api.sounddevice_manager._stop_output_stream()
             self._stream_samplerate = None
 
     @property
@@ -174,17 +175,15 @@ class TTSVocalizerWorker(Worker):
                 self.logger.error(
                     f"PortAudioError initializing stream with samplerate {samplerate}: {e}"
                 )
-            self.api.sounddevice_manager.out_stream = (
-                None  # Ensure stream is None on error
-            )
+            # Use the manager's method to stop the stream
+            self.api.sounddevice_manager._stop_output_stream()
             return False
         except Exception as e:
             self.logger.error(
                 f"Unexpected error initializing stream with samplerate {samplerate}: {e}"
             )
-            self.api.sounddevice_manager.out_stream = (
-                None  # Ensure stream is None on error
-            )
+            # Use the manager's method to stop the stream
+            self.api.sounddevice_manager._stop_output_stream()
             return False
 
     def on_tts_generator_worker_add_to_stream_signal(self, response: dict):
@@ -195,7 +194,6 @@ class TTSVocalizerWorker(Worker):
     def handle_message(self, item):
         if not self.accept_message or item is None:
             return
-
         # Ensure stream is initialized
         if self.api.sounddevice_manager.out_stream is None:
             self.logger.warning(
@@ -263,7 +261,8 @@ class TTSVocalizerWorker(Worker):
                 self.logger.warning(
                     "Failed to write to audio stream. Stream might be closed."
                 )
-                self.api.sounddevice_manager.out_stream = None
+                # Use the manager's method to stop the stream
+                self.api.sounddevice_manager._stop_output_stream()
                 self._stream_samplerate = None
         else:
             self.logger.warning(
