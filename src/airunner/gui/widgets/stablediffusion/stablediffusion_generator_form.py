@@ -573,7 +573,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             image_preset=ImagePreset(self.generator_settings.image_preset),
             quality_effects=QualityEffects(
                 self.generator_settings.quality_effects
-            ),
+            ) if self.generator_settings.quality_effects != "" and self.generator_settings.quality_effects is not None else QualityEffects.STANDARD,
         )
 
         self.emit_signal(
