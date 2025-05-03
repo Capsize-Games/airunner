@@ -28,16 +28,17 @@ class WhisperModelManager(BaseModelManager):
     Handler for the Whisper model from OpenAI.
     """
 
-    _model_status = {
-        ModelType.STT: ModelStatus.UNLOADED,
-        ModelType.STT_PROCESSOR: ModelStatus.UNLOADED,
-        ModelType.STT_FEATURE_EXTRACTOR: ModelStatus.UNLOADED,
-    }
-
     def __init__(self, *args, **kwargs):
         self.model_type = ModelType.STT
         self.model_class = "stt"
         super().__init__(*args, **kwargs)
+        self._model_status.update(
+            {
+                ModelType.STT: ModelStatus.UNLOADED,
+                ModelType.STT_PROCESSOR: ModelStatus.UNLOADED,
+                ModelType.STT_FEATURE_EXTRACTOR: ModelStatus.UNLOADED,
+            }
+        )
         self._lock = threading.Lock()
         self._model = None
         self._processor = None
@@ -91,7 +92,6 @@ class WhisperModelManager(BaseModelManager):
                 self.logger.error(f"Failed to process inputs {e}")
                 self.logger.error(e)
 
-            print("TRANSCRIPTION", transcription)
             if transcription:
                 self._send_transcription(transcription)
 
