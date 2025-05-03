@@ -79,7 +79,7 @@ class SettingsMixin:
 
         app = QApplication.instance()
         if app:
-            self.api = app.api
+            self.api = getattr(app, "api", None)
 
     @property
     def session_manager(self):
