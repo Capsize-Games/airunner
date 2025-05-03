@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QFileDialog, QGraphicsScene
 from PIL.ImageQt import ImageQt
 from PySide6.QtGui import QPixmap, QImage, QPen, QPainter
 
-from airunner.enums import SignalCode, CanvasToolName
+from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
 from airunner.utils.image import (
     convert_binary_to_image,
@@ -15,7 +15,6 @@ from airunner.utils.image import (
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.canvas.templates.input_image_ui import Ui_input_image
 from airunner.gui.widgets.canvas.input_image_scene import InputImageScene
-from airunner.gui.widgets.canvas.custom_view import CustomGraphicsView
 
 
 class InputImage(BaseWidget):
