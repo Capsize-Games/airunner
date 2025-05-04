@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
+from airunner.gui.widgets.canvas.draggables.layer_image_item import LayerImageItem
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.settings import (
     AIRUNNER_VALID_IMAGE_FILES,
@@ -606,7 +607,7 @@ class CustomScene(
 
         if image is not None:
             if self.item is None:
-                self.item = DraggablePixmap(image)
+                self.item = LayerImageItem(image)
                 if self.item.scene() is None:
                     self.addItem(self.item)
                     # Store initial position when adding to scene
