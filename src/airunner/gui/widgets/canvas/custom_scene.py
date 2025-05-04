@@ -1026,12 +1026,19 @@ class CustomScene(
 
     def _handle_cursor(self, event, apply_cursor: bool = True):
         # Track the last cursor state to avoid redundant calls
-        if hasattr(self, "_last_cursor_state") and self._last_cursor_state == (
-            event.type(),
-            apply_cursor,
-        ):
-            return
+        if hasattr(self, "_last_cursor_state"):
+            # Add position to the tracked state to debounce cursor updates during small movements
+            current_state = (event.type(), apply_cursor)
+
+            # Only process if the event type or apply_cursor changed
+            # This significantly reduces cursor update processing
+            if self._last_cursor_state == current_state:
+                return
+
+        # Update the tracked state
         self._last_cursor_state = (event.type(), apply_cursor)
+
+        # Emit the cursor update signal
         self.emit_signal(
             SignalCode.CANVAS_UPDATE_CURSOR,
             {"event": event, "apply_cursor": apply_cursor},
