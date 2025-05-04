@@ -15,9 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QGroupBox, QProgressBar,
-    QSizePolicy, QSlider, QSpacerItem, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QGroupBox, QSizePolicy,
+    QSpacerItem, QVBoxLayout, QWidget)
 
 class Ui_SoundSettings(object):
     def setupUi(self, SoundSettings):
@@ -50,30 +49,6 @@ class Ui_SoundSettings(object):
 
         self.verticalLayout.addWidget(self.recordingGroup)
 
-        self.microphoneMonitorGroup = QGroupBox(SoundSettings)
-        self.microphoneMonitorGroup.setObjectName(u"microphoneMonitorGroup")
-        self.microphoneMonitorLayout = QVBoxLayout(self.microphoneMonitorGroup)
-        self.microphoneMonitorLayout.setObjectName(u"microphoneMonitorLayout")
-        self.inputLevelSlider = QSlider(self.microphoneMonitorGroup)
-        self.inputLevelSlider.setObjectName(u"inputLevelSlider")
-        self.inputLevelSlider.setOrientation(Qt.Horizontal)
-        self.inputLevelSlider.setMinimum(0)
-        self.inputLevelSlider.setMaximum(100)
-        self.inputLevelSlider.setValue(50)
-
-        self.microphoneMonitorLayout.addWidget(self.inputLevelSlider)
-
-        self.microphoneLevelBar = QProgressBar(self.microphoneMonitorGroup)
-        self.microphoneLevelBar.setObjectName(u"microphoneLevelBar")
-        self.microphoneLevelBar.setMinimum(0)
-        self.microphoneLevelBar.setMaximum(100)
-        self.microphoneLevelBar.setValue(0)
-
-        self.microphoneMonitorLayout.addWidget(self.microphoneLevelBar)
-
-
-        self.verticalLayout.addWidget(self.microphoneMonitorGroup)
-
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout.addItem(self.verticalSpacer)
@@ -87,7 +62,6 @@ class Ui_SoundSettings(object):
     def retranslateUi(self, SoundSettings):
         self.playbackGroup.setTitle(QCoreApplication.translate("SoundSettings", u"Playback Device", None))
         self.recordingGroup.setTitle(QCoreApplication.translate("SoundSettings", u"Recording Device", None))
-        self.microphoneMonitorGroup.setTitle(QCoreApplication.translate("SoundSettings", u"Microphone Monitor", None))
         pass
     # retranslateUi
 

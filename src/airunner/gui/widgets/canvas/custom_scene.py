@@ -139,7 +139,10 @@ class CustomScene(
             (SignalCode.HISTORY_CLEAR_SIGNAL, self.on_clear_history_signal),
             (SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal),
             (SignalCode.MASK_LAYER_TOGGLED, self.on_mask_layer_toggled),
-            (SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.on_settings_changed),
+            (
+                SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+                self.on_settings_changed,
+            ),
         ]:
             self.register(signal, handler)
 
@@ -318,7 +321,9 @@ class CustomScene(
                 self.logger.error(f"Unhandled response code: {code}")
 
         if self.settings_key == "drawing_pad_settings":
-            self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
+            self.emit_signal(
+                SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL
+            )
             if callback:
                 callback(data)
 
@@ -368,13 +373,12 @@ class CustomScene(
 
     def on_mask_layer_toggled(self):
         self.initialize_image()
-    
+
     def on_settings_changed(self, data):
         table = data["setting_name"]
         column_name = data["column_name"]
         value = data["value"]
-        #if table == "controlnet_settings" and column_name == "generated_image":
-
+        # if table == "controlnet_settings" and column_name == "generated_image":
 
     def on_canvas_copy_image_signal(self):
         self._copy_image(self.current_active_image)
@@ -1013,6 +1017,14 @@ class CustomScene(
         pass
 
     def _handle_cursor(self, event, apply_cursor: bool = True):
+        # Track the last cursor state to avoid redundant calls
+        if hasattr(self, "_last_cursor_state") and self._last_cursor_state == (
+            event.type(),
+            apply_cursor,
+        ):
+            return
+        self._last_cursor_state = (event.type(), apply_cursor)
+        print("test")
         self.emit_signal(
             SignalCode.CANVAS_UPDATE_CURSOR,
             {"event": event, "apply_cursor": apply_cursor},

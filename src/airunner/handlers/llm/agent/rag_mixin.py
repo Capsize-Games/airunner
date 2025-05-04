@@ -2,7 +2,6 @@ import os
 import time
 from typing import List, Optional, Dict, Set
 from functools import lru_cache
-from threading import Thread
 
 from llama_index.core import (
     Document,
@@ -58,8 +57,7 @@ class RAGMixin:
 
         if self.rag_mode_enabled:
             self._load_settings()
-            # Start the preloading process in a background thread to avoid blocking
-            Thread(target=self._preload_resources, daemon=True).start()
+            self._preload_resources()
 
     def _preload_resources(self):
         """Preload resources to improve first-search performance."""
