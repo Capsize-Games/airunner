@@ -55,7 +55,7 @@ class LayerImageItem(DraggablePixmap):
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # Only handle drag if we initiated one on this item
+        # Only do the complex drag calculations if we're actually dragging
         if self.initial_mouse_scene_pos is not None:
             # Calculate delta from initial press in scene coordinates
             delta = event.scenePos() - self.initial_mouse_scene_pos
@@ -93,7 +93,8 @@ class LayerImageItem(DraggablePixmap):
             # Accept the event to prevent further processing
             event.accept()
         else:
-            # Not our drag, let base class handle
+            # Fast path for non-drag mouse moves - just call superclass
+            # and don't do any unnecessary calculations
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):

@@ -5,6 +5,7 @@ import os
 
 from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import QTimer
 
 from airunner.enums import CanvasToolName
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
@@ -48,6 +49,8 @@ class BaseWidget(AbstractBaseWidget):
     icons: List[Optional[Tuple[str, str]]] = []
     ui: Optional[object] = None
     _splitters: List[str] = []
+    _splitter_debounce_timer: Optional[QTimer] = None
+    _splitter_debounce_ms = 300  # 300ms debounce for splitter movements
 
     def __init__(self, *args, **kwargs):
         self.icon_manager: Optional[IconManager] = None
@@ -68,13 +71,7 @@ class BaseWidget(AbstractBaseWidget):
         self.worker_class_map: Dict = {}
         self.initialize_ui()
 
-        for splitter_name in self.splitters:
-            try:
-                splitter = getattr(self.ui, splitter_name)
-                if splitter:
-                    splitter.splitterMoved.connect(self.save_state)
-            except AttributeError:
-                pass
+        self._setup_splitters()
 
     @property
     def splitters(self) -> List[str]:
@@ -235,3 +232,31 @@ class BaseWidget(AbstractBaseWidget):
             return True
         except AttributeError:
             return False
+
+    def _setup_splitters(self):
+        # Initialize the debounce timer for splitter movements
+        self._splitter_debounce_timer = QTimer(self)
+        self._splitter_debounce_timer.setSingleShot(True)
+        self._splitter_debounce_timer.timeout.connect(
+            self._save_splitter_state
+        )
+
+        # Connect splitter moved signals with debouncing
+        for splitter_name in self.splitters:
+            try:
+                splitter = getattr(self.ui, splitter_name)
+                if splitter:
+                    # When splitter moves, reset the timer
+                    splitter.splitterMoved.connect(
+                        self._debounce_splitter_moved
+                    )
+            except AttributeError:
+                pass
+
+    def _debounce_splitter_moved(self, *args):
+        # Reset the timer whenever the splitter moves
+        self._splitter_debounce_timer.start(self._splitter_debounce_ms)
+
+    def _save_splitter_state(self):
+        # This is called only after the debounce delay with no more movements
+        save_splitter_settings(self.ui, self.splitters)
