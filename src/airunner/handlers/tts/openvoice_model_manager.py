@@ -177,10 +177,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             )
 
             if response is not None:
-                self.emit_signal(
-                    SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
-                    {"message": response},
-                )
+                self.api.tts.add_to_stream(response)
 
     def load(self, _target_model=None):
         """
@@ -255,7 +252,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             self.logger.error(
                 f"Failed to load from se_extractor {e} - torch_hub_cache_home={torch_hub_cache_home}"
             )
-            self.emit_signal(SignalCode.TTS_DISABLE_SIGNAL)
+            self.api.tts.disable()
 
         if self._target_se is None:
             self.logger.error("Target speaker extraction returned None.")

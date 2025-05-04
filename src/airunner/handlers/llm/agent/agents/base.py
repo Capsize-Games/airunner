@@ -21,7 +21,7 @@ from llama_index.core.storage.chat_store import SimpleChatStore
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from airunner.enums import LLMActionType, SignalCode, ImagePreset
+from airunner.enums import GeneratorSection, LLMActionType, SignalCode, ImagePreset
 from airunner.data.models import Conversation, User, Tab
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
@@ -421,7 +421,7 @@ class BaseAgent(
                 Call this tool if the user wants to quit the application,
                 asks you to quit, shutdown or exit. Do not panic and
                 close the application on your own."""
-                self.emit_signal(SignalCode.QUIT_APPLICATION, {})
+                self.api.quit_application()
                 return "Quitting application..."
 
             self._quit_application_tool = FunctionTool.from_defaults(
@@ -446,9 +446,7 @@ class BaseAgent(
 
                 Call this tool if the user wants to enable or disable
                 text to speech."""
-                self.emit_signal(
-                    SignalCode.TOGGLE_TTS_SIGNAL, {"enabled": enabled}
-                )
+                self.api.tts.toggle(enabled)
                 return "Text to speech toggled."
 
             self._toggle_text_to_speech = FunctionTool.from_defaults(
@@ -507,10 +505,7 @@ class BaseAgent(
                     return (
                         f"Unable to open image: {image_path} does not exist."
                     )
-                self.emit_signal(
-                    SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL,
-                    {"image_path": image_path},
-                )
+                self.api.art.canvas.image_from_path(image_path)
                 return "Opening image..."
 
             self._open_image_from_path_tool = FunctionTool.from_defaults(
@@ -527,7 +522,7 @@ class BaseAgent(
 
                 Call this tool if the user wants to clear the canvas, delete
                 images, etc."""
-                self.emit_signal(SignalCode.CANVAS_CLEAR, {})
+                self.api.art.canvas.clear()
                 return "Canvas cleared."
 
             self._clear_canvas_tool = FunctionTool.from_defaults(
@@ -544,7 +539,7 @@ class BaseAgent(
 
                 Call this tool if the user wants to clear the conversation,
                 delete messages, etc."""
-                self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {})
+                self.api.llm.clear_history()
                 return "Conversation cleared."
 
             self._clear_conversation_tool = FunctionTool.from_defaults(
@@ -615,7 +610,7 @@ class BaseAgent(
                     ),
                 ],
                 image_type: Annotated[
-                    str,
+                    GeneratorSection,
                     (
                         "The type of image to generate. "
                         f"Can be {image_preset_options}."
@@ -645,17 +640,8 @@ class BaseAgent(
                     # get as close to multiple of 64 as possible
                     height = (height // 64) * 64
 
-                self.emit_signal(
-                    SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
-                    {
-                        "message": {
-                            "prompt": prompt,
-                            "second_prompt": second_prompt,
-                            "type": image_type,
-                            "width": width,
-                            "height": height,
-                        }
-                    },
+                self.api.art.llm_image_generated(
+                    prompt, second_prompt, image_type, width, height
                 )
                 return "Generating image..."
 
@@ -880,7 +866,7 @@ class BaseAgent(
     def bot_mood(self, value: str):
         if self.conversation:
             self._update_conversation("bot_mood", value)
-            self.emit_signal(SignalCode.BOT_MOOD_UPDATED, {"mood": value})
+            self.api.llm.chatbot.update_mood()
 
     @property
     def conversation(self) -> Optional[Conversation]:

@@ -7,10 +7,12 @@ from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 
+
 class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
     """
     Worker class for downloading files from CivitAI with progress tracking and cancellation support.
     """
+
     progress = Signal(int, int)  # current, total
     finished = Signal()
     failed = Signal(Exception)
@@ -49,10 +51,8 @@ class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
             url, file_name, size_kb = self.queue.get()
             size_kb *= 1024  # Convert size from KB to bytes
 
-            self.emit_signal(SignalCode.CLEAR_DOWNLOAD_STATUS_BAR)
-            self.emit_signal(SignalCode.SET_DOWNLOAD_STATUS_LABEL, {
-                "message": f"Downloading {file_name}"
-            })
+            self.api.clear_download_status()
+            self.api.set_download_status(f"Downloading {file_name}")
 
             file_name = os.path.expanduser(file_name)
             try:
@@ -60,18 +60,15 @@ class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
             except FileExistsError:
                 pass
 
-            self.emit_signal(SignalCode.UPDATE_DOWNLOAD_LOG, {
-                "message": f"Downloading {url} of size {size_kb} bytes to {file_name}"
-            })
+            self.api.update_download_log(
+                f"Downloading {url} of size {size_kb} bytes to {file_name}"
+            )
 
             if os.path.exists(file_name):
-                self.emit_signal(SignalCode.UPDATE_DOWNLOAD_LOG, {
-                    "message": "File already exists, skipping download"
-                })
-                self.emit_signal(SignalCode.DOWNLOAD_PROGRESS, {
-                    "current": size_kb,
-                    "total": size_kb
-                })
+                self.api.update_download_log(
+                    "File already exists, skipping download"
+                )
+                self.api.set_download_progress(current=size_kb, total=size_kb)
                 self.progress.emit(size_kb, size_kb)
                 self.finished.emit()
                 continue
@@ -84,17 +81,16 @@ class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
                             if self.is_cancelled:
                                 break
                             f.write(chunk)
-                            self.emit_signal(SignalCode.DOWNLOAD_PROGRESS, {
-                                "current": f.tell(),
-                                "total": size_kb
-                            })
+                            self.api.set_download_progress(
+                                current=f.tell(), total=size_kb
+                            )
                             self.progress.emit(f.tell(), size_kb)
 
-                self.emit_signal(SignalCode.UPDATE_DOWNLOAD_LOG, {
-                    "message": f"Finished downloading {file_name}"
-                })
+                self.api.update_download_log(
+                    f"Finished downloading {file_name}"
+                )
                 self.finished.emit()
 
             except Exception as e:
                 self.failed.emit(e)
-                self.emit_signal(SignalCode.DOWNLOAD_COMPLETE)
+                self.api.download_complete()
