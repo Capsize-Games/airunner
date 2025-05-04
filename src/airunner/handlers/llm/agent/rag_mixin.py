@@ -508,10 +508,7 @@ class RAGMixin:
                     code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
                     response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
                 self.logger.error(error_message)
-                self.emit_signal(
-                    SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
-                    {"code": code, "message": response},
-                )
+                self.api.worker_response(code, response)
         return self.__embedding
 
     @embedding.setter
