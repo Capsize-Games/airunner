@@ -1,7 +1,16 @@
 from typing import Optional, Dict
 
 from PySide6 import QtGui
-from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QSize, QRectF
+from PySide6.QtCore import (
+    QPointF,
+    QPoint,
+    Qt,
+    QRect,
+    QEvent,
+    QSize,
+    QRectF,
+    QTimer,
+)
 from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView,
@@ -124,6 +133,11 @@ class CustomGraphicsView(
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
+
+        self._pan_update_timer = QTimer()
+        self._pan_update_timer.setSingleShot(True)
+        self._pan_update_timer.timeout.connect(self._do_pan_update)
+        self._pending_pan_event = False
 
     @property
     def zero_point(self) -> QPointF:
@@ -498,12 +512,22 @@ class CustomGraphicsView(
             delta = event.pos() - self.last_pos
             self.canvas_offset -= delta
             self.last_pos = event.pos()
-            self.update_active_grid_area_position()
-            self.updateImagePositions()
-            self.draw_grid()
+            if not self._pan_update_timer.isActive():
+                self._do_pan_update()
+                self._pan_update_timer.start(16)  # ~60 FPS
+            else:
+                self._pending_pan_event = True
             event.accept()
             return
         super().mouseMoveEvent(event)
+
+    def _do_pan_update(self):
+        self.update_active_grid_area_position()
+        self.updateImagePositions()
+        self.draw_grid()
+        if self._pending_pan_event:
+            self._pending_pan_event = False
+            self._pan_update_timer.start(16)
 
     def showEvent(self, event):
         super().showEvent(event)
