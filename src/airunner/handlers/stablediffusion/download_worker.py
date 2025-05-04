@@ -1,8 +1,12 @@
+
 import os
 from queue import Queue
 import time
+from typing import Tuple, Callable
+
 import requests
 from PySide6.QtCore import QObject, Signal
+
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
@@ -15,12 +19,12 @@ class DownloadWorker(
     SettingsMixin,
     QObject,
 ):
-    progress = Signal(int, int)  # current, total
-    finished = Signal()
-    failed = Signal(Exception)
-    queue = Queue()
-    running = False
-    is_cancelled = False
+    progress: Signal = Signal(int, int)  # current, total
+    finished: Signal = Signal()
+    failed: Signal = Signal(Exception)
+    queue: Queue[Tuple[str, str, str, Callable[[], None]]] = Queue()
+    running: bool = False
+    is_cancelled: bool = False
 
     def __init__(self, *args, **kwargs):
         super().__init__()
