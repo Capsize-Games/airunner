@@ -266,10 +266,7 @@ class WhisperModelManager(BaseModelManager):
         """
         Emit the transcription so that other handlers can use it
         """
-        self.emit_signal(
-            SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
-            {"transcription": transcription},
-        )
+        self.api.stt.audio_processor_response(transcription)
 
     def process_transcription(self, generated_ids) -> str:
         # Move to CPU only for decoding

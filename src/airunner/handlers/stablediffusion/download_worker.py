@@ -56,11 +56,8 @@ class DownloadWorker(
             url = f"{DEFAULT_HF_ENDPOINT}/{path}/resolve/main/{file_name}?download=true".replace(
                 " ", ""
             )
-            self.emit_signal(SignalCode.CLEAR_DOWNLOAD_STATUS_BAR)
-            self.emit_signal(
-                SignalCode.SET_DOWNLOAD_STATUS_LABEL,
-                {"message": f"Downloading {file_name}"},
-            )
+            self.api.clear_download_status()
+            self.api.set_download_status(f"Downloading {file_name}")
 
             file_name = os.path.join(file_path, file_name)
             file_name = os.path.expanduser(file_name)
@@ -72,22 +69,16 @@ class DownloadWorker(
                     pass
 
             if os.path.exists(file_name):
-                self.emit_signal(
-                    SignalCode.UPDATE_DOWNLOAD_LOG,
-                    {"message": f"File already exists, skipping download"},
+                self.api.update_download_log(
+                    f"File already exists, skipping download"
                 )
-                self.emit_signal(
-                    SignalCode.DOWNLOAD_PROGRESS, {"current": 0, "total": 0}
-                )
+                self.api.set_download_progress(current=0, total=0)
                 self.finished.emit()
                 continue
 
             size_kb = self.get_size(url)
-            self.emit_signal(
-                SignalCode.UPDATE_DOWNLOAD_LOG,
-                {
-                    "message": f"Downloading {url} of size {size_kb} KB to {file_name}"
-                },
+            self.api.update_download_log(
+                f"Downloading {url} of size {size_kb} bytes to {file_name}"
             )
 
             try:
@@ -115,19 +106,15 @@ class DownloadWorker(
                                     f"OverflowError when writing to {file_name}"
                                 )
                                 raise
-                            self.emit_signal(
-                                SignalCode.DOWNLOAD_PROGRESS,
-                                {"current": f.tell(), "total": size_kb},
+                            self.api.set_download_progress(
+                                current=f.tell(), total=size_kb
                             )
-                        self.emit_signal(
-                            SignalCode.UPDATE_DOWNLOAD_LOG,
-                            {
-                                "message": f"finished with download of {file_name}"
-                            },
+                        self.api.update_download_log(
+                            f"Finished downloading {file_name}"
                         )
                         self.finished.emit()
             except Exception as e:
                 print(f"Failed to download {url}")
                 print(e)
                 self.failed.emit(e)
-                self.emit_signal(SignalCode.DOWNLOAD_COMPLETE)
+                self.api.download_complete()
