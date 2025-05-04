@@ -102,11 +102,6 @@ class MainWindow(
     QMainWindow,
 ):
     show_grid_toggled = Signal(bool)
-    cell_size_changed_signal = Signal(int)
-    line_width_changed_signal = Signal(int)
-    line_color_changed_signal = Signal(str)
-    canvas_color_changed_signal = Signal(str)
-    snap_to_grid_changed_signal = Signal(bool)
     image_generated = Signal(bool)
     generator_tab_changed_signal = Signal()
     load_image = Signal(str)
@@ -163,6 +158,8 @@ class MainWindow(
         ("play", "workflow_actionRun"),
         ("save", "workflow_actionSave"),
         ("stop-circle", "workflow_actionStop"),
+        ("corner-up-right", "actionRotate_90_clockwise"),
+        ("corner-up-left", "actionRotate_90_counter_clockwise"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -215,7 +212,7 @@ class MainWindow(
             SignalCode.TOGGLE_LLM_SIGNAL: self.on_toggle_llm,
             SignalCode.UNLOAD_NON_SD_MODELS: self.on_unload_non_sd_models,
             SignalCode.LOAD_NON_SD_MODELS: self.on_load_non_sd_models,
-            SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL: self.action_reset_settings,
+            SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL: self._action_reset_settings,
             SignalCode.APPLICATION_RESET_PATHS_SIGNAL: self.on_reset_paths_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.KEYBOARD_SHORTCUTS_UPDATED: self.on_keyboard_shortcuts_updated,
@@ -308,80 +305,25 @@ class MainWindow(
                 self.toggle_visibility_action.setText("Show Window")
 
     @Slot()
-    def workflow_actionRun_triggered(self):
-        self.ui.graph.run_workflow()
-
-    @Slot()
-    def workflow_actionEdit_triggered(self):
-        self.ui.graph.edit_workflow()
-
-    @Slot()
-    def workflow_actionClear_triggered(self):
-        self.ui.graph.clear_graph()
-
-    @Slot()
-    def workflow_actionPause_triggered(self):
-        self.ui.graph.pause_workflow()
-
-    @Slot()
-    def workflow_actionSave_triggered(self):
-        self.ui.graph.save_workflow()
-
-    @Slot()
-    def workflow_actionStop_triggered(self):
-        self.ui.graph.stop_workflow()
-
-    @Slot()
-    def workflow_actionOpen_triggered(self):
-        self.ui.graph.load_workflow()
-
-    @Slot()
-    def action_quit_triggered(self):
+    def on_actionQuit_triggered(self):
         self.handle_close()
 
     @Slot(bool)
-    def action_toggle_close_to_system_tray(self, val):
+    def on_actionCollapse_to_system_tray_toggled(self, val):
         self.qsettings.setValue("close_to_system_tray", val)
         self.qsettings.sync()
 
     @Slot(bool)
-    def action_toggle_brush(self, active: bool):
-        self.toggle_tool(CanvasToolName.BRUSH, active)
-
-    @Slot(bool)
-    def action_toggle_eraser(self, active: bool):
+    def on_actionToggle_Eraser_toggled(self, active: bool):
         self.toggle_tool(CanvasToolName.ERASER, active)
 
-    @Slot(bool)
-    def action_toggle_active_grid_area(self, active: bool):
-        self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, active)
-
-    @Slot(bool)
-    def action_toggle_nsfw_filter_triggered(self, val: bool):
-        if val is False:
-            self.show_nsfw_warning_popup()
-        else:
-            self.update_application_settings("nsfw_filter", val)
-            self.toggle_nsfw_filter()
-            self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
+    @Slot()
+    def on_actionRecener_triggered(self):
+        self.emit_signal(SignalCode.RECENTER_GRID_SIGNAL)
 
     @Slot()
-    def action_center_clicked(self):
-        print("center clicked")
-
-    @Slot()
-    def action_reset_settings(self):
-        reply = QMessageBox.question(
-            self,
-            "Reset Settings",
-            "Are you sure you want to reset all settings to their default values?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
-
-        if reply == QMessageBox.Yes:
-            self.reset_settings()
-            self.restart()
+    def on_actionReset_Settings_2_triggered(self):
+        self._action_reset_settings()
 
     @Slot()
     def import_controlnet_image(self):
@@ -400,63 +342,55 @@ class MainWindow(
         pass
 
     @Slot()
-    def action_export_image_triggered(self):
+    def on_actionExport_image_button_triggered(self):
         self.emit_signal(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
 
     @Slot()
-    def action_import_image_triggered(self):
+    def on_actionImport_image_triggered(self):
         self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
 
     @Slot()
-    def action_new_document_triggered(self):
+    def on_artActionNew_triggered(self):
         self.emit_signal(SignalCode.CANVAS_CLEAR)
 
     @Slot()
-    def action_undo_triggered(self):
+    def on_actionUndo_triggered(self):
         self.emit_signal(SignalCode.UNDO_SIGNAL)
 
     @Slot()
-    def action_redo_triggered(self):
+    def on_actionRedo_triggered(self):
         self.emit_signal(SignalCode.REDO_SIGNAL)
 
     @Slot()
-    def action_paste_image_triggered(self):
+    def on_actionPaste_triggered(self):
         self.emit_signal(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
 
     @Slot()
-    def action_copy_image_triggered(self):
+    def on_actionCopy_triggered(self):
         self.emit_signal(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
 
     @Slot()
-    def action_cut_image_triggered(self):
+    def on_actionCut_triggered(self):
         self.emit_signal(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
 
     @Slot()
-    def action_rotate_90_clockwise_triggered(self):
+    def on_actionRotate_90_clockwise(self):
         self.emit_signal(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
 
     @Slot()
-    def action_rotate_90_counterclockwise_triggered(self):
+    def on_actionRotate_90_counter_clockwise(self):
         self.emit_signal(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
 
     @Slot()
-    def action_show_prompt_browser_triggered(self):
-        PromptBrowser()
-
-    @Slot()
-    def action_clear_all_prompts_triggered(self):
+    def on_actionClear_all_prompts(self):
         self.clear_all_prompts()
 
     @Slot()
-    def action_triggered_browse_ai_runner_path(self):
+    def on_actionBrowse_AI_Runner_Path(self):
         path = self.path_settings.base_path
         if path == "":
             path = AIRUNNER_BASE_PATH
         show_path(path)
-
-    @Slot()
-    def action_show_images_path(self):
-        self.show_settings_path("image_path")
 
     @Slot()
     def action_show_model_path_txt2img(self):
@@ -479,23 +413,15 @@ class MainWindow(
         pass
 
     @Slot()
-    def action_show_about_window(self):
-        AboutWindow()
-
-    @Slot()
-    def action_show_settings(self):
-        SettingsWindow()
-
-    @Slot()
-    def action_open_vulnerability_report(self):
+    def on_actionReport_vulnerability_triggered(self):
         webbrowser.open(AIRUNNER_VULNERABILITY_REPORT_LINK)
 
     @Slot()
-    def action_open_bug_report(self):
+    def on_actionBug_report_triggered(self):
         webbrowser.open(AIRUNNER_BUG_REPORT_LINK)
 
     @Slot()
-    def action_open_discord(self):
+    def on_actionDiscord_triggered(self):
         if AIRUNNER_DISCORD_URL:
             webbrowser.open(AIRUNNER_DISCORD_URL)
 
@@ -520,35 +446,63 @@ class MainWindow(
         pass
 
     @Slot()
-    def action_run_setup_wizard_clicked(self):
+    def on_actionRun_setup_wizard_2_triggered(self):
         self.show_setup_wizard()
 
     @Slot(bool)
-    def action_toggle_llm(self, val: bool):
+    def on_actionToggle_Stable_Diffusion_toggled(self, val: bool):
+        self.on_toggle_sd({"enabled": val})
+
+    @Slot()
+    def on_actionSettings_triggered(self):
+        SettingsWindow()
+
+    @Slot()
+    def on_actionBrowse_Images_Path_2_triggered(self):
+        self.show_settings_path("image_path")
+
+    @Slot()
+    def on_actionPrompt_Browser_triggered(self):
+        PromptBrowser()
+
+    @Slot()
+    def on_actionStats_triggered(self):
+        widget = StatsWidget()
+        # display in a window
+        widget.show()
+
+    @Slot(bool)
+    def on_actionToggle_Active_Grid_Area_toggled(self, val: bool):
+        self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, val)
+
+    @Slot(bool)
+    def on_actionToggle_Brush_toggled(self, val: bool):
+        self.toggle_tool(CanvasToolName.BRUSH, val)
+
+    @Slot(bool)
+    def on_actionToggle_Eraser_toggled(self, val: bool):
+        self.toggle_tool(CanvasToolName.ERASER, val)
+
+    @Slot(bool)
+    def on_actionToggle_Grid_toggled(self, val: bool):
+        self.update_grid_settings("show_grid", val)
+        self.emit_signal(SignalCode.TOGGLE_GRID, {"show_grid": val})
+
+    @Slot(bool)
+    def on_actionToggle_LLM_toggled(self, val: bool):
         self.on_toggle_llm(val=val)
 
     @Slot(bool)
-    def action_image_generator_toggled(self, val: bool):
-        self.on_toggle_sd({"enabled": val})
+    def on_actionSafety_Checker_toggled(self, val: bool):
+        if val is False:
+            self.show_nsfw_warning_popup()
+        else:
+            self.update_application_settings("nsfw_filter", val)
+            self.toggle_nsfw_filter()
+            self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
 
     @Slot(bool)
-    def tts_button_toggled(self, val: bool):
-        self.on_toggle_tts(val=val)
-
-    @Slot(bool)
-    def action_controlnet_toggled(self, val: bool):
-        self.update_controlnet_settings("enabled", val)
-        self._update_action_button(
-            ModelType.CONTROLNET,
-            self.ui.actionToggle_Controlnet,
-            val,
-            SignalCode.CONTROLNET_LOAD_SIGNAL,
-            SignalCode.CONTROLNET_UNLOAD_SIGNAL,
-            "controlnet_enabled",
-        )
-
-    @Slot(bool)
-    def stt_button_toggled(self, val):
+    def on_actionToggle_Speech_to_Text_toggled(self, val: bool):
         if self._model_status[ModelType.STT] is ModelStatus.LOADING:
             val = not val
         self._update_action_button(
@@ -567,27 +521,77 @@ class MainWindow(
             self.emit_signal(SignalCode.STT_LOAD_SIGNAL)
 
     @Slot()
-    def action_stats_triggered(self):
-        widget = StatsWidget()
-        # display in a window
-        widget.show()
+    def on_workflow_actionClear_triggered(self):
+        self.ui.graph.clear_graph()
 
     @Slot()
-    def action_conversation_triggered_new(self):
+    def on_workflow_actionRun_triggered(self):
+        self.ui.graph.run_workflow()
+
+    @Slot()
+    def on_workflow_actionEdit_triggered(self):
+        self.ui.graph.edit_workflow()
+
+    @Slot()
+    def on_workflow_actionPause_triggered(self):
+        self.ui.graph.pause_workflow()
+
+    @Slot()
+    def on_workflow_actionSave_triggered(self):
+        self.ui.graph.save_workflow()
+
+    @Slot()
+    def on_workflow_actionStop_triggered(self):
+        self.ui.graph.stop_workflow()
+
+    @Slot()
+    def on_workflow_actionOpen_triggered(self):
+        self.ui.graph.load_workflow()
+
+    @Slot(bool)
+    def on_actionToggle_Text_to_Speech_toggled(self, val: bool):
+        self.on_toggle_tts(val=val)
+
+    @Slot()
+    def on_AboutWindow_triggered(self):
+        AboutWindow()
+
+    @Slot(bool)
+    def on_actionToggle_Controlnet_toggled(self, val: bool):
+        self.update_controlnet_settings("enabled", val)
+        self._update_action_button(
+            ModelType.CONTROLNET,
+            self.ui.actionToggle_Controlnet,
+            val,
+            SignalCode.CONTROLNET_LOAD_SIGNAL,
+            SignalCode.CONTROLNET_UNLOAD_SIGNAL,
+            "controlnet_enabled",
+        )
+
+    @Slot()
+    def on_actionNew_Conversation_triggered(self):
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
 
     @Slot()
-    def action_conversation_triggered_delete(self):
+    def on_actionDeleted_conversation_triggered(self):
         current_conversation = self.llm_generator_settings.current_conversation
         self.emit_signal(
             SignalCode.CONVERSATION_DELETED,
             {"conversation_id": current_conversation.id},
         )
 
-    @Slot(bool)
-    def action_toggle_grid(self, val):
-        self.update_grid_settings("show_grid", val)
-        self.emit_signal(SignalCode.TOGGLE_GRID, {"show_grid": val})
+    def _action_reset_settings(self):
+        reply = QMessageBox.question(
+            self,
+            "Reset Settings",
+            "Are you sure you want to reset all settings to their default values?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if reply == QMessageBox.Yes:
+            self.reset_settings()
+            self.restart()
 
     """
     End slot functions
@@ -1170,24 +1174,6 @@ class MainWindow(
     #################################
 
     ###### Window handlers ######
-    def cell_size_changed(self, val):
-        self.update_grid_settings("cell_size", val)
-
-    def line_width_changed(self, val):
-        self.update_grid_settings("line_width", val)
-
-    def line_color_changed(self, val):
-        self.update_grid_settings("line_color", val)
-
-    def snap_to_grid_changed(self, val):
-        self.update_grid_settings("snap_to_grid", val)
-
-    def canvas_color_changed(self, val):
-        self.update_grid_settings("canvas_color", val)
-
-    def action_ai_toggled(self, val):
-        self.update_application_settings("ai_mode", val)
-
     def on_toggle_tool_signal(self, data: Dict):
         self.toggle_tool(data["tool"], data["active"])
 
