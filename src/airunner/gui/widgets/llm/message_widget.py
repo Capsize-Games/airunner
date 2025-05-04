@@ -1,10 +1,9 @@
-import threading
-
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget
 from PySide6.QtGui import QFontMetrics
-from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer
+from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer, QThread, QObject
 from PySide6.QtCore import Signal
+import queue
 
 from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -19,6 +18,30 @@ class AutoResizingTextEdit(QTextEdit):
         self.document().contentsChanged.connect(self.sizeChange)
 
 
+# Worker class for the resize operation
+class ResizeWorker(QObject):
+    finished = Signal()
+
+    def __init__(self, message_queue):
+        super().__init__()
+        self.message_queue = message_queue
+        self.running = True
+
+    def process(self):
+        while self.running:
+            try:
+                # Get the next message widget from the queue with a timeout
+                message_widget = self.message_queue.get(timeout=0.1)
+                message_widget.set_content_size()
+                self.message_queue.task_done()
+            except queue.Empty:
+                # If the queue is empty, just continue and check again
+                pass
+
+    def stop(self):
+        self.running = False
+
+
 class MessageWidget(BaseWidget):
     widget_class_ = Ui_message
     textChanged = Signal()
@@ -26,6 +49,24 @@ class MessageWidget(BaseWidget):
         ("copy", "copy_button"),
         ("x-circle", "delete_button"),
     ]
+
+    # Class-level thread and queue for all instances
+    resize_queue = queue.Queue()
+    resize_thread = None
+    resize_worker = None
+
+    @classmethod
+    def initialize_resize_worker(cls):
+        if cls.resize_thread is None:
+            cls.resize_thread = QThread()
+            cls.resize_worker = ResizeWorker(cls.resize_queue)
+            cls.resize_worker.moveToThread(cls.resize_thread)
+
+            # Connect signals and slots
+            cls.resize_thread.started.connect(cls.resize_worker.process)
+
+            # Start the thread
+            cls.resize_thread.start()
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
@@ -38,6 +79,10 @@ class MessageWidget(BaseWidget):
         self.conversation_id = kwargs.pop("conversation_id")
         self.is_bot = kwargs.pop("is_bot")
         super().__init__(*args, **kwargs)
+
+        # Initialize the class-level worker if not already done
+        self.__class__.initialize_resize_worker()
+
         self._deleted = False
         self.ui.content.setReadOnly(True)
         self.ui.content.insertPlainText(self.message)
@@ -121,8 +166,8 @@ class MessageWidget(BaseWidget):
         self.textChanged.emit()
 
     def resizeEvent(self, event):
-        thread = threading.Thread(target=self.set_content_size)
-        thread.start()
+        # Add this widget to the resize queue instead of creating a new thread
+        self.resize_queue.put(self)
         super().resizeEvent(event)
 
     def sizeHint(self):

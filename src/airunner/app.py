@@ -80,6 +80,10 @@ class App(MediatorMixin, SettingsMixin, QObject):
             return  # Skip GUI initialization if the flag is False
         signal.signal(signal.SIGINT, self.signal_handler)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
+        QApplication.setAttribute(
+            Qt.ApplicationAttribute.AA_EnableHighDpiScaling
+        )
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
         self.app = QApplication.instance()
         if self.app is None:
             self.app = QApplication([])
