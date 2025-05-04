@@ -827,7 +827,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 self.logger.error(error_message)
             if self.image_request.callback:
                 self.image_request.callback(response)
-            self.api.art.worker_response(code=code, message=response)
+            self.api.worker_response(code=code, message=response)
             self._current_state = HandlerState.READY
             clear_memory()
         self.handle_requested_action()
@@ -1261,7 +1261,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
                 response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
             self.logger.error(error_message)
-            self.api.art.worker_response(code, response)
+            self.api.worker_response(code, response)
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return False
         return True
