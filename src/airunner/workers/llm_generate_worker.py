@@ -1,4 +1,3 @@
-import threading
 from typing import Dict, Optional, Type
 
 from airunner.enums import SignalCode
@@ -123,7 +122,7 @@ class LLMGenerateWorker(Worker):
     def on_llm_load_model_signal(self, data):
         # Reset model manager to ensure proper selection based on current settings
         self._model_manager = None
-        self._load_llm_thread(data)
+        self._load_llm(data)
 
     def on_llm_clear_history_signal(self, data: Optional[Dict] = None):
         if self.model_manager:
@@ -151,17 +150,11 @@ class LLMGenerateWorker(Worker):
 
     def start_worker_thread(self):
         if self.application_settings.llm_enabled or AIRUNNER_LLM_ON:
-            self._load_llm_thread()
+            self._load_llm()
 
     def handle_message(self, message):
         if self.model_manager:
             self.model_manager.handle_request(message)
-
-    def _load_llm_thread(self, data=None):
-        self._llm_thread = threading.Thread(
-            target=self._load_llm, args=(data,)
-        )
-        self._llm_thread.start()
 
     def load(self):
         self._load_llm()

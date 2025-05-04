@@ -36,44 +36,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="microphoneMonitorGroup">
-     <property name="title">
-      <string>Microphone Monitor</string>
-     </property>
-     <layout class="QVBoxLayout" name="microphoneMonitorLayout">
-      <item>
-       <widget class="QSlider" name="inputLevelSlider">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="minimum">
-         <number>0</number>
-        </property>
-        <property name="maximum">
-         <number>100</number>
-        </property>
-        <property name="value">
-         <number>50</number>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QProgressBar" name="microphoneLevelBar">
-        <property name="minimum">
-         <number>0</number>
-        </property>
-        <property name="maximum">
-         <number>100</number>
-        </property>
-        <property name="value">
-         <number>0</number>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Orientation::Vertical</enum>

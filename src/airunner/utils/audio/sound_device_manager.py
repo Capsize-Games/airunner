@@ -21,10 +21,14 @@ class SoundDeviceManager:
 
     @property
     def in_stream(self):
+        if not self._in_stream:
+            self.initialize_input_stream()
         return self._in_stream
 
     @property
     def out_stream(self):
+        if not self._out_stream:
+            self.initialize_output_stream()
         return self._out_stream
 
     @property

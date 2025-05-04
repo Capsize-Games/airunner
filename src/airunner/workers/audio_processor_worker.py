@@ -1,4 +1,5 @@
 from airunner.enums import SignalCode
+from airunner.handlers.stt.whisper_model_manager import WhisperModelManager
 from airunner.workers.worker import Worker
 
 
@@ -27,13 +28,12 @@ class AudioProcessorWorker(Worker):
 
     def _initialize_stt_handler(self):
         if self._stt is None:
-            from airunner.handlers.stt.whisper_model_manager import (
-                WhisperModelManager,
-            )
-
             self._stt = WhisperModelManager()
 
     def on_stt_load_signal(self):
+        if self._stt is None:
+            self._initialize_stt_handler()
+
         if self._stt:
             self._stt_load()
 
