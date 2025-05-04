@@ -23,7 +23,9 @@ from PySide6.QtWidgets import (
 )
 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
-from airunner.gui.widgets.canvas.draggables.layer_image_item import LayerImageItem
+from airunner.gui.widgets.canvas.draggables.layer_image_item import (
+    LayerImageItem,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.settings import (
     AIRUNNER_VALID_IMAGE_FILES,
@@ -831,7 +833,17 @@ class CustomScene(
         # Get the current canvas offset from the view
         canvas_offset = self.get_canvas_offset()
 
-        if outpaint_box_rect:
+        # Check for existing stored position in drawing_pad_settings
+        use_settings_position = False
+        settings_x = self.drawing_pad_settings.x_pos
+        settings_y = self.drawing_pad_settings.y_pos
+
+        if settings_x is not None and settings_y is not None:
+            use_settings_position = True
+            root_point = QPoint(settings_x, settings_y)
+
+        # If no position in settings, use outpaint box or default to center
+        if not use_settings_position and outpaint_box_rect:
             if is_outpaint:
                 image, root_point, _pivot_point = self._handle_outpaint(
                     outpaint_box_rect, image
@@ -840,16 +852,9 @@ class CustomScene(
                 # This is the key part - ensure we use the absolute position from outpaint_box_rect
                 # exactly as provided, which should match the active grid area's absolute position
                 root_point = QPoint(outpaint_box_rect.x, outpaint_box_rect.y)
-
-            if self.item:
-                # Store the absolute position without any adjustments
-                absolute_pos = QPointF(root_point.x(), root_point.y())
-                self._original_item_positions[self.item] = absolute_pos
-
-                # Calculate display position by subtracting current canvas offset
-                visible_pos_x = absolute_pos.x() - canvas_offset.x()
-                visible_pos_y = absolute_pos.y() - canvas_offset.y()
-                self.item.setPos(visible_pos_x, visible_pos_y)
+        elif not use_settings_position:
+            # Default to center position
+            root_point = QPoint(0, 0)
 
         q_image = ImageQt.ImageQt(image)
 
@@ -861,14 +866,16 @@ class CustomScene(
             # If there's no item yet, create one first
             self.set_item(q_image, z_index=5)
 
-            # For new items, initialize their position accounting for canvas offset
-            if outpaint_box_rect:
-                absolute_pos = QPointF(root_point.x(), root_point.y())
-                self._original_item_positions[self.item] = absolute_pos
+        # Always update the stored absolute position in the scene
+        if self.item:
+            # Store the absolute position without any adjustments
+            absolute_pos = QPointF(root_point.x(), root_point.y())
+            self._original_item_positions[self.item] = absolute_pos
 
-                visible_pos_x = absolute_pos.x() - canvas_offset.x()
-                visible_pos_y = absolute_pos.y() - canvas_offset.y()
-                self.item.setPos(visible_pos_x, visible_pos_y)
+            # Calculate display position by subtracting current canvas offset
+            visible_pos_x = absolute_pos.x() - canvas_offset.x()
+            visible_pos_y = absolute_pos.y() - canvas_offset.y()
+            self.item.setPos(visible_pos_x, visible_pos_y)
 
         self.update()
         self.initialize_image(image)
@@ -1070,9 +1077,18 @@ class CustomScene(
 
         # Store the original position if we haven't already
         if self.item not in self._original_item_positions:
-            self._original_item_positions[self.item] = self.item.pos()
+            # Use the drawing_pad_settings values for position
+            abs_x = self.drawing_pad_settings.x_pos
+            abs_y = self.drawing_pad_settings.y_pos
 
-        # Get the original position
+            if abs_x is None or abs_y is None:
+                # Default to current position if settings aren't available
+                abs_x = self.item.pos().x() + canvas_offset.x()
+                abs_y = self.item.pos().y() + canvas_offset.y()
+
+            self._original_item_positions[self.item] = QPointF(abs_x, abs_y)
+
+        # Get the original absolute position
         original_pos = self._original_item_positions[self.item]
 
         # Calculate and set the new position
