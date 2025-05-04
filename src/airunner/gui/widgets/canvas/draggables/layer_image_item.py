@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 from PySide6.QtWidgets import QGraphicsItem
 from airunner.gui.widgets.canvas.draggables.draggable_pixmap import (
     DraggablePixmap,
@@ -6,8 +6,8 @@ from airunner.gui.widgets.canvas.draggables.draggable_pixmap import (
 
 
 class LayerImageItem(DraggablePixmap):
-    def __init__(self, pixmap, layer_image_data):
-        self.layer_image_data = layer_image_data
+    def __init__(self, pixmap, layer_image_data: Optional[Dict] = None):
+        self.layer_image_data = layer_image_data or {}
         super().__init__(pixmap)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
