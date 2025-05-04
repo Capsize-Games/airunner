@@ -79,7 +79,7 @@ class FramePackHandler(BaseModelManager):
     progress_update = Signal(
         int, str
     )  # Emits progress percentage and status message
-    
+
     def __init__(self):
         self._model_status = {
             ModelType.VIDEO: ModelStatus.UNLOADED,
@@ -334,9 +334,8 @@ class FramePackHandler(BaseModelManager):
             self.logger.error(
                 f"Failed to unload FramePack models: {e}", exc_info=True
             )
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-                f"Failed to unload FramePack models: {str(e)}",
+            self.api.application_error(
+                f"Failed to unload FramePack models: {str(e)}"
             )
             return False
 
@@ -410,9 +409,8 @@ class FramePackHandler(BaseModelManager):
             )
 
             # Report that the thread has started
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
-                f"Video generation started: {self.current_job_id}",
+            self.api.application_status(
+                f"Video generation started: {self.current_job_id}"
             )
 
             return self.current_job_id
@@ -848,10 +846,7 @@ class FramePackHandler(BaseModelManager):
                 f"Error during video generation: {str(e)}", exc_info=True
             )
             self.stream.push(("error", str(e)))
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-                f"FramePack error: {str(e)}",
-            )
+            self.api.application_error(f"FramePack error: {str(e)}")
             return None
 
         finally:
@@ -942,10 +937,7 @@ class FramePackHandler(BaseModelManager):
             self.video_completed.emit(item_data)
 
         elif item_type == "error":
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-                f"FramePack error: {item_data}",
-            )
+            self.api.application_error(f"FramePack error: {item_data}")
 
         elif item_type == "end":
             # Final video is complete

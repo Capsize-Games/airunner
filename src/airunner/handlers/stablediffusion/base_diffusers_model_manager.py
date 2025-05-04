@@ -827,10 +827,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 self.logger.error(error_message)
             if self.image_request.callback:
                 self.image_request.callback(response)
-            self.emit_signal(
-                SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
-                {"code": code, "message": response},
-            )
+            self.api.worker_response(code=code, message=response)
             self._current_state = HandlerState.READY
             clear_memory()
         self.handle_requested_action()
@@ -850,7 +847,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.change_model_status(ModelType.LORA, ModelStatus.LOADING)
         self._unload_loras()
         self._load_lora()
-        self.emit_signal(SignalCode.LORA_UPDATED_SIGNAL)
+        self.api.art.lora_updated()
         self.change_model_status(ModelType.LORA, ModelStatus.LOADED)
 
     def reload_embeddings(self):
@@ -863,7 +860,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             return
         self.change_model_status(ModelType.EMBEDDINGS, ModelStatus.LOADING)
         self._load_embeddings()
-        self.emit_signal(SignalCode.EMBEDDING_UPDATED_SIGNAL)
+        self.api.art.embedding_updated()
         self.change_model_status(ModelType.EMBEDDINGS, ModelStatus.LOADED)
 
     def load_embeddings(self):
@@ -905,13 +902,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         )
 
         if images is not None:
-            self.emit_signal(
-                SignalCode.SD_PROGRESS_SIGNAL,
-                {
-                    "step": self.image_request.steps,
-                    "total": self.image_request.steps,
-                },
-            )
+            self.api.art.final_progress_update(total=self.image_request.steps)
 
             # Benchmark exporting images
             self._export_images(images, data)
@@ -1270,10 +1261,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
                 response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
             self.logger.error(error_message)
-            self.emit_signal(
-                SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
-                {"code": code, "message": response},
-            )
+            self.api.worker_response(code, response)
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return False
         return True
@@ -1295,14 +1283,13 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self._pipe:
             pipeline_class = self._pipe.__class__
             if pipeline_class in self.txt2img_pipelines:
-                pipeline_type = "txt2img"
+                pipeline_type = GeneratorSection.TXT2IMG
             elif pipeline_class in self.img2img_pipelines:
-                pipeline_type = "img2img"
+                pipeline_type = GeneratorSection.IMG2IMG
             elif pipeline_class in self.outpaint_pipelines:
-                pipeline_type = "inpaint"
-        self.emit_signal(
-            SignalCode.SD_PIPELINE_LOADED_SIGNAL, {"pipeline": pipeline_type}
-        )
+                pipeline_type = GeneratorSection.INPAINT
+        if pipeline_type is not None:
+            self.api.art.pipeline_loaded(pipeline_type)
 
     def _move_pipe_to_device(self):
         if self._pipe is not None:
@@ -2013,10 +2000,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.generator.manual_seed(seed)
 
     def _callback(self, _pipe, _i, _t, callback_kwargs):
-        self.emit_signal(
-            SignalCode.SD_PROGRESS_SIGNAL,
-            {"step": _i, "total": self.image_request.steps},
-        )
+        self.api.art.progress_update(step=_i, total=self.image_request.steps)
         return callback_kwargs
 
     def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):

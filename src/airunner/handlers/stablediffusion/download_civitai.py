@@ -47,7 +47,7 @@ class DownloadCivitAI(
         self.worker.moveToThread(self.thread)
 
         # Connect signals
-        self.worker.finished.connect(lambda: self.emit_signal(SignalCode.DOWNLOAD_COMPLETE))
+        self.worker.finished.connect(lambda: self.api.download_complete)
         self.worker.finished.connect(self.thread.quit)
         self.worker.progress.connect(lambda current, total: callback(current, total))
         print(f"Starting model download thread")
