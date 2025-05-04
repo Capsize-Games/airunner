@@ -866,7 +866,7 @@ class BaseAgent(
     def bot_mood(self, value: str):
         if self.conversation:
             self._update_conversation("bot_mood", value)
-            self.api.llm.chatbot.update_mood()
+            self.api.llm.chatbot.update_mood(value)
 
     @property
     def conversation(self) -> Optional[Conversation]:

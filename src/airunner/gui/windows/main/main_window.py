@@ -282,7 +282,6 @@ class MainWindow(
     signals in the corresponding ui file.
     """
 
-    @Slot(QSystemTrayIcon.ActivationReason)
     def on_tray_icon_activated(self, reason: QSystemTrayIcon.ActivationReason):
         """Handle tray icon activation events."""
         print(f"Tray icon activated with reason: {reason}")
@@ -318,7 +317,7 @@ class MainWindow(
         self.toggle_tool(CanvasToolName.ERASER, active)
 
     @Slot()
-    def on_actionRecener_triggered(self):
+    def on_actionRecenter_triggered(self):
         self.emit_signal(SignalCode.RECENTER_GRID_SIGNAL)
 
     @Slot()
@@ -374,19 +373,19 @@ class MainWindow(
         self.emit_signal(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
 
     @Slot()
-    def on_actionRotate_90_clockwise(self):
+    def on_actionRotate_90_clockwise_triggered(self):
         self.emit_signal(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
 
     @Slot()
-    def on_actionRotate_90_counter_clockwise(self):
+    def on_actionRotate_90_counter_clockwise_triggered(self):
         self.emit_signal(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
 
     @Slot()
-    def on_actionClear_all_prompts(self):
+    def on_actionClear_all_prompts_triggered(self):
         self.clear_all_prompts()
 
     @Slot()
-    def on_actionBrowse_AI_Runner_Path(self):
+    def on_actionBrowse_AI_Runner_Path_triggered(self):
         path = self.path_settings.base_path
         if path == "":
             path = AIRUNNER_BASE_PATH
@@ -515,10 +514,6 @@ class MainWindow(
         )
         QApplication.processEvents()
         self.update_application_settings("stt_enabled", val)
-        if not val:
-            self.emit_signal(SignalCode.STT_UNLOAD_SIGNAL)
-        else:
-            self.emit_signal(SignalCode.STT_LOAD_SIGNAL)
 
     @Slot()
     def on_workflow_actionClear_triggered(self):
@@ -553,7 +548,7 @@ class MainWindow(
         self.on_toggle_tts(val=val)
 
     @Slot()
-    def on_AboutWindow_triggered(self):
+    def on_actionAbout_triggered(self):
         AboutWindow()
 
     @Slot(bool)
@@ -573,7 +568,7 @@ class MainWindow(
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
 
     @Slot()
-    def on_actionDeleted_conversation_triggered(self):
+    def on_actionDelete_conversation_triggered(self):
         current_conversation = self.llm_generator_settings.current_conversation
         self.emit_signal(
             SignalCode.CONVERSATION_DELETED,
