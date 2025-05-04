@@ -1025,7 +1025,6 @@ class CustomScene(
         ):
             return
         self._last_cursor_state = (event.type(), apply_cursor)
-        print("test")
         self.emit_signal(
             SignalCode.CANVAS_UPDATE_CURSOR,
             {"event": event, "apply_cursor": apply_cursor},
