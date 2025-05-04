@@ -1,7 +1,7 @@
 import os
-import threading
 import sounddevice as sd
 import librosa
+import queue
 
 import numpy as np
 import torch
@@ -12,6 +12,7 @@ from transformers.models.whisper.processing_whisper import WhisperProcessor
 from transformers.models.whisper.feature_extraction_whisper import (
     WhisperFeatureExtractor,
 )
+from PySide6.QtCore import QThread, QMutex, QObject, Signal
 
 from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.enums import SignalCode, ModelType, ModelStatus
@@ -21,6 +22,58 @@ from airunner.settings import (
     AIRUNNER_DEFAULT_STT_HF_PATH,
     AIRUNNER_LOCAL_FILES_ONLY,
 )
+
+
+# Audio processing worker that runs in a separate thread
+class AudioProcessingWorker(QObject):
+    transcription_ready = Signal(str)
+
+    def __init__(self, manager):
+        super().__init__()
+        self.manager = manager
+        self.queue = queue.Queue()
+        self.running = True
+
+    def process(self):
+        """Process audio data from the queue continuously"""
+        while self.running:
+            try:
+                # Get the next audio data from the queue with a timeout
+                audio_data = self.queue.get(timeout=0.1)
+
+                if audio_data:
+                    item = audio_data["item"]
+
+                    # Convert the byte string to a float32 array
+                    inputs = np.frombuffer(item, dtype=np.int16)
+                    inputs = inputs.astype(np.float32) / 32767.0
+
+                    transcription = None
+                    try:
+                        transcription = self.manager._process_inputs(inputs)
+                    except Exception as e:
+                        self.manager.logger.error(
+                            f"Failed to process inputs {e}"
+                        )
+                        self.manager.logger.error(e)
+
+                    if transcription:
+                        self.transcription_ready.emit(transcription)
+
+                # Mark this task as done
+                self.queue.task_done()
+
+            except queue.Empty:
+                # If the queue is empty, just continue and check again
+                QThread.msleep(10)  # Small sleep to prevent CPU spinning
+
+    def add_audio(self, audio_data):
+        """Add audio data to the processing queue"""
+        self.queue.put(audio_data)
+
+    def stop(self):
+        """Stop the worker's processing loop"""
+        self.running = False
 
 
 class WhisperModelManager(BaseModelManager):
@@ -37,31 +90,29 @@ class WhisperModelManager(BaseModelManager):
             ModelType.STT_FEATURE_EXTRACTOR: ModelStatus.UNLOADED,
         }
         super().__init__(*args, **kwargs)
-        self._lock = threading.Lock()
+
+        self._lock = QMutex()
         self._model = None
         self._processor = None
         self._feature_extractor = None
         self._sampling_rate = 16000
         self.audio_stream = None
 
+        # Setup a single persistent worker thread
+        self.worker_thread = QThread()
+        self.worker = AudioProcessingWorker(self)
+        self.worker.moveToThread(self.worker_thread)
+        self.worker.transcription_ready.connect(self._send_transcription)
+
+        # Start the worker thread
+        self.worker_thread.started.connect(self.worker.process)
+        self.worker_thread.start()
+
+        # Register cleanup for application exit
+        self.register(SignalCode.QUIT_APPLICATION, self.cleanup_worker)
+
         # Determine device map strategy based on available hardware
         self._device_map = "auto" if torch.cuda.is_available() else None
-
-    @property
-    def dtype(self):
-        return torch.float16 if torch.cuda.is_available() else torch.float32
-
-    @property
-    def stt_is_loading(self):
-        return self.model_status is ModelStatus.LOADING
-
-    @property
-    def stt_is_loaded(self):
-        return self.model_status is ModelStatus.LOADED
-
-    @property
-    def stt_is_unloaded(self):
-        return self.model_status is ModelStatus.UNLOADED
 
     @property
     def model_path(self) -> str:
@@ -72,26 +123,43 @@ class WhisperModelManager(BaseModelManager):
         )
         return os.path.abspath(file_path)
 
+    @property
+    def dtype(self):
+        return torch.float16 if torch.cuda.is_available() else torch.float32
+
+    @property
+    def stt_is_loading(self) -> bool:
+        return self._model_status[ModelType.STT] is ModelStatus.LOADING
+
+    @property
+    def stt_is_loaded(self) -> bool:
+        return self._model_status[ModelType.STT] is ModelStatus.LOADED
+
+    @property
+    def stt_is_unloaded(self) -> bool:
+        return self._model_status[ModelType.STT] is ModelStatus.UNLOADED
+
+    @property
+    def stt_is_failed(self) -> bool:
+        return self._model_status[ModelType.STT] is ModelStatus.FAILED
+
+    def cleanup_worker(self):
+        """Clean up the worker thread on application exit"""
+        if hasattr(self, "worker") and self.worker:
+            self.worker.stop()
+
+        if hasattr(self, "worker_thread") and self.worker_thread:
+            self.worker_thread.quit()
+            self.worker_thread.wait(
+                1000
+            )  # Wait up to 1 second for thread to finish
+
     def process_audio(self, audio_data):
         """
-        Process incoming audio data.
+        Process incoming audio data by adding it to the worker's queue
         """
-        with self._lock:
-            item = audio_data["item"]
-
-            # Convert the byte string to a float32 array
-            inputs = np.frombuffer(item, dtype=np.int16)
-            inputs = inputs.astype(np.float32) / 32767.0
-
-            transcription = None
-            try:
-                transcription = self._process_inputs(inputs)
-            except Exception as e:
-                self.logger.error(f"Failed to process inputs {e}")
-                self.logger.error(e)
-
-            if transcription:
-                self._send_transcription(transcription)
+        if hasattr(self, "worker") and self.worker:
+            self.worker.add_audio(audio_data)
 
     def load(self, retry: bool = False):
         if self.stt_is_loading or self.stt_is_loaded:
@@ -206,6 +274,7 @@ class WhisperModelManager(BaseModelManager):
 
     def _process_inputs(self, inputs: np.ndarray) -> str:
         """Process audio input array and return transcription"""
+        # Using QMutex locker pattern
         if not self._feature_extractor or not self._model:
             return ""
 

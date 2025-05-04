@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 
 from PySide6.QtCore import Qt, QPoint, QTimer
 from PySide6.QtCore import Slot
@@ -156,7 +156,7 @@ class CanvasWidget(BaseWidget):
         tool = message.get("tool", None)
         active = message.get("active", False)
         self._update_action_buttons(tool, active)
-        self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
+        self._update_cursor()
 
     def on_toggle_grid_signal(self, message: dict):
         self.ui.grid_button.setChecked(message.get("show_grid", True))
@@ -177,10 +177,13 @@ class CanvasWidget(BaseWidget):
         super().showEvent(event)
         if not self._initialized:
             self._initialized = True
-            QTimer.singleShot(100, lambda: self.do_draw(force_draw=True))
-            self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR)
+            self._update_cursor()
 
-    def on_canvas_update_cursor_signal(self, message: dict):
+    def on_canvas_update_cursor_signal(self, message: Dict):
+        self._update_cursor(message)
+
+    def _update_cursor(self, message: Optional[Dict] = None):
+        message = message or {}
         event = message.get("event", None)
         cursor = None
         if message.get("apply_cursor", None):
