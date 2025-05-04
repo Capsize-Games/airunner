@@ -7,7 +7,12 @@ from airunner.app import App
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.stablediffusion.image_request import ImageRequest
-from airunner.enums import SignalCode, LLMActionType
+from airunner.enums import (
+    EngineResponseCode,
+    GeneratorSection,
+    SignalCode,
+    LLMActionType,
+)
 from airunner.setup_database import setup_database
 from airunner.utils.application.create_worker import create_worker
 from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
@@ -18,30 +23,65 @@ from airunner.utils.application.ui_loader import (
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
 
-class API(App):
-    def __init__(self, *args, **kwargs):
-        # Extract the initialize_app flag and pass the rest to the parent App class
-        self._initialize_app = kwargs.pop("initialize_app", True)
-        initialize_gui = kwargs.pop("initialize_gui", True)
-        self.signal_handlers = {
-            SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
-            SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
-        }
-        self.sounddevice_manager = SoundDeviceManager()
-        super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
-        self.initialize_model_scanner()
+class APIServiceBase:
+    def __init__(self, emit_signal):
+        self.emit_signal = emit_signal
 
-    def initialize_model_scanner(self):
-        from airunner.workers.model_scanner_worker import (
-            ModelScannerWorker,
+
+class ARTAPIService(APIServiceBase):
+    def lora_updated(self):
+        """
+        Emit a signal indicating that the LoRA has been updated.
+        """
+        self.emit_signal(SignalCode.LORA_UPDATED_SIGNAL, {})
+
+    def embedding_updated(self):
+        """
+        Emit a signal indicating that the embedding has been updated.
+        """
+        self.emit_signal(SignalCode.EMBEDDING_UPDATED_SIGNAL, {})
+
+    def final_progress_update(self, total: int):
+        self.progress_update(total, total)
+
+    def progress_update(self, step: int, total: int):
+        """
+        Emit a signal indicating the image generation progress.
+        :param step: The current step in the progress.
+        :param total: The total number of steps.
+        """
+        self.emit_signal(
+            SignalCode.SD_PROGRESS_SIGNAL,
+            {
+                "step": step,
+                "total": total,
+            },
         )
 
-        if self._initialize_app:
-            setup_database()
-            self.model_scanner_worker = create_worker(ModelScannerWorker)
-            self.model_scanner_worker.add_to_queue("scan_for_models")
+    def worker_response(self, code: EngineResponseCode, message: Dict):
+        """
+        Emit a signal indicating a response from the worker.
+        :param code: The response code from the worker.
+        :param message: The message from the worker.
+        """
+        self.emit_signal(
+            SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
+            {"code": code, "message": message},
+        )
 
-    def send_llm_request(
+    def pipeline_loaded(self, section: GeneratorSection):
+        """
+        Emit a signal indicating that the pipeline has been loaded.
+        :param section: The section of the pipeline that has been loaded.
+        """
+        self.emit_signal(
+            SignalCode.SD_PIPELINE_LOADED_SIGNAL,
+            {"generator_section": section},
+        )
+
+
+class LLMAPIService(APIServiceBase):
+    def send_request(
         self,
         prompt: str,
         llm_request: Optional[LLMRequest] = None,
@@ -72,6 +112,33 @@ class API(App):
                 },
             },
         )
+
+
+class API(App):
+    def __init__(self, *args, **kwargs):
+        self.llm = LLMAPIService(emit_signal=self.emit_signal)
+        self.art = ARTAPIService(emit_signal=self.emit_signal)
+
+        # Extract the initialize_app flag and pass the rest to the parent App class
+        self._initialize_app = kwargs.pop("initialize_app", True)
+        initialize_gui = kwargs.pop("initialize_gui", True)
+        self.signal_handlers = {
+            SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
+            SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
+        }
+        self.sounddevice_manager = SoundDeviceManager()
+        super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
+        self._initialize_model_scanner()
+
+    def _initialize_model_scanner(self):
+        from airunner.workers.model_scanner_worker import (
+            ModelScannerWorker,
+        )
+
+        if self._initialize_app:
+            setup_database()
+            self.model_scanner_worker = create_worker(ModelScannerWorker)
+            self.model_scanner_worker.add_to_queue("scan_for_models")
 
     def send_llm_text_streamed_signal(self, response: LLMResponse):
         """

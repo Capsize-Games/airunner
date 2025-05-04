@@ -23,7 +23,7 @@ from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint_sd_xl import (
 
 from compel import ReturnedEmbeddingsType
 
-from airunner.enums import QualityEffects, StableDiffusionVersion, ImagePreset
+from airunner.enums import QualityEffects, StableDiffusionVersion
 from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
     StableDiffusionModelManager,
 )

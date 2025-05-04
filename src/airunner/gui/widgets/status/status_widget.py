@@ -1,3 +1,4 @@
+from typing import Optional, Dict
 import torch
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
@@ -29,7 +30,7 @@ class StatusWidget(BaseWidget):
             self.ui.controlnet_status.deleteLater()
             self.ui.nsfw_status.deleteLater()
 
-        self.set_sd_pipeline_label({"pipeline": ""})
+        self.set_sd_pipeline_label()
         self.version = None
 
         self.timer = QTimer()
@@ -64,9 +65,10 @@ class StatusWidget(BaseWidget):
     def on_application_settings_changed(self):
         self.set_sd_status_text()
 
-    def set_sd_pipeline_label(self, data):
-        if data["pipeline"]:
-            self.ui.pipeline_label.setText(data["pipeline"])
+    def set_sd_pipeline_label(self, data: Optional[Dict] = None):
+        data = data or {}
+        if data.get("generator_section", None):
+            self.ui.pipeline_label.setText(data["generator_section"].value)
             self.ui.pipeline_divider.show()
         else:
             self.ui.pipeline_label.setText("")
