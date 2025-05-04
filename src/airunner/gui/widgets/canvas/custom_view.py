@@ -1,13 +1,14 @@
 from typing import Optional, Dict
 
 from PySide6 import QtGui
-from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QSize
-from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen
+from PySide6.QtCore import QPointF, QPoint, Qt, QRect, QEvent, QSize, QRectF
+from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView,
     QGraphicsItemGroup,
     QGraphicsLineItem,
     QGraphicsScene,
+    QGraphicsItem,
 )
 
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
@@ -21,6 +22,46 @@ from airunner.gui.widgets.canvas.draggables.active_grid_area import (
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.utils.settings import get_qsettings
+
+
+class GridGraphicsItem(QGraphicsItem):
+    def __init__(self, view):
+        super().__init__()
+        self.view = view
+        self.setZValue(-100)
+        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, False)
+
+    def boundingRect(self) -> QRectF:
+        # Always cover the visible area
+        rect = self.view.mapToScene(self.view.viewport().rect()).boundingRect()
+        return rect
+
+    def paint(self, painter: QPainter, option, widget=None):
+        cell_size = self.view.grid_settings.cell_size
+        if cell_size <= 0:
+            return
+        color = QColor(self.view.grid_settings.line_color)
+        pen = QPen(color, self.view.grid_settings.line_width)
+        painter.setPen(pen)
+        visible_rect = self.boundingRect()
+        offset_x = self.view.canvas_offset.x()
+        offset_y = self.view.canvas_offset.y()
+        left = int(visible_rect.left())
+        right = int(visible_rect.right())
+        top = int(visible_rect.top())
+        bottom = int(visible_rect.bottom())
+        start_x = left - ((left + int(offset_x)) % cell_size)
+        start_y = top - ((top + int(offset_y)) % cell_size)
+        # Draw vertical lines
+        x = start_x
+        while x <= right:
+            painter.drawLine(x, top, x, bottom)
+            x += cell_size
+        # Draw horizontal lines
+        y = start_y
+        while y <= bottom:
+            painter.drawLine(left, y, right, y)
+            y += cell_size
 
 
 class CustomGraphicsView(
@@ -49,6 +90,7 @@ class CustomGraphicsView(
         )  # Explicitly use QPointF, not QPoint
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
+        self.grid_item = None
 
         # Add settings to handle negative coordinates properly
         self.setAlignment(
@@ -224,66 +266,28 @@ class CustomGraphicsView(
         self.drawing = True
         self.set_scene_rect()  # Set scene rect based on viewport
 
-        # Clear existing grid lines first
-        self.clear_lines()
+        # Remove old grid item if it exists
+        if self.grid_item is not None:
+            self.scene.removeItem(self.grid_item)
+            self.grid_item = None
 
-        # Draw grid if enabled
+        # Add a single efficient grid item
         if self.grid_settings.show_grid:
-            self.draw_grid(size=size)
-        # Removed redundant clear/draw
+            self.grid_item = GridGraphicsItem(self)
+            self.scene.addItem(self.grid_item)
 
         self.show_active_grid_area()  # Ensure active grid is shown/positioned correctly
         self.update_scene()
         self.drawing = False
 
     def draw_grid(self, size: Optional[QSize] = None):
-        if not self.__can_draw_grid:
-            return
+        if self.grid_item:
+            self.grid_item.update()
 
-        # Ensure any existing line group is removed from the scene and deleted
-        self.clear_lines()
-
-        # Create a fresh line group
-        self.line_group = QGraphicsItemGroup()
-
-        # Add the new line group to the scene
-        if self.scene:
-            self.scene.addItem(self.line_group)
-
-        cell_size = self.grid_settings.cell_size
-        if size:
-            scene_width = size.width()
-            scene_height = size.height()
-        else:
-            scene_width = int(self.scene.width())
-            scene_height = int(self.scene.height())
-
-        # Adjust for canvas offset
-        offset_x = self.canvas_offset.x() % cell_size
-        offset_y = self.canvas_offset.y() % cell_size
-
-        num_vertical_lines = scene_width // cell_size + 2
-        num_horizontal_lines = scene_height // cell_size + 2
-
-        color = QColor(self.grid_settings.line_color)
-        pen = QPen(
-            color,
-            self.grid_settings.line_width,
-        )
-
-        # Create vertical lines
-        for i in range(num_vertical_lines):
-            x = i * cell_size - offset_x
-            line = QGraphicsLineItem(x, 0, x, scene_height)
-            line.setPen(pen)
-            self.line_group.addToGroup(line)
-
-        # Create horizontal lines
-        for i in range(num_horizontal_lines):
-            y = i * cell_size - offset_y
-            line = QGraphicsLineItem(0, y, scene_width, y)
-            line.setPen(pen)
-            self.line_group.addToGroup(line)
+    def clear_lines(self):
+        if self.grid_item is not None:
+            self.scene.removeItem(self.grid_item)
+            self.grid_item = None
 
     def clear_lines(self):
         if self.line_group is not None:
@@ -465,53 +469,41 @@ class CustomGraphicsView(
             self.do_draw()
             self._last_viewport_size = new_size
 
-    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
-        """
-        Handle window resize events by adjusting canvas offsets to maintain center position.
-        """
-        # Store the old viewport center point in scene coordinates before resize
-        old_viewport_size = self._last_viewport_size
-        old_viewport_center_scene = self.mapToScene(
-            old_viewport_size.width() // 2, old_viewport_size.height() // 2
-        )
-
-        # Call the parent implementation
+    def resizeEvent(self, event):
         super().resizeEvent(event)
+        self.draw_grid()  # Only redraw grid on resize
 
-        # Get new viewport size
-        new_size = event.size()
+    def wheelEvent(self, event):
+        super().wheelEvent(event)
+        self.draw_grid()  # Only redraw grid on zoom
 
-        # Calculate new viewport center in scene coordinates
-        new_viewport_center_scene = self.mapToScene(
-            new_size.width() // 2, new_size.height() // 2
-        )
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.MiddleButton:
+            self._middle_mouse_pressed = True
+            self.last_pos = event.pos()
+            event.accept()
+            return
+        super().mousePressEvent(event)
 
-        # Calculate the adjustment needed to maintain the same center
-        if (
-            self._last_viewport_size.width() > 0
-            and self._last_viewport_size.height() > 0
-        ):
-            # Calculate the delta between old and new scene centers
-            delta_x = (
-                new_viewport_center_scene.x() - old_viewport_center_scene.x()
-            )
-            delta_y = (
-                new_viewport_center_scene.y() - old_viewport_center_scene.y()
-            )
-
-            # Adjust canvas offset to maintain the same center point
-            self.canvas_offset -= QPointF(delta_x, delta_y)
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.MiddleButton:
+            self._middle_mouse_pressed = False
             self.save_canvas_offset()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
 
-            # Update all positions with the new offset
-            self.updateImagePositions()
+    def mouseMoveEvent(self, event):
+        if self._middle_mouse_pressed:
+            delta = event.pos() - self.last_pos
+            self.canvas_offset -= delta
+            self.last_pos = event.pos()
             self.update_active_grid_area_position()
-
-        # Update stored viewport size
-        self._last_viewport_size = new_size
-
-        # Redraw with the updated offset
-        self.do_draw(force_draw=True, size=new_size)
+            self.updateImagePositions()
+            self.draw_grid()
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -549,10 +541,6 @@ class CustomGraphicsView(
     def toggle_drag_mode(self):
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
-    def mouseMoveEvent(self, event: QMouseEvent):
-        self.handle_pan_canvas(event)
-        super().mouseMoveEvent(event)
-
     def handle_pan_canvas(self, event: QMouseEvent):
         if self._middle_mouse_pressed:
             delta = (
@@ -567,7 +555,7 @@ class CustomGraphicsView(
             # Update display positions based on the NEW offset
             self.update_active_grid_area_position()
             self.updateImagePositions()  # Ensure this also uses absolute pos - offset
-            self.do_draw()  # Redraw grid lines relative to new offset
+            self.draw_grid()  # Only redraw grid, not full scene
 
     def update_active_grid_area_position(self):
         if self.active_grid_area:
