@@ -275,6 +275,8 @@ class CustomGraphicsView(
             self.clear_lines()
 
     def do_draw(self, force_draw: bool = False, size: Optional[QSize] = None):
+        if self.scene is None:
+            return
         if (self.drawing or not self.initialized) and not force_draw:
             return
         self.drawing = True
@@ -545,7 +547,7 @@ class CustomGraphicsView(
 
         if not self._initialized:
             self._initialized = True
-            self.on_recenter_grid_signal()
+            QTimer.singleShot(0, self.on_recenter_grid_signal)
 
     def set_canvas_color(
         self,
