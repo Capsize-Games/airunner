@@ -172,10 +172,7 @@ class BaseModelManager(
             self.logger.info(
                 f"Instance {id(self)}: Model {model.name} status changed from {old_status.name} to {status.name}"
             )
-            self.emit_signal(
-                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
-                {"model": model, "status": status},
-            )
+            self.api.change_model_status(model, status)
             self.logger.debug(
                 f"Instance {id(self)}: Current status dict: {self._model_status}"
             )  # Added instance ID

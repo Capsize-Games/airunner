@@ -7,7 +7,14 @@ from airunner.app import App
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.stablediffusion.image_request import ImageRequest
-from airunner.enums import SignalCode, LLMActionType
+from airunner.enums import (
+    EngineResponseCode,
+    GeneratorSection,
+    ModelStatus,
+    ModelType,
+    SignalCode,
+    LLMActionType,
+)
 from airunner.setup_database import setup_database
 from airunner.utils.application.create_worker import create_worker
 from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
@@ -18,30 +25,147 @@ from airunner.utils.application.ui_loader import (
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
 
-class API(App):
-    def __init__(self, *args, **kwargs):
-        # Extract the initialize_app flag and pass the rest to the parent App class
-        self._initialize_app = kwargs.pop("initialize_app", True)
-        initialize_gui = kwargs.pop("initialize_gui", True)
-        self.signal_handlers = {
-            SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
-            SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
-        }
-        self.sounddevice_manager = SoundDeviceManager()
-        super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
-        self.initialize_model_scanner()
+class APIServiceBase:
+    def __init__(self, emit_signal):
+        self.emit_signal = emit_signal
 
-    def initialize_model_scanner(self):
-        from airunner.workers.model_scanner_worker import (
-            ModelScannerWorker,
+
+class STTAPIService(APIServiceBase):
+    def audio_processor_response(self, transcription: str):
+        """
+        Emit a signal with the audio processor response.
+        :param transcription: The response from the audio processor.
+        """
+        self.emit_signal(
+            SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL,
+            {"transcription": transcription},
         )
 
-        if self._initialize_app:
-            setup_database()
-            self.model_scanner_worker = create_worker(ModelScannerWorker)
-            self.model_scanner_worker.add_to_queue("scan_for_models")
 
-    def send_llm_request(
+class TTSAPIService(APIServiceBase):
+    def toggle(self, enabled: bool):
+        """
+        Emit a signal to toggle TTS on or off.
+        :param enabled: True to enable TTS, False to disable.
+        """
+        self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL, {"enabled": enabled})
+
+    def add_to_stream(self, response: str):
+        """
+        Emit a signal to add text to the TTS stream.
+        :param response: The text to add to the stream.
+        """
+        self.emit_signal(
+            SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL,
+            {"message": response},
+        )
+
+    def disable(self):
+        """
+        Emit a signal to disable TTS.
+        """
+        self.emit_signal(SignalCode.TTS_DISABLE_SIGNAL, {})
+
+
+class CanvasAPIService(APIServiceBase):
+    def image_from_path(self, path: str):
+        """
+        Emit a signal to load an image from the given path.
+        :param path: The path to the image file.
+        """
+        self.emit_signal(
+            SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL,
+            {"image_path": path},
+        )
+
+    def clear(self):
+        """
+        Emit a signal to clear the canvas.
+        """
+        self.emit_signal(SignalCode.CANVAS_CLEAR, {})
+
+
+class ARTAPIService(APIServiceBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
+
+    def lora_updated(self):
+        """
+        Emit a signal indicating that the LoRA has been updated.
+        """
+        self.emit_signal(SignalCode.LORA_UPDATED_SIGNAL, {})
+
+    def embedding_updated(self):
+        """
+        Emit a signal indicating that the embedding has been updated.
+        """
+        self.emit_signal(SignalCode.EMBEDDING_UPDATED_SIGNAL, {})
+
+    def final_progress_update(self, total: int):
+        self.progress_update(total, total)
+
+    def progress_update(self, step: int, total: int):
+        """
+        Emit a signal indicating the image generation progress.
+        :param step: The current step in the progress.
+        :param total: The total number of steps.
+        """
+        self.emit_signal(
+            SignalCode.SD_PROGRESS_SIGNAL,
+            {
+                "step": step,
+                "total": total,
+            },
+        )
+
+    def pipeline_loaded(self, section: GeneratorSection):
+        """
+        Emit a signal indicating that the pipeline has been loaded.
+        :param section: The section of the pipeline that has been loaded.
+        """
+        self.emit_signal(
+            SignalCode.SD_PIPELINE_LOADED_SIGNAL,
+            {"generator_section": section},
+        )
+
+    def llm_image_generated(
+        self,
+        prompt: str,
+        second_prompt: str,
+        section: GeneratorSection,
+        width: int,
+        height: int,
+    ):
+        """
+        Emit a signal indicating that an image has been generated by the LLM.
+        :param prompt: The prompt used for image generation.
+        :param second_prompt: The second prompt used for image generation.
+        :param section: The section of the pipeline that generated the image.
+        :param width: The width of the generated image.
+        :param height: The height of the generated image.
+        """
+        self.emit_signal(
+            SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
+            {
+                "message": {
+                    "prompt": prompt,
+                    "second_prompt": second_prompt,
+                    "type": section,
+                    "width": width,
+                    "height": height,
+                }
+            },
+        )
+
+
+class ChatbotAPIService(APIServiceBase):
+    def update_mood(self, mood: str):
+        self.emit_signal(SignalCode.BOT_MOOD_UPDATED, {"mood": mood})
+
+
+class LLMAPIService(APIServiceBase):
+    def send_request(
         self,
         prompt: str,
         llm_request: Optional[LLMRequest] = None,
@@ -72,6 +196,41 @@ class API(App):
                 },
             },
         )
+
+    def clear_history(self):
+        """
+        Emit a signal to clear the LLM history.
+        """
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {})
+
+
+class API(App):
+    def __init__(self, *args, **kwargs):
+        self.llm = LLMAPIService(emit_signal=self.emit_signal)
+        self.art = ARTAPIService(emit_signal=self.emit_signal)
+        self.tts = TTSAPIService(emit_signal=self.emit_signal)
+        self.stt = STTAPIService(emit_signal=self.emit_signal)
+
+        # Extract the initialize_app flag and pass the rest to the parent App class
+        self._initialize_app = kwargs.pop("initialize_app", True)
+        initialize_gui = kwargs.pop("initialize_gui", True)
+        self.signal_handlers = {
+            SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
+            SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
+        }
+        self.sounddevice_manager = SoundDeviceManager()
+        super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
+        self._initialize_model_scanner()
+
+    def _initialize_model_scanner(self):
+        from airunner.workers.model_scanner_worker import (
+            ModelScannerWorker,
+        )
+
+        if self._initialize_app:
+            setup_database()
+            self.model_scanner_worker = create_worker(ModelScannerWorker)
+            self.model_scanner_worker.add_to_queue("scan_for_models")
 
     def send_llm_text_streamed_signal(self, response: LLMResponse):
         """
@@ -148,3 +307,75 @@ class API(App):
         layout.addWidget(widget)
         dialog.setLayout(layout)
         dialog.exec()
+
+    def change_model_status(self, model: ModelType, status: ModelStatus):
+        """
+        Change the status of a model and emit a signal.
+        :param model: The model type.
+        :param status: The new status of the model.
+        """
+        self.emit_signal(
+            SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+            {"model": model, "status": status},
+        )
+
+    def worker_response(self, code: EngineResponseCode, message: Dict):
+        """
+        Emit a signal indicating a response from the worker.
+        :param code: The response code from the worker.
+        :param message: The message from the worker.
+        """
+        self.emit_signal(
+            SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
+            {"code": code, "message": message},
+        )
+
+    def quit_application(self):
+        """
+        Emit a signal to quit the application.
+        """
+        self.emit_signal(SignalCode.QUIT_APPLICATION, {})
+
+    def application_error(self, message: str):
+        """
+        Emit a signal indicating an application error.
+        :param message: The error message.
+        """
+        self.emit_signal(
+            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+            {"message": message},
+        )
+
+    def application_status(self, message: str):
+        """
+        Emit a signal indicating application status.
+        :param message: The status message.
+        """
+        self.emit_signal(
+            SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
+            {"message": message},
+        )
+
+    def update_download_log(self, message: str):
+        self.emit_signal(
+            SignalCode.UPDATE_DOWNLOAD_LOG,
+            {"message": message},
+        )
+
+    def set_download_progress(self, current: int, total: int):
+        self.emit_signal(
+            SignalCode.DOWNLOAD_PROGRESS,
+            {"current": current, "total": total},
+        )
+
+    def clear_download_status(self):
+        self.emit_signal(SignalCode.CLEAR_DOWNLOAD_STATUS_BAR)
+
+    def set_download_status(self, message: str):
+        self.emit_signal(
+            SignalCode.SET_DOWNLOAD_STATUS_LABEL,
+            {"message": message},
+        )
+
+    def download_complete(self):
+        self.emit_signal(SignalCode.DOWNLOAD_COMPLETE)
