@@ -66,7 +66,7 @@ class AudioCaptureWorker(Worker):
         ):
             self._stop_listening()
 
-    def start(self):
+    def run_thread(self):
         self.logger.debug("Starting audio capture worker")
         self.running = True
         chunk_duration = self.stt_settings.chunk_duration
@@ -76,83 +76,82 @@ class AudioCaptureWorker(Worker):
         recording = []
         is_receiving_input = False
 
-        while self.running:
-            while (
-                self.listening
-                and self.running
-                and self.api.sounddevice_manager.in_stream
-            ):
-                try:
-                    # Use the actual sample rate from the stream if available
-                    actual_fs = (
-                        self.api.sounddevice_manager.in_stream.samplerate
-                        if hasattr(
-                            self.api.sounddevice_manager.in_stream,
-                            "samplerate",
-                        )
-                        else self.stt_settings.fs
+        while (
+            self.listening
+            and self.running
+            and self.api.sounddevice_manager.in_stream
+        ):
+            try:
+                # Use the actual sample rate from the stream if available
+                actual_fs = (
+                    self.api.sounddevice_manager.in_stream.samplerate
+                    if hasattr(
+                        self.api.sounddevice_manager.in_stream,
+                        "samplerate",
                     )
-                    frames = int(chunk_duration * actual_fs)
-                    chunk_data = self.api.sounddevice_manager.read_from_input(
-                        frames
-                    )
+                    else self.stt_settings.fs
+                )
+                frames = int(chunk_duration * actual_fs)
+                chunk_data = self.api.sounddevice_manager.read_from_input(
+                    frames
+                )
 
-                    if chunk_data is None or chunk_data[0] is None:
-                        QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
-                        continue
-
-                    chunk, overflowed = chunk_data
-                    if chunk.ndim > 1:
-                        chunk = np.mean(chunk, axis=1)
-                except Exception as e:
-                    self.logger.error(f"Error reading from input stream: {e}")
+                if chunk_data is None or chunk_data[0] is None:
                     QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
                     continue
 
-                if (
-                    self._use_playback_stream
-                    and self.api.sounddevice_manager.out_stream
-                ):
-                    try:
-                        self.api.sounddevice_manager.write_to_output(chunk)
-                    except Exception as e:
-                        self.logger.error(f"Playback error: {e}")
-
-                if (
-                    np.max(np.abs(chunk)) > volume_input_threshold
-                ):  # check if chunk is not silence
-                    self.logger.debug("Heard voice")
-
-                    is_receiving_input = True
-                    self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
-                    voice_input_start_time = time.time()
-                elif voice_input_start_time is not None:
-                    # make voice_end_time silence_buffer_seconds after voice_input_start_time
-                    end_time = voice_input_start_time + silence_buffer_seconds
-                    if time.time() >= end_time:
-                        if len(recording) > 0:
-                            self.logger.debug(
-                                "Sending audio to audio_processor_worker"
-                            )
-                            self.emit_signal(
-                                SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL,
-                                {
-                                    "callback": lambda _recording=recording: self.emit_signal(
-                                        SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
-                                        {"item": b"".join(_recording)},
-                                    )
-                                },
-                            )
-                            recording = []
-                            is_receiving_input = False
-                if is_receiving_input:
-                    chunk_bytes = np.int16(
-                        chunk * 32767
-                    ).tobytes()  # convert to bytes
-                    recording.append(chunk_bytes)
-
-            while not self.listening and self.running:
+                chunk, overflowed = chunk_data
+                if chunk.ndim > 1:
+                    chunk = np.mean(chunk, axis=1)
+            except Exception as e:
+                self.logger.error(f"Error reading from input stream: {e}")
                 QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
+                continue
+
+            if (
+                self._use_playback_stream
+                and self.api.sounddevice_manager.out_stream
+            ):
+                try:
+                    self.api.sounddevice_manager.write_to_output(chunk)
+                except Exception as e:
+                    self.logger.error(f"Playback error: {e}")
+
+            if (
+                np.max(np.abs(chunk)) > volume_input_threshold
+            ):  # check if chunk is not silence
+                self.logger.debug("Heard voice")
+
+                is_receiving_input = True
+                self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+                voice_input_start_time = time.time()
+            elif voice_input_start_time is not None:
+                # make voice_end_time silence_buffer_seconds after voice_input_start_time
+                end_time = voice_input_start_time + silence_buffer_seconds
+                if time.time() >= end_time:
+                    if len(recording) > 0:
+                        self.logger.debug(
+                            "Sending audio to audio_processor_worker"
+                        )
+                        self.emit_signal(
+                            SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL,
+                            {
+                                "callback": lambda _recording=recording: self.emit_signal(
+                                    SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL,
+                                    {"item": b"".join(_recording)},
+                                )
+                            },
+                        )
+                        recording = []
+                        is_receiving_input = False
+            if is_receiving_input:
+                chunk_bytes = np.int16(
+                    chunk * 32767
+                ).tobytes()  # convert to bytes
+                recording.append(chunk_bytes)
+
+        while not self.listening and self.running:
+            QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
 
     def _start_listening(self):
         self.logger.debug("Start listening")

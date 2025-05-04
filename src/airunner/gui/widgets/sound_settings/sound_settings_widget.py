@@ -1,12 +1,13 @@
-import threading
 import time
 import sounddevice as sd
+from PySide6.QtCore import Qt, QThread, QObject, Signal
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.sound_settings.templates.sound_settings_ui import (
     Ui_SoundSettings,
 )
 from airunner.data.models import SoundSettings
 from airunner.enums import SignalCode
+from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 
 
 class SoundSettingsWidget(BaseWidget):
@@ -16,8 +17,6 @@ class SoundSettingsWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.load_devices()  # Ensure devices are loaded on initialization
         self.connect_signals()
-        self.monitoring = True
-        # self.start_microphone_monitor()
 
     def load_devices(self):
         # Populate comboboxes with available audio devices
@@ -128,30 +127,3 @@ class SoundSettingsWidget(BaseWidget):
         # Adjust the microphone input level
         print(f"Input level adjusted to: {value}")
         # Replace with actual logic to adjust microphone input level
-
-    def start_microphone_monitor(self):
-        # Start a thread to monitor real-time microphone levels
-        def monitor():
-            while self.monitoring:
-                try:
-                    # Capture a short audio sample
-                    audio_data = sd.rec(
-                        int(0.1 * 44100),
-                        samplerate=44100,
-                        channels=1,
-                        dtype="float32",
-                    )
-                    sd.wait()
-                    # Calculate the RMS (Root Mean Square) level of the audio sample
-                    rms_level = int((audio_data**2).mean() ** 0.5 * 100)
-                    self.ui.microphoneLevelBar.setValue(min(rms_level, 100))
-                except Exception as e:
-                    print(f"Error monitoring microphone: {e}")
-                time.sleep(0.1)
-
-        threading.Thread(target=monitor, daemon=True).start()
-
-    def closeEvent(self, event):
-        # Stop monitoring when the widget is closed
-        self.monitoring = False
-        super().closeEvent(event)
