@@ -1,5 +1,3 @@
-import threading
-
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 
@@ -25,7 +23,7 @@ class AudioProcessorWorker(Worker):
     def start_worker_thread(self):
         self._initialize_stt_handler()
         if self.application_settings.stt_enabled:
-            threading.Thread(target=self._stt_load).start()
+            self._stt_load()
 
     def _initialize_stt_handler(self):
         if self._stt is None:
@@ -37,11 +35,11 @@ class AudioProcessorWorker(Worker):
 
     def on_stt_load_signal(self):
         if self._stt:
-            threading.Thread(target=self._stt_load).start()
+            self._stt_load()
 
     def on_stt_unload_signal(self):
         if self._stt:
-            threading.Thread(target=self._stt_unload).start()
+            self._stt_unload()
 
     def unload(self):
         self._stt_unload()

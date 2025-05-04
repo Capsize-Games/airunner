@@ -1,6 +1,5 @@
 import queue
 import re
-import threading
 from typing import Optional, Type, Dict
 
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
@@ -102,14 +101,10 @@ class TTSGeneratorWorker(Worker):
                 callback()
 
     def on_enable_tts_signal(self):
-        if self.tts:
-            thread = threading.Thread(target=self._load_tts)
-            thread.start()
+        self._load_tts()
 
     def on_disable_tts_signal(self):
-        if self.tts:
-            thread = threading.Thread(target=self._unload_tts)
-            thread.start()
+        self._unload_tts()
 
     def start_worker_thread(self):
         if self.tts_enabled:
