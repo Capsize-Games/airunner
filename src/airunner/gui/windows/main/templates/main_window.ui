@@ -917,7 +917,7 @@
   <action name="actionUndo">
    <property name="icon">
     <iconset resource="../../../resources/feather.qrc">
-     <normaloff>:/light/icons/feather/light/corner-left-down.svg</normaloff>:/light/icons/feather/light/corner-left-down.svg</iconset>
+     <normaloff>:/light/icons/feather/light/corner-up-left.svg</normaloff>:/light/icons/feather/light/corner-up-left.svg</iconset>
    </property>
    <property name="text">
     <string>Undo</string>
@@ -926,7 +926,7 @@
   <action name="actionRedo">
    <property name="icon">
     <iconset resource="../../../resources/feather.qrc">
-     <normaloff>:/light/icons/feather/light/corner-right-down.svg</normaloff>:/light/icons/feather/light/corner-right-down.svg</iconset>
+     <normaloff>:/light/icons/feather/light/corner-up-right.svg</normaloff>:/light/icons/feather/light/corner-up-right.svg</iconset>
    </property>
    <property name="text">
     <string>Redo</string>

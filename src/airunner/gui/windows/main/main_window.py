@@ -158,8 +158,8 @@ class MainWindow(
         ("play", "workflow_actionRun"),
         ("save", "workflow_actionSave"),
         ("stop-circle", "workflow_actionStop"),
-        ("corner-up-right", "actionRotate_90_clockwise"),
-        ("corner-up-left", "actionRotate_90_counter_clockwise"),
+        ("corner-up-right", "actionRedo"),
+        ("corner-up-left", "actionUndo"),
     ]
 
     def __init__(self, *args, **kwargs):
