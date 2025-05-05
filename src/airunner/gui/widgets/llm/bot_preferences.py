@@ -109,7 +109,7 @@ class BotPreferencesWidget(BaseWidget):
         chatbot_id = chatbot.id
         self.update_llm_generator_settings("current_chatbot", chatbot_id)
         self.load_form_elements()
-        self.emit_signal(SignalCode.CHATBOT_CHANGED)
+        self.api.llm.chatbot_changed()
 
     def load_saved_chatbots(self):
         names = [chatbot.name for chatbot in self.chatbots]
@@ -198,7 +198,7 @@ class BotPreferencesWidget(BaseWidget):
             return
 
         self.add_chatbot_document_to_chatbot(self.chatbot, file_path[0])
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+        self.api.llm.reload_rag()
         self.load_documents()
 
     def load_documents(self):
@@ -217,7 +217,7 @@ class BotPreferencesWidget(BaseWidget):
         TargetFiles.objects.delete(target_file.id)
 
         self.load_documents()
-        self.emit_signal(SignalCode.RAG_RELOAD_INDEX_SIGNAL)
+        self.api.llm.reload_rag()
 
     def update_chatbot(self, key, val):
         chatbot = self.chatbot

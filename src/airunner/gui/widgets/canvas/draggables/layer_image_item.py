@@ -152,7 +152,7 @@ class LayerImageItem(DraggablePixmap):
                         pass
 
                     # Signal image updated
-                    self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
+                    self.api.art.canvas.image_updated()
 
             # Accept the event
             event.accept()

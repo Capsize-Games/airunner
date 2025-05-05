@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Any, Callable
 
 from PySide6 import QtGui
 from PySide6.QtCore import (
@@ -20,7 +20,8 @@ from PySide6.QtWidgets import (
     QGraphicsItem,
 )
 
-from airunner.enums import CanvasToolName, SignalCode, CanvasType
+from airunner.enums import CanvasToolName, SignalCode, CanvasType, QueueType
+from airunner.gui.widgets.canvas.grid_graphics_item import GridGraphicsItem
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.image import convert_image_to_binary
 from airunner.gui.widgets.canvas.brush_scene import BrushScene
@@ -31,46 +32,6 @@ from airunner.gui.widgets.canvas.draggables.active_grid_area import (
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.utils.settings import get_qsettings
-
-
-class GridGraphicsItem(QGraphicsItem):
-    def __init__(self, view):
-        super().__init__()
-        self.view = view
-        self.setZValue(-100)
-        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, False)
-
-    def boundingRect(self) -> QRectF:
-        # Always cover the visible area
-        rect = self.view.mapToScene(self.view.viewport().rect()).boundingRect()
-        return rect
-
-    def paint(self, painter: QPainter, option, widget=None):
-        cell_size = self.view.grid_settings.cell_size
-        if cell_size <= 0:
-            return
-        color = QColor(self.view.grid_settings.line_color)
-        pen = QPen(color, self.view.grid_settings.line_width)
-        painter.setPen(pen)
-        visible_rect = self.boundingRect()
-        offset_x = self.view.canvas_offset.x()
-        offset_y = self.view.canvas_offset.y()
-        left = int(visible_rect.left())
-        right = int(visible_rect.right())
-        top = int(visible_rect.top())
-        bottom = int(visible_rect.bottom())
-        start_x = left - ((left + int(offset_x)) % cell_size)
-        start_y = top - ((top + int(offset_y)) % cell_size)
-        # Draw vertical lines
-        x = start_x
-        while x <= right:
-            painter.drawLine(x, top, x, bottom)
-            x += cell_size
-        # Draw horizontal lines
-        y = start_y
-        while y <= bottom:
-            painter.drawLine(left, y, right, y)
-            y += cell_size
 
 
 class CustomGraphicsView(
@@ -121,7 +82,6 @@ class CustomGraphicsView(
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_tool_changed_signal,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
             SignalCode.SET_CANVAS_COLOR_SIGNAL: self.set_canvas_color,
-            SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL: self.draw_selected_area,
             SignalCode.UPDATE_SCENE_SIGNAL: self.update_scene,
             SignalCode.CANVAS_CLEAR_LINES_SIGNAL: self.clear_lines,
             SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
@@ -231,8 +191,6 @@ class CustomGraphicsView(
         # 4. Set active grid area to this centered position
         self.update_active_grid_settings("pos_x", int(pos_x))
         self.update_active_grid_settings("pos_y", int(pos_y))
-        self.settings.setValue("active_grid_pos_x", int(pos_x))
-        self.settings.setValue("active_grid_pos_y", int(pos_y))
 
         # 5. If there's an image in the scene, update its position to match the active grid area
         if self.scene and hasattr(self.scene, "item") and self.scene.item:
@@ -343,58 +301,6 @@ class CustomGraphicsView(
         if item.scene() == self.scene:
             self.scene.removeItem(item)
 
-    def draw_selected_area(self):
-        """
-        Draw the selected active grid area container after user selection.
-        """
-        selection_start_pos = self.scene.selection_start_pos
-        selection_stop_pos = self.scene.selection_stop_pos
-
-        # If selection is in progress, hide the grid area
-        if selection_stop_pos is None and selection_start_pos is not None:
-            if self.active_grid_area:
-                self.remove_scene_item(self.active_grid_area)
-                self.active_grid_area = None
-            return
-
-        # If selection finished, update settings and show grid area
-        if selection_start_pos is not None and selection_stop_pos is not None:
-            rect = QRect(selection_start_pos, selection_stop_pos).normalized()
-
-            # Calculate width/height (ensure divisibility by 8, min size)
-            width = max(
-                self.grid_settings.cell_size, rect.width() - (rect.width() % 8)
-            )
-            height = max(
-                self.grid_settings.cell_size,
-                rect.height() - (rect.height() % 8),
-            )
-
-            # Calculate the ABSOLUTE top-left position based on selection + current offset
-            absolute_x = rect.left() + self.canvas_offset.x()
-            absolute_y = rect.top() + self.canvas_offset.y()
-
-            # Update settings with the new absolute position and size
-            self.update_active_grid_settings("pos_x", int(round(absolute_x)))
-            self.update_active_grid_settings("pos_y", int(round(absolute_y)))
-            # Also update persistent QSettings
-            self.settings.setValue("active_grid_pos_x", int(round(absolute_x)))
-            self.settings.setValue("active_grid_pos_y", int(round(absolute_y)))
-            self.settings.sync()
-
-            # Update size settings (these might not need offset adjustment)
-            self.update_generator_settings("width", width)
-            self.update_generator_settings("height", height)
-            self.update_application_settings("working_width", width)
-            self.update_application_settings("working_height", height)
-
-            # Clear the temporary selection rectangle from the scene
-            self.scene.clear_selection()
-
-        # Ensure the active grid area is shown/updated at the new position
-        self.show_active_grid_area()  # This will create/add if needed and set correct display pos
-        self.emit_signal(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
-
     def show_active_grid_area(self):
         if not self.__do_show_active_grid_area:
             # Ensure it's removed if disabled
@@ -439,8 +345,6 @@ class CustomGraphicsView(
             # Save this initial absolute position
             self.update_active_grid_settings("pos_x", int(round(absolute_x)))
             self.update_active_grid_settings("pos_y", int(round(absolute_y)))
-            self.settings.setValue("active_grid_pos_x", int(round(absolute_x)))
-            self.settings.setValue("active_grid_pos_y", int(round(absolute_y)))
             self.settings.sync()
 
         # Calculate and set the display position
@@ -515,8 +419,7 @@ class CustomGraphicsView(
             self.canvas_offset -= delta
             self.last_pos = event.pos()
             if not self._pan_update_timer.isActive():
-                self._do_pan_update()
-                self._pan_update_timer.start(16)  # ~60 FPS
+                self._pan_update_timer.start(1)
             else:
                 self._pending_pan_event = True
             event.accept()
@@ -529,7 +432,7 @@ class CustomGraphicsView(
         self.draw_grid()
         if self._pending_pan_event:
             self._pending_pan_event = False
-            self._pan_update_timer.start(16)
+            self._pan_update_timer.start(1)
 
     def showEvent(self, event):
         super().showEvent(event)

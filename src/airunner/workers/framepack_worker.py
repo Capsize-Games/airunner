@@ -106,10 +106,8 @@ class FramePackWorker(Worker):
                 success = self._framepack_handler.load()
 
                 if not success:
-                    self.logger.error("Failed to load FramePack models")
-                    self.emit_signal(
-                        SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-                        "Failed to load FramePack models",
+                    self.api.application_error(
+                        "Failed to load FramePack models"
                     )
                     return False
 
@@ -122,12 +120,8 @@ class FramePackWorker(Worker):
                 )
 
                 if model_status != ModelStatus.READY:
-                    self.logger.error(
-                        f"FramePack models are not ready after loading. Status: {model_status}"
-                    )
-                    self.emit_signal(
-                        SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-                        f"FramePack models not ready: {model_status}",
+                    self.api.application_error(
+                        f"FramePack models not ready: {model_status}"
                     )
                     return False
 
@@ -143,9 +137,7 @@ class FramePackWorker(Worker):
                     success = self._framepack_handler.load()
 
                     if not success:
-                        self.logger.error("Failed to load FramePack models")
-                        self.emit_signal(
-                            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                        self.api.application_error(
                             "Failed to load FramePack models",
                         )
                         return False
@@ -157,11 +149,7 @@ class FramePackWorker(Worker):
                         )
                         != ModelStatus.READY
                     ):
-                        self.logger.error(
-                            "FramePack models still not ready after loading"
-                        )
-                        self.emit_signal(
-                            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                        self.api.application_error(
                             "FramePack models are not ready after loading attempt",
                         )
                         return False
@@ -170,10 +158,7 @@ class FramePackWorker(Worker):
                 callback = data.get("callback", None)
                 if callback:
                     callback(data)
-
-                self.logger.info("FramePack models loaded successfully")
-                self.emit_signal(
-                    SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
+                self.api.application_status(
                     "FramePack models loaded successfully",
                 )
                 return True
@@ -181,12 +166,7 @@ class FramePackWorker(Worker):
             return False
 
         except Exception as e:
-            import traceback
-
-            self.logger.error(f"Error loading FramePack models: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+            self.api.application_error(
                 f"Error loading FramePack models: {str(e)}",
             )
             return False
@@ -220,9 +200,7 @@ class FramePackWorker(Worker):
             self.load_model_manager()
 
             if not self._framepack_handler:
-                self.logger.error("FramePack handler is not initialized")
-                self.emit_signal(
-                    SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                self.api.application_error(
                     "Video generation failed: FramePack not initialized",
                 )
                 return
@@ -236,9 +214,7 @@ class FramePackWorker(Worker):
             # Get image path or data
             image = data.get("input_image")
             if not image:
-                self.logger.error("No input image provided")
-                self.emit_signal(
-                    SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                self.api.application_error(
                     "No input image provided for video generation",
                 )
                 return
@@ -266,20 +242,14 @@ class FramePackWorker(Worker):
             # Set up signal connections for progress updates
             # Connect the handler's signals to our own signal emitters
             self._framepack_handler.frame_ready.connect(
-                lambda frame: self.emit_signal(
-                    SignalCode.VIDEO_FRAME_UPDATE_SIGNAL, {"frame": frame}
-                )
+                lambda frame: self.api.video.frame_update(frame)
             )
             self._framepack_handler.video_completed.connect(
-                lambda path: self.emit_signal(
-                    SignalCode.VIDEO_GENERATION_COMPLETED_SIGNAL,
-                    {"path": path},
-                )
+                lambda path: self.api.video.generation_complete(path)
             )
             self._framepack_handler.progress_update.connect(
-                lambda percent, message: self.emit_signal(
-                    SignalCode.VIDEO_GENERATION_PROGRESS_SIGNAL,
-                    {"percent": percent, "message": message},
+                lambda percent, message: self.api.video.video_generate_step(
+                    percent, message
                 )
             )
 
@@ -299,20 +269,11 @@ class FramePackWorker(Worker):
 
             # Store job ID for potential cancellation
             self._current_job_id = job_id
-            self.logger.info(f"Video generation started with job ID: {job_id}")
-
-            # Send initial response
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
+            self.api.application_status(
                 f"Video generation started (Job ID: {job_id})",
             )
 
         except Exception as e:
-            import traceback
-
-            self.logger.error(f"Error in video generation: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            self.emit_signal(
-                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+            self.api.application_error(
                 f"Video generation error: {str(e)}",
             )
