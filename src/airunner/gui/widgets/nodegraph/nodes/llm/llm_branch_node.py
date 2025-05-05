@@ -138,16 +138,14 @@ class LLMBranchNode(BaseLLMNode):
             # Generate a mock response for testing (synchronous)
             result = self._generate_mock_condition_result(condition)
             # Immediately emit the completion signal
-            self.emit_signal(
-                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
-                {
-                    "node_id": self.id,
-                    "result": (
-                        self.EXEC_TRUE_PORT_NAME
-                        if result
-                        else self.EXEC_FALSE_PORT_NAME
-                    ),
-                },
+            self.api.nodegraph.node_executed(
+                node_id=self.id,
+                result=(
+                    self.EXEC_TRUE_PORT_NAME
+                    if result
+                    else self.EXEC_FALSE_PORT_NAME
+                ),
+                data={"condition": condition, "result": result},
             )
         else:
             print(f"Starting LLM evaluation for condition: {condition}")
@@ -224,18 +222,12 @@ No other text, no explanation:
 
 CONDITION: {condition}"""
 
-            self.emit_signal(
-                SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
-                {
-                    "llm_request": True,
-                    "node_id": self.id,  # Include node ID for routing response
-                    "request_data": {
-                        "action": LLMActionType.CHAT,
-                        "prompt": prompt,
-                        # "system_prompt": system_prompt,
-                        "llm_request": llm_request,
-                    },
-                },
+            self.api.llm.send_request(
+                prompt=prompt,
+                llm_request=llm_request,
+                action=LLMActionType.CHAT,
+                do_tts_reply=False,
+                node_id=self.id,
             )
         except Exception as e:
             print(
@@ -331,9 +323,8 @@ CONDITION: {condition}"""
             self._exec_data = {}  # Clear execution data
 
             # Emit signal indicating completion and which port to trigger next
-            self.emit_signal(
-                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
-                {"node_id": self.id, "result": output_port_name},
+            self.api.nodegraph.node_executed(
+                node_id=self.id, result=output_port_name
             )
 
         elif elapsed_time >= timeout:
@@ -344,9 +335,9 @@ CONDITION: {condition}"""
             self._exec_data = {}  # Clear execution data
 
             # Emit signal indicating completion and trigger the FALSE port
-            self.emit_signal(
-                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
-                {"node_id": self.id, "result": self.EXEC_FALSE_PORT_NAME},
+            self.api.nodegraph.node_executed(
+                node_id=self.id,
+                result=self.EXEC_FALSE_PORT_NAME,
             )
 
     def _get_value(self, input_data, name, expected_type):
@@ -417,9 +408,9 @@ CONDITION: {condition}"""
             self._execution_pending = False
 
             # Emit signal to continue execution with FALSE path
-            self.emit_signal(
-                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
-                {"node_id": self.id, "result": self.EXEC_FALSE_PORT_NAME},
+            self.api.nodegraph.node_executed(
+                node_id=self.id,
+                result=self.EXEC_FALSE_PORT_NAME,
             )
 
             # Clear execution data

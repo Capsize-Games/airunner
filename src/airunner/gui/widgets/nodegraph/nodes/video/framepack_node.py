@@ -172,7 +172,7 @@ class FramePackNode(BaseWorkflowNode):
         }
 
         # Emit signal to generate video
-        self.mediator.emit_signal(SignalCode.VIDEO_GENERATE_SIGNAL, data)
+        self.api.video.generate(data)
 
         # Return None to indicate the node execution is pending
         # The NodeGraphWorker will pause execution until NODE_EXECUTION_COMPLETED_SIGNAL
@@ -192,9 +192,10 @@ class FramePackNode(BaseWorkflowNode):
 
         # Emit signal that execution is complete with the result
         # This continues the workflow execution at this node
-        self.mediator.emit_signal(
-            SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
-            {"node_id": self.id, "result": {"video": video_path}},
+        self.api.nodegraph.node_executed(
+            node_id=self.id,
+            result=self.EXEC_OUT_PORT_NAME,
+            data={"video": video_path},
         )
 
         self.logger.info(f"Video generation complete for node {self.id}")
