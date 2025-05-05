@@ -405,7 +405,7 @@ class CustomScene(
         self._add_image_to_undo()
         self._history_set_image(data)
 
-    def _history_set_image(self, data: dict):
+    def _history_set_image(self, data: Dict):
         if data is not None:
             if data["image"] is None:
                 self.delete_image()
@@ -986,10 +986,10 @@ class CustomScene(
             self.current_active_image = image
             self.initialize_image(image)
 
-    def _add_undo_history(self, data: dict):
+    def _add_undo_history(self, data: Dict):
         self.undo_history.append(data)
 
-    def _add_redo_history(self, data: dict):
+    def _add_redo_history(self, data: Dict):
         self.redo_history.append(data)
 
     def _clear_history(self):

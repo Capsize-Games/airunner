@@ -143,13 +143,13 @@ class CanvasWidget(BaseWidget):
     def on_active_grid_area_button_toggled(self, val: bool):
         self.api.art.canvas.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, val)
 
-    def on_toggle_tool_signal(self, message: dict):
+    def on_toggle_tool_signal(self, message: Dict):
         tool = message.get("tool", None)
         active = message.get("active", False)
         self._update_action_buttons(tool, active)
         self._update_cursor()
 
-    def on_toggle_grid_signal(self, message: dict):
+    def on_toggle_grid_signal(self, message: Dict):
         self.ui.grid_button.setChecked(message.get("show_grid", True))
 
     def _update_action_buttons(self, tool, active):
