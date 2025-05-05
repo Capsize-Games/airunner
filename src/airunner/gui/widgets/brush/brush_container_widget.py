@@ -27,12 +27,7 @@ class BrushContainerWidget(BaseWidget):
             self.brush_settings.primary_color = color.name()
             self.update_brush_settings("primary_color", color.name())
             self.set_button_color()
-            self.emit_signal(
-                SignalCode.BRUSH_COLOR_CHANGED_SIGNAL,
-                {
-                    "color": color.name()
-                }
-            )
+            self.api.canvas.brush_color_changed(color.name())
 
     def set_button_color(self):
         color = self.brush_settings.primary_color
