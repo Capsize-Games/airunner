@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
+from airunner.gui.widgets.canvas.grid_graphics_item import GridGraphicsItem
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.image import convert_image_to_binary
 from airunner.gui.widgets.canvas.brush_scene import BrushScene
@@ -31,46 +32,6 @@ from airunner.gui.widgets.canvas.draggables.active_grid_area import (
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.utils.settings import get_qsettings
-
-
-class GridGraphicsItem(QGraphicsItem):
-    def __init__(self, view):
-        super().__init__()
-        self.view = view
-        self.setZValue(-100)
-        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, False)
-
-    def boundingRect(self) -> QRectF:
-        # Always cover the visible area
-        rect = self.view.mapToScene(self.view.viewport().rect()).boundingRect()
-        return rect
-
-    def paint(self, painter: QPainter, option, widget=None):
-        cell_size = self.view.grid_settings.cell_size
-        if cell_size <= 0:
-            return
-        color = QColor(self.view.grid_settings.line_color)
-        pen = QPen(color, self.view.grid_settings.line_width)
-        painter.setPen(pen)
-        visible_rect = self.boundingRect()
-        offset_x = self.view.canvas_offset.x()
-        offset_y = self.view.canvas_offset.y()
-        left = int(visible_rect.left())
-        right = int(visible_rect.right())
-        top = int(visible_rect.top())
-        bottom = int(visible_rect.bottom())
-        start_x = left - ((left + int(offset_x)) % cell_size)
-        start_y = top - ((top + int(offset_y)) % cell_size)
-        # Draw vertical lines
-        x = start_x
-        while x <= right:
-            painter.drawLine(x, top, x, bottom)
-            x += cell_size
-        # Draw horizontal lines
-        y = start_y
-        while y <= bottom:
-            painter.drawLine(left, y, right, y)
-            y += cell_size
 
 
 class CustomGraphicsView(
