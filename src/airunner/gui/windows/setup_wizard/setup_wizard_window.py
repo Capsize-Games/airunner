@@ -1,17 +1,30 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWizard
+from airunner.api import API
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.gui.windows.setup_wizard.age_restriction.age_restriction_warning import AgeRestrictionWarning
-from airunner.gui.windows.setup_wizard.model_setup.llm.mistral_license import MistralLicense
-from airunner.gui.windows.setup_wizard.model_setup.stt.whisper_license import WhisperLicense
-from airunner.gui.windows.setup_wizard.model_setup.tts.speecht5_license import SpeechT5License
-from airunner.gui.windows.setup_wizard.welcome_page import WelcomePage
-from airunner.gui.windows.setup_wizard.user_agreement.user_agreement import UserAgreement
-from airunner.gui.windows.setup_wizard.model_setup.stable_diffusion_setup.stable_diffusion_license import (
-    StableDiffusionLicense
+from airunner.gui.windows.setup_wizard.age_restriction.age_restriction_warning import (
+    AgeRestrictionWarning,
 )
-from airunner.gui.windows.setup_wizard.ai_runner_license.ai_runner_license import AIRunnerLicense
+from airunner.gui.windows.setup_wizard.model_setup.llm.mistral_license import (
+    MistralLicense,
+)
+from airunner.gui.windows.setup_wizard.model_setup.stt.whisper_license import (
+    WhisperLicense,
+)
+from airunner.gui.windows.setup_wizard.model_setup.tts.speecht5_license import (
+    SpeechT5License,
+)
+from airunner.gui.windows.setup_wizard.welcome_page import WelcomePage
+from airunner.gui.windows.setup_wizard.user_agreement.user_agreement import (
+    UserAgreement,
+)
+from airunner.gui.windows.setup_wizard.model_setup.stable_diffusion_setup.stable_diffusion_license import (
+    StableDiffusionLicense,
+)
+from airunner.gui.windows.setup_wizard.ai_runner_license.ai_runner_license import (
+    AIRunnerLicense,
+)
 
 
 class SetupWizardWindow(
@@ -25,7 +38,9 @@ class SetupWizardWindow(
         self.canceled = False
 
         # Reset agreements
-        self.update_application_settings("stable_diffusion_agreement_checked", False)
+        self.update_application_settings(
+            "stable_diffusion_agreement_checked", False
+        )
         self.update_application_settings("airunner_agreement_checked", False)
         self.update_application_settings("user_agreement_checked", False)
 
@@ -78,9 +93,9 @@ class SetupWizardWindow(
             self.page_order.append(page_id)
 
         # attach to parent page id changed signal
-        self.button(
-            QWizard.WizardButton.CancelButton
-        ).clicked.connect(self.cancel)
+        self.button(QWizard.WizardButton.CancelButton).clicked.connect(
+            self.cancel
+        )
 
         # Set window title
         self.setWindowTitle("AI Runner Setup Wizard")
@@ -107,20 +122,36 @@ class SetupWizardWindow(
 
                 # final page conditional
                 if current_id == self.final_page_id:
-                    age_restriction_warning = self.pages["age_restriction_warning"].read_age_restriction_agreement
+                    age_restriction_warning = self.pages[
+                        "age_restriction_warning"
+                    ].read_age_restriction_agreement
                     self.setup_settings = dict(
-                        age_restriction_agreed=self.pages["age_restriction_warning"].age_restriction_agreed,
+                        age_restriction_agreed=self.pages[
+                            "age_restriction_warning"
+                        ].age_restriction_agreed,
                         read_age_restriction_agreement=age_restriction_warning,
-                        user_agreement_completed=self.pages["user_agreement"].agreed,
-                        airunner_license_completed=self.pages["airunner_license"].agreed,
-                        sd_license_completed=self.pages["stable_diffusion_license"].agreed,
+                        user_agreement_completed=self.pages[
+                            "user_agreement"
+                        ].agreed,
+                        airunner_license_completed=self.pages[
+                            "airunner_license"
+                        ].agreed,
+                        sd_license_completed=self.pages[
+                            "stable_diffusion_license"
+                        ].agreed,
                     )
 
                     return -1
 
                 elif current_id == self.age_restriction_warning_id:
-                    if self.pages["age_restriction_warning"].age_restriction_agreed and \
-                            self.pages["age_restriction_warning"].read_age_restriction_agreement:
+                    if (
+                        self.pages[
+                            "age_restriction_warning"
+                        ].age_restriction_agreed
+                        and self.pages[
+                            "age_restriction_warning"
+                        ].read_age_restriction_agreement
+                    ):
                         return self.page_order[current_index + 1]
                     else:
                         return self.page_order[current_index]
