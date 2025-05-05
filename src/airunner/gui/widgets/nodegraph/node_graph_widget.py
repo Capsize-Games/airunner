@@ -35,7 +35,7 @@ from airunner.gui.widgets.nodegraph.nodes import (
     GenerateImageNode,
     FramePackNode,
     VideoNode,
-    #Gemma3Node,
+    # Gemma3Node,
     PromptBuilderNode,
     SchedulerNode,
 )
@@ -86,6 +86,7 @@ class NodeGraphWidget(BaseWidget):
         # check if on windows
         if not is_windows():
             from airunner.workers.framepack_worker import FramePackWorker
+
             self.framepack_worker = create_worker(FramePackWorker)
 
         self.stop_progress_bar()
@@ -387,7 +388,7 @@ class NodeGraphWidget(BaseWidget):
             GenerateImageNode,
             FramePackNode,
             VideoNode,
-            #Gemma3Node,
+            # Gemma3Node,
             PromptBuilderNode,
             SchedulerNode,
         ]:
@@ -1035,9 +1036,7 @@ class NodeGraphWidget(BaseWidget):
         )
         self.api.nodegraph.load_workflow(
             workflow=workflow,
-            callback=lambda _data=data: self._finalize_load_workflow(
-                _data
-            ),
+            callback=lambda _data=data: self._finalize_load_workflow(_data),
         )
 
     def _finalize_load_workflow(self, data: Dict):
@@ -1053,7 +1052,9 @@ class NodeGraphWidget(BaseWidget):
 
     def _clear_graph(self, add_start_node: bool = True):
         self.logger.info("Clearing current graph session and variables...")
-        self.api.nodegraph.clear_workflow()
+        self.api.nodegraph.clear_workflow(
+            callback=lambda: self._finalize_clear_graph(add_start_node)
+        )
 
     def _finalize_clear_graph(self, add_start_node: bool = True):
         # Clear the graph session
