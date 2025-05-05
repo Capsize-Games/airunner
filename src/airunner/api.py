@@ -58,10 +58,10 @@ class EmbeddingAPIServices(APIServiceBase):
 class LoraAPIServices(APIServiceBase):
     def update(self):
         self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL)
-    
+
     def status_changed(self):
         self.emit_signal(SignalCode.LORA_STATUS_CHANGED)
-    
+
     def delete(self, lora_widget):
         """
         Emit a signal to delete a LoRA widget.
@@ -129,6 +129,23 @@ class NodegraphAPIService(APIServiceBase):
 class VideoAPIService(APIServiceBase):
     def generate(self, data: Dict):
         self.emit_signal(SignalCode.VIDEO_GENERATE_SIGNAL, data)
+
+    def frame_update(self, frame):
+        self.emit_signal(
+            SignalCode.VIDEO_FRAME_UPDATE_SIGNAL, {"frame": frame}
+        )
+
+    def generation_complete(self, path: str):
+        self.emit_signal(
+            SignalCode.VIDEO_GENERATED_SIGNAL,
+            {"path": path},
+        )
+
+    def video_generate_step(self, percent, message: str):
+        self.emit_signal(
+            SignalCode.VIDEO_PROGRESS_SIGNAL,
+            {"percent": percent, "message": message},
+        )
 
 
 class STTAPIService(APIServiceBase):

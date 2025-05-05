@@ -188,6 +188,7 @@ class StatusWidget(BaseWidget):
         self.update_model_status(data)
 
     def on_status_info_signal(self, message):
+        self.logger.info(message)
         self.set_system_status(message, error=False)
 
     def on_status_error_signal(self, message):
