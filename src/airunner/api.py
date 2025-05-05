@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QDialog, QVBoxLayout
 from PySide6.QtCore import QObject, QPoint
 
 from airunner.app import App
+from airunner.data.models.conversation import Conversation
 from airunner.data.models.workflow import Workflow
 from airunner.gui.widgets.nodegraph.custom_node_graph import CustomNodeGraph
 from airunner.handlers.llm.llm_request import LLMRequest
@@ -27,11 +28,31 @@ from airunner.utils.application.ui_loader import (
     load_ui_from_string,
 )
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 
 
-class APIServiceBase:
+class APIServiceBase(MediatorMixin, SettingsMixin, QObject):
     def __init__(self, emit_signal):
-        self.emit_signal = emit_signal
+        super().__init__()
+
+
+class EmbeddingAPIServices(APIServiceBase):
+    def delete(self, embedding_widget):
+        """
+        Emit a signal to delete an embedding widget.
+        :param embedding_widget: The widget to be deleted.
+        """
+        self.emit_signal(
+            SignalCode.EMBEDDING_DELETE_SIGNAL,
+            {"embedding_widget": embedding_widget},
+        )
+
+    def status_changed(self):
+        self.emit_signal(SignalCode.EMBEDDING_STATUS_CHANGED)
+
+    def update(self):
+        self.emit_signal(SignalCode.EMBEDDING_UPDATE_SIGNAL)
 
 
 class NodegraphAPIService(APIServiceBase):
@@ -303,11 +324,41 @@ class CanvasAPIService(APIServiceBase):
             {"image_response": image_response},
         )
 
+    def input_image_changed(self, section: str, setting: str, value: Any):
+        self.emit_signal(
+            SignalCode.INPUT_IMAGE_SETTINGS_CHANGED,
+            {"section": section, "setting": setting, "value": value},
+        )
+
 
 class ARTAPIService(APIServiceBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
+
+    def save_prompt(
+        self,
+        prompt: str,
+        negative_prompt: str,
+        secondary_prompt: str,
+        secondary_negative_prompt: str,
+    ):
+        """
+        Emit a signal to save the current prompt.
+        :param prompt: The main prompt.
+        :param negative_prompt: The negative prompt.
+        :param secondary_prompt: The secondary prompt.
+        :param secondary_negative_prompt: The secondary negative prompt.
+        """
+        self.emit_signal(
+            SignalCode.SD_SAVE_PROMPT_SIGNAL,
+            {
+                "prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "secondary_prompt": secondary_prompt,
+                "secondary_negative_prompt": secondary_negative_prompt,
+            },
+        )
 
     def unload(self):
         self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
@@ -392,19 +443,28 @@ class ARTAPIService(APIServiceBase):
     def stop_progress_bar(self):
         self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
 
-    def send_request(self, image_request: Optional[ImageRequest] = None):
+    def send_request(
+        self,
+        image_request: Optional[ImageRequest] = None,
+        data: Optional[Dict] = None,
+    ):
         """ "
         Send a request to the image generator with the given request.
         :param image_request: Optional ImageRequest object.
         :return: None
         """
-        image_request = image_request or ImageRequest()
-        self.emit_signal(
-            SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request}
+        data = data or {}
+        image_request = data.get(
+            "image_request", image_request or ImageRequest()
         )
+        data.update({"image_request": image_request})
+        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, data)
 
     def interrupt_generate(self):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
+
+    def active_grid_area_updated(self):
+        self.emit_signal(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
 
 
 class ChatbotAPIService(APIServiceBase):
@@ -413,6 +473,9 @@ class ChatbotAPIService(APIServiceBase):
 
 
 class LLMAPIService(APIServiceBase):
+    def chatbot_changed(self):
+        self.emit_signal(SignalCode.CHATBOT_CHANGED)
+
     def send_request(
         self,
         prompt: str,
@@ -461,20 +524,51 @@ class LLMAPIService(APIServiceBase):
             {"conversation_id": conversation_id},
         )
 
+    def model_changed(self, model_service: str):
+        self.update_llm_generator_settings("model_service", model_service)
+        self.emit_signal(
+            SignalCode.LLM_MODEL_CHANGED,
+            {
+                "model_service": model_service,
+            },
+        )
+
     def reload_rag(self, target_files: Optional[List[str]] = None):
         self.emit_signal(
             SignalCode.RAG_RELOAD_INDEX_SIGNAL,
-            {"target_files": target_files},
+            {"target_files": target_files} if target_files else None,
         )
-    
+
+    def load_conversation(
+        self, conversation_id: int, conversation: Conversation, chatbot_id: int
+    ):
+        self.emit_signal(
+            SignalCode.LOAD_CONVERSATION,
+            {
+                "conversation_id": conversation_id,
+                "conversation": conversation,
+                "chatbot_id": chatbot_id,
+            },
+        )
+
     def interrupt(self):
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+
+    def update_generator_form_values(self):
+        self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
+    
+    def delete_messages_after_id(self, message_id: int):
+        self.emit_signal(
+            SignalCode.DELETE_MESSAGES_AFTER_ID,
+            {"message_id": message_id},
+        )
 
 
 class API(App):
     def __init__(self, *args, **kwargs):
         self.llm = LLMAPIService(emit_signal=self.emit_signal)
         self.art = ARTAPIService(emit_signal=self.emit_signal)
+        self.embeddings = EmbeddingAPIServices(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
         self.stt = STTAPIService(emit_signal=self.emit_signal)
         self.video = VideoAPIService(emit_signal=self.emit_signal)
@@ -650,3 +744,6 @@ class API(App):
 
     def clear_prompts(self):
         self.emit_signal(SignalCode.CLEAR_PROMPTS)
+
+    def keyboard_shortcuts_updated(self):
+        self.emit_signal(SignalCode.KEYBOARD_SHORTCUTS_UPDATED)

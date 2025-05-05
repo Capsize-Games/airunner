@@ -393,7 +393,7 @@ class CustomGraphicsView(
 
         # Ensure the active grid area is shown/updated at the new position
         self.show_active_grid_area()  # This will create/add if needed and set correct display pos
-        self.emit_signal(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
+        self.api.art.active_grid_area_updated()
 
     def show_active_grid_area(self):
         if not self.__do_show_active_grid_area:

@@ -1,12 +1,19 @@
+from typing import List, Type
 import os
 from airunner.enums import SignalCode
+from airunner.utils.art.embeddings import get_embeddings_by_version
 from airunner.utils.models import scan_path_for_embeddings
+from airunner.data.models import Embedding
 
 
 class EmbeddingMixin:
     @property
+    def embeddings(self) -> List[Type[Embedding]]:
+        return Embedding.objects.all()
+
+    @property
     def __embeddings(self):
-        return self.get_embeddings_by_version(self.generator_settings.version)
+        return get_embeddings_by_version(self.generator_settings.version)
 
     def get_embeddings(self, message: dict = None):
         name_filter = message.get("name_filter") if message is not None else ""
@@ -20,9 +27,7 @@ class EmbeddingMixin:
                 embeddings.append(embedding)
         self.emit_signal(
             SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
-            {
-                "embeddings": embeddings
-            }
+            {"embeddings": embeddings},
         )
         return embeddings
 
@@ -31,10 +36,13 @@ class EmbeddingMixin:
         for embedding in embeddings:
             if not os.path.exists(embedding["path"]):
                 self._delete_embedding(embedding)
-    
+
     def _delete_embedding(self, embedding):
         for index, _embedding in enumerate(self.embeddings):
-            if _embedding.name == embedding.name and _embedding.path == embedding.path:
+            if (
+                _embedding.name == embedding.name
+                and _embedding.path == embedding.path
+            ):
                 self._delete_embedding(embedding)
                 return
 
@@ -44,6 +52,8 @@ class EmbeddingMixin:
         self.emit_signal(
             SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
             {
-                "embeddings": self.get_embeddings_by_version(self.generator_settings.version)
-            }
+                "embeddings": get_embeddings_by_version(
+                    self.generator_settings.version
+                )
+            },
         )
