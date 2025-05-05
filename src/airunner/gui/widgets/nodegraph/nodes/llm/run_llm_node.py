@@ -172,20 +172,12 @@ class RunLLMNode(BaseLLMNode):
         try:
             llm_request.node_id = self.id
             print("CALLING LLM TEXT GENERATE REQUEST SIGNAL WITH ", prompt)
-            self.emit_signal(
-                SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
-                {
-                    "llm_request": True,
-                    "node_id": self.id,
-                    "request_data": {
-                        "action": LLMActionType.CHAT,
-                        "prompt": prompt,
-                        # "system_prompt": system_prompt,
-                        # "model_type": model_type,
-                        # "model_name": model_name,
-                        "llm_request": llm_request,
-                    },
-                },
+            self.api.llm.send_request(
+                prompt=prompt,
+                llm_request=llm_request,
+                action=LLMActionType.CHAT,
+                do_tts_reply=True,
+                node_id=self.id,
             )
         except Exception as e:
             print(f"Error emitting LLM request signal for node {self.id}: {e}")
@@ -219,11 +211,12 @@ class RunLLMNode(BaseLLMNode):
         if llm_response.is_end_of_message:
             # Optionally, you could store the final complete response object if needed
             # self._final_complete_response = llm_response # If LLMResponse structure supports final state
-            self.emit_signal(
-                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
-                {
-                    "node_id": self.id,
-                    "result": self.output_ports()[0].name(),
+            self.api.nodegraph.node_executed(
+                node_id=self.id,
+                result=self.output_ports()[0].name(),
+                data={
+                    "llm_response": llm_response,
+                    "llm_message": self._accumulated_response_text,
                 },
             )
 

@@ -43,26 +43,16 @@ class GenerateImageNode(BaseArtNode):
     def _generate_image(self, image_request: ImageRequest):
         # Store the current node ID with the request to identify this node
         image_request.node_id = self.id
-
-        # Emit signal to generate the image
-        self.emit_signal(
-            SignalCode.DO_GENERATE_SIGNAL,
-            {
-                "image_request": image_request,
-            },
-        )
+        self.api.art.send_request(image_request)
 
     def _on_image_generated(self, data: Dict):
         image_response = data.get("message", None)
         if image_response is None:
             # Send completion signal with empty output data
-            self.emit_signal(
-                SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
-                {
-                    "node_id": self.id,
-                    "result": self.EXEC_OUT_PORT_NAME,
-                    "output_data": {"image_response": None, "image": None},
-                },
+            self.api.nodegraph.node_executed(
+                node_id=self.id,
+                result=self.EXEC_OUT_PORT_NAME,
+                data={"image_response": None, "image": None},
             )
             self._pending_request = False
             return
@@ -81,17 +71,14 @@ class GenerateImageNode(BaseArtNode):
 
         # Emit signal that execution is complete with the result and output data
         # This continues the workflow execution at this node
-        self.emit_signal(
-            SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
-            {
-                "node_id": self.id,
-                "result": self.EXEC_OUT_PORT_NAME,
-                "output_data": output_data,  # Include the output data in the signal
-            },
+        self.api.nodegraph.node_executed(
+            node_id=self.id,
+            result=self.EXEC_OUT_PORT_NAME,
+            data=output_data,  # Include the output data in the node execution
         )
 
         if self.get_property("unload_after_generation"):
-            self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
+            self.api.art.unload()
 
     def execute(self, input_data: Dict):
         """
@@ -125,4 +112,4 @@ class GenerateImageNode(BaseArtNode):
 
     def on_stop(self):
         super().on_stop()
-        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
+        self.api.art.interrupt_generate()
