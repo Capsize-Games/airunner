@@ -842,21 +842,15 @@ class CustomScene(
 
         if outpaint_box_rect:
             if is_outpaint:
-                print("root point from _handle_outpaint")
                 image, root_point, _pivot_point = self._handle_outpaint(
                     outpaint_box_rect, image
                 )
             else:
-                print("root point from outpaint box")
                 root_point = QPoint(outpaint_box_rect.x, outpaint_box_rect.y)
         elif settings_x is not None and settings_y is not None:
-            print("root point from settings")
             root_point = QPoint(settings_x, settings_y)
         else:
-            print("root point not set default is 0")
             root_point = QPoint(0, 0)
-
-        print("ADDING IMAGE TO ROOT POINT", root_point)
 
         q_image = ImageQt.ImageQt(image)
 
