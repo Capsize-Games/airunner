@@ -151,7 +151,7 @@ class InputImage(BaseWidget):
 
         # REMOVED: Cache clearing logic moved to load_image_from_grid
 
-        self.api.canvas.input_image_changed(self.settings_key, key, value)
+        self.api.art.canvas.input_image_changed(self.settings_key, key, value)
 
     def showEvent(self, event):
         super().showEvent(event)

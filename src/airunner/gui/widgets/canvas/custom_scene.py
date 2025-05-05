@@ -192,7 +192,7 @@ class CustomScene(
             image = convert_image_to_binary(image)
         self._update_current_settings("image", image)
         if self.settings_key == "drawing_pad_settings":
-            self.api.canvas.image_updated()
+            self.api.art.canvas.image_updated()
 
     @property
     def is_brush_or_eraser(self):
@@ -203,7 +203,7 @@ class CustomScene(
 
     @image_pivot_point.setter
     def image_pivot_point(self, value):
-        self.api.canvas.update_current_layer(value)
+        self.api.art.canvas.update_current_layer(value)
 
     def on_clear_history_signal(self):
         self._clear_history()
@@ -308,7 +308,7 @@ class CustomScene(
         ):
             if self.settings_key == "drawing_pad_settings":
                 message = data.get("message")
-                self.api.canvas.application_error(message)
+                self.api.art.canvas.application_error(message)
                 self.display_gpu_memory_error(message)
         elif code is EngineResponseCode.INTERRUPTED:
             pass
@@ -453,7 +453,7 @@ class CustomScene(
             if zoom_level < 0.1:
                 zoom_level = 0.1
             self.update_grid_settings("zoom_level", zoom_level)
-            self.api.canvas.zoom_level_changed()
+            self.api.art.canvas.zoom_level_changed()
 
     def mousePressEvent(self, event):
         if isinstance(event, QGraphicsSceneMouseEvent):
@@ -472,7 +472,7 @@ class CustomScene(
             if not self.is_brush_or_eraser:
                 super().mousePressEvent(event)
             elif self.drawing_pad_settings.enable_automatic_drawing:
-                self.api.canvas.interrupt_image_generation()
+                self.api.art.canvas.interrupt_image_generation()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.RightButton:
@@ -791,7 +791,7 @@ class CustomScene(
                 outpaint_box_rect=outpaint_box_rect,
             )
             # Emit signal to notify the view to update image positions
-            self.api.canvas.image_updated()
+            self.api.art.canvas.image_updated()
 
     def _resize_image(self, image: Image) -> Image:
         if image is None:
@@ -983,7 +983,7 @@ class CustomScene(
     def _clear_history(self):
         self.undo_history = []
         self.redo_history = []
-        self.api.canvas.clear_history()
+        self.api.art.canvas.clear_history()
 
     def _cut_image(self, image: Image = None) -> Image:
         image = self._copy_image(image)
@@ -994,14 +994,14 @@ class CustomScene(
     def _add_image_to_undo(self, image: Image = None):
         image = self.current_active_image if image is None else image
         self._add_undo_history({"image": image if image is not None else None})
-        self.api.canvas.update_history(
+        self.api.art.canvas.update_history(
             len(self.undo_history), len(self.redo_history)
         )
 
     def _add_image_to_redo(self):
         image = self.current_active_image
         self._add_redo_history({"image": image if image is not None else None})
-        self.api.canvas.update_history(
+        self.api.art.canvas.update_history(
             len(self.undo_history), len(self.redo_history)
         )
 
@@ -1029,7 +1029,7 @@ class CustomScene(
         self._last_cursor_state = (event.type(), apply_cursor)
 
         # Emit the cursor update signal
-        self.api.canvas.update_cursor(event, apply_cursor)
+        self.api.art.canvas.update_cursor(event, apply_cursor)
 
     @staticmethod
     def _load_image(image_path: str) -> Image:

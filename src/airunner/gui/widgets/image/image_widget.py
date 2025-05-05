@@ -152,7 +152,7 @@ class ImageWidget(BaseWidget):
             self.meta_data = load_metadata_from_image(image)
 
     def send_image_to_grid(self):
-        self.api.canvas.image_from_path(self.image_path)
+        self.api.art.canvas.image_from_path(self.image_path)
 
     def view_image(self):
         from PySide6.QtWidgets import (

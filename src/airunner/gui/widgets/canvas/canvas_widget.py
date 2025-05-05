@@ -105,27 +105,27 @@ class CanvasWidget(BaseWidget):
 
     @Slot()
     def on_recenter_button_clicked(self):
-        self.api.canvas.recenter_grid()
+        self.api.art.canvas.recenter_grid()
 
     @Slot()
     def on_new_button_clicked(self):
-        self.api.canvas.clear()
+        self.api.art.canvas.clear()
 
     @Slot()
     def on_import_button_clicked(self):
-        self.api.canvas.import_image()
+        self.api.art.canvas.import_image()
 
     @Slot()
     def on_export_button_clicked(self):
-        self.api.canvas.export_image()
+        self.api.art.canvas.export_image()
 
     @Slot()
     def on_undo_button_clicked(self):
-        self.api.canvas.undo()
+        self.api.art.canvas.undo()
 
     @Slot()
     def on_redo_button_clicked(self):
-        self.api.canvas.redo()
+        self.api.art.canvas.redo()
 
     @Slot(bool)
     def on_grid_button_toggled(self, val: bool):
@@ -202,7 +202,7 @@ class CanvasWidget(BaseWidget):
         self.do_draw()
 
     def do_draw(self, force_draw: bool = False):
-        self.api.canvas.do_draw(force_draw)
+        self.api.art.canvas.do_draw(force_draw)
         self.ui.canvas_container_size = (
             self.ui.canvas_container.viewport().size()
         )

@@ -318,7 +318,7 @@ class MainWindow(
 
     @Slot()
     def on_actionRecenter_triggered(self):
-        self.api.canvas.recenter_grid()
+        self.api.art.canvas.recenter_grid()
 
     @Slot()
     def on_actionReset_Settings_2_triggered(self):
@@ -342,43 +342,43 @@ class MainWindow(
 
     @Slot()
     def on_actionExport_image_button_triggered(self):
-        self.api.canvas.export_image()
+        self.api.art.canvas.export_image()
 
     @Slot()
     def on_actionImport_image_triggered(self):
-        self.api.canvas.import_image()
+        self.api.art.canvas.import_image()
 
     @Slot()
     def on_artActionNew_triggered(self):
-        self.api.canvas.clear()
+        self.api.art.canvas.clear()
 
     @Slot()
     def on_actionUndo_triggered(self):
-        self.api.canvas.undo()
+        self.api.art.canvas.undo()
 
     @Slot()
     def on_actionRedo_triggered(self):
-        self.api.canvas.redo()
+        self.api.art.canvas.redo()
 
     @Slot()
     def on_actionPaste_triggered(self):
-        self.api.canvas.paste_image()
+        self.api.art.canvas.paste_image()
 
     @Slot()
     def on_actionCopy_triggered(self):
-        self.api.canvas.copy_image()
+        self.api.art.canvas.copy_image()
 
     @Slot()
     def on_actionCut_triggered(self):
-        self.api.canvas.cut_image()
+        self.api.art.canvas.cut_image()
 
     @Slot()
     def on_actionRotate_90_clockwise_triggered(self):
-        self.api.canvas.rotate_image_90_clockwise()
+        self.api.art.canvas.rotate_image_90_clockwise()
 
     @Slot()
     def on_actionRotate_90_counter_clockwise_triggered(self):
-        self.api.canvas.rotate_image_90_counterclockwise()
+        self.api.art.canvas.rotate_image_90_counterclockwise()
 
     @Slot()
     def on_actionClear_all_prompts_triggered(self):
@@ -429,7 +429,7 @@ class MainWindow(
         if val is True and self.drawing_pad_mask is None:
             self._generate_drawingpad_mask()
         self.update_drawing_pad_settings("mask_layer_enabled", val)
-        self.api.canvas.mask_layer_toggled()
+        self.api.art.canvas.mask_layer_toggled()
 
     @Slot(bool)
     def action_outpaint_toggled(self, val: bool):
@@ -484,7 +484,7 @@ class MainWindow(
     @Slot(bool)
     def on_actionToggle_Grid_toggled(self, val: bool):
         self.update_grid_settings("show_grid", val)
-        self.api.canvas.toggle_grid(val)
+        self.api.art.canvas.toggle_grid(val)
 
     @Slot(bool)
     def on_actionToggle_LLM_toggled(self, val: bool):
@@ -686,7 +686,7 @@ class MainWindow(
             )
 
     def show_layers(self):
-        self.api.canvas.show_layers()
+        self.api.art.canvas.show_layers()
 
     def on_reset_paths_signal(self):
         self.reset_path_settings()
@@ -893,7 +893,7 @@ class MainWindow(
         self.initialized = True
 
     def layer_opacity_changed(self, _attr_name, value=None, _widget=None):
-        self.api.canvas.layer_opacity_changed(value)
+        self.api.art.canvas.layer_opacity_changed(value)
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -1374,7 +1374,7 @@ class MainWindow(
 
     def toggle_tool(self, tool: CanvasToolName, active: bool):
         self.update_application_settings("current_tool", tool.value)
-        self.api.canvas.tool_changed(tool, active)
+        self.api.art.canvas.tool_changed(tool, active)
 
     def _initialize_window(self):
         self.center()
