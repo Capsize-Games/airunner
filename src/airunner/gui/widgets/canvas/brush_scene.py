@@ -116,7 +116,7 @@ class BrushScene(CustomScene):
             mask_updated = True
         super().rotate_image(angle)
         if mask_updated:
-            self.api.canvas.mask_updated()
+            self.api.art.canvas.mask_updated()
 
     def _draw_at(self, painter=None):
         self._create_line(
@@ -264,16 +264,16 @@ class BrushScene(CustomScene):
                 self.current_tool is CanvasToolName.BRUSH
                 or self.current_tool is CanvasToolName.ERASER
             ):
-                self.api.canvas.generate_mask()
+                self.api.art.canvas.generate_mask()
 
         # Ensure changes are saved to database
         drawing_pad_settings.save()
 
         # Emit signals to refresh related UI
-        self.api.canvas.image_updated()
+        self.api.art.canvas.image_updated()
         if self.drawing_pad_settings.mask_layer_enabled:
             self.initialize_image()
-            self.api.canvas.mask_updated()
+            self.api.art.canvas.mask_updated()
 
     def set_mask(self):
         mask = None
@@ -340,4 +340,4 @@ class BrushScene(CustomScene):
         )
         self.mask_image = ImageQt.ImageQt(mask_image)
         self.initialize_image()
-        self.api.canvas.mask_updated()
+        self.api.art.canvas.mask_updated()

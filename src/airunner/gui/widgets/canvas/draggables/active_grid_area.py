@@ -217,7 +217,7 @@ class ActiveGridArea(DraggablePixmap):
 
             # Emit signal if we moved
             if has_moved:
-                self.api.canvas.generate_mask()
+                self.api.art.canvas.generate_mask()
                 self.api.art.active_grid_area_updated()
 
                 # Save the snapped absolute position

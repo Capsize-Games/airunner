@@ -25,10 +25,7 @@ class EmbeddingMixin:
                 continue
             if name_filter in embedding["name"]:
                 embeddings.append(embedding)
-        self.emit_signal(
-            SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
-            {"embeddings": embeddings},
-        )
+        self.api.art.embeddings.get_all_results(embeddings=embeddings)
         return embeddings
 
     def delete_missing_embeddings(self):
@@ -49,11 +46,8 @@ class EmbeddingMixin:
     def scan_for_embeddings(self):
         embeddings = scan_path_for_embeddings(self.path_settings.base_path)
         self.update_embeddings(embeddings)
-        self.emit_signal(
-            SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
-            {
-                "embeddings": get_embeddings_by_version(
-                    self.generator_settings.version
-                )
-            },
+        self.api.art.get_all_results(
+            embeddings=get_embeddings_by_version(
+                self.generator_settings.version
+            )
         )

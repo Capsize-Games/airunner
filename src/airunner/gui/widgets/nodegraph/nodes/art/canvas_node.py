@@ -17,5 +17,5 @@ class CanvasNode(BaseArtNode):
         image_response = self.get_input_data("image_response", input_data)
         # # Return empty dict as this node primarily displays data
         # # Execution flow is handled by the graph executor via exec ports
-        self.api.canvas.send_image_to_canvas(image_response)
+        self.api.art.canvas.send_image_to_canvas(image_response)
         return {}

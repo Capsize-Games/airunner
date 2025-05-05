@@ -35,7 +35,7 @@ class EmbeddingWidget(BaseWidget):
 
     @Slot()
     def action_clicked_button_deleted(self):
-        self.api.embeddings.delete(self)
+        self.api.art.embeddings.delete(self)
 
     def update_embedding(self, embedding: Embedding):
         embedding.save()
@@ -47,7 +47,7 @@ class EmbeddingWidget(BaseWidget):
         self.ui.enabledCheckbox.setChecked(val)
         self.ui.enabledCheckbox.blockSignals(False)
         self.update_embedding(self.embedding)
-        self.api.embeddings.status_changed()
+        self.api.art.embeddings.status_changed()
 
     def create_trigger_word_widgets(self, embedding: Embedding):
         for i in reversed(range(self.ui.gridLayout.layout().count())):

@@ -63,7 +63,7 @@ class EmbeddingsContainerWidget(BaseWidget):
     @Slot()
     def apply_embeddings(self):
         self._apply_button_enabled = False
-        self.api.embeddings.update()
+        self.api.art.embeddings.update()
 
     @Slot(str)
     def search_text_changed(self, val):
