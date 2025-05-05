@@ -55,6 +55,24 @@ class EmbeddingAPIServices(APIServiceBase):
         self.emit_signal(SignalCode.EMBEDDING_UPDATE_SIGNAL)
 
 
+class LoraAPIServices(APIServiceBase):
+    def update(self):
+        self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL)
+    
+    def status_changed(self):
+        self.emit_signal(SignalCode.LORA_STATUS_CHANGED)
+    
+    def delete(self, lora_widget):
+        """
+        Emit a signal to delete a LoRA widget.
+        :param lora_widget: The widget to be deleted.
+        """
+        self.emit_signal(
+            SignalCode.LORA_DELETE_SIGNAL,
+            {"lora_widget": lora_widget},
+        )
+
+
 class NodegraphAPIService(APIServiceBase):
     def node_executed(
         self, node_id: str, result: str, data: Optional[Dict] = None
@@ -466,6 +484,9 @@ class ARTAPIService(APIServiceBase):
     def active_grid_area_updated(self):
         self.emit_signal(SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED)
 
+    def update_generator_form_values(self):
+        self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
+
 
 class ChatbotAPIService(APIServiceBase):
     def update_mood(self, mood: str):
@@ -554,9 +575,6 @@ class LLMAPIService(APIServiceBase):
     def interrupt(self):
         self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
-    def update_generator_form_values(self):
-        self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
-    
     def delete_messages_after_id(self, message_id: int):
         self.emit_signal(
             SignalCode.DELETE_MESSAGES_AFTER_ID,
@@ -569,6 +587,7 @@ class API(App):
         self.llm = LLMAPIService(emit_signal=self.emit_signal)
         self.art = ARTAPIService(emit_signal=self.emit_signal)
         self.embeddings = EmbeddingAPIServices(emit_signal=self.emit_signal)
+        self.lora = LoraAPIServices(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
         self.stt = STTAPIService(emit_signal=self.emit_signal)
         self.video = VideoAPIService(emit_signal=self.emit_signal)
@@ -747,3 +766,6 @@ class API(App):
 
     def keyboard_shortcuts_updated(self):
         self.emit_signal(SignalCode.KEYBOARD_SHORTCUTS_UPDATED)
+
+    def reset_paths(self):
+        self.emit_signal(SignalCode.APPLICATION_RESET_PATHS_SIGNAL)
