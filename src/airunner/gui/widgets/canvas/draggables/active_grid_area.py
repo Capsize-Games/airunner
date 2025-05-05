@@ -234,13 +234,6 @@ class ActiveGridArea(DraggablePixmap):
                     self.update_active_grid_settings(
                         "pos_y", int(self._current_snapped_pos[1])
                     )
-                    # Update persistent settings
-                    self.settings.setValue(
-                        "active_grid_pos_x", int(self._current_snapped_pos[0])
-                    )
-                    self.settings.setValue(
-                        "active_grid_pos_y", int(self._current_snapped_pos[1])
-                    )
 
             # Accept the event
             event.accept()
