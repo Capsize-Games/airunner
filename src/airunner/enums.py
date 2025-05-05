@@ -233,6 +233,7 @@ class SignalCode(Enum):
     VIDEO_GENERATED_SIGNAL = enum.auto()
     INTERRUPT_VIDEO_GENERATION_SIGNAL = enum.auto()
     VIDEO_PROGRESS_SIGNAL = enum.auto()
+    VIDEO_FRAME_UPDATE_SIGNAL = enum.auto()
 
 
 class EngineResponseCode(Enum):
