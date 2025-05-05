@@ -150,18 +150,14 @@ class NodeGraphWidget(BaseWidget):
 
     def run_workflow(self):
         self.start_progress_bar()
-        self.emit_signal(SignalCode.RUN_WORKFLOW_SIGNAL, {"graph": self.graph})
+        self.api.nodegraph.run_workflow(self.graph)
 
     def pause_workflow(self):
-        self.emit_signal(
-            SignalCode.PAUSE_WORKFLOW_SIGNAL, {"graph": self.graph}
-        )
+        self.api.nodegraph.pause_workflow(self.graph)
 
     def stop_workflow(self):
         self.stop_progress_bar()
-        self.emit_signal(
-            SignalCode.STOP_WORKFLOW_SIGNAL, {"graph": self.graph}
-        )
+        self.api.nodegraph.stop_workflow(self.graph)
 
     def save_workflow(self):
         """Shows a dialog to save the workflow, allowing creation of a new one or overwriting an existing one."""
@@ -402,13 +398,10 @@ class NodeGraphWidget(BaseWidget):
         Emit a register graph signal so that other widgets can
         interact with the node graph.
         """
-        self.emit_signal(
-            SignalCode.REGISTER_GRAPH_SIGNAL,
-            {
-                "graph": self.graph,
-                "nodes_palette": self._nodes_palette,
-                "callback": lambda: self._finalize_register_graph(),
-            },
+        self.api.nodegraph.register_graph(
+            graph=self.graph,
+            nodes_palette=self._nodes_palette,
+            finalize=self._finalize_register_graph,
         )
 
     def _finalize_register_graph(self):
@@ -1040,14 +1033,11 @@ class NodeGraphWidget(BaseWidget):
             db_nodes=db_nodes,
             db_connections=db_connections,
         )
-        self.emit_signal(
-            SignalCode.WORKFLOW_LOAD_SIGNAL,
-            {
-                "workflow": workflow,
-                "callback": lambda _data=data: self._finalize_load_workflow(
-                    _data
-                ),
-            },
+        self.api.nodegraph.load_workflow(
+            workflow=workflow,
+            callback=lambda _data=data: self._finalize_load_workflow(
+                _data
+            ),
         )
 
     def _finalize_load_workflow(self, data: Dict):
@@ -1063,10 +1053,7 @@ class NodeGraphWidget(BaseWidget):
 
     def _clear_graph(self, add_start_node: bool = True):
         self.logger.info("Clearing current graph session and variables...")
-        self.emit_signal(
-            SignalCode.CLEAR_WORKFLOW_SIGNAL,
-            {"callback": lambda: self._finalize_clear_graph(add_start_node)},
-        )
+        self.api.nodegraph.clear_workflow()
 
     def _finalize_clear_graph(self, add_start_node: bool = True):
         # Clear the graph session
