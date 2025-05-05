@@ -37,6 +37,23 @@ class APIServiceBase(MediatorMixin, SettingsMixin, QObject):
         super().__init__()
 
 
+class ImageFilterAPIServices(APIServiceBase):
+    def cancel(self):
+        self.emit_signal(SignalCode.CANVAS_CANCEL_FILTER_SIGNAL)
+
+    def apply(self, filter_object: Any):
+        self.emit_signal(
+            SignalCode.CANVAS_APPLY_FILTER_SIGNAL,
+            {"filter_object": filter_object},
+        )
+
+    def preview(self, filter_object: Any):
+        self.emit_signal(
+            SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL,
+            {"filter_object": filter_object},
+        )
+
+
 class EmbeddingAPIServices(APIServiceBase):
     def delete(self, embedding_widget):
         """
@@ -53,6 +70,12 @@ class EmbeddingAPIServices(APIServiceBase):
 
     def update(self):
         self.emit_signal(SignalCode.EMBEDDING_UPDATE_SIGNAL)
+
+    def get_all_results(self, embeddings: List):
+        self.emit_signal(
+            SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL,
+            {"embeddings": embeddings},
+        )
 
 
 class LoraAPIServices(APIServiceBase):
@@ -200,6 +223,11 @@ class CanvasAPIService(APIServiceBase):
         Emit a signal to generate a mask.
         """
         self.emit_signal(SignalCode.GENERATE_MASK)
+
+    def mask_response(self, mask):
+        self.emit_signal(
+            SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, {"mask": mask}
+        )
 
     def image_updated(self):
         """
@@ -370,6 +398,11 @@ class ARTAPIService(APIServiceBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
+        self.embeddings = EmbeddingAPIServices(emit_signal=self.emit_signal)
+        self.lora = LoraAPIServices(emit_signal=self.emit_signal)
+        self.image_filter = ImageFilterAPIServices(
+            emit_signal=self.emit_signal
+        )
 
     def save_prompt(
         self,
@@ -395,14 +428,39 @@ class ARTAPIService(APIServiceBase):
             },
         )
 
+    def load(self, saved_prompt: Optional[str] = None):
+        self.emit_signal(
+            SignalCode.SD_LOAD_PROMPT_SIGNAL, {"saved_prompt": saved_prompt}
+        )
+
     def unload(self):
         self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
+
+    def model_changed(
+        self,
+        model: Optional[str],
+        version: Optional[str] = None,
+        pipeline: Optional[str] = None,
+    ):
+        data = {}
+        if model is not None:
+            data["model"] = model
+        if version is not None:
+            data["version"] = version
+        if pipeline is not None:
+            data["pipeline"] = pipeline
+        self.emit_signal(SignalCode.SD_ART_MODEL_CHANGED, data)
 
     def load_safety_checker(self):
         self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
 
     def unload_safety_checker(self):
         self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL)
+
+    def change_scheduler(self, val: str):
+        self.emit_signal(
+            SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": val}
+        )
 
     def lora_updated(self):
         """
@@ -478,6 +536,21 @@ class ARTAPIService(APIServiceBase):
     def stop_progress_bar(self):
         self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
 
+    def clear_progress_bar(self):
+        self.emit_signal(
+            SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL,
+            {"do_clear": True},
+        )
+
+    def missing_required_models(self, message: str):
+        self.emit_signal(
+            SignalCode.MISSING_REQUIRED_MODELS,
+            {
+                "title": "Model Not Found",
+                "message": message,
+            },
+        )
+
     def send_request(
         self,
         image_request: Optional[ImageRequest] = None,
@@ -503,6 +576,28 @@ class ARTAPIService(APIServiceBase):
 
     def update_generator_form_values(self):
         self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
+
+    def toggle_sd(self, enabled: bool, callback: callable, finalize: callable):
+        self.emit_signal(
+            SignalCode.TOGGLE_SD_SIGNAL,
+            {
+                "enabled": enabled,
+                "callback": callback,
+                "finalize": finalize,
+            },
+        )
+
+    def load_non_sd(self, callback: callable):
+        self.emit_signal(
+            SignalCode.LOAD_NON_SD_MODELS,
+            dict(callback=callable),
+        )
+
+    def unload_non_sd(self, callback: callable):
+        self.emit_signal(
+            SignalCode.UNLOAD_NON_SD_MODELS,
+            dict(callback=callback),
+        )
 
 
 class ChatbotAPIService(APIServiceBase):
@@ -603,12 +698,9 @@ class API(App):
     def __init__(self, *args, **kwargs):
         self.llm = LLMAPIService(emit_signal=self.emit_signal)
         self.art = ARTAPIService(emit_signal=self.emit_signal)
-        self.embeddings = EmbeddingAPIServices(emit_signal=self.emit_signal)
-        self.lora = LoraAPIServices(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
         self.stt = STTAPIService(emit_signal=self.emit_signal)
         self.video = VideoAPIService(emit_signal=self.emit_signal)
-        self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
         self.nodegraph = NodegraphAPIService(emit_signal=self.emit_signal)
 
         # Extract the initialize_app flag and pass the rest to the parent App class
@@ -787,7 +879,9 @@ class API(App):
     def reset_paths(self):
         self.emit_signal(SignalCode.APPLICATION_RESET_PATHS_SIGNAL)
 
-    def application_settings_changed(self, setting_name: str, column_name: str, val: Any):
+    def application_settings_changed(
+        self, setting_name: str, column_name: str, val: Any
+    ):
         self.emit_signal(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
             {
@@ -795,4 +889,19 @@ class API(App):
                 "column_name": column_name,
                 "value": val,
             },
+        )
+
+    def widget_element_changed(self, element: str, value_name: str, val: Any):
+        self.emit_signal(
+            SignalCode.WIDGET_ELEMENT_CHANGED_SIGNAL,
+            {
+                "element": element,
+                value_name: val,
+            },
+        )
+
+    def delete_prompt(self, prompt_id: int):
+        self.emit_signal(
+            SignalCode.SD_ADDITIONAL_PROMPT_DELETE_SIGNAL,
+            {"prompt_id": prompt_id},
         )

@@ -69,7 +69,7 @@ class LoraContainerWidget(BaseWidget):
     @Slot()
     def apply_lora(self):
         self._apply_button_enabled = False
-        self.api.lora.update()
+        self.api.art.lora.update()
 
     def on_lora_modified(self):
         self._apply_button_enabled = True

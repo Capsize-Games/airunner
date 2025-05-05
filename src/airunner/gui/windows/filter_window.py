@@ -14,6 +14,7 @@ class FilterWindow(BaseWindow):
     """
     FilterWindow is used as a base class for all filters.
     """
+
     template_class_ = Ui_filter_window
     window_title = ""
     _filter_values = {}
@@ -26,9 +27,7 @@ class FilterWindow(BaseWindow):
 
         self.image_filter = ImageFilter.objects.options(
             joinedload(ImageFilter.image_filter_values)
-        ).get(
-            image_filter_id
-        )
+        ).get(image_filter_id)
         self.image_filter_model_name = self.image_filter.name
         self.window_title = self.image_filter.display_name
         self._filter = None
@@ -37,8 +36,16 @@ class FilterWindow(BaseWindow):
     def showEvent(self, event):
         for filter_value in self.image_filter.image_filter_values:
             if filter_value.value_type in ("float", "int"):
-                min_value = int(filter_value.min_value) if filter_value.min_value else 0
-                max_value = int(filter_value.max_value) if filter_value.max_value else 100
+                min_value = (
+                    int(filter_value.min_value)
+                    if filter_value.min_value
+                    else 0
+                )
+                max_value = (
+                    int(filter_value.max_value)
+                    if filter_value.max_value
+                    else 100
+                )
 
                 if filter_value.value_type == "float":
                     spinbox_value = float(filter_value.value)
@@ -55,13 +62,11 @@ class FilterWindow(BaseWindow):
 
                 slider_spinbox_widget = FilterSliderWidget(
                     filter_value=filter_value,
-                    preview_filter=self.preview_filter
+                    preview_filter=self.preview_filter,
                 )
-                settings_property = ".".join([
-                    "image_filter_values",
-                    filter_value.name,
-                    "value"
-                ])
+                settings_property = ".".join(
+                    ["image_filter_values", filter_value.name, "value"]
+                )
                 slider_spinbox_widget.init(
                     slider_minimum=min_value,
                     slider_maximum=max_value,
@@ -103,24 +108,12 @@ class FilterWindow(BaseWindow):
         return self._filter
 
     def reject(self):
-        self.emit_signal(
-            SignalCode.CANVAS_CANCEL_FILTER_SIGNAL
-        )
+        self.api.art.image_filter.cancel()
         super().reject()
 
     def accept(self):
-        self.emit_signal(
-            SignalCode.CANVAS_APPLY_FILTER_SIGNAL,
-            {
-                "filter_object": self.filter_object()
-            }
-        )
+        self.api.art.image_filter.apply(self.filter_object())
         super().accept()
 
     def preview_filter(self):
-        self.emit_signal(
-            SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL,
-            {
-                "filter_object": self.filter_object()
-            }
-        )
+        self.api.art.image_filter.preview(self.filter_object())
