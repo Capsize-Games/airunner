@@ -1,9 +1,12 @@
 from typing import Optional, Dict, List, Any
 
+from NodeGraphQt import NodesPaletteWidget
 from PySide6.QtWidgets import QDialog, QVBoxLayout
 from PySide6.QtCore import QObject, QPoint
 
 from airunner.app import App
+from airunner.data.models.workflow import Workflow
+from airunner.gui.widgets.nodegraph.custom_node_graph import CustomNodeGraph
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.stablediffusion.image_request import ImageRequest
@@ -18,6 +21,7 @@ from airunner.enums import (
 from airunner.setup_database import setup_database
 from airunner.utils.application.create_worker import create_worker
 from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
+from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.utils.application.ui_loader import (
     load_ui_file,
     load_ui_from_string,
@@ -28,6 +32,64 @@ from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 class APIServiceBase:
     def __init__(self, emit_signal):
         self.emit_signal = emit_signal
+
+
+class NodegraphAPIService(APIServiceBase):
+    def node_executed(
+        self, node_id: str, result: str, data: Optional[Dict] = None
+    ):
+        self.emit_signal(
+            SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL,
+            {
+                "node_id": node_id,
+                "result": result,
+                "output_data": data or {},
+            },
+        )
+
+    def run_workflow(self, graph: CustomNodeGraph):
+        self.emit_signal(SignalCode.RUN_WORKFLOW_SIGNAL, {"graph": self.graph})
+
+    def pause_workflow(self, graph: CustomNodeGraph):
+        self.emit_signal(SignalCode.PAUSE_WORKFLOW_SIGNAL, {"graph": graph})
+
+    def stop_workflow(self, graph: CustomNodeGraph):
+        self.emit_signal(SignalCode.STOP_WORKFLOW_SIGNAL, {"graph": graph})
+
+    def register_graph(
+        self,
+        graph: CustomNodeGraph,
+        nodes_palette: NodesPaletteWidget,
+        finalize: callable,
+    ):
+        self.emit_signal(
+            SignalCode.REGISTER_GRAPH_SIGNAL,
+            {
+                "graph": graph,
+                "nodes_palette": nodes_palette,
+                "callback": finalize,
+            },
+        )
+
+    def load_workflow(self, workflow: Workflow, callback: callable):
+        self.emit_signal(
+            SignalCode.WORKFLOW_LOAD_SIGNAL,
+            {
+                "workflow": workflow,
+                "callback": callback,
+            },
+        )
+
+    def clear_workflow(self, callback: callable):
+        self.emit_signal(
+            SignalCode.CLEAR_WORKFLOW_SIGNAL,
+            {"callback": callback},
+        )
+
+
+class VideoAPIService(APIServiceBase):
+    def generate(self, data: Dict):
+        self.emit_signal(SignalCode.VIDEO_GENERATE_SIGNAL, data)
 
 
 class STTAPIService(APIServiceBase):
@@ -235,11 +297,20 @@ class CanvasAPIService(APIServiceBase):
     def interrupt_image_generation(self):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
+    def send_image_to_canvas(self, image_response: ImageResponse):
+        self.emit_signal(
+            SignalCode.SEND_IMAGE_TO_CANVAS_SIGNAL,
+            {"image_response": image_response},
+        )
+
 
 class ARTAPIService(APIServiceBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
+
+    def unload(self):
+        self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL)
 
     def load_safety_checker(self):
         self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
@@ -285,7 +356,7 @@ class ARTAPIService(APIServiceBase):
             SignalCode.SD_PIPELINE_LOADED_SIGNAL,
             {"generator_section": section},
         )
-    
+
     def generate_image_signal(self):
         self.emit_signal(SignalCode.SD_GENERATE_IMAGE_SIGNAL)
 
@@ -321,6 +392,20 @@ class ARTAPIService(APIServiceBase):
     def stop_progress_bar(self):
         self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
 
+    def send_request(self, image_request: Optional[ImageRequest] = None):
+        """ "
+        Send a request to the image generator with the given request.
+        :param image_request: Optional ImageRequest object.
+        :return: None
+        """
+        image_request = image_request or ImageRequest()
+        self.emit_signal(
+            SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request}
+        )
+
+    def interrupt_generate(self):
+        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
+
 
 class ChatbotAPIService(APIServiceBase):
     def update_mood(self, mood: str):
@@ -334,6 +419,7 @@ class LLMAPIService(APIServiceBase):
         llm_request: Optional[LLMRequest] = None,
         action: LLMActionType = LLMActionType.CHAT,
         do_tts_reply: bool = True,
+        node_id: Optional[str] = None,
     ):
         """
         Send a request to the LLM with the given prompt and action.
@@ -347,24 +433,27 @@ class LLMAPIService(APIServiceBase):
         llm_request = llm_request or LLMRequest.from_default()
         llm_request.do_tts_reply = do_tts_reply
 
+        data = {
+            "llm_request": True,
+            "request_data": {
+                "action": action,
+                "prompt": prompt,
+                "llm_request": llm_request,
+                "do_tts_reply": do_tts_reply,
+            },
+        }
+        if node_id is not None:
+            data["node_id"] = node_id
         self.emit_signal(
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
-            {
-                "llm_request": True,
-                "request_data": {
-                    "action": action,
-                    "prompt": prompt,
-                    "llm_request": llm_request,
-                    "do_tts_reply": do_tts_reply,
-                },
-            },
+            data,
         )
 
-    def clear_history(self):
+    def clear_history(self, **kwargs):
         """
         Emit a signal to clear the LLM history.
         """
-        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {})
+        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, kwargs)
 
     def converation_deleted(self, conversation_id: int):
         self.emit_signal(
@@ -377,6 +466,9 @@ class LLMAPIService(APIServiceBase):
             SignalCode.RAG_RELOAD_INDEX_SIGNAL,
             {"target_files": target_files},
         )
+    
+    def interrupt(self):
+        self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
 
 class API(App):
@@ -385,7 +477,9 @@ class API(App):
         self.art = ARTAPIService(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
         self.stt = STTAPIService(emit_signal=self.emit_signal)
+        self.video = VideoAPIService(emit_signal=self.emit_signal)
         self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
+        self.nodegraph = NodegraphAPIService(emit_signal=self.emit_signal)
 
         # Extract the initialize_app flag and pass the rest to the parent App class
         self._initialize_app = kwargs.pop("initialize_app", True)
@@ -417,17 +511,6 @@ class API(App):
         """
         self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}
-        )
-
-    def send_image_request(self, image_request: Optional[ImageRequest] = None):
-        """ "
-        Send a request to the image generator with the given request.
-        :param image_request: Optional ImageRequest object.
-        :return: None
-        """
-        image_request = image_request or ImageRequest()
-        self.emit_signal(
-            SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request}
         )
 
     def show_hello_world_window(self):
