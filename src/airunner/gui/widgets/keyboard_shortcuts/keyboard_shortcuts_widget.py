@@ -101,7 +101,7 @@ class KeyboardShortcutsWidget(BaseWidget):
             line_edit.setText(shortcut_key.text)
 
             self.pressed_keys.clear()
-            self.emit_signal(SignalCode.KEYBOARD_SHORTCUTS_UPDATED)
+            self.api.keyboard_shortcuts_updated()
 
     @staticmethod
     def get_key_text(event):

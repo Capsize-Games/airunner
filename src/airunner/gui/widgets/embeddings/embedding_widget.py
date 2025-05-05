@@ -1,10 +1,11 @@
-
 from PySide6.QtCore import Slot
 
 from airunner.data.models import Embedding
 from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.embeddings.embedding_trigger_word_widget import EmbeddingTriggerWordWidget
+from airunner.gui.widgets.embeddings.embedding_trigger_word_widget import (
+    EmbeddingTriggerWordWidget,
+)
 from airunner.gui.widgets.embeddings.templates.embedding_ui import Ui_embedding
 
 
@@ -14,6 +15,7 @@ class EmbeddingWidget(BaseWidget):
     It is responsible for displaying the embedding's name, trigger words,
     and active status.
     """
+
     widget_class_ = Ui_embedding
 
     def __init__(self, *args, **kwargs):
@@ -33,12 +35,7 @@ class EmbeddingWidget(BaseWidget):
 
     @Slot()
     def action_clicked_button_deleted(self):
-        self.emit_signal(
-            SignalCode.EMBEDDING_DELETE_SIGNAL,
-            {
-                "embedding_widget": self
-            }
-        )
+        self.api.embeddings.delete(self)
 
     def update_embedding(self, embedding: Embedding):
         embedding.save()
@@ -50,7 +47,7 @@ class EmbeddingWidget(BaseWidget):
         self.ui.enabledCheckbox.setChecked(val)
         self.ui.enabledCheckbox.blockSignals(False)
         self.update_embedding(self.embedding)
-        self.emit_signal(SignalCode.EMBEDDING_STATUS_CHANGED)
+        self.api.embeddings.status_changed()
 
     def create_trigger_word_widgets(self, embedding: Embedding):
         for i in reversed(range(self.ui.gridLayout.layout().count())):

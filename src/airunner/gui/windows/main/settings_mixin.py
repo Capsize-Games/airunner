@@ -297,10 +297,6 @@ class SettingsMixin:
         return self.load_settings_from_db(MetadataSettings)
 
     @property
-    def embeddings(self) -> List[Type[Embedding]]:
-        return Embedding.objects.all()
-
-    @property
     def prompt_templates(self) -> List[Type[PromptTemplate]]:
         return self.load_prompt_templates()
 
@@ -379,15 +375,6 @@ class SettingsMixin:
     @property
     def image_filter_values(self) -> Optional[List[ImageFilterValue]]:
         return ImageFilterValue.objects.all()
-
-    def get_embeddings_by_version(
-        self, version
-    ) -> Optional[List[Type[Embedding]]]:
-        return [
-            embedding
-            for embedding in self.embeddings
-            if embedding.version == version
-        ]
 
     @property
     def chatbot(self) -> Optional[Chatbot]:

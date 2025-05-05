@@ -4,6 +4,7 @@ from PySide6.QtCore import Slot, QThread, QSize, QTimer
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode, ModelType, ModelStatus
+from airunner.utils.art.embeddings import get_embeddings_by_version
 from airunner.utils.models import scan_path_for_embeddings
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.embeddings.embedding_widget import EmbeddingWidget
@@ -62,7 +63,7 @@ class EmbeddingsContainerWidget(BaseWidget):
     @Slot()
     def apply_embeddings(self):
         self._apply_button_enabled = False
-        self.emit_signal(SignalCode.EMBEDDING_UPDATE_SIGNAL)
+        self.api.embeddings.update()
 
     @Slot(str)
     def search_text_changed(self, val):
@@ -148,7 +149,7 @@ class EmbeddingsContainerWidget(BaseWidget):
         if self._version is None or self._version != version or force_reload:
             self._version = version
             self.clear_embedding_widgets()
-            embeddings = self.get_embeddings_by_version(version)
+            embeddings = get_embeddings_by_version(version)
             if embeddings:
                 filtered_embeddings = [
                     embedding
