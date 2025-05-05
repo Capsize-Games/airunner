@@ -206,10 +206,6 @@ class SettingsMixin:
         return self.load_schedulers()
 
     @property
-    def lora(self) -> List[Type[Lora]]:
-        return self.load_lora()
-
-    @property
     def shortcut_keys(self) -> List[Type[ShortcutKeys]]:
         return self.load_shortcut_keys()
 
