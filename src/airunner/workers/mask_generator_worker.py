@@ -28,9 +28,7 @@ class MaskGeneratorWorker(Worker):
 
     def on_generate_mask_signal(self, _message: dict):
         mask = self.generate_mask()
-        self.emit_signal(
-            SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, {"mask": mask}
-        )
+        self.api.art.canvas.mask_response(mask)
 
     def generate_mask(self) -> Image:
         base_64_image = self.drawing_pad_settings.image

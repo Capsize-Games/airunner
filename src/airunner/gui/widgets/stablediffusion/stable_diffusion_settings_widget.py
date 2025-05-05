@@ -103,7 +103,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     @Slot(str)
     def handle_model_changed(self, val: str):
         self._update_model_id()
-        self.emit_signal(SignalCode.SD_ART_MODEL_CHANGED, {"model": val})
+        self.api.art.model_changed(model=val)
 
     def _update_model_id(self):
         index = self.ui.model.currentIndex()
@@ -112,9 +112,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
 
     def handle_scheduler_changed(self, name):
         self.update_generator_settings("scheduler", name)
-        self.emit_signal(
-            SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": name}
-        )
+        self.api.art.change_scheduler(name)
 
     @Slot(str)
     def handle_pipeline_changed(self, val: str):
@@ -152,14 +150,11 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
 
         self.load_versions()
         self.load_models()
-        self.emit_signal(SignalCode.SD_ART_MODEL_CHANGED, {"pipeline": val})
+        self.api.art.model_changed(pipeline=val)
 
     def handle_version_changed(self, val):
         self.update_generator_settings("version", val)
-        self.emit_signal(
-            SignalCode.WIDGET_ELEMENT_CHANGED,
-            {"element": "sd_version", "version": val},
-        )
+        self.api.widget_element_changed("sd_version", "version", val)
 
         generator_settings = GeneratorSettings.objects.first()
         model = AIModels.objects.filter_first(
@@ -175,13 +170,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             generator_settings.save()
 
         self.load_models()
-        self.emit_signal(
-            SignalCode.SD_ART_MODEL_CHANGED,
-            {
-                "model": model.id,
-                "version": val,
-            },
-        )
+        self.api.art.model_changed(model=model.id, version=val)
 
     def _load_pipelines(self):
         self.ui.pipeline.blockSignals(True)

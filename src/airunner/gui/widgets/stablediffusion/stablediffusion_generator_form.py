@@ -168,7 +168,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     @Slot()
     def on_interrupt_button_clicked(self):
-        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
+        self.api.art.interrupt_image_generation()
 
     def on_delete_prompt_clicked(self, data: Dict):
         prompt_id = data.get("prompt_id", None)
@@ -387,10 +387,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         It sets the prompts in the generator form UI and continues the image generation process.
         """
         # Unload non-Stable Diffusion models
-        self.emit_signal(
-            SignalCode.UNLOAD_NON_SD_MODELS,
-            dict(callback=self.unload_llm_callback),
-        )
+        self.api.art.unload_non_sd(callback=self.unload_llm_callback)
         # Set the prompts in the generator form UI
         data = data["message"]
         self.update_application_settings("working_width", data["width"])
@@ -412,13 +409,10 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.logger.info(
                 "Stable Diffusion is not enabled, enabling it now."
             )
-            self.emit_signal(
-                SignalCode.TOGGLE_SD_SIGNAL,
-                dict(
-                    callback=self.handle_generate_button_clicked,
-                    finalize=self.finalize_image_generated_by_llm,
-                    enabled=True,
-                ),
+            self.api.art.toggle_sd(
+                enabled=True,
+                callback=self.handle_generate_button_clicked,
+                finalize=self.finalize_image_generated_by_llm,
             )
         else:
             # If SD is already enabled, emit a signal to generate the image.
@@ -436,25 +430,19 @@ class StableDiffusionGeneratorForm(BaseWidget):
         """
         Callback function to be called after the image has been generated.
         """
-        self.emit_signal(
-            SignalCode.TOGGLE_SD_SIGNAL,
-            dict(
-                callback=lambda d: self.emit_signal(
-                    SignalCode.LOAD_NON_SD_MODELS,
-                    dict(
-                        callback=lambda _d: self.api.send_llm_text_streamed_signal(
-                            LLMResponse(
-                                message="Your image has been generated",
-                                is_first_message=True,
-                                is_end_of_message=True,
-                                name=self.chatbot.name,
-                                action=LLMActionType.GENERATE_IMAGE,
-                            )
-                        )
-                    ),
-                ),
-                enabled=False,
+        self.api.art.toggle_sd(
+            callback=lambda _d: self.load_non_sd(
+                callback=lambda _d: self.api.send_llm_text_streamed_signal(
+                    LLMResponse(
+                        message="Your image has been generated",
+                        is_first_message=True,
+                        is_end_of_message=True,
+                        name=self.chatbot.name,
+                        action=LLMActionType.GENERATE_IMAGE,
+                    )
+                )
             ),
+            enabled=False,
         )
 
     ##########################################################################
@@ -571,24 +559,22 @@ class StableDiffusionGeneratorForm(BaseWidget):
             additional_prompts=additional_prompts,
             callback=callback,
             image_preset=ImagePreset(self.generator_settings.image_preset),
-            quality_effects=QualityEffects(
-                self.generator_settings.quality_effects
-            ) if self.generator_settings.quality_effects != "" and self.generator_settings.quality_effects is not None else QualityEffects.STANDARD,
+            quality_effects=(
+                QualityEffects(self.generator_settings.quality_effects)
+                if self.generator_settings.quality_effects != ""
+                and self.generator_settings.quality_effects is not None
+                else QualityEffects.STANDARD
+            ),
         )
 
-        self.emit_signal(
-            SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request}
-        )
+        self.api.art.send_request(image_request=image_request)
 
     def action_clicked_button_save_prompts(self):
-        self.emit_signal(
-            SignalCode.SD_SAVE_PROMPT_SIGNAL,
-            {
-                "prompt": self.ui.prompt.toPlainText(),
-                "negative_prompt": self.ui.negative_prompt.toPlainText(),
-                "secondary_prompt": self.ui.secondary_prompt.toPlainText(),
-                "secondary_negative_prompt": self.ui.secondary_negative_prompt.toPlainText(),
-            },
+        self.api.art.save_prompt(
+            prompt=self.ui.prompt.toPlainText(),
+            negative_prompt=self.ui.negative_prompt.toPlainText(),
+            secondary_prompt=self.ui.secondary_prompt.toPlainText(),
+            secondary_negative_prompt=self.ui.secondary_negative_prompt.toPlainText(),
         )
 
     def handle_prompt_changed(self):

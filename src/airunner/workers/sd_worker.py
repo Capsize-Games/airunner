@@ -378,15 +378,6 @@ class SDWorker(Worker):
         self.logger.error(f"SDWorker Error: {error_message}")
 
     def send_missing_model_alert(self, message):
-        self.emit_signal(
-            SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL,
-            {"do_clear": True},
-        )
-        self.emit_signal(
-            SignalCode.MISSING_REQUIRED_MODELS,
-            {
-                "title": "Model Not Found",
-                "message": message,
-            },
-        )
-        self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, {"enabled": False})
+        self.api.art.clear_progress_bar()
+        self.api.art.missing_required_models(message)
+        self.api.art.toggle_sd(enabled=False)

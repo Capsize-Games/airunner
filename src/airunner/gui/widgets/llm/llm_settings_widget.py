@@ -26,14 +26,10 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         self.update_llm_generator_settings("model_path", val)
 
     @Slot(str)
-    def on_model_service_currentTextChanged(self, val: str):
-        self.update_llm_generator_settings("model_service", val)
-        self._toggle_model_path_visibility(val != ModelService.LOCAL.value)
-        self.emit_signal(
-            SignalCode.LLM_MODEL_CHANGED,
-            {
-                "model_service": val,
-            },
+    def on_model_service_currentTextChanged(self, model_service: str):
+        self.api.llm.model_changed(model_service)
+        self._toggle_model_path_visibility(
+            model_service != ModelService.LOCAL.value
         )
 
     @Slot(bool)

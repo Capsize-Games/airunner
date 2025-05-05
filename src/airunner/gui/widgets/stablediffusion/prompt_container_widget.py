@@ -29,12 +29,7 @@ class PromptContainerWidget(BaseWidget):
 
     @Slot()
     def handle_delete_prompt_clicked(self):
-        self.emit_signal(
-            SignalCode.SD_ADDITIONAL_PROMPT_DELETE_SIGNAL, 
-            {
-                "prompt_id": self.prompt_id
-            }
-        )
+        self.api.delete_prompt(self.prompt_id)
     
     def on_widget_element_changed(self, data: Dict):
         if data.get("element") in (

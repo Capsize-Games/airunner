@@ -1,5 +1,5 @@
 import os
-
+from typing import List, Type
 from PySide6.QtCore import Slot, QSize, QThread, QTimer
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
@@ -48,6 +48,10 @@ class LoraContainerWidget(BaseWidget):
         self._scanner_thread.started.connect(self._scanner_worker.run)
         self._scanner_thread.start()
 
+    @property
+    def lora(self) -> List[Type[Lora]]:
+        return self.load_lora()
+
     def _scan_path_for_lora(self, path) -> bool:
         if self._deleting:
             return False
@@ -65,7 +69,7 @@ class LoraContainerWidget(BaseWidget):
     @Slot()
     def apply_lora(self):
         self._apply_button_enabled = False
-        self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL)
+        self.api.art.lora.update()
 
     def on_lora_modified(self):
         self._apply_button_enabled = True
