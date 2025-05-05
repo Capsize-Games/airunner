@@ -145,10 +145,7 @@ class ChatPromptWidget(BaseWidget):
             ).first()
         if conversation is not None:
             self.conversation = conversation
-            self.emit_signal(
-                SignalCode.LLM_CLEAR_HISTORY_SIGNAL,
-                {"conversation_id": self.conversation_id},
-            )
+            self.api.llm.clear_history(conversation_id=self.conversation_id)
             self.on_clear_conversation()
             self._set_conversation_widgets(
                 [
@@ -189,7 +186,7 @@ class ChatPromptWidget(BaseWidget):
             self.enable_send_button()
 
     def on_chatbot_changed(self):
-        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
+        self.api.llm.clear_history()
         self.on_clear_conversation()
 
     def on_set_conversation(self, message):
@@ -274,7 +271,7 @@ class ChatPromptWidget(BaseWidget):
 
     @Slot()
     def action_button_clicked_clear_conversation(self):
-        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
+        self.api.llm.clear_history()
 
     def on_clear_conversation(self):
         self._clear_conversation()
@@ -298,7 +295,7 @@ class ChatPromptWidget(BaseWidget):
         self.do_generate()
 
     def interrupt_button_clicked(self):
-        self.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL)
+        self.api.llm.interrupt()
         self.stop_progress_bar()
         self.generating = False
         self.enable_send_button()
@@ -334,16 +331,11 @@ class ChatPromptWidget(BaseWidget):
 
         self.clear_prompt()
         self.start_progress_bar()
-        self.emit_signal(
-            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
-            {
-                "llm_request": True,
-                "request_data": {
-                    "action": self.action,
-                    "prompt": prompt,
-                    "llm_request": LLMRequest.from_default(),
-                },
-            },
+        self.api.llm.send_request(
+            prompt=prompt,
+            llm_request=LLMRequest.from_default(),
+            action=self.action,
+            do_tts_reply=False
         )
 
     def on_token_signal(self, val):

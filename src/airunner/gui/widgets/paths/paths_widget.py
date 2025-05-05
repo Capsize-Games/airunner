@@ -1,4 +1,3 @@
-
 from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.paths.templates.paths_ui import Ui_paths_form
@@ -11,4 +10,4 @@ class PathsWidget(BaseWidget):
         super().__init__(**kwargs)
 
     def action_button_clicked_reset(self):
-        self.emit_signal(SignalCode.APPLICATION_RESET_PATHS_SIGNAL)
+        self.api.reset_paths()

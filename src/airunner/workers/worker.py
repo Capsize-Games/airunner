@@ -1,3 +1,4 @@
+from typing import Any
 import queue
 from abc import abstractmethod, ABC, ABCMeta
 
@@ -37,7 +38,7 @@ class Worker(
         # as it's handled by create_worker function
 
     @abstractmethod
-    def handle_message(self, message):
+    def handle_message(self, message: Any):
         raise NotImplementedError
 
     def start_worker_thread(self):

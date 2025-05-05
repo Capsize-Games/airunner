@@ -116,7 +116,7 @@ class BrushScene(CustomScene):
             mask_updated = True
         super().rotate_image(angle)
         if mask_updated:
-            self.emit_signal(SignalCode.MASK_UPDATED)
+            self.api.art.canvas.mask_updated()
 
     def _draw_at(self, painter=None):
         self._create_line(
@@ -254,26 +254,27 @@ class BrushScene(CustomScene):
             self.update_drawing_pad_settings("mask", base_64_image)
         else:
             # For normal image layer
-            image = ImageQt.fromqimage(self.active_image)
-            base_64_image = convert_image_to_binary(image)
-            # Update both database object and in-memory settings with the same base64 image
-            drawing_pad_settings.image = base_64_image
-            self.update_drawing_pad_settings("image", base_64_image)
+            if self.active_image is not None:
+                image = ImageQt.fromqimage(self.active_image)
+                base_64_image = convert_image_to_binary(image)
+                # Update both database object and in-memory settings with the same base64 image
+                drawing_pad_settings.image = base_64_image
+                self.update_drawing_pad_settings("image", base_64_image)
 
-            if (
-                self.current_tool is CanvasToolName.BRUSH
-                or self.current_tool is CanvasToolName.ERASER
-            ):
-                self.emit_signal(SignalCode.GENERATE_MASK)
+                if (
+                    self.current_tool is CanvasToolName.BRUSH
+                    or self.current_tool is CanvasToolName.ERASER
+                ):
+                    self.api.art.canvas.generate_mask()
 
         # Ensure changes are saved to database
         drawing_pad_settings.save()
 
         # Emit signals to refresh related UI
-        self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
+        self.api.art.canvas.image_updated()
         if self.drawing_pad_settings.mask_layer_enabled:
             self.initialize_image()
-            self.emit_signal(SignalCode.MASK_UPDATED)
+            self.api.art.canvas.mask_updated()
 
     def set_mask(self):
         mask = None
@@ -340,4 +341,4 @@ class BrushScene(CustomScene):
         )
         self.mask_image = ImageQt.ImageQt(mask_image)
         self.initialize_image()
-        self.emit_signal(SignalCode.MASK_UPDATED)
+        self.api.art.canvas.mask_updated()

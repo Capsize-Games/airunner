@@ -117,17 +117,14 @@ class GeneratorForm(BaseWidget):
                 data = dict(callback=finalize)
             else:
                 data = None
-        self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, data)
+        self.api.art.send_request(data=data)
 
     def action_clicked_button_save_prompts(self):
-        self.emit_signal(
-            SignalCode.SD_SAVE_PROMPT_SIGNAL,
-            {
-                "prompt": self.ui.prompt.toPlainText(),
-                "negative_prompt": self.ui.negative_prompt.toPlainText(),
-                "secondary_prompt": self.ui.secondary_prompt.toPlainText(),
-                "secondary_negative_prompt": self.ui.secondary_negative_prompt.toPlainText(),
-            },
+        self.api.art.save_prompt(
+            self.ui.prompt.toPlainText(),
+            self.ui.negative_prompt.toPlainText(),
+            self.ui.secondary_prompt.toPlainText(),
+            self.ui.secondary_negative_prompt.toPlainText(),
         )
 
     def handle_prompt_changed(self):
@@ -144,7 +141,7 @@ class GeneratorForm(BaseWidget):
 
     @Slot()
     def handle_interrupt_button_clicked(self):
-        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
+        self.api.art.interrupt_generate()
 
     def extract_json_from_message(self, message):
         # Regular expression to find the JSON block

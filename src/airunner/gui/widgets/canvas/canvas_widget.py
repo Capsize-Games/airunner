@@ -1,6 +1,6 @@
 from typing import Optional, Dict
 
-from PySide6.QtCore import Qt, QPoint, QTimer
+from PySide6.QtCore import Qt, QPoint
 from PySide6.QtCore import Slot
 
 from airunner.gui.cursors.circle_brush import circle_cursor
@@ -105,27 +105,27 @@ class CanvasWidget(BaseWidget):
 
     @Slot()
     def on_recenter_button_clicked(self):
-        self.emit_signal(SignalCode.RECENTER_GRID_SIGNAL)
+        self.api.art.canvas.recenter_grid()
 
     @Slot()
     def on_new_button_clicked(self):
-        self.emit_signal(SignalCode.CANVAS_CLEAR)
+        self.api.art.canvas.clear()
 
     @Slot()
     def on_import_button_clicked(self):
-        self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
+        self.api.art.canvas.import_image()
 
     @Slot()
     def on_export_button_clicked(self):
-        self.emit_signal(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
+        self.api.art.canvas.export_image()
 
     @Slot()
     def on_undo_button_clicked(self):
-        self.emit_signal(SignalCode.UNDO_SIGNAL)
+        self.api.art.canvas.undo()
 
     @Slot()
     def on_redo_button_clicked(self):
-        self.emit_signal(SignalCode.REDO_SIGNAL)
+        self.api.art.canvas.redo()
 
     @Slot(bool)
     def on_grid_button_toggled(self, val: bool):
@@ -133,32 +133,23 @@ class CanvasWidget(BaseWidget):
 
     @Slot(bool)
     def on_brush_button_toggled(self, val: bool):
-        self.emit_signal(
-            SignalCode.TOGGLE_TOOL,
-            {"tool": CanvasToolName.BRUSH, "active": val},
-        )
+        self.api.art.canvas.toggle_tool(CanvasToolName.BRUSH, val)
 
     @Slot(bool)
     def on_eraser_button_toggled(self, val: bool):
-        self.emit_signal(
-            SignalCode.TOGGLE_TOOL,
-            {"tool": CanvasToolName.ERASER, "active": val},
-        )
+        self.api.art.canvas.toggle_tool(CanvasToolName.ERASER, val)
 
     @Slot(bool)
     def on_active_grid_area_button_toggled(self, val: bool):
-        self.emit_signal(
-            SignalCode.TOGGLE_TOOL,
-            {"tool": CanvasToolName.ACTIVE_GRID_AREA, "active": val},
-        )
+        self.api.art.canvas.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, val)
 
-    def on_toggle_tool_signal(self, message: dict):
+    def on_toggle_tool_signal(self, message: Dict):
         tool = message.get("tool", None)
         active = message.get("active", False)
         self._update_action_buttons(tool, active)
         self._update_cursor()
 
-    def on_toggle_grid_signal(self, message: dict):
+    def on_toggle_grid_signal(self, message: Dict):
         self.ui.grid_button.setChecked(message.get("show_grid", True))
 
     def _update_action_buttons(self, tool, active):
@@ -211,9 +202,7 @@ class CanvasWidget(BaseWidget):
         self.do_draw()
 
     def do_draw(self, force_draw: bool = False):
-        self.emit_signal(
-            SignalCode.SCENE_DO_DRAW_SIGNAL, {"force_draw": force_draw}
-        )
+        self.api.art.canvas.do_draw(force_draw)
         self.ui.canvas_container_size = (
             self.ui.canvas_container.viewport().size()
         )
