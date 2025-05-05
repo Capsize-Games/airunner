@@ -786,3 +786,13 @@ class API(App):
 
     def reset_paths(self):
         self.emit_signal(SignalCode.APPLICATION_RESET_PATHS_SIGNAL)
+
+    def application_settings_changed(self, setting_name: str, column_name: str, val: Any):
+        self.emit_signal(
+            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
+            {
+                "setting_name": setting_name,
+                "column_name": column_name,
+                "value": val,
+            },
+        )
