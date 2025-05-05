@@ -7,6 +7,7 @@ import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
 from PySide6.QtGui import QImage
 from PySide6.QtCore import Qt, QPoint, QRect, QPointF
+from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import (
     QEnterEvent,
     QDragEnterEvent,
@@ -241,6 +242,7 @@ class CustomScene(
                 export_image(image, file_path)
 
     def on_import_image_signal(self):
+        print("IMPORT IMAGE")
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",
@@ -276,6 +278,7 @@ class CustomScene(
         self._load_image_from_object(image)
 
     def on_load_image_signal(self, image_path: str):
+        print("on_load_image_signal")
         self._add_image_to_undo()
         image = self._load_image(image_path)
         if self.application_settings.resize_on_paste:
@@ -631,11 +634,27 @@ class CustomScene(
         # Save the current position before updating the item
         old_pos = self.item.pos() if self.item else QPointF(0, 0)
 
+        if self.item is not None:
+            x = self.image_pivot_point.x()
+            y = self.image_pivot_point.y()
+        else:
+            x = self.active_grid_settings.pos_x
+            y = self.active_grid_settings.pos_y
+
         self.set_item(self.image)
+
         self.set_painter(self.image)
 
         # If we had an original position stored for the previous item, use it for the new item
-        if self.item:
+        if self.item is not None:
+            # set position to active grid area
+            if self.item is not None:
+                self.item.setPos(
+                    x,
+                    y,
+                )
+                self.parent.updateImagePositions()
+
             # Store the position if not already tracked
             if self.item not in self._original_item_positions:
                 # Use the old position if it was a replacement item
@@ -646,9 +665,7 @@ class CustomScene(
 
             # Make sure item is visible with priority rendering
             self.item.setVisible(True)
-            self.item.setZValue(
-                5
-            )  # Higher Z ensures it appears above background
+            self.item.setZValue(5)
 
             # Force immediate update of the image area
             self.update(self.item.boundingRect())
@@ -656,10 +673,6 @@ class CustomScene(
             # Make sure the view's viewport also gets updated
             if self.views():
                 self.views()[0].viewport().update()
-
-                # Force immediate event processing to display the image faster
-                from PySide6.QtWidgets import QApplication
-
                 QApplication.processEvents()
 
     def stop_painter(self):
@@ -826,27 +839,26 @@ class CustomScene(
         canvas_offset = self.get_canvas_offset()
 
         # Check for existing stored position in drawing_pad_settings
-        use_settings_position = False
         settings_x = self.drawing_pad_settings.x_pos
         settings_y = self.drawing_pad_settings.y_pos
 
-        if settings_x is not None and settings_y is not None:
-            use_settings_position = True
-            root_point = QPoint(settings_x, settings_y)
-
-        # If no position in settings, use outpaint box or default to center
-        if not use_settings_position and outpaint_box_rect:
+        if outpaint_box_rect:
             if is_outpaint:
+                print("root point from _handle_outpaint")
                 image, root_point, _pivot_point = self._handle_outpaint(
                     outpaint_box_rect, image
                 )
             else:
-                # This is the key part - ensure we use the absolute position from outpaint_box_rect
-                # exactly as provided, which should match the active grid area's absolute position
+                print("root point from outpaint box")
                 root_point = QPoint(outpaint_box_rect.x, outpaint_box_rect.y)
-        elif not use_settings_position:
-            # Default to center position
+        elif settings_x is not None and settings_y is not None:
+            print("root point from settings")
+            root_point = QPoint(settings_x, settings_y)
+        else:
+            print("root point not set default is 0")
             root_point = QPoint(0, 0)
+
+        print("ADDING IMAGE TO ROOT POINT", root_point)
 
         q_image = ImageQt.ImageQt(image)
 

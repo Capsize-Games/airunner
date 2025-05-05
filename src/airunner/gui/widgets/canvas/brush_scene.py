@@ -254,17 +254,18 @@ class BrushScene(CustomScene):
             self.update_drawing_pad_settings("mask", base_64_image)
         else:
             # For normal image layer
-            image = ImageQt.fromqimage(self.active_image)
-            base_64_image = convert_image_to_binary(image)
-            # Update both database object and in-memory settings with the same base64 image
-            drawing_pad_settings.image = base_64_image
-            self.update_drawing_pad_settings("image", base_64_image)
+            if self.active_image is not None:
+                image = ImageQt.fromqimage(self.active_image)
+                base_64_image = convert_image_to_binary(image)
+                # Update both database object and in-memory settings with the same base64 image
+                drawing_pad_settings.image = base_64_image
+                self.update_drawing_pad_settings("image", base_64_image)
 
-            if (
-                self.current_tool is CanvasToolName.BRUSH
-                or self.current_tool is CanvasToolName.ERASER
-            ):
-                self.api.art.canvas.generate_mask()
+                if (
+                    self.current_tool is CanvasToolName.BRUSH
+                    or self.current_tool is CanvasToolName.ERASER
+                ):
+                    self.api.art.canvas.generate_mask()
 
         # Ensure changes are saved to database
         drawing_pad_settings.save()
