@@ -122,15 +122,11 @@ class InputImageScene(BrushScene):
                 model.save()
 
             if self.drawing_pad_settings.enable_automatic_drawing:
-                self.emit_signal(SignalCode.DO_GENERATE_SIGNAL)
+                self.api.art.send_request()
 
         # Clear drawing state
         self._is_drawing = False
         self._is_erasing = False
-
-        # No need to call super() as we don't want the BrushScene behavior
-        # but we do want the signal
-        self.emit_signal(self.current_settings.__tablename__ + "_updated")
 
         return True  # Event handled
 

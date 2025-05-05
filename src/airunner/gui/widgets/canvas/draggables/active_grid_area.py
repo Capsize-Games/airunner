@@ -217,10 +217,8 @@ class ActiveGridArea(DraggablePixmap):
 
             # Emit signal if we moved
             if has_moved:
-                self.emit_signal(SignalCode.GENERATE_MASK)
-                self.emit_signal(
-                    SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED
-                )
+                self.api.art.canvas.generate_mask()
+                self.api.art.active_grid_area_updated()
 
                 # Save the snapped absolute position
                 if (
@@ -235,13 +233,6 @@ class ActiveGridArea(DraggablePixmap):
                     )
                     self.update_active_grid_settings(
                         "pos_y", int(self._current_snapped_pos[1])
-                    )
-                    # Update persistent settings
-                    self.settings.setValue(
-                        "active_grid_pos_x", int(self._current_snapped_pos[0])
-                    )
-                    self.settings.setValue(
-                        "active_grid_pos_y", int(self._current_snapped_pos[1])
                     )
 
             # Accept the event

@@ -62,7 +62,7 @@ class LoraWidget(BaseWidget):
         self.ui.enabledCheckbox.setChecked(val)
         self.ui.enabledCheckbox.blockSignals(False)
         self.update_lora(self.current_lora)
-        self.emit_signal(SignalCode.LORA_STATUS_CHANGED)
+        self.api.art.lora.status_changed()
 
     @Slot(str)
     def action_text_changed_trigger_word(self, val):
@@ -71,7 +71,7 @@ class LoraWidget(BaseWidget):
 
     @Slot()
     def action_clicked_button_deleted(self):
-        self.emit_signal(SignalCode.LORA_DELETE_SIGNAL, {"lora_widget": self})
+        self.api.art.lora.delete(self)
 
     def create_trigger_word_widgets(self, lora, defer=False):
         if defer:
