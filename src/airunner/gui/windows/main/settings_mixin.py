@@ -850,11 +850,8 @@ class SettingsMixin:
     def __settings_updated(
         self, setting_name=None, column_name=None, val=None
     ):
-        self.emit_signal(
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
-            {
-                "setting_name": setting_name,
-                "column_name": column_name,
-                "value": val,
-            },
+        self.api.application_settings_changed(
+            setting_name=setting_name,
+            column_name=column_name,
+            val=val,
         )
