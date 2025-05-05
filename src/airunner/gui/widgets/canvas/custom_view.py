@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Any, Callable
 
 from PySide6 import QtGui
 from PySide6.QtCore import (
@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QGraphicsItem,
 )
 
-from airunner.enums import CanvasToolName, SignalCode, CanvasType
+from airunner.enums import CanvasToolName, SignalCode, CanvasType, QueueType
 from airunner.gui.widgets.canvas.grid_graphics_item import GridGraphicsItem
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.image import convert_image_to_binary
@@ -419,8 +419,7 @@ class CustomGraphicsView(
             self.canvas_offset -= delta
             self.last_pos = event.pos()
             if not self._pan_update_timer.isActive():
-                self._do_pan_update()
-                self._pan_update_timer.start(16)  # ~60 FPS
+                self._pan_update_timer.start(1)
             else:
                 self._pending_pan_event = True
             event.accept()
@@ -433,7 +432,7 @@ class CustomGraphicsView(
         self.draw_grid()
         if self._pending_pan_event:
             self._pending_pan_event = False
-            self._pan_update_timer.start(16)
+            self._pan_update_timer.start(1)
 
     def showEvent(self, event):
         super().showEvent(event)
