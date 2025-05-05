@@ -41,7 +41,7 @@ extras_require = {
         "sentence_transformers==3.4.1",
         "sounddevice==0.5.1",
         "pyttsx3==2.91",
-        "cryptography==44.0.0",
+        "cryptography==44.0.3",
         "llama-index==0.12.14",
         "llama-index-readers-file==0.4.4",
         "llama-index-readers-web==0.3.5",
