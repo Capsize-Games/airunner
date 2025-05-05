@@ -121,7 +121,6 @@ class CustomGraphicsView(
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_tool_changed_signal,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
             SignalCode.SET_CANVAS_COLOR_SIGNAL: self.set_canvas_color,
-            SignalCode.CANVAS_DO_DRAW_SELECTION_AREA_SIGNAL: self.draw_selected_area,
             SignalCode.UPDATE_SCENE_SIGNAL: self.update_scene,
             SignalCode.CANVAS_CLEAR_LINES_SIGNAL: self.clear_lines,
             SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
@@ -231,8 +230,6 @@ class CustomGraphicsView(
         # 4. Set active grid area to this centered position
         self.update_active_grid_settings("pos_x", int(pos_x))
         self.update_active_grid_settings("pos_y", int(pos_y))
-        self.settings.setValue("active_grid_pos_x", int(pos_x))
-        self.settings.setValue("active_grid_pos_y", int(pos_y))
 
         # 5. If there's an image in the scene, update its position to match the active grid area
         if self.scene and hasattr(self.scene, "item") and self.scene.item:
@@ -343,58 +340,6 @@ class CustomGraphicsView(
         if item.scene() == self.scene:
             self.scene.removeItem(item)
 
-    def draw_selected_area(self):
-        """
-        Draw the selected active grid area container after user selection.
-        """
-        selection_start_pos = self.scene.selection_start_pos
-        selection_stop_pos = self.scene.selection_stop_pos
-
-        # If selection is in progress, hide the grid area
-        if selection_stop_pos is None and selection_start_pos is not None:
-            if self.active_grid_area:
-                self.remove_scene_item(self.active_grid_area)
-                self.active_grid_area = None
-            return
-
-        # If selection finished, update settings and show grid area
-        if selection_start_pos is not None and selection_stop_pos is not None:
-            rect = QRect(selection_start_pos, selection_stop_pos).normalized()
-
-            # Calculate width/height (ensure divisibility by 8, min size)
-            width = max(
-                self.grid_settings.cell_size, rect.width() - (rect.width() % 8)
-            )
-            height = max(
-                self.grid_settings.cell_size,
-                rect.height() - (rect.height() % 8),
-            )
-
-            # Calculate the ABSOLUTE top-left position based on selection + current offset
-            absolute_x = rect.left() + self.canvas_offset.x()
-            absolute_y = rect.top() + self.canvas_offset.y()
-
-            # Update settings with the new absolute position and size
-            self.update_active_grid_settings("pos_x", int(round(absolute_x)))
-            self.update_active_grid_settings("pos_y", int(round(absolute_y)))
-            # Also update persistent QSettings
-            self.settings.setValue("active_grid_pos_x", int(round(absolute_x)))
-            self.settings.setValue("active_grid_pos_y", int(round(absolute_y)))
-            self.settings.sync()
-
-            # Update size settings (these might not need offset adjustment)
-            self.update_generator_settings("width", width)
-            self.update_generator_settings("height", height)
-            self.update_application_settings("working_width", width)
-            self.update_application_settings("working_height", height)
-
-            # Clear the temporary selection rectangle from the scene
-            self.scene.clear_selection()
-
-        # Ensure the active grid area is shown/updated at the new position
-        self.show_active_grid_area()  # This will create/add if needed and set correct display pos
-        self.api.art.active_grid_area_updated()
-
     def show_active_grid_area(self):
         if not self.__do_show_active_grid_area:
             # Ensure it's removed if disabled
@@ -439,8 +384,6 @@ class CustomGraphicsView(
             # Save this initial absolute position
             self.update_active_grid_settings("pos_x", int(round(absolute_x)))
             self.update_active_grid_settings("pos_y", int(round(absolute_y)))
-            self.settings.setValue("active_grid_pos_x", int(round(absolute_x)))
-            self.settings.setValue("active_grid_pos_y", int(round(absolute_y)))
             self.settings.sync()
 
         # Calculate and set the display position

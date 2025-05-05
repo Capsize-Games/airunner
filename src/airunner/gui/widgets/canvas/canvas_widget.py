@@ -1,6 +1,6 @@
 from typing import Optional, Dict
 
-from PySide6.QtCore import Qt, QPoint, QTimer
+from PySide6.QtCore import Qt, QPoint
 from PySide6.QtCore import Slot
 
 from airunner.gui.cursors.circle_brush import circle_cursor
@@ -133,15 +133,15 @@ class CanvasWidget(BaseWidget):
 
     @Slot(bool)
     def on_brush_button_toggled(self, val: bool):
-        self.toggle_tool(CanvasToolName.BRUSH, val)
+        self.api.art.canvas.toggle_tool(CanvasToolName.BRUSH, val)
 
     @Slot(bool)
     def on_eraser_button_toggled(self, val: bool):
-        self.toggle_tool(CanvasToolName.ERASER, val)
+        self.api.art.canvas.toggle_tool(CanvasToolName.ERASER, val)
 
     @Slot(bool)
     def on_active_grid_area_button_toggled(self, val: bool):
-        self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, val)
+        self.api.art.canvas.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, val)
 
     def on_toggle_tool_signal(self, message: dict):
         tool = message.get("tool", None)
