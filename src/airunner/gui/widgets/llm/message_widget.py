@@ -203,12 +203,7 @@ class MessageWidget(BaseWidget):
                     conversation.value = messages[0 : self.message_id]
                 session.add(conversation)
                 session.commit()
-            self.emit_signal(
-                SignalCode.DELETE_MESSAGES_AFTER_ID,
-                {
-                    "message_id": self.message_id,
-                },
-            )
+            self.api.llm.delete_messages_after_id(self.message_id)
             self.setParent(None)
             QTimer.singleShot(0, self.deleteLater)
 
