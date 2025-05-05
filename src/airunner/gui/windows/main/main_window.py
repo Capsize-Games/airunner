@@ -318,7 +318,7 @@ class MainWindow(
 
     @Slot()
     def on_actionRecenter_triggered(self):
-        self.emit_signal(SignalCode.RECENTER_GRID_SIGNAL)
+        self.api.canvas.recenter_grid()
 
     @Slot()
     def on_actionReset_Settings_2_triggered(self):
@@ -342,43 +342,43 @@ class MainWindow(
 
     @Slot()
     def on_actionExport_image_button_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
+        self.api.canvas.export_image()
 
     @Slot()
     def on_actionImport_image_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
+        self.api.canvas.import_image()
 
     @Slot()
     def on_artActionNew_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_CLEAR)
+        self.api.canvas.clear()
 
     @Slot()
     def on_actionUndo_triggered(self):
-        self.emit_signal(SignalCode.UNDO_SIGNAL)
+        self.api.canvas.undo()
 
     @Slot()
     def on_actionRedo_triggered(self):
-        self.emit_signal(SignalCode.REDO_SIGNAL)
+        self.api.canvas.redo()
 
     @Slot()
     def on_actionPaste_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
+        self.api.canvas.paste_image()
 
     @Slot()
     def on_actionCopy_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
+        self.api.canvas.copy_image()
 
     @Slot()
     def on_actionCut_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
+        self.api.canvas.cut_image()
 
     @Slot()
     def on_actionRotate_90_clockwise_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
+        self.api.canvas.rotate_image_90_clockwise()
 
     @Slot()
     def on_actionRotate_90_counter_clockwise_triggered(self):
-        self.emit_signal(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
+        self.api.canvas.rotate_image_90_counterclockwise()
 
     @Slot()
     def on_actionClear_all_prompts_triggered(self):
@@ -428,9 +428,8 @@ class MainWindow(
     def action_toggle_mask_layer(self, val: bool):
         if val is True and self.drawing_pad_mask is None:
             self._generate_drawingpad_mask()
-
         self.update_drawing_pad_settings("mask_layer_enabled", val)
-        self.emit_signal(SignalCode.MASK_LAYER_TOGGLED)
+        self.api.canvas.mask_layer_toggled()
 
     @Slot(bool)
     def action_outpaint_toggled(self, val: bool):
@@ -485,7 +484,7 @@ class MainWindow(
     @Slot(bool)
     def on_actionToggle_Grid_toggled(self, val: bool):
         self.update_grid_settings("show_grid", val)
-        self.emit_signal(SignalCode.TOGGLE_GRID, {"show_grid": val})
+        self.api.canvas.toggle_grid(val)
 
     @Slot(bool)
     def on_actionToggle_LLM_toggled(self, val: bool):
@@ -498,7 +497,7 @@ class MainWindow(
         else:
             self.update_application_settings("nsfw_filter", val)
             self.toggle_nsfw_filter()
-            self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
+            self.api.art.load_safety_checker()
 
     @Slot(bool)
     def on_actionToggle_Speech_to_Text_toggled(self, val: bool):
@@ -565,15 +564,12 @@ class MainWindow(
 
     @Slot()
     def on_actionNew_Conversation_triggered(self):
-        self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
+        self.api.llm.clear_history()
 
     @Slot()
     def on_actionDelete_conversation_triggered(self):
         current_conversation = self.llm_generator_settings.current_conversation
-        self.emit_signal(
-            SignalCode.CONVERSATION_DELETED,
-            {"conversation_id": current_conversation.id},
-        )
+        self.api.llm.converation_deleted(current_conversation.id)
 
     def _action_reset_settings(self):
         reply = QMessageBox.question(
@@ -682,25 +678,15 @@ class MainWindow(
             self.update_chatbot(
                 "target_files", [os.path.join(filepath, filename)]
             )
-            self.emit_signal(
-                SignalCode.RAG_RELOAD_INDEX_SIGNAL,
-                {"target_files": self.chatbot.target_files},
-            )
-            self.emit_signal(
-                SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,
-                {
-                    "llm_request": True,
-                    "request_data": {
-                        "action": LLMActionType.RAG,
-                        "prompt": "Summarize the text and provide a synopsis of the content. "
-                        "Be concise and informative.",
-                        "llm_request": LLMRequest.from_default(),
-                    },
-                },
+            self.api.llm.reload_rag(self.chatbot.target_files)
+            self.api.llm.send_request(
+                action=LLMActionType.RAG,
+                prompt="Summarize the text and provide a synopsis of the content. Be concise and informative.",
+                llm_request=LLMRequest.from_default(),
             )
 
     def show_layers(self):
-        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        self.api.canvas.show_layers()
 
     def on_reset_paths_signal(self):
         self.reset_path_settings()
@@ -821,13 +807,10 @@ class MainWindow(
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
-        self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
+        self.api.clear_status_message()
         self.initialize_widget_elements()
         self._load_plugins()
-        self.emit_signal(
-            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL,
-            {"main_window": self},
-        )
+        self.api.main_window_loaded(self)
 
         if not AIRUNNER_DISCORD_URL:
             self.ui.actionDiscord.deleteLater()
@@ -910,7 +893,7 @@ class MainWindow(
         self.initialized = True
 
     def layer_opacity_changed(self, _attr_name, value=None, _widget=None):
-        self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
+        self.api.canvas.layer_opacity_changed(value)
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -942,10 +925,7 @@ class MainWindow(
 
     def on_nsfw_content_detected_signal(self):
         # display message in status
-        self.emit_signal(
-            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-            AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE,
-        )
+        self.api.application_error(AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE)
 
     def closeEvent(self, event):
         event.ignore()
@@ -973,7 +953,7 @@ class MainWindow(
     def quit(self):
         self.logger.debug("Quitting")
         self.save_state()
-        self.emit_signal(SignalCode.QUIT_APPLICATION)
+        self.api.quit_application()
 
     def handle_quit_application_signal(self):
         self.hide()
@@ -1277,14 +1257,13 @@ class MainWindow(
                 "show_nsfw_warning", show_nsfw_warning
             )
         self.toggle_nsfw_filter()
-        self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL)
+        self.api.art.unload_safety_checker()
 
     ###### End window handlers ######
 
     def show_update_message(self):
-        self.emit_signal(
-            SignalCode.APPLICATION_STATUS_INFO_SIGNAL,
-            f"New version available: {self.latest_version}",
+        self.api.application_status(
+            f"New version available: {self.latest_version}"
         )
 
     def show_update_popup(self):
@@ -1395,10 +1374,7 @@ class MainWindow(
 
     def toggle_tool(self, tool: CanvasToolName, active: bool):
         self.update_application_settings("current_tool", tool.value)
-        self.emit_signal(
-            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL,
-            {"tool": tool, "active": active},
-        )
+        self.api.canvas.tool_changed(tool, active)
 
     def _initialize_window(self):
         self.center()
@@ -1425,7 +1401,7 @@ class MainWindow(
     def clear_all_prompts(self):
         self.prompt = ""
         self.negative_prompt = ""
-        self.emit_signal(SignalCode.CLEAR_PROMPTS)
+        self.api.clear_prompts()
 
     def new_batch(self, index, image, data):
         self.generator_tab_widget.new_batch(index, image, data)

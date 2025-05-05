@@ -1,7 +1,7 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Any
 
 from PySide6.QtWidgets import QDialog, QVBoxLayout
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, QPoint
 
 from airunner.app import App
 from airunner.handlers.llm.llm_request import LLMRequest
@@ -68,6 +68,48 @@ class TTSAPIService(APIServiceBase):
 
 
 class CanvasAPIService(APIServiceBase):
+    def recenter_grid(self):
+        """
+        Emit a signal to recenter the grid.
+        """
+        self.emit_signal(SignalCode.RECENTER_GRID_SIGNAL)
+
+    def toggle_grid(self, val: bool):
+        self.emit_signal(SignalCode.TOGGLE_GRID, {"show_grid": val})
+
+    def generate_mask(self):
+        """
+        Emit a signal to generate a mask.
+        """
+        self.emit_signal(SignalCode.GENERATE_MASK)
+
+    def image_updated(self):
+        """
+        Emit a signal indicating that the canvas image has been updated.
+        """
+        self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
+
+    def update_current_layer(self, point: QPoint):
+        self.emit_signal(
+            SignalCode.LAYER_UPDATE_CURRENT_SIGNAL,
+            {"pivot_point_x": point.x(), "pivot_point_y": point.y()},
+        )
+
+    def mask_updated(self):
+        """
+        Emit a signal indicating that the mask has been updated.
+        """
+        self.emit_signal(SignalCode.MASK_UPDATED)
+
+    def brush_color_changed(self, color: str):
+        """
+        Emit a signal when the brush color is changed.
+        :param color: The new color of the brush.
+        """
+        self.emit_signal(
+            SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, {"color": color}
+        )
+
     def image_from_path(self, path: str):
         """
         Emit a signal to load an image from the given path.
@@ -84,11 +126,126 @@ class CanvasAPIService(APIServiceBase):
         """
         self.emit_signal(SignalCode.CANVAS_CLEAR, {})
 
+    def undo(self):
+        """
+        Emit a signal to undo the last action on the canvas.
+        """
+        self.emit_signal(SignalCode.UNDO_SIGNAL)
+
+    def redo(self):
+        """
+        Emit a signal to redo the last undone action on the canvas.
+        """
+        self.emit_signal(SignalCode.REDO_SIGNAL)
+
+    def import_image(self):
+        """
+        Emit a signal to import an image into the canvas.
+        """
+        self.emit_signal(SignalCode.CANVAS_IMPORT_IMAGE_SIGNAL)
+
+    def export_image(self):
+        """
+        Emit a signal to export the current canvas image.
+        """
+        self.emit_signal(SignalCode.CANVAS_EXPORT_IMAGE_SIGNAL)
+
+    def paste_image(self):
+        """
+        Emit a signal to paste an image into the canvas.
+        """
+        self.emit_signal(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
+
+    def copy_image(self):
+        """
+        Emit a signal to copy the current canvas image.
+        """
+        self.emit_signal(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
+
+    def cut_image(self):
+        """
+        Emit a signal to cut the current canvas image.
+        """
+        self.emit_signal(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
+
+    def rotate_image_90_clockwise(self):
+        """
+        Emit a signal to rotate the current canvas image by 90 degrees.
+        """
+        self.emit_signal(SignalCode.CANVAS_ROTATE_90_CLOCKWISE_SIGNAL)
+
+    def rotate_image_90_counterclockwise(self):
+        """
+        Emit a signal to rotate the current canvas image by 90 degrees counterclockwise.
+        """
+        self.emit_signal(SignalCode.CANVAS_ROTATE_90_COUNTER_CLOCKWISE_SIGNAL)
+
+    def mask_layer_toggled(self):
+        """
+        Emit a signal to toggle the mask layer.
+        """
+        self.emit_signal(SignalCode.MASK_LAYER_TOGGLED)
+
+    def show_layers(self):
+        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+
+    def layer_opacity_changed(self, value: int):
+        self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
+
+    def toggle_tool(self, tool: str, active: bool):
+        self.emit_signal(
+            SignalCode.TOGGLE_TOOL,
+            {"tool": tool, "active": active},
+        )
+
+    def tool_changed(self, tool: str, active: bool):
+        self.emit_signal(
+            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL,
+            {"tool": tool, "active": active},
+        )
+
+    def do_draw(self, force: bool = False):
+        self.emit_signal(
+            SignalCode.SCENE_DO_DRAW_SIGNAL, {"force_draw": force}
+        )
+
+    def clear_history(self):
+        self.emit_signal(SignalCode.HISTORY_UPDATED, {"undo": 0, "redo": 0})
+
+    def update_history(self, undo: int, redo: int):
+        """
+        Emit a signal to update the history of the canvas.
+        :param undo: The number of undo actions available.
+        :param redo: The number of redo actions available.
+        """
+        self.emit_signal(
+            SignalCode.HISTORY_UPDATED,
+            {"undo": undo, "redo": redo},
+        )
+
+    def update_cursor(self, event: Any, apply_cursor: bool):
+        self.emit_signal(
+            SignalCode.CANVAS_UPDATE_CURSOR,
+            {"event": event, "apply_cursor": apply_cursor},
+        )
+
+    def zoom_level_changed(self):
+        self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
+
+    def interrupt_image_generation(self):
+        self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
+
 
 class ARTAPIService(APIServiceBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
+
+    def load_safety_checker(self):
+        self.emit_signal(SignalCode.SAFETY_CHECKER_LOAD_SIGNAL)
+
+    def unload_safety_checker(self):
+        self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL)
 
     def lora_updated(self):
         """
@@ -128,6 +285,9 @@ class ARTAPIService(APIServiceBase):
             SignalCode.SD_PIPELINE_LOADED_SIGNAL,
             {"generator_section": section},
         )
+    
+    def generate_image_signal(self):
+        self.emit_signal(SignalCode.SD_GENERATE_IMAGE_SIGNAL)
 
     def llm_image_generated(
         self,
@@ -157,6 +317,9 @@ class ARTAPIService(APIServiceBase):
                 }
             },
         )
+
+    def stop_progress_bar(self):
+        self.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
 
 
 class ChatbotAPIService(APIServiceBase):
@@ -203,6 +366,18 @@ class LLMAPIService(APIServiceBase):
         """
         self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL, {})
 
+    def converation_deleted(self, conversation_id: int):
+        self.emit_signal(
+            SignalCode.CONVERSATION_DELETED,
+            {"conversation_id": conversation_id},
+        )
+
+    def reload_rag(self, target_files: Optional[List[str]] = None):
+        self.emit_signal(
+            SignalCode.RAG_RELOAD_INDEX_SIGNAL,
+            {"target_files": target_files},
+        )
+
 
 class API(App):
     def __init__(self, *args, **kwargs):
@@ -210,6 +385,7 @@ class API(App):
         self.art = ARTAPIService(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
         self.stt = STTAPIService(emit_signal=self.emit_signal)
+        self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
 
         # Extract the initialize_app flag and pass the rest to the parent App class
         self._initialize_app = kwargs.pop("initialize_app", True)
@@ -379,3 +555,15 @@ class API(App):
 
     def download_complete(self):
         self.emit_signal(SignalCode.DOWNLOAD_COMPLETE)
+
+    def clear_status_message(self):
+        self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
+
+    def main_window_loaded(self, main_window: Any):
+        self.emit_signal(
+            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL,
+            {"main_window": main_window},
+        )
+
+    def clear_prompts(self):
+        self.emit_signal(SignalCode.CLEAR_PROMPTS)
