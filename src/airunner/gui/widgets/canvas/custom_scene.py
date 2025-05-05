@@ -242,7 +242,6 @@ class CustomScene(
                 export_image(image, file_path)
 
     def on_import_image_signal(self):
-        print("IMPORT IMAGE")
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",
@@ -278,7 +277,6 @@ class CustomScene(
         self._load_image_from_object(image)
 
     def on_load_image_signal(self, image_path: str):
-        print("on_load_image_signal")
         self._add_image_to_undo()
         image = self._load_image(image_path)
         if self.application_settings.resize_on_paste:
