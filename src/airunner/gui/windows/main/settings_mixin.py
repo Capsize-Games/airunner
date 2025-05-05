@@ -850,8 +850,9 @@ class SettingsMixin:
     def __settings_updated(
         self, setting_name=None, column_name=None, val=None
     ):
-        self.api.application_settings_changed(
-            setting_name=setting_name,
-            column_name=column_name,
-            val=val,
-        )
+        if self.api:
+            self.api.application_settings_changed(
+                setting_name=setting_name,
+                column_name=column_name,
+                val=val,
+            )
