@@ -203,25 +203,25 @@ class BaseDiffusersModelManager(BaseModelManager):
     @property
     def img2img_pipelines(
         self,
-    ) -> List[Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+    ) -> List[Any]:
         return []
 
     @property
     def txt2img_pipelines(
         self,
-    ) -> List[Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+    ) -> List[Any]:
         return []
 
     @property
     def controlnet_pipelines(
         self,
-    ) -> List[Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+    ) -> List[Any]:
         return []
 
     @property
     def outpaint_pipelines(
         self,
-    ) -> List[Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+    ) -> List[Any]:
         return []
 
     @property
@@ -507,7 +507,7 @@ class BaseDiffusersModelManager(BaseModelManager):
     @property
     def pipeline_map(
         self,
-    ) -> Dict[str, Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+    ) -> Dict[str, Any]:
         return {
             "txt2img": StableDiffusionPipeline,
             "img2img": StableDiffusionImg2ImgPipeline,

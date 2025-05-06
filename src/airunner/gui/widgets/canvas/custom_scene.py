@@ -1021,8 +1021,35 @@ class CustomScene(
         # Update the tracked state
         self._last_cursor_state = (event.type(), apply_cursor)
 
-        # Emit the cursor update signal
-        self.api.art.canvas.update_cursor(event, apply_cursor)
+        # Instead of creating a complex message object, let's modify the event if needed
+        # This ensures compatibility with the API expecting (event, apply_cursor)
+        evt = event
+
+        # If this is an enter/leave event that doesn't have .button() method,
+        # we need to create a simplified event object that works with the cursor logic
+        if not hasattr(event, "button"):
+            # Create a simple object with the necessary properties
+            class SimpleEvent:
+                def __init__(self, original_event):
+                    self.type_value = original_event.type()
+                    # Add properties that _update_cursor will check
+                    self.button_value = None
+                    self.buttons_value = Qt.MouseButton.NoButton
+
+                def type(self):
+                    return self.type_value
+
+                def button(self):
+                    return self.button_value
+
+                def buttons(self):
+                    return self.buttons_value
+
+            # Create our simplified event
+            evt = SimpleEvent(event)
+
+        # Call the API with the expected parameters
+        self.api.art.canvas.update_cursor(evt, apply_cursor)
 
     @staticmethod
     def _load_image(image_path: str) -> Image:
