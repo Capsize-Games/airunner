@@ -392,6 +392,9 @@ class CanvasAPIService(APIServiceBase):
             SignalCode.INPUT_IMAGE_SETTINGS_CHANGED,
             {"section": section, "setting": setting, "value": value},
         )
+    
+    def update_image_positions(self):
+        self.emit_signal(SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS)
 
 
 class ARTAPIService(APIServiceBase):
