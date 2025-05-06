@@ -176,13 +176,18 @@ class CanvasWidget(BaseWidget):
     def _update_cursor(self, message: Optional[Dict] = None):
         message = message or {}
         event = message.get("event", None)
+        current_tool = message.get("current_tool", self.current_tool)
         cursor = None
-        print("message", message)
-        print(self.current_tool)
-        if message.get("apply_cursor", None):
-            if event and event.button() == Qt.MouseButton.MiddleButton:
+
+        if message.get("apply_cursor", False):
+            # Handle different event types
+            if (
+                event
+                and hasattr(event, "button")
+                and event.button() == Qt.MouseButton.MiddleButton
+            ):
                 cursor = Qt.CursorShape.ClosedHandCursor
-            elif self.current_tool in (
+            elif current_tool in (
                 CanvasToolName.BRUSH,
                 CanvasToolName.ERASER,
             ):
@@ -191,18 +196,21 @@ class CanvasWidget(BaseWidget):
                     Qt.GlobalColor.transparent,
                     self.brush_settings.size,
                 )
-            elif self.current_tool is CanvasToolName.ACTIVE_GRID_AREA:
-                if event and event.buttons() == Qt.MouseButton.LeftButton:
+            elif current_tool is CanvasToolName.ACTIVE_GRID_AREA:
+                # For enterEvent (event is None) or events without left button pressed
+                if (
+                    event
+                    and hasattr(event, "buttons")
+                    and event.buttons() == Qt.MouseButton.LeftButton
+                ):
                     cursor = Qt.CursorShape.ClosedHandCursor
                 else:
                     cursor = Qt.CursorShape.OpenHandCursor
         else:
             cursor = Qt.CursorShape.ArrowCursor
 
-        print("CURSOR", cursor)
-
-        if cursor:
-            self.setCursor(cursor)
+        print(cursor)
+        self.setCursor(cursor)
 
     def toggle_grid(self, _val):
         self.do_draw()
