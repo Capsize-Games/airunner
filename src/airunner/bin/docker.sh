@@ -15,10 +15,12 @@ fi
 
 # Check for CI mode flag
 CI_MODE=0
+FAST_PACKAGE_TEST=0 # New flag for fast testing PyInstaller changes
+
 if [ "$1" == "--ci" ]; then
   CI_MODE=1
   shift
-  echo "Running in CI mode - local volume mounts disabled"
+  echo "Running in CI mode - local volume mounts disabled for Python userbase/cache"
 fi
 
 RTX50XX=0
@@ -26,6 +28,17 @@ if [ "$1" == "--50xx" ]; then
   RTX50XX=1
   shift
   echo "Using nightly torch version"
+fi
+
+# New: Check for --fast-package-test flag
+if [ "$1" == "--fast-package-test" ]; then
+  if [ "$CI_MODE" -eq 1 ]; then
+    FAST_PACKAGE_TEST=1
+    echo "Fast package test mode enabled: PyInstaller will use local code and skip rebuilding dependency images."
+  else
+    echo "Warning: --fast-package-test is intended for --ci mode."
+  fi
+  shift
 fi
 
 # Export HOST_UID and HOST_GID for the current user
@@ -234,15 +247,26 @@ fi
 
 if [ "$1" == "build_package" ]; then
   echo "Building for Linux production..."
+  ACTION_PARAMS="run --build --rm" # Default Docker Compose action parameters
+  ENV_PARAMS="" # Default environment parameters
+
+  if [ "$CI_MODE" -eq 1 ] && [ "$FAST_PACKAGE_TEST" -eq 1 ]; then
+    ACTION_PARAMS="run --rm" # Remove --build to use existing images
+    ENV_PARAMS="-e SKIP_BUTLER=1" # Add environment variable to skip butler
+    echo "Executing PyInstaller with local code changes (no dependency image rebuild)."
+    echo "Butler deployment will be skipped."
+  fi
+
   if [ "$CI_MODE" -eq 1 ]; then
     if [ "$RTX50XX" -eq 1 ]; then
       echo "Building with nightly torch version..."
-      $DOCKER_COMPOSE_BUILD_50XX_PACKAGE run --build --rm airunner_package_ci /app/package/pyinstaller/build_50xx.sh
+      $DOCKER_COMPOSE_BUILD_50XX_PACKAGE $ACTION_PARAMS $ENV_PARAMS airunner_package_ci /app/package/pyinstaller/build_50xx.sh
     else
       echo "Building with stable torch version..."
-      $DOCKER_COMPOSE_BUILD_PACKAGE run --build --rm airunner_package_ci /app/package/pyinstaller/build.sh
+      $DOCKER_COMPOSE_BUILD_PACKAGE $ACTION_PARAMS $ENV_PARAMS airunner_package_ci /app/package/pyinstaller/build.sh
     fi
   else
+    # Non-CI mode always rebuilds as per original logic
     $DOCKER_COMPOSE_BUILD_PACKAGE run --build --rm airunner_package /app/package/pyinstaller/build.sh
   fi
   exit 0

@@ -177,8 +177,12 @@ class CanvasWidget(BaseWidget):
         message = message or {}
         event = message.get("event", None)
         cursor = None
+        print("message", message)
+        print(self.current_tool)
         if message.get("apply_cursor", None):
-            if self.current_tool in (
+            if event and event.button() == Qt.MouseButton.MiddleButton:
+                cursor = Qt.CursorShape.ClosedHandCursor
+            elif self.current_tool in (
                 CanvasToolName.BRUSH,
                 CanvasToolName.ERASER,
             ):
@@ -194,6 +198,8 @@ class CanvasWidget(BaseWidget):
                     cursor = Qt.CursorShape.OpenHandCursor
         else:
             cursor = Qt.CursorShape.ArrowCursor
+
+        print("CURSOR", cursor)
 
         if cursor:
             self.setCursor(cursor)
