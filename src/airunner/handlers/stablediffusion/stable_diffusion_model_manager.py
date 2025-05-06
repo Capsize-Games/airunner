@@ -1,7 +1,6 @@
 from typing import Dict, Any, Type
 
 from diffusers import (
-    DiffusionPipeline,
     StableDiffusionPipeline,
     StableDiffusionImg2ImgPipeline,
     StableDiffusionInpaintPipeline,
@@ -50,7 +49,7 @@ class StableDiffusionModelManager(BaseDiffusersModelManager):
     @property
     def pipeline_map(
         self,
-    ) -> Dict[str, Type[DiffusionPipeline]]:
+    ) -> Dict[str, Any]:
         return {
             "txt2img": StableDiffusionPipeline,
             "img2img": StableDiffusionImg2ImgPipeline,
@@ -63,7 +62,7 @@ class StableDiffusionModelManager(BaseDiffusersModelManager):
     @property
     def _pipeline_class(
         self,
-    ) -> Type[DiffusionPipeline]:
+    ) -> Any:
         operation_type = "txt2img"
         if self.is_img2img:
             operation_type = "img2img"

@@ -2,7 +2,6 @@ import os
 from typing import Dict, List, Type, Any
 
 from diffusers import (
-    DiffusionPipeline,
     StableDiffusionXLPipeline,
     StableDiffusionXLImg2ImgPipeline,
     StableDiffusionXLInpaintPipeline,
@@ -116,7 +115,7 @@ class SDXLModelManager(StableDiffusionModelManager):
     @property
     def pipeline_map(
         self,
-    ) -> Dict[str, Type[DiffusionPipeline]]:
+    ) -> Dict[str, Any]:
         return {
             "txt2img": StableDiffusionXLPipeline,
             "img2img": StableDiffusionXLImg2ImgPipeline,
