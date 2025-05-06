@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Tuple, Optional, List
 from NodeGraphQt import NodesPaletteWidget
 from PySide6.QtWidgets import (
@@ -9,7 +10,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 from PySide6.QtCore import Slot
-from airunner.utils import is_windows
 
 from airunner.enums import SignalCode
 from airunner.gui.widgets.nodegraph.nodes import (
@@ -83,8 +83,9 @@ class NodeGraphWidget(BaseWidget):
         if self.current_workflow_id is not None:
             self._perform_load(self.current_workflow_id)
 
-        # check if on windows
-        if not is_windows():
+        # Check if framepack is available
+        here = os.path.dirname(__file__)
+        if os.path.exists(os.path.join(here, "../../FramePack")):
             from airunner.workers.framepack_worker import FramePackWorker
 
             self.framepack_worker = create_worker(FramePackWorker)

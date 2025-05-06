@@ -90,6 +90,7 @@ class CustomGraphicsView(
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
             SignalCode.RECENTER_GRID_SIGNAL: self.on_recenter_grid_signal,
             SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL: self.on_canvas_image_updated_signal,
+            SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS: self.updateImagePositions,
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
@@ -550,6 +551,15 @@ class CustomGraphicsView(
             self._middle_mouse_pressed = False
             self.last_pos = None
         super().mouseReleaseEvent(event)
+
+    def enterEvent(self, event: QEvent) -> None:
+        """
+        Handle the event when the mouse enters the CustomGraphicsView widget.
+        Sets the cursor to a crosshair for better visibility.
+        """
+        self.scene.enterEvent(event)
+        super().enterEvent(event)
+        self.setCursor(Qt.CursorShape.CrossCursor)
 
     def leaveEvent(self, event: QEvent) -> None:
         """
