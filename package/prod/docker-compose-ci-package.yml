@@ -27,4 +27,5 @@ services:
       - PIP_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/pip
     # Add volume mount for dist directory to allow build artifacts to be accessible
     volumes:
+      - ../../:/app:rw,z # Mount the entire project root to /app
       - ../../dist:/app/dist:rw,z

@@ -13,11 +13,19 @@ echo "============================================"
 echo ""
 cp /app/setup.py /app/dist/airunner/_internal/airunner/
 echo ""
-echo "============================================"
-echo "Deploying airunner to itch.io"
-echo "============================================"
-echo ""
-chown -R 1000:1000 dist
-LATEST_TAG=$(grep -oP '(?<=version=).*(?=,)' /app/setup.py | tr -d '"')
-echo "Latest tag: $LATEST_TAG"
-/home/appuser/butler/butler push /app/dist/airunner capsizegames/ai-runner:ubuntu_50xx --userversion $LATEST_TAG
+
+# Skip Butler deployment when SKIP_BUTLER environment variable is set
+if [ "${SKIP_BUTLER}" = "1" ]; then
+    echo "============================================"
+    echo "Skipping Butler deployment (SKIP_BUTLER=1)"
+    echo "============================================"
+else
+    echo "============================================"
+    echo "Deploying airunner to itch.io"
+    echo "============================================"
+    echo ""
+    chown -R 1000:1000 dist
+    LATEST_TAG=$(grep -oP '(?<=version=).*(?=,)' /app/setup.py | tr -d '"')
+    echo "Latest tag: $LATEST_TAG"
+    /home/appuser/butler/butler push /app/dist/airunner capsizegames/ai-runner:ubuntu_50xx --userversion $LATEST_TAG
+fi

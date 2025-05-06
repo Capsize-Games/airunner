@@ -3,6 +3,8 @@ import site
 import shutil
 import os
 from os.path import join
+# Import PyInstaller hook utilities
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
 base_path = "/app"
 # Correct the site-packages path for the CI environment
@@ -82,10 +84,8 @@ a = Analysis(
     datas=[
         (join(airunner_path, 'alembic.ini'), 'airunner'),
         (python_include_path, 'include/python3.10'),
-        # Use corrected site_packages_path variable for data entries
         (join(site_packages_path, 'inflect'), 'inflect'),
         (join(site_packages_path, 'controlnet_aux'), 'controlnet_aux'),
-        (join(site_packages_path, 'diffusers'), 'diffusers'),
         (join(site_packages_path, 'tiktoken'), 'tiktoken'),
         (join(site_packages_path, 'tiktoken_ext'), 'tiktoken_ext'),
         (join(site_packages_path, 'pydantic'), 'pydantic'),
@@ -93,8 +93,13 @@ a = Analysis(
         (join(site_packages_path, 'llama_index'), 'llama_index'),
         (join(site_packages_path, 'PySide6'), 'PySide6'),
         (join(site_packages_path, 'PySide6/Qt/plugins/platforms'), 'platforms'),
+        # Use collect_data_files to gather triton source and data files
+        *collect_data_files('triton', include_py_files=True),
+        *collect_data_files('torchao', include_py_files=True), # Add torchao sources
         (join(airunner_path, 'alembic'), 'airunner/alembic'),
         (join(airunner_path, 'alembic.ini'), '.'),
+        *copy_metadata('safetensors'), # Keep safetensors metadata
+        *collect_data_files('safetensors', include_py_files=True) # Keep safetensors data
     ],
     hiddenimports=[
         'airunner',
@@ -112,10 +117,12 @@ a = Analysis(
         'airunner.data.bootstrap.model_bootstrap_data',
         'airunner.data.bootstrap.pipeline_bootstrap_data',
         'airunner.data.bootstrap.prompt_templates_bootstrap_data',
+        
         'diffusers',
-        'diffusers.loaders',
-        'diffusers.loaders.ip_adapter',
-        'diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion',
+        # safetensors handling (remains in spec)
+        'safetensors',
+        *collect_submodules('safetensors'),
+
         'huggingface_hub.utils',
         'torch',
         'torch.jit',
@@ -142,8 +149,16 @@ a = Analysis(
         'PySide6',
         'scipy.special._cdflib',
         'pysqlite2',
+        'triton',
+        'triton.runtime',
+        'triton.runtime.driver',
+        'triton.backends',
+        'triton.backends.nvidia',
+        'torchao',
+        'torchao.kernel',
+        'torchao.quantization',
     ],
-    hookspath=[],
+    hookspath=['/app/package/pyinstaller/hooks'], # Added path to custom hooks
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
