@@ -202,6 +202,7 @@ This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
    ```
 3. **Install dependencies**  
    ```bash
+   pip install "typing-extensions==4.13.2"
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
    pip install -e .[all_dev]
    pip install -U timm
@@ -274,6 +275,21 @@ Or a single test:
 
 ```bash
 python -m unittest src/airunner/tests/test_prompt_weight_convert.py
+```
+
+---
+
+## Test CI Mode
+
+Test the build locally
+
+```bash
+./test_ci_mode.sh --fast-package-test
+```
+
+Or directly
+```bash
+./src/airunner/bin/docker.sh --ci --fast-package-test build_package
 ```
 
 ---

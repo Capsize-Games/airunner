@@ -135,7 +135,15 @@ done
 log_result "Test 7: Running full package build in CI mode"
 # Ensure dist is clean for this specific test if needed
 # rm -rf ./dist/* 
-./src/airunner/bin/docker.sh --ci build_package || log_error "Full package build failed"
+
+# Determine if we should use the fast test mode for PyInstaller changes
+PACKAGE_BUILD_ARGS=""
+if [[ " $@ " =~ " --fast-package-test " ]]; then
+  log_result "Fast package test mode enabled for Test 7."
+  PACKAGE_BUILD_ARGS="--fast-package-test"
+fi
+
+./src/airunner/bin/docker.sh --ci $PACKAGE_BUILD_ARGS build_package || log_error "Full package build failed"
 # Add checks here if needed, e.g., check for expected output in ./dist
 if [ -f "./dist/airunner-linux.tar.gz" ]; then # Or whatever the expected output is
     log_result "✅ Full package build completed successfully"

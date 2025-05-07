@@ -90,6 +90,7 @@ class CustomGraphicsView(
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
             SignalCode.RECENTER_GRID_SIGNAL: self.on_recenter_grid_signal,
             SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL: self.on_canvas_image_updated_signal,
+            SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS: self.updateImagePositions,
         }
         for k, v in signal_handlers.items():
             self.register(k, v)
@@ -405,10 +406,26 @@ class CustomGraphicsView(
             return
         super().mousePressEvent(event)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:
-            self._middle_mouse_pressed = False
             self.save_canvas_offset()
+            self._middle_mouse_pressed = False
+            self.last_pos = None
+
+            # After releasing middle mouse button, trigger a cursor update
+            # Pass a fake enter event to the scene to refresh the cursor
+            if self.scene:
+                # Create a simple "dummy" event just to trigger cursor update
+                class SimpleEvent:
+                    def __init__(self):
+                        pass
+
+                    def type(self):
+                        return QEvent.Type.Enter
+
+                # Tell the scene to update the cursor based on current tool
+                self.scene._handle_cursor(SimpleEvent(), True)
+
             event.accept()
             return
         super().mouseReleaseEvent(event)
@@ -549,7 +566,34 @@ class CustomGraphicsView(
             self.save_canvas_offset()
             self._middle_mouse_pressed = False
             self.last_pos = None
+
+            # After releasing middle mouse button, trigger a cursor update
+            # Pass a fake enter event to the scene to refresh the cursor
+            if self.scene:
+                # Create a simple "dummy" event just to trigger cursor update
+                class SimpleEvent:
+                    def __init__(self):
+                        pass
+
+                    def type(self):
+                        return QEvent.Type.Enter
+
+                # Tell the scene to update the cursor based on current tool
+                self.scene._handle_cursor(SimpleEvent(), True)
+
+            event.accept()
+            return
         super().mouseReleaseEvent(event)
+
+    def enterEvent(self, event: QEvent) -> None:
+        """
+        Handle the event when the mouse enters the CustomGraphicsView widget.
+        Let the scene handle the cursor based on the current tool.
+        """
+        self.scene.enterEvent(event)
+        super().enterEvent(event)
+        # Remove the forced crosshair cursor to let the custom cursor logic work
+        # self.setCursor(Qt.CursorShape.CrossCursor)  # This was forcing the plus sign cursor
 
     def leaveEvent(self, event: QEvent) -> None:
         """
