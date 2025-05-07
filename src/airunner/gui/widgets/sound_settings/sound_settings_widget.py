@@ -1,13 +1,12 @@
+import threading
 import time
 import sounddevice as sd
-from PySide6.QtCore import Qt, QThread, QObject, Signal
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.sound_settings.templates.sound_settings_ui import (
     Ui_SoundSettings,
 )
 from airunner.data.models import SoundSettings
 from airunner.enums import SignalCode
-from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 
 
 class SoundSettingsWidget(BaseWidget):
@@ -17,6 +16,7 @@ class SoundSettingsWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.load_devices()  # Ensure devices are loaded on initialization
         self.connect_signals()
+        self.monitoring = True
 
     def load_devices(self):
         # Populate comboboxes with available audio devices
@@ -87,22 +87,12 @@ class SoundSettingsWidget(BaseWidget):
                     sound_settings.id, recording_device=current_device
                 )
 
-        self.ui.microphoneLevelBar.setValue(
-            sound_settings.microphone_volume if sound_settings else 0
-        )
-        self.ui.inputLevelSlider.setValue(
-            sound_settings.microphone_volume if sound_settings else 0
-        )
-
     def connect_signals(self):
         self.ui.playbackComboBox.currentTextChanged.connect(
             self.update_playback_device
         )
         self.ui.recordingComboBox.currentTextChanged.connect(
             self.update_recording_device
-        )
-        self.ui.inputLevelSlider.valueChanged.connect(
-            self.update_microphone_volume
         )
 
     def update_playback_device(self, device):
