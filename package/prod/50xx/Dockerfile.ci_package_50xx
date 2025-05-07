@@ -1,0 +1,15 @@
+FROM ghcr.io/capsize-games/airunner/airunner:linux_build_runtime_50xx_ci
+
+WORKDIR /app
+
+ENV DEV_ENV=0
+ENV AIRUNNER_ENVIRONMENT="prod"
+ENV PYTHONOPTIMIZE=0
+ENV PYTHONUSERBASE=/home/appuser/.local/share/airunner/python
+ENV PATH=/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
+
+# Add CUDA debugging environment variables for 50xx GPU architecture
+ENV CUDA_LAUNCH_BLOCKING=1
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+ENV CUDA_MODULE_LOADING=LAZY
+ENV CUDA_VISIBLE_DEVICES=all
