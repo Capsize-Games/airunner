@@ -116,6 +116,7 @@ a = Analysis(
         (join(linux_lib, 'libtbb.so.2'), '.'),
         (join(linux_lib, 'libtbb.so.12.5'), '.'),
         (join(linux_lib, 'libtbb.so.12'), '.'),
+        (portaudio_path, '.'),
     ],
     datas=[
         (join(airunner_path, 'alembic.ini'), 'airunner'),

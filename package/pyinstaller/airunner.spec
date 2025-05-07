@@ -6,6 +6,7 @@ from os.path import join
 # Import PyInstaller hook utilities
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
+portaudio_path = '/usr/lib/x86_64-linux-gnu/libportaudio.so.2'
 base_path = "/app"
 # Correct the site-packages path for the CI environment
 site_packages_path = "/home/appuser/.local/share/airunner/python/lib/python3.10/site-packages"
@@ -80,6 +81,7 @@ a = Analysis(
         (join(site_packages_path, 'nvidia/cublas/lib/libcublas.so.12'), '.'),
         (join(site_packages_path, 'nvidia/cusparse/lib/libcusparse.so.12'), '.'),
         (join(site_packages_path, 'nvidia/cublas/lib/libcublasLt.so.12'), '.'),
+        (portaudio_path, '.'),
     ],
     datas=[
         (join(airunner_path, 'alembic.ini'), 'airunner'),
