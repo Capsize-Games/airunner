@@ -27,6 +27,7 @@ services:
       - HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface
       - HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface
       - PIP_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/pip
-    # Add volume mount for dist directory to allow build artifacts to be accessible
+    # Add volume mount for project directory and dist directory
     volumes:
+      - ../../../:/app:rw,z # Mount the entire project root to /app  
       - ../../../dist:/app/dist:rw,z

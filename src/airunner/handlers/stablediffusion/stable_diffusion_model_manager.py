@@ -1,22 +1,11 @@
-from typing import Dict, List, Any, Type
+from typing import Dict, Any, Type
 
-import diffusers
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
+from diffusers import (
     StableDiffusionPipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_img2img import (
     StableDiffusionImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import (
     StableDiffusionInpaintPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet import (
     StableDiffusionControlNetPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_img2img import (
     StableDiffusionControlNetImg2ImgPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint import (
     StableDiffusionControlNetInpaintPipeline,
 )
 from airunner.handlers.stablediffusion.base_diffusers_model_manager import (
@@ -60,7 +49,7 @@ class StableDiffusionModelManager(BaseDiffusersModelManager):
     @property
     def pipeline_map(
         self,
-    ) -> Dict[str, Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+    ) -> Dict[str, Any]:
         return {
             "txt2img": StableDiffusionPipeline,
             "img2img": StableDiffusionImg2ImgPipeline,
@@ -73,7 +62,7 @@ class StableDiffusionModelManager(BaseDiffusersModelManager):
     @property
     def _pipeline_class(
         self,
-    ) -> Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]:
+    ) -> Any:
         operation_type = "txt2img"
         if self.is_img2img:
             operation_type = "img2img"
