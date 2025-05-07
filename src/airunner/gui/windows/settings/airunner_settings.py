@@ -33,9 +33,6 @@ from airunner.gui.widgets.memory_preferences.memory_preferences_widget import (
 from airunner.gui.widgets.paths.paths_widget import PathsWidget
 from airunner.gui.widgets.tts.voice_settings_widget import VoiceSettingsWidget
 from airunner.gui.widgets.user.user_settings_widget import UserSettingsWidget
-from airunner.gui.widgets.sound_settings.sound_settings_widget import (
-    SoundSettingsWidget,
-)
 from airunner.gui.widgets.huggingface_settings.huggingface_settings_widget import (
     HuggingfaceSettingsWidget,
 )
@@ -50,6 +47,14 @@ from airunner.gui.windows.settings.templates.airunner_settings_ui import (
 )
 from airunner.gui.windows.base_window import BaseWindow
 from airunner.utils.settings import get_qsettings
+
+try:
+    from airunner.gui.widgets.sound_settings.sound_settings_widget import (
+        SoundSettingsWidget,
+    )
+except OSError as e:
+    SoundSettingsWidget = None
+    print("Error loading sound settings widget:", e)
 
 
 class HighlightDelegate(QStyledItemDelegate):
