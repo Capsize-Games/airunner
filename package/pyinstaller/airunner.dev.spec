@@ -81,6 +81,7 @@ a = Analysis(
         (join(base_path, python_env_path, 'lib/python3.10/site-packages/nvidia/cublas/lib/libcublas.so.12'), '.'),
         (join(base_path, python_env_path, 'lib/python3.10/site-packages/nvidia/cusparse/lib/libcusparse.so.12'), '.'),
         (join(base_path, python_env_path, 'lib/python3.10/site-packages/nvidia/cublas/lib/libcublasLt.so.12'), '.'),
+        (portaudio_path, '.'),
     ],
     datas=[
         (join(airunner_path, 'alembic.ini'), 'airunner'),
