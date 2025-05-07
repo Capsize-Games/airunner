@@ -260,7 +260,7 @@ if [ "$1" == "build_package" ]; then
   if [ "$CI_MODE" -eq 1 ]; then
     if [ "$RTX50XX" -eq 1 ]; then
       echo "Building with nightly torch version..."
-      $DOCKER_COMPOSE_BUILD_50XX_PACKAGE $ACTION_PARAMS $ENV_PARAMS airunner_package_ci /app/package/pyinstaller/build_50xx.sh
+      $DOCKER_COMPOSE_BUILD_50XX_PACKAGE $ACTION_PARAMS $ENV_PARAMS linux_package_50xx_ci /app/package/pyinstaller/build_50xx.sh
     else
       echo "Building with stable torch version..."
       $DOCKER_COMPOSE_BUILD_PACKAGE $ACTION_PARAMS $ENV_PARAMS airunner_package_ci /app/package/pyinstaller/build.sh
