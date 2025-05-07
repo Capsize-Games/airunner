@@ -27,7 +27,6 @@ from airunner.utils.application.ui_loader import (
     load_ui_file,
     load_ui_from_string,
 )
-from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.utils.application.mediator_mixin import MediatorMixin
 
@@ -393,6 +392,9 @@ class CanvasAPIService(APIServiceBase):
             {"section": section, "setting": setting, "value": value},
         )
 
+    def update_image_positions(self):
+        self.emit_signal(SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS)
+
 
 class ARTAPIService(APIServiceBase):
     def __init__(self, *args, **kwargs):
@@ -710,7 +712,6 @@ class API(App):
             SignalCode.SHOW_WINDOW_SIGNAL: self.show_hello_world_window,
             SignalCode.SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL: self.show_dynamic_ui_from_string,
         }
-        self.sounddevice_manager = SoundDeviceManager()
         super().__init__(*args, initialize_gui=initialize_gui, **kwargs)
         self._initialize_model_scanner()
 

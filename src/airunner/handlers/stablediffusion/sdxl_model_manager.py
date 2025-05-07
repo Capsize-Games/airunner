@@ -1,23 +1,12 @@
 import os
 from typing import Dict, List, Type, Any
 
-import diffusers
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+from diffusers import (
     StableDiffusionXLPipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2img import (
     StableDiffusionXLImg2ImgPipeline,
-)
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_inpaint import (
     StableDiffusionXLInpaintPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl import (
     StableDiffusionXLControlNetPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_sd_xl_img2img import (
     StableDiffusionXLControlNetImg2ImgPipeline,
-)
-from diffusers.pipelines.controlnet.pipeline_controlnet_inpaint_sd_xl import (
     StableDiffusionXLControlNetInpaintPipeline,
 )
 
@@ -126,7 +115,7 @@ class SDXLModelManager(StableDiffusionModelManager):
     @property
     def pipeline_map(
         self,
-    ) -> Dict[str, Type[diffusers.pipelines.pipeline_utils.DiffusionPipeline]]:
+    ) -> Dict[str, Any]:
         return {
             "txt2img": StableDiffusionXLPipeline,
             "img2img": StableDiffusionXLImg2ImgPipeline,

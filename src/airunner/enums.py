@@ -33,6 +33,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    CANVAS_UPDATE_IMAGE_POSITIONS = "canvas_update_image_positions"
     WIDGET_ELEMENT_CHANGED_SIGNAL = "widget_element_changed_signal"
     REFRESH_STYLESHEET_SIGNAL = "refresh_stylesheet_signal"
     NAVIGATE_TO_URL = "navigate_to_url"
