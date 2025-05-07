@@ -209,7 +209,6 @@ class CanvasWidget(BaseWidget):
         else:
             cursor = Qt.CursorShape.ArrowCursor
 
-        print(cursor)
         self.setCursor(cursor)
 
     def toggle_grid(self, _val):
