@@ -7,3 +7,12 @@ ENV AIRUNNER_ENVIRONMENT="prod"
 ENV PYTHONOPTIMIZE=0
 ENV PYTHONUSERBASE=/home/appuser/.local/share/airunner/python
 ENV PATH=/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
+
+# RTX 50xx compatibility settings
+ENV RTX_50XX_SUPPORT=1
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+ENV TORCH_USE_CUDA_DSA=1
+ENV TORCH_CUDNN_V8_API_ENABLED=1
+
+# Use PyTorch 2.x's torch.compile for incompatible ops
+ENV TORCH_COMPILE_MODE=reduce-overhead
