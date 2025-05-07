@@ -2,6 +2,7 @@
 import site
 import shutil
 import os
+import glob
 from os.path import join
 # Import PyInstaller hook utilities
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
@@ -17,9 +18,47 @@ linux_lib = '/usr/lib/x86_64-linux-gnu'
 nss_lib = linux_lib  # NSS libraries location
 gtk_lib = linux_lib  # GTK libraries location
 db_lib = linux_lib   # Database libraries location
-cuda_lib = '/usr/local/cuda-11/lib64'  # CUDA libraries location
+
+# Update CUDA paths for CUDA 12.x which supports 50xx GPUs
+cuda_lib = '/usr/local/cuda/lib64'  # Updated path for CUDA 12.x
+torch_lib = join(site_packages_path, 'torch/lib')  # PyTorch's bundled CUDA libraries
+
 qt_lib = join(site_packages_path, 'PySide6/Qt/lib/')
 python_include_path = "/usr/include/python3.10"
+
+# Get all necessary PyTorch bundled CUDA libraries
+torch_cuda_libs = []
+for lib_pattern in [
+    # JIT link libraries (critical for RTX 5080)
+    "libnvJitLink*.so*",
+    # Core CUDA libraries from PyTorch
+    "libcuda*.so*", 
+    "libcublas*.so*", 
+    "libcudnn*.so*", 
+    "libcufft*.so*",
+    "libcurand*.so*",
+    "libcusparse*.so*",
+    "libcusolver*.so*",
+    "libnvToolsExt*.so*",
+    "libnvrtc*.so*",
+]:
+    for cuda_so in glob.glob(join(torch_lib, lib_pattern)):
+        if os.path.isfile(cuda_so) and not os.path.islink(cuda_so):
+            torch_cuda_libs.append((cuda_so, '.'))
+
+# Get PyTorch's NVIDIA libraries 
+for nvidia_dir in ['cusparse', 'cublas', 'cudnn', 'cufft', 'curand', 'cusolver']:
+    nvidia_path = join(site_packages_path, f'nvidia/{nvidia_dir}/lib')
+    if os.path.exists(nvidia_path):
+        for lib_file in glob.glob(join(nvidia_path, f'lib{nvidia_dir}*.so*')):
+            if os.path.isfile(lib_file) and not os.path.islink(lib_file):
+                torch_cuda_libs.append((lib_file, f'nvidia/{nvidia_dir}/lib'))
+
+# Get key system CUDA libraries (if needed)
+system_cuda_libs = []
+for cuda_so in glob.glob(join(cuda_lib, "*.so*")):
+    if os.path.isfile(cuda_so) and not os.path.islink(cuda_so) and 'stubs' not in cuda_so:
+        system_cuda_libs.append((cuda_so, '.'))
 
 a = Analysis(
     [join(airunner_path, 'main.py')],
@@ -27,17 +66,16 @@ a = Analysis(
         join(base_path, 'src'),
     ],
     binaries=[
-        # Use the corrected site_packages_path variable
+        # ...existing binaries...
         (join(site_packages_path, 'tiktoken/_tiktoken.cpython-310-x86_64-linux-gnu.so'), 'tiktoken'),
-        (join(cudnn_lib, 'libcudnn_adv.so.9'), '.'),
-        (join(cudnn_lib, 'libcudnn_cnn.so.9'), '.'),
-        (join(cudnn_lib, 'libcudnn_engines_precompiled.so.9'), '.'),
-        (join(cudnn_lib, 'libcudnn_engines_runtime_compiled.so.9'), '.'),
-        (join(cudnn_lib, 'libcudnn_graph.so.9'), '.'),
-        (join(cudnn_lib, 'libcudnn_heuristic.so.9'), '.'),
-        (join(cudnn_lib, 'libcudnn_ops.so.9'), '.'),
-        (join(cudnn_lib, 'libcudnn.so.9'), '.'),
-        # QT libraries - Use corrected qt_lib variable
+        
+        # Add PyTorch's CUDA libraries first (prioritize these)
+        *torch_cuda_libs,
+        
+        # Add system CUDA libraries as fallback
+        *system_cuda_libs,
+        
+        # QT libraries
         (join(qt_lib, 'libQt6XcbQpa.so.6'), '.'),
         (join(qt_lib, 'libQt6DBus.so.6'), '.'),
         (join(qt_lib, 'libQt6Widgets.so.6'), '.'),
@@ -46,6 +84,8 @@ a = Analysis(
         (join(linux_lib, 'libpython3.10.so.1.0'), '.'),
         (join(linux_lib, 'libxcb.so.1.1.0'), '.'),
         (join(linux_lib, 'libxkbcommon-x11.so.0.0.0'), '.'),
+        
+        # ...existing system libraries...
         # NSS libraries for QtWebEngine
         (join(nss_lib, 'libplds4.so'), '.'),
         (join(nss_lib, 'libplc4.so'), '.'),
@@ -58,9 +98,9 @@ a = Analysis(
         (join(gtk_lib, 'libgtk-3.so.0'), '.'),
         (join(gtk_lib, 'libgdk-3.so.0'), '.'),
         # Database libraries
-        (join(linux_lib, 'libpq.so.5'), '.'),
-        (join(linux_lib, 'libodbc.so.2'), '.'),
-        (join(linux_lib, 'libmysqlclient.so.21'), '.'),
+        (join(db_lib, 'libpq.so.5'), '.'),
+        (join(db_lib, 'libodbc.so.2'), '.'),
+        (join(db_lib, 'libmysqlclient.so.21'), '.'),
         # Other system libraries
         (join(linux_lib, 'libpcsclite.so'), '.'),
         (join(linux_lib, 'libpcsclite.so.1'), '.'),
@@ -76,10 +116,6 @@ a = Analysis(
         (join(linux_lib, 'libtbb.so.2'), '.'),
         (join(linux_lib, 'libtbb.so.12.5'), '.'),
         (join(linux_lib, 'libtbb.so.12'), '.'),
-        # CUDA libraries - Use corrected site_packages_path variable
-        (join(site_packages_path, 'nvidia/cublas/lib/libcublas.so.12'), '.'),
-        (join(site_packages_path, 'nvidia/cusparse/lib/libcusparse.so.12'), '.'),
-        (join(site_packages_path, 'nvidia/cublas/lib/libcublasLt.so.12'), '.'),
     ],
     datas=[
         (join(airunner_path, 'alembic.ini'), 'airunner'),
@@ -158,9 +194,11 @@ a = Analysis(
         'torchao.kernel',
         'torchao.quantization',
     ],
-    hookspath=['/app/package/pyinstaller/hooks'], # Added path to custom hooks
+    hookspath=['/app/package/pyinstaller/hooks'], # Use custom hooks
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=[
+        '/app/package/pyinstaller/hooks/runtime-hook-cuda-50xx.py'  # Add our 50xx-specific CUDA runtime hook
+    ],
     excludes=[
         'tensorflow',
     ],
@@ -225,3 +263,9 @@ punkt_path = '/home/appuser/nltk_data/tokenizers/punkt'
 punkt_path_out = join(internal_path, "llama_index/core/_static/nltk_cache/tokenizers/punkt")
 print(f"Copy punkt from {punkt_path} to {punkt_path_out}")
 shutil.copytree(punkt_path, punkt_path_out)
+
+# Create a marker file to indicate this is an RTX 50xx build
+marker_file_path = os.path.join(os.path.dirname(SPECPATH), '..', 'dist', 'airunner', '_internal', 'rtx50xx_build')
+os.makedirs(os.path.dirname(marker_file_path), exist_ok=True)
+with open(marker_file_path, 'w') as f:
+    f.write('This is an RTX 50xx-specific build\n')
