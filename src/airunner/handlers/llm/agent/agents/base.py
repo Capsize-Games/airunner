@@ -21,7 +21,12 @@ from llama_index.core.storage.chat_store import SimpleChatStore
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from airunner.enums import GeneratorSection, LLMActionType, SignalCode, ImagePreset
+from airunner.enums import (
+    GeneratorSection,
+    LLMActionType,
+    SignalCode,
+    ImagePreset,
+)
 from airunner.data.models import Conversation, User, Tab
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
@@ -1472,11 +1477,11 @@ class BaseAgent(
                 "llm_request": llm_request,
             }
         )
-        self._perform_analysis(action)
-        self._summarize_conversation()
-        self._log_system_prompt(
-            action, system_prompt, rag_system_prompt, llm_request
-        )
+        # self._perform_analysis(action)
+        # self._summarize_conversation()
+        # self._log_system_prompt(
+        #     action, system_prompt, rag_system_prompt, llm_request
+        # )
         self._update_system_prompt(system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._update_memory_settings()
