@@ -2,10 +2,11 @@ from typing import Type, Optional
 from abc import ABCMeta
 import os
 import torch
+from airunner.settings import AIRUNNER_BASE_PATH
 
 torch.hub.set_dir(
     os.environ.get(
-        "TORCH_HOME", "/home/appuser/.local/share/airunner/torch/hub"
+        "TORCH_HOME", os.path.join(AIRUNNER_BASE_PATH, "torch/hub")
     )
 )
 import librosa
@@ -21,7 +22,6 @@ from airunner.settings import (
     AIRUNNER_LOG_LEVEL,
 )
 from airunner.enums import (
-    SignalCode,
     ModelType,
     ModelStatus,
     AvailableLanguage,
@@ -241,13 +241,22 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
         try:
             self.logger.info(f"Loading {self._reference_speaker}")
+            target_dir = os.path.join(AIRUNNER_BASE_PATH, "processed")
+            if not os.path.exists(target_dir):
+                os.makedirs(target_dir, exist_ok=True)
+            # check if audio_path is valid
+            if not os.path.isfile(self._reference_speaker):
+                raise FileNotFoundError(
+                    f"Reference speaker file {self._reference_speaker} does not exist."
+                )
             self._target_se, self._audio_name = se_extractor.get_se(
                 audio_path=self._reference_speaker,
                 vc_model=self.tone_color_converter,
                 vad=True,
-                target_dir=os.path.join(AIRUNNER_BASE_PATH, "processed"),
+                target_dir=target_dir,
             )
-        except AssertionError as e:
+            print("loaded")
+        except Exception as e:
             torch_hub_cache_home = torch.hub.get_dir()
             self.logger.error(
                 f"Failed to load from se_extractor {e} - torch_hub_cache_home={torch_hub_cache_home}"
