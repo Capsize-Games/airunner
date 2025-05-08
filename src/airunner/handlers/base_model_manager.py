@@ -1,6 +1,6 @@
 import torch
 from abc import ABC, abstractmethod, ABCMeta
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from airunner.utils.memory import is_ampere_or_newer
 
@@ -133,11 +133,17 @@ class BaseModelManager(
 
     @property
     def attn_implementation(self) -> str:
-        return (
-            "flash_attention_2"
-            if is_ampere_or_newer(self.device_index)
-            else "sdpa"
-        )
+        try:
+            # raise NotImplementedError
+            from flash_attn import flash_attn_varlen_func, flash_attn_func
+
+            if "flash" in self.enabled_backends and is_ampere_or_newer(
+                self.device_index
+            ):
+                return "flash_attention_2"
+        except:
+            pass
+        return "sdpa"
 
     @property
     def llm_dtype(self):
