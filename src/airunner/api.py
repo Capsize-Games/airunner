@@ -29,6 +29,7 @@ from airunner.utils.application.ui_loader import (
 )
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
 
 class APIServiceBase(MediatorMixin, SettingsMixin, QObject):
@@ -704,6 +705,7 @@ class API(App):
         self.stt = STTAPIService(emit_signal=self.emit_signal)
         self.video = VideoAPIService(emit_signal=self.emit_signal)
         self.nodegraph = NodegraphAPIService(emit_signal=self.emit_signal)
+        self.sounddevice_manager = SoundDeviceManager()
 
         # Extract the initialize_app flag and pass the rest to the parent App class
         self._initialize_app = kwargs.pop("initialize_app", True)
