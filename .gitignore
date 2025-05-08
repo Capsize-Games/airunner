@@ -42,3 +42,4 @@ package/asound.conf
 .secrets
 *.log
 FramePack
+OpenVoice
