@@ -190,23 +190,35 @@ This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
 
 #### Bare metal / local
 
-1. **Clone AI Runner**  
-   ```bash
-   git clone https://github.com/Capsize-Games/airunner.git
-   cd airunner
-   ```
-2. **Create a virtual environment**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-3. **Install dependencies**  
+**Ubuntu**
+1. Install python
+2. clone repo `git clone https://github.com/Capsize-Games/airunner.git`
+3. Change into directory `cd airunner`
+4. create virtual environment `python -m venv venv`
+5. activate virtual environment `.\venv\Scripts\activate`
+6. Install requirements:
    ```bash
    pip install "typing-extensions==4.13.2"
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
    pip install -e .[all_dev]
    pip install -U timm
    ```
+7. run app with `airunner`
+
+**Windows**
+1. Install python
+2. clone repo `git clone https://github.com/Capsize-Games/airunner.git`
+3. Change into directory `cd airunner`
+4. create virtual environment `python -m venv venv`
+5. activate virtual environment `.\venv\Scripts\activate`
+6. Install requirements:
+   ```bash
+   pip install "typing-extensions==4.13.2"
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+   pip install -e .[windows]
+   pip install -U timm
+   ```
+7. run app with `airunner`
 ---
 
 ***See the [Installation Wiki for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).***
