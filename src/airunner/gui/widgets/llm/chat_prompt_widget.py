@@ -256,7 +256,7 @@ class ChatPromptWidget(BaseWidget):
 
         if combined_message != "":
             self.add_message_to_conversation(
-                name=self.chatbot.name,
+                name=self.chatbot.botname,
                 message=combined_message,
                 is_bot=True,
                 first_message=False,
