@@ -2,8 +2,12 @@ import random
 import os
 import torch
 from typing import Optional, Dict, List, Union, Type
+from airunner.utils import is_windows
 
-from peft import PeftModel
+if not is_windows():
+    from peft import PeftModel
+else:
+    PeftModel = None
 from transformers.utils.quantization_config import (
     BitsAndBytesConfig,
     GPTQConfig,
@@ -18,7 +22,6 @@ from airunner.enums import (
     ModelStatus,
     LLMActionType,
 )
-from airunner.utils import is_windows
 from airunner.settings import (
     AIRUNNER_MAX_SEED,
     AIRUNNER_LOCAL_FILES_ONLY,
@@ -459,7 +462,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 attn_implementation=self.attn_implementation,
             )
 
-            if not is_windows():
+            if PeftModel is not None:
                 # Attempt to load adapter if available
                 try:
                     if os.path.exists(self.adapter_path):
