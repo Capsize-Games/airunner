@@ -45,7 +45,7 @@ class Signal(QObject):
             else:
                 self.callback(data)
         except Exception as e:
-            self.logger.error(f"Error in signal callback: {e}")
+            print(f"Error in signal callback: {e}")
 
 
 class SignalMediator(metaclass=SingletonMeta):
