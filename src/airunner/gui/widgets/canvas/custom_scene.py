@@ -594,9 +594,17 @@ class CustomScene(
                 self.item = LayerImageItem(image)
                 if self.item.scene() is None:
                     self.addItem(self.item)
-                    # Store initial position when adding to scene
+                    self.item.setPos(
+                        self.active_grid_settings.pos_x,
+                        self.active_grid_settings.pos_y,
+                    )
                     self._original_item_positions[self.item] = self.item.pos()
             else:
+                self.item.setPos(
+                    self.active_grid_settings.pos_x,
+                    self.active_grid_settings.pos_y,
+                )
+                self._original_item_positions[self.item] = self.item.pos()
                 self.item.updateImage(image)
 
             self.item.setZValue(
