@@ -97,6 +97,11 @@ class SoundSettingsWidget(BaseWidget):
 
     def update_playback_device(self, device):
         sound_settings = SoundSettings.objects.first()
+        if sound_settings is None:
+            SoundSettings.objects.create(
+                playback_device=device, recording_device=None
+            )
+        sound_settings = SoundSettings.objects.first()
         SoundSettings.objects.update(sound_settings.id, playback_device=device)
         self.emit_signal(SignalCode.PLAYBACK_DEVICE_CHANGED, device)
 
