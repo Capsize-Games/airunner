@@ -183,6 +183,7 @@ These are the sizes of the various models that power AI Runner.
    ```powershell
    git clone https://github.com/Capsize-Games/airunner.git
    cd airunner
+   python -m venv venv
    ./venv/Scripts/activate
    ```
 3. Install requirements
