@@ -28,7 +28,6 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 
 ## Table of Contents
 - [Overview](#overview)
-- [Why Developers Use AI Runner](#why-developers-use-ai-runner)
 - [Features](#features)
 - [System Requirements](#system-requirements)
 - [Installation Quick Start](#installation-quick-start-development-version)
@@ -37,7 +36,6 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 - [Unit Tests](#unit-tests)
 - [Database](#database)
 - [Advanced Features](#advanced-features)
-- [Missing or Planned Features](#missing-or-planned-features)
 - [Contributing](#contributing)
 
 ---
@@ -60,27 +58,6 @@ Originally created as a GUI-centric AI art and chatbot tool for end users, AI Ru
 - Offline scenarios: Work behind firewalls or without internet.  
 - Custom UI/UX: Build plugins/extensions for your particular domain.  
 - End-user tools: Hand off a no-code (GUI) solution for less technical stakeholders.
-
----
-
-## Why Developers Use AI Runner
-
-1. **Fast Setup with Docker**  
-   No need to configure Python environments manually—just pull and run. AI Runner includes all major dependencies, plus GPU support (with [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)).
-
-2. **Local LLM & Stable Diffusion in One**  
-   Stop juggling separate repos for text generation and image generation. AI Runner unifies them under one interface.
-
-3. **Plugin & Extension System**  
-   Extend or modify AI Runner’s GUI or back-end with custom plugins. Add new model workflows, custom UI panels, or special logic without forking the entire codebase.
-
-4. **Python Library**  
-   Install from PyPi and **import** AI Runner directly into your Python project (e.g., a game in Pygame or a PySide6 desktop app).
-
-5. **Offline / Private Data**  
-   Keep data on-premise or behind a firewall—great for enterprise or regulated environments that can’t rely on external cloud inference.
-
-If you find it helpful, please **star this repo** and share it with others—it helps the project grow and signals demand for local AI solutions.
 
 ---
 
@@ -150,21 +127,42 @@ These are the sizes of the various models that power AI Runner.
 
 ## Installation Quick Start (development version)
 
-### Ubuntu / Windows WSL 2
+### Ubuntu (including Windows WSL 2)
 
-1. Ensure correct python version is installed (see setup.py)
-2. Install nvidia cuda toolkit
+1. Install system requirements
    ```bash
-   sudo apt install nvidia-cuda-toolkit
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip
    ```
-3. Clone repo, create virtual env, activate it
+1. Create airunner directory
+   ```bash
+   sudo mkdir ~/.local/share/airunner
+   sudo chown $USER:USER ~/.local/share/airunner
+   ```
+1. Install pyenv (allows management of multiple Python versions)
+   ```bash
+   curl https://pyenv.run | bash
+   ```
+1. Add pyenv to shell configuration
+   ```bash
+   export PYENV_ROOT="$HOME/.pyenv"
+   [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+   eval "$(pyenv init - bash)"
+   source ~/.bashrc
+   ```
+1. Install python and set to global version
+   ```bash
+   pyenv install 3.13.3
+   ```
+1. Clone repo, set local python version, create virtual env, activate it
    ```bash
    git clone https://github.com/Capsize-Games/airunner.git
    cd airunner
-   python -m venv venv
-   .\venv\Scripts\activate
+   pyenv local 3.13.3
+   python3 -m venv venv
+   source ./venv/bin/activate
    ```
-4. Install requirements
+1. Install AI Runner requirements
    ```bash
    pip install "typing-extensions==4.13.2"
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
@@ -172,32 +170,17 @@ These are the sizes of the various models that power AI Runner.
    pip install -U timm
    python -c "import nltk; nltk.download('punkt')"
    ```
-5. Run app 
+1. Run app 
    ```bash
    airunner
    ```
 
-### Windows
-1. Ensure correct python version is installed (see setup.py)
-2. Clone repo, create virtual env, activate it 
-   ```powershell
-   git clone https://github.com/Capsize-Games/airunner.git
-   cd airunner
-   python -m venv venv
-   ./venv/Scripts/activate
-   ```
-3. Install requirements
-   ```bash
-   pip install "typing-extensions==4.13.2"
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install -e .[windows]
-   pip install -U timm
-   python -c "import nltk; nltk.download('punkt')"
-   ```
-4. Run app
-   ```powershell
-   airunner
-   ```
+**Optional**
+
+- Flash attention 2
+- xformers
+- openvoice
+- framepack
 
 ---
 
