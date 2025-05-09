@@ -136,7 +136,7 @@ These are the sizes of the various models that power AI Runner.
    ```
 1. Create airunner directory
    ```bash
-   sudo mkdir ~/.local/share/airunner`
+   sudo mkdir ~/.local/share/airunner
    sudo chown $USER:USER ~/.local/share/airunner
    ```
 1. Install pyenv (allows management of multiple Python versions)
