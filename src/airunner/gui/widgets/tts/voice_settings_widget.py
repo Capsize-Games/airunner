@@ -34,21 +34,18 @@ class VoiceSettingsWidget(BaseWidget):
         self.ui = Ui_voice_settings()
         self.ui.setupUi(self)
         self.ui.create_voice_button.clicked.connect(self.create_voice)
+        self.selected_voice = None
         self.load_voices()
 
     def load_voices(self):
-        layout = self.ui.voice_list_layout
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-
+        self.clear_voice_item()
         self.initalize_voice_item()
         self.initialize_voice_combobox()
 
     def initalize_voice_item(self):
         # Get voice from current bot
+        if self.selected_voice is not None:
+            voice = VoiceSettings.objects.get(self.selected_voice)
         if self.chatbot and self.chatbot.voice_id:
             voice = VoiceSettings.objects.get(self.chatbot.voice_id)
         else:
@@ -58,34 +55,33 @@ class VoiceSettingsWidget(BaseWidget):
 
     def initialize_voice_combobox(self):
         # set voices combobox
+        self.ui.voice.blockSignals(True)
         self.ui.voice.clear()
         voices = VoiceSettings.objects.all()
         if voices:
             for voice in voices:
                 self.ui.voice.addItem(f"{voice.name}")
+        if self.selected_voice is not None:
+            voice = VoiceSettings.objects.get(self.selected_voice)
+            if voice is not None:
+                # set the current voice
+                self.ui.voice.setCurrentText(voice.name)
+        elif self.chatbot and self.chatbot.voice_id:
+            voice = VoiceSettings.objects.get(self.chatbot.voice_id)
+            if voice is not None:
+                # set the current voice
+                self.ui.voice.setCurrentText(voice.name)
+        self.ui.voice.blockSignals(False)
 
     @Slot(str)
     def on_voice_currentTextChanged(self, text):
         """Handle the change in the voice combobox."""
         if text:
-            # Parse the voice name from the format "name (count)"
-            voice_name = text.split(" (")[0]
-            # Find the voice with the matching name
-            all_voices = VoiceSettings.objects.all()
-            count = 0
-            target_count = (
-                int(text.split("(")[1].split(")")[0]) if "(" in text else 1
-            )
-
-            for voice in all_voices:
-                if voice.name == voice_name:
-                    count += 1
-                    if count == target_count:
-                        self.clear_voice_item()
-                        self.add_voice_item(voice)
-                        return
-            self.clear_voice_item()
-            self.load_voices()
+            voices = VoiceSettings.objects.filter(VoiceSettings.name == text)
+            if len(voices) > 0:
+                self.selected_voice = voices[0].id
+                self.clear_voice_item()
+                self.load_voices()
 
     def clear_voice_item(self):
         """Clear the current voice item from the layout."""
