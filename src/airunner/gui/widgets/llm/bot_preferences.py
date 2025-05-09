@@ -235,13 +235,21 @@ class BotPreferencesWidget(BaseWidget):
         voices = VoiceSettings.objects.all()
         self.ui.voice_combobox.blockSignals(True)
         self.ui.voice_combobox.clear()
+
+        # Add voices to combobox if any exist
         for voice in voices:
             self.ui.voice_combobox.addItem(voice.name, voice.id)
-        self.ui.voice_combobox.setCurrentIndex(
-            self.ui.voice_combobox.findData(
-                self.chatbot.voice_id or voices[0].id
+
+        # Handle the case when there are no voices available
+        if not voices:
+            self.ui.voice_combobox.addItem("No voices available", None)
+            self.ui.voice_combobox.setCurrentIndex(0)
+        else:
+            self.ui.voice_combobox.setCurrentIndex(
+                self.ui.voice_combobox.findData(
+                    self.chatbot.voice_id or voices[0].id
+                )
             )
-        )
         self.ui.voice_combobox.blockSignals(False)
 
     @Slot(int)

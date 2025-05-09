@@ -49,6 +49,7 @@ from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
 from airunner.handlers.llm.agent.actions.show_path import show_path
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.data.models.shortcut_keys import ShortcutKeys
+from airunner.data.models.application_settings import ApplicationSettings
 from airunner.data.models.image_filter import ImageFilter
 from airunner.data.models.drawingpad_settings import DrawingPadSettings
 from airunner.data.models.tab import Tab
@@ -232,6 +233,14 @@ class MainWindow(
         }
         self.logger.debug("Starting AI Runnner")
         super().__init__()
+        ApplicationSettings.objects.update(
+            self.application_settings.id,
+            sd_enabled=False,
+            llm_enabled=False,
+            tts_enabled=False,
+            stt_enabled=False,
+            controlnet_enabled=False,
+        )
 
         self.single_click_timer = QTimer(self)
         self.single_click_timer.setSingleShot(True)
@@ -460,7 +469,7 @@ class MainWindow(
 
     @Slot()
     def on_actionSettings_triggered(self):
-        SettingsWindow()
+        SettingsWindow(prevent_always_on_top=True)
 
     @Slot()
     def on_actionBrowse_Images_Path_2_triggered(self):

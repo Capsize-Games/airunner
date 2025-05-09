@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>voice_settings</class>
  <widget class="QWidget" name="voice_settings">
@@ -14,6 +15,9 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <widget class="QComboBox" name="voice"/>
+   </item>
+   <item>
     <widget class="QScrollArea" name="voice_scroll_area">
      <property name="widgetResizable">
       <bool>true</bool>
@@ -23,8 +27,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>480</width>
-        <height>200</height>
+        <width>492</width>
+        <height>492</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="voice_list_layout"/>
