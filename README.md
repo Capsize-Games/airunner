@@ -154,7 +154,12 @@ These are the sizes of the various models that power AI Runner.
 1. Install system requirements
    ```bash
    sudo apt update && sudo apt upgrade -y
-   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit
+   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses
+   ```
+1. Create airunner directory
+   ```bash
+   sudo mkdir ~/.local/share/airunner`
+   sudo chown $USER:USER ~/.local/share/airunner
    ```
 1. Install pyenv (allows management of multiple Python versions)
    ```bash
@@ -189,28 +194,6 @@ These are the sizes of the various models that power AI Runner.
    ```
 1. Run app 
    ```bash
-   airunner
-   ```
-
-### Windows
-1. Ensure correct python version is installed (see setup.py)
-2. Clone repo, create virtual env, activate it 
-   ```powershell
-   git clone https://github.com/Capsize-Games/airunner.git
-   cd airunner
-   python -m venv venv
-   ./venv/Scripts/activate
-   ```
-3. Install requirements
-   ```bash
-   pip install "typing-extensions==4.13.2"
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install -e .[windows]
-   pip install -U timm
-   python -c "import nltk; nltk.download('punkt')"
-   ```
-4. Run app
-   ```powershell
    airunner
    ```
 
