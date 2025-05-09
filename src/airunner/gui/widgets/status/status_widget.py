@@ -6,6 +6,7 @@ from airunner.enums import SignalCode, ModelStatus, ModelType, StatusColors
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.status.templates.status_ui import Ui_status_widget
 from airunner.settings import AIRUNNER_ART_ENABLED
+from airunner.data.models.voice_settings import VoiceSettings
 
 
 class StatusWidget(BaseWidget):
@@ -161,6 +162,13 @@ class StatusWidget(BaseWidget):
         elif data["model"] == ModelType.TTS:
             element_name = "tts_status"
             tool_tip = "TTS"
+            model_type = None
+            if self.chatbot and self.chatbot.voice_id:
+                voice = VoiceSettings.objects.get(pk=self.chatbot.voice_id)
+                if voice:
+                    model_type = f"TTS ({voice.model_type})"
+            if model_type is not None:
+                getattr(self.ui, element_name).setText(model_type)
         elif data["model"] == ModelType.STT:
             element_name = "stt_status"
             tool_tip = "STT"
