@@ -150,7 +150,7 @@ These are the sizes of the various models that power AI Runner.
    eval "$(pyenv init - bash)"
    source ~/.bashrc
    ```
-1. Install python and set to global version
+1. Install python and set to local version
    ```bash
    pyenv install 3.13.3
    ```
