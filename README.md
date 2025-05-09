@@ -175,6 +175,13 @@ These are the sizes of the various models that power AI Runner.
    airunner
    ```
 
+**Optional**
+
+- Flash attention 2
+- xformers
+- openvoice
+- framepack
+
 ---
 
 ### Docker
