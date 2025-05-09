@@ -24,14 +24,6 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 ![image](https://github.com/user-attachments/assets/b523c9e3-6a9b-4dfb-b66f-672b9b728f6e)
 <small>**Agent workflows**</small>
 
-![image](https://github.com/user-attachments/assets/d6a4c89b-d0d7-4c8b-9661-b7ce8a14ece9)
-![image](https://github.com/user-attachments/assets/f8627be0-0afe-4037-9522-b2df200fb775)
-
-<small>**OpenRouter + Huggingface integration**</small>
-
-![image](https://github.com/user-attachments/assets/f9d2697c-f2d1-422d-9501-d5966ac94595)
-<small>**Chatbots with personalities, moods, and local weather capablities**</small>
-
 ---
 
 ## Table of Contents
@@ -39,7 +31,7 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 - [Why Developers Use AI Runner](#why-developers-use-ai-runner)
 - [Features](#features)
 - [System Requirements](#system-requirements)
-- [Quick Start (Docker)](#quick-start-docker)
+- [Installation Quick Start](#installation-quick-start-development-version)
 - [Installation Details](#installation-details)
 - [AI Models](#ai-models)
 - [Unit Tests](#unit-tests)
@@ -72,8 +64,6 @@ Originally created as a GUI-centric AI art and chatbot tool for end users, AI Ru
 ---
 
 ## Why Developers Use AI Runner
-
-![images/img.png](images/img.png)
 
 1. **Fast Setup with Docker**  
    No need to configure Python environments manually—just pull and run. AI Runner includes all major dependencies, plus GPU support (with [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)).
@@ -128,25 +118,19 @@ Below is a high-level list of capabilities in AI Runner:
 
 ## System Requirements
 
-### Minimum Specs
+### System Requirements
 
-- **OS**: Ubuntu 22.04
-- **CPU**: Ryzen 2700K or Intel Core i7-8700K
-- **Memory**: 16 GB RAM  
-- **GPU**: NVIDIA RTX 3060 or better
-- **Network**: Broadband (used to download models)  
-- **Storage**: 22 GB
-
-### Recommended Specs
-
-- **OS**: Ubuntu 22.04  
-- **CPU**: Ryzen 5800X or Intel Core i7-11700K
-- **Memory**: 32 GB RAM  
-- **GPU**: NVIDIA RTX 4090 or better
-- **Network**: Broadband (used to download models)  
-- **Storage**: 50 GB
-
+| Specification       | Minimum                              | Recommended                          |
+|---------------------|--------------------------------------------|--------------------------------------------|
+| **OS**             | Ubuntu 22.04, Windows 10                               | Ubuntu 22.04 (Wayland)                              |
+| **CPU**            | Ryzen 2700K or Intel Core i7-8700K         | Ryzen 5800X or Intel Core i7-11700K        |
+| **Memory**         | 16 GB RAM                                  | 32 GB RAM                                  |
+| **GPU**            | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
+| **Network**        | Broadband (used to download models)        | Broadband (used to download models)        |
+| **Storage**        | 22 GB                                      | 50 GB                                      |
 ---
+
+### Models
 
 These are the sizes of the various models that power AI Runner.
 
@@ -164,12 +148,59 @@ These are the sizes of the various models that power AI Runner.
 
 ---
 
-## Quick Start
+## Installation Quick Start (development version)
 
+### Ubuntu / Windows WSL 2
 
-### Development Environment setup
+1. Ensure correct python version is installed (see setup.py)
+2. Install nvidia cuda toolkit
+   ```bash
+   sudo apt install nvidia-cuda-toolkit
+   ```
+3. Clone repo, create virtual env, activate it
+   ```bash
+   git clone https://github.com/Capsize-Games/airunner.git
+   cd airunner
+   python -m venv venv
+   .\venv\Scripts\activate
+   ```
+4. Install requirements
+   ```bash
+   pip install "typing-extensions==4.13.2"
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+   pip install -e .[all_dev]
+   pip install -U timm
+   python -c "import nltk; nltk.download('punkt')"
+   ```
+5. Run app 
+   ```bash
+   airunner
+   ```
 
-#### Docker
+### Windows
+1. Ensure correct python version is installed (see setup.py)
+2. Clone repo, create virtual env, activate it 
+   ```powershell
+   git clone https://github.com/Capsize-Games/airunner.git
+   cd airunner
+   ./venv/Scripts/activate
+   ```
+3. Install requirements
+   ```bash
+   pip install "typing-extensions==4.13.2"
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+   pip install -e .[windows]
+   pip install -U timm
+   python -c "import nltk; nltk.download('punkt')"
+   ```
+4. Run app
+   ```powershell
+   airunner
+   ```
+
+---
+
+### Docker
 
 **Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
 
@@ -186,41 +217,6 @@ These are the sizes of the various models that power AI Runner.
    ```
 This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
 
----
-
-#### Bare metal / local
-
-**Ubuntu**
-1. Install python
-2. clone repo `git clone https://github.com/Capsize-Games/airunner.git`
-3. Change into directory `cd airunner`
-4. create virtual environment `python -m venv venv`
-5. activate virtual environment `.\venv\Scripts\activate`
-6. Install requirements:
-   ```bash
-   pip install "typing-extensions==4.13.2"
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install -e .[all_dev]
-   pip install -U timm
-   python -c "import nltk; nltk.download('punkt')"
-   ```
-7. run app with `airunner`
-
-**Windows**
-1. Install python
-2. clone repo `git clone https://github.com/Capsize-Games/airunner.git`
-3. Change into directory `cd airunner`
-4. create virtual environment `python -m venv venv`
-5. activate virtual environment `.\venv\Scripts\activate`
-6. Install requirements:
-   ```bash
-   pip install "typing-extensions==4.13.2"
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install -e .[windows]
-   pip install -U timm
-   python -c "import nltk; nltk.download('punkt')"
-   ```
-7. run app with `airunner`
 ---
 
 ***See the [Installation Wiki for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).***

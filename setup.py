@@ -35,7 +35,6 @@ extras_require = {
     ],
     "llm": [  # LLM dependencies (also text-to-speech and speech-to-text)
         "transformers==4.51.3",
-        "auto-gptq==0.7.1",
         "bitsandbytes==0.45.5",
         "datasets==3.2.0",
         "sentence_transformers==3.4.1",
