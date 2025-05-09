@@ -33,15 +33,15 @@ extras_require = {
         "timm<=0.6.7",  # Timm is marked at a lower version for compel, we upgrade after installing
     ],
     "llm": [  # LLM dependencies (also text-to-speech and speech-to-text)
-        "transformers==4.51.3", # As of May 2025, latest is ~4.41.0. Check version.
-        "bitsandbytes==0.45.5", # As of May 2025, latest is ~0.43.0. Check version.
-        "datasets==3.2.0", # As of May 2025, latest is ~2.19.0. Check version.
-        "sentence_transformers==3.4.1", # As of May 2025, latest is ~3.0.1. Check version.
-        "sounddevice==0.5.1", # As of May 2025, latest is ~0.4.7. Check version.
-        "pyttsx3==2.91", # This is an older version, latest is similar but good to note.
-        "cryptography==44.0.0", # As of May 2025, latest is ~42.0.8. Check version.
-        "llama-index==0.12.14", # As of May 2025, latest is ~0.10.44. Check version.
-        "llama-index-readers-file==0.4.4", # LlamaIndex packages are rapidly evolving, check versions.
+        "transformers==4.51.3",
+        "bitsandbytes==0.45.5",
+        "datasets==3.2.0",
+        "sentence_transformers==3.4.1",
+        "sounddevice==0.5.1",
+        "pyttsx3==2.91",
+        "cryptography==44.0.0",
+        "llama-index==0.12.14",
+        "llama-index-readers-file==0.4.4",
         "llama-index-readers-web==0.3.5",
         "llama-index-llms-huggingface==0.4.2",
         "llama-index-llms-groq==0.3.1",
@@ -49,13 +49,12 @@ extras_require = {
         "llama-index-vector-stores-faiss==0.3.0",
         "llama-index-embeddings-huggingface==0.5.1",
         "llama-index-llms-openrouter==0.3.1",
-        "langchain-community==0.3.17", # As of May 2025, latest is ~0.2.0. Check version significantly.
+        "langchain-community==0.3.17",
         "EbookLib==0.18",
         "html2text==2024.2.26",
         "rake_nltk==1.0.6",
         # "tf-keras==2.18.0", # Removed as it causes issues on Windows with dlopenflags
-        "peft==0.15.2", # As of May 2025, latest is ~0.11.1. Check version.
-        "lxml_html_clean==0.4.1", # This seems to be an older or less common package. lxml is more standard.
+        "peft==0.15.2",
         # "flash_attn==2.7.4.post1", # flash-attn usually requires specific build steps.
         # Summarizations (basic)
         "sumy==0.11.0",
@@ -66,31 +65,29 @@ extras_require = {
         "openmeteo_requests==1.4.0",
     ],
     "tts": [  # Text-to-speech dependencies (requires llm dependencies)
-        "inflect==7.5.0", # As of May 2025, latest is ~7.3.0. Check version.
+        "inflect==7.5.0",
         "pycountry==24.6.1",
-        "librosa==0.11.0", # As of May 2025, latest is ~0.10.2. Check version.
+        "librosa==0.11.0",
     ],
     "rabbitmq": ["pika"],
 }
 
 extras_require["all"] = []
 extras_require["all_dev"] = []
-extras_require["windows"] = [] # For Windows-specific aggregate, excludes "linux"
+extras_require["windows"] = []
 
 for k, v_list in extras_require.items():
     if k == "all":
         continue
-    if k != "dev": # 'all' should not include 'dev' dependencies
-        extras_require["all"].extend(v_list)
-    extras_require["all_dev"].extend(v_list) # 'all_dev' includes everything
-
-# The existing loop does this:
-for k, v in extras_require.items():
-    if k in ["all", "all_dev", "windows"]: # Avoid processing already aggregated keys if script is re-run/modified
-        continue
-    # Assuming 'v' is the list of dependencies for key 'k'
     if k != "dev":
-        if k not in extras_require["all"]: # Avoid duplicates if keys share dependencies (not typical for extras)
+        extras_require["all"].extend(v_list)
+    extras_require["all_dev"].extend(v_list)
+
+for k, v in extras_require.items():
+    if k in ["all", "all_dev", "windows"]:
+        continue
+    if k != "dev":
+        if k not in extras_require["all"]:
              extras_require["all"].extend(v)
     if k not in extras_require["all_dev"]:
         extras_require["all_dev"].extend(v)
@@ -101,7 +98,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.6.5",
+    version="4.7.0",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -112,24 +109,24 @@ setup(
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "src"},
     packages=find_packages("src"),
-    python_requires=">=3.10.17", # Note: 3.10.17 is unusually specific. >=3.10 is more common.
+    python_requires=">=3.13.3",
     install_requires=[
-        "torch", # For GPU, user must install this from PyTorch's index first
-        "torchvision", # or alongside airunner specifying PyTorch's index.
+        "torch",
+        "torchvision",
         "torchaudio",
         "torchao",
-        "accelerate==1.3.0", # As of May 2025, latest is ~0.31.0
-        "huggingface-hub>=0.24.0,<1.0", # As of May 2025, latest is ~0.23.0
-        "tokenizers==0.21.1", # As of May 2025, latest is ~0.19.1
-        "optimum==1.24.0", # As of May 2025, latest is ~1.20.0
-        "numpy==1.26.4", # Standard, latest version
-        "pillow==10.4.0", # As of May 2025, latest is 10.3.0
-        "alembic==1.14.1", # As of May 2025, latest is 1.13.1
-        "aiosqlite==0.21.0", # As of May 2025, latest is 0.20.0
-        "sqlalchemy==2.0.38", # As of May 2025, latest is 2.0.30
-        "setuptools==78.1.0", # As of May 2025, latest is 70.1.0. This is a very new version number.
-        "facehuggershield==0.1.13",
-        "etils[epath]==1.12.2", # As of May 2025, latest is 1.8.0
+        "accelerate==1.3.0",
+        "huggingface-hub>=0.24.0,<1.0",
+        "tokenizers==0.21.1", 
+        "optimum==1.24.0", 
+        "numpy==1.26.4",
+        "pillow==10.4.0", 
+        "alembic==1.14.1",
+        "aiosqlite==0.21.0",
+        "sqlalchemy==2.0.38",
+        "setuptools==78.1.0",
+        "facehuggershield==0.1.13",        
+        "etils[epath]==1.12.2", 
     ],
     extras_require=extras_require,
     package_data={
