@@ -28,7 +28,6 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 
 ## Table of Contents
 - [Overview](#overview)
-- [Why Developers Use AI Runner](#why-developers-use-ai-runner)
 - [Features](#features)
 - [System Requirements](#system-requirements)
 - [Installation Quick Start](#installation-quick-start-development-version)
@@ -59,27 +58,6 @@ Originally created as a GUI-centric AI art and chatbot tool for end users, AI Ru
 - Offline scenarios: Work behind firewalls or without internet.  
 - Custom UI/UX: Build plugins/extensions for your particular domain.  
 - End-user tools: Hand off a no-code (GUI) solution for less technical stakeholders.
-
----
-
-## Why Developers Use AI Runner
-
-1. **Fast Setup with Docker**  
-   No need to configure Python environments manually—just pull and run. AI Runner includes all major dependencies, plus GPU support (with [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)).
-
-2. **Local LLM & Stable Diffusion in One**  
-   Stop juggling separate repos for text generation and image generation. AI Runner unifies them under one interface.
-
-3. **Plugin & Extension System**  
-   Extend or modify AI Runner’s GUI or back-end with custom plugins. Add new model workflows, custom UI panels, or special logic without forking the entire codebase.
-
-4. **Python Library**  
-   Install from PyPi and **import** AI Runner directly into your Python project (e.g., a game in Pygame or a PySide6 desktop app).
-
-5. **Offline / Private Data**  
-   Keep data on-premise or behind a firewall—great for enterprise or regulated environments that can’t rely on external cloud inference.
-
-If you find it helpful, please **star this repo** and share it with others—it helps the project grow and signals demand for local AI solutions.
 
 ---
 
