@@ -129,6 +129,15 @@ These are the sizes of the various models that power AI Runner.
 
 ### Ubuntu (including Windows WSL 2)
 
+The instructions will assume the following directory structure. *You should only deviate from this structure if you know what you're doing.*
+
+```plaintext
+~/Projects
+├── airunner
+├── OpenVoice
+└── venv
+```
+
 1. Install system requirements
    ```bash
    sudo apt update && sudo apt upgrade -y
