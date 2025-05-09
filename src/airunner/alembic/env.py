@@ -10,11 +10,19 @@ from airunner.settings import AIRUNNER_DB_URL
 config = context.config
 config.set_main_option("sqlalchemy.url", AIRUNNER_DB_URL)
 
-# check if db file exists
-if AIRUNNER_DB_URL.__contains__("sqlite") and not os.path.exists(
-    AIRUNNER_DB_URL.replace("sqlite:///", "")
-):
-    print(f"Database file not found at {AIRUNNER_DB_URL}")
+# Check if DB file exists
+if AIRUNNER_DB_URL.__contains__("sqlite"):
+    db_path = AIRUNNER_DB_URL.replace("sqlite:///", "")
+    try:
+        if not os.path.exists(db_path):
+            print(f"Database file not found at {db_path}")
+            # create the file
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            with open(db_path, "w") as f:
+                pass
+            print(f"Database file created at {db_path}")
+    except Exception as e:
+        print(f"Error checking DB path: {e}")
 
 # Import your models here
 from airunner.data.models.base import Base
@@ -85,9 +93,12 @@ def run_migrations_online():
         with context.begin_transaction():
             context.run_migrations()
             connection.commit()
+    print("Migrations completed successfully.")
 
 
 if context.is_offline_mode():
+    print("Running migrations offline...")
     run_migrations_offline()
 else:
+    print("Running migrations online...")
     run_migrations_online()

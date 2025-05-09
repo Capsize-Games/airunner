@@ -16,7 +16,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._tts_request: TTSRequest = None
+        self._tts_request: Optional[TTSRequest] = None
         self._rate: Optional[int] = None
         self._pitch: Optional[int] = None
         self._volume: Optional[int] = None
@@ -58,7 +58,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             return self.tts_request.rate
         return EspeakSettings.rate.default.arg
 
-    def generate(self, tts_request: Type[TTSRequest]):
+    def generate(self, tts_request: TTSRequest):
         """
         Generate speech from the given message.
         """
@@ -125,25 +125,55 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             return
 
         try:
-            voice = self.voice
-            if (
-                self.espeak_settings
-                and self.gender != self.espeak_settings.gender
-            ):
-                if self.gender == "Male":
-                    voice = "male1"
-                else:
-                    self.gender == "Female"
-                    voice = "female1"
-            elif not self.espeak_settings:
-                self.logger.warning("Espeak settings are not defined.")
+            # Configure basic properties first
+            rate_to_set = self.rate
+            volume_to_set = self.volume
+            pitch_to_set = self.pitch
 
-            # Configure the engine properties
-            self._engine.setProperty("rate", float(self.rate))
-            self._engine.setProperty("volume", self.volume / 100.0)
-            self._engine.setProperty("pitch", float(self.pitch))
-            self._engine.setProperty("voice", f"{voice}")
-            self._engine.setProperty("language", self.language)
+            self._engine.setProperty("rate", float(rate_to_set))
+            self._engine.setProperty("volume", volume_to_set / 100.0)
+            self._engine.setProperty("pitch", float(pitch_to_set))
+
+            # Get all available voices
+            available_voices = self._engine.getProperty("voices")
+            if not available_voices:
+                self.logger.warning(
+                    "No voices available in the pyttsx3 engine"
+                )
+                return
+
+            # Log available voices for debugging
+            voice_ids = [voice.id for voice in available_voices]
+            self.logger.debug(f"Available voices: {voice_ids}")
+
+            # Get desired voice/language settings
+            language_to_set = self.language or "en"
+            gender_to_set = self.gender
+
+            # Default voice (first available)
+            selected_voice = available_voices[0]
+
+            # Try to find a matching voice by language
+            for voice in available_voices:
+                # Voice IDs in pyttsx3+espeak often contain the language code
+                if language_to_set in voice.id.lower():
+                    selected_voice = voice
+                    # If we also want to match gender and it's in the ID
+                    if (
+                        gender_to_set == Gender.FEMALE.value
+                        and "female" in voice.id.lower()
+                    ):
+                        break  # Perfect match
+                    elif (
+                        gender_to_set == Gender.MALE.value
+                        and "male" in voice.id.lower()
+                    ):
+                        break  # Perfect match
+
+            # Set the selected voice
+            self.logger.debug(f"Selected voice: {selected_voice.id}")
+            self._engine.setProperty("voice", selected_voice.id)
+
         except Exception as e:
             self.logger.error(
                 f"Error initializing espeak engine properties: {e}"
