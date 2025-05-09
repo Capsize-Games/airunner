@@ -141,7 +141,7 @@ The instructions will assume the following directory structure. *You should only
 1. Install system requirements
    ```bash
    sudo apt update && sudo apt upgrade -y
-   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme
+   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme espeak-ng-espeak
    ```
 1. Create airunner directory
    ```bash
@@ -153,9 +153,9 @@ The instructions will assume the following directory structure. *You should only
    curl https://pyenv.run | bash
    ```
 1. Add pyenv to shell configuration
-   ```bash
-   # Check and add pyenv configuration if not already present
-   if ! grep -q "Pyenv configuration added by AI Runner" ~/.bashrc; then
+```bash
+# Check and add pyenv configuration if not already present
+if ! grep -q "Pyenv configuration added by AI Runner" ~/.bashrc; then
      cat << 'EOF' >> ~/.bashrc
 
 # Pyenv configuration added by AI Runner setup
@@ -194,8 +194,8 @@ if [ -n "$WSL_DISTRO_NAME" ]; then
     export QT_QPA_PLATFORMTHEME=gtk3
 fi
 EOF
-   fi
-   ```
+fi
+```
 1. Install python and set to local version
    ```bash
    . ~/.bashrc
