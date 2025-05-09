@@ -1,5 +1,4 @@
 import json
-import queue
 
 from typing import Dict, Optional
 
@@ -153,7 +152,7 @@ class ChatPromptWidget(BaseWidget):
                         "name": (
                             self.user.username
                             if message["role"] == "user"
-                            else self.chatbot.name
+                            else self.chatbot.botname
                         ),
                         "content": message["blocks"][0]["text"],
                         "is_bot": message["role"] == "assistant",
@@ -335,7 +334,7 @@ class ChatPromptWidget(BaseWidget):
             prompt=prompt,
             llm_request=LLMRequest.from_default(),
             action=self.action,
-            do_tts_reply=False
+            do_tts_reply=False,
         )
 
     def on_token_signal(self, val):

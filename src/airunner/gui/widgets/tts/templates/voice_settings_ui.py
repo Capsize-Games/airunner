@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QPushButton, QScrollArea, QSizePolicy,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QPushButton, QScrollArea,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 class Ui_voice_settings(object):
     def setupUi(self, voice_settings):
@@ -25,12 +25,17 @@ class Ui_voice_settings(object):
         voice_settings.resize(512, 576)
         self.verticalLayout = QVBoxLayout(voice_settings)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.voice = QComboBox(voice_settings)
+        self.voice.setObjectName(u"voice")
+
+        self.verticalLayout.addWidget(self.voice)
+
         self.voice_scroll_area = QScrollArea(voice_settings)
         self.voice_scroll_area.setObjectName(u"voice_scroll_area")
         self.voice_scroll_area.setWidgetResizable(True)
         self.voice_scroll_area_contents = QWidget()
         self.voice_scroll_area_contents.setObjectName(u"voice_scroll_area_contents")
-        self.voice_scroll_area_contents.setGeometry(QRect(0, 0, 480, 200))
+        self.voice_scroll_area_contents.setGeometry(QRect(0, 0, 492, 492))
         self.voice_list_layout = QVBoxLayout(self.voice_scroll_area_contents)
         self.voice_list_layout.setObjectName(u"voice_list_layout")
         self.voice_scroll_area.setWidget(self.voice_scroll_area_contents)

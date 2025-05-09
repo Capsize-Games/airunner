@@ -203,6 +203,12 @@ class CustomGraphicsView(
         # 6. Update all display positions based on new offset
         self.updateImagePositions()
         self.update_active_grid_area_position()
+        self.update_drawing_pad_settings(
+            "x_pos", int(pos_x)
+        )
+        self.update_drawing_pad_settings(
+            "y_pos", int(pos_y)
+        )
         self.do_draw(force_draw=True)
 
     def on_mask_generator_worker_response_signal(self, message: dict):
@@ -558,7 +564,6 @@ class CustomGraphicsView(
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_mouse_pressed = True
             self.last_pos = event.pos()
-
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent):

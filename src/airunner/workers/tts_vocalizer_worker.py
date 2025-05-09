@@ -58,14 +58,15 @@ class TTSVocalizerWorker(Worker):
             self.start_stream()
 
     def on_application_settings_changed_signal(self, data):
-        if (
-            data
-            and data.get("setting_name", "") == "speech_t5_settings"
-            and data.get("column_name", "") == "pitch"
-        ):
-            pitch = data.get("value", 0)
-            self.stop_stream()
-            self.start_stream(pitch)
+        # if (
+        #     data
+        #     and data.get("setting_name", "") == "speech_t5_settings"
+        #     and data.get("column_name", "") == "pitch"
+        # ):
+        #     pitch = data.get("value", 0)
+        #     self.stop_stream()
+        #     self.start_stream(pitch)
+        pass
 
     def on_playback_device_changed_signal(self):
         self.logger.debug(f"Playback device changed")
