@@ -168,7 +168,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     @Slot()
     def on_interrupt_button_clicked(self):
-        self.api.art.interrupt_image_generation()
+        self.api.art.canvas.interrupt_image_generation()
 
     def on_delete_prompt_clicked(self, data: Dict):
         prompt_id = data.get("prompt_id", None)
