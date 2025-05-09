@@ -437,7 +437,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
                         message="Your image has been generated",
                         is_first_message=True,
                         is_end_of_message=True,
-                        name=self.chatbot.name,
+                        name=self.chatbot.botname,
                         action=LLMActionType.GENERATE_IMAGE,
                     )
                 )
