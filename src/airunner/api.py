@@ -580,7 +580,7 @@ class ARTAPIService(APIServiceBase):
     def update_generator_form_values(self):
         self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
 
-    def toggle_sd(self, enabled: bool, callback: callable, finalize: callable):
+    def toggle_sd(self, enabled: bool = False, callback: Optional[callable] = None, finalize: Optional[callable] = None):
         self.emit_signal(
             SignalCode.TOGGLE_SD_SIGNAL,
             {

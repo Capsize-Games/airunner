@@ -431,6 +431,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         Callback function to be called after the image has been generated.
         """
         self.api.art.toggle_sd(
+            enabled=False,
             callback=lambda _d: self.load_non_sd(
                 callback=lambda _d: self.api.send_llm_text_streamed_signal(
                     LLMResponse(
@@ -442,7 +443,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
                     )
                 )
             ),
-            enabled=False,
         )
 
     ##########################################################################
