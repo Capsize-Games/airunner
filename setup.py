@@ -4,7 +4,7 @@ extras_require = {
     # These are optional dependencies that will change the
     # behavior of the application or add new features if installed.
     "nvidia": [  # NVIDIA dependencies:
-        "nvidia-cuda-runtime-cu12", # This package provides CUDA 12 runtime
+        "nvidia-cuda-runtime-cu12",  # This package provides CUDA 12 runtime
     ],
     "gui": [  # GUI dependencies
         "PySide6==6.9.0",
@@ -14,20 +14,20 @@ extras_require = {
     ],
     "linux": [  # Linux-specific dependencies
         # "faiss-gpu==1.7.2", # If faiss-gpu is from NVIDIA or a custom index, it needs similar handling
-        "tensorrt==10.9.0.34", # This package is from NVIDIA
+        "tensorrt==10.9.0.34",  # This package is from NVIDIA
     ],
     "dev": [  # Development dependencies
         "pytest",
         "python-dotenv==1.0.1",
         "coverage==7.8.0",
-        "black==25.1.0", # Note: As of May 2025, Black's versioning might be year.month (e.g., 24.x.x or 25.x.x). 25.1.0 is plausible for a future date.
-        "pyinstaller==6.12.0", # As of May 2025, latest PyInstaller is 6.8.0. Check if 6.12.0 is a future or dev version.
+        "black==25.1.0",  # Note: As of May 2025, Black's versioning might be year.month (e.g., 24.x.x or 25.x.x). 25.1.0 is plausible for a future date.
+        "pyinstaller==6.12.0",  # As of May 2025, latest PyInstaller is 6.8.0. Check if 6.12.0 is a future or dev version.
     ],
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",
-        "diffusers==0.33.1", # As of May 2025, latest is ~0.29.0. Check version.
+        "diffusers==0.33.1",  # As of May 2025, latest is ~0.29.0. Check version.
         "controlnet_aux==0.0.9",
-        "safetensors==0.5.2", # As of May 2025, latest is ~0.4.3. Check version.
+        "safetensors==0.5.2",  # As of May 2025, latest is ~0.4.3. Check version.
         "compel==2.0.3",
         "tomesd==0.1.3",
         "timm<=0.6.7",  # Timm is marked at a lower version for compel, we upgrade after installing
@@ -58,6 +58,7 @@ extras_require = {
         # "flash_attn==2.7.4.post1", # flash-attn usually requires specific build steps.
         # Summarizations (basic)
         "sumy==0.11.0",
+        "sentencepiece==0.2.0",
     ],
     "llm_weather": [  # LLM dependencies for weather (requires llm dependencies)
         "requests-cache==1.2.1",
@@ -88,7 +89,7 @@ for k, v in extras_require.items():
         continue
     if k != "dev":
         if k not in extras_require["all"]:
-             extras_require["all"].extend(v)
+            extras_require["all"].extend(v)
     if k not in extras_require["all_dev"]:
         extras_require["all_dev"].extend(v)
     if k != "linux":
@@ -117,16 +118,16 @@ setup(
         "torchao",
         "accelerate==1.3.0",
         "huggingface-hub>=0.24.0,<1.0",
-        "tokenizers==0.21.1", 
-        "optimum==1.24.0", 
+        "tokenizers==0.21.1",
+        "optimum==1.24.0",
         "numpy==1.26.4",
-        "pillow==10.4.0", 
+        "pillow==10.4.0",
         "alembic==1.14.1",
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
         "setuptools==78.1.0",
-        "facehuggershield==0.1.13",        
-        "etils[epath]==1.12.2", 
+        "facehuggershield==0.1.13",
+        "etils[epath]==1.12.2",
     ],
     extras_require=extras_require,
     package_data={
