@@ -460,7 +460,7 @@ class MainWindow(
 
     @Slot()
     def on_actionSettings_triggered(self):
-        SettingsWindow()
+        SettingsWindow(prevent_always_on_top=True)
 
     @Slot()
     def on_actionBrowse_Images_Path_2_triggered(self):
