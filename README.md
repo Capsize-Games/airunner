@@ -156,11 +156,14 @@ These are the sizes of the various models that power AI Runner.
    ```
 1. Clone repo, set local python version, create virtual env, activate it
    ```bash
-   git clone https://github.com/Capsize-Games/airunner.git
-   cd airunner
+   cd ~
+   mkdir Projects
+   cd Projects
    pyenv local 3.13.3
    python3 -m venv venv
    source ./venv/bin/activate
+   git clone https://github.com/Capsize-Games/airunner.git
+   cd airunner
    ```
 1. Install AI Runner requirements
    ```bash
@@ -177,10 +180,10 @@ These are the sizes of the various models that power AI Runner.
 
 **Optional**
 
+- [OpenVoice](https://github.com/Capsize-Games/airunner/wiki/Modules#openvoice)
 - Flash attention 2
 - xformers
-- openvoice
-- framepack
+- FramePack
 
 ---
 
