@@ -37,7 +37,6 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 - [Unit Tests](#unit-tests)
 - [Database](#database)
 - [Advanced Features](#advanced-features)
-- [Missing or Planned Features](#missing-or-planned-features)
 - [Contributing](#contributing)
 
 ---
@@ -150,21 +149,37 @@ These are the sizes of the various models that power AI Runner.
 
 ## Installation Quick Start (development version)
 
-### Ubuntu / Windows WSL 2
+### Ubuntu (including Windows WSL 2)
 
-1. Ensure correct python version is installed (see setup.py)
-2. Install nvidia cuda toolkit
+1. Install system requirements
    ```bash
-   sudo apt install nvidia-cuda-toolkit
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit
    ```
-3. Clone repo, create virtual env, activate it
+1. Install pyenv (allows management of multiple Python versions)
+   ```bash
+   curl https://pyenv.run | bash
+   ```
+1. Add pyenv to shell configuration
+   ```bash
+   export PYENV_ROOT="$HOME/.pyenv"
+   [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+   eval "$(pyenv init - bash)"
+   source ~/.bashrc
+   ```
+1. Install python and set to global version
+   ```bash
+   pyenv install 3.13.3
+   ```
+1. Clone repo, set local python version, create virtual env, activate it
    ```bash
    git clone https://github.com/Capsize-Games/airunner.git
    cd airunner
-   python -m venv venv
-   .\venv\Scripts\activate
+   pyenv local 3.13.3
+   python3 -m venv venv
+   source ./venv/bin/activate
    ```
-4. Install requirements
+1. Install AI Runner requirements
    ```bash
    pip install "typing-extensions==4.13.2"
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
@@ -172,7 +187,7 @@ These are the sizes of the various models that power AI Runner.
    pip install -U timm
    python -c "import nltk; nltk.download('punkt')"
    ```
-5. Run app 
+1. Run app 
    ```bash
    airunner
    ```
