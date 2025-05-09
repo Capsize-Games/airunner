@@ -202,6 +202,7 @@ This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
    pip install -e .[all_dev]
    pip install -U timm
+   python -c "import nltk; nltk.download('punkt')"
    ```
 7. run app with `airunner`
 
@@ -217,6 +218,7 @@ This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
    pip install -e .[windows]
    pip install -U timm
+   python -c "import nltk; nltk.download('punkt')"
    ```
 7. run app with `airunner`
 ---
