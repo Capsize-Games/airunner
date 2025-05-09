@@ -300,42 +300,66 @@ QMenu QMenu::item:hover {
 
 QScrollBar:vertical {
     background: #000;
+    padding-top: 16px;
+    padding-bottom: 16px;
 }
 
 QScrollBar::handle:vertical {
     background: rgba(0, 132, 185, 255);
+    min-height: 20px;
 }
 
 QScrollBar::add-line:vertical {
     border: 1px solid rgba(0, 132, 185, 255);
+    height: 15px;
+    subcontrol-position: bottom;
+    subcontrol-origin: padding;
+    background: #000;
 }
 
 QScrollBar::sub-line:vertical {
     border: 1px solid rgba(0, 132, 185, 255);
+    height: 15px;
+    subcontrol-position: top;
+    subcontrol-origin: padding;
+    background: #000;
 }
 
 QScrollBar:horizontal {
     background: #000;
+    padding-left: 16px;
+    padding-right: 16px;
 }
 
 QScrollBar::handle:horizontal {
     background: rgba(0, 132, 185, 255);
+    min-width: 20px;
 }
 
 QScrollBar::add-line:horizontal {
     border: 1px solid rgba(0, 132, 185, 255);
+    width: 15px;
+    subcontrol-position: right;
+    subcontrol-origin: padding;
+    background: #000;
 }
 
 QScrollBar::sub-line:horizontal {
     border: 1px solid rgba(0, 132, 185, 255);
+    width: 15px;
+    subcontrol-position: left;
+    subcontrol-origin: padding;
+    background: #000;
 }
 
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-    border: 1px solid rgba(0, 132, 185, 255);
+    background: #000;
+    border: none;
 }
 
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-    border: 1px solid rgba(0, 132, 185, 255);
+    background: #000;
+    border: none;
 }
 
 QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
