@@ -165,20 +165,18 @@ The instructions will assume the following directory structure. *You should only
    ```
 1. Clone repo, set local python version, create virtual env, activate it
    ```bash
-   cd ~
-   mkdir Projects
-   cd Projects
+   mkdir ~/Projects
+   cd ~/Projects
    pyenv local 3.13.3
-   python3 -m venv venv
+   python -m venv venv
    source ./venv/bin/activate
    git clone https://github.com/Capsize-Games/airunner.git
-   cd airunner
    ```
 1. Install AI Runner requirements
    ```bash
    pip install "typing-extensions==4.13.2"
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install -e .[all_dev]
+   pip install -e airunner[all_dev]
    pip install -U timm
    python -c "import nltk; nltk.download('punkt')"
    ```
