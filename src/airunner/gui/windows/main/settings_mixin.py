@@ -243,50 +243,24 @@ class SettingsMixin:
 
     @property
     def speech_t5_settings(self) -> SpeechT5Settings:
-        settings = None
-        if self.chatbot_voice_model_type is TTSModel.SPEECHT5:
-            settings_id = self.chatbot_voice_settings.settings_id
-            settings = SpeechT5Settings.objects.filter_by_first(id=settings_id)
+        settings = SpeechT5Settings.objects.first()
         if settings is None:
             settings = SpeechT5Settings.objects.create()
-            Chatbot.objects.update(
-                self.chatbot.id,
-                voice_settings_id=settings.id,
-            )
-            self.chatbot_voice_settings.settings_id = settings.id
-        return settings
+        return SpeechT5Settings.objects.first()
 
     @property
     def espeak_settings(self) -> Optional[object]:
-        settings = None
-        if self.chatbot_voice_model_type == TTSModel.ESPEAK:
-            settings_id = self.chatbot_voice_settings.settings_id
-            settings = EspeakSettings.objects.filter_by_first(id=settings_id)
+        settings = EspeakSettings.objects.first()
         if settings is None:
             settings = EspeakSettings.objects.create()
-            Chatbot.objects.update(
-                self.chatbot.id,
-                voice_settings_id=settings.id,
-            )
-            self.chatbot_voice_settings.settings_id = settings.id
-        return settings
+        return EspeakSettings.objects.first()
 
     @property
     def openvoice_settings(self) -> OpenVoiceSettings:
-        settings = None
-        if self.chatbot_voice_model_type == TTSModel.OPENVOICE:
-            settings_id = self.chatbot_voice_settings.settings_id
-            settings = OpenVoiceSettings.objects.filter_by_first(
-                id=settings_id
-            )
+        settings = OpenVoiceSettings.objects.first()
         if settings is None:
             settings = OpenVoiceSettings.objects.create()
-            Chatbot.objects.update(
-                self.chatbot.id,
-                voice_settings_id=settings.id,
-            )
-            self.chatbot_voice_settings.settings_id = settings.id
-        return settings
+        return OpenVoiceSettings.objects.first()
 
     @property
     def metadata_settings(self) -> MetadataSettings:
@@ -407,18 +381,11 @@ class SettingsMixin:
 
     def _get_settings_for_voice_settings(self, model_type: TTSModel):
         if model_type is TTSModel.SPEECHT5:
-            settings = SpeechT5Settings.objects.first()
-            if settings is None:
-                settings = SpeechT5Settings.objects.create()
+            return self.speech_t5_settings
         elif model_type is TTSModel.OPENVOICE and AIRUNNER_ENABLE_OPEN_VOICE:
-            settings = OpenVoiceSettings.objects.first()
-            if settings is None:
-                settings = OpenVoiceSettings.objects.create()
+            return self.openvoice_settings
         else:
-            # Fall back to espeak
-            settings = EspeakSettings.objects.first()
-            if settings is None:
-                settings = EspeakSettings.objects.create()
+            return self.espeak_settings
         return settings
 
     @property
@@ -526,6 +493,18 @@ class SettingsMixin:
         setattr(controlnet_settings, column_name, val)
         self.update_controlnet_settings(column_name, val)
 
+    def update_setting_by_table_name(self, table_name, column_name, val):
+        model_class_ = table_to_class.get(table_name)
+        if model_class_ is None:
+            self.logger.error(f"Model class for {table_name} not found")
+            return
+        setting = model_class_.objects.order_by(model_class_.id.desc()).first()
+        if setting:
+            model_class_.objects.update(setting.id, **{column_name: val})
+            self.__settings_updated(table_name, column_name, val)
+        else:
+            self.logger.error("Failed to update settings: No setting found")
+
     @staticmethod
     def load_schedulers() -> List[Schedulers]:
         return Schedulers.objects.all()
@@ -577,18 +556,6 @@ class SettingsMixin:
             logger.error(f"Error in load_settings_from_db: {e}")
             # Create new settings with defaults if there was an error
             return model_class_()
-
-    def update_setting_by_table_name(self, table_name, column_name, val):
-        model_class_ = table_to_class.get(table_name)
-        if model_class_ is None:
-            self.logger.error(f"Model class for {table_name} not found")
-            return
-        setting = model_class_.objects.order_by(model_class_.id.desc()).first()
-        if setting:
-            model_class_.objects.update(setting.id, **{column_name: val})
-            self.__settings_updated(table_name, column_name, val)
-        else:
-            self.logger.error("Failed to update settings: No setting found")
 
     def update_setting(self, model_class_, name, value):
         setting = model_class_.objects.order_by(model_class_.id.desc()).first()
