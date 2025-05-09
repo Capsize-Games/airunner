@@ -94,7 +94,7 @@ class Conversation(BaseModel):
             value=None,
             chatbot_id=chatbot.id,
             user_id=user.id,
-            chatbot_name=chatbot.name,
+            chatbot_name=chatbot.botname,
             user_name=user.username,
             bot_mood=previous_conversation.bot_mood if previous_conversation else None
         )
