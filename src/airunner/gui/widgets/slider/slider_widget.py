@@ -1,5 +1,5 @@
 from typing import Any
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, QTimer
 from PySide6.QtWidgets import QDoubleSpinBox
 
 from airunner.data.models import Lora
@@ -22,6 +22,13 @@ class SliderWidget(BaseWidget):
         self.table_column = None
         self.table_item = None
         self._callback = None
+
+        # Setup debounce timer with a permanent connection to _process_pending_update
+        self._debounce_timer = QTimer()
+        self._debounce_timer.setSingleShot(True)
+        self._debounce_timer.setInterval(300)  # 300ms debounce delay
+        self._debounce_timer.timeout.connect(self._process_pending_update)
+        self._pending_update = None
 
     @property
     def slider_single_step(self):
@@ -151,6 +158,7 @@ class SliderWidget(BaseWidget):
         super().showEvent(event)
 
     def init(self, **kwargs):
+        print("DEBUG: Widget init starting")
         self.is_loading = True
         self._callback = kwargs.get("slider_callback", None)
         if self._callback is None:
@@ -198,16 +206,28 @@ class SliderWidget(BaseWidget):
             and self.table_name is not None
             and self.table_column is not None
         ):
-
+            print(
+                f"DEBUG: Loading value from table {self.table_name} with ID {self.table_id} and column {self.table_column}"
+            )
             if self.table_name == "lora":
                 self.table_item = Lora.objects.filter_by_first(
                     id=self.table_id
                 )
+                print(f"DEBUG: Found table item: {self.table_item}")
                 current_value = getattr(self.table_item, self.table_column)
+                print(
+                    f"DEBUG: Loaded current_value from table_item: {current_value}"
+                )
 
         elif current_value is None:
             if settings_property is not None:
+                print(
+                    f"DEBUG: Loading value from settings property: {settings_property}"
+                )
                 current_value = self.get_settings_value(settings_property)
+                print(
+                    f"DEBUG: Loaded current_value from settings: {current_value}"
+                )
             else:
                 current_value = 0
 
@@ -296,16 +316,33 @@ class SliderWidget(BaseWidget):
         return getattr(obj, column_name, None)
 
     def set_settings_value(self, settings_property: str, val: Any):
-        if self.table_item is not None:
+        # Store the current update parameters for the timer callback
+        self._pending_update = (settings_property, val)
+        print(f"DEBUG: Debouncing update for {settings_property} = {val}")
 
-            setattr(self.table_item, self.table_column, val)
-            self.table_item.save()
+        # Cancel any existing timer to reset the debounce period
+        self._debounce_timer.stop()
 
-        elif settings_property is not None:
-            keys = settings_property.split(".")
-            self.update_setting_by_table_name(
-                table_name=keys[0], column_name=keys[1], val=val
-            )
+        # Start a new timer that will trigger the actual update when it expires
+        self._debounce_timer.start()
+
+    def _process_pending_update(self):
+        """Execute the actual update after the debounce period has elapsed."""
+        # Get the latest pending update
+        if self._pending_update:
+            settings_property, val = self._pending_update
+            self._pending_update = None
+
+            if self.table_item is not None:
+                setattr(self.table_item, self.table_column, val)
+                self.table_item.save()
+            elif settings_property is not None:
+                keys = settings_property.split(".")
+                self.update_setting_by_table_name(
+                    table_name=keys[0], column_name=keys[1], val=val
+                )
+        else:
+            print("DEBUG: No pending update to process")
 
     def set_slider_and_spinbox_values(self, val):
         if val is None:

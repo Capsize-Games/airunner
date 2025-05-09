@@ -168,7 +168,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     @Slot()
     def on_interrupt_button_clicked(self):
-        self.api.art.interrupt_image_generation()
+        self.api.art.canvas.interrupt_image_generation()
 
     def on_delete_prompt_clicked(self, data: Dict):
         prompt_id = data.get("prompt_id", None)
@@ -431,18 +431,18 @@ class StableDiffusionGeneratorForm(BaseWidget):
         Callback function to be called after the image has been generated.
         """
         self.api.art.toggle_sd(
+            enabled=False,
             callback=lambda _d: self.load_non_sd(
                 callback=lambda _d: self.api.send_llm_text_streamed_signal(
                     LLMResponse(
                         message="Your image has been generated",
                         is_first_message=True,
                         is_end_of_message=True,
-                        name=self.chatbot.name,
+                        name=self.chatbot.botname,
                         action=LLMActionType.GENERATE_IMAGE,
                     )
                 )
             ),
-            enabled=False,
         )
 
     ##########################################################################
