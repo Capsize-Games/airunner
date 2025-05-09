@@ -19,6 +19,8 @@ class EspeakPreferencesWidget(BaseWidget):
         if not self._item:
             self._item = EspeakSettings.objects.create()
         super().__init__(*args, **kwargs)
+        if self.espeak_settings is None:
+            EspeakSettings.objects.create()
 
     def initialize_ui(self):
         self.ui.pitch.setProperty("table_item", self._item)
@@ -87,25 +89,22 @@ class EspeakPreferencesWidget(BaseWidget):
         )
 
     def callback(self, attr_name, value, _widget=None):
-        self.update_espeak_settings(attr_name, value)
+        EspeakSettings.objects.update(**{attr_name: value})
 
     def language_changed(self, text):
-        self.update_espeak_settings("language", text)
-        self.update_espeak_settings(
-            "gender", self.ui.gender_combobox.currentText()
-        )
-        self.update_espeak_settings(
-            "voice", self.ui.voice_combobox.currentText()
+        # self.update_espeak_settings("language", text)
+        # self.update_espeak_settings(
+        #     "gender", self.ui.gender_combobox.currentText()
+        # )
+        # self.update_espeak_settings(
+        #     "voice", self.ui.voice_combobox.currentText()
+        # )
+        EspeakSettings.objects.update(
+            language=text,
+            gender=self.ui.gender_combobox.currentText(),
+            voice=self.ui.voice_combobox.currentText(),
         )
 
-        self.update_espeak_settings("language", text)
-        self.update_espeak_settings(
-            "gender", self.ui.gender_combobox.currentText()
-        )
-        self.update_espeak_settings(
-            "voice", self.ui.voice_combobox.currentText()
-        )
-      
     def voice_changed(self, text):
         self.update_espeak_settings("voice", text)
 

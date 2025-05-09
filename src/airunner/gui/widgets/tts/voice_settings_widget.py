@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QMessageBox,
 )
+from PySide6.QtCore import Slot
 from airunner.gui.widgets.tts.templates.voice_settings_ui import (
     Ui_voice_settings,
 )
@@ -15,6 +16,7 @@ from airunner.data.models.speech_t5_settings import SpeechT5Settings
 from airunner.gui.widgets.tts.espeak_preferences_widget import (
     EspeakPreferencesWidget,
 )
+from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.tts.speecht5_preferences_widget import (
     SpeechT5PreferencesWidget,
 )
@@ -26,7 +28,7 @@ from airunner.enums import TTSModel
 from airunner.data.models.openvoice_settings import OpenVoiceSettings
 
 
-class VoiceSettingsWidget(QWidget):
+class VoiceSettingsWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ui = Ui_voice_settings()
@@ -42,9 +44,57 @@ class VoiceSettingsWidget(QWidget):
             if widget:
                 widget.deleteLater()
 
-        voices = VoiceSettings.objects.all()
-        for voice in voices:
+        self.initalize_voice_item()
+        self.initialize_voice_combobox()
+
+    def initalize_voice_item(self):
+        # Get voice from current bot
+        if self.chatbot and self.chatbot.voice_id:
+            voice = VoiceSettings.objects.get(self.chatbot.voice_id)
+        else:
+            voice = VoiceSettings.objects.first()
+        if voice is not None:
             self.add_voice_item(voice)
+
+    def initialize_voice_combobox(self):
+        # set voices combobox
+        self.ui.voice.clear()
+        voices = VoiceSettings.objects.all()
+        if voices:
+            for voice in voices:
+                self.ui.voice.addItem(f"{voice.name}")
+
+    @Slot(str)
+    def on_voice_currentTextChanged(self, text):
+        """Handle the change in the voice combobox."""
+        if text:
+            # Parse the voice name from the format "name (count)"
+            voice_name = text.split(" (")[0]
+            # Find the voice with the matching name
+            all_voices = VoiceSettings.objects.all()
+            count = 0
+            target_count = (
+                int(text.split("(")[1].split(")")[0]) if "(" in text else 1
+            )
+
+            for voice in all_voices:
+                if voice.name == voice_name:
+                    count += 1
+                    if count == target_count:
+                        self.clear_voice_item()
+                        self.add_voice_item(voice)
+                        return
+            self.clear_voice_item()
+            self.load_voices()
+
+    def clear_voice_item(self):
+        """Clear the current voice item from the layout."""
+        layout = self.ui.voice_list_layout
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
 
     def add_voice_item(self, voice):
         container = QWidget()
@@ -110,36 +160,42 @@ class VoiceSettingsWidget(QWidget):
         layout.addWidget(widget)
 
     def create_voice(self):
+        name = "New Voice"
+        voices = VoiceSettings.objects.filter(VoiceSettings.name == name)
+        total = len(voices)
+        name = f"{name} ({total + 1})" if total > 0 else name
         voice = VoiceSettings.objects.create(
-            name="New Voice",
+            name=name,
             model_type=(
                 TTSModel.SPEECHT5.value
                 if not AIRUNNER_ENABLE_OPEN_VOICE
                 else TTSModel.OPENVOICE.value
             ),
-            settings_id=0,
+            settings_id=1,
         )
-        if voice.model_type == TTSModel.SPEECHT5.value:
-            settings = SpeechT5Settings.objects.create()
-        elif voice.model_type == TTSModel.ESPEAK.value:
-            settings = EspeakSettings.objects.create()
-        elif (
-            AIRUNNER_ENABLE_OPEN_VOICE
-            and voice.model_type == TTSModel.OPENVOICE.value
-        ):
-            settings = OpenVoiceSettings.objects.create()
-        else:
-            return
-        VoiceSettings.objects.update(
-            voice.id,
-            settings_id=settings.id,
-        )
-        voice.settings_id = settings.id
+        # if voice.model_type == TTSModel.SPEECHT5.value:
+        #     settings = SpeechT5Settings.objects.create()
+        # elif voice.model_type == TTSModel.ESPEAK.value:
+        #     settings = EspeakSettings.objects.create()
+        # elif (
+        #     AIRUNNER_ENABLE_OPEN_VOICE
+        #     and voice.model_type == TTSModel.OPENVOICE.value
+        # ):
+        #     settings = OpenVoiceSettings.objects.create()
+        # else:
+        #     return
+        # VoiceSettings.objects.update(
+        #     voice.id,
+        #     settings_id=settings.id,
+        # )
+        # voice.settings_id = settings.id
         self.add_voice_item(voice)
+        self.initialize_voice_combobox()
 
     def update_voice_name(self, voice, name):
         voice.name = name
         VoiceSettings.objects.update(voice.id, name=name)
+        self.initialize_voice_combobox()
 
     def update_voice_model(self, voice, model_type, layout):
         if voice.model_type != model_type:
@@ -175,6 +231,7 @@ class VoiceSettingsWidget(QWidget):
 
         # Update the settings widget
         self.add_settings_widget(voice, layout)
+        self.initialize_voice_combobox()
 
     def delete_voice(self, voice):
         confirm = QMessageBox.question(
@@ -196,3 +253,4 @@ class VoiceSettingsWidget(QWidget):
 
             VoiceSettings.objects.delete(voice.id)
             self.load_voices()
+        self.initialize_voice_combobox()

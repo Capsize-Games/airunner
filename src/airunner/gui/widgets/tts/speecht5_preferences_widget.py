@@ -11,13 +11,12 @@ class SpeechT5PreferencesWidget(BaseWidget):
 
     def __init__(self, id: int, *args, **kwargs):
         self._id: int = id
-        self._item: SpeechT5Settings = SpeechT5Settings.objects.get(self._id)
-        if not self._item:
-            self._item = SpeechT5Settings.objects.create()
         super().__init__(*args, **kwargs)
+        if self.speech_t5_settings is None:
+            SpeechT5PreferencesWidget.objects.create()
 
     def initialize_ui(self):
-        self.ui.pitch.setProperty("table_item", self._item)
+        self.ui.pitch.setProperty("table_item", self.speech_t5_settings)
         voice = None
 
         settings = SpeechT5Settings.objects.get(self._id)
@@ -38,7 +37,9 @@ class SpeechT5PreferencesWidget(BaseWidget):
             self.ui.pitch.init(current_value=settings.pitch / 100)
 
     def voice_changed(self, text):
-        self.update_speech_t5_settings("voice", text)
+        SpeechT5PreferencesWidget.objects.update(
+            voice=text,
+        )
 
     def load_settings(self):
         """Load the SpeechT5 settings into the widget."""
