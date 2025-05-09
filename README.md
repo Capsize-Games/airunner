@@ -141,7 +141,7 @@ The instructions will assume the following directory structure. *You should only
 1. Install system requirements
    ```bash
    sudo apt update && sudo apt upgrade -y
-   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake
+   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme
    ```
 1. Create airunner directory
    ```bash
@@ -154,13 +154,51 @@ The instructions will assume the following directory structure. *You should only
    ```
 1. Add pyenv to shell configuration
    ```bash
-   export PYENV_ROOT="$HOME/.pyenv"
-   [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-   eval "$(pyenv init - bash)"
-   source ~/.bashrc
+   # Check and add pyenv configuration if not already present
+   if ! grep -q "Pyenv configuration added by AI Runner" ~/.bashrc; then
+     cat << 'EOF' >> ~/.bashrc
+
+# Pyenv configuration added by AI Runner setup
+export PYENV_ROOT="$HOME/.pyenv"
+if [ -d "$PYENV_ROOT/bin" ]; then
+  export PATH="$PYENV_ROOT/bin:$PATH"
+fi
+if command -v pyenv &>/dev/null; then
+  eval "$(pyenv init - bash)"
+fi
+EOF
+   fi
+
+   # Check and add WSLg XDG_RUNTIME_DIR fix if not already present
+   if ! grep -q "WSLg XDG_RUNTIME_DIR Fix added by AI Runner" ~/.bashrc; then
+     cat << 'EOF' >> ~/.bashrc
+
+# WSLg XDG_RUNTIME_DIR Fix added by AI Runner setup
+if [ -n "$WSL_DISTRO_NAME" ]; then
+    if [ -d "/wslg/runtime-dir" ]; then
+        export XDG_RUNTIME_DIR="/wslg/runtime-dir"
+    elif [ -d "/mnt/wslg/runtime-dir" ]; then # Older WSLg path
+        export XDG_RUNTIME_DIR="/mnt/wslg/runtime-dir"
+    fi
+fi
+EOF
+   fi
+
+   # Check and add Qt environment variables for WSLg if not already present
+   if ! grep -q "Qt environment variables for WSLg added by AI Runner" ~/.bashrc; then
+     cat << 'EOF' >> ~/.bashrc
+
+# Qt environment variables for WSLg added by AI Runner setup
+if [ -n "$WSL_DISTRO_NAME" ]; then
+    export QT_QPA_PLATFORM=wayland
+    export QT_QPA_PLATFORMTHEME=gtk3
+fi
+EOF
+   fi
    ```
 1. Install python and set to local version
    ```bash
+   . ~/.bashrc
    pyenv install 3.13.3
    ```
 1. Clone repo, set local python version, create virtual env, activate it
