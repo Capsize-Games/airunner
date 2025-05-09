@@ -62,11 +62,22 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Generate speech from the given message.
         """
+        if not self._engine or self.model_status != ModelStatus.LOADED:
+            self.logger.warning(
+                "TTS engine not available or not loaded. Cannot generate speech."
+            )
+            return None
+
         self.tts_request = tts_request
         message = tts_request.message.replace('"', "'")
         if message:
-            self._engine.say(message)
-            self._engine.runAndWait()
+            try:
+                self._engine.say(message)
+                self._engine.runAndWait()
+            except Exception as e:
+                self.logger.error(f"Error during speech generation: {e}")
+                # Optionally, consider changing model status if generation fails repeatedly
+                # self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
         return None
 
     def load(self, target_model=None):
