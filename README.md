@@ -143,16 +143,16 @@ The instructions will assume the following directory structure. *You should only
    sudo apt update && sudo apt upgrade -y
    sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme espeak-ng-espeak
    ```
-1. Create airunner directory
+2. Create airunner directory
    ```bash
    sudo mkdir ~/.local/share/airunner
    sudo chown $USER:USER ~/.local/share/airunner
    ```
-1. Install pyenv (allows management of multiple Python versions)
+3. Install pyenv (allows management of multiple Python versions)
    ```bash
    curl https://pyenv.run | bash
    ```
-1. Add pyenv to shell configuration
+4. Add pyenv to shell configuration
 ```bash
 # Check and add pyenv configuration if not already present
 if ! grep -q "Pyenv configuration added by AI Runner" ~/.bashrc; then
@@ -196,12 +196,12 @@ fi
 EOF
 fi
 ```
-1. Install python and set to local version
+5. Install python and set to local version
    ```bash
    . ~/.bashrc
    pyenv install 3.13.3
    ```
-1. Clone repo, set local python version, create virtual env, activate it
+6. Clone repo, set local python version, create virtual env, activate it
    ```bash
    mkdir ~/Projects
    cd ~/Projects
@@ -210,7 +210,7 @@ fi
    source ./venv/bin/activate
    git clone https://github.com/Capsize-Games/airunner.git
    ```
-1. Install AI Runner requirements
+7. Install AI Runner requirements
    ```bash
    pip install "typing-extensions==4.13.2"
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
@@ -218,7 +218,7 @@ fi
    pip install -U timm
    python -c "import nltk; nltk.download('punkt')"
    ```
-1. Run app 
+8. Run app 
    ```bash
    airunner
    ```
