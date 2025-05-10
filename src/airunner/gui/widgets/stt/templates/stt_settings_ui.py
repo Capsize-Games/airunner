@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'stt_settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -70,15 +70,15 @@ class Ui_stt_settings(object):
         sizePolicy1.setHeightForWidth(self.volume_input_threshold_slider.sizePolicy().hasHeightForWidth())
         self.volume_input_threshold_slider.setSizePolicy(sizePolicy1)
         self.volume_input_threshold_slider.setMinimumSize(QSize(0, 10))
-        self.volume_input_threshold_slider.setProperty("slider_minimum", 1)
-        self.volume_input_threshold_slider.setProperty("slider_maximum", 2000)
-        self.volume_input_threshold_slider.setProperty("spinbox_minimum", 0.000000000000000)
-        self.volume_input_threshold_slider.setProperty("spinbox_maximum", 2.000000000000000)
-        self.volume_input_threshold_slider.setProperty("display_as_float", True)
-        self.volume_input_threshold_slider.setProperty("slider_single_step", 1)
-        self.volume_input_threshold_slider.setProperty("slider_page_step", 10)
-        self.volume_input_threshold_slider.setProperty("spinbox_single_step", 0.010000000000000)
-        self.volume_input_threshold_slider.setProperty("spinbox_page_step", 0.100000000000000)
+        self.volume_input_threshold_slider.setProperty(u"slider_minimum", 1)
+        self.volume_input_threshold_slider.setProperty(u"slider_maximum", 2000)
+        self.volume_input_threshold_slider.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.volume_input_threshold_slider.setProperty(u"spinbox_maximum", 2.000000000000000)
+        self.volume_input_threshold_slider.setProperty(u"display_as_float", True)
+        self.volume_input_threshold_slider.setProperty(u"slider_single_step", 1)
+        self.volume_input_threshold_slider.setProperty(u"slider_page_step", 10)
+        self.volume_input_threshold_slider.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.volume_input_threshold_slider.setProperty(u"spinbox_page_step", 0.100000000000000)
 
         self.gridLayout.addWidget(self.volume_input_threshold_slider, 0, 0, 1, 1)
 
@@ -87,15 +87,15 @@ class Ui_stt_settings(object):
         sizePolicy1.setHeightForWidth(self.silence_buffer_seconds.sizePolicy().hasHeightForWidth())
         self.silence_buffer_seconds.setSizePolicy(sizePolicy1)
         self.silence_buffer_seconds.setMinimumSize(QSize(0, 10))
-        self.silence_buffer_seconds.setProperty("slider_minimum", 1)
-        self.silence_buffer_seconds.setProperty("slider_maximum", 5000)
-        self.silence_buffer_seconds.setProperty("spinbox_minimum", 0.000000000000000)
-        self.silence_buffer_seconds.setProperty("spinbox_maximum", 5.000000000000000)
-        self.silence_buffer_seconds.setProperty("display_as_float", True)
-        self.silence_buffer_seconds.setProperty("slider_single_step", 1)
-        self.silence_buffer_seconds.setProperty("slider_page_step", 10)
-        self.silence_buffer_seconds.setProperty("spinbox_single_step", 0.010000000000000)
-        self.silence_buffer_seconds.setProperty("spinbox_page_step", 0.100000000000000)
+        self.silence_buffer_seconds.setProperty(u"slider_minimum", 1)
+        self.silence_buffer_seconds.setProperty(u"slider_maximum", 5000)
+        self.silence_buffer_seconds.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.silence_buffer_seconds.setProperty(u"spinbox_maximum", 5.000000000000000)
+        self.silence_buffer_seconds.setProperty(u"display_as_float", True)
+        self.silence_buffer_seconds.setProperty(u"slider_single_step", 1)
+        self.silence_buffer_seconds.setProperty(u"slider_page_step", 10)
+        self.silence_buffer_seconds.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.silence_buffer_seconds.setProperty(u"spinbox_page_step", 0.100000000000000)
 
         self.gridLayout.addWidget(self.silence_buffer_seconds, 1, 0, 1, 1)
 
@@ -123,9 +123,9 @@ class Ui_stt_settings(object):
     def retranslateUi(self, stt_settings):
         stt_settings.setWindowTitle(QCoreApplication.translate("stt_settings", u"Form", None))
         self.label_2.setText(QCoreApplication.translate("stt_settings", u"LLM Settings", None))
-        self.volume_input_threshold_slider.setProperty("settings_property", QCoreApplication.translate("stt_settings", u"stt_settings.volume_input_threshold", None))
-        self.volume_input_threshold_slider.setProperty("label_text", QCoreApplication.translate("stt_settings", u"Input Volume", None))
-        self.silence_buffer_seconds.setProperty("settings_property", QCoreApplication.translate("stt_settings", u"stt_settings.silence_buffer_seconds", None))
-        self.silence_buffer_seconds.setProperty("label_text", QCoreApplication.translate("stt_settings", u"Silence Buffer", None))
+        self.volume_input_threshold_slider.setProperty(u"settings_property", QCoreApplication.translate("stt_settings", u"stt_settings.volume_input_threshold", None))
+        self.volume_input_threshold_slider.setProperty(u"label_text", QCoreApplication.translate("stt_settings", u"Input Volume", None))
+        self.silence_buffer_seconds.setProperty(u"settings_property", QCoreApplication.translate("stt_settings", u"stt_settings.silence_buffer_seconds", None))
+        self.silence_buffer_seconds.setProperty(u"label_text", QCoreApplication.translate("stt_settings", u"Silence Buffer", None))
     # retranslateUi
 

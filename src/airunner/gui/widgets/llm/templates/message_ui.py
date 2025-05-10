@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'message.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -58,7 +58,7 @@ class Ui_message(object):
         self.copy_button = QPushButton(self.message_container)
         self.copy_button.setObjectName(u"copy_button")
         icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/copy.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/light/icons/feather/light/copy.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.copy_button.setIcon(icon)
 
         self.horizontalLayout.addWidget(self.copy_button)
@@ -66,7 +66,7 @@ class Ui_message(object):
         self.delete_button = QPushButton(self.message_container)
         self.delete_button.setObjectName(u"delete_button")
         icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.delete_button.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.delete_button)

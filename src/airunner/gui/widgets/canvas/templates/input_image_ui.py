@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'input_image.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -73,12 +73,12 @@ class Ui_input_image(object):
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.strength_slider_widget.sizePolicy().hasHeightForWidth())
         self.strength_slider_widget.setSizePolicy(sizePolicy1)
-        self.strength_slider_widget.setProperty("slider_maximum", 100)
-        self.strength_slider_widget.setProperty("current_value", 0)
-        self.strength_slider_widget.setProperty("spinbox_maximum", 1.000000000000000)
-        self.strength_slider_widget.setProperty("display_as_float", True)
-        self.strength_slider_widget.setProperty("spinbox_single_step", 0.010000000000000)
-        self.strength_slider_widget.setProperty("spinbox_page_step", 0.100000000000000)
+        self.strength_slider_widget.setProperty(u"slider_maximum", 100)
+        self.strength_slider_widget.setProperty(u"current_value", 0)
+        self.strength_slider_widget.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.strength_slider_widget.setProperty(u"display_as_float", True)
+        self.strength_slider_widget.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.strength_slider_widget.setProperty(u"spinbox_page_step", 0.100000000000000)
 
         self.gridLayout.addWidget(self.strength_slider_widget, 0, 0, 1, 1)
 
@@ -86,12 +86,12 @@ class Ui_input_image(object):
         self.mask_blur_slider_widget.setObjectName(u"mask_blur_slider_widget")
         sizePolicy1.setHeightForWidth(self.mask_blur_slider_widget.sizePolicy().hasHeightForWidth())
         self.mask_blur_slider_widget.setSizePolicy(sizePolicy1)
-        self.mask_blur_slider_widget.setProperty("slider_maximum", 100)
-        self.mask_blur_slider_widget.setProperty("current_value", 0)
-        self.mask_blur_slider_widget.setProperty("spinbox_maximum", 1.000000000000000)
-        self.mask_blur_slider_widget.setProperty("display_as_float", True)
-        self.mask_blur_slider_widget.setProperty("spinbox_single_step", 0.010000000000000)
-        self.mask_blur_slider_widget.setProperty("spinbox_page_step", 0.100000000000000)
+        self.mask_blur_slider_widget.setProperty(u"slider_maximum", 100)
+        self.mask_blur_slider_widget.setProperty(u"current_value", 0)
+        self.mask_blur_slider_widget.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.mask_blur_slider_widget.setProperty(u"display_as_float", True)
+        self.mask_blur_slider_widget.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.mask_blur_slider_widget.setProperty(u"spinbox_page_step", 0.100000000000000)
 
         self.gridLayout.addWidget(self.mask_blur_slider_widget, 1, 0, 1, 1)
 
@@ -110,7 +110,7 @@ class Ui_input_image(object):
         self.link_to_grid_image_button = QPushButton(input_image)
         self.link_to_grid_image_button.setObjectName(u"link_to_grid_image_button")
         icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/link.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/light/icons/feather/light/link.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.link_to_grid_image_button.setIcon(icon)
         self.link_to_grid_image_button.setCheckable(True)
 
@@ -121,7 +121,7 @@ class Ui_input_image(object):
         self.lock_input_image_button.setMinimumSize(QSize(24, 24))
         self.lock_input_image_button.setMaximumSize(QSize(24, 24))
         icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/lock.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/light/icons/feather/light/lock.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.lock_input_image_button.setIcon(icon1)
         self.lock_input_image_button.setCheckable(True)
 
@@ -130,7 +130,7 @@ class Ui_input_image(object):
         self.refresh_button = QPushButton(input_image)
         self.refresh_button.setObjectName(u"refresh_button")
         icon2 = QIcon()
-        icon2.addFile(u":/light/icons/feather/light/refresh-ccw.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/light/icons/feather/light/refresh-ccw.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.refresh_button.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.refresh_button)
@@ -149,7 +149,7 @@ class Ui_input_image(object):
         self.import_button = QPushButton(input_image)
         self.import_button.setObjectName(u"import_button")
         icon3 = QIcon()
-        icon3.addFile(u":/light/icons/feather/light/folder.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(u":/light/icons/feather/light/folder.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.import_button.setIcon(icon3)
 
         self.horizontalLayout.addWidget(self.import_button)
@@ -157,7 +157,7 @@ class Ui_input_image(object):
         self.delete_button = QPushButton(input_image)
         self.delete_button.setObjectName(u"delete_button")
         icon4 = QIcon()
-        icon4.addFile(u":/light/icons/feather/light/trash-2.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(u":/light/icons/feather/light/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.delete_button.setIcon(icon4)
 
         self.horizontalLayout.addWidget(self.delete_button)
@@ -178,10 +178,10 @@ class Ui_input_image(object):
 
     def retranslateUi(self, input_image):
         input_image.setWindowTitle(QCoreApplication.translate("input_image", u"Form", None))
-        self.strength_slider_widget.setProperty("label_text", QCoreApplication.translate("input_image", u"Strength", None))
-        self.strength_slider_widget.setProperty("settings_property", QCoreApplication.translate("input_image", u"generator_settings.strength", None))
-        self.mask_blur_slider_widget.setProperty("label_text", QCoreApplication.translate("input_image", u"Mask Blur", None))
-        self.mask_blur_slider_widget.setProperty("settings_property", QCoreApplication.translate("input_image", u"outpaint_settings.mask_blur", None))
+        self.strength_slider_widget.setProperty(u"label_text", QCoreApplication.translate("input_image", u"Strength", None))
+        self.strength_slider_widget.setProperty(u"settings_property", QCoreApplication.translate("input_image", u"generator_settings.strength", None))
+        self.mask_blur_slider_widget.setProperty(u"label_text", QCoreApplication.translate("input_image", u"Mask Blur", None))
+        self.mask_blur_slider_widget.setProperty(u"settings_property", QCoreApplication.translate("input_image", u"outpaint_settings.mask_blur", None))
 #if QT_CONFIG(tooltip)
         self.link_to_grid_image_button.setToolTip(QCoreApplication.translate("input_image", u"Link to Grid image", None))
 #endif // QT_CONFIG(tooltip)

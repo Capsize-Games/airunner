@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'stablediffusion_generator_form.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -30,7 +30,7 @@ class Ui_stablediffusion_generator_form(object):
         font = QFont()
         font.setPointSize(8)
         stablediffusion_generator_form.setFont(font)
-        stablediffusion_generator_form.setCursor(QCursor(Qt.PointingHandCursor))
+        stablediffusion_generator_form.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.gridLayout_4 = QGridLayout(stablediffusion_generator_form)
         self.gridLayout_4.setSpacing(0)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
@@ -356,7 +356,7 @@ class Ui_stablediffusion_generator_form(object):
         self.generate_button.setMinimumSize(QSize(30, 30))
         self.generate_button.setMaximumSize(QSize(30, 30))
         icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.generate_button.setIcon(icon)
 
         self.horizontalLayout_7.addWidget(self.generate_button)
@@ -367,9 +367,9 @@ class Ui_stablediffusion_generator_form(object):
         self.interrupt_button.setSizePolicy(sizePolicy1)
         self.interrupt_button.setMinimumSize(QSize(30, 30))
         self.interrupt_button.setMaximumSize(QSize(30, 30))
-        self.interrupt_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.interrupt_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.interrupt_button.setIcon(icon1)
 
         self.horizontalLayout_7.addWidget(self.interrupt_button)

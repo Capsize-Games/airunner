@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'generator_tab.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -71,8 +71,8 @@ class Ui_generator_tab(object):
 
     def retranslateUi(self, generator_tab):
         generator_tab.setWindowTitle(QCoreApplication.translate("generator_tab", u"Form", None))
-        self.generator_form_stablediffusion.setProperty("generator_section", QCoreApplication.translate("generator_tab", u"txt2img", None))
-        self.generator_form_stablediffusion.setProperty("generator_name", QCoreApplication.translate("generator_tab", u"stablediffusion", None))
+        self.generator_form_stablediffusion.setProperty(u"generator_section", QCoreApplication.translate("generator_tab", u"txt2img", None))
+        self.generator_form_stablediffusion.setProperty(u"generator_name", QCoreApplication.translate("generator_tab", u"stablediffusion", None))
         self.generator_tabs.setTabText(self.generator_tabs.indexOf(self.tab_stablediffusion), QCoreApplication.translate("generator_tab", u"Stable Diffusion", None))
     # retranslateUi
 

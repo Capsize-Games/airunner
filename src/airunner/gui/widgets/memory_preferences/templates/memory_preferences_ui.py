@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'memory_preferences.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -243,15 +243,15 @@ class Ui_memory_preferences(object):
         self.tome_sd_ratio = SliderWidget(self.use_tome)
         self.tome_sd_ratio.setObjectName(u"tome_sd_ratio")
         self.tome_sd_ratio.setMinimumSize(QSize(0, 20))
-        self.tome_sd_ratio.setProperty("slider_callback", u"tome_sd_ratio_value_change")
-        self.tome_sd_ratio.setProperty("current_value", 1000)
-        self.tome_sd_ratio.setProperty("slider_maximum", 1000)
-        self.tome_sd_ratio.setProperty("spinbox_maximum", 1.000000000000000)
-        self.tome_sd_ratio.setProperty("display_as_float", True)
-        self.tome_sd_ratio.setProperty("spinbox_single_step", 0.010000000000000)
-        self.tome_sd_ratio.setProperty("spinbox_page_step", 0.100000000000000)
-        self.tome_sd_ratio.setProperty("spinbox_minimum", 0.000000000000000)
-        self.tome_sd_ratio.setProperty("slider_minimum", 0)
+        self.tome_sd_ratio.setProperty(u"slider_callback", u"tome_sd_ratio_value_change")
+        self.tome_sd_ratio.setProperty(u"current_value", 1000)
+        self.tome_sd_ratio.setProperty(u"slider_maximum", 1000)
+        self.tome_sd_ratio.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.tome_sd_ratio.setProperty(u"display_as_float", True)
+        self.tome_sd_ratio.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.tome_sd_ratio.setProperty(u"spinbox_page_step", 0.100000000000000)
+        self.tome_sd_ratio.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.tome_sd_ratio.setProperty(u"slider_minimum", 0)
 
         self.gridLayout_2.addWidget(self.tome_sd_ratio, 1, 0, 1, 1)
 
@@ -397,8 +397,8 @@ class Ui_memory_preferences(object):
         self.use_tome.setToolTip(QCoreApplication.translate("memory_preferences", u"Merge redundant tokens for faster inference. May result in slight reduction in image quality.", None))
 #endif // QT_CONFIG(tooltip)
         self.use_tome.setTitle(QCoreApplication.translate("memory_preferences", u"ToMe Token Merging", None))
-        self.tome_sd_ratio.setProperty("label_text", QCoreApplication.translate("memory_preferences", u"Ratio", None))
-        self.tome_sd_ratio.setProperty("settings_property", QCoreApplication.translate("memory_preferences", u"memory_settings.tome_sd_ratio", None))
+        self.tome_sd_ratio.setProperty(u"label_text", QCoreApplication.translate("memory_preferences", u"Ratio", None))
+        self.tome_sd_ratio.setProperty(u"settings_property", QCoreApplication.translate("memory_preferences", u"memory_settings.tome_sd_ratio", None))
         self.label_10.setText(QCoreApplication.translate("memory_preferences", u"Faster inference, slight image impact", None))
         self.label_8.setText(QCoreApplication.translate("memory_preferences", u"Faster inference, lower VRAM usage", None))
         self.label_4.setText(QCoreApplication.translate("memory_preferences", u"Less VRAM usage, slight inference impact", None))

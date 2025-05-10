@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'open_voice_preferences.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -41,15 +41,15 @@ class Ui_open_voice_preferences(object):
 
         self.speed_slider = SliderWidget(open_voice_preferences)
         self.speed_slider.setObjectName(u"speed_slider")
-        self.speed_slider.setProperty("slider_minimum", 1)
-        self.speed_slider.setProperty("slider_maximum", 100)
-        self.speed_slider.setProperty("spinbox_minimum", 0.000000000000000)
-        self.speed_slider.setProperty("spinbox_maximum", 1.000000000000000)
-        self.speed_slider.setProperty("display_as_float", True)
-        self.speed_slider.setProperty("slider_single_step", 0)
-        self.speed_slider.setProperty("slider_page_step", 0)
-        self.speed_slider.setProperty("spinbox_single_step", 0.010000000000000)
-        self.speed_slider.setProperty("spinbox_double_step", 0.100000000000000)
+        self.speed_slider.setProperty(u"slider_minimum", 1)
+        self.speed_slider.setProperty(u"slider_maximum", 100)
+        self.speed_slider.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.speed_slider.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.speed_slider.setProperty(u"display_as_float", True)
+        self.speed_slider.setProperty(u"slider_single_step", 0)
+        self.speed_slider.setProperty(u"slider_page_step", 0)
+        self.speed_slider.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.speed_slider.setProperty(u"spinbox_double_step", 0.100000000000000)
 
         self.verticalLayout.addWidget(self.speed_slider)
 
@@ -67,8 +67,8 @@ class Ui_open_voice_preferences(object):
     def retranslateUi(self, open_voice_preferences):
         self.groupBox.setTitle(QCoreApplication.translate("open_voice_preferences", u"Language", None))
         self.language_combobox.setCurrentText("")
-        self.speed_slider.setProperty("settings_property", QCoreApplication.translate("open_voice_preferences", u"openvoice_settings.speed", None))
-        self.speed_slider.setProperty("label_text", QCoreApplication.translate("open_voice_preferences", u"Speed", None))
+        self.speed_slider.setProperty(u"settings_property", QCoreApplication.translate("open_voice_preferences", u"openvoice_settings.speed", None))
+        self.speed_slider.setProperty(u"label_text", QCoreApplication.translate("open_voice_preferences", u"Speed", None))
         pass
     # retranslateUi
 
