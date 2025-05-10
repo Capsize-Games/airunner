@@ -41,7 +41,7 @@ extras_require = {
         "pyttsx3==2.91",
         "cryptography==44.0.0",
         "llama-index==0.12.14",
-        "llama-index-readers-file==0.4.4",
+        "llama-index-readers-file==0.4.7",
         "llama-index-readers-web==0.3.5",
         "llama-index-llms-huggingface==0.4.2",
         "llama-index-llms-groq==0.3.1",
