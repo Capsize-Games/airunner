@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'stablediffusion_tool_tab.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -42,7 +42,7 @@ class Ui_stablediffusion_tool_tab_widget(object):
         font = QFont()
         font.setPointSize(8)
         self.tool_tab_widget_container.setFont(font)
-        self.tool_tab_widget_container.setCursor(QCursor(Qt.ArrowCursor))
+        self.tool_tab_widget_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         self.tool_tab_widget_container.setAcceptDrops(False)
         self.tool_tab_widget_container.setTabPosition(QTabWidget.TabPosition.North)
         self.tab_3 = QWidget()
@@ -174,11 +174,11 @@ class Ui_stablediffusion_tool_tab_widget(object):
     def retranslateUi(self, stablediffusion_tool_tab_widget):
         stablediffusion_tool_tab_widget.setWindowTitle(QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Form", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Stable Diffusion", None))
-        self.image_to_image.setProperty("settings_key", QCoreApplication.translate("stablediffusion_tool_tab_widget", u"image_to_image_settings", None))
+        self.image_to_image.setProperty(u"settings_key", QCoreApplication.translate("stablediffusion_tool_tab_widget", u"image_to_image_settings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_5), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Input image", None))
-        self.controlnet_image.setProperty("settings_key", QCoreApplication.translate("stablediffusion_tool_tab_widget", u"controlnet_settings", None))
+        self.controlnet_image.setProperty(u"settings_key", QCoreApplication.translate("stablediffusion_tool_tab_widget", u"controlnet_settings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_8), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Controlnet", None))
-        self.widget_2.setProperty("settings_key", QCoreApplication.translate("stablediffusion_tool_tab_widget", u"outpaint_settings", None))
+        self.widget_2.setProperty(u"settings_key", QCoreApplication.translate("stablediffusion_tool_tab_widget", u"outpaint_settings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_9), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Inpaint", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"LoRA", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Embeddings", None))

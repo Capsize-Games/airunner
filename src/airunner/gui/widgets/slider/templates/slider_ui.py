@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'slider.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -73,7 +73,7 @@ class Ui_slider_widget(object):
         self.slider_spinbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.slider_spinbox.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         self.slider_spinbox.setKeyboardTracking(True)
-        self.slider_spinbox.setProperty("showGroupSeparator", False)
+        self.slider_spinbox.setProperty(u"showGroupSeparator", False)
         self.slider_spinbox.setMaximum(1.000000000000000)
         self.slider_spinbox.setSingleStep(0.010000000000000)
 

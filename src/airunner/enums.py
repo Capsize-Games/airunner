@@ -161,78 +161,78 @@ class SignalCode(Enum):
     SD_LOAD_SIGNAL = "load_stablediffusion_signal"
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
     SD_ART_MODEL_CHANGED = "reload_stablediffusion_signal"
-    LLM_MODEL_CHANGED = enum.auto()
+    LLM_MODEL_CHANGED = "llm_model_changed_signal"
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
     SAFETY_CHECKER_LOAD_SIGNAL = "SAFETY_CHECKER_LOAD_SIGNAL"
     SAFETY_CHECKER_UNLOAD_SIGNAL = "SAFETY_CHECKER_UNLOAD_SIGNAL"
 
-    BRUSH_COLOR_CHANGED_SIGNAL = enum.auto()
+    BRUSH_COLOR_CHANGED_SIGNAL = "brush_color_changed_signal"
 
-    HISTORY_CLEAR_SIGNAL = enum.auto()
-    UNDO_SIGNAL = enum.auto()
-    REDO_SIGNAL = enum.auto()
-    LOAD_CONVERSATION = enum.auto()
-    SET_CONVERSATION = enum.auto()
-    BOT_MOOD_UPDATED = enum.auto()
-    CHATBOT_CHANGED = enum.auto()
-    CONVERSATION_DELETED = enum.auto()
+    HISTORY_CLEAR_SIGNAL = "history_clear_signal"
+    UNDO_SIGNAL = "undo_signal"
+    REDO_SIGNAL = "redo_signal"
+    LOAD_CONVERSATION = "load_conversation_signal"
+    SET_CONVERSATION = "set_conversation_signal"
+    BOT_MOOD_UPDATED = "bot_mood_updated_signal"
+    CHATBOT_CHANGED = "chatbot_changed_signal"
+    CONVERSATION_DELETED = "conversation_deleted_signal"
 
-    KEYBOARD_SHORTCUTS_UPDATED = enum.auto()
-    LORA_STATUS_CHANGED = enum.auto()
-    EMBEDDING_STATUS_CHANGED = enum.auto()
+    KEYBOARD_SHORTCUTS_UPDATED = "keyboard_shortcuts_updated_signal"
+    LORA_STATUS_CHANGED = "lora_status_changed"
+    EMBEDDING_STATUS_CHANGED = "embedding_status_changed"
 
-    MASK_LAYER_TOGGLED = enum.auto()
-    MASK_UPDATED = enum.auto()
-    HISTORY_UPDATED = enum.auto()
-    CANVAS_IMAGE_UPDATED_SIGNAL = enum.auto()
+    MASK_LAYER_TOGGLED = "mask_layer_toggled"
+    MASK_UPDATED = "mask_updated"
+    HISTORY_UPDATED = "history_updated"
+    CANVAS_IMAGE_UPDATED_SIGNAL = "canvas_image_updated_signal"
 
-    UNLOAD_NON_SD_MODELS = enum.auto()
-    LOAD_NON_SD_MODELS = enum.auto()
+    UNLOAD_NON_SD_MODELS = "unload_non_sd_models"
+    LOAD_NON_SD_MODELS = "load_non_sd_models"
 
-    SD_PIPELINE_LOADED_SIGNAL = enum.auto()
-    MISSING_REQUIRED_MODELS = enum.auto()
+    SD_PIPELINE_LOADED_SIGNAL = "sd_pipeline_loaded_signal"
+    MISSING_REQUIRED_MODELS = "missing_required_models"
 
-    DELETE_MESSAGES_AFTER_ID = enum.auto()
-    TTS_MODEL_CHANGED = enum.auto()
+    DELETE_MESSAGES_AFTER_ID = "delete_messages_after_id"
+    TTS_MODEL_CHANGED = "tts_model_changed"
 
-    TOGGLE_TOOL = enum.auto()
-    TOGGLE_GRID = enum.auto()
+    TOGGLE_TOOL = "toggle_tool"
+    TOGGLE_GRID = "toggle_grid"
 
-    SECTION_CHANGED = enum.auto()
+    SECTION_CHANGED = "section_changed"
 
-    WEB_BROWSER_PAGE_HTML = enum.auto()
+    WEB_BROWSER_PAGE_HTML = "web_browser_page_html"
 
-    CLEAR_PROMPTS = enum.auto()
+    CLEAR_PROMPTS = "clear_prompts"
 
-    WIDGET_ELEMENT_CHANGED = enum.auto()  # Use this for generic widget events
-    SD_ADDITIONAL_PROMPT_DELETE_SIGNAL = enum.auto()
-    RECENTER_GRID_SIGNAL = enum.auto()
-    LLM_TEXT_STREAM_PROCESS_SIGNAL = enum.auto()
-    SHOW_WINDOW_SIGNAL = enum.auto()
-    SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL = enum.auto()
-    VOICE_SAVED = enum.auto()
-    PLAYBACK_DEVICE_CHANGED = enum.auto()
-    RECORDING_DEVICE_CHANGED = enum.auto()
-    NODE_EXECUTION_COMPLETED_SIGNAL = enum.auto()
-    CLEAR_WORKFLOW_SIGNAL = enum.auto()
-    WORKFLOW_LOAD_SIGNAL = enum.auto()
-    REGISTER_GRAPH_SIGNAL = enum.auto()
-    ENABLE_WORKFLOWS_TOGGLED = enum.auto()
-    SEND_IMAGE_TO_CANVAS_SIGNAL = enum.auto()
-    RUN_WORKFLOW_SIGNAL = enum.auto()
-    STOP_WORKFLOW_SIGNAL = enum.auto()
-    PAUSE_WORKFLOW_SIGNAL = enum.auto()
-    INPUT_IMAGE_SETTINGS_CHANGED = enum.auto()
+    WIDGET_ELEMENT_CHANGED = "widget_element_changed"
+    SD_ADDITIONAL_PROMPT_DELETE_SIGNAL = "sd_additional_prompt_delete_signal"
+    RECENTER_GRID_SIGNAL = "recenter_grid_signal"
+    LLM_TEXT_STREAM_PROCESS_SIGNAL = "llm_text_stream_process_signal"
+    SHOW_WINDOW_SIGNAL = "show_window_signal"
+    SHOW_DYNAMIC_UI_FROM_STRING_SIGNAL = "show_dynamic_ui_from_string_signal"
+    VOICE_SAVED = "voice_saved"
+    PLAYBACK_DEVICE_CHANGED = "playback_device_changed"
+    RECORDING_DEVICE_CHANGED = "recording_device_changed"
+    NODE_EXECUTION_COMPLETED_SIGNAL = "node_execution_completed_signal"
+    CLEAR_WORKFLOW_SIGNAL = "clear_workflow_signal"
+    WORKFLOW_LOAD_SIGNAL = "workflow_load_signal"
+    REGISTER_GRAPH_SIGNAL = "register_graph_signal"
+    ENABLE_WORKFLOWS_TOGGLED = "enable_workflows_toggled"
+    SEND_IMAGE_TO_CANVAS_SIGNAL = "send_image_to_canvas_signal"
+    RUN_WORKFLOW_SIGNAL = "run_workflow_signal"
+    STOP_WORKFLOW_SIGNAL = "stop_workflow_signal"
+    PAUSE_WORKFLOW_SIGNAL = "pause_workflow_signal"
+    INPUT_IMAGE_SETTINGS_CHANGED = "input_image_settings_changed"
 
     # Video generation signals
-    VIDEO_LOAD_SIGNAL = enum.auto()
-    VIDEO_UNLOAD_SIGNAL = enum.auto()
-    VIDEO_GENERATE_SIGNAL = enum.auto()
-    VIDEO_GENERATED_SIGNAL = enum.auto()
-    INTERRUPT_VIDEO_GENERATION_SIGNAL = enum.auto()
-    VIDEO_PROGRESS_SIGNAL = enum.auto()
-    VIDEO_FRAME_UPDATE_SIGNAL = enum.auto()
+    VIDEO_LOAD_SIGNAL = "video_load_signal"
+    VIDEO_UNLOAD_SIGNAL = "video_unload_signal"
+    VIDEO_GENERATE_SIGNAL = "video_generate_signal"
+    VIDEO_GENERATED_SIGNAL = "video_generated_signal"
+    INTERRUPT_VIDEO_GENERATION_SIGNAL = "interrupt_video_generation_signal"
+    VIDEO_PROGRESS_SIGNAL = "video_progress_signal"
+    VIDEO_FRAME_UPDATE_SIGNAL = "video_frame_update_signal"
 
 
 class EngineResponseCode(Enum):

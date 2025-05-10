@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'about.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -47,7 +47,7 @@ class Ui_about_window(object):
         font.setPointSize(14)
         self.title.setFont(font)
 
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.title)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.title)
 
         self.label_3 = QLabel(self.layoutWidget)
         self.label_3.setObjectName(u"label_3")
@@ -58,20 +58,20 @@ class Ui_about_window(object):
         font1.setPointSize(11)
         self.label_3.setFont(font1)
 
-        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label_3)
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label_3)
 
         self.label_2 = QLabel(self.layoutWidget)
         self.label_2.setObjectName(u"label_2")
         self.label_2.setFont(font1)
 
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label_2)
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.label_2)
 
         self.buttonBox = QDialogButtonBox(self.layoutWidget)
         self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
         self.buttonBox.setStandardButtons(QDialogButtonBox.Ok)
 
-        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.buttonBox)
+        self.formLayout.setWidget(3, QFormLayout.ItemRole.LabelRole, self.buttonBox)
 
 
         self.retranslateUi(about_window)

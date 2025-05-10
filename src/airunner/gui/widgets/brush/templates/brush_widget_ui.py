@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'brush_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -51,17 +51,17 @@ class Ui_brush_widget(object):
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, -1)
         self.brush_size_slider = SliderWidget(self.widget_2)
         self.brush_size_slider.setObjectName(u"brush_size_slider")
-        self.brush_size_slider.setProperty("slider_minimum", 1)
-        self.brush_size_slider.setProperty("slider_maximum", 100)
-        self.brush_size_slider.setProperty("spinbox_minimum", 1)
-        self.brush_size_slider.setProperty("spinbox_maximum", 100)
-        self.brush_size_slider.setProperty("slider_tick_interval", 1)
-        self.brush_size_slider.setProperty("slider_single_step", 1)
-        self.brush_size_slider.setProperty("slider_page_step", 10)
-        self.brush_size_slider.setProperty("spinbox_single_step", 1)
-        self.brush_size_slider.setProperty("spinbox_page_step", 10)
-        self.brush_size_slider.setProperty("settings_property", u"brush_settings.size")
-        self.brush_size_slider.setProperty("display_as_float", False)
+        self.brush_size_slider.setProperty(u"slider_minimum", 1)
+        self.brush_size_slider.setProperty(u"slider_maximum", 100)
+        self.brush_size_slider.setProperty(u"spinbox_minimum", 1)
+        self.brush_size_slider.setProperty(u"spinbox_maximum", 100)
+        self.brush_size_slider.setProperty(u"slider_tick_interval", 1)
+        self.brush_size_slider.setProperty(u"slider_single_step", 1)
+        self.brush_size_slider.setProperty(u"slider_page_step", 10)
+        self.brush_size_slider.setProperty(u"spinbox_single_step", 1)
+        self.brush_size_slider.setProperty(u"spinbox_page_step", 10)
+        self.brush_size_slider.setProperty(u"settings_property", u"brush_settings.size")
+        self.brush_size_slider.setProperty(u"display_as_float", False)
 
         self.horizontalLayout_2.addWidget(self.brush_size_slider)
 
@@ -137,7 +137,7 @@ class Ui_brush_widget(object):
 
     def retranslateUi(self, brush_widget):
         brush_widget.setWindowTitle(QCoreApplication.translate("brush_widget", u"Form", None))
-        self.brush_size_slider.setProperty("label_text", QCoreApplication.translate("brush_widget", u"Brush Size", None))
+        self.brush_size_slider.setProperty(u"label_text", QCoreApplication.translate("brush_widget", u"Brush Size", None))
         self.toggle_auto_generate_while_drawing.setText(QCoreApplication.translate("brush_widget", u"Auto-generate while drawing", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("brush_widget", u"Brush color", None))
         self.primary_color_button.setText("")

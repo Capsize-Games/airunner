@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'paths.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -94,21 +94,21 @@ class Ui_paths_form(object):
 
     def retranslateUi(self, paths_form):
         paths_form.setWindowTitle(QCoreApplication.translate("paths_form", u"Form", None))
-        self.ebook_path_widget.setProperty("title", QCoreApplication.translate("paths_form", u"Ebook Path", None))
-        self.ebook_path_widget.setProperty("description", QCoreApplication.translate("paths_form", u"Absolute path to directory containing ebooks (epub)", None))
-        self.ebook_path_widget.setProperty("path_name", QCoreApplication.translate("paths_form", u"ebook_path", None))
-        self.image_path_widget.setProperty("title", QCoreApplication.translate("paths_form", u"Image Path", None))
-        self.image_path_widget.setProperty("description", QCoreApplication.translate("paths_form", u"Absolute path to the directory which will contain generated images", None))
-        self.image_path_widget.setProperty("path_name", QCoreApplication.translate("paths_form", u"image_path", None))
-        self.llama_index_path_widget.setProperty("title", QCoreApplication.translate("paths_form", u"LLama Index Path", None))
-        self.llama_index_path_widget.setProperty("description", QCoreApplication.translate("paths_form", u"Absolute path to directory which will store files for LLama Index", None))
-        self.llama_index_path_widget.setProperty("path_name", QCoreApplication.translate("paths_form", u"llama_index_path", None))
-        self.base_path_widget.setProperty("title", QCoreApplication.translate("paths_form", u"Base Path", None))
-        self.base_path_widget.setProperty("description", QCoreApplication.translate("paths_form", u"Absolute path to the directory which will hold all model directories", None))
-        self.base_path_widget.setProperty("path_name", QCoreApplication.translate("paths_form", u"base_path", None))
-        self.documents_path_widget.setProperty("title", QCoreApplication.translate("paths_form", u"Documents Path", None))
-        self.documents_path_widget.setProperty("description", QCoreApplication.translate("paths_form", u"Absolute path to directory containing documnets (txt, PDF)", None))
-        self.documents_path_widget.setProperty("path_name", QCoreApplication.translate("paths_form", u"documents_path", None))
+        self.ebook_path_widget.setProperty(u"title", QCoreApplication.translate("paths_form", u"Ebook Path", None))
+        self.ebook_path_widget.setProperty(u"description", QCoreApplication.translate("paths_form", u"Absolute path to directory containing ebooks (epub)", None))
+        self.ebook_path_widget.setProperty(u"path_name", QCoreApplication.translate("paths_form", u"ebook_path", None))
+        self.image_path_widget.setProperty(u"title", QCoreApplication.translate("paths_form", u"Image Path", None))
+        self.image_path_widget.setProperty(u"description", QCoreApplication.translate("paths_form", u"Absolute path to the directory which will contain generated images", None))
+        self.image_path_widget.setProperty(u"path_name", QCoreApplication.translate("paths_form", u"image_path", None))
+        self.llama_index_path_widget.setProperty(u"title", QCoreApplication.translate("paths_form", u"LLama Index Path", None))
+        self.llama_index_path_widget.setProperty(u"description", QCoreApplication.translate("paths_form", u"Absolute path to directory which will store files for LLama Index", None))
+        self.llama_index_path_widget.setProperty(u"path_name", QCoreApplication.translate("paths_form", u"llama_index_path", None))
+        self.base_path_widget.setProperty(u"title", QCoreApplication.translate("paths_form", u"Base Path", None))
+        self.base_path_widget.setProperty(u"description", QCoreApplication.translate("paths_form", u"Absolute path to the directory which will hold all model directories", None))
+        self.base_path_widget.setProperty(u"path_name", QCoreApplication.translate("paths_form", u"base_path", None))
+        self.documents_path_widget.setProperty(u"title", QCoreApplication.translate("paths_form", u"Documents Path", None))
+        self.documents_path_widget.setProperty(u"description", QCoreApplication.translate("paths_form", u"Absolute path to directory containing documnets (txt, PDF)", None))
+        self.documents_path_widget.setProperty(u"path_name", QCoreApplication.translate("paths_form", u"documents_path", None))
         self.auto_button.setText(QCoreApplication.translate("paths_form", u"Reset Paths to Default Values", None))
     # retranslateUi
 

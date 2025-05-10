@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'node_graph.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -46,25 +46,25 @@ class Ui_node_graph_widget(object):
         self.new_button = QPushButton(self.widget)
         self.new_button.setObjectName(u"new_button")
         icon = QIcon()
-        icon.addFile(u":/dark/icons/feather/dark/file-plus.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/dark/icons/feather/dark/file-plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.new_button.setIcon(icon)
 
         self.gridLayout_3.addWidget(self.new_button, 0, 4, 1, 1)
 
         self.delete_button = QPushButton(self.widget)
         self.delete_button.setObjectName(u"delete_button")
-        self.delete_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.delete_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon1 = QIcon()
-        icon1.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.delete_button.setIcon(icon1)
 
         self.gridLayout_3.addWidget(self.delete_button, 0, 8, 1, 1)
 
         self.stop_button = QPushButton(self.widget)
         self.stop_button.setObjectName(u"stop_button")
-        self.stop_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.stop_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon2 = QIcon()
-        icon2.addFile(u":/dark/icons/feather/dark/stop-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/dark/icons/feather/dark/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.stop_button.setIcon(icon2)
 
         self.gridLayout_3.addWidget(self.stop_button, 0, 2, 1, 1)
@@ -72,34 +72,34 @@ class Ui_node_graph_widget(object):
         self.clear_button = QPushButton(self.widget)
         self.clear_button.setObjectName(u"clear_button")
         icon3 = QIcon()
-        icon3.addFile(u":/dark/icons/feather/dark/x-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(u":/dark/icons/feather/dark/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.clear_button.setIcon(icon3)
 
         self.gridLayout_3.addWidget(self.clear_button, 0, 6, 1, 1)
 
         self.play_button = QPushButton(self.widget)
         self.play_button.setObjectName(u"play_button")
-        self.play_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.play_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon4 = QIcon()
-        icon4.addFile(u":/dark/icons/feather/dark/play.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(u":/dark/icons/feather/dark/play.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.play_button.setIcon(icon4)
 
         self.gridLayout_3.addWidget(self.play_button, 0, 0, 1, 1)
 
         self.load_button = QPushButton(self.widget)
         self.load_button.setObjectName(u"load_button")
-        self.load_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.load_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon5 = QIcon()
-        icon5.addFile(u":/dark/icons/feather/dark/folder.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(u":/dark/icons/feather/dark/folder.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.load_button.setIcon(icon5)
 
         self.gridLayout_3.addWidget(self.load_button, 0, 7, 1, 1)
 
         self.save_button = QPushButton(self.widget)
         self.save_button.setObjectName(u"save_button")
-        self.save_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.save_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon6 = QIcon()
-        icon6.addFile(u":/dark/icons/feather/dark/save.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon6.addFile(u":/dark/icons/feather/dark/save.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.save_button.setIcon(icon6)
 
         self.gridLayout_3.addWidget(self.save_button, 0, 5, 1, 1)
@@ -110,9 +110,9 @@ class Ui_node_graph_widget(object):
 
         self.pause_button = QPushButton(self.widget)
         self.pause_button.setObjectName(u"pause_button")
-        self.pause_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.pause_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon7 = QIcon()
-        icon7.addFile(u":/dark/icons/feather/dark/pause-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon7.addFile(u":/dark/icons/feather/dark/pause-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pause_button.setIcon(icon7)
 
         self.gridLayout_3.addWidget(self.pause_button, 0, 1, 1, 1)

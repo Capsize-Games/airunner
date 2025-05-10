@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'chat_prompt.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -69,7 +69,7 @@ class Ui_chat_prompt(object):
         self.send_button.setMinimumSize(QSize(30, 30))
         self.send_button.setMaximumSize(QSize(30, 30))
         icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/corner-down-left.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/light/icons/feather/light/corner-down-left.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.send_button.setIcon(icon)
 
         self.horizontalLayout.addWidget(self.send_button)
@@ -81,7 +81,7 @@ class Ui_chat_prompt(object):
         self.clear_conversation_button.setMinimumSize(QSize(30, 30))
         self.clear_conversation_button.setMaximumSize(QSize(30, 30))
         icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.clear_conversation_button.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.clear_conversation_button)
@@ -93,7 +93,7 @@ class Ui_chat_prompt(object):
         self.pushButton.setMinimumSize(QSize(30, 30))
         self.pushButton.setMaximumSize(QSize(30, 30))
         icon2 = QIcon()
-        icon2.addFile(u":/light/icons/feather/light/stop-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/light/icons/feather/light/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.pushButton)
