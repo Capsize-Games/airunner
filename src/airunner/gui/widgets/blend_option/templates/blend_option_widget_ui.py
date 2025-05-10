@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'blend_option_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -76,7 +76,7 @@ class Ui_Form(object):
         self.image_container.setMaximumSize(QSize(128, 128))
         self.image_container.setStyleSheet(u"border: 1px solid black")
 
-        self.image_form.setWidget(0, QFormLayout.LabelRole, self.image_container)
+        self.image_form.setWidget(0, QFormLayout.ItemRole.LabelRole, self.image_container)
 
         self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -95,7 +95,7 @@ class Ui_Form(object):
         self.verticalLayout.addItem(self.image_spacer)
 
 
-        self.image_form.setLayout(0, QFormLayout.FieldRole, self.verticalLayout)
+        self.image_form.setLayout(0, QFormLayout.ItemRole.FieldRole, self.verticalLayout)
 
 
         self.gridLayout_2.addLayout(self.image_form, 2, 0, 1, 2)

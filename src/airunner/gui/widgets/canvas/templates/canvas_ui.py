@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'canvas.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -80,9 +80,9 @@ class Ui_canvas(object):
         self.new_button.setObjectName(u"new_button")
         self.new_button.setMinimumSize(QSize(30, 30))
         self.new_button.setMaximumSize(QSize(30, 30))
-        self.new_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.new_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.new_button.setIcon(icon)
         self.new_button.setFlat(False)
 
@@ -92,9 +92,9 @@ class Ui_canvas(object):
         self.import_button.setObjectName(u"import_button")
         self.import_button.setMinimumSize(QSize(30, 30))
         self.import_button.setMaximumSize(QSize(30, 30))
-        self.import_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.import_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/folder.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/light/icons/feather/light/folder.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.import_button.setIcon(icon1)
         self.import_button.setFlat(False)
 
@@ -104,9 +104,9 @@ class Ui_canvas(object):
         self.export_button.setObjectName(u"export_button")
         self.export_button.setMinimumSize(QSize(30, 30))
         self.export_button.setMaximumSize(QSize(30, 30))
-        self.export_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.export_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon2 = QIcon()
-        icon2.addFile(u":/light/icons/feather/light/save.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/light/icons/feather/light/save.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.export_button.setIcon(icon2)
         self.export_button.setFlat(False)
 
@@ -123,9 +123,9 @@ class Ui_canvas(object):
         self.recenter_button.setObjectName(u"recenter_button")
         self.recenter_button.setMinimumSize(QSize(30, 30))
         self.recenter_button.setMaximumSize(QSize(30, 30))
-        self.recenter_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.recenter_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon3 = QIcon()
-        icon3.addFile(u":/light/icons/feather/light/target.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(u":/light/icons/feather/light/target.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.recenter_button.setIcon(icon3)
         self.recenter_button.setFlat(False)
 
@@ -135,9 +135,9 @@ class Ui_canvas(object):
         self.active_grid_area_button.setObjectName(u"active_grid_area_button")
         self.active_grid_area_button.setMinimumSize(QSize(30, 30))
         self.active_grid_area_button.setMaximumSize(QSize(30, 30))
-        self.active_grid_area_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.active_grid_area_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon4 = QIcon()
-        icon4.addFile(u":/light/icons/feather/light/object-selected-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(u":/light/icons/feather/light/object-selected-icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.active_grid_area_button.setIcon(icon4)
         self.active_grid_area_button.setCheckable(True)
         self.active_grid_area_button.setFlat(False)
@@ -148,9 +148,9 @@ class Ui_canvas(object):
         self.brush_button.setObjectName(u"brush_button")
         self.brush_button.setMinimumSize(QSize(30, 30))
         self.brush_button.setMaximumSize(QSize(30, 30))
-        self.brush_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.brush_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon5 = QIcon()
-        icon5.addFile(u":/light/icons/feather/light/pencil-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(u":/light/icons/feather/light/pencil-icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.brush_button.setIcon(icon5)
         self.brush_button.setCheckable(True)
         self.brush_button.setFlat(False)
@@ -161,9 +161,9 @@ class Ui_canvas(object):
         self.eraser_button.setObjectName(u"eraser_button")
         self.eraser_button.setMinimumSize(QSize(30, 30))
         self.eraser_button.setMaximumSize(QSize(30, 30))
-        self.eraser_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.eraser_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon6 = QIcon()
-        icon6.addFile(u":/light/icons/feather/light/eraser-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon6.addFile(u":/light/icons/feather/light/eraser-icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.eraser_button.setIcon(icon6)
         self.eraser_button.setCheckable(True)
         self.eraser_button.setFlat(False)
@@ -174,9 +174,9 @@ class Ui_canvas(object):
         self.grid_button.setObjectName(u"grid_button")
         self.grid_button.setMinimumSize(QSize(30, 30))
         self.grid_button.setMaximumSize(QSize(30, 30))
-        self.grid_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.grid_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon7 = QIcon()
-        icon7.addFile(u":/light/icons/feather/light/grid.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon7.addFile(u":/light/icons/feather/light/grid.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.grid_button.setIcon(icon7)
         self.grid_button.setCheckable(True)
         self.grid_button.setFlat(False)
@@ -194,9 +194,9 @@ class Ui_canvas(object):
         self.undo_button.setObjectName(u"undo_button")
         self.undo_button.setMinimumSize(QSize(30, 30))
         self.undo_button.setMaximumSize(QSize(30, 30))
-        self.undo_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.undo_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon8 = QIcon()
-        icon8.addFile(u":/light/icons/feather/light/corner-up-left.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon8.addFile(u":/light/icons/feather/light/corner-up-left.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.undo_button.setIcon(icon8)
         self.undo_button.setFlat(False)
 
@@ -206,9 +206,9 @@ class Ui_canvas(object):
         self.redo_button.setObjectName(u"redo_button")
         self.redo_button.setMinimumSize(QSize(30, 30))
         self.redo_button.setMaximumSize(QSize(30, 30))
-        self.redo_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.redo_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon9 = QIcon()
-        icon9.addFile(u":/light/icons/feather/light/corner-up-right.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon9.addFile(u":/light/icons/feather/light/corner-up-right.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.redo_button.setIcon(icon9)
         self.redo_button.setFlat(False)
 
@@ -284,6 +284,6 @@ class Ui_canvas(object):
         self.grid_button.setText("")
         self.undo_button.setText("")
         self.redo_button.setText("")
-        self.canvas_container.setProperty("canvas_type", QCoreApplication.translate("canvas", u"brush", None))
+        self.canvas_container.setProperty(u"canvas_type", QCoreApplication.translate("canvas", u"brush", None))
     # retranslateUi
 

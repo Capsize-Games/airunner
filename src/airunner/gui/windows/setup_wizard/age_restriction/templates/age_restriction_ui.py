@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'age_restriction.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -40,13 +40,13 @@ class Ui_age_restriction_warning(object):
         font.setBold(False)
         self.checkBox.setFont(font)
 
-        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.checkBox)
+        self.formLayout_2.setWidget(0, QFormLayout.ItemRole.LabelRole, self.checkBox)
 
         self.label_7 = QLabel(age_restriction_warning)
         self.label_7.setObjectName(u"label_7")
         self.label_7.setWordWrap(True)
 
-        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.label_7)
+        self.formLayout_2.setWidget(0, QFormLayout.ItemRole.FieldRole, self.label_7)
 
 
         self.gridLayout.addLayout(self.formLayout_2, 5, 0, 1, 1)
@@ -127,13 +127,13 @@ class Ui_age_restriction_warning(object):
         self.checkBox_2.setObjectName(u"checkBox_2")
         self.checkBox_2.setFont(font3)
 
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.checkBox_2)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.checkBox_2)
 
         self.label_6 = QLabel(age_restriction_warning)
         self.label_6.setObjectName(u"label_6")
         self.label_6.setWordWrap(True)
 
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.label_6)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.label_6)
 
 
         self.gridLayout.addLayout(self.formLayout, 8, 0, 1, 1)
