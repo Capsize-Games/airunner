@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'tool_tab.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -37,7 +37,7 @@ class Ui_tool_tab_widget(object):
         font = QFont()
         font.setPointSize(8)
         self.tool_tab_widget_container.setFont(font)
-        self.tool_tab_widget_container.setCursor(QCursor(Qt.ArrowCursor))
+        self.tool_tab_widget_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         self.tool_tab_widget_container.setAcceptDrops(False)
         self.tool_tab_widget_container.setTabPosition(QTabWidget.TabPosition.North)
         self.tool_tab_widget_container.setTabsClosable(False)

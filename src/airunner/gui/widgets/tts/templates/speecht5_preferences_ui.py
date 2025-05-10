@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'speecht5_preferences.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -51,15 +51,15 @@ class Ui_speecht5_preferences(object):
 
         self.pitch = SliderWidget(self.preferences_groupbox)
         self.pitch.setObjectName(u"pitch")
-        self.pitch.setProperty("slider_minimum", 1)
-        self.pitch.setProperty("slider_maximum", 100)
-        self.pitch.setProperty("spinbox_minimum", 0.000000000000000)
-        self.pitch.setProperty("spinbox_maximum", 1.000000000000000)
-        self.pitch.setProperty("display_as_float", True)
-        self.pitch.setProperty("slider_single_step", 1)
-        self.pitch.setProperty("slider_page_step", 10)
-        self.pitch.setProperty("spinbox_single_step", 0.010000000000000)
-        self.pitch.setProperty("spinbox_page_step", 0.100000000000000)
+        self.pitch.setProperty(u"slider_minimum", 1)
+        self.pitch.setProperty(u"slider_maximum", 100)
+        self.pitch.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.pitch.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.pitch.setProperty(u"display_as_float", True)
+        self.pitch.setProperty(u"slider_single_step", 1)
+        self.pitch.setProperty(u"slider_page_step", 10)
+        self.pitch.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.pitch.setProperty(u"spinbox_page_step", 0.100000000000000)
 
         self.gridLayout_8.addWidget(self.pitch, 2, 0, 1, 1)
 
@@ -96,8 +96,8 @@ class Ui_speecht5_preferences(object):
         speecht5_preferences.setWindowTitle(QCoreApplication.translate("speecht5_preferences", u"Form", None))
         self.preferences_groupbox.setTitle(QCoreApplication.translate("speecht5_preferences", u"SpeechT5", None))
         self.label_3.setText(QCoreApplication.translate("speecht5_preferences", u"More realistic. Slower. Uses VRAM", None))
-        self.pitch.setProperty("settings_property", QCoreApplication.translate("speecht5_preferences", u"speech_t5_settings.pitch", None))
-        self.pitch.setProperty("label_text", QCoreApplication.translate("speecht5_preferences", u"Pitch", None))
+        self.pitch.setProperty(u"settings_property", QCoreApplication.translate("speecht5_preferences", u"speech_t5_settings.pitch", None))
+        self.pitch.setProperty(u"label_text", QCoreApplication.translate("speecht5_preferences", u"Pitch", None))
         self.groupBox.setTitle(QCoreApplication.translate("speecht5_preferences", u"Voice Style", None))
         self.voice.setItemText(0, QCoreApplication.translate("speecht5_preferences", u"US Male", None))
         self.voice.setItemText(1, QCoreApplication.translate("speecht5_preferences", u"US Male 2", None))
