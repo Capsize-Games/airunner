@@ -1,3 +1,4 @@
+from PySide6.QtCore import Slot
 import threading
 import time
 import sounddevice as sd
@@ -15,7 +16,6 @@ class SoundSettingsWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.load_devices()  # Ensure devices are loaded on initialization
-        self.connect_signals()
         self.monitoring = True
 
     def load_devices(self):
@@ -36,19 +36,35 @@ class SoundSettingsWidget(BaseWidget):
             ],
         )
 
-        current_output_device = sd.query_devices(kind="output")
-        current_input_device = sd.query_devices(kind="input")
+        current_output_device = None
+        current_input_device = None
+        
+        try:
+            current_output_device = sd.query_devices(kind="output")
+        except sd.PortAudioError as e:
+            self.logger.error(f"PortAudioError: Unable to query output devices. {e}")
+        
+        try:
+            current_input_device = sd.query_devices(kind="input")
+        except sd.PortAudioError as e:
+            self.logger.error(f"PortAudioError: Unable to query input devices. {e}")
 
         input_device_names = [device["name"] for device in input_devices]
         output_device_names = [device["name"] for device in output_devices]
 
         self.ui.playbackComboBox.clear()
         self.ui.playbackComboBox.addItems(output_device_names)
-        self.ui.playbackComboBox.setCurrentText(current_output_device["name"])
+        
+        # Set current device only if successfully queried
+        if current_output_device is not None and output_device_names:
+            self.ui.playbackComboBox.setCurrentText(current_output_device["name"])
 
         self.ui.recordingComboBox.clear()
         self.ui.recordingComboBox.addItems(input_device_names)
-        self.ui.recordingComboBox.setCurrentText(current_input_device["name"])
+        
+        # Set current device only if successfully queried
+        if current_input_device is not None and input_device_names:
+            self.ui.recordingComboBox.setCurrentText(current_input_device["name"])
 
         # Retrieve current settings
         sound_settings = SoundSettings.objects.first()
@@ -87,15 +103,8 @@ class SoundSettingsWidget(BaseWidget):
                     sound_settings.id, recording_device=current_device
                 )
 
-    def connect_signals(self):
-        self.ui.playbackComboBox.currentTextChanged.connect(
-            self.update_playback_device
-        )
-        self.ui.recordingComboBox.currentTextChanged.connect(
-            self.update_recording_device
-        )
-
-    def update_playback_device(self, device):
+    @Slot(str)
+    def on_playbackComboBox_currentTextChanged(self, device: str):
         sound_settings = SoundSettings.objects.first()
         if sound_settings is None:
             SoundSettings.objects.create(
@@ -105,8 +114,14 @@ class SoundSettingsWidget(BaseWidget):
         SoundSettings.objects.update(sound_settings.id, playback_device=device)
         self.emit_signal(SignalCode.PLAYBACK_DEVICE_CHANGED, device)
 
-    def update_recording_device(self, device):
+    @Slot(str)
+    def on_recordingComboBox_currentTextChanged(self, device: str):
         sound_settings = SoundSettings.objects.first()
+        if sound_settings is None:
+            SoundSettings.objects.create(
+                recording_device=device, playback_device=None
+            )
+            sound_settings = SoundSettings.objects.first()
         SoundSettings.objects.update(
             sound_settings.id, recording_device=device
         )
@@ -114,6 +129,11 @@ class SoundSettingsWidget(BaseWidget):
 
     def update_microphone_volume(self, volume):
         sound_settings = SoundSettings.objects.first()
+        if sound_settings is None:
+            SoundSettings.objects.create(
+                microphone_volume=volume, playback_device=None, recording_device=None
+            )
+            sound_settings = SoundSettings.objects.first()
         SoundSettings.objects.update(
             sound_settings.id, microphone_volume=volume
         )
