@@ -1113,22 +1113,26 @@ class CustomScene(
         # Get the original absolute position
         original_pos = self._original_item_positions[self.item]
 
-        # Calculate and set the new position
+        # Calculate new position based on current canvas_offset
         new_x = original_pos.x() - canvas_offset.x()
         new_y = original_pos.y() - canvas_offset.y()
 
-        # Before changing position, prepare the item for geometry change
-        self.item.prepareGeometryChange()
-        self.item.setPos(new_x, new_y)
-
-        # Make sure the item is visible and in focus
-        self.item.setVisible(True)
-        self.item.setZValue(5)  # Priority rendering
-
-        # Update the entire viewport to ensure image is visible even at negative coordinates
-        self.invalidate(
-            self._extended_viewport_rect, QGraphicsScene.SceneLayer.ItemLayer
-        )
+        # Only update position if it has significantly changed to avoid constant redraws
+        current_pos = self.item.pos()
+        if (abs(current_pos.x() - new_x) > 1 or abs(current_pos.y() - new_y) > 1):
+            # Before changing position, prepare the item for geometry change
+            self.item.prepareGeometryChange()
+            self.item.setPos(new_x, new_y)
+            
+            # Make sure the item is visible and in focus
+            self.item.setVisible(True)
+            
+            # Only update the specific area affected by the item
+            rect = self.item.boundingRect().adjusted(-10, -10, 10, 10)
+            scene_rect = self.item.mapRectToScene(rect)
+            self.update(scene_rect)
+        
+        # Avoid full scene invalidation - this is expensive during resize operations
 
     def get_canvas_offset(self):
         """Get the current canvas offset from the parent view if available."""
