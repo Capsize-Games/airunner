@@ -99,6 +99,13 @@ class CustomGraphicsView(
         self._pan_update_timer.setSingleShot(True)
         self._pan_update_timer.timeout.connect(self._do_pan_update)
         self._pending_pan_event = False
+        
+        # Add resize throttling to reduce lag during splitter movement
+        self._resize_timer = QTimer()
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.timeout.connect(self._handle_deferred_resize)
+        self._resize_data = None
+        self._is_resizing = False
 
     @property
     def zero_point(self) -> QPointF:
@@ -389,16 +396,42 @@ class CustomGraphicsView(
         # Redraw lines
         self.do_draw()
 
-    def _handle_resize_timeout(self):
-        new_size = self.viewport().size()
-        if new_size != self._last_viewport_size:
-            self.setSceneRect(0, 0, new_size.width(), new_size.height())
-            self.do_draw()
-            self._last_viewport_size = new_size
-
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self.draw_grid()  # Only redraw grid on resize
+        
+        # Get current viewport size and old size
+        new_size = self.viewport().size()
+        old_size = event.oldSize()
+        
+        # Only proceed if we have valid sizes
+        if old_size.width() > 0 and old_size.height() > 0 and new_size.width() > 0 and new_size.height() > 0:
+            # Update the central reference point
+            self._canvas_center_point = QPointF(new_size.width() / 2, new_size.height() / 2)
+            
+            # Calculate size differences
+            delta_width = new_size.width() - old_size.width()
+            delta_height = new_size.height() - old_size.height()
+            
+            # Adjust canvas offset by half the size change to maintain the same logical center
+            self.canvas_offset = QPointF(
+                self.canvas_offset.x() - delta_width / 2,
+                self.canvas_offset.y() - delta_height / 2
+            )
+            
+            # Immediately update grid positions
+            self.update_active_grid_area_position()
+            self.updateImagePositions()
+            self.draw_grid()
+        
+        # Save the new viewport size for future reference
+        self._last_viewport_size = new_size
+
+    # Remove the deferred resize handling that was causing issues
+    def _handle_deferred_resize(self):
+        pass
+
+    def _update_canvas_center_on_resize(self):
+        pass
 
     def wheelEvent(self, event):
         super().wheelEvent(event)
