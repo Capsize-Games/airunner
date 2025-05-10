@@ -29,6 +29,10 @@ class SliderWidget(BaseWidget):
         self._debounce_timer.setInterval(300)  # 300ms debounce delay
         self._debounce_timer.timeout.connect(self._process_pending_update)
         self._pending_update = None
+        # Ensure signal connections
+        self.ui.slider.valueChanged.connect(self.handle_slider_valueChanged)
+        self.ui.slider.sliderReleased.connect(self.on_slider_sliderReleased)
+        self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_valueChanged)
 
     @property
     def slider_single_step(self):
@@ -124,19 +128,21 @@ class SliderWidget(BaseWidget):
         adjusted_value = round(position / single_step) * single_step
         if adjusted_value < self.slider_minimum:
             adjusted_value = self.slider_minimum
-
-        self.ui.slider.blockSignals(True)
-        self.ui.slider.setValue(adjusted_value)
-        self.ui.slider.blockSignals(False)
-
+        if self.ui.slider.value() != adjusted_value:
+            self.ui.slider.blockSignals(True)
+            self.ui.slider.setValue(adjusted_value)
+            self.ui.slider.blockSignals(False)
         try:
-            normalized = adjusted_value / self.slider_maximum
-            spinbox_val = normalized * self.spinbox_maximum
+            normalized = (adjusted_value - self.slider_minimum) / (self.slider_maximum - self.slider_minimum)
+            spinbox_val = normalized * (self.spinbox_maximum - self.spinbox_minimum) + self.spinbox_minimum
         except ZeroDivisionError:
-            spinbox_val = 0.0
-
-        spinbox_val = round(spinbox_val, 2)
-        self.ui.slider_spinbox.setValue(spinbox_val)
+            spinbox_val = self.spinbox_minimum
+        spinbox_val = round(spinbox_val, 4)
+        if abs(self.ui.slider_spinbox.value() - spinbox_val) > 1e-6:
+            self.ui.slider_spinbox.blockSignals(True)
+            self.ui.slider_spinbox.setValue(spinbox_val)
+            self.ui.slider_spinbox.blockSignals(False)
+        # Do NOT call self.slider_callback here. Only update UI.
 
     @Slot()
     def on_slider_sliderReleased(self):
@@ -146,11 +152,15 @@ class SliderWidget(BaseWidget):
 
     @Slot(float)
     def handle_spinbox_valueChanged(self, val: float):
-        normalized = val / self.spinbox_maximum
-        slider_val = round(normalized * self.slider_maximum)
-        self.ui.slider.blockSignals(True)
-        self.ui.slider.setValue(slider_val)
-        self.ui.slider.blockSignals(False)
+        try:
+            normalized = (val - self.spinbox_minimum) / (self.spinbox_maximum - self.spinbox_minimum)
+            slider_val = round(normalized * (self.slider_maximum - self.slider_minimum) + self.slider_minimum)
+        except ZeroDivisionError:
+            slider_val = self.slider_minimum
+        if self.ui.slider.value() != slider_val:
+            self.ui.slider.blockSignals(True)
+            self.ui.slider.setValue(slider_val)
+            self.ui.slider.blockSignals(False)
         self.slider_callback(self.settings_property, slider_val)
 
     def showEvent(self, event):
@@ -206,28 +216,15 @@ class SliderWidget(BaseWidget):
             and self.table_name is not None
             and self.table_column is not None
         ):
-            print(
-                f"DEBUG: Loading value from table {self.table_name} with ID {self.table_id} and column {self.table_column}"
-            )
             if self.table_name == "lora":
                 self.table_item = Lora.objects.filter_by_first(
                     id=self.table_id
                 )
-                print(f"DEBUG: Found table item: {self.table_item}")
                 current_value = getattr(self.table_item, self.table_column)
-                print(
-                    f"DEBUG: Loaded current_value from table_item: {current_value}"
-                )
 
         elif current_value is None:
             if settings_property is not None:
-                print(
-                    f"DEBUG: Loading value from settings property: {settings_property}"
-                )
                 current_value = self.get_settings_value(settings_property)
-                print(
-                    f"DEBUG: Loaded current_value from settings: {current_value}"
-                )
             else:
                 current_value = 0
 
