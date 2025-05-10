@@ -14,20 +14,20 @@ extras_require = {
     ],
     "linux": [  # Linux-specific dependencies
         # "faiss-gpu==1.7.2", # If faiss-gpu is from NVIDIA or a custom index, it needs similar handling
-        "tensorrt==10.9.0.34",  # This package is from NVIDIA
+        "tensorrt==10.9.0.34",
     ],
     "dev": [  # Development dependencies
         "pytest",
         "python-dotenv==1.0.1",
         "coverage==7.8.0",
-        "black==25.1.0",  # Note: As of May 2025, Black's versioning might be year.month (e.g., 24.x.x or 25.x.x). 25.1.0 is plausible for a future date.
-        "pyinstaller==6.12.0",  # As of May 2025, latest PyInstaller is 6.8.0. Check if 6.12.0 is a future or dev version.
+        "black==25.1.0",
+        "pyinstaller==6.12.0",
     ],
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",
-        "diffusers==0.33.1",  # As of May 2025, latest is ~0.29.0. Check version.
+        "diffusers==0.33.1",
         "controlnet_aux==0.0.9",
-        "safetensors==0.5.2",  # As of May 2025, latest is ~0.4.3. Check version.
+        "safetensors==0.5.2",
         "compel==2.0.3",
         "tomesd==0.1.3",
         "timm<=0.6.7",  # Timm is marked at a lower version for compel, we upgrade after installing
@@ -53,7 +53,6 @@ extras_require = {
         "EbookLib==0.18",
         "html2text==2024.2.26",
         "rake_nltk==1.0.6",
-        # "tf-keras==2.18.0", # Removed as it causes issues on Windows with dlopenflags
         "peft==0.15.2",
         # "flash_attn==2.7.4.post1", # flash-attn usually requires specific build steps.
         # Summarizations (basic)
