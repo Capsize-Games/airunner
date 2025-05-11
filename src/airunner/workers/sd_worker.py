@@ -415,8 +415,11 @@ class SDWorker(ThreadedWorkerMixin, Worker):
                         self._generate_image(data)
 
     def _generate_image(self, message: Dict):
-        message["callback"] = self._finalize_do_generate_signal
-        self.load_model_manager(message)
+        if not self.model_manager:
+            message["callback"] = self._finalize_do_generate_signal
+            self.load_model_manager(message)
+            return
+        self._finalize_do_generate_signal(message)
 
     def _finalize_do_generate_signal(self, message: Dict):
         if self.model_manager:
