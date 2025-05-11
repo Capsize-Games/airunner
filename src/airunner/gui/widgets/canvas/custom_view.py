@@ -419,7 +419,7 @@ class CustomGraphicsView(
         
         # Create a thread worker to handle the resize processing
         self._resize_worker = BackgroundWorker(
-            task_function=lambda: self._process_resize(self._resize_data),
+            task_function=self._process_resize,
             callback_data={'resize_data': self._resize_data}
         )
         
@@ -433,8 +433,18 @@ class CustomGraphicsView(
         # Start the background thread
         self._resize_worker.start()
         
-    def _process_resize(self, resize_data):
-        """Process resize in a background thread to prevent UI freezing"""
+    def _process_resize(self, worker=None):
+        """Process resize in a background thread to prevent UI freezing
+        
+        Args:
+            worker: The BackgroundWorker instance running this task (automatically provided)
+        """
+        # Get resize data from the worker's callback_data
+        resize_data = worker.callback_data.get('resize_data') if worker else None
+        
+        if not resize_data:
+            return None
+            
         new_size = resize_data['new_size']
         old_size = resize_data['old_size']
         

@@ -793,6 +793,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
     def handle_generate_signal(self, message: Optional[Dict] = None):
+        print("*"*100)
+        print("handle_generate_signal")
         self.image_request = message.get("image_request", None)
 
         if not self.image_request:
