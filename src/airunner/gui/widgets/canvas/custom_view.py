@@ -565,7 +565,6 @@ class CustomGraphicsView(
 
         if not self._initialized:
             self._initialized = True
-            QTimer.singleShot(0, self.on_recenter_grid_signal)
 
     def set_canvas_color(
         self,
