@@ -85,7 +85,6 @@ class CustomGraphicsView(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
             SignalCode.RECENTER_GRID_SIGNAL: self.on_recenter_grid_signal,
-            SignalCode.RECENTER_GRID_SIGNAL: self.on_recenter_grid_signal,
             SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL: self.on_canvas_image_updated_signal,
             SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS: self.updateImagePositions,
         }
