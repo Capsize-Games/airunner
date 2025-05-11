@@ -120,9 +120,15 @@
           </property>
          </widget>
          <widget class="QWidget" name="center_widget" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
-            <width>0</width>
+            <width>200</width>
             <height>0</height>
            </size>
           </property>
@@ -224,6 +230,12 @@
           </layout>
          </widget>
          <widget class="QWidget" name="panel_container" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <property name="spacing">
             <number>0</number>
