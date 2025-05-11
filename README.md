@@ -139,9 +139,18 @@ The instructions will assume the following directory structure. *You should only
 ```
 
 1. Install system requirements
+   **All platforms**
    ```bash
    sudo apt update && sudo apt upgrade -y
    sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme espeak-ng-espeak
+   ```
+   **Linux**
+   ```bash
+   sudo apt install -y espeak
+   ```
+   **Windows**
+   ```bash
+   sudo apt install -y espeak-ng-espeak
    ```
 2. Create airunner directory
    ```bash
