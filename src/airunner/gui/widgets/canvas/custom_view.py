@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 from airunner.enums import CanvasToolName, SignalCode, CanvasType, QueueType
 from airunner.gui.widgets.canvas.grid_graphics_item import GridGraphicsItem
 from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.utils.application.background_worker import BackgroundWorker
 from airunner.utils.image import convert_image_to_binary
 from airunner.gui.widgets.canvas.brush_scene import BrushScene
 from airunner.gui.widgets.canvas.custom_scene import CustomScene
@@ -405,52 +406,87 @@ class CustomGraphicsView(
         
         # Start or reset the throttling timer - wait for resize to finish
         if not self._resize_timer.isActive():
-            self._resize_timer.start(1)  # 150ms delay before processing resize
+            self._resize_timer.start(150)  # 150ms delay before processing resize
         else:
             # Reset the timer if already running
             self._resize_timer.stop()
-            self._resize_timer.start(1)
+            self._resize_timer.start(150)
 
     def _handle_deferred_resize(self):
-        """Handle resize after a delay to prevent excessive updates during resize operations."""
+        """Start a background thread to handle resize operations"""
         if not self._resize_data:
             return
-            
-        new_size = self._resize_data['new_size']
-        old_size = self._resize_data['old_size']
+        
+        # Create a thread worker to handle the resize processing
+        self._resize_worker = BackgroundWorker(
+            task_function=lambda: self._process_resize(self._resize_data),
+            callback_data={'resize_data': self._resize_data}
+        )
+        
+        # Connect the finished signal
+        self._resize_worker.taskFinished.connect(self._on_resize_processed)
+        
+        # Clear resize data early to prevent double processing
+        resize_data = self._resize_data
+        self._resize_data = None
+        
+        # Start the background thread
+        self._resize_worker.start()
+        
+    def _process_resize(self, resize_data):
+        """Process resize in a background thread to prevent UI freezing"""
+        new_size = resize_data['new_size']
+        old_size = resize_data['old_size']
         
         # Only proceed if we have valid sizes
         if (old_size.width() <= 0 or old_size.height() <= 0 or 
             new_size.width() <= 0 or new_size.height() <= 0):
-            return
+            return None
             
-        # Update the central reference point
-        self._canvas_center_point = QPointF(new_size.width() / 2, new_size.height() / 2)
+        # Calculate central reference point
+        canvas_center_point = QPointF(new_size.width() / 2, new_size.height() / 2)
         
         # Calculate size differences
         delta_width = new_size.width() - old_size.width()
         delta_height = new_size.height() - old_size.height()
         
-        # Adjust canvas offset by half the size change to maintain the same logical center
-        self.canvas_offset = QPointF(
+        # Calculate new canvas offset
+        new_offset = QPointF(
             self.canvas_offset.x() - delta_width / 2,
             self.canvas_offset.y() - delta_height / 2
         )
         
-        # Update positions only once at the end of resize operation
+        # Return the calculated values
+        return {
+            'canvas_offset': new_offset,
+            'new_size': new_size,
+            'canvas_center_point': canvas_center_point
+        }
+    
+    def _on_resize_processed(self, data):
+        """Handle the completion of resize processing"""
+        if 'error' in data:
+            self.logger.error(f"Error during resize processing: {data['error']}")
+            return
+            
+        if 'result' not in data:
+            return
+            
+        result = data['result']
+        if not result:
+            return
+            
+        # Update canvas offset with the thread-calculated value
+        self.canvas_offset = result['canvas_offset']
+        self._canvas_center_point = result['canvas_center_point']
+        self._last_viewport_size = result['new_size']
+        
+        # Update positions on UI thread
         self.update_active_grid_area_position()
         self.updateImagePositions()
         
-        # Redraw grid with throttled update
+        # Redraw grid
         self.draw_grid()
-        
-        # Save the new viewport size for future reference
-        self._last_viewport_size = new_size
-        
-        # Clear resize data
-        self._resize_data = None
-
-        # self.api.art.canvas.recenter_grid()
 
     def wheelEvent(self, event):
         super().wheelEvent(event)
