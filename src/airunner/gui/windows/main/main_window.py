@@ -785,8 +785,8 @@ class MainWindow(
         return bash_execute(args[0])
 
     def on_theme_changed_signal(self, data: Dict):
-        self.update_icons()
         self.set_stylesheet(data.get("dark_mode", False), data.get("override_system_theme", False))
+        self.update_icons()
 
     def update_icons(self):
         theme = (
