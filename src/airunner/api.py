@@ -908,3 +908,9 @@ class API(App):
             SignalCode.SD_ADDITIONAL_PROMPT_DELETE_SIGNAL,
             {"prompt_id": prompt_id},
         )
+
+    def refresh_stylesheet(self, dark_mode: Optional[bool] = None, override_system_theme: Optional[bool] = None):
+        self.emit_signal(SignalCode.REFRESH_STYLESHEET_SIGNAL, {
+            "dark_mode": dark_mode,
+            "override_system_theme": override_system_theme
+        })
