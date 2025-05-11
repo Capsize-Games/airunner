@@ -177,7 +177,11 @@ class CustomScene(
 
     @property
     def image_pivot_point(self):
-        return QPoint(self.current_settings.x_pos, self.current_settings.y_pos)
+        if hasattr(self.current_settings, "x_pos") and hasattr(
+            self.current_settings, "y_pos"
+        ):
+            return QPointF(self.current_settings.x_pos, self.current_settings.y_pos)
+        return QPointF(0, 0)
 
     @property
     def current_active_image(self) -> Image:
@@ -627,7 +631,11 @@ class CustomScene(
         self.set_image(image)
 
         # Save the current position before updating the item
-        old_pos = self.item.pos() if self.item else QPointF(0, 0)
+        try:
+            old_pos = self.item.pos() if self.item else QPointF(0, 0)
+        except RuntimeError as e:
+            self.logger.error(f"Error getting item position: {e}")
+            old_pos = QPointF(0, 0)
 
         if self.item is not None:
             x = self.image_pivot_point.x()
