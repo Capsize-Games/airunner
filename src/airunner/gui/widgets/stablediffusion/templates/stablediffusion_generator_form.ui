@@ -251,16 +251,6 @@
               <number>0</number>
              </property>
              <item>
-              <widget class="QCheckBox" name="use_refiner_checkbox">
-               <property name="toolTip">
-                <string>Uses second refiner model to enhance image</string>
-               </property>
-               <property name="text">
-                <string>Use refiner model</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <layout class="QHBoxLayout" name="horizontalLayout">
                <item>
                 <layout class="QVBoxLayout" name="verticalLayout">
@@ -609,7 +599,6 @@
   <tabstop>add_prompt_button</tabstop>
   <tabstop>negative_prompt</tabstop>
   <tabstop>secondary_negative_prompt</tabstop>
-  <tabstop>use_refiner_checkbox</tabstop>
   <tabstop>image_presets</tabstop>
   <tabstop>quality_effects</tabstop>
   <tabstop>original_size_width</tabstop>
