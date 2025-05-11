@@ -15,11 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
-    QGridLayout, QGroupBox, QHBoxLayout, QLabel,
-    QLineEdit, QPlainTextEdit, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
+    QSizePolicy, QSpacerItem, QSplitter, QVBoxLayout,
+    QWidget)
 import airunner.feather_rc
 
 class Ui_stablediffusion_generator_form(object):
@@ -148,11 +148,6 @@ class Ui_stablediffusion_generator_form(object):
         self.sdxl_settings = QVBoxLayout(self.sdxl_settings_container)
         self.sdxl_settings.setObjectName(u"sdxl_settings")
         self.sdxl_settings.setContentsMargins(0, 0, 0, 0)
-        self.use_refiner_checkbox = QCheckBox(self.sdxl_settings_container)
-        self.use_refiner_checkbox.setObjectName(u"use_refiner_checkbox")
-
-        self.sdxl_settings.addWidget(self.use_refiner_checkbox)
-
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.verticalLayout = QVBoxLayout()
@@ -384,8 +379,7 @@ class Ui_stablediffusion_generator_form(object):
         QWidget.setTabOrder(self.secondary_prompt, self.add_prompt_button)
         QWidget.setTabOrder(self.add_prompt_button, self.negative_prompt)
         QWidget.setTabOrder(self.negative_prompt, self.secondary_negative_prompt)
-        QWidget.setTabOrder(self.secondary_negative_prompt, self.use_refiner_checkbox)
-        QWidget.setTabOrder(self.use_refiner_checkbox, self.image_presets)
+        QWidget.setTabOrder(self.secondary_negative_prompt, self.image_presets)
         QWidget.setTabOrder(self.image_presets, self.quality_effects)
         QWidget.setTabOrder(self.quality_effects, self.original_size_width)
         QWidget.setTabOrder(self.original_size_width, self.original_size_height)
@@ -427,10 +421,6 @@ class Ui_stablediffusion_generator_form(object):
         self.negative_prompt_label.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative Prompt", None))
         self.negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative prompt", None))
         self.secondary_negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Second negative prompt", None))
-#if QT_CONFIG(tooltip)
-        self.use_refiner_checkbox.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Uses second refiner model to enhance image", None))
-#endif // QT_CONFIG(tooltip)
-        self.use_refiner_checkbox.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Use refiner model", None))
         self.label_2.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Presets", None))
         self.label_3.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Quality Effects", None))
         self.quality_effects.setItemText(0, "")
