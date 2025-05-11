@@ -6,7 +6,6 @@ from PySide6.QtWidgets import QFileDialog, QGraphicsScene
 from PIL.ImageQt import ImageQt
 from PySide6.QtGui import QPixmap, QImage, QPen, QPainter
 
-from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
 from airunner.utils.image import (
     convert_binary_to_image,
