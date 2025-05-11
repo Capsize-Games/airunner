@@ -511,7 +511,20 @@
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
         </property>
-        <widget class="StableDiffusionGeneratorForm" name="prompts" native="true"/>
+        <widget class="StableDiffusionGeneratorForm" name="prompts" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>275</width>
+           <height>0</height>
+          </size>
+         </property>
+        </widget>
         <widget class="CustomGraphicsView" name="canvas_container">
          <property name="verticalScrollBarPolicy">
           <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
@@ -523,7 +536,20 @@
           <string>brush</string>
          </property>
         </widget>
-        <widget class="StablediffusionToolTabWidget" name="widget" native="true"/>
+        <widget class="StablediffusionToolTabWidget" name="widget" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>275</width>
+           <height>0</height>
+          </size>
+         </property>
+        </widget>
        </widget>
       </item>
      </layout>
