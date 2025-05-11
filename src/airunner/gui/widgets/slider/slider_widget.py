@@ -168,7 +168,6 @@ class SliderWidget(BaseWidget):
         super().showEvent(event)
 
     def init(self, **kwargs):
-        print("DEBUG: Widget init starting")
         self.is_loading = True
         self._callback = kwargs.get("slider_callback", None)
         if self._callback is None:
