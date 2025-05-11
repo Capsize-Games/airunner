@@ -310,26 +310,26 @@ class SDXLModelManager(StableDiffusionModelManager):
             self._load_compel()
 
         prompt = self.prompt
-        negative_prompt = self.negative_prompt
         second_prompt = self.second_prompt
+        negative_prompt = self.negative_prompt
         second_negative_prompt = self.second_negative_prompt
 
         if (
             self._current_prompt != prompt
-            or self._current_negative_prompt != negative_prompt
             or self._current_prompt_2 != second_prompt
+            or self._current_negative_prompt != negative_prompt
             or self._current_negative_prompt_2 != second_negative_prompt
         ):
             self._current_prompt = prompt
-            self._current_negative_prompt = negative_prompt
             self._current_prompt_2 = second_prompt
+            self._current_negative_prompt = negative_prompt
             self._current_negative_prompt_2 = second_negative_prompt
             self._unload_prompt_embeds()
 
         if (
             self._prompt_embeds is None
-            or self._negative_prompt_embeds is None
             or self._pooled_prompt_embeds is None
+            or self._negative_prompt_embeds is None
             or self._negative_pooled_prompt_embeds is None
         ):
             self.logger.debug("Loading prompt embeds")

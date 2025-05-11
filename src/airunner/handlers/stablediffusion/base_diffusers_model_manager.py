@@ -529,7 +529,7 @@ class BaseDiffusersModelManager(BaseModelManager):
     def do_join_prompts(self) -> bool:
         return (
             self.use_compel
-            and self.image_request.additional_prompts
+            and self.image_request.additional_prompts is not None
             and len(self.image_request.additional_prompts) > 0
         )
 

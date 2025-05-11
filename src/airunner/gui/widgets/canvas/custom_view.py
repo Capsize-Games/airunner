@@ -1,26 +1,21 @@
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict
 
-from PySide6 import QtGui
 from PySide6.QtCore import (
     QPointF,
     QPoint,
     Qt,
-    QRect,
     QEvent,
     QSize,
-    QRectF,
     QTimer,
 )
-from PySide6.QtGui import QMouseEvent, QColor, QBrush, QPen, QPainter
+from PySide6.QtGui import QMouseEvent, QColor, QBrush
 from PySide6.QtWidgets import (
     QGraphicsView,
     QGraphicsItemGroup,
-    QGraphicsLineItem,
     QGraphicsScene,
-    QGraphicsItem,
 )
 
-from airunner.enums import CanvasToolName, SignalCode, CanvasType, QueueType
+from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.gui.widgets.canvas.grid_graphics_item import GridGraphicsItem
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application.background_worker import BackgroundWorker
