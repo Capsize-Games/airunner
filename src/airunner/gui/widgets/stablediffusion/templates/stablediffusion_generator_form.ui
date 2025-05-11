@@ -698,22 +698,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>use_refiner_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>on_use_refiner_checkbox_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>29</x>
-     <y>503</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-3</x>
-     <y>462</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>prompt</sender>
    <signal>textChanged()</signal>
    <receiver>stablediffusion_generator_form</receiver>
