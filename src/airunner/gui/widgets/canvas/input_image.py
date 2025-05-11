@@ -226,15 +226,16 @@ class InputImage(BaseWidget):
         self.delete_image()
 
     def import_image(self):
-        self._import_path, _ = QFileDialog.getOpenFileName(
-            self.window(),
-            "Open Image",
-            self._import_path,
-            f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
-        )
-        if self._import_path == "":
-            return
-        self.load_image(os.path.abspath(self._import_path))
+        if self.settings_key == "drawing_pad_settings":
+            self._import_path, _ = QFileDialog.getOpenFileName(
+                self.window(),
+                "Open Image",
+                self._import_path,
+                f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
+            )
+            if self._import_path == "":
+                return
+            self.load_image(os.path.abspath(self._import_path))
 
     def load_image(self, file_path: str):
         image = Image.open(file_path)
