@@ -26,7 +26,8 @@ class SDXLModelManager(StableDiffusionModelManager):
 
     @property
     def use_refiner(self) -> bool:
-        return self.generator_settings.use_refiner
+        # return self.generator_settings.use_refiner
+        return False
 
     @property
     def refiner(self):
