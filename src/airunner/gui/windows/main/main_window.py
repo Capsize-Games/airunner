@@ -260,6 +260,7 @@ class MainWindow(
         self.initialize_ui()
         self._initialize_workers()
         self.last_tray_click_time = 0
+        self.settings_window = None
 
     @property
     def close_to_system_tray(self) -> bool:
@@ -470,7 +471,12 @@ class MainWindow(
 
     @Slot()
     def on_actionSettings_triggered(self):
-        SettingsWindow(prevent_always_on_top=True)
+        if self.settings_window is None:
+            self.settings_window = SettingsWindow(prevent_always_on_top=False, exec=False)
+            self.settings_window.show()
+        elif not self.settings_window.isVisible():
+            self.settings_window.show()
+        self.settings_window.raise_()
 
     @Slot()
     def on_actionBrowse_Images_Path_2_triggered(self):
