@@ -409,7 +409,6 @@ class Ui_stablediffusion_generator_form(object):
         self.add_prompt_button.clicked.connect(stablediffusion_generator_form.handle_add_prompt_clicked)
         self.image_presets.currentTextChanged.connect(stablediffusion_generator_form.handle_image_presets_changed)
         self.quality_effects.currentTextChanged.connect(stablediffusion_generator_form.handle_quality_effects_changed)
-        self.use_refiner_checkbox.toggled.connect(stablediffusion_generator_form.on_use_refiner_checkbox_toggled)
         self.prompt.textChanged.connect(stablediffusion_generator_form.handle_prompt_changed)
         self.secondary_prompt.textChanged.connect(stablediffusion_generator_form.handle_second_prompt_changed)
         self.negative_prompt.textChanged.connect(stablediffusion_generator_form.handle_negative_prompt_changed)
