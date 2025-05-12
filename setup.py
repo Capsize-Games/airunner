@@ -29,7 +29,7 @@ extras_require = {
         "diffusers==0.33.1",
         "controlnet_aux==0.0.9",
         "safetensors==0.5.2",
-        "compel==2.0.3",
+        "compel==2.1.0",
         "tomesd==0.1.3",
         "timm<=0.6.7",  # Timm is marked at a lower version for compel, we upgrade after installing
     ],
