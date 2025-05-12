@@ -332,9 +332,9 @@ GUI_ARGS="--rm \
   -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY \
   -e XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
   -v $XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR \
-  -e QT_WAYLAND_DISABLE_WINDOWDECORATION=1 \
   -e GDK_BACKEND=wayland \
   -e XDG_SESSION_TYPE=wayland \
+  -e QT_QPA_PLATFORMTHEME=gnome \
   -v /etc/machine-id:/etc/machine-id:ro"
 
 COMMON_ARGS="--rm \
