@@ -4,13 +4,9 @@ echo "Starting docker"
 
 # Detect if running in GitHub Actions
 if [ -n "$GITHUB_ACTIONS" ]; then
-  # In GitHub Actions, don't use sudo
-  USE_SUDO=""
-  echo "Running in GitHub Actions - sudo disabled"
+  echo "Running in GitHub Actions"
 else
-  # On regular systems, use sudo
-  USE_SUDO="sudo"
-  echo "Running on regular system - sudo enabled"
+  echo "Running on regular system"
 fi
 
 # Check for CI mode flag
@@ -41,12 +37,42 @@ if [ "$1" == "--fast-package-test" ]; then
   shift
 fi
 
+# Function to safely set permissions and handle errors gracefully
+safe_set_permissions() {
+  local dir="$1"
+  local perms="$2"
+  local operation="$3" # chmod, chown, or chmod g+s
+  
+  if [ ! -e "$dir" ]; then
+    echo "Directory $dir does not exist, skipping $operation"
+    return 0
+  fi
+  
+  # Check if we have write permissions to the directory
+  if [ -w "$dir" ]; then
+    echo "Setting $operation on $dir..."
+    if [ "$operation" == "chmod" ]; then
+      chmod $perms "$dir" 2>/dev/null || echo "Warning: Unable to change permissions of $dir (continuing anyway)"
+    elif [ "$operation" == "chown" ]; then
+      chown $perms "$dir" 2>/dev/null || echo "Warning: Unable to change ownership of $dir (continuing anyway)"
+    elif [ "$operation" == "chmod g+s" ]; then
+      chmod g+s "$dir" 2>/dev/null || echo "Warning: Unable to set group ID bit on $dir (continuing anyway)"
+    fi
+  else
+    echo "Warning: No write permission for $dir, skipping $operation"
+  fi
+}
+
 # Export HOST_UID and HOST_GID for the current user
 export HOST_UID=$(id -u)
 export HOST_GID=$(id -g)
 export HOST_HOME=$HOME
 export AIRUNNER_HOME_DIR=${HOST_HOME}/.local/share/airunner
 TORCH_HUB_DIR=${HOME}/.local/share/airunner/torch/hub
+
+# Export Wayland-specific variables
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+export WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
 
 # Set PYTHONUSERBASE to redirect pip installations to .local/share/airunner/python
 export PYTHONUSERBASE=$AIRUNNER_HOME_DIR/python
@@ -60,9 +86,8 @@ if [ "$CI_MODE" -eq 0 ]; then
       echo "Creating directory: $dir"
       mkdir -p "$dir"
     fi
-    # Set proper permissions, use sudo conditionally
-    chmod 775 "$dir"
-    $USE_SUDO chown $HOST_UID:$HOST_GID "$dir"
+    # Set proper permissions
+    safe_set_permissions "$dir" "775" "chmod"
   done
 
   # Ensure the target directory exists
@@ -76,8 +101,7 @@ if [ "$CI_MODE" -eq 0 ]; then
     echo "Creating pip cache directory: $CACHE_DIR"
     mkdir -p "$CACHE_DIR"
   fi
-  $USE_SUDO chmod -R 755 "$CACHE_DIR"
-  $USE_SUDO chown -R $HOST_UID:$HOST_GID "$CACHE_DIR"
+  safe_set_permissions "$CACHE_DIR" "755" "chmod"
 
   # Ensure build and dist exist and have correct permissions
   BUILD_DIR="$PWD/build"
@@ -85,16 +109,14 @@ if [ "$CI_MODE" -eq 0 ]; then
     echo "Creating directory: $BUILD_DIR"
     mkdir -p "$BUILD_DIR"
   fi
-  $USE_SUDO chmod -R 755 "$BUILD_DIR"
-  $USE_SUDO chown -R $HOST_UID:$HOST_GID "$BUILD_DIR"
+  safe_set_permissions "$BUILD_DIR" "755" "chmod"
 
   DIST_DIR="$PWD/dist"
   if [ ! -d "$DIST_DIR" ]; then
     echo "Creating directory: $DIST_DIR"
     mkdir -p "$DIST_DIR"
   fi
-  $USE_SUDO chmod -R 755 "$DIST_DIR"
-  $USE_SUDO chown -R $HOST_UID:$HOST_GID "$DIST_DIR"
+  safe_set_permissions "$DIST_DIR" "755" "chmod"
 
   # Ensure the log file exists and has the correct permissions
   LOG_FILE="${HOME}/.local/share/airunner/airunner.log"
@@ -102,8 +124,7 @@ if [ "$CI_MODE" -eq 0 ]; then
     mkdir -p "$(dirname "$LOG_FILE")"
     touch "$LOG_FILE"
   fi
-  chmod 664 "$LOG_FILE"  # Allow read/write for owner and group
-  $USE_SUDO chown $HOST_UID:$HOST_GID "$LOG_FILE"  # Set ownership to the current user and group
+  safe_set_permissions "$LOG_FILE" "664" "chmod"  # Allow read/write for owner and group
 
   # Ensure the parent directory has the correct permissions
   PYTHON_DIR=$AIRUNNER_HOME_DIR/python
@@ -118,8 +139,7 @@ if [ "$CI_MODE" -eq 0 ]; then
     mkdir -p "$PYTHON_DIR/include"
     mkdir -p "$PYTHON_DIR/share"
   fi
-  $USE_SUDO chmod -R 775 "$PYTHON_DIR"
-  $USE_SUDO chown -R $HOST_UID:$HOST_GID "$PYTHON_DIR"
+  safe_set_permissions "$PYTHON_DIR" "775" "chmod"
 
   if [ "$DEV_ENV" == "1" ]; then
     DEFAULT_DB_NAME=airunner.dev.db
@@ -138,16 +158,16 @@ if [ "$CI_MODE" -eq 0 ]; then
     # Check if permissions need to be updated
     if [ $(stat -c "%a" "$AIRUNNER_HOME_DIR") -ne 775 ]; then
       echo "Updating permissions for $AIRUNNER_HOME_DIR..."
-      $USE_SUDO chmod -R 775 "$AIRUNNER_HOME_DIR"  # Allow read/write/execute for owner and group
+      safe_set_permissions "$AIRUNNER_HOME_DIR" "775" "chmod"  # Allow read/write/execute for owner and group
     fi
     # Check if the group ID bit is already set
     if [ $(stat -c "%A" "$AIRUNNER_HOME_DIR" | cut -c 6) != "s" ]; then
       echo "Setting group ID bit on $AIRUNNER_HOME_DIR..."
-      $USE_SUDO chmod g+s "$AIRUNNER_HOME_DIR"  # Set the group ID on new files and directories
+      safe_set_permissions "$AIRUNNER_HOME_DIR" "" "chmod g+s"  # Set the group ID on new files and directories
     fi
     if [ $(stat -c "%a" "$AIRUNNER_HOME_DIR") -ne 775 ]; then
       echo "Updating permissions for $AIRUNNER_HOME_DIR..."
-      $USE_SUDO chmod -R 775 "$AIRUNNER_HOME_DIR"  # Allow read/write/execute for owner and group
+      safe_set_permissions "$AIRUNNER_HOME_DIR" "775" "chmod"  # Allow read/write/execute for owner and group
     fi
   fi
 
@@ -156,12 +176,12 @@ if [ "$CI_MODE" -eq 0 ]; then
     # Check if permissions need to be updated
     if [ $(stat -c "%a" "$TORCH_HUB_DIR") -ne 775 ]; then
       echo "Updating permissions for $TORCH_HUB_DIR..."
-      $USE_SUDO chmod -R 775 "$TORCH_HUB_DIR"  # Allow read/write/execute for owner and group
+      safe_set_permissions "$TORCH_HUB_DIR" "775" "chmod"  # Allow read/write/execute for owner and group
     fi
     # Check if the group ID bit is already set
     if [ $(stat -c "%A" "$TORCH_HUB_DIR" | cut -c 6) != "s" ]; then
       echo "Setting group ID bit on $TORCH_HUB_DIR..."
-      $USE_SUDO chmod g+s "$TORCH_HUB_DIR"  # Set the group ID on new files and directories
+      safe_set_permissions "$TORCH_HUB_DIR" "" "chmod g+s"  # Set the group ID on new files and directories
     fi
   fi
 
@@ -194,9 +214,12 @@ else
   echo "HOST_HOME=$HOME" > .env
   echo "HOST_UID=$HOST_UID" >> .env
   echo "HOST_GID=$HOST_GID" >> .env
+  # Add Wayland variables
+  echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> .env
+  echo "WAYLAND_DISPLAY=$WAYLAND_DISPLAY" >> .env
   chmod 644 .env
-  $USE_SUDO chown $HOST_UID:$HOST_GID .env
   echo "Created .env file with HOST_HOME=$HOME, HOST_UID=$HOST_UID, HOST_GID=$HOST_GID"
+  echo "Added Wayland environment variables: XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR, WAYLAND_DISPLAY=$WAYLAND_DISPLAY"
 fi
 
 # Set Docker Compose commands based on CI mode
@@ -252,9 +275,7 @@ if [ "$1" == "build_package" ]; then
 
   if [ "$CI_MODE" -eq 1 ] && [ "$FAST_PACKAGE_TEST" -eq 1 ]; then
     ACTION_PARAMS="run --rm" # Remove --build to use existing images
-    ENV_PARAMS="-e SKIP_BUTLER=1" # Add environment variable to skip butler
     echo "Executing PyInstaller with local code changes (no dependency image rebuild)."
-    echo "Butler deployment will be skipped."
   fi
 
   if [ "$CI_MODE" -eq 1 ]; then

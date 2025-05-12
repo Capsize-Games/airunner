@@ -258,6 +258,27 @@ fi
    ```
 This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
 
+> **Note:** AI Runner's Docker setup uses Wayland by default for optimal performance and compatibility with modern Linux desktop environments.
+
+### Building Docker Images Locally
+
+If you want to build and customize the Docker images locally:
+
+1. **Build the base image**
+   ```bash
+   ./src/airunner/bin/docker.sh build_base
+   ```
+
+2. **Build the runtime image**
+   ```bash
+   ./src/airunner/bin/docker.sh build_runtime
+   ```
+
+3. **Run using your locally built images**
+   ```bash
+   ./src/airunner/bin/docker.sh airunner
+   ```
+
 ---
 
 ***See the [Installation Wiki for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).***
