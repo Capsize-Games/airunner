@@ -5,8 +5,15 @@ WORKDIR /app
 # Set up Python environment variables
 ENV PATH="/usr/local/bin:/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH"
 
-# Ensure all directories have proper permissions
+# Install Qt Wayland support packages for proper window decorations
 USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libwayland-client0 \
+    libqt6waylandclient6 \
+    qt6-gtk-platformtheme \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ensure all directories have proper permissions
 RUN mkdir -p /home/appuser/.local/lib /home/appuser/.local/bin /home/appuser/.local/share && \
     mkdir -p /home/appuser/.cache && \
     chown -R appuser:appgroup /home/appuser/.local && \
