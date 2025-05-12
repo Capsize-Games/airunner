@@ -18,12 +18,3 @@ echo "Deploying airunner to itch.io"
 echo "============================================"
 echo ""
 chown -R 1000:1000 dist
-
-# CHECK IF DEV ENVIRONMENT
-if [ "$DEV_ENV" -eq 1 ]; then
-  echo "Dev environment detected. Skipping deployment."
-  exit 0
-fi
-LATEST_TAG=$(grep -oP '(?<=version=).*(?=,)' /app/setup.py | tr -d '"')
-echo "Latest tag: $LATEST_TAG"
-/home/appuser/butler/butler push /app/dist/airunner capsizegames/ai-runner:ubuntu --userversion $LATEST_TAG

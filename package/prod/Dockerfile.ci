@@ -183,14 +183,8 @@ RUN chmod +x /home/appuser/entrypoint.sh
 # Generate asound.conf as a static file instead of dynamically generating it
 RUN echo 'pcm.!default {\n    type plug\n    slave.pcm "dmix:1,0"\n    slave.channels 2\n}\n\nctl.!default {\n    type hw\n    card 1\n}' > /etc/asound.conf
 
-# Download butler
-WORKDIR /home/appuser/
-RUN mkdir -p /home/appuser/butler && \
-    cd /home/appuser/butler && \
-    wget https://dl.itch.ovh/butler/linux-amd64/head/butler && chmod +x butler && \
-    cd /home/appuser
-
 # Setup pip configuration
+WORKDIR /home/appuser/
 COPY ./package/pip.conf /etc/pip.conf
 RUN chown -R ${HOST_UID}:${HOST_GID} /etc/pip.conf && \
     chmod 644 /etc/pip.conf

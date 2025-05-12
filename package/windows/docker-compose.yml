@@ -16,7 +16,6 @@ services:
       - DISPLAY=:0
       - WINEARCH=win64
       - WINEPREFIX=/home/wineuser/.wine
-      - BUTLER_API_KEY=${BUTLER_API_KEY:-} # Pass through Butler API key if needed for uploads
       - DEV_ENV=0
       - AIRUNNER_ENVIRONMENT="prod"
       - PYTHONOPTIMIZE=0
