@@ -21,9 +21,9 @@ services:
       # - GID=${GID}
       - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512,expandable_segments:True
       - NUMBA_CACHE_DIR=/tmp/numba_cache
-      - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.10:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.10:/usr/local/lib/python3.10/dist-packages
+      - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.13:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.13:/usr/local/lib/python3.13/dist-packages
       - DISABLE_TELEMETRY=1
-      - PYTHONPATH=/home/appuser/.local/lib/python3.10/site-packages:/app
+      - PYTHONPATH=/home/appuser/.local/lib/python3.13/site-packages:/app
       - PIP_USER=1
       - DISPLAY
       - HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface
@@ -32,13 +32,13 @@ services:
       - XAUTHORITY=/home/appuser/.Xauthority
       - DEBIAN_FRONTEND=noninteractive
       - TZ=America/Denver
-      - PATH=/usr/local/cuda/bin:/home/appuser/.local/bin:$PATH
+      - PATH=/usr/local/bin:/usr/local/cuda/bin:/home/appuser/.local/bin:$PATH
       - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
       - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
       - QT_LOGGING_RULES=*.debug=false;driver.usb.debug=true
       - QT_DEBUG_PLUGINS=0
       - PYTHONLOGLEVEL=WARNING
-      - QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/lib/python3.10/site-packages/PySide6/Qt/plugins/platforms
+      - QT_QPA_PLATFORM_PLUGIN_PATH=/home/appuser/.local/lib/python3.13/site-packages/PySide6/Qt/plugins/platforms
       - QT_QPA_PLATFORM=xcb
       - PYTHONUNBUFFERED=1
       - NO_AT_BRIDGE=1
@@ -88,7 +88,7 @@ services:
       - /run/user/${HOST_UID}/pulse:/run/user/1000/pulse:ro
       - ${XAUTHORITY}:${XAUTHORITY}:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
-      - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python:/home/appuser/.local:rw,z
+      - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python/lib/python3.13:/home/appuser/.local/lib/python3.13:rw,z
     working_dir: /app
     runtime: nvidia
     ports:
