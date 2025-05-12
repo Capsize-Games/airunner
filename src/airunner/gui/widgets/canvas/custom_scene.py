@@ -245,6 +245,8 @@ class CustomScene(
                 export_image(image, file_path)
 
     def on_import_image_signal(self):
+        if self.settings_key != "drawing_pad_settings":
+            return
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",
