@@ -32,18 +32,24 @@ RUN set -eux; \
 RUN apt-get update && apt-get install -y software-properties-common && \
  add-apt-repository ppa:ubuntu-toolchain-r/test && \
  apt-get update && apt-get install -y \
- python3.10 \
- python3.10-venv \
- python3-pip \
- python3.10-distutils \
  build-essential \
- git \
- wget \
- libffi-dev \
  libssl-dev \
+ zlib1g-dev \
+ libbz2-dev \
+ libreadline-dev \
+ libsqlite3-dev \
+ wget \
+ curl \
+ llvm \
+ libncurses5-dev \
+ libncursesw5-dev \
+ xz-utils \
+ tk-dev \
+ libffi-dev \
+ liblzma-dev \
+ git \
  libgl1-mesa-dev \
  libjpeg-dev \
- zlib1g-dev \
  libpng-dev \
  cmake \
  ninja-build \
@@ -122,12 +128,32 @@ RUN apt-get update && apt-get install -y software-properties-common && \
  gnupg && \
  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Install Python 3.13.3 from source
+RUN cd /tmp && \
+    wget https://www.python.org/ftp/python/3.13.3/Python-3.13.3.tgz && \
+    tar -xf Python-3.13.3.tgz && \
+    cd Python-3.13.3 && \
+    ./configure --enable-optimizations && \
+    make -j$(nproc) && \
+    make altinstall && \
+    cd .. && \
+    rm -rf Python-3.13.3 Python-3.13.3.tgz
+
+# Make Python 3.13.3 the default
+RUN ln -sf /usr/local/bin/python3.13 /usr/local/bin/python && \
+    ln -sf /usr/local/bin/python3.13 /usr/local/bin/python3 && \
+    ln -sf /usr/local/bin/pip3.13 /usr/local/bin/pip && \
+    ln -sf /usr/local/bin/pip3.13 /usr/local/bin/pip3
+
+# Update PATH to include Python 3.13.3
+ENV PATH="/usr/local/bin:${PATH}"
+
 # Set environment variables for CUDA and cuDNN, nvidia runtime and path
 ENV PATH=/usr/local/cuda/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=$CUDA_HOME/bin:$PATH
-ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/lib/python3.10/site-packages/PySide6/Qt/lib:/ususe_grr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
+ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/lib/python3.13/site-packages/PySide6/Qt/lib:/ususe_grr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 

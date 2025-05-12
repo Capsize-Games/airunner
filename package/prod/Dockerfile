@@ -143,12 +143,32 @@ RUN apt-get update && \
  && \
  rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Install Python 3.13.3 from source
+RUN cd /tmp && \
+    wget https://www.python.org/ftp/python/3.13.3/Python-3.13.3.tgz && \
+    tar -xf Python-3.13.3.tgz && \
+    cd Python-3.13.3 && \
+    ./configure --enable-optimizations && \
+    make -j$(nproc) && \
+    make altinstall && \
+    cd .. && \
+    rm -rf Python-3.13.3 Python-3.13.3.tgz
+
+# Make Python 3.13.3 the default
+RUN ln -sf /usr/local/bin/python3.13 /usr/local/bin/python && \
+    ln -sf /usr/local/bin/python3.13 /usr/local/bin/python3 && \
+    ln -sf /usr/local/bin/pip3.13 /usr/local/bin/pip && \
+    ln -sf /usr/local/bin/pip3.13 /usr/local/bin/pip3
+
+# Update PATH to include Python 3.13.3
+ENV PATH="/usr/local/bin:${PATH}"
+
 # Set environment variables for CUDA and cuDNN, nvidia runtime and path
 ENV PATH=/usr/local/cuda/bin:/home/appuser/.local/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=$CUDA_HOME/bin:$PATH
-ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/.local/share/airunner/python/local/lib/python3.10/site-packages/PySide6/Qt/lib:/ususe_grr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
+ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/.local/share/airunner/python/local/lib/python3.13/site-packages/PySide6/Qt/lib:/ususe_grr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
@@ -160,7 +180,12 @@ ENV GDK_BACKEND=wayland
 ENV XDG_SESSION_TYPE=wayland
 
 # Create directory structure with correct permissions using UID:GID values
-RUN mkdir -p /home/appuser/.local/share/airunner && chown -R ${HOST_UID}:${HOST_GID} /home/appuser/.local/share/airunner
+RUN mkdir -p /home/appuser/.local/share/airunner && \
+    mkdir -p /home/appuser/.local/lib && \
+    mkdir -p /home/appuser/.local/bin && \
+    chown -R ${HOST_UID}:${HOST_GID} /home/appuser/.local && \
+    chmod -R 755 /home/appuser/.local
+
 COPY --chown=${HOST_UID}:${HOST_GID} . /app/
 COPY ./package/prod/entrypoint.sh /home/appuser/entrypoint.sh
 RUN chmod +x /home/appuser/entrypoint.sh
@@ -168,39 +193,13 @@ RUN chmod +x /home/appuser/entrypoint.sh
 # Copy configuration files
 COPY --chown=appuser:appgroup ./package/prod/qt_wayland_config.txt /tmp/qt_wayland_config.txt
 
-# Install pyenv and Python as appuser
+# Add Qt Wayland configuration to bashrc
 USER appuser
-RUN echo "Installing pyenv as user $(whoami)" && \
-    mkdir -p $HOME/.pyenv && \
-    git clone --depth=1 https://github.com/pyenv/pyenv.git $HOME/.pyenv && \
-    cd $HOME/.pyenv && \
-    src/configure && \
-    make -C src && \
-    echo "Verifying pyenv installation..." && \
-    echo "Directory listing of $HOME/.pyenv:" && \
-    ls -la $HOME/.pyenv && \
-    echo "Adding pyenv config to bashrc" && \
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> $HOME/.bashrc && \
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> $HOME/.bashrc && \
-    echo 'eval "$(pyenv init --path)"' >> $HOME/.bashrc && \
-    echo 'eval "$(pyenv init -)"' >> $HOME/.bashrc && \
-    echo "Adding Qt Wayland config to bashrc" && \
+RUN echo "Adding Qt Wayland config to bashrc" && \
     cat /tmp/qt_wayland_config.txt >> $HOME/.bashrc && \
-    echo "Installing Python with pyenv" && \
-    export PYENV_ROOT="$HOME/.pyenv" && \
-    export PATH="$PYENV_ROOT/bin:$PATH" && \
-    if [ -f "$HOME/.pyenv/bin/pyenv" ]; then \
-        echo "Using bin/pyenv" && \
-        $HOME/.pyenv/bin/pyenv install 3.13.3 && \
-        $HOME/.pyenv/bin/pyenv global 3.13.3; \
-    elif [ -f "$HOME/.pyenv/libexec/pyenv" ]; then \
-        echo "Using libexec/pyenv" && \
-        $HOME/.pyenv/libexec/pyenv install 3.13.3 && \
-        $HOME/.pyenv/libexec/pyenv global 3.13.3; \
-    else \
-        echo "ERROR: pyenv executable not found"; \
-        exit 1; \
-    fi
+    # Verify Python 3.13.3 installation
+    python --version && \
+    pip --version
 
 USER root
 COPY ./package/pip.conf /etc/pip.conf
