@@ -31,7 +31,6 @@ jobs:
 
       - name: Create .env file for Docker Compose
         run: |
-          echo "BUTLER_API_KEY=${{ secrets.BUTLER_API_KEY }}" > .env
           echo "DEV_ENV=0" >> .env
           echo "AIRUNNER_ENVIRONMENT=prod" >> .env
           echo "PYTHONOPTIMIZE=0" >> .env

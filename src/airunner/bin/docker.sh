@@ -309,18 +309,50 @@ if [ "$1" == "build_dev_package" ]; then
   exit 0
 fi
 
+# Special handling for run_dev command
+if [ "$1" == "run_dev" ]; then
+  echo "Running airunner in development mode..."
+  shift  # Remove 'run_dev' from the arguments
+  if [ "$CI_MODE" -eq 1 ]; then
+    $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --build --rm airunner_prod_ci airunner "$@"
+  else
+    $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --build --rm airunner_dev airunner "$@"
+  fi
+  exit 0
+fi
+
 # Get user command
+IMAGE_NAME="airunner:linux"
+DISPLAY_SERVER="wayland"
+  
+# Configure for Wayland with necessary fixes
+# CRITICAL: Uses identical configuration to our successful test script
+GUI_ARGS="--rm \
+  -e QT_QPA_PLATFORM=wayland \
+  -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY \
+  -e XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+  -v $XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR \
+  -e QT_WAYLAND_DISABLE_WINDOWDECORATION=1 \
+  -e GDK_BACKEND=wayland \
+  -e XDG_SESSION_TYPE=wayland \
+  -v /etc/machine-id:/etc/machine-id:ro"
+
+COMMON_ARGS="--rm \
+             -v /etc/machine-id:/etc/machine-id:ro \
+             -u $(id -u):$(id -g) \
+             -w /app"
+
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
   if [ "$CI_MODE" -eq 1 ]; then
-    $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --build --rm airunner_prod_ci bash
+    $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --build --rm airunner_prod_ci bash
   else
-    $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --build --rm airunner_dev bash
+    $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --build --rm airunner_dev bash
   fi
 else
   if [ "$CI_MODE" -eq 1 ]; then
-    $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --build --rm airunner_prod_ci "$@"
+    $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --build --rm airunner_prod_ci "$@"
   else
-    $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --build --rm airunner_dev "$@"
+    $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --build --rm airunner_dev "$@"
   fi
 fi
