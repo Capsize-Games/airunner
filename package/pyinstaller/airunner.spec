@@ -39,7 +39,10 @@ a = Analysis(
         (join(cudnn_lib, 'libcudnn_ops.so.9'), '.'),
         (join(cudnn_lib, 'libcudnn.so.9'), '.'),
         # QT libraries - Use corrected qt_lib variable
-        (join(qt_lib, 'libQt6XcbQpa.so.6'), '.'),
+        (join(qt_lib, 'libQt6WaylandClient.so.6'), '.'),
+        (join(qt_lib, 'libQt6WaylandCompositor.so.6'), '.'),
+        (join(qt_lib, 'libQt6WaylandEglClientHwIntegration.so.6'), '.'),
+        (join(qt_lib, 'libQt6WaylandEglPlatformSupport.so.6'), '.'),
         (join(qt_lib, 'libQt6DBus.so.6'), '.'),
         (join(qt_lib, 'libQt6Widgets.so.6'), '.'),
         (join(qt_lib, 'libQt6Gui.so.6'), '.'),

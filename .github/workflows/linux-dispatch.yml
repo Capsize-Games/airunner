@@ -47,7 +47,6 @@ jobs:
       
       - name: Push Linux Runtime to It
         env:
-          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
           DEV_ENV: "0"
         run: |
           src/airunner/bin/docker.sh --ci build_package

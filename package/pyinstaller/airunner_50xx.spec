@@ -76,14 +76,15 @@ a = Analysis(
         *system_cuda_libs,
         
         # QT libraries
-        (join(qt_lib, 'libQt6XcbQpa.so.6'), '.'),
+        (join(qt_lib, 'libQt6WaylandClient.so.6'), '.'),
+        (join(qt_lib, 'libQt6WaylandCompositor.so.6'), '.'),
+        (join(qt_lib, 'libQt6WaylandEglClientHwIntegration.so.6'), '.'),
+        (join(qt_lib, 'libQt6WaylandEglPlatformSupport.so.6'), '.'),
         (join(qt_lib, 'libQt6DBus.so.6'), '.'),
         (join(qt_lib, 'libQt6Widgets.so.6'), '.'),
         (join(qt_lib, 'libQt6Gui.so.6'), '.'),
         (join(qt_lib, 'libQt6Core.so.6'), '.'),
         (join(linux_lib, 'libpython3.10.so.1.0'), '.'),
-        (join(linux_lib, 'libxcb.so.1.1.0'), '.'),
-        (join(linux_lib, 'libxkbcommon-x11.so.0.0.0'), '.'),
         
         # ...existing system libraries...
         # NSS libraries for QtWebEngine
