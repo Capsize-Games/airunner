@@ -54,7 +54,6 @@ RUN apt-get update && \
  nvidia-cuda-toolkit \
  pipewire \
  libportaudio2 \
- libxcb-cursor0 \
  gnupg \
  gpg-agent \
  pinentry-curses \
@@ -76,15 +75,6 @@ RUN apt-get update && \
  libwayland-server0 \
  wayland-protocols \
  libxkbcommon0 \
- # Keep minimal XCB for compatibility
- libxcb-cursor0 \
- libxcb-icccm4 \
- libxcb-image0 \
- libxcb-keysyms1 \
- libxcb-randr0 \
- libxcb-render-util0 \
- libxcb-xkb1 \
- libxkbcommon-x11-0 \
  # Database and other required libraries
  libpq5 \
  libodbc2 \
