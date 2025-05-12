@@ -69,36 +69,23 @@ RUN apt-get update && \
  libpng-dev \
  ninja-build \
  ffmpeg \
- # Qt6 dependencies for XCB
- libxcb-xinput0 \
- libxcb-xfixes0 \
- libxcomposite1 \
+ # Wayland dependencies
+ libwayland-client0 \
+ libwayland-cursor0 \
+ libwayland-egl1 \
+ libwayland-server0 \
+ wayland-protocols \
+ libxkbcommon0 \
+ # Keep minimal XCB for compatibility
+ libxcb-cursor0 \
  libxcb-icccm4 \
  libxcb-image0 \
  libxcb-keysyms1 \
  libxcb-randr0 \
  libxcb-render-util0 \
- libxcb-xinerama0 \
  libxcb-xkb1 \
- libxcb-glx0 \
- libxcb-shape0 \
- libxcb-shm0 \
- libxcb-sync1 \
- libxcb-dri2-0 \
- libxcb-dri3-0 \
- libxcb-present0 \
  libxkbcommon-x11-0 \
- libx11-xcb1 \
- libxcb1 \
- gstreamer1.0-gl \
- x11-utils \
- patchelf \
- mesa-utils \
- xauth \
- libnss3 \
- libatk1.0-0 \
- libxkbcommon-x11-0 \
- libgtk-3-0 \
+ # Database and other required libraries
  libpq5 \
  libodbc2 \
  libmysqlclient21 \
@@ -118,14 +105,8 @@ RUN apt-get update && \
  fonts-liberation \
  libglvnd0 \
  libgl1 \
- libglx0 \
  libegl1 \
- libxext6 \
- libx11-6 \
- x11-apps \
- # Add these new X11-related packages
- dbus-x11 \
- x11-xserver-utils \
+ # Audio support
  portaudio19-dev \
  alsa-utils \
  libasound2-plugins \
@@ -171,69 +152,66 @@ ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/.local/share/airunner/python/local/lib/python3.
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
-RUN mkdir ~/.local/share/airunner && chown -R appuser:appuser ~/.local/share/airunner
-COPY --chown=appuser:appuser . /app/
+# Configure for Wayland by default
+ENV QT_QPA_PLATFORM=wayland
+ENV QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+ENV QT_QPA_PLATFORMTHEME=gtk3
+ENV GDK_BACKEND=wayland
+ENV XDG_SESSION_TYPE=wayland
+
+# Create directory structure with correct permissions using UID:GID values
+RUN mkdir -p /home/appuser/.local/share/airunner && chown -R ${HOST_UID}:${HOST_GID} /home/appuser/.local/share/airunner
+COPY --chown=${HOST_UID}:${HOST_GID} . /app/
 COPY ./package/prod/entrypoint.sh /home/appuser/entrypoint.sh
 RUN chmod +x /home/appuser/entrypoint.sh
-RUN curl https://pyenv.run | bash
 
-# Download butler
-WORKDIR /home/appuser/
-RUN mkdir -p /home/appuser/butler && \
-    cd /home/appuser/butler && \
-    wget https://dl.itch.ovh/butler/linux-amd64/head/butler && chmod +x butler && \
-    cd /home/appuser
+# Copy configuration files
+COPY --chown=appuser:appgroup ./package/prod/qt_wayland_config.txt /tmp/qt_wayland_config.txt
 
-RUN if ! grep -q "Pyenv configuration added by AI Runner" ~/.bashrc; then \
-     cat << 'EOF' >> ~/.bashrc \
-\
-# Pyenv configuration added by AI Runner setup \
-export PYENV_ROOT="$HOME/.pyenv" \
-if [ -d "$PYENV_ROOT/bin" ]; then \
-  export PATH="$PYENV_ROOT/bin:$PATH" \
-fi \
-if command -v pyenv &>/dev/null; then \
-  eval "$(pyenv init - bash)" \
-fi \
-EOF \
-   fi \
-   && \
-   # Check and add WSLg XDG_RUNTIME_DIR fix if not already present \
-   if ! grep -q "WSLg XDG_RUNTIME_DIR Fix added by AI Runner" ~/.bashrc; then \
-     cat << 'EOF' >> ~/.bashrc \
-\
-# WSLg XDG_RUNTIME_DIR Fix added by AI Runner setup \
-if [ -n "$WSL_DISTRO_NAME" ]; then \
-    if [ -d "/wslg/runtime-dir" ]; then \
-        export XDG_RUNTIME_DIR="/wslg/runtime-dir" \
-    elif [ -d "/mnt/wslg/runtime-dir" ]; then # Older WSLg path \
-        export XDG_RUNTIME_DIR="/mnt/wslg/runtime-dir" \
-    fi \
-fi \
-EOF \
-   fi \
-   && \
-   # Check and add Qt environment variables for WSLg if not already present \
-   if ! grep -q "Qt environment variables for WSLg added by AI Runner" ~/.bashrc; then \
-     cat << 'EOF' >> ~/.bashrc \
-\
-# Qt environment variables for WSLg added by AI Runner setup \
-if [ -n "$WSL_DISTRO_NAME" ]; then \
-    export QT_QPA_PLATFORM=wayland \
-    export QT_QPA_PLATFORMTHEME=gtk3 \
-fi \
-EOF \
-   fi \
-&& \
-pyenv install 3.13.3 && \
-pyenv global 3.13.3
+# Install pyenv and Python as appuser
+USER appuser
+RUN echo "Installing pyenv as user $(whoami)" && \
+    mkdir -p $HOME/.pyenv && \
+    git clone --depth=1 https://github.com/pyenv/pyenv.git $HOME/.pyenv && \
+    cd $HOME/.pyenv && \
+    src/configure && \
+    make -C src && \
+    echo "Verifying pyenv installation..." && \
+    echo "Directory listing of $HOME/.pyenv:" && \
+    ls -la $HOME/.pyenv && \
+    echo "Adding pyenv config to bashrc" && \
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> $HOME/.bashrc && \
+    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> $HOME/.bashrc && \
+    echo 'eval "$(pyenv init --path)"' >> $HOME/.bashrc && \
+    echo 'eval "$(pyenv init -)"' >> $HOME/.bashrc && \
+    echo "Adding Qt Wayland config to bashrc" && \
+    cat /tmp/qt_wayland_config.txt >> $HOME/.bashrc && \
+    echo "Installing Python with pyenv" && \
+    export PYENV_ROOT="$HOME/.pyenv" && \
+    export PATH="$PYENV_ROOT/bin:$PATH" && \
+    if [ -f "$HOME/.pyenv/bin/pyenv" ]; then \
+        echo "Using bin/pyenv" && \
+        $HOME/.pyenv/bin/pyenv install 3.13.3 && \
+        $HOME/.pyenv/bin/pyenv global 3.13.3; \
+    elif [ -f "$HOME/.pyenv/libexec/pyenv" ]; then \
+        echo "Using libexec/pyenv" && \
+        $HOME/.pyenv/libexec/pyenv install 3.13.3 && \
+        $HOME/.pyenv/libexec/pyenv global 3.13.3; \
+    else \
+        echo "ERROR: pyenv executable not found"; \
+        exit 1; \
+    fi
 
+USER root
 COPY ./package/pip.conf /etc/pip.conf
-RUN chown -R 1000:1000 /etc/pip.conf && \
+RUN chown -R ${HOST_UID}:${HOST_GID} /etc/pip.conf && \
     chmod 644 /etc/pip.conf
 
 USER ${HOST_UID}:${HOST_GID}
 
 WORKDIR /app
 
+# Set default shell to bash
+SHELL ["/bin/bash", "-c"]
+ENTRYPOINT ["/bin/bash", "/home/appuser/entrypoint.sh"]
 CMD ["/bin/bash"]

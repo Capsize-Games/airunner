@@ -79,7 +79,6 @@ RUN if python3 -c "import airunner" 2>/dev/null; then \
             echo "Airunner version $INSTALLED_VERSION is installed, but version $REQUIRED_VERSION is required."; \
             pip install --no-cache-dir -v -e .[all_dev] && \
             pip install --no-cache-dir -v -U langchain-community && \
-            pip install --no-cache-dir -v -U mediapipe && \
             pip install --no-cache-dir -v -U timm; \
         else \
             echo "Airunner version $INSTALLED_VERSION is already installed."; \
@@ -88,7 +87,6 @@ RUN if python3 -c "import airunner" 2>/dev/null; then \
         echo "Airunner is not installed. Installing the latest version..."; \
         pip install --no-cache-dir -v -e .[all_dev] && \
         pip install --no-cache-dir -v -U langchain-community && \
-        pip install --no-cache-dir -v -U mediapipe && \
         pip install --no-cache-dir -v -U timm; \
     fi
 
