@@ -2,77 +2,115 @@ FROM ghcr.io/capsize-games/airunner/airunner:linux
 
 WORKDIR /app
 
-ENV PATH=/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH
+# Set up pyenv environment variables explicitly at the beginning
+ENV PYENV_ROOT="/home/appuser/.pyenv"
+ENV PATH="$PYENV_ROOT/bin:$PATH"
+ENV PATH="/home/appuser/.pyenv/shims:$PATH"
+ENV PATH="/home/appuser/.local/bin:/home/appuser/.local/share/airunner/python/bin:$PATH"
 
-# Ensure the appuser exists and directories are created
+# Create appuser if doesn't exist but don't try to modify existing directories
 RUN id -u appuser >/dev/null 2>&1 || useradd -m -s /bin/bash appuser && \
-    mkdir -p /home/appuser/.local /home/appuser/.cache && \
-    sudo chown -R appuser:appuser /home/appuser/.local && \
-    sudo chown -R appuser:appuser /home/appuser/.cache
+    chown appuser:appgroup package/dev/entrypoint.sh || true && \
+    mkdir -p /home/appuser/.cache && \
+    chown -R appuser:appgroup /home/appuser/.cache || true
 
-# Check if AIRUNNER_ENABLE_OPEN_VOICE==1
+# Set the user for all subsequent commands
 USER appuser
 
+# Activate pyenv in the shell
+SHELL ["/bin/bash", "-c"]
+
+# Debug info and ensure pyenv is initialized
+RUN echo "Python and pip location check:" && \
+    export PYENV_ROOT="$HOME/.pyenv" && \
+    export PATH="$PYENV_ROOT/bin:$PATH" && \
+    eval "$($PYENV_ROOT/bin/pyenv init -)" && \
+    eval "$($PYENV_ROOT/bin/pyenv init --path)" && \
+    echo "Python version: $(python3 --version)" && \
+    echo "Python location: $(which python3)" && \
+    echo "Pip location: $(which pip3)" && \
+    echo "Current PATH: $PATH"
+
 # Check if torch is installed before continuing
-RUN if python3 -c "import torch" 2>/dev/null; then \
-    echo "Torch is already installed."; \
-  else \
-    echo "Torch is not installed. Installing torch, torchvision, and torchaudio..."; \
-    pip install --no-cache-dir -v torch torchvision torchaudio; \
-  fi
+RUN export PYENV_ROOT="$HOME/.pyenv" && \
+    export PATH="$PYENV_ROOT/bin:$PATH" && \
+    eval "$($PYENV_ROOT/bin/pyenv init -)" && \
+    eval "$($PYENV_ROOT/bin/pyenv init --path)" && \
+    if python3 -c "import torch" 2>/dev/null; then \
+      echo "Torch is already installed."; \
+      python3 -c "import torch; print('Torch version:', torch.__version__, 'CUDA available:', torch.cuda.is_available())"; \
+    else \
+      echo "Torch is not installed. Installing torch, torchvision, and torchaudio..."; \
+      pip3 install "typing-extensions==4.13.2" && \
+      pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 --verbose; \
+    fi
 
 # Handle OpenVoice and MeloTTS installation
-RUN if [ "$AIRUNNER_ENABLE_OPEN_VOICE" == "1" ]; then \
+RUN export PYENV_ROOT="$HOME/.pyenv" && \
+    export PATH="$PYENV_ROOT/bin:$PATH" && \
+    eval "$($PYENV_ROOT/bin/pyenv init -)" && \
+    eval "$($PYENV_ROOT/bin/pyenv init --path)" && \
+    if [ "$AIRUNNER_ENABLE_OPEN_VOICE" == "1" ]; then \
         if python3 -c "import openvoice" 2>/dev/null; then \
             echo "OpenVoice is already installed."; \
         else \
             echo "OpenVoice is not installed. Installing OpenVoice..."; \
             [ ! -d "OpenVoice" ] && git clone https://github.com/myshell-ai/OpenVoice.git; \
-            cd OpenVoice && pip install --no-cache-dir -v . && cd .. && rm -rf OpenVoice; \
+            cd OpenVoice && pip3 install --no-cache-dir -v . && cd .. && rm -rf OpenVoice; \
         fi; \
         if python3 -c "import melo" 2>/dev/null; then \
             echo "MeloTTS is already installed."; \
         else \
             echo "MeloTTS is not installed. Installing MeloTTS..."; \
             [ ! -d "MeloTTS" ] && git clone https://github.com/myshell-ai/MeloTTS.git; \
-            cd MeloTTS && git checkout v0.1.2 && pip install --no-cache-dir -v . && cd .. && rm -rf MeloTTS; \
+            cd MeloTTS && git checkout v0.1.2 && pip3 install --no-cache-dir -v . && cd .. && rm -rf MeloTTS; \
         fi; \
         echo "Downloading unidic..."; \
         python3 -m unidic download && echo "Unidic download complete."; \
     else \
         echo "Uninstalling OpenVoice and MeloTTS..."; \
-        pip uninstall myshell-openvoice -y || true; \
-        pip uninstall melotts -y || true; \
+        pip3 uninstall myshell-openvoice -y || true; \
+        pip3 uninstall melotts -y || true; \
     fi
 
-RUN pip install --no-cache-dir -v altgraph
+RUN export PYENV_ROOT="$HOME/.pyenv" && \
+    export PATH="$PYENV_ROOT/bin:$PATH" && \
+    eval "$($PYENV_ROOT/bin/pyenv init -)" && \
+    eval "$($PYENV_ROOT/bin/pyenv init --path)" && \
+    pip3 install --no-cache-dir -v altgraph
 
 # Handle Airunner installation
-RUN if python3 -c "import airunner" 2>/dev/null; then \
+RUN export PYENV_ROOT="$HOME/.pyenv" && \
+    export PATH="$PYENV_ROOT/bin:$PATH" && \
+    eval "$($PYENV_ROOT/bin/pyenv init -)" && \
+    eval "$($PYENV_ROOT/bin/pyenv init --path)" && \
+    if python3 -c "import airunner" 2>/dev/null; then \
         echo "Airunner is already installed."; \
-        INSTALLED_VERSION=$(pip show airunner | grep Version | cut -d ' ' -f 2); \
+        INSTALLED_VERSION=$(pip3 show airunner | grep Version | cut -d ' ' -f 2); \
         REQUIRED_VERSION=$(grep 'version=' /app/setup.py | sed -n "s/.*version=['\"]\([^'\"]*\)['\"].*/\1/p"); \
         echo "Installed version: $INSTALLED_VERSION"; \
         echo "Required version: $REQUIRED_VERSION"; \
         if [ "$INSTALLED_VERSION" != "$REQUIRED_VERSION" ]; then \
             echo "Airunner version $INSTALLED_VERSION is installed, but version $REQUIRED_VERSION is required."; \
-            pip install --no-cache-dir -v -e .[all_dev] && \
-            pip install --no-cache-dir -v -U langchain-community && \
-            pip install --no-cache-dir -v -U mediapipe && \
-            pip install --no-cache-dir -v -U timm; \
+            pip3 install --no-cache-dir -v -e .[all_dev] && \
+            pip3 install --no-cache-dir -v -U langchain-community && \
+            pip3 install --no-cache-dir -v -U timm; \
         else \
             echo "Airunner version $INSTALLED_VERSION is already installed."; \
         fi; \
     else \
         echo "Airunner is not installed. Installing the latest version..."; \
-        pip install --no-cache-dir -v -e .[all_dev] && \
-        pip install --no-cache-dir -v -U langchain-community && \
-        pip install --no-cache-dir -v -U mediapipe && \
-        pip install --no-cache-dir -v -U timm; \
+        pip3 install --no-cache-dir -v -e .[all_dev] && \
+        pip3 install --no-cache-dir -v -U langchain-community && \
+        pip3 install --no-cache-dir -v -U timm; \
     fi
 
 # Handle NLTK punkt tokenizer installation
-RUN if [ -f "/home/appuser/nltk_data/tokenizers/punkt/english.pickle" ]; then \
+RUN export PYENV_ROOT="$HOME/.pyenv" && \
+    export PATH="$PYENV_ROOT/bin:$PATH" && \
+    eval "$($PYENV_ROOT/bin/pyenv init -)" && \
+    eval "$($PYENV_ROOT/bin/pyenv init --path)" && \
+    if [ -f "/home/appuser/nltk_data/tokenizers/punkt/english.pickle" ]; then \
         echo "NLTK punkt tokenizer is already installed."; \
     else \
         echo "NLTK punkt tokenizer is not installed. Installing..."; \

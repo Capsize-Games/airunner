@@ -15,7 +15,6 @@ services:
     working_dir: /app
     runtime: nvidia
     environment:
-      - BUTLER_API_KEY=${BUTLER_API_KEY}
       - DEV_ENV=${DEV_ENV:-0}
       - AIRUNNER_ENVIRONMENT=${AIRUNNER_ENVIRONMENT:-prod}
       - HOST_UID=${HOST_UID:-1000}
