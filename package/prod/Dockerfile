@@ -29,30 +29,47 @@ RUN set -eux; \
     fi
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y software-properties-common && \
+RUN apt-get update && \
+ apt-get install -y \software-properties-common && \
  add-apt-repository ppa:ubuntu-toolchain-r/test && \
- apt-get update && apt-get install -y \
- python3.10 \
- python3.10-venv \
- python3-pip \
- python3.10-distutils \
+ apt-get update && \
+ apt-get install -y \
+ make \
  build-essential \
- git \
- wget \
- libffi-dev \
  libssl-dev \
+ zlib1g-dev \
+ libbz2-dev \
+ libreadline-dev \
+ libsqlite3-dev \
+ wget \
+ curl \
+ llvm \
+ libncurses5-dev \
+ libncursesw5-dev \
+ xz-utils \
+ tk-dev \
+ libffi-dev \
+ liblzma-dev \
+ git \
+ nvidia-cuda-toolkit \
+ pipewire \
+ libportaudio2 \
+ libxcb-cursor0 \
+ gnupg \
+ gpg-agent \
+ pinentry-curses \
+ espeak \
+ xclip \
+ cmake \
+ qt6-qpa-plugins \
+ qt6-wayland \
+ qt6-gtk-platformtheme \
  libgl1-mesa-dev \
  libjpeg-dev \
- zlib1g-dev \
  libpng-dev \
- cmake \
  ninja-build \
- xclip \
- xserver-xorg \
- xvfb \
  ffmpeg \
  # Qt6 dependencies for XCB
- libxcb-cursor0 \
  libxcb-xinput0 \
  libxcb-xfixes0 \
  libxcomposite1 \
@@ -99,7 +116,6 @@ RUN apt-get update && apt-get install -y software-properties-common && \
  # Fontconfig and fonts
  fontconfig \
  fonts-liberation \
- mesa-utils \
  libglvnd0 \
  libgl1 \
  libglx0 \
@@ -113,11 +129,9 @@ RUN apt-get update && apt-get install -y software-properties-common && \
  portaudio19-dev \
  alsa-utils \
  libasound2-plugins \
- espeak \
  vim \
  tmux \
  libstdc++6 \
- wget \
  gnupg \
  # NSS libraries for WebEngine
  libnss3 \
@@ -157,9 +171,11 @@ ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/.local/share/airunner/python/local/lib/python3.
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
+RUN mkdir ~/.local/share/airunner && chown -R appuser:appuser ~/.local/share/airunner
 COPY --chown=appuser:appuser . /app/
 COPY ./package/prod/entrypoint.sh /home/appuser/entrypoint.sh
 RUN chmod +x /home/appuser/entrypoint.sh
+RUN curl https://pyenv.run | bash
 
 # Download butler
 WORKDIR /home/appuser/
@@ -168,6 +184,49 @@ RUN mkdir -p /home/appuser/butler && \
     wget https://dl.itch.ovh/butler/linux-amd64/head/butler && chmod +x butler && \
     cd /home/appuser
 
+RUN if ! grep -q "Pyenv configuration added by AI Runner" ~/.bashrc; then \
+     cat << 'EOF' >> ~/.bashrc \
+\
+# Pyenv configuration added by AI Runner setup \
+export PYENV_ROOT="$HOME/.pyenv" \
+if [ -d "$PYENV_ROOT/bin" ]; then \
+  export PATH="$PYENV_ROOT/bin:$PATH" \
+fi \
+if command -v pyenv &>/dev/null; then \
+  eval "$(pyenv init - bash)" \
+fi \
+EOF \
+   fi \
+   && \
+   # Check and add WSLg XDG_RUNTIME_DIR fix if not already present \
+   if ! grep -q "WSLg XDG_RUNTIME_DIR Fix added by AI Runner" ~/.bashrc; then \
+     cat << 'EOF' >> ~/.bashrc \
+\
+# WSLg XDG_RUNTIME_DIR Fix added by AI Runner setup \
+if [ -n "$WSL_DISTRO_NAME" ]; then \
+    if [ -d "/wslg/runtime-dir" ]; then \
+        export XDG_RUNTIME_DIR="/wslg/runtime-dir" \
+    elif [ -d "/mnt/wslg/runtime-dir" ]; then # Older WSLg path \
+        export XDG_RUNTIME_DIR="/mnt/wslg/runtime-dir" \
+    fi \
+fi \
+EOF \
+   fi \
+   && \
+   # Check and add Qt environment variables for WSLg if not already present \
+   if ! grep -q "Qt environment variables for WSLg added by AI Runner" ~/.bashrc; then \
+     cat << 'EOF' >> ~/.bashrc \
+\
+# Qt environment variables for WSLg added by AI Runner setup \
+if [ -n "$WSL_DISTRO_NAME" ]; then \
+    export QT_QPA_PLATFORM=wayland \
+    export QT_QPA_PLATFORMTHEME=gtk3 \
+fi \
+EOF \
+   fi \
+&& \
+pyenv install 3.13.3 && \
+pyenv global 3.13.3
 
 COPY ./package/pip.conf /etc/pip.conf
 RUN chown -R 1000:1000 /etc/pip.conf && \
