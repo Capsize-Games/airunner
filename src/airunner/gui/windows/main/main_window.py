@@ -169,7 +169,8 @@ class MainWindow(
         ("stop-circle", "workflow_actionStop"),
         ("corner-up-right", "actionRedo"),
         ("corner-up-left", "actionUndo"),
-        ("save", "actionSave_As")
+        ("save", "actionSave_As"),
+        ("target", "actionRecenter"),
     ]
 
     def __init__(self, *args, **kwargs):
