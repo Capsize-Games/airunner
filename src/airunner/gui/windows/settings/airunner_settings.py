@@ -85,12 +85,12 @@ class SettingsWindow(BaseWindow):
 
     def __init__(self, **kwargs):
         self.widgets = {}
-        self.qsettings = get_qsettings()
-        super().__init__(**kwargs)
         self.model = None
         self.scroll_widget = None
         self.scroll_layout = None
         self.highlight_delegate = None
+        self.qsettings = get_qsettings()
+        super().__init__(**kwargs)
         self.emit_signal(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
 
     def showEvent(self, event):
@@ -346,6 +346,9 @@ class SettingsWindow(BaseWindow):
         self.qsettings.sync()
 
     def on_item_clicked(self, index):
+        if not self.model:
+            self.logger.error("Model is not initialized.")
+            return
         item = self.model.itemFromIndex(index)
         if item.parent() is None:
             return
