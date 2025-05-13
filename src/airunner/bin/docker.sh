@@ -216,34 +216,12 @@ else
 fi
 
 # Set Docker Compose commands based on CI mode
-DOCKER_COMPOSE_BUILD_BASE="docker compose --env-file .env -f ./package/prod/docker-compose.yml"
-DOCKER_COMPOSE_BUILD_RUNTIME="docker compose --env-file .env -f ./package/prod/docker-compose-linux_build_runtime.yml"
-DOCKER_COMPOSE_BUILD_PACKAGE="docker compose --env-file .env -f ./package/prod/docker-compose-linux_package.yml"
 DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/dev/docker-compose.yml"
-DOCKER_COMPOSE_BUILD_DEV_PACKAGE="docker compose --env-file .env -f ./package/dev/docker-compose-linux_dev_package.yml"
 
 # Add DOCKER_COMPOSE_BUILD_LINUX variable as specified in instructions
 DOCKER_COMPOSE_BUILD_LINUX=$DOCKER_COMPOSE_BUILD_DEV_RUNTIME
 
 DOCKER_EXEC="docker exec -it airunner_dev"
-
-if [ "$1" == "build_base" ]; then
-  echo "Building the base Docker image..."
-  COMPOSE_BAKE=1 $DOCKER_COMPOSE_BUILD_BASE build
-  exit 0
-fi
-
-if [ "$1" == "build_runtime" ]; then
-  echo "Building the Docker Compose services for Linux packaging..."
-  $DOCKER_COMPOSE_BUILD_RUNTIME build
-  exit 0
-fi
-
-if [ "$1" == "build_package" ]; then
-  echo "Building for Linux production..."
-  $DOCKER_COMPOSE_BUILD_PACKAGE run --build --rm airunner_package /app/package/pyinstaller/build.sh
-  exit 0
-fi
 
 if [ "$1" == "build_dev_runtime" ]; then
   echo "Building the Docker Compose services for Linux dev packaging..."

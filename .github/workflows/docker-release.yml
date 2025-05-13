@@ -38,7 +38,7 @@ jobs:
     - name: Build and push Docker image via Compose
       run: |
           chmod +x ./src/airunner/bin/docker.sh
-          ./src/airunner/bin/docker.sh --ci build_base
+          ./src/airunner/bin/docker.sh build_dev_runtime
           docker tag ghcr.io/capsize-games/airunner/airunner:linux_ci ghcr.io/capsize-games/airunner/airunner:linux
           docker push ghcr.io/capsize-games/airunner/airunner:linux
 
