@@ -1,7 +1,8 @@
 from typing import List, Dict
 import os.path
 
-from PySide6.QtCore import QObject, QThread, Slot, Signal
+from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
+from PySide6.QtWidgets import QWizard
 
 from airunner.data.models import AIModels, ControlnetModel
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
@@ -410,11 +411,11 @@ class InstallWorker(
             self.application_settings.stable_diffusion_agreement_checked
             and self.current_step == 2
         ):
-            self.current_step = 3
-            self.download_controlnet_processors()
-        elif self.current_step == 3:
             self.current_step = 4
-            self.download_flux()
+            self.download_controlnet_processors()
+        # elif self.current_step == 3:
+        #     self.current_step = 4
+        #     self.download_flux()
         elif self.current_step == 4:
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading LLM"}
@@ -459,6 +460,10 @@ class InstallPage(BaseWizard):
         # reset the progress bar
         self.ui.progress_bar.setValue(0)
         self.ui.progress_bar.setMaximum(100)
+        
+        # Disable the Next button when starting downloads
+        if hasattr(parent, 'button') and parent.button(QWizard.WizardButton.NextButton):
+            parent.button(QWizard.WizardButton.NextButton).setEnabled(False)
 
         # These will increase
         self.total_steps = 0
@@ -526,8 +531,24 @@ class InstallPage(BaseWizard):
         self.worker.moveToThread(self.thread)
 
     def start(self):
+        """Start the installation process and ensure Next button is disabled"""
+        # Make sure Next button is disabled when downloads start
+        if hasattr(self.parent, 'button') and self.parent.button(QWizard.WizardButton.NextButton):
+            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(False)
+            
+        # Connect signals and start the thread
+        self.worker.file_download_finished.connect(self.file_download_finished)
+        self.worker.progress_updated.connect(self.file_progress_updated)
         self.thread.started.connect(self.worker.run)
         self.thread.start()
+
+    def file_download_finished(self):
+        """Handler for when a file download completes"""
+        self.update_progress_bar()
+        
+    def file_progress_updated(self, current, total):
+        """Handler for download progress updates"""
+        self.download_progress({"current": current, "total": total})
 
     def on_set_downloading_status_label(self, data: dict = None):
         if "message" in data:
@@ -544,16 +565,30 @@ class InstallPage(BaseWizard):
         self.ui.status_bar.setValue(progress * 100)
 
     def update_progress_bar(self, final: bool = False):
+        """Update the progress bar and manage Next button state"""
         if final:
             self.steps_completed = self.total_steps
         else:
             self.steps_completed += 1
+            
         if self.total_steps == self.steps_completed:
             self.ui.progress_bar.setValue(100)
+            
+            # Add a slight delay before enabling the Next button
+            # to ensure all processing is complete
+            QTimer.singleShot(500, self._enable_next_button)
         else:
             self.ui.progress_bar.setValue(
                 (self.steps_completed / self.total_steps) * 100
             )
+            # Make sure Next button stays disabled during downloads
+            if hasattr(self.parent, 'button') and self.parent.button(QWizard.WizardButton.NextButton):
+                self.parent.button(QWizard.WizardButton.NextButton).setEnabled(False)
+                
+    def _enable_next_button(self):
+        """Enable the Next button when installation is complete"""
+        if hasattr(self.parent, 'button') and self.parent.button(QWizard.WizardButton.NextButton):
+            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(True)
 
     def set_status(self, message: str):
         # set the text of a QProgressBar
