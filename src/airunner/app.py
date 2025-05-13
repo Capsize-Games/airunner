@@ -142,8 +142,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
             screen = screens[0]
 
         base_dir = Path(os.path.dirname(os.path.realpath(__file__)))
-        stylesheet_path = base_dir / "gui" / "images" / "splashscreen.png"
-        original_pixmap = QPixmap(stylesheet_path)
+        image_path = base_dir / "gui" / "images" / "splashscreen.png"
+        original_pixmap = QPixmap(image_path)
 
         # Create a new transparent pixmap the size of the screen
         screen_size = screen.geometry().size()
