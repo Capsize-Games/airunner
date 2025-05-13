@@ -7,6 +7,7 @@ Create Date: 2025-05-10 05:41:39.672153
 """
 from typing import Sequence, Union
 from airunner.data.models.image_filter import ImageFilter
+from airunner.data.models.image_filter_value import ImageFilterValue
 from alembic import op
 import sqlalchemy as sa
 
@@ -53,15 +54,19 @@ def upgrade() -> None:
     image_filter_values["yellow_blue"]["min_value"] = -1.0
     image_filter_values["yellow_blue"]["max_value"] = 1.0
 
-    image_filter = ImageFilter.objects.first(
-        ImageFilter.name=="color_balance"
-    )
-    if not image_filter:
-        return
-    ImageFilter.objects.update(
-        image_filter.id,
-        image_filter_values=image_filter_values
-    )
+    for k, v in image_filter_values.items():
+        item = ImageFilterValue.objects.first(
+            ImageFilter.name==k
+        )
+        if not item:
+            return
+        ImageFilterValue.objects.update(
+            item.id,
+            value=v["value"],
+            value_type=v["value_type"],
+            min_value=v["min_value"],
+            max_value=v["max_value"]
+        )
 
 
 def downgrade() -> None:
