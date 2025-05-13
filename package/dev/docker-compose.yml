@@ -26,6 +26,12 @@ services:
       - PYTHONPATH=/home/appuser/.local/lib/python3.13/site-packages:/app
       - PIP_USER=1
       - DISPLAY
+      - QT_WAYLAND_DISABLE_WINDOWDECORATION=0
+      - QT_QPA_PLATFORM=wayland
+      - QT_QPA_PLATFORMTHEME=gtk3
+      - GDK_BACKEND=wayland
+      - XDG_SESSION_TYPE=wayland
+      - PYTHONUSERBASE=/home/appuser/.local/share/airunner/python
       - HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface
       - HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface
       - HF_HUB_DISABLE_TELEMETRY=1
