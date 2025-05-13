@@ -73,7 +73,14 @@ export PYTHONUSERBASE=$AIRUNNER_HOME_DIR/python
 
 # Only create local directories if not in CI mode
 # Ensure the Python directory structure exists with proper permissions before mounting
-PYTHON_DIRS=("$PYTHONUSERBASE/bin" "$PYTHONUSERBASE/lib" "$PYTHONUSERBASE/share" "$PYTHONUSERBASE/include")
+PYTHON_DIRS=(
+  "$PYTHONUSERBASE/bin" 
+  "$PYTHONUSERBASE/lib" 
+  "$PYTHONUSERBASE/lib/python3.13"
+  "$PYTHONUSERBASE/lib/python3.13/site-packages"
+  "$PYTHONUSERBASE/share" 
+  "$PYTHONUSERBASE/include"
+)
 for dir in "${PYTHON_DIRS[@]}"; do
   if [ ! -d "$dir" ]; then
     echo "Creating directory: $dir"
@@ -129,6 +136,8 @@ else
   mkdir -p "$PYTHON_DIR"
   mkdir -p "$PYTHON_DIR/bin"
   mkdir -p "$PYTHON_DIR/lib"
+  mkdir -p "$PYTHON_DIR/lib/python3.13"
+  mkdir -p "$PYTHON_DIR/lib/python3.13/site-packages"
   mkdir -p "$PYTHON_DIR/include"
   mkdir -p "$PYTHON_DIR/share"
 fi
@@ -256,12 +265,12 @@ elif [ "$1" == "run" ] || [ "$1" == "airunner" ]; then
   # Run the airunner application
   echo "Running airunner..."
   shift # Remove the 'run' or 'airunner' command
-  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --build --rm airunner_dev airunner "$@"
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --rm airunner_dev airunner "$@"
 elif [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
-  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --build --rm airunner_dev bash
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --rm airunner_dev bash
 else
   # Run a custom command
   echo "Running command: $@"
-  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --build --rm airunner_dev "$@"
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --rm airunner_dev "$@"
 fi
