@@ -69,16 +69,8 @@ echo "XDG_SESSION_TYPE: $XDG_SESSION_TYPE"
 echo "QT_QPA_PLATFORM: $QT_QPA_PLATFORM"
 echo "GDK_BACKEND: $GDK_BACKEND"
 
-# Install basic packages
-$PIP_CMD install --no-cache-dir pip setuptools wheel --upgrade
-$PIP_CMD install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-
-# Install python packages at runtime
-$PIP_CMD install --no-cache-dir -e .[all_dev] \
- -U langchain-community
-$PIP_CMD install -U timm
-$PYTHON_CMD -c "import nltk; nltk.download('punkt')"
-rm -rf .cache/pip
+# Package installations have been moved to Dockerfile
+# Any runtime-specific setup should go here
 
 # Handle interactive sessions
 if [ "$#" -eq 0 ]; then

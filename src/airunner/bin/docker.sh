@@ -223,21 +223,6 @@ DOCKER_COMPOSE_BUILD_LINUX=$DOCKER_COMPOSE_BUILD_DEV_RUNTIME
 
 DOCKER_EXEC="docker exec -it airunner_dev"
 
-if [ "$1" == "build_dev_runtime" ]; then
-  echo "Building the Docker Compose services for Linux dev packaging..."
-  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME build
-  exit 0
-fi
-
-$DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --build --rm airunner_dev /app/package/pyinstaller/build_dev.sh
-
-# Special handling for run_dev command
-$DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --build --rm airunner_dev airunner "$@"
-
-# Get user command
-IMAGE_NAME="airunner:linux"
-  
-echo "Using Wayland display server configuration"
 # Configure for Wayland with necessary fixes and X11 fallback
 GUI_ARGS="--rm \
   -e QT_QPA_PLATFORM=xcb;wayland \
@@ -258,9 +243,25 @@ COMMON_ARGS="--rm \
              -u $(id -u):$(id -g) \
              -w /app"
 
-if [ "$#" -eq 0 ]; then
+# Handle different command options
+if [ "$1" == "build_dev_runtime" ]; then
+  echo "Building the Docker Compose services for Linux dev packaging..."
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME build
+  exit 0
+elif [ "$1" == "build_dev" ]; then
+  echo "Building the application with pyinstaller..."
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run --build --rm airunner_dev /app/package/pyinstaller/build_dev.sh
+  exit 0
+elif [ "$1" == "run" ] || [ "$1" == "airunner" ]; then
+  # Run the airunner application
+  echo "Running airunner..."
+  shift # Remove the 'run' or 'airunner' command
+  $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --build --rm airunner_dev airunner "$@"
+elif [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
   $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --build --rm airunner_dev bash
 else
+  # Run a custom command
+  echo "Running command: $@"
   $DOCKER_COMPOSE_BUILD_DEV_RUNTIME run $COMMON_ARGS $GUI_ARGS --build --rm airunner_dev "$@"
 fi
