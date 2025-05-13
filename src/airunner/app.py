@@ -7,7 +7,7 @@ from functools import partial
 from pathlib import Path
 from PySide6 import QtCore
 from PySide6.QtCore import QObject, QTimer
-from PySide6.QtGui import QGuiApplication, QPixmap, Qt, QWindow
+from PySide6.QtGui import QGuiApplication, QPixmap, Qt, QWindow, QPainter
 from PySide6.QtWidgets import QApplication, QSplashScreen
 
 from airunner.enums import SignalCode
@@ -143,9 +143,32 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         base_dir = Path(os.path.dirname(os.path.realpath(__file__)))
         stylesheet_path = base_dir / "gui" / "images" / "splashscreen.png"
-        pixmap = QPixmap(stylesheet_path)
-        splash = QSplashScreen(
-            screen, pixmap, QtCore.Qt.WindowType.WindowStaysOnTopHint
+        original_pixmap = QPixmap(stylesheet_path)
+
+        # Create a new transparent pixmap the size of the screen
+        screen_size = screen.geometry().size()
+        centered_pixmap = QPixmap(screen_size)
+        centered_pixmap.fill(Qt.transparent)
+
+        # Calculate center position for the original pixmap
+        x_pos = (screen_size.width() - original_pixmap.width()) // 2
+        y_pos = (screen_size.height() - original_pixmap.height()) // 2
+
+        # Draw the original pixmap onto the centered position of the full-screen pixmap
+        painter = QPainter(centered_pixmap)
+        painter.drawPixmap(x_pos, y_pos, original_pixmap)
+        painter.end()
+
+        splash = QSplashScreen(screen, centered_pixmap)
+        splash.setMask(centered_pixmap.mask())
+
+        # make splash screen transparent and full size
+        splash.setAttribute(Qt.WA_TranslucentBackground)
+        splash.setGeometry(screen.geometry())
+        splash.setWindowFlags(
+            QtCore.Qt.WindowType.FramelessWindowHint
+            | QtCore.Qt.WindowType.WindowStaysOnTopHint
+            | QtCore.Qt.WindowType.SplashScreen
         )
         splash.show()
         App.update_splash_message(splash, f"Loading AI Runner")
