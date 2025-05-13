@@ -524,6 +524,12 @@
            <height>0</height>
           </size>
          </property>
+         <property name="maximumSize">
+          <size>
+           <width>350</width>
+           <height>16777215</height>
+          </size>
+         </property>
         </widget>
         <widget class="CustomGraphicsView" name="canvas_container">
          <property name="verticalScrollBarPolicy">
@@ -547,6 +553,12 @@
           <size>
            <width>275</width>
            <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>350</width>
+           <height>16777215</height>
           </size>
          </property>
         </widget>
