@@ -251,63 +251,10 @@ fi
    ```bash
    git clone https://github.com/Capsize-Games/airunner.git
    cd airunner
-   ```
-3. **Pull the docker image and run airunner**
-   ```bash
    ./src/airunner/bin/docker.sh airunner
    ```
-This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
 
 > **Note:** AI Runner's Docker setup uses Wayland by default for optimal performance and compatibility with modern Linux desktop environments.
-
-### Building Docker Images Locally
-
-If you want to build and customize the Docker images locally:
-
-1. **Build the base image**
-   ```bash
-   ./src/airunner/bin/docker.sh build_base
-   ```
-
-2. **Build the runtime image**
-   ```bash
-   ./src/airunner/bin/docker.sh build_runtime
-   ```
-
-3. **Run using your locally built images**
-   ```bash
-   ./src/airunner/bin/docker.sh airunner
-   ```
-
----
-
-***See the [Installation Wiki for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).***
-
----
-
-## Building the package
-
-AI Runner can be packaged with PyInstaller which packages Python runtime and dependencies so that the application can be used without any dependencies. Useful for distributing to non-technical users.
-
-### Build the package locally
-
-AI Runner uses PyInstaller to create a standalone package. If you want to build it for yourself, follow these steps.
-
-1. **Follow the *Development Environment setup* steps above.**
-2. **Build the package**  
-   ```bash
-   ./src/airunner/bin/docker.sh build_dev_package
-   ```
-
-#### Building the package for production
-
-If you want to build the production package, follow these steps.
-
-1. **Follow the *Development Environment setup* steps above.**
-2. **Build the package**  
-   ```bash
-   ./src/airunner/bin/docker.sh build_package
-   ```
 
 ---
 
@@ -347,21 +294,6 @@ Or a single test:
 
 ```bash
 python -m unittest src/airunner/tests/test_prompt_weight_convert.py
-```
-
----
-
-## Test CI Mode
-
-Test the build locally
-
-```bash
-./test_ci_mode.sh --fast-package-test
-```
-
-Or directly
-```bash
-./src/airunner/bin/docker.sh --ci --fast-package-test build_package
 ```
 
 ---
