@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QWizard
+from PySide6.QtCore import QTimer
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.windows.setup_wizard.installation_settings.install_failed_page import (
@@ -47,6 +48,12 @@ class DownloadWizardWindow(
         )
 
         self.init_pages()
+        
+        # Connect signals for Next and Back buttons to control their state
+        self.currentIdChanged.connect(self.on_page_changed)
+        
+        # We'll disable the next button immediately if we're on the installation page
+        self.disableNextIfInstallPage()
 
     def save_settings(self):
         """
@@ -78,19 +85,36 @@ class DownloadWizardWindow(
             self.setPage(0, PathSettings(self))
             choose_models_page = ChooseModelsPage(self)
             self.setPage(1, choose_models_page)
-            self.setPage(
-                2,
-                InstallPage(
-                    self,
-                    stablediffusion_models=choose_models_page.models,
-                    models_enabled=choose_models_page.models_enabled,
-                ),
+            self.install_page = InstallPage(
+                self,
+                stablediffusion_models=choose_models_page.models,
+                models_enabled=choose_models_page.models_enabled,
             )
+            self.setPage(2, self.install_page)
             self.setPage(3, InstallSuccessPage(self))
             failed = False
 
         if failed:
             self.setPage(1, InstallFailedPage(self))
+
+    def on_page_changed(self, id):
+        """Handle page changes to properly manage button states"""
+        # If we're now on the install page, disable the next button
+        if self.currentPage() == self.install_page:
+            self.disableNextButton()
+            
+            # Start the installation process which will re-enable the button when done
+            QTimer.singleShot(100, self.install_page.start)
+    
+    def disableNextIfInstallPage(self):
+        """Check if current page is install page and disable Next button if so"""
+        if hasattr(self, 'install_page') and self.currentPage() == self.install_page:
+            self.disableNextButton()
+            
+    def disableNextButton(self):
+        """Disable the Next button"""
+        if self.button(QWizard.WizardButton.NextButton):
+            self.button(QWizard.WizardButton.NextButton).setEnabled(False)
 
     def show_final_page(self):
         """
