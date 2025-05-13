@@ -43,3 +43,4 @@ package/asound.conf
 *.log
 FramePack
 OpenVoice
+docker-compose.local.yml

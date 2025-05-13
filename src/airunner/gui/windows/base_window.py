@@ -38,4 +38,8 @@ class BaseWindow(
             self.exec()
 
     def initialize_window(self):
-        pass
+        """
+        Initialize the window. This method is called after the UI is set up.
+
+        Override this method in subclasses to perform any additional setup.
+        """

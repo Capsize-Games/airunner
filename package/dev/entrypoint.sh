@@ -2,63 +2,96 @@
 set -e
 set -x
 
-# Diagnostic information for X11 setup
-echo "===== X11 Setup Diagnostic Information ====="
-echo "User: $(whoami)"
-echo "DISPLAY: $DISPLAY"
-echo "XAUTHORITY: $XAUTHORITY"
-echo "Checking X11 socket directory:"
-ls -la /tmp/.X11-unix/ || echo "X11 socket directory not found"
-echo "Checking if .Xauthority exists:"
-ls -la $XAUTHORITY 2>/dev/null || echo ".Xauthority not found"
+# Try to find Python 3.13.3 - check various possible locations
+PYTHON_CMD=""
 
-# Check if we can connect to the X server
-echo "Testing X connection with xdpyinfo:"
-if xdpyinfo >/dev/null 2>&1; then
-  echo "X connection successful!"
+# Check common locations for Python 3.13.3
+if [ -x "/usr/local/bin/python3.13" ]; then
+    PYTHON_CMD="/usr/local/bin/python3.13"
+    echo "Found Python at /usr/local/bin/python3.13"
+elif [ -x "/usr/local/bin/python" ]; then
+    PYTHON_CMD="/usr/local/bin/python"
+    echo "Found Python at /usr/local/bin/python"
+elif [ -x "/usr/bin/python3.13" ]; then
+    PYTHON_CMD="/usr/bin/python3.13"
+    echo "Found Python at /usr/bin/python3.13"
+elif command -v python3 &>/dev/null; then
+    PYTHON_CMD="python3"
+    echo "Using python3 from PATH"
+elif command -v python &>/dev/null; then
+    PYTHON_CMD="python"
+    echo "Using python from PATH"
 else
-  echo "X connection failed"
+    echo "WARNING: Could not find Python 3.13.3. Will attempt to continue anyway."
+    PYTHON_CMD="python3"  # Default to python3 and hope for the best
 fi
 
-pip install --no-cache-dir pip setuptools wheel --upgrade
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# Check Python version
+echo "===== Python Version Check ====="
+if [ -n "$PYTHON_CMD" ]; then
+    $PYTHON_CMD --version || echo "Failed to get Python version"
+    
+    # Find pip corresponding to Python
+    if [ -x "/usr/local/bin/pip3.13" ]; then
+        PIP_CMD="/usr/local/bin/pip3.13"
+    elif [ -x "/usr/local/bin/pip" ]; then
+        PIP_CMD="/usr/local/bin/pip"
+    elif command -v pip3 &>/dev/null; then
+        PIP_CMD="pip3"
+    else
+        PIP_CMD="pip"
+    fi
+    
+    $PIP_CMD --version || echo "Failed to get pip version"
+else
+    echo "No Python executable found to check version."
+fi
 
-# # Check if OpenVoice exists
-# if [ ! -d "OpenVoice" ]; then
-#   git clone https://github.com/myshell-ai/OpenVoice.git
-# fi
-# cd OpenVoice
-# pip install .
-# cd ..
-# rm -rf OpenVoice
+# Set PYTHONUSERBASE to ensure pip installs packages into the correct directory
+export PATH=/usr/local/bin:/home/appuser/.local/share/airunner/python/bin:/home/appuser/.local/bin:$PATH
+export PATH=$PYTHONUSERBASE/bin:$PATH
 
-# # Check if MeloTTS exists
-# if [ ! -d "MeloTTS" ]; then
-#   git clone https://github.com/myshell-ai/MeloTTS.git
-# fi
-# cd MeloTTS
-# git checkout v0.1.2
-# pip install .
-# cd ..
-# rm -rf MeloTTS
+# Remove PIP_USER to avoid conflicts with --prefix
+unset PIP_USER
 
-# echo "Downloading unidic..."
-# python3 -m unidic download
-# echo "Unidic download complete."
-# exit 0
+# Ensure pip uses the correct cache directory
+export PIP_CACHE_DIR=$AIRUNNER_HOME_DIR/.cache/pip
 
-# Install python packages at runtime
-pip install --no-cache-dir -e .[nvidia,gui,linux,dev,art,llm,llm_weather,tts] \
- -U langchain-community \
- -U mediapipe
-pip install -U timm
-python3 -c "import nltk; nltk.download('punkt')"
-rm -rf .cache/pip
+echo "PATH set to $PATH"
+echo "PIP_CACHE_DIR set to $PIP_CACHE_DIR"
 
-# Modify the script to handle interactive sessions properly
+# Check if the directory structure exists, but don't try to create it
+# if we don't have permission (the host should create these directories)
+if [ ! -d "$PYTHONUSERBASE" ]; then
+    echo "Warning: PYTHONUSERBASE directory ($PYTHONUSERBASE) does not exist"
+    echo "The host should create this directory before running the container"
+else
+    # Check if subdirectories exist and try to create them only if we have permission
+    for dir in bin lib share; do
+        if [ ! -d "$PYTHONUSERBASE/$dir" ]; then
+            echo "Directory $PYTHONUSERBASE/$dir doesn't exist, attempting to create..."
+            mkdir -p "$PYTHONUSERBASE/$dir" 2>/dev/null || echo "Warning: Cannot create $PYTHONUSERBASE/$dir (permission denied, continuing anyway)"
+        fi
+    done
+fi
+
+echo "===== Wayland Setup Information ====="
+echo "User: $(whoami)"
+echo "XDG_SESSION_TYPE: $XDG_SESSION_TYPE"
+echo "QT_QPA_PLATFORM: $QT_QPA_PLATFORM"
+echo "GDK_BACKEND: $GDK_BACKEND"
+
+# Package installations have been moved to Dockerfile
+# Any runtime-specific setup should go here
+
+# Handle interactive sessions
 if [ "$#" -eq 0 ]; then
   echo "No command provided. Starting an interactive shell..."
   exec bash
+elif [ "$1" == "airunner" ]; then
+  echo "Running airunner in development mode..."
+  shift # Remove 'airunner' from the arguments
+  cd /app && exec $PYTHON_CMD src/airunner/main.py "$@"
 else
   echo "Executing command: $@"
   exec "$@"

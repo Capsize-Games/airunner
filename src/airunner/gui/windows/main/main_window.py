@@ -6,6 +6,7 @@ import webbrowser
 from functools import partial
 from typing import Dict, Optional
 
+from airunner.gui.windows.wayland_helper import enable_wayland_window_decorations
 import requests
 from PIL import Image
 from PySide6 import QtGui
@@ -168,7 +169,8 @@ class MainWindow(
         ("stop-circle", "workflow_actionStop"),
         ("corner-up-right", "actionRedo"),
         ("corner-up-left", "actionUndo"),
-        ("save", "actionSave_As")
+        ("save", "actionSave_As"),
+        ("target", "actionRecenter"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -234,6 +236,7 @@ class MainWindow(
         }
         self.logger.debug("Starting AI Runnner")
         super().__init__()
+        enable_wayland_window_decorations(self)
         ApplicationSettings.objects.update(
             self.application_settings.id,
             sd_enabled=False,
