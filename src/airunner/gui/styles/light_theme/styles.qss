@@ -13,9 +13,9 @@ QDoubleSpinBox:disabled {
 QDoubleSpinBox {
     background-color: #fff;
     border: 1px solid rgba(0, 132, 185, 100);
-    padding: 2px;
+    padding: 2px 5px;
     color: #1f1f1f;
-    min-width: 50px;
+    max-width: 50px;
 }
 
 QDoubleSpinBox::up-button {
