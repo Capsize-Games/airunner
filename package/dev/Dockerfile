@@ -157,10 +157,19 @@ ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/lib/python3.13/site-packages/PySide6/Qt/lib:/us
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
+# Copy the application files first
 COPY --chown=${HOST_UID}:${HOST_GID} . /app/
 
-USER ${HOST_UID}:${HOST_GID}
+# Install Python packages at build time instead of runtime
+USER root
+RUN pip3.13 install --no-cache-dir pip setuptools wheel --upgrade && \
+    pip3.13 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 && \
+    cd /app && pip3.13 install --no-cache-dir -e .[all_dev] -U langchain-community && \
+    pip3.13 install -U timm && \
+    python3.13 -c "import nltk; nltk.download('punkt')" && \
+    rm -rf /tmp/* /var/tmp/* /root/.cache/pip
 
+USER ${HOST_UID}:${HOST_GID}
 WORKDIR /app
 
 CMD ["/bin/bash"]
