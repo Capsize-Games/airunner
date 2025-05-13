@@ -1,6 +1,0 @@
-# Qt environment variables for Wayland added by AI Runner
-export QT_QPA_PLATFORM=wayland
-export QT_QPA_PLATFORMTHEME=gtk3
-export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-export GDK_BACKEND=wayland
-export XDG_SESSION_TYPE=wayland
