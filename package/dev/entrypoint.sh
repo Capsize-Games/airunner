@@ -60,8 +60,20 @@ export PIP_CACHE_DIR=$AIRUNNER_HOME_DIR/.cache/pip
 echo "PATH set to $PATH"
 echo "PIP_CACHE_DIR set to $PIP_CACHE_DIR"
 
-# Ensure the directory structure exists
-mkdir -p $PYTHONUSERBASE/{bin,lib,share}
+# Check if the directory structure exists, but don't try to create it
+# if we don't have permission (the host should create these directories)
+if [ ! -d "$PYTHONUSERBASE" ]; then
+    echo "Warning: PYTHONUSERBASE directory ($PYTHONUSERBASE) does not exist"
+    echo "The host should create this directory before running the container"
+else
+    # Check if subdirectories exist and try to create them only if we have permission
+    for dir in bin lib share; do
+        if [ ! -d "$PYTHONUSERBASE/$dir" ]; then
+            echo "Directory $PYTHONUSERBASE/$dir doesn't exist, attempting to create..."
+            mkdir -p "$PYTHONUSERBASE/$dir" 2>/dev/null || echo "Warning: Cannot create $PYTHONUSERBASE/$dir (permission denied, continuing anyway)"
+        fi
+    done
+fi
 
 echo "===== Wayland Setup Information ====="
 echo "User: $(whoami)"
