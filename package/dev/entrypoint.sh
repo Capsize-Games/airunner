@@ -48,7 +48,6 @@ else
 fi
 
 # Set PYTHONUSERBASE to ensure pip installs packages into the correct directory
-export PYTHONUSERBASE=/home/appuser/.local/share/airunner/python
 export PATH=/usr/local/bin:/home/appuser/.local/share/airunner/python/bin:/home/appuser/.local/bin:$PATH
 export PATH=$PYTHONUSERBASE/bin:$PATH
 
@@ -63,13 +62,6 @@ echo "PIP_CACHE_DIR set to $PIP_CACHE_DIR"
 
 # Ensure the directory structure exists
 mkdir -p $PYTHONUSERBASE/{bin,lib,share}
-
-# Set up Wayland environment variables
-export QT_QPA_PLATFORM=wayland
-export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-export QT_QPA_PLATFORMTHEME=gtk3
-export GDK_BACKEND=wayland
-export XDG_SESSION_TYPE=wayland
 
 echo "===== Wayland Setup Information ====="
 echo "User: $(whoami)"
