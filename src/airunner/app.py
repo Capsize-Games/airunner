@@ -164,7 +164,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         # make splash screen transparent and full size
         splash.setAttribute(Qt.WA_TranslucentBackground)
-        splash.setGeometry(screen.geometry())
+        splash.setGeometry(
+            screen.geometry().x(),
+            screen.geometry().y(),
+            screen.geometry().width(),
+            screen.geometry().height() - original_pixmap.height(),
+        )
         splash.setWindowFlags(
             QtCore.Qt.WindowType.FramelessWindowHint
             | QtCore.Qt.WindowType.WindowStaysOnTopHint
