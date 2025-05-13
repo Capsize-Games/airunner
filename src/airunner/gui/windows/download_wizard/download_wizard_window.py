@@ -35,6 +35,7 @@ class DownloadWizardWindow(
         :param setup_settings: The setup settings dictionary.
         """
         super().__init__()
+        self.install_page = None
         self.setWindowTitle("AI Runner Download Wizard")
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         self.setOption(QWizard.WizardOption.IndependentPages, True)
@@ -48,10 +49,10 @@ class DownloadWizardWindow(
         )
 
         self.init_pages()
-        
+
         # Connect signals for Next and Back buttons to control their state
         self.currentIdChanged.connect(self.on_page_changed)
-        
+
         # We'll disable the next button immediately if we're on the installation page
         self.disableNextIfInstallPage()
 
@@ -102,15 +103,19 @@ class DownloadWizardWindow(
         # If we're now on the install page, disable the next button
         if self.currentPage() == self.install_page:
             self.disableNextButton()
-            
+
             # Start the installation process which will re-enable the button when done
-            QTimer.singleShot(100, self.install_page.start)
-    
+            if self.install_page:
+                QTimer.singleShot(100, self.install_page.start)
+
     def disableNextIfInstallPage(self):
         """Check if current page is install page and disable Next button if so"""
-        if hasattr(self, 'install_page') and self.currentPage() == self.install_page:
+        if (
+            hasattr(self, "install_page")
+            and self.currentPage() == self.install_page
+        ):
             self.disableNextButton()
-            
+
     def disableNextButton(self):
         """Disable the Next button"""
         if self.button(QWizard.WizardButton.NextButton):
