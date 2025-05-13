@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>789</width>
-    <height>579</height>
+    <width>1020</width>
+    <height>570</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -520,18 +520,30 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>275</width>
+           <width>225</width>
            <height>0</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>350</width>
+           <width>16777215</width>
            <height>16777215</height>
+          </size>
+         </property>
+         <property name="baseSize">
+          <size>
+           <width>225</width>
+           <height>0</height>
           </size>
          </property>
         </widget>
         <widget class="CustomGraphicsView" name="canvas_container">
+         <property name="minimumSize">
+          <size>
+           <width>512</width>
+           <height>0</height>
+          </size>
+         </property>
          <property name="verticalScrollBarPolicy">
           <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
          </property>
@@ -544,7 +556,7 @@
         </widget>
         <widget class="StablediffusionToolTabWidget" name="widget" native="true">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -557,8 +569,14 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>350</width>
+           <width>16777215</width>
            <height>16777215</height>
+          </size>
+         </property>
+         <property name="baseSize">
+          <size>
+           <width>275</width>
+           <height>0</height>
           </size>
          </property>
         </widget>
