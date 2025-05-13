@@ -125,11 +125,47 @@ These are the sizes of the various models that power AI Runner.
 
 ---
 
-## Installation Quick Start (development version)
+## 💾 Installation Quick Start (development version)
 
-### Ubuntu (including Windows WSL 2)
+### 🐳 Docker
 
-The instructions will assume the following directory structure. *You should only deviate from this structure if you know what you're doing.*
+**Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
+
+**Note:** 
+
+AI Runner's Docker setup uses Wayland by default for optimal performance and compatibility with modern Linux desktop environments. This means you will need wayland support on your host system.
+
+1. **Install NVIDIA Container Toolkit**  
+   Follow the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to enable GPU passthrough for Docker.
+2. **Clone AI Runner**
+   ```bash
+   git clone https://github.com/Capsize-Games/airunner.git
+   cd airunner
+   ./src/airunner/bin/docker.sh airunner
+   ```
+
+#### Custom docker compose file
+
+Docker compose allows you to customize the container environment.
+
+For example, if you want access to a directory on your host machine, you can mount it in the container by creating a `airunner/package/dev/docker-compose.local.yml` file with the following content
+
+```yaml
+version: '3.8'
+
+services:
+  airunner_dev:
+    volumes:
+      - /mnt/YourDrive:/mnt/YourDrive:rw,z
+```
+
+---
+
+### 🖥️ Ubuntu (including Windows WSL 2)
+
+Choose this if you want to run AI Runner natively on your machine without Docker.
+
+The following instructions will assume the following directory structure. *You should only deviate from this structure if you know what you're doing.*
 
 ```plaintext
 ~/Projects
@@ -238,23 +274,6 @@ fi
 - Flash attention 2
 - xformers
 - FramePack
-
----
-
-### Docker
-
-**Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
-
-1. **Install NVIDIA Container Toolkit**  
-   Follow the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to enable GPU passthrough for Docker.
-2. **Clone AI Runner**  
-   ```bash
-   git clone https://github.com/Capsize-Games/airunner.git
-   cd airunner
-   ./src/airunner/bin/docker.sh airunner
-   ```
-
-> **Note:** AI Runner's Docker setup uses Wayland by default for optimal performance and compatibility with modern Linux desktop environments.
 
 ---
 
