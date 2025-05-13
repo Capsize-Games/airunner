@@ -225,7 +225,16 @@ else
 fi
 
 # Set Docker Compose commands based on CI mode
-DOCKER_COMPOSE_BUILD_DEV_RUNTIME="docker compose --env-file .env -f ./package/dev/docker-compose.yml"
+DOCKER_COMPOSE_BASE="docker compose --env-file .env -f ./package/dev/docker-compose.yml"
+
+# Check if local override file exists
+DOCKER_COMPOSE_LOCAL_FILE="./package/dev/docker-compose.local.yml"
+if [ -f "$DOCKER_COMPOSE_LOCAL_FILE" ]; then
+  echo "Using local Docker Compose override file: $DOCKER_COMPOSE_LOCAL_FILE"
+  DOCKER_COMPOSE_BUILD_DEV_RUNTIME="$DOCKER_COMPOSE_BASE -f $DOCKER_COMPOSE_LOCAL_FILE"
+else
+  DOCKER_COMPOSE_BUILD_DEV_RUNTIME="$DOCKER_COMPOSE_BASE"
+fi
 
 # Add DOCKER_COMPOSE_BUILD_LINUX variable as specified in instructions
 DOCKER_COMPOSE_BUILD_LINUX=$DOCKER_COMPOSE_BUILD_DEV_RUNTIME

@@ -17,8 +17,6 @@ services:
       - AIRUNNER_ENVIRONMENT=dev
       - HOST_UID=${HOST_UID}
       - HOST_GID=${HOST_GID}
-      # - UID=${UID}
-      # - GID=${GID}
       - PYTORCH_CUDA_ALLOC_CONF=garbage_collection_threshold:0.9,max_split_size_mb:512,expandable_segments:True
       - NUMBA_CACHE_DIR=/tmp/numba_cache
       - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/python3.13:/usr/lib/x86_64-linux-gnu/:/usr/local/lib/:/usr/local/lib/python3.13:/usr/local/lib/python3.13/dist-packages
@@ -82,7 +80,7 @@ services:
       - ../../.env
     stdin_open: true
     tty: true
-    entrypoint: ["/app/package/dev/entrypoint.sh"]
+    entrypoint: [ "/app/package/dev/entrypoint.sh" ]
     volumes:
       - ../../:/app:rw,z
       - ../../package/dev/entrypoint.sh:/home/appuser/entrypoint.sh:ro
