@@ -32,7 +32,9 @@ class SliderWidget(BaseWidget):
         # Ensure signal connections
         self.ui.slider.valueChanged.connect(self.handle_slider_valueChanged)
         self.ui.slider.sliderReleased.connect(self.on_slider_sliderReleased)
-        self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_valueChanged)
+        self.ui.slider_spinbox.valueChanged.connect(
+            self.handle_spinbox_valueChanged
+        )
 
     @property
     def slider_single_step(self):
@@ -133,8 +135,13 @@ class SliderWidget(BaseWidget):
             self.ui.slider.setValue(adjusted_value)
             self.ui.slider.blockSignals(False)
         try:
-            normalized = (adjusted_value - self.slider_minimum) / (self.slider_maximum - self.slider_minimum)
-            spinbox_val = normalized * (self.spinbox_maximum - self.spinbox_minimum) + self.spinbox_minimum
+            normalized = (adjusted_value - self.slider_minimum) / (
+                self.slider_maximum - self.slider_minimum
+            )
+            spinbox_val = (
+                normalized * (self.spinbox_maximum - self.spinbox_minimum)
+                + self.spinbox_minimum
+            )
         except ZeroDivisionError:
             spinbox_val = self.spinbox_minimum
         spinbox_val = round(spinbox_val, 4)
@@ -153,8 +160,13 @@ class SliderWidget(BaseWidget):
     @Slot(float)
     def handle_spinbox_valueChanged(self, val: float):
         try:
-            normalized = (val - self.spinbox_minimum) / (self.spinbox_maximum - self.spinbox_minimum)
-            slider_val = round(normalized * (self.slider_maximum - self.slider_minimum) + self.slider_minimum)
+            normalized = (val - self.spinbox_minimum) / (
+                self.spinbox_maximum - self.spinbox_minimum
+            )
+            slider_val = round(
+                normalized * (self.slider_maximum - self.slider_minimum)
+                + self.slider_minimum
+            )
         except ZeroDivisionError:
             slider_val = self.slider_minimum
         if self.ui.slider.value() != slider_val:
@@ -250,7 +262,6 @@ class SliderWidget(BaseWidget):
         self.ui.groupBox.setTitle(label_text)
 
         # add the label to the ui
-        self.ui.slider_spinbox.setFixedWidth(50)
         self.set_slider_and_spinbox_values(current_value)
         if not self.display_as_float:
             self.ui.slider_spinbox.setDecimals(0)
