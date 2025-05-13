@@ -1,15 +1,11 @@
 [![AI Runner Logo](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
 [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz)
+![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner)
 [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml)
 [![Docker Release](https://github.com/Capsize-Games/airunner/actions/workflows/docker-release.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/docker-release.yml)
 [![Linux Build](https://github.com/Capsize-Games/airunner/actions/workflows/linux-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/linux-dispatch.yml)
-![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
-![GitHub issues](https://img.shields.io/github/issues/Capsize-Games/airunner)
-![GitHub closed issues](https://img.shields.io/github/issues-closed/Capsize-Games/airunner)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/Capsize-Games/airunner)
-![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/Capsize-Games/airunner)
 
 ---
 
@@ -125,11 +121,47 @@ These are the sizes of the various models that power AI Runner.
 
 ---
 
-## Installation Quick Start (development version)
+## 💾 Installation Quick Start (development version)
 
-### Ubuntu (including Windows WSL 2)
+### 🐳 Docker
 
-The instructions will assume the following directory structure. *You should only deviate from this structure if you know what you're doing.*
+**Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
+
+**Note:** 
+
+AI Runner's Docker setup uses Wayland by default for optimal performance and compatibility with modern Linux desktop environments. This means you will need wayland support on your host system.
+
+1. **Install NVIDIA Container Toolkit**  
+   Follow the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to enable GPU passthrough for Docker.
+2. **Clone AI Runner**
+   ```bash
+   git clone https://github.com/Capsize-Games/airunner.git
+   cd airunner
+   ./src/airunner/bin/docker.sh airunner
+   ```
+
+#### Custom docker compose file
+
+Docker compose allows you to customize the container environment.
+
+For example, if you want access to a directory on your host machine, you can mount it in the container by creating a `airunner/package/dev/docker-compose.local.yml` file with the following content
+
+```yaml
+version: '3.8'
+
+services:
+  airunner_dev:
+    volumes:
+      - /mnt/YourDrive:/mnt/YourDrive:rw,z
+```
+
+---
+
+### 🖥️ Ubuntu (including Windows WSL 2)
+
+Choose this if you want to run AI Runner natively on your machine without Docker.
+
+The following instructions will assume the following directory structure. *You should only deviate from this structure if you know what you're doing.*
 
 ```plaintext
 ~/Projects
@@ -241,55 +273,6 @@ fi
 
 ---
 
-### Docker
-
-**Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
-
-1. **Install NVIDIA Container Toolkit**  
-   Follow the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to enable GPU passthrough for Docker.
-2. **Clone AI Runner**  
-   ```bash
-   git clone https://github.com/Capsize-Games/airunner.git
-   cd airunner
-   ```
-3. **Pull the docker image and run airunner**
-   ```bash
-   ./src/airunner/bin/docker.sh airunner
-   ```
-This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
-
----
-
-***See the [Installation Wiki for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).***
-
----
-
-## Building the package
-
-AI Runner can be packaged with PyInstaller which packages Python runtime and dependencies so that the application can be used without any dependencies. Useful for distributing to non-technical users.
-
-### Build the package locally
-
-AI Runner uses PyInstaller to create a standalone package. If you want to build it for yourself, follow these steps.
-
-1. **Follow the *Development Environment setup* steps above.**
-2. **Build the package**  
-   ```bash
-   ./src/airunner/bin/docker.sh build_dev_package
-   ```
-
-#### Building the package for production
-
-If you want to build the production package, follow these steps.
-
-1. **Follow the *Development Environment setup* steps above.**
-2. **Build the package**  
-   ```bash
-   ./src/airunner/bin/docker.sh build_package
-   ```
-
----
-
 ## AI Models
 
 By default, AI Runner installs essential TTS/STT and minimal LLM components.  
@@ -326,21 +309,6 @@ Or a single test:
 
 ```bash
 python -m unittest src/airunner/tests/test_prompt_weight_convert.py
-```
-
----
-
-## Test CI Mode
-
-Test the build locally
-
-```bash
-./test_ci_mode.sh --fast-package-test
-```
-
-Or directly
-```bash
-./src/airunner/bin/docker.sh --ci --fast-package-test build_package
 ```
 
 ---
