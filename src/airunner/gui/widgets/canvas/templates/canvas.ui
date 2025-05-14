@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>789</width>
-    <height>579</height>
+    <width>1020</width>
+    <height>570</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -511,8 +511,51 @@
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
         </property>
-        <widget class="StableDiffusionGeneratorForm" name="prompts" native="true"/>
+        <widget class="StableDiffusionGeneratorForm" name="prompts" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>350</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>350</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="baseSize">
+          <size>
+           <width>350</width>
+           <height>0</height>
+          </size>
+         </property>
+        </widget>
         <widget class="CustomGraphicsView" name="canvas_container">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>1</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="baseSize">
+          <size>
+           <width>512</width>
+           <height>0</height>
+          </size>
+         </property>
          <property name="verticalScrollBarPolicy">
           <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
          </property>
@@ -523,7 +566,32 @@
           <string>brush</string>
          </property>
         </widget>
-        <widget class="StablediffusionToolTabWidget" name="widget" native="true"/>
+        <widget class="StablediffusionToolTabWidget" name="widget" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>512</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="baseSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+        </widget>
        </widget>
       </item>
      </layout>

@@ -1,7 +1,6 @@
 from typing import Optional, Dict
 from PySide6.QtWidgets import QGraphicsItem
 from PySide6.QtCore import Qt, QPointF
-from airunner.enums import SignalCode, CanvasToolName
 from airunner.utils.application.snap_to_grid import snap_to_grid
 from airunner.gui.widgets.canvas.draggables.draggable_pixmap import (
     DraggablePixmap,

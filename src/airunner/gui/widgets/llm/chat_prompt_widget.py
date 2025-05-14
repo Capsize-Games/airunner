@@ -2,9 +2,8 @@ import json
 
 from typing import Dict, Optional
 
-from PySide6.QtCore import Slot, QTimer, QPropertyAnimation
-from PySide6.QtWidgets import QSpacerItem, QSizePolicy
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Slot, QPropertyAnimation, QTimer, Qt
+from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QApplication
 
 from airunner.enums import (
     SignalCode,
@@ -20,6 +19,7 @@ from airunner.utils.llm.strip_names_from_message import (
     strip_names_from_message,
 )
 from airunner.utils import create_worker
+from airunner.utils.widgets import load_splitter_settings
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.workers.llm_response_worker import LLMResponseWorker
@@ -47,12 +47,9 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
         }
         self._splitters = ["chat_prompt_splitter"]
+        self._default_splitter_settings_applied = False
         super().__init__()
         self.token_buffer = []
-        self.ui_update_timer = QTimer(self)
-        self.ui_update_timer.setInterval(50)
-        self.ui_update_timer.timeout.connect(self.flush_token_buffer)
-        self.ui_update_timer.start()
         self.registered: bool = False
         self.scroll_bar = None
         self.is_modal = True
@@ -100,6 +97,34 @@ class ChatPromptWidget(BaseWidget):
             LLMResponseWorker, sleep_time_in_ms=1
         )
         self.load_conversation()
+
+    def _apply_default_splitter_settings(self):
+        """
+        Applies default splitter sizes. Called via QTimer.singleShot to ensure
+        widget geometry is more likely to be initialized.
+        """
+        if hasattr(self, "ui") and self.ui is not None:
+            QApplication.processEvents()  # Ensure pending layout events are processed
+            # For a vertical splitter where the bottom panel (prompt input) should be minimized,
+            # we maximize the top panel (index 0).
+            default_chat_splitter_config = {
+                "chat_prompt_splitter": {
+                    "index_to_maximize": 0,
+                    "min_other_size": 50,
+                }  # Assuming 50px is a good min for prompt
+            }
+            load_splitter_settings(
+                self.ui,
+                self._splitters,
+                orientations={
+                    "chat_prompt_splitter": Qt.Orientation.Vertical
+                },  # Explicitly set orientation
+                default_maximize_config=default_chat_splitter_config,
+            )
+        else:
+            self.logger.warning(
+                "ChatPromptWidget: UI not available when attempting to apply default splitter settings."
+            )
 
     @property
     def conversation(self) -> Optional[Conversation]:
@@ -342,6 +367,10 @@ class ChatPromptWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
+        if not self._default_splitter_settings_applied and self.isVisible():
+            self._apply_default_splitter_settings()
+            self._default_splitter_settings_applied = True
+
         if not self.registered:
             self.registered = True
 

@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'lora.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -63,9 +63,9 @@ class Ui_lora(object):
         self.delete_button.setObjectName(u"delete_button")
         self.delete_button.setMinimumSize(QSize(24, 24))
         self.delete_button.setMaximumSize(QSize(24, 24))
-        self.delete_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.delete_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon = QIcon()
-        icon.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.delete_button.setIcon(icon)
 
         self.gridLayout_3.addWidget(self.delete_button, 2, 2, 1, 1)
@@ -75,16 +75,16 @@ class Ui_lora(object):
         sizePolicy.setHeightForWidth(self.scale_slider.sizePolicy().hasHeightForWidth())
         self.scale_slider.setSizePolicy(sizePolicy)
         self.scale_slider.setMinimumSize(QSize(0, 0))
-        self.scale_slider.setProperty("slider_minimum", 0)
-        self.scale_slider.setProperty("slider_maximum", 100)
-        self.scale_slider.setProperty("spinbox_minimum", 0.000000000000000)
-        self.scale_slider.setProperty("spinbox_maximum", 1.000000000000000)
-        self.scale_slider.setProperty("display_as_float", True)
-        self.scale_slider.setProperty("slider_single_step", 1)
-        self.scale_slider.setProperty("slider_page_step", 5)
-        self.scale_slider.setProperty("spinbox_single_step", 0.010000000000000)
-        self.scale_slider.setProperty("spinbox_page_step", 0.100000000000000)
-        self.scale_slider.setProperty("table_id", 0)
+        self.scale_slider.setProperty(u"slider_minimum", 0)
+        self.scale_slider.setProperty(u"slider_maximum", 100)
+        self.scale_slider.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.scale_slider.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.scale_slider.setProperty(u"display_as_float", True)
+        self.scale_slider.setProperty(u"slider_single_step", 1)
+        self.scale_slider.setProperty(u"slider_page_step", 5)
+        self.scale_slider.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.scale_slider.setProperty(u"spinbox_page_step", 0.100000000000000)
+        self.scale_slider.setProperty(u"table_id", 0)
 
         self.gridLayout_3.addWidget(self.scale_slider, 1, 0, 1, 3)
 
@@ -114,7 +114,7 @@ class Ui_lora(object):
         self.delete_button.setToolTip(QCoreApplication.translate("lora", u"Delete model", None))
 #endif // QT_CONFIG(tooltip)
         self.delete_button.setText("")
-        self.scale_slider.setProperty("settings_property", QCoreApplication.translate("lora", u"lora.scale", None))
-        self.scale_slider.setProperty("label_text", QCoreApplication.translate("lora", u"Scale", None))
+        self.scale_slider.setProperty(u"settings_property", QCoreApplication.translate("lora", u"lora.scale", None))
+        self.scale_slider.setProperty(u"label_text", QCoreApplication.translate("lora", u"Scale", None))
     # retranslateUi
 

@@ -1,8 +1,5 @@
+from PySide6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy, QGridLayout
 
-from PySide6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy
-
-from airunner.data.models import LLMGeneratorSettings
-from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.llm.llm_history_item_widget import LLMHistoryItemWidget
 from airunner.gui.widgets.llm.templates.llm_history_widget_ui import Ui_llm_history_widget
@@ -25,37 +22,34 @@ class LLMHistoryWidget(BaseWidget):
             Conversation.id.desc()
         ).all()        
 
+        # Get the existing layout - keep using the original QGridLayout from the UI file
         layout = self.ui.gridLayout_2
 
-        if layout is None:
-            self.logger.error("Layout is None")
+        # Clear all widgets from the layout
+        while layout.count() > 0:
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().setParent(None)
+            elif item.spacerItem():
+                layout.removeItem(item.spacerItem())
 
-        # clear all widgets from the layout
-        try:
-            layout.removeItem(self.spacer)
-        except Exception as e:
-            self.logger.error(f"Error removing spacer: {e}")
-
-        if layout:
-            for i in reversed(range(layout.count())):
-                widget = layout.itemAt(i).widget()
-                if widget:
-                    widget.setParent(None)
-
-        if layout is None:
-            layout = QVBoxLayout(self.ui.scrollAreaWidgetContents)
-            self.ui.scrollAreaWidgetContents.setLayout(layout)
-
+        # Make sure scroll area widget contents has the right size policy
+        self.ui.scrollAreaWidgetContents.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        
+        # Add conversation widgets to the grid layout
+        row = 0
         for conversation in conversations:
             # if conversation.title == "":
             #     continue
             llm_history_item_widget = LLMHistoryItemWidget(
                 conversation=conversation
             )
-            # add to layout
-            layout.addWidget(llm_history_item_widget)
+            # Add to grid layout - spanning the full row
+            layout.addWidget(llm_history_item_widget, row, 0, 1, 1)
+            row += 1
 
-        # Add a vertical spacer at the end
-        layout.addItem(self.spacer)
-
-        self.ui.scrollAreaWidgetContents.setLayout(layout)
+        # Add a vertical spacer at the end to push widgets to top
+        layout.addItem(self.spacer, row, 0, 1, 1)
+        
+        # Set widget resizable for proper scrolling
+        self.ui.conversations_scroll_area.setWidgetResizable(True)

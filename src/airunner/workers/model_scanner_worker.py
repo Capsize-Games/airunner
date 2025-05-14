@@ -34,8 +34,7 @@ class ModelScannerWorker(Worker, PipelineMixin):
             )
         )
         if not os.path.exists(model_path):
-            self.logger.error(f"Model path does not exist: {model_path}")
-            return
+            os.makedirs(model_path)
         # find all folders inside of model_path, each of those folders is a model version
         with os.scandir(model_path) as dir_object:
             # check if dir_object is a directory
