@@ -833,10 +833,8 @@ class MainWindow(
         )
 
         self.set_stylesheet()
-
-        load_splitter_settings(self.ui, ["main_window_splitter"])
-
         self.restore_state()
+        load_splitter_settings(self.ui, ["main_window_splitter"])
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
