@@ -1,15 +1,11 @@
 [![AI Runner Logo](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
 [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz)
+![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner)
 [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml)
 [![Docker Release](https://github.com/Capsize-Games/airunner/actions/workflows/docker-release.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/docker-release.yml)
 [![Linux Build](https://github.com/Capsize-Games/airunner/actions/workflows/linux-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/linux-dispatch.yml)
-![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
-![GitHub issues](https://img.shields.io/github/issues/Capsize-Games/airunner)
-![GitHub closed issues](https://img.shields.io/github/issues-closed/Capsize-Games/airunner)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/Capsize-Games/airunner)
-![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/Capsize-Games/airunner)
 
 ---
 
@@ -28,7 +24,6 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 
 ## Table of Contents
 - [Overview](#overview)
-- [Why Developers Use AI Runner](#why-developers-use-ai-runner)
 - [Features](#features)
 - [System Requirements](#system-requirements)
 - [Installation Quick Start](#installation-quick-start-development-version)
@@ -37,7 +32,6 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 - [Unit Tests](#unit-tests)
 - [Database](#database)
 - [Advanced Features](#advanced-features)
-- [Missing or Planned Features](#missing-or-planned-features)
 - [Contributing](#contributing)
 
 ---
@@ -60,27 +54,6 @@ Originally created as a GUI-centric AI art and chatbot tool for end users, AI Ru
 - Offline scenarios: Work behind firewalls or without internet.  
 - Custom UI/UX: Build plugins/extensions for your particular domain.  
 - End-user tools: Hand off a no-code (GUI) solution for less technical stakeholders.
-
----
-
-## Why Developers Use AI Runner
-
-1. **Fast Setup with Docker**  
-   No need to configure Python environments manually—just pull and run. AI Runner includes all major dependencies, plus GPU support (with [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)).
-
-2. **Local LLM & Stable Diffusion in One**  
-   Stop juggling separate repos for text generation and image generation. AI Runner unifies them under one interface.
-
-3. **Plugin & Extension System**  
-   Extend or modify AI Runner’s GUI or back-end with custom plugins. Add new model workflows, custom UI panels, or special logic without forking the entire codebase.
-
-4. **Python Library**  
-   Install from PyPi and **import** AI Runner directly into your Python project (e.g., a game in Pygame or a PySide6 desktop app).
-
-5. **Offline / Private Data**  
-   Keep data on-premise or behind a firewall—great for enterprise or regulated environments that can’t rely on external cloud inference.
-
-If you find it helpful, please **star this repo** and share it with others—it helps the project grow and signals demand for local AI solutions.
 
 ---
 
@@ -148,105 +121,156 @@ These are the sizes of the various models that power AI Runner.
 
 ---
 
-## Installation Quick Start (development version)
+## 💾 Installation Quick Start (development version)
 
-### Ubuntu / Windows WSL 2
-
-1. Ensure correct python version is installed (see setup.py)
-2. Install nvidia cuda toolkit
-   ```bash
-   sudo apt install nvidia-cuda-toolkit
-   ```
-3. Clone repo, create virtual env, activate it
-   ```bash
-   git clone https://github.com/Capsize-Games/airunner.git
-   cd airunner
-   python -m venv venv
-   .\venv\Scripts\activate
-   ```
-4. Install requirements
-   ```bash
-   pip install "typing-extensions==4.13.2"
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install -e .[all_dev]
-   pip install -U timm
-   python -c "import nltk; nltk.download('punkt')"
-   ```
-5. Run app 
-   ```bash
-   airunner
-   ```
-
-### Windows
-1. Ensure correct python version is installed (see setup.py)
-2. Clone repo, create virtual env, activate it 
-   ```powershell
-   git clone https://github.com/Capsize-Games/airunner.git
-   cd airunner
-   python -m venv venv
-   ./venv/Scripts/activate
-   ```
-3. Install requirements
-   ```bash
-   pip install "typing-extensions==4.13.2"
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install -e .[windows]
-   pip install -U timm
-   python -c "import nltk; nltk.download('punkt')"
-   ```
-4. Run app
-   ```powershell
-   airunner
-   ```
-
----
-
-### Docker
+### 🐳 Docker
 
 **Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
 
+**Note:** 
+
+AI Runner's Docker setup uses Wayland by default for optimal performance and compatibility with modern Linux desktop environments. This means you will need wayland support on your host system.
+
 1. **Install NVIDIA Container Toolkit**  
    Follow the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to enable GPU passthrough for Docker.
-2. **Clone AI Runner**  
+2. **Clone AI Runner**
    ```bash
    git clone https://github.com/Capsize-Games/airunner.git
    cd airunner
-   ```
-3. **Pull the docker image and run airunner**
-   ```bash
    ./src/airunner/bin/docker.sh airunner
    ```
-This starts the GUI with stable diffusion, LLM, TTS/STT, and more.
+
+#### Custom docker compose file
+
+Docker compose allows you to customize the container environment.
+
+For example, if you want access to a directory on your host machine, you can mount it in the container by creating a `airunner/package/dev/docker-compose.local.yml` file with the following content
+
+```yaml
+version: '3.8'
+
+services:
+  airunner_dev:
+    volumes:
+      - /mnt/YourDrive:/mnt/YourDrive:rw,z
+```
 
 ---
 
-***See the [Installation Wiki for more information](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).***
+### 🖥️ Ubuntu (including Windows WSL 2)
 
----
+Choose this if you want to run AI Runner natively on your machine without Docker.
 
-## Building the package
+These instructions will assume the following directory structure. *You should only deviate from this structure if you know what you're doing.*
 
-AI Runner can be packaged with PyInstaller which packages Python runtime and dependencies so that the application can be used without any dependencies. Useful for distributing to non-technical users.
+```plaintext
+~/Projects
+├── airunner
+├── OpenVoice
+└── venv
+```
 
-### Build the package locally
-
-AI Runner uses PyInstaller to create a standalone package. If you want to build it for yourself, follow these steps.
-
-1. **Follow the *Development Environment setup* steps above.**
-2. **Build the package**  
+1. Install system requirements
+   **All platforms**
    ```bash
-   ./src/airunner/bin/docker.sh build_dev_package
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme espeak-ng-espeak
+   ```
+   **Linux**
+   ```bash
+   sudo apt install -y espeak
+   ```
+   **Windows**
+   ```bash
+   sudo apt install -y espeak-ng-espeak
+   ```
+2. Create airunner directory
+   ```bash
+   sudo mkdir ~/.local/share/airunner
+   sudo chown $USER:USER ~/.local/share/airunner
+   ```
+3. Install pyenv (allows management of multiple Python versions)
+   ```bash
+   curl https://pyenv.run | bash
+   ```
+4. Add pyenv to shell configuration
+```bash
+# Check and add pyenv configuration if not already present
+if ! grep -q "Pyenv configuration added by AI Runner" ~/.bashrc; then
+     cat << 'EOF' >> ~/.bashrc
+
+# Pyenv configuration added by AI Runner setup
+export PYENV_ROOT="$HOME/.pyenv"
+if [ -d "$PYENV_ROOT/bin" ]; then
+  export PATH="$PYENV_ROOT/bin:$PATH"
+fi
+if command -v pyenv &>/dev/null; then
+  eval "$(pyenv init - bash)"
+fi
+EOF
+   fi
+
+   # Check and add WSLg XDG_RUNTIME_DIR fix if not already present
+   if ! grep -q "WSLg XDG_RUNTIME_DIR Fix added by AI Runner" ~/.bashrc; then
+     cat << 'EOF' >> ~/.bashrc
+
+# WSLg XDG_RUNTIME_DIR Fix added by AI Runner setup
+if [ -n "$WSL_DISTRO_NAME" ]; then
+    if [ -d "/wslg/runtime-dir" ]; then
+        export XDG_RUNTIME_DIR="/wslg/runtime-dir"
+    elif [ -d "/mnt/wslg/runtime-dir" ]; then # Older WSLg path
+        export XDG_RUNTIME_DIR="/mnt/wslg/runtime-dir"
+    fi
+fi
+EOF
+   fi
+
+   # Check and add Qt environment variables for WSLg if not already present
+   if ! grep -q "Qt environment variables for WSLg added by AI Runner" ~/.bashrc; then
+     cat << 'EOF' >> ~/.bashrc
+
+# Qt environment variables for WSLg added by AI Runner setup
+if [ -n "$WSL_DISTRO_NAME" ]; then
+    export QT_QPA_PLATFORM=wayland
+    export QT_QPA_PLATFORMTHEME=gtk3
+fi
+EOF
+fi
+```
+5. Install python and set to local version
+   ```bash
+   . ~/.bashrc
+   pyenv install 3.13.3
+   ```
+6. Clone repo, set local python version, create virtual env, activate it
+   ```bash
+   mkdir ~/Projects
+   cd ~/Projects
+   pyenv local 3.13.3
+   python -m venv venv
+   source ./venv/bin/activate
+   git clone https://github.com/Capsize-Games/airunner.git
+   ```
+7. Install AI Runner requirements
+   ```bash
+   pip install "typing-extensions==4.13.2"
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+   pip install -e airunner[all_dev]
+   pip install -U timm
+   python -c "import nltk; nltk.download('punkt')"
+   python -c "import nltk; nltk.download('punkt_tab')"
+   ```
+8. Run app 
+   ```bash
+   airunner
    ```
 
-#### Building the package for production
+**Optional**
 
-If you want to build the production package, follow these steps.
-
-1. **Follow the *Development Environment setup* steps above.**
-2. **Build the package**  
-   ```bash
-   ./src/airunner/bin/docker.sh build_package
-   ```
+- [OpenVoice](https://github.com/Capsize-Games/airunner/wiki/Modules#openvoice)
+- Flash attention 2
+- xformers
+- FramePack
 
 ---
 
@@ -286,21 +310,6 @@ Or a single test:
 
 ```bash
 python -m unittest src/airunner/tests/test_prompt_weight_convert.py
-```
-
----
-
-## Test CI Mode
-
-Test the build locally
-
-```bash
-./test_ci_mode.sh --fast-package-test
-```
-
-Or directly
-```bash
-./src/airunner/bin/docker.sh --ci --fast-package-test build_package
 ```
 
 ---

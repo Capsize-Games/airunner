@@ -107,22 +107,22 @@ imagefilter_bootstrap_data = {
                 'name': 'cyan_red',
                 'value': '0.0',
                 'value_type': 'float',
-                'min_value': None,
-                'max_value': None
+                'min_value': -1.0,
+                'max_value': 1.0
             },
             'magenta_green': {
                 'name': 'magenta_green',
                 'value': '0.0',
                 'value_type': 'float',
-                'min_value': None,
-                'max_value': None
+                'min_value': -1.0,
+                'max_value': 1.0
             },
             'yellow_blue': {
                 'name': 'yellow_blue',
                 'value': '0.0',
                 'value_type': 'float',
-                'min_value': None,
-                'max_value': None
+                'min_value': -1.0,
+                'max_value': 1.0
             }
         }
     },

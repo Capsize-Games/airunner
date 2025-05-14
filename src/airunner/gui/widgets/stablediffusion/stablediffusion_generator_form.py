@@ -709,10 +709,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
             "negative_crops_coords_top_left", negative_crops_coords_top_left
         )
 
-    @Slot(bool)
-    def on_use_refiner_checkbox_toggled(self, val: bool):
-        self.update_generator_settings("use_refiner", val)
-
     def generate(self, data=None):
         if self.generator_settings.random_seed:
             self.seed = random_seed()

@@ -2,12 +2,8 @@ import random
 import os
 import torch
 from typing import Optional, Dict, List, Union, Type
-from airunner.utils import is_windows
 
-if not is_windows():
-    from peft import PeftModel
-else:
-    PeftModel = None
+from peft import PeftModel
 from transformers.utils.quantization_config import (
     BitsAndBytesConfig,
     GPTQConfig,

@@ -1,5 +1,7 @@
 from typing import Dict, Optional, Type
 
+from PySide6.QtCore import QThread, Signal, QObject
+
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
@@ -9,9 +11,10 @@ from airunner.handlers.llm.openrouter_model_manager import (
 )
 # from airunner.handlers.llm.gemma3_model_manager import Gemma3Manager
 from airunner.enums import ModelService
+from airunner.utils.application.threaded_worker_mixin import ThreadedWorkerMixin
 
 
-class LLMGenerateWorker(Worker):
+class LLMGenerateWorker(ThreadedWorkerMixin, Worker):
     def __init__(self, local_agent_class=None):
         self.local_agent_class = local_agent_class
         self.signal_handlers = {
@@ -102,6 +105,8 @@ class LLMGenerateWorker(Worker):
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
         self.running = False
+        # Stop any active background tasks
+        self.stop_all_background_tasks()
         if self.model_manager:
             self.model_manager.unload()
         if self._llm_thread is not None:
@@ -160,9 +165,36 @@ class LLMGenerateWorker(Worker):
         self._load_llm()
 
     def _load_llm(self, data=None):
+        """Load the LLM model in a separate thread to prevent UI blocking"""
         data = data or {}
+        
         if self.model_manager is not None:
-            self.model_manager.load()
+            # Define the task function that will be run in the background
+            def load_model_task(worker=None):
+                self.model_manager.load()
+                return None  # No specific result needed
+            
+            # Execute the model loading in a background thread
+            self.execute_in_background(
+                task_function=load_model_task,
+                task_id="model_loading",
+                callback_data=data,
+                on_finished=self._on_model_loading_finished
+            )
+        else:
+            # If no model manager, call the callback directly
+            callback = data.get("callback", None)
+            if callback:
+                callback(data)
+    
+    def _on_model_loading_finished(self, data):
+        """Handle completion of model loading"""
+        # Process any error that occurred during loading
+        if 'error' in data:
+            self.logger.error(f"Error loading model: {data['error']}")
+            self.api.application_error(f"Failed to load LLM model: {data['error']}")
+        
+        # Call the original callback if provided
         callback = data.get("callback", None)
         if callback:
             callback(data)

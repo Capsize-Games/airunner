@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'controlnet_settings_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -45,33 +45,33 @@ class Ui_controlnet_settings_widget(object):
         self.verticalLayout.setContentsMargins(0, 0, 0, -1)
         self.controlnet_conditioning_scale = SliderWidget(self.widget)
         self.controlnet_conditioning_scale.setObjectName(u"controlnet_conditioning_scale")
-        self.controlnet_conditioning_scale.setProperty("slider_minimum", 0)
-        self.controlnet_conditioning_scale.setProperty("slider_maximum", 100)
-        self.controlnet_conditioning_scale.setProperty("spinbox_minimum", 0)
-        self.controlnet_conditioning_scale.setProperty("spinbox_maximum", 1.000000000000000)
-        self.controlnet_conditioning_scale.setProperty("slider_tick_interval", 1)
-        self.controlnet_conditioning_scale.setProperty("slider_single_step", 1)
-        self.controlnet_conditioning_scale.setProperty("slider_page_step", 2)
-        self.controlnet_conditioning_scale.setProperty("spinbox_single_step", 0.100000000000000)
-        self.controlnet_conditioning_scale.setProperty("spinbox_page_step", 0.200000000000000)
-        self.controlnet_conditioning_scale.setProperty("settings_property", u"controlnet_settings.conditioning_scale")
-        self.controlnet_conditioning_scale.setProperty("display_as_float", True)
+        self.controlnet_conditioning_scale.setProperty(u"slider_minimum", 0)
+        self.controlnet_conditioning_scale.setProperty(u"slider_maximum", 100)
+        self.controlnet_conditioning_scale.setProperty(u"spinbox_minimum", 0)
+        self.controlnet_conditioning_scale.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.controlnet_conditioning_scale.setProperty(u"slider_tick_interval", 1)
+        self.controlnet_conditioning_scale.setProperty(u"slider_single_step", 1)
+        self.controlnet_conditioning_scale.setProperty(u"slider_page_step", 2)
+        self.controlnet_conditioning_scale.setProperty(u"spinbox_single_step", 0.100000000000000)
+        self.controlnet_conditioning_scale.setProperty(u"spinbox_page_step", 0.200000000000000)
+        self.controlnet_conditioning_scale.setProperty(u"settings_property", u"controlnet_settings.conditioning_scale")
+        self.controlnet_conditioning_scale.setProperty(u"display_as_float", True)
 
         self.verticalLayout.addWidget(self.controlnet_conditioning_scale)
 
         self.strength_slider = SliderWidget(self.widget)
         self.strength_slider.setObjectName(u"strength_slider")
-        self.strength_slider.setProperty("slider_minimum", 0)
-        self.strength_slider.setProperty("slider_maximum", 100)
-        self.strength_slider.setProperty("spinbox_minimum", 0)
-        self.strength_slider.setProperty("spinbox_maximum", 1.000000000000000)
-        self.strength_slider.setProperty("slider_tick_interval", 1)
-        self.strength_slider.setProperty("slider_single_step", 1)
-        self.strength_slider.setProperty("slider_page_step", 10)
-        self.strength_slider.setProperty("spinbox_single_step", 0.100000000000000)
-        self.strength_slider.setProperty("spinbox_page_step", 0.200000000000000)
-        self.strength_slider.setProperty("settings_property", u"controlnet_settings.strength")
-        self.strength_slider.setProperty("display_as_float", True)
+        self.strength_slider.setProperty(u"slider_minimum", 0)
+        self.strength_slider.setProperty(u"slider_maximum", 100)
+        self.strength_slider.setProperty(u"spinbox_minimum", 0)
+        self.strength_slider.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.strength_slider.setProperty(u"slider_tick_interval", 1)
+        self.strength_slider.setProperty(u"slider_single_step", 1)
+        self.strength_slider.setProperty(u"slider_page_step", 10)
+        self.strength_slider.setProperty(u"spinbox_single_step", 0.100000000000000)
+        self.strength_slider.setProperty(u"spinbox_page_step", 0.200000000000000)
+        self.strength_slider.setProperty(u"settings_property", u"controlnet_settings.strength")
+        self.strength_slider.setProperty(u"display_as_float", True)
 
         self.verticalLayout.addWidget(self.strength_slider)
 
@@ -109,7 +109,7 @@ class Ui_controlnet_settings_widget(object):
 
     def retranslateUi(self, controlnet_settings_widget):
         controlnet_settings_widget.setWindowTitle(QCoreApplication.translate("controlnet_settings_widget", u"Form", None))
-        self.controlnet_conditioning_scale.setProperty("label_text", QCoreApplication.translate("controlnet_settings_widget", u"Conditioning Scale", None))
-        self.strength_slider.setProperty("label_text", QCoreApplication.translate("controlnet_settings_widget", u"Strength", None))
+        self.controlnet_conditioning_scale.setProperty(u"label_text", QCoreApplication.translate("controlnet_settings_widget", u"Conditioning Scale", None))
+        self.strength_slider.setProperty(u"label_text", QCoreApplication.translate("controlnet_settings_widget", u"Strength", None))
     # retranslateUi
 

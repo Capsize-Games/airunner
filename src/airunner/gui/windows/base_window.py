@@ -1,11 +1,6 @@
-import os
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.settings import (
-    AIRUNNER_DARK_THEME_NAME,
-    AIRUNNER_LIGHT_THEME_NAME,
-)
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
@@ -43,4 +38,8 @@ class BaseWindow(
             self.exec()
 
     def initialize_window(self):
-        pass
+        """
+        Initialize the window. This method is called after the UI is set up.
+
+        Override this method in subclasses to perform any additional setup.
+        """

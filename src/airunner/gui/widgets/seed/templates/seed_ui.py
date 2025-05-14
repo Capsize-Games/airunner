@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'seed.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -40,9 +40,9 @@ class Ui_seed_widget(object):
         self.random_button.setObjectName(u"random_button")
         self.random_button.setMinimumSize(QSize(24, 24))
         self.random_button.setMaximumSize(QSize(24, 24))
-        self.random_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.random_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/dice-game-icon.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/light/icons/feather/light/dice-game-icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.random_button.setIcon(icon)
         self.random_button.setCheckable(True)
         self.random_button.setFlat(True)

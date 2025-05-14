@@ -9,7 +9,6 @@ from PySide6.QtGui import QImage
 from PySide6.QtCore import Qt, QPoint, QRect, QPointF
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import (
-    QEnterEvent,
     QDragEnterEvent,
     QDropEvent,
     QImageReader,
@@ -32,7 +31,6 @@ from airunner.settings import (
     AIRUNNER_VALID_IMAGE_FILES,
     AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
 )
-from airunner.utils import is_windows
 from airunner.utils.image import (
     export_image,
     convert_binary_to_image,
@@ -177,7 +175,13 @@ class CustomScene(
 
     @property
     def image_pivot_point(self):
-        return QPoint(self.current_settings.x_pos, self.current_settings.y_pos)
+        if hasattr(self.current_settings, "x_pos") and hasattr(
+            self.current_settings, "y_pos"
+        ):
+            return QPointF(
+                self.current_settings.x_pos, self.current_settings.y_pos
+            )
+        return QPointF(0, 0)
 
     @property
     def current_active_image(self) -> Image:
@@ -242,6 +246,8 @@ class CustomScene(
                 export_image(image, file_path)
 
     def on_import_image_signal(self):
+        if self.settings_key != "drawing_pad_settings":
+            return
         file_path, _ = QFileDialog.getOpenFileName(
             None,
             "Open Image",
@@ -338,6 +344,7 @@ class CustomScene(
                 image=images[0].convert("RGBA"),
                 is_outpaint=image_response.is_outpaint,
                 outpaint_box_rect=outpaint_box_rect,
+                generated=True,
             )
 
     def display_gpu_memory_error(self, message: str):
@@ -584,32 +591,30 @@ class CustomScene(
             self.image.fill(Qt.GlobalColor.transparent)
 
     def set_item(
-        self, image: QImage = None, z_index: int = 5
+        self,
+        image: QImage = None,
+        z_index: int = 5,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
     ):  # Change default z_index to 5
         # Instead of fixed scene rect, use extended viewport
         self.setSceneRect(self._extended_viewport_rect)
 
         if image is not None:
+            x = self.active_grid_settings.pos_x if x is None else x
+            y = self.active_grid_settings.pos_y if y is None else y
+
             if self.item is None:
                 self.item = LayerImageItem(image)
                 if self.item.scene() is None:
                     self.addItem(self.item)
-                    self.item.setPos(
-                        self.active_grid_settings.pos_x,
-                        self.active_grid_settings.pos_y,
-                    )
+                    self.item.setPos(x, y)
                     self._original_item_positions[self.item] = self.item.pos()
             else:
-                self.item.setPos(
-                    self.active_grid_settings.pos_x,
-                    self.active_grid_settings.pos_y,
-                )
+                self.item.setPos(x, y)
                 self._original_item_positions[self.item] = self.item.pos()
                 self.item.updateImage(image)
-
-            self.item.setZValue(
-                z_index
-            )  # Higher Z-value for better visibility
+            self.item.setZValue(z_index)
 
             # Ensure item is visible and prepare its geometry
             self.item.setVisible(True)
@@ -621,54 +626,26 @@ class CustomScene(
         self.selection_start_pos = None
         self.selection_stop_pos = None
 
-    def initialize_image(self, image: Image = None):
+    def initialize_image(self, image: Image = None, generated: bool = False):
         """Initialize the image in the scene."""
         self.stop_painter()
         self.set_image(image)
 
-        # Save the current position before updating the item
-        old_pos = self.item.pos() if self.item else QPointF(0, 0)
-
-        if self.item is not None:
-            x = self.image_pivot_point.x()
-            y = self.image_pivot_point.y()
-        else:
+        if generated:
+            self.update_drawing_pad_settings(
+                "x_pos", self.active_grid_settings.pos_x
+            )
+            self.update_drawing_pad_settings(
+                "y_pos", self.active_grid_settings.pos_y
+            )
             x = self.active_grid_settings.pos_x
             y = self.active_grid_settings.pos_y
+        else:
+            x = self.drawing_pad_settings.x_pos
+            y = self.drawing_pad_settings.y_pos
 
-        self.set_item(self.image)
-
+        self.set_item(self.image, x=x, y=y)
         self.set_painter(self.image)
-
-        # If we had an original position stored for the previous item, use it for the new item
-        if self.item is not None:
-            # set position to active grid area
-            if self.item is not None:
-                self.item.setPos(
-                    x,
-                    y,
-                )
-                self.api.art.canvas.update_image_positions()
-
-            # Store the position if not already tracked
-            if self.item not in self._original_item_positions:
-                # Use the old position if it was a replacement item
-                if old_pos != QPointF(0, 0):
-                    self._original_item_positions[self.item] = old_pos
-                else:
-                    self._original_item_positions[self.item] = self.item.pos()
-
-            # Make sure item is visible with priority rendering
-            self.item.setVisible(True)
-            self.item.setZValue(5)
-
-            # Force immediate update of the image area
-            self.update(self.item.boundingRect())
-
-            # Make sure the view's viewport also gets updated
-            if self.views():
-                self.views()[0].viewport().update()
-                QApplication.processEvents()
 
     def stop_painter(self):
         if self.painter is not None and self.painter.isActive():
@@ -707,26 +684,6 @@ class CustomScene(
         return image
 
     def _get_image_from_clipboard(self):
-        if is_windows():
-            return self._image_from_system_clipboard_windows()
-        return self._image_from_system_clipboard_linux()
-
-    def _image_from_system_clipboard_windows(self):
-        self.logger.debug("image_from_system_clipboard_windows")
-        import win32clipboard
-
-        try:
-            win32clipboard.OpenClipboard()
-            data = win32clipboard.GetClipboardData(win32clipboard.CF_DIB)
-            win32clipboard.CloseClipboard()
-            # convert bytes to image
-            image = Image.open(io.BytesIO(data))
-            return image
-        except Exception as e:
-            self.logger.error(f"Failed to get image from clipboard: {e}")
-            return None
-
-    def _image_from_system_clipboard_linux(self):
         self.logger.debug("image_from_system_clipboard_linux")
         try:
             image = ImageGrab.grabclipboard()
@@ -744,26 +701,6 @@ class CustomScene(
         return self._move_pixmap_to_clipboard(image)
 
     def _move_pixmap_to_clipboard(self, image: Image) -> Image:
-        if is_windows():
-            return self._image_to_system_clipboard_windows(image)
-        return self._image_to_system_clipboard_linux(image)
-
-    def _image_to_system_clipboard_windows(self, image: Image) -> Image:
-        if image is None:
-            return None
-        self.logger.debug("image_to_system_clipboard_windows")
-        import win32clipboard
-
-        data = io.BytesIO()
-        image.save(data, format="png")
-        data = data.getvalue()
-        win32clipboard.OpenClipboard()
-        win32clipboard.EmptyClipboard()
-        win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
-        win32clipboard.CloseClipboard()
-        return image
-
-    def _image_to_system_clipboard_linux(self, image: Image) -> Image:
         if image is None:
             return None
         data = io.BytesIO()
@@ -788,6 +725,7 @@ class CustomScene(
         image: Image.Image,
         is_outpaint: bool,
         outpaint_box_rect: Optional[Rect] = None,
+        generated: bool = False,
     ):
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
@@ -797,6 +735,7 @@ class CustomScene(
                 image,
                 is_outpaint=is_outpaint,
                 outpaint_box_rect=outpaint_box_rect,
+                generated=generated,
             )
             # Emit signal to notify the view to update image positions
             self.api.art.canvas.image_updated()
@@ -817,6 +756,7 @@ class CustomScene(
         image: Image.Image,
         is_outpaint: bool = False,
         outpaint_box_rect: Optional[Rect] = None,
+        generated: bool = False,
     ):
         """
         Adds a given image to the scene
@@ -825,7 +765,6 @@ class CustomScene(
         :param outpaint_box_rect: Rect indicating the root point of the image
         :return:
         """
-        # image = ImageOps.expand(image, border=border_size, fill=border_color)
         if image is None:
             self.logger.warning("Image is None, unable to add to scene")
             return
@@ -871,7 +810,7 @@ class CustomScene(
             self.item.setPos(visible_pos_x, visible_pos_y)
 
         self.update()
-        self.initialize_image(image)
+        self.initialize_image(image, generated=generated)
         self.current_active_image = image
 
     def _handle_outpaint(
@@ -1113,22 +1052,29 @@ class CustomScene(
         # Get the original absolute position
         original_pos = self._original_item_positions[self.item]
 
-        # Calculate and set the new position
+        # Calculate new position based on current canvas_offset
         new_x = original_pos.x() - canvas_offset.x()
         new_y = original_pos.y() - canvas_offset.y()
 
-        # Before changing position, prepare the item for geometry change
-        self.item.prepareGeometryChange()
-        self.item.setPos(new_x, new_y)
+        # Only update position if it has significantly changed to avoid constant redraws
+        current_pos = self.item.pos()
+        if (
+            abs(current_pos.x() - new_x) > 1
+            or abs(current_pos.y() - new_y) > 1
+        ):
+            # Before changing position, prepare the item for geometry change
+            self.item.prepareGeometryChange()
+            self.item.setPos(new_x, new_y)
 
-        # Make sure the item is visible and in focus
-        self.item.setVisible(True)
-        self.item.setZValue(5)  # Priority rendering
+            # Make sure the item is visible and in focus
+            self.item.setVisible(True)
 
-        # Update the entire viewport to ensure image is visible even at negative coordinates
-        self.invalidate(
-            self._extended_viewport_rect, QGraphicsScene.SceneLayer.ItemLayer
-        )
+            # Only update the specific area affected by the item
+            rect = self.item.boundingRect().adjusted(-10, -10, 10, 10)
+            scene_rect = self.item.mapRectToScene(rect)
+            self.update(scene_rect)
+
+        # Avoid full scene invalidation - this is expensive during resize operations
 
     def get_canvas_offset(self):
         """Get the current canvas offset from the parent view if available."""
