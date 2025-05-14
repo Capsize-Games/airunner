@@ -6,6 +6,9 @@ import webbrowser
 from functools import partial
 from typing import Dict, Optional
 
+from airunner.gui.windows.wayland_helper import (
+    enable_wayland_window_decorations,
+)
 import requests
 from PIL import Image
 from PySide6 import QtGui
@@ -168,6 +171,8 @@ class MainWindow(
         ("stop-circle", "workflow_actionStop"),
         ("corner-up-right", "actionRedo"),
         ("corner-up-left", "actionUndo"),
+        ("save", "actionSave_As"),
+        ("target", "actionRecenter"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -233,6 +238,7 @@ class MainWindow(
         }
         self.logger.debug("Starting AI Runnner")
         super().__init__()
+        enable_wayland_window_decorations(self)
         ApplicationSettings.objects.update(
             self.application_settings.id,
             sd_enabled=False,
@@ -259,6 +265,7 @@ class MainWindow(
         self.initialize_ui()
         self._initialize_workers()
         self.last_tray_click_time = 0
+        self.settings_window = None
 
     @property
     def close_to_system_tray(self) -> bool:
@@ -469,7 +476,14 @@ class MainWindow(
 
     @Slot()
     def on_actionSettings_triggered(self):
-        SettingsWindow(prevent_always_on_top=True)
+        if self.settings_window is None:
+            self.settings_window = SettingsWindow(
+                prevent_always_on_top=False, exec=False
+            )
+            self.settings_window.show()
+        elif not self.settings_window.isVisible():
+            self.settings_window.show()
+        self.settings_window.raise_()
 
     @Slot()
     def on_actionBrowse_Images_Path_2_triggered(self):
@@ -783,9 +797,12 @@ class MainWindow(
         args = data["args"]
         return bash_execute(args[0])
 
-    def on_theme_changed_signal(self):
+    def on_theme_changed_signal(self, data: Dict):
+        self.set_stylesheet(
+            data.get("dark_mode", False),
+            data.get("override_system_theme", False),
+        )
         self.update_icons()
-        self.set_stylesheet()
 
     def update_icons(self):
         theme = (
@@ -816,10 +833,19 @@ class MainWindow(
         )
 
         self.set_stylesheet()
-
-        load_splitter_settings(self.ui, ["main_window_splitter"])
-
         self.restore_state()
+        # Configure default splitter sizes to maximize the canvas area (index 1)
+        default_splitter_config = {
+            "main_window_splitter": {
+                "index_to_maximize": 1,
+                "min_other_size": 50,
+            }
+        }
+        load_splitter_settings(
+            self.ui,
+            ["main_window_splitter"],
+            default_maximize_config=default_splitter_config,
+        )
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
@@ -864,7 +890,7 @@ class MainWindow(
         self.ui.actionCopy.deleteLater()
         self.ui.actionPaste.deleteLater()
         self.ui.actionRotate_90_clockwise.deleteLater()
-        self.ui.actionRotate_90_counter_clockwise.deleteLater()
+        self.ui.actionRotate_90_counterclockwise.deleteLater()
         self.ui.actionPrompt_Browser.deleteLater()
 
     def _load_plugins(self):
@@ -1399,7 +1425,44 @@ class MainWindow(
         self.api.art.canvas.tool_changed(tool, active)
 
     def _initialize_window(self):
-        self.center()
+        # self.center()
+        screen = QGuiApplication.primaryScreen()  # Use primaryScreen
+
+        if not screen:
+            self.logger.warning(
+                "Could not get primary screen. Falling back to default size."
+            )
+            # Fallback to a default size if screen info is unavailable
+            default_width, default_height = 1024, 768
+            self.resize(default_width, default_height)
+            self.setMinimumSize(512, 512)
+            # Set maximum size to something reasonable if screen info is missing
+            self.setMaximumSize(
+                default_width, default_height
+            )  # Or a larger sensible max
+        else:
+            screen_geometry = screen.availableGeometry()
+            self.logger.info(
+                f"Available screen geometry: "
+                f"x={screen_geometry.x()}, y={screen_geometry.y()}, "
+                f"width={screen_geometry.width()}, height={screen_geometry.height()}"
+            )
+
+            # Set geometry using explicit move and resize
+            self.move(screen_geometry.topLeft())
+            self.resize(screen_geometry.size())
+
+            self.setMinimumSize(512, 512)
+            # Ensure maximum size is at least the minimum size and not smaller than the available geometry
+            max_width = max(screen_geometry.width(), self.minimumWidth())
+            max_height = max(screen_geometry.height(), self.minimumHeight())
+            self.setMaximumSize(max_width, max_height)
+
+        self.setWindowIcon(
+            QIcon(
+                os.path.join(self.path_settings.base_path, "images/icon.png")
+            )
+        )
         self.set_window_title()
 
     def center(self):

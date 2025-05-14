@@ -1,12 +1,12 @@
 import os
 
 from PIL import Image
+from PIL.ImageQt import fromqimage
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QFileDialog, QGraphicsScene
 from PIL.ImageQt import ImageQt
 from PySide6.QtGui import QPixmap, QImage, QPen, QPainter
 
-from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
 from airunner.utils.image import (
     convert_binary_to_image,
@@ -226,15 +226,16 @@ class InputImage(BaseWidget):
         self.delete_image()
 
     def import_image(self):
-        self._import_path, _ = QFileDialog.getOpenFileName(
-            self.window(),
-            "Open Image",
-            self._import_path,
-            f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
-        )
-        if self._import_path == "":
-            return
-        self.load_image(os.path.abspath(self._import_path))
+        if self.settings_key == "drawing_pad_settings":
+            self._import_path, _ = QFileDialog.getOpenFileName(
+                self.window(),
+                "Open Image",
+                self._import_path,
+                f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
+            )
+            if self._import_path == "":
+                return
+            self.load_image(os.path.abspath(self._import_path))
 
     def load_image(self, file_path: str):
         image = Image.open(file_path)
@@ -372,40 +373,40 @@ class InputImage(BaseWidget):
             and self._scene
             and hasattr(self._scene, "active_image")
         ):
-            from PIL.ImageQt import fromqimage
+            if self._scene.active_image is not None:
+                image = fromqimage(self._scene.active_image)
+                base_64_image = convert_image_to_binary(image)
 
-            image = fromqimage(self._scene.active_image)
-            base_64_image = convert_image_to_binary(image)
-            if self.is_mask:
-                self.update_drawing_pad_settings("mask", base_64_image)
-                model = self.drawing_pad_settings.__class__.objects.first()
-                model.mask = base_64_image
-                model.save()
-            elif (
-                self.settings_key == "controlnet_settings"
-                and hasattr(self, "use_generated_image")
-                and self.use_generated_image
-            ):
-                self.update_controlnet_settings(
-                    "generated_image", base_64_image
-                )
-                model = self.controlnet_settings.__class__.objects.first()
-                model.generated_image = base_64_image
-                model.save()
-            elif self.settings_key == "outpaint_settings":
-                self.update_outpaint_settings("image", base_64_image)
-                model = self.outpaint_settings.__class__.objects.first()
-                model.image = base_64_image
-                model.save()
-            elif self.settings_key == "image_to_image_settings":
-                self.update_image_to_image_settings("image", base_64_image)
-                model = self.image_to_image_settings.__class__.objects.first()
-                model.image = base_64_image
-                model.save()
-            else:
-                self.update_current_settings("image", base_64_image)
-            # After saving, reload to ensure UI is in sync
-            self.load_image_from_settings()
+                if self.is_mask:
+                    self.update_drawing_pad_settings("mask", base_64_image)
+                    model = self.drawing_pad_settings.__class__.objects.first()
+                    model.mask = base_64_image
+                    model.save()
+                elif (
+                    self.settings_key == "controlnet_settings"
+                    and hasattr(self, "use_generated_image")
+                    and self.use_generated_image
+                ):
+                    self.update_controlnet_settings(
+                        "generated_image", base_64_image
+                    )
+                    model = self.controlnet_settings.__class__.objects.first()
+                    model.generated_image = base_64_image
+                    model.save()
+                elif self.settings_key == "outpaint_settings":
+                    self.update_outpaint_settings("image", base_64_image)
+                    model = self.outpaint_settings.__class__.objects.first()
+                    model.image = base_64_image
+                    model.save()
+                elif self.settings_key == "image_to_image_settings":
+                    self.update_image_to_image_settings("image", base_64_image)
+                    model = self.image_to_image_settings.__class__.objects.first()
+                    model.image = base_64_image
+                    model.save()
+                else:
+                    self.update_current_settings("image", base_64_image)
+                # After saving, reload to ensure UI is in sync
+                self.load_image_from_settings()
 
     # Patch InputImageScene to call save after drawing
     def _patch_scene_for_persistence(self):

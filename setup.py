@@ -3,18 +3,17 @@ from setuptools import setup, find_packages
 extras_require = {
     # These are optional dependencies that will change the
     # behavior of the application or add new features if installed.
-    "nvidia": [  # NVIDIA dependencies: skip if installing NVIDIA manually
-        "nvidia-pyindex==1.0.9",
-        "nvidia-cuda-runtime-cu12",
+    "nvidia": [  # NVIDIA dependencies:
+        "nvidia-cuda-runtime-cu12",  # This package provides CUDA 12 runtime
     ],
     "gui": [  # GUI dependencies
-        "PySide6==6.7.0",
-        "PySide6_Addons==6.7.0",
-        "PySide6_Essentials==6.7.0",
+        "PySide6==6.9.0",
+        "PySide6_Addons==6.9.0",
+        "PySide6_Essentials==6.9.0",
         "nodegraphqt==0.6.38",
     ],
     "linux": [  # Linux-specific dependencies
-        # "faiss-gpu==1.7.2",
+        # "faiss-gpu==1.7.2", # If faiss-gpu is from NVIDIA or a custom index, it needs similar handling
         "tensorrt==10.9.0.34",
     ],
     "dev": [  # Development dependencies
@@ -29,7 +28,7 @@ extras_require = {
         "diffusers==0.33.1",
         "controlnet_aux==0.0.9",
         "safetensors==0.5.2",
-        "compel==2.0.3",
+        "compel==2.1.0",
         "tomesd==0.1.3",
         "timm<=0.6.7",  # Timm is marked at a lower version for compel, we upgrade after installing
     ],
@@ -40,9 +39,9 @@ extras_require = {
         "sentence_transformers==3.4.1",
         "sounddevice==0.5.1",
         "pyttsx3==2.91",
-        "cryptography==44.0.0",
+        "cryptography==44.0.3",
         "llama-index==0.12.14",
-        "llama-index-readers-file==0.4.4",
+        "llama-index-readers-file==0.4.7",
         "llama-index-readers-web==0.3.5",
         "llama-index-llms-huggingface==0.4.2",
         "llama-index-llms-groq==0.3.1",
@@ -54,12 +53,11 @@ extras_require = {
         "EbookLib==0.18",
         "html2text==2024.2.26",
         "rake_nltk==1.0.6",
-        # "tf-keras==2.18.0", # Removed as it causes issues on Windows with dlopenflags
         "peft==0.15.2",
-        "lxml_html_clean==0.4.1",
-        # "flash_attn==2.7.4.post1",
+        # "flash_attn==2.7.4.post1", # flash-attn usually requires specific build steps.
         # Summarizations (basic)
         "sumy==0.11.0",
+        "sentencepiece==0.2.0",
     ],
     "llm_weather": [  # LLM dependencies for weather (requires llm dependencies)
         "requests-cache==1.2.1",
@@ -78,17 +76,29 @@ extras_require["all"] = []
 extras_require["all_dev"] = []
 extras_require["windows"] = []
 
-for k, v in extras_require.items():
+for k, v_list in extras_require.items():
     if k == "all":
         continue
     if k != "dev":
-        extras_require["all"].extend(v)
-    extras_require["all_dev"].extend(v)
-    extras_require["windows"].extend(v if k != "linux" else [])
+        extras_require["all"].extend(v_list)
+    extras_require["all_dev"].extend(v_list)
+
+for k, v in extras_require.items():
+    if k in ["all", "all_dev", "windows"]:
+        continue
+    if k != "dev":
+        if k not in extras_require["all"]:
+            extras_require["all"].extend(v)
+    if k not in extras_require["all_dev"]:
+        extras_require["all_dev"].extend(v)
+    if k != "linux":
+        if k not in extras_require["windows"]:
+            extras_require["windows"].extend(v)
+
 
 setup(
     name="airunner",
-    version="4.6.5",
+    version="4.7.0",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -99,19 +109,19 @@ setup(
     url="https://github.com/Capsize-Games/airunner",
     package_dir={"": "src"},
     packages=find_packages("src"),
-    python_requires=">=3.10.17",
+    python_requires=">=3.13.3",
     install_requires=[
         "torch",
         "torchvision",
         "torchaudio",
         "torchao",
-        "accelerate==1.3.0",
+        "accelerate==1.6.0",
         "huggingface-hub>=0.24.0,<1.0",
         "tokenizers==0.21.1",
         "optimum==1.24.0",
-        "numpy==1.26.4",
+        "numpy==2.2.5",
         "pillow==10.4.0",
-        "alembic==1.14.1",
+        "alembic==1.15.2",
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
         "setuptools==78.1.0",

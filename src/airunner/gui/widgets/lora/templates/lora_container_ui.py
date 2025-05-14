@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'lora_container.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -108,15 +108,15 @@ class Ui_lora_container(object):
         sizePolicy.setHeightForWidth(self.lora_scale_slider.sizePolicy().hasHeightForWidth())
         self.lora_scale_slider.setSizePolicy(sizePolicy)
         self.lora_scale_slider.setMinimumSize(QSize(0, 0))
-        self.lora_scale_slider.setProperty("slider_minimum", 0)
-        self.lora_scale_slider.setProperty("slider_maximum", 100)
-        self.lora_scale_slider.setProperty("spinbox_minimum", 0.000000000000000)
-        self.lora_scale_slider.setProperty("spinbox_maximum", 1.000000000000000)
-        self.lora_scale_slider.setProperty("display_as_float", True)
-        self.lora_scale_slider.setProperty("slider_single_step", 1)
-        self.lora_scale_slider.setProperty("slider_page_step", 5)
-        self.lora_scale_slider.setProperty("spinbox_single_step", 0.010000000000000)
-        self.lora_scale_slider.setProperty("spinbox_page_step", 0.100000000000000)
+        self.lora_scale_slider.setProperty(u"slider_minimum", 0)
+        self.lora_scale_slider.setProperty(u"slider_maximum", 100)
+        self.lora_scale_slider.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.lora_scale_slider.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.lora_scale_slider.setProperty(u"display_as_float", True)
+        self.lora_scale_slider.setProperty(u"slider_single_step", 1)
+        self.lora_scale_slider.setProperty(u"slider_page_step", 5)
+        self.lora_scale_slider.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.lora_scale_slider.setProperty(u"spinbox_page_step", 0.100000000000000)
 
         self.verticalLayout.addWidget(self.lora_scale_slider)
 
@@ -165,8 +165,8 @@ class Ui_lora_container(object):
         self.pushButton.setText(QCoreApplication.translate("lora_container", u"Scan for LoRA", None))
         self.label.setText(QCoreApplication.translate("lora_container", u"Lora", None))
         self.apply_lora_button.setText(QCoreApplication.translate("lora_container", u"Apply Changes", None))
-        self.lora_scale_slider.setProperty("settings_property", QCoreApplication.translate("lora_container", u"generator_settings.lora_scale", None))
-        self.lora_scale_slider.setProperty("label_text", QCoreApplication.translate("lora_container", u"Scale", None))
+        self.lora_scale_slider.setProperty(u"settings_property", QCoreApplication.translate("lora_container", u"generator_settings.lora_scale", None))
+        self.lora_scale_slider.setProperty(u"label_text", QCoreApplication.translate("lora_container", u"Scale", None))
         self.lineEdit.setPlaceholderText(QCoreApplication.translate("lora_container", u"Search", None))
         self.toggleAllLora.setText(QCoreApplication.translate("lora_container", u"Toggle all", None))
     # retranslateUi
