@@ -156,6 +156,7 @@ ENV PATH=$CUDA_HOME/bin:$PATH
 ENV LD_LIBRARY_PATH=$VIRTUAL_ENV/lib/python3.13/site-packages/PySide6/Qt/lib:/ususe_grr/lib/x86_64-linux-gnu:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+ENV NLTK_DATA=/usr/local/share/nltk_data
 
 # Copy the application files first
 COPY --chown=${HOST_UID}:${HOST_GID} . /app/
@@ -166,8 +167,8 @@ RUN pip3.13 install --no-cache-dir pip setuptools wheel --upgrade && \
     pip3.13 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 && \
     cd /app && pip3.13 install --no-cache-dir -e .[all_dev] -U langchain-community && \
     pip3.13 install -U timm && \
-    python3.13 -c "import nltk; nltk.download('punkt')" && \
-    python3.13 -c "import nltk; nltk.download('punkt_tab')" && \
+    python3.13 -c "import nltk; nltk.download('punkt', download_dir='/usr/local/share/nltk_data')" && \
+    python3.13 -c "import nltk; nltk.download('punkt_tab', download_dir='/usr/local/share/nltk_data')" && \
     rm -rf /tmp/* /var/tmp/* /root/.cache/pip
 
 USER ${HOST_UID}:${HOST_GID}
