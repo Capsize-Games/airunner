@@ -520,19 +520,19 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>250</width>
+           <width>350</width>
            <height>0</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>16777215</width>
+           <width>350</width>
            <height>16777215</height>
           </size>
          </property>
          <property name="baseSize">
           <size>
-           <width>250</width>
+           <width>350</width>
            <height>0</height>
           </size>
          </property>
@@ -581,13 +581,13 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>16777215</width>
+           <width>512</width>
            <height>16777215</height>
           </size>
          </property>
          <property name="baseSize">
           <size>
-           <width>275</width>
+           <width>0</width>
            <height>0</height>
           </size>
          </property>

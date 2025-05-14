@@ -2,12 +2,14 @@ from typing import Optional, Dict
 
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QApplication  # ADDED QApplication
 
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.canvas.templates.canvas_ui import Ui_canvas
 from airunner.utils.application import set_widget_state
+from airunner.utils.widgets import load_splitter_settings
 
 
 class CanvasWidget(BaseWidget):
@@ -52,7 +54,20 @@ class CanvasWidget(BaseWidget):
         }
         self._initialized: bool = False
         self._splitters = ["canvas_splitter"]
+        self._default_splitter_settings_applied = False
         super().__init__(*args, **kwargs)
+
+        # Configure default splitter sizes for canvas_splitter
+        # Assuming the main canvas area is the second panel (index 1)
+        default_canvas_splitter_config = {
+            "canvas_splitter": {"index_to_maximize": 1, "min_other_size": 50}
+        }
+        load_splitter_settings(
+            self.ui,
+            self._splitters,  # self._splitters is ["canvas_splitter"]
+            default_maximize_config=default_canvas_splitter_config,
+        )
+
         current_tool = self.current_tool
         show_grid = self.grid_settings.show_grid
 
@@ -166,12 +181,41 @@ class CanvasWidget(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
+        if not self._default_splitter_settings_applied and self.isVisible():
+            self._apply_default_splitter_settings()
+            self._default_splitter_settings_applied = True
+
         if not self._initialized:
             self._initialized = True
             self._update_cursor()
 
     def on_canvas_update_cursor_signal(self, message: Dict):
         self._update_cursor(message)
+
+    def _apply_default_splitter_settings(self):
+        """
+        Applies default splitter sizes. Called to ensure
+        widget geometry is more likely to be initialized.
+        """
+        if hasattr(self, "ui") and self.ui is not None:
+            QApplication.processEvents()  # Ensure pending layout events are processed
+            default_canvas_splitter_config = {
+                "canvas_splitter": {
+                    "index_to_maximize": 1,
+                    "min_other_size": 50,
+                }
+            }
+            load_splitter_settings(
+                self.ui,
+                self._splitters,  # Uses self._splitters defined in __init__
+                default_maximize_config=default_canvas_splitter_config,
+            )
+        else:
+            # This case should ideally not happen if __init__ completed successfully.
+            # Consider logging if a logger is available and configured for this class.
+            print(
+                f"Error in CanvasWidget: UI not available when attempting to apply default splitter settings."
+            )
 
     def _update_cursor(self, message: Optional[Dict] = None):
         message = message or {}
