@@ -12,7 +12,7 @@ class InputImageContainer(BaseWidget):
         self.signal_handlers = {
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
             SignalCode.MASK_UPDATED: self.on_mask_generator_worker_response_signal,
-            SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL: self.on_load_image_from_grid_signal,
+            # SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL: self.on_load_image_from_grid_signal,
         }
         super().__init__(*args, **kwargs)
         self.input_image = None

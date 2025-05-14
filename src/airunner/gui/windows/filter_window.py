@@ -8,6 +8,7 @@ from airunner.gui.widgets.slider.filter_slider_widget import FilterSliderWidget
 from airunner.gui.windows.base_window import BaseWindow
 from airunner.gui.windows.filter_window_ui import Ui_filter_window
 from airunner.data.session_manager import session_scope
+from PySide6.QtCore import QTimer
 
 
 class FilterWindow(BaseWindow):
@@ -31,6 +32,12 @@ class FilterWindow(BaseWindow):
         self.image_filter_model_name = self.image_filter.name
         self.window_title = self.image_filter.display_name
         self._filter = None
+
+        self._debounce_timer = QTimer(self)
+        self._debounce_timer.setSingleShot(True)
+        self._debounce_timer.setInterval(250)  # 250ms debounce
+        self._debounce_timer.timeout.connect(self._do_preview_filter)
+
         self.exec()
 
     def showEvent(self, event):
@@ -116,4 +123,9 @@ class FilterWindow(BaseWindow):
         super().accept()
 
     def preview_filter(self):
+        # Debounce the preview call
+        self._debounce_timer.stop()
+        self._debounce_timer.start()
+
+    def _do_preview_filter(self):
         self.api.art.image_filter.preview(self.filter_object())

@@ -85,12 +85,12 @@ class SettingsWindow(BaseWindow):
 
     def __init__(self, **kwargs):
         self.widgets = {}
-        self.qsettings = get_qsettings()
-        super().__init__(**kwargs)
         self.model = None
         self.scroll_widget = None
         self.scroll_layout = None
         self.highlight_delegate = None
+        self.qsettings = get_qsettings()
+        super().__init__(**kwargs)
         self.emit_signal(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
 
     def showEvent(self, event):
@@ -346,6 +346,9 @@ class SettingsWindow(BaseWindow):
         self.qsettings.sync()
 
     def on_item_clicked(self, index):
+        if not self.model:
+            self.logger.error("Model is not initialized.")
+            return
         item = self.model.itemFromIndex(index)
         if item.parent() is None:
             return
@@ -364,11 +367,11 @@ class SettingsWindow(BaseWindow):
         elif name == "dark_mode":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("dark_mode_enabled", checked)
-            self.emit_signal(SignalCode.REFRESH_STYLESHEET_SIGNAL)
+            self.api.refresh_stylesheet(dark_mode=checked)
         elif name == "override_system_theme":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("override_system_theme", checked)
-            self.emit_signal(SignalCode.REFRESH_STYLESHEET_SIGNAL)
+            self.api.refresh_stylesheet(override_system_theme=checked)
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("latest_version_check", checked)

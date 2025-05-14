@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'llm_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -47,7 +47,7 @@ class Ui_llm_widget(object):
         if QIcon.hasThemeIcon(iconThemeName):
             icon = QIcon.fromTheme(iconThemeName)
         else:
-            icon.addFile(u"../../../", QSize(), QIcon.Normal, QIcon.Off)
+            icon.addFile(u"../../../", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
 
         self.tabWidget.addTab(self.chat, icon, "")
         self.preferences = QWidget()
@@ -65,7 +65,7 @@ class Ui_llm_widget(object):
         if QIcon.hasThemeIcon(iconThemeName):
             icon1 = QIcon.fromTheme(iconThemeName)
         else:
-            icon1.addFile(u"../../../", QSize(), QIcon.Normal, QIcon.Off)
+            icon1.addFile(u"../../../", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
 
         self.tabWidget.addTab(self.preferences, icon1, "")
         self.settings = QWidget()
@@ -83,7 +83,7 @@ class Ui_llm_widget(object):
         if QIcon.hasThemeIcon(iconThemeName):
             icon2 = QIcon.fromTheme(iconThemeName)
         else:
-            icon2.addFile(u"../../../", QSize(), QIcon.Normal, QIcon.Off)
+            icon2.addFile(u"../../../", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
 
         self.tabWidget.addTab(self.settings, icon2, "")
 

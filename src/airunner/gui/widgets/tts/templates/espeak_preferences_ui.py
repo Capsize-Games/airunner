@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'espeak_preferences.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -43,29 +43,29 @@ class Ui_espeak_preferences(object):
         self.gridLayout_8.setContentsMargins(10, 10, 10, 10)
         self.pitch = SliderWidget(self.espeak)
         self.pitch.setObjectName(u"pitch")
-        self.pitch.setProperty("slider_minimum", 1)
-        self.pitch.setProperty("slider_maximum", 100)
-        self.pitch.setProperty("spinbox_minimum", 0.000000000000000)
-        self.pitch.setProperty("spinbox_maximum", 1.000000000000000)
-        self.pitch.setProperty("display_as_float", True)
-        self.pitch.setProperty("slider_single_step", 1)
-        self.pitch.setProperty("slider_page_step", 10)
-        self.pitch.setProperty("spinbox_single_step", 0.010000000000000)
-        self.pitch.setProperty("spinbox_page_step", 0.100000000000000)
+        self.pitch.setProperty(u"slider_minimum", 1)
+        self.pitch.setProperty(u"slider_maximum", 100)
+        self.pitch.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.pitch.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.pitch.setProperty(u"display_as_float", True)
+        self.pitch.setProperty(u"slider_single_step", 1)
+        self.pitch.setProperty(u"slider_page_step", 10)
+        self.pitch.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.pitch.setProperty(u"spinbox_page_step", 0.100000000000000)
 
         self.gridLayout_8.addWidget(self.pitch, 5, 0, 1, 1)
 
         self.volume = SliderWidget(self.espeak)
         self.volume.setObjectName(u"volume")
-        self.volume.setProperty("slider_minimum", 1)
-        self.volume.setProperty("slider_maximum", 100)
-        self.volume.setProperty("spinbox_minimum", 0.000000000000000)
-        self.volume.setProperty("spinbox_maximum", 1.000000000000000)
-        self.volume.setProperty("display_as_float", True)
-        self.volume.setProperty("slider_single_step", 1)
-        self.volume.setProperty("slider_page_step", 10)
-        self.volume.setProperty("spinbox_single_step", 0.010000000000000)
-        self.volume.setProperty("spinbox_page_step", 0.100000000000000)
+        self.volume.setProperty(u"slider_minimum", 1)
+        self.volume.setProperty(u"slider_maximum", 100)
+        self.volume.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.volume.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.volume.setProperty(u"display_as_float", True)
+        self.volume.setProperty(u"slider_single_step", 1)
+        self.volume.setProperty(u"slider_page_step", 10)
+        self.volume.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.volume.setProperty(u"spinbox_page_step", 0.100000000000000)
 
         self.gridLayout_8.addWidget(self.volume, 6, 0, 1, 1)
 
@@ -112,15 +112,15 @@ class Ui_espeak_preferences(object):
 
         self.rate = SliderWidget(self.espeak)
         self.rate.setObjectName(u"rate")
-        self.rate.setProperty("slider_minimum", 0)
-        self.rate.setProperty("slider_maximum", 300)
-        self.rate.setProperty("spinbox_minimum", 0.000000000000000)
-        self.rate.setProperty("spinbox_maximum", 3.000000000000000)
-        self.rate.setProperty("display_as_float", True)
-        self.rate.setProperty("slider_single_step", 1)
-        self.rate.setProperty("slider_page_step", 10)
-        self.rate.setProperty("spinbox_single_step", 0.010000000000000)
-        self.rate.setProperty("spinbox_page_step", 0.100000000000000)
+        self.rate.setProperty(u"slider_minimum", 0)
+        self.rate.setProperty(u"slider_maximum", 300)
+        self.rate.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.rate.setProperty(u"spinbox_maximum", 3.000000000000000)
+        self.rate.setProperty(u"display_as_float", True)
+        self.rate.setProperty(u"slider_single_step", 1)
+        self.rate.setProperty(u"slider_page_step", 10)
+        self.rate.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.rate.setProperty(u"spinbox_page_step", 0.100000000000000)
 
         self.gridLayout_8.addWidget(self.rate, 4, 0, 1, 1)
 
@@ -151,10 +151,10 @@ class Ui_espeak_preferences(object):
     def retranslateUi(self, espeak_preferences):
         espeak_preferences.setWindowTitle(QCoreApplication.translate("espeak_preferences", u"Form", None))
         self.espeak.setTitle(QCoreApplication.translate("espeak_preferences", u"Espeak", None))
-        self.pitch.setProperty("settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.pitch", None))
-        self.pitch.setProperty("label_text", QCoreApplication.translate("espeak_preferences", u"Pitch", None))
-        self.volume.setProperty("settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.volume", None))
-        self.volume.setProperty("label_text", QCoreApplication.translate("espeak_preferences", u"Volume", None))
+        self.pitch.setProperty(u"settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.pitch", None))
+        self.pitch.setProperty(u"label_text", QCoreApplication.translate("espeak_preferences", u"Pitch", None))
+        self.volume.setProperty(u"settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.volume", None))
+        self.volume.setProperty(u"label_text", QCoreApplication.translate("espeak_preferences", u"Volume", None))
         self.label_3.setText(QCoreApplication.translate("espeak_preferences", u"Robotic, fast, no VRAM usage", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("espeak_preferences", u"Language", None))
         self.label.setText(QCoreApplication.translate("espeak_preferences", u"Override the system language", None))
@@ -162,8 +162,8 @@ class Ui_espeak_preferences(object):
         self.gender_combobox.setItemText(0, QCoreApplication.translate("espeak_preferences", u"Male", None))
         self.gender_combobox.setItemText(1, QCoreApplication.translate("espeak_preferences", u"Female", None))
 
-        self.rate.setProperty("settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.rate", None))
-        self.rate.setProperty("label_text", QCoreApplication.translate("espeak_preferences", u"Rate", None))
+        self.rate.setProperty(u"settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.rate", None))
+        self.rate.setProperty(u"label_text", QCoreApplication.translate("espeak_preferences", u"Rate", None))
         self.groupBox.setTitle(QCoreApplication.translate("espeak_preferences", u"Voice", None))
     # retranslateUi
 

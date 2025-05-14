@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'update.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -36,29 +36,29 @@ class Ui_update_available(object):
         font.setBold(False)
         self.label.setFont(font)
 
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label)
 
         self.current_version_label = QLabel(self.layoutWidget)
         self.current_version_label.setObjectName(u"current_version_label")
 
-        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.current_version_label)
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.current_version_label)
 
         self.latest_version_label = QLabel(self.layoutWidget)
         self.latest_version_label.setObjectName(u"latest_version_label")
 
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.latest_version_label)
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.latest_version_label)
 
         self.label_2 = QLabel(self.layoutWidget)
         self.label_2.setObjectName(u"label_2")
 
-        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.label_2)
+        self.formLayout.setWidget(3, QFormLayout.ItemRole.LabelRole, self.label_2)
 
         self.buttonBox = QDialogButtonBox(self.layoutWidget)
         self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
         self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
 
-        self.formLayout.setWidget(4, QFormLayout.LabelRole, self.buttonBox)
+        self.formLayout.setWidget(4, QFormLayout.ItemRole.LabelRole, self.buttonBox)
 
 
         self.retranslateUi(update_available)

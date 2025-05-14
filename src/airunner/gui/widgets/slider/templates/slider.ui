@@ -180,56 +180,7 @@
   </layout>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>slider</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>slider_widget</receiver>
-   <slot>handle_slider_valueChanged(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>186</x>
-     <y>33</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-3</x>
-     <y>29</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>slider_spinbox</sender>
-   <signal>valueChanged(double)</signal>
-   <receiver>slider_widget</receiver>
-   <slot>handle_spinbox_valueChanged(double)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>419</x>
-     <y>34</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>391</x>
-     <y>-12</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>slider</sender>
-   <signal>sliderReleased()</signal>
-   <receiver>slider_widget</receiver>
-   <slot>on_slider_sliderReleased()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>202</x>
-     <y>34</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-5</x>
-     <y>16</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>handle_spinbox_valueChanged(double)</slot>
   <slot>handle_slider_valueChanged(int)</slot>

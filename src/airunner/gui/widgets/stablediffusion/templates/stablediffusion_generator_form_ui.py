@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'stablediffusion_generator_form.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,11 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
-    QGridLayout, QGroupBox, QHBoxLayout, QLabel,
-    QLineEdit, QPlainTextEdit, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QSplitter,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
+    QSizePolicy, QSpacerItem, QSplitter, QVBoxLayout,
+    QWidget)
 import airunner.feather_rc
 
 class Ui_stablediffusion_generator_form(object):
@@ -30,7 +30,7 @@ class Ui_stablediffusion_generator_form(object):
         font = QFont()
         font.setPointSize(8)
         stablediffusion_generator_form.setFont(font)
-        stablediffusion_generator_form.setCursor(QCursor(Qt.PointingHandCursor))
+        stablediffusion_generator_form.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.gridLayout_4 = QGridLayout(stablediffusion_generator_form)
         self.gridLayout_4.setSpacing(0)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
@@ -148,11 +148,6 @@ class Ui_stablediffusion_generator_form(object):
         self.sdxl_settings = QVBoxLayout(self.sdxl_settings_container)
         self.sdxl_settings.setObjectName(u"sdxl_settings")
         self.sdxl_settings.setContentsMargins(0, 0, 0, 0)
-        self.use_refiner_checkbox = QCheckBox(self.sdxl_settings_container)
-        self.use_refiner_checkbox.setObjectName(u"use_refiner_checkbox")
-
-        self.sdxl_settings.addWidget(self.use_refiner_checkbox)
-
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.verticalLayout = QVBoxLayout()
@@ -356,7 +351,7 @@ class Ui_stablediffusion_generator_form(object):
         self.generate_button.setMinimumSize(QSize(30, 30))
         self.generate_button.setMaximumSize(QSize(30, 30))
         icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.generate_button.setIcon(icon)
 
         self.horizontalLayout_7.addWidget(self.generate_button)
@@ -367,9 +362,9 @@ class Ui_stablediffusion_generator_form(object):
         self.interrupt_button.setSizePolicy(sizePolicy1)
         self.interrupt_button.setMinimumSize(QSize(30, 30))
         self.interrupt_button.setMaximumSize(QSize(30, 30))
-        self.interrupt_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.interrupt_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.interrupt_button.setIcon(icon1)
 
         self.horizontalLayout_7.addWidget(self.interrupt_button)
@@ -384,8 +379,7 @@ class Ui_stablediffusion_generator_form(object):
         QWidget.setTabOrder(self.secondary_prompt, self.add_prompt_button)
         QWidget.setTabOrder(self.add_prompt_button, self.negative_prompt)
         QWidget.setTabOrder(self.negative_prompt, self.secondary_negative_prompt)
-        QWidget.setTabOrder(self.secondary_negative_prompt, self.use_refiner_checkbox)
-        QWidget.setTabOrder(self.use_refiner_checkbox, self.image_presets)
+        QWidget.setTabOrder(self.secondary_negative_prompt, self.image_presets)
         QWidget.setTabOrder(self.image_presets, self.quality_effects)
         QWidget.setTabOrder(self.quality_effects, self.original_size_width)
         QWidget.setTabOrder(self.original_size_width, self.original_size_height)
@@ -409,7 +403,6 @@ class Ui_stablediffusion_generator_form(object):
         self.add_prompt_button.clicked.connect(stablediffusion_generator_form.handle_add_prompt_clicked)
         self.image_presets.currentTextChanged.connect(stablediffusion_generator_form.handle_image_presets_changed)
         self.quality_effects.currentTextChanged.connect(stablediffusion_generator_form.handle_quality_effects_changed)
-        self.use_refiner_checkbox.toggled.connect(stablediffusion_generator_form.on_use_refiner_checkbox_toggled)
         self.prompt.textChanged.connect(stablediffusion_generator_form.handle_prompt_changed)
         self.secondary_prompt.textChanged.connect(stablediffusion_generator_form.handle_second_prompt_changed)
         self.negative_prompt.textChanged.connect(stablediffusion_generator_form.handle_negative_prompt_changed)
@@ -428,10 +421,6 @@ class Ui_stablediffusion_generator_form(object):
         self.negative_prompt_label.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative Prompt", None))
         self.negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative prompt", None))
         self.secondary_negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Second negative prompt", None))
-#if QT_CONFIG(tooltip)
-        self.use_refiner_checkbox.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Uses second refiner model to enhance image", None))
-#endif // QT_CONFIG(tooltip)
-        self.use_refiner_checkbox.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Use refiner model", None))
         self.label_2.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Presets", None))
         self.label_3.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Quality Effects", None))
         self.quality_effects.setItemText(0, "")
