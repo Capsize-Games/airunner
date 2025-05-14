@@ -161,7 +161,7 @@ services:
 
 Choose this if you want to run AI Runner natively on your machine without Docker.
 
-The following instructions will assume the following directory structure. *You should only deviate from this structure if you know what you're doing.*
+These instructions will assume the following directory structure. *You should only deviate from this structure if you know what you're doing.*
 
 ```plaintext
 ~/Projects
@@ -258,6 +258,7 @@ fi
    pip install -e airunner[all_dev]
    pip install -U timm
    python -c "import nltk; nltk.download('punkt')"
+   python -c "import nltk; nltk.download('punkt_tab')"
    ```
 8. Run app 
    ```bash
