@@ -1,6 +1,4 @@
 from PySide6.QtCore import Slot
-import threading
-import time
 import sounddevice as sd
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.sound_settings.templates.sound_settings_ui import (
