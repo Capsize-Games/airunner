@@ -83,8 +83,8 @@ class BrushScene(CustomScene):
         self._create_mask_image()
         super().delete_image()
 
-    def initialize_image(self, image: Image = None):
-        super().initialize_image(image)
+    def initialize_image(self, image: Image = None, generated: bool = False):
+        super().initialize_image(image, generated=generated)
         self.stop_painter()
         self.set_mask()
         self.set_painter(
