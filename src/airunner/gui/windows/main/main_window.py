@@ -834,7 +834,18 @@ class MainWindow(
 
         self.set_stylesheet()
         self.restore_state()
-        load_splitter_settings(self.ui, ["main_window_splitter"])
+        # Configure default splitter sizes to maximize the canvas area (index 1)
+        default_splitter_config = {
+            "main_window_splitter": {
+                "index_to_maximize": 1,
+                "min_other_size": 50,
+            }
+        }
+        load_splitter_settings(
+            self.ui,
+            ["main_window_splitter"],
+            default_maximize_config=default_splitter_config,
+        )
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
@@ -879,7 +890,7 @@ class MainWindow(
         self.ui.actionCopy.deleteLater()
         self.ui.actionPaste.deleteLater()
         self.ui.actionRotate_90_clockwise.deleteLater()
-        self.ui.actionRotate_90_counter_clockwise.deleteLater()
+        self.ui.actionRotate_90_counterclockwise.deleteLater()
         self.ui.actionPrompt_Browser.deleteLater()
 
     def _load_plugins(self):
