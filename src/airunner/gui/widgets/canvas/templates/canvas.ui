@@ -513,14 +513,14 @@
         </property>
         <widget class="StableDiffusionGeneratorForm" name="prompts" native="true">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
          <property name="minimumSize">
           <size>
-           <width>225</width>
+           <width>250</width>
            <height>0</height>
           </size>
          </property>
@@ -532,13 +532,25 @@
          </property>
          <property name="baseSize">
           <size>
-           <width>225</width>
+           <width>250</width>
            <height>0</height>
           </size>
          </property>
         </widget>
         <widget class="CustomGraphicsView" name="canvas_container">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="minimumSize">
+          <size>
+           <width>1</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="baseSize">
           <size>
            <width>512</width>
            <height>0</height>
@@ -556,14 +568,14 @@
         </widget>
         <widget class="StablediffusionToolTabWidget" name="widget" native="true">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
          <property name="minimumSize">
           <size>
-           <width>275</width>
+           <width>0</width>
            <height>0</height>
           </size>
          </property>

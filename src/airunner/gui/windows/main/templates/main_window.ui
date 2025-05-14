@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>920</width>
-    <height>645</height>
+    <width>1257</width>
+    <height>621</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -107,14 +107,14 @@
            <bool>true</bool>
           </property>
           <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="minimumSize">
            <size>
-            <width>200</width>
+            <width>250</width>
             <height>0</height>
            </size>
           </property>
@@ -126,21 +126,22 @@
           </property>
           <property name="baseSize">
            <size>
-            <width>0</width>
+            <width>250</width>
             <height>0</height>
            </size>
           </property>
+          <layout class="QGridLayout" name="gridLayout_6"/>
          </widget>
          <widget class="QWidget" name="center_widget" native="true">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="minimumSize">
            <size>
-            <width>512</width>
+            <width>64</width>
             <height>0</height>
            </size>
           </property>
@@ -200,7 +201,7 @@
                <item row="0" column="0">
                 <widget class="CanvasWidget" name="canvas" native="true">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -255,14 +256,14 @@
          </widget>
          <widget class="QWidget" name="panel_container" native="true">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="minimumSize">
            <size>
-            <width>200</width>
+            <width>300</width>
             <height>0</height>
            </size>
           </property>
@@ -274,7 +275,7 @@
           </property>
           <property name="baseSize">
            <size>
-            <width>200</width>
+            <width>300</width>
             <height>0</height>
            </size>
           </property>
@@ -297,7 +298,7 @@
            <item>
             <widget class="ToolTabWidget" name="tool_tab_widget" native="true">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -324,7 +325,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>920</width>
+     <width>1257</width>
      <height>23</height>
     </rect>
    </property>

@@ -15,7 +15,7 @@ QDoubleSpinBox {
     border: 1px solid rgba(0, 132, 185, 100);
     padding: 2px 5px;
     color: #1f1f1f;
-    max-width: 50px;
+    max-width: 55px;
 }
 
 QDoubleSpinBox::up-button {
