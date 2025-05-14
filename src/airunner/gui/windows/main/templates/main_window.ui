@@ -256,26 +256,26 @@
          </widget>
          <widget class="QWidget" name="panel_container" native="true">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="minimumSize">
            <size>
-            <width>300</width>
+            <width>350</width>
             <height>0</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>16777215</width>
+            <width>350</width>
             <height>16777215</height>
            </size>
           </property>
           <property name="baseSize">
            <size>
-            <width>300</width>
+            <width>350</width>
             <height>0</height>
            </size>
           </property>
