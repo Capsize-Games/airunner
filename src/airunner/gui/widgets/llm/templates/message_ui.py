@@ -43,7 +43,7 @@ class Ui_message(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(10, 10, 10, 10)
         self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setSpacing(5)
+        self.horizontalLayout.setSpacing(2)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.user_name = QLabel(self.message_container)
         self.user_name.setObjectName(u"user_name")
@@ -55,19 +55,27 @@ class Ui_message(object):
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
+        self.play_audio_button = QPushButton(self.message_container)
+        self.play_audio_button.setObjectName(u"play_audio_button")
+        icon = QIcon()
+        icon.addFile(u":/light/icons/feather/light/play.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.play_audio_button.setIcon(icon)
+
+        self.horizontalLayout.addWidget(self.play_audio_button)
+
         self.copy_button = QPushButton(self.message_container)
         self.copy_button.setObjectName(u"copy_button")
-        icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/copy.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.copy_button.setIcon(icon)
+        icon1 = QIcon()
+        icon1.addFile(u":/light/icons/feather/light/copy.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.copy_button.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.copy_button)
 
         self.delete_button = QPushButton(self.message_container)
         self.delete_button.setObjectName(u"delete_button")
-        icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.delete_button.setIcon(icon1)
+        icon2 = QIcon()
+        icon2.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.delete_button.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.delete_button)
 
@@ -94,7 +102,14 @@ class Ui_message(object):
 
     def retranslateUi(self, message):
         message.setWindowTitle(QCoreApplication.translate("message", u"Form", None))
+#if QT_CONFIG(tooltip)
+        message.setToolTip(QCoreApplication.translate("message", u"Copy message text", None))
+#endif // QT_CONFIG(tooltip)
         self.user_name.setText(QCoreApplication.translate("message", u"TextLabel", None))
+#if QT_CONFIG(tooltip)
+        self.play_audio_button.setToolTip(QCoreApplication.translate("message", u"Play message audio", None))
+#endif // QT_CONFIG(tooltip)
+        self.play_audio_button.setText("")
 #if QT_CONFIG(tooltip)
         self.copy_button.setToolTip(QCoreApplication.translate("message", u"Copy message", None))
 #endif // QT_CONFIG(tooltip)

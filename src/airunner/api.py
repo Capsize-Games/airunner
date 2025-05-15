@@ -184,6 +184,16 @@ class STTAPIService(APIServiceBase):
 
 
 class TTSAPIService(APIServiceBase):
+    def play_audio(self, message: str):
+        """
+        Emit a signal to play audio.
+        :param message: The message to be spoken.
+        """
+        self.emit_signal(
+            SignalCode.TTS_QUEUE_SIGNAL,
+            {"message": message, "is_end_of_message": True},
+        )
+
     def toggle(self, enabled: bool):
         """
         Emit a signal to toggle TTS on or off.
@@ -580,7 +590,12 @@ class ARTAPIService(APIServiceBase):
     def update_generator_form_values(self):
         self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
 
-    def toggle_sd(self, enabled: bool = False, callback: Optional[callable] = None, finalize: Optional[callable] = None):
+    def toggle_sd(
+        self,
+        enabled: bool = False,
+        callback: Optional[callable] = None,
+        finalize: Optional[callable] = None,
+    ):
         self.emit_signal(
             SignalCode.TOGGLE_SD_SIGNAL,
             {
@@ -695,7 +710,7 @@ class LLMAPIService(APIServiceBase):
             SignalCode.DELETE_MESSAGES_AFTER_ID,
             {"message_id": message_id},
         )
-    
+
     def send_llm_text_streamed_signal(self, response: LLMResponse):
         """
         Send a TTS request with the given response."
@@ -910,8 +925,15 @@ class API(App):
             {"prompt_id": prompt_id},
         )
 
-    def refresh_stylesheet(self, dark_mode: Optional[bool] = None, override_system_theme: Optional[bool] = None):
-        self.emit_signal(SignalCode.REFRESH_STYLESHEET_SIGNAL, {
-            "dark_mode": dark_mode,
-            "override_system_theme": override_system_theme
-        })
+    def refresh_stylesheet(
+        self,
+        dark_mode: Optional[bool] = None,
+        override_system_theme: Optional[bool] = None,
+    ):
+        self.emit_signal(
+            SignalCode.REFRESH_STYLESHEET_SIGNAL,
+            {
+                "dark_mode": dark_mode,
+                "override_system_theme": override_system_theme,
+            },
+        )
