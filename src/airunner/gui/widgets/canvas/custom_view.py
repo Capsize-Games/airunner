@@ -221,19 +221,19 @@ class CustomGraphicsView(
         self.do_draw(force_draw=data.get("force_draw", False))
 
     def on_application_settings_changed_signal(self, data: Dict):
-        if (
-            data.get("setting_name") == "grid_settings"
-            and data.get("column_name") == "canvas_color"
-            and self._canvas_color != data.get("value", self._canvas_color)
-            and self.scene
-        ):
-            self._canvas_color = data.get("value")
-            self.set_canvas_color(self.scene, self._canvas_color)
+        if data.get("setting_name") == "grid_settings":
+            if (
+                data.get("column_name") == "canvas_color"
+                and self._canvas_color != data.get("value", self._canvas_color)
+                and self.scene
+            ):
+                self._canvas_color = data.get("value")
+                self.set_canvas_color(self.scene, self._canvas_color)
 
-        if self.grid_settings.show_grid:
-            self.do_draw()
-        else:
-            self.clear_lines()
+            if self.grid_settings.show_grid:
+                self.do_draw()
+            else:
+                self.clear_lines()
 
     def do_draw(self, force_draw: bool = False, size: Optional[QSize] = None):
         if self.scene is None:
@@ -265,15 +265,6 @@ class CustomGraphicsView(
         if self.grid_item is not None:
             self.scene.removeItem(self.grid_item)
             self.grid_item = None
-
-    def clear_lines(self):
-        if self.line_group is not None:
-            # Remove the line group from the scene
-            if self.line_group.scene() == self.scene:
-                self.scene.removeItem(self.line_group)
-
-            # Delete the line group completely
-            self.line_group = None
 
     def register_line_data(self, lines_data):
         for line_data in lines_data:
