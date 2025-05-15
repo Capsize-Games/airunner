@@ -172,7 +172,8 @@ RUN pip3.13 install --no-cache-dir pip setuptools wheel --upgrade && \
     pip3.13 install -U timm && \
     python3.13 -c "import nltk; nltk.download('punkt', download_dir='/usr/local/share/nltk_data')" && \
     python3.13 -c "import nltk; nltk.download('punkt_tab', download_dir='/usr/local/share/nltk_data')" && \
-    rm -rf /tmp/* /var/tmp/* /root/.cache/pip
+    python3.13 -m unidic download
+rm -rf /tmp/* /var/tmp/* /root/.cache/pip
 
 USER ${HOST_UID}:${HOST_GID}
 WORKDIR /app
