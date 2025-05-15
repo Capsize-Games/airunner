@@ -1,4 +1,4 @@
-from typing import Optional, Type
+from typing import Optional
 from abc import ABCMeta
 import pyttsx3
 
@@ -58,13 +58,19 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             return self.tts_request.rate
         return EspeakSettings.rate.default.arg
 
+    @property
+    def status(self) -> ModelStatus:
+        """Get the current model status for TTS."""
+        return self._model_status.get(ModelType.TTS, ModelStatus.UNLOADED)
+
     def generate(self, tts_request: TTSRequest):
         """
         Generate speech from the given message.
         """
-        if not self._engine or self.model_status != ModelStatus.LOADED:
+        if not self._engine or self.status != ModelStatus.LOADED:
             self.logger.warning(
                 "TTS engine not available or not loaded. Cannot generate speech."
+                f" Current status: {self.status}"
             )
             return None
 
@@ -85,16 +91,23 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         Load and initialize the Espeak engine.
         """
         # If already loading or loaded, don't attempt to reinitialize
-        if self.model_status in [ModelStatus.LOADING, ModelStatus.LOADED]:
+        if self.status in [ModelStatus.LOADING, ModelStatus.LOADED]:
+            self.logger.debug(
+                f"Espeak engine already in {self.status} state, skipping initialization"
+            )
             return
 
-        self.logger.debug("Initializing espeak")
+        self.logger.debug(
+            f"Initializing espeak (current status: {self.status})"
+        )
         # Don't call unload() here as it triggers the cycle
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         try:
             self._engine = pyttsx3.init()
             self._initialize()
-            self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
+            self.logger.debug(
+                f"Espeak engine initialization complete, status: {self.status}"
+            )
         except Exception as e:
             self.logger.error(f"Failed to initialize espeak: {e}")
             self._engine = None
@@ -158,7 +171,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             self.logger.debug(f"Available voices: {voice_ids}")
 
             # Get desired voice/language settings
-            language_to_set = self.language or "en"
+            language_to_set = self.espeak_settings.voice.lower()
             gender_to_set = self.gender
 
             # Default voice (first available)
@@ -167,6 +180,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             # Try to find a matching voice by language
             for voice in available_voices:
                 # Voice IDs in pyttsx3+espeak often contain the language code
+                print(voice.id.lower())
                 if language_to_set in voice.id.lower():
                     selected_voice = voice
                     # If we also want to match gender and it's in the ID
@@ -185,8 +199,10 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             self.logger.debug(f"Selected voice: {selected_voice.id}")
             self._engine.setProperty("voice", selected_voice.id)
 
+            self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
+
         except Exception as e:
             self.logger.error(
                 f"Error initializing espeak engine properties: {e}"
             )
-            # Don't set state to failed here as the engine is created but properties failed
+            self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
