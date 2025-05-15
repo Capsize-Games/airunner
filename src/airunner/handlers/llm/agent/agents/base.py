@@ -1553,7 +1553,7 @@ class BaseAgent(
 
     def do_interrupt_process(self):
         if self.do_interrupt:
-            self.api.send_llm_text_streamed_signal(
+            self.api.llm.send_llm_text_streamed_signal(
                 LLMResponse(
                     name=self.botname,
                 )
@@ -1569,7 +1569,7 @@ class BaseAgent(
         do_tts_reply: bool = True,
     ):
         if response != self._complete_response and not do_not_display:
-            self.api.send_llm_text_streamed_signal(
+            self.api.llm.send_llm_text_streamed_signal(
                 LLMResponse(
                     message=response,
                     is_first_message=is_first_message,
