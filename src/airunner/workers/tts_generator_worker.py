@@ -2,11 +2,6 @@ import queue
 import re
 from typing import Optional, Type, Dict
 
-from airunner.handlers.tts.openvoice_model_manager import OpenVoiceModelManager
-from airunner.handlers.tts.speecht5_model_manager import SpeechT5ModelManager
-from airunner.handlers.tts.espeak_model_manager import (
-    EspeakModelManager,
-)
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import (
     SignalCode,
@@ -151,11 +146,24 @@ class TTSGeneratorWorker(Worker):
             return
         self._current_model = model
         if model_type is TTSModel.SPEECHT5:
-            self.tts = SpeechT5ModelManager()
+            from airunner.handlers.tts.speecht5_model_manager import (
+                SpeechT5ModelManager,
+            )
+
+            tts_model_manager_class_ = SpeechT5ModelManager
         elif model_type is TTSModel.OPENVOICE:
-            self.tts = OpenVoiceModelManager()
+            from airunner.handlers.tts.openvoice_model_manager import (
+                OpenVoiceModelManager,
+            )
+
+            tts_model_manager_class_ = OpenVoiceModelManager
         else:
-            self.tts = EspeakModelManager()
+            from airunner.handlers.tts.espeak_model_manager import (
+                EspeakModelManager,
+            )
+
+            tts_model_manager_class_ = EspeakModelManager
+        self.tts = tts_model_manager_class_()
         self.logger.debug(f"Instantiated new TTS model manager: {self.tts}")
 
     def on_add_to_queue_signal(self, data):
@@ -289,7 +297,9 @@ class TTSGeneratorWorker(Worker):
                 tts_req = TTSRequest(
                     message=message, gender=self.chatbot.gender
                 )
-            elif model_type is TTSModel.OPENVOICE:
+            elif (
+                model_type is TTSModel.OPENVOICE
+            ):
                 tts_req = OpenVoiceTTSRequest(
                     message=message, gender=self.chatbot.gender
                 )

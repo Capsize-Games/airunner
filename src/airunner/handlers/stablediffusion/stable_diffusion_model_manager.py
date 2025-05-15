@@ -1,4 +1,4 @@
-from typing import Dict, Any, Type
+from typing import Dict, Any
 
 from diffusers import (
     StableDiffusionPipeline,

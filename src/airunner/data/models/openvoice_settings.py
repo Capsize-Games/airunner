@@ -12,3 +12,4 @@ class OpenVoiceSettings(BaseModel):
     pitch = Column(Integer, default=100)
     volume = Column(Integer, default=100)
     voice = Column(String, default="default")
+    reference_speaker_path = Column(String, default="default")
