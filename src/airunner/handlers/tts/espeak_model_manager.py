@@ -180,7 +180,6 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             # Try to find a matching voice by language
             for voice in available_voices:
                 # Voice IDs in pyttsx3+espeak often contain the language code
-                print(voice.id.lower())
                 if language_to_set in voice.id.lower():
                     selected_voice = voice
                     # If we also want to match gender and it's in the ID

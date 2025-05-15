@@ -614,7 +614,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         This helps clients know when a complete response has been delivered.
         """
         self.logger.debug("Sending final message")
-        self.api.send_llm_text_streamed_signal(
+        self.api.llm.send_llm_text_streamed_signal(
             LLMResponse(
                 node_id=llm_request.node_id if llm_request else None,
                 is_end_of_message=True,

@@ -21,7 +21,7 @@ class AgentWorker(Worker):
             message["model"].generate(**message["kwargs"])
         except RuntimeError as e:
             self.logger.error(f"RuntimeError: {str(e)}")
-            self.api.send_llm_text_streamed_signal(
+            self.api.llm.send_llm_text_streamed_signal(
                 LLMResponse(
                     is_first_message=True,
                     is_end_of_message=True,
