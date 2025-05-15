@@ -589,16 +589,22 @@ class SynthesizerTrn(nn.Module):
     def voice_conversion(self, y, y_lengths, sid_src, sid_tgt, tau=1.0):
         g_src = sid_src
         g_tgt = sid_tgt
+
+        def zero_or_none(g):
+            if g is None:
+                return None
+            return torch.zeros_like(g) if self.zero_g else g
+
         z, m_q, logs_q, y_mask = self.enc_q(
             y,
             y_lengths,
-            g=g_src if not self.zero_g else torch.zeros_like(g_src),
+            g=zero_or_none(g_src),
             tau=tau,
         )
         z_p = self.flow(z, y_mask, g=g_src)
         z_hat = self.flow(z_p, y_mask, g=g_tgt, reverse=True)
         o_hat = self.dec(
             z_hat * y_mask,
-            g=g_tgt if not self.zero_g else torch.zeros_like(g_tgt),
+            g=zero_or_none(g_tgt),
         )
         return o_hat, y_mask, (z, z_p, z_hat)
