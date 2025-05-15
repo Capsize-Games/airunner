@@ -4,16 +4,23 @@ import re
 import unicodedata
 
 from transformers import AutoTokenizer
-
 from . import symbols
-punctuation = ["!", "?", "…", ",", ".", "'", "-"]
+import pdb
+from pykakasi import kakasi
+from airunner.vendor.melo.text import japanese_bert
+from airunner.vendor.melo.text.japanese_bert import get_bert_feature
+from num2words import num2words
 
 try:
     import MeCab
+    import unidic
 except ImportError as e:
-    raise ImportError("Japanese requires mecab-python3 and unidic-lite.") from e
-from num2words import num2words
+    raise ImportError(
+        "Japanese requires mecab-python3 and unidic-lite."
+    ) from e
 
+
+punctuation = ["!", "?", "…", ",", ".", "'", "-"]
 _CONVRULES = [
     # Conversion of 2 letters
     "アァ/ a a",
@@ -364,7 +371,8 @@ def hira2kata(text: str) -> str:
 
 _SYMBOL_TOKENS = set(list("・、。？！"))
 _NO_YOMI_TOKENS = set(list("「」『』―（）［］[]"))
-_TAGGER = MeCab.Tagger()
+# Set MeCab dictionary path explicitly to avoid missing mecabrc errors
+_TAGGER = MeCab.Tagger(f"-d {unidic.DICDIR}")
 
 
 def text2kata(text: str) -> str:
@@ -378,9 +386,9 @@ def text2kata(text: str) -> str:
         word, yomi = parts[0], parts[1]
         if yomi:
             try:
-                res.append(yomi.split(',')[6])
+                res.append(yomi.split(",")[6])
             except:
-                import pdb; pdb.set_trace()
+                pdb.set_trace()
         else:
             if word in _SYMBOL_TOKENS:
                 res.append(word)
@@ -536,7 +544,7 @@ def replace_punctuation(text):
 
     return replaced_text
 
-from pykakasi import kakasi
+
 # Initialize kakasi object
 kakasi = kakasi()
 # Set options for converting Chinese characters to Katakana
@@ -544,6 +552,7 @@ kakasi.setMode("J", "K")  # Chinese to Katakana
 kakasi.setMode("H", "K")  # Hiragana to Katakana
 # Convert Chinese characters to Katakana
 conv = kakasi.getConverter()
+
 
 def text_normalize(text):
     res = unicodedata.normalize("NFKC", text)
@@ -563,11 +572,12 @@ def distribute_phone(n_phone, n_word):
     return phones_per_word
 
 
-
 # tokenizer = AutoTokenizer.from_pretrained('cl-tohoku/bert-base-japanese-v3')
 
-model_id = 'tohoku-nlp/bert-base-japanese-v3'
+model_id = "tohoku-nlp/bert-base-japanese-v3"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+
 def g2p(norm_text):
 
     tokenized = tokenizer.tokenize(norm_text)
@@ -583,8 +593,8 @@ def g2p(norm_text):
         text = ""
         for ch in group:
             text += ch
-        if text == '[UNK]':
-            phs += ['_']
+        if text == "[UNK]":
+            phs += ["_"]
             word2ph += [1]
             continue
         elif text in punctuation:
@@ -607,23 +617,20 @@ def g2p(norm_text):
         phs += phonemes
     phones = ["_"] + phs + ["_"]
     tones = [0 for i in phones]
-    word2ph =  [1] + word2ph + [1]
+    word2ph = [1] + word2ph + [1]
     assert len(word2ph) == len(tokenized) + 2
     return phones, tones, word2ph
 
-def get_bert_feature(text, word2ph, device):
-    from text import japanese_bert
 
+def get_bert_feature(text, word2ph, device):
     return japanese_bert.get_bert_feature(text, word2ph, device=device)
 
 
 if __name__ == "__main__":
     # tokenizer = AutoTokenizer.from_pretrained("./bert/bert-base-japanese-v3")
     text = "こんにちは、世界！..."
-    text = 'ええ、僕はおきなと申します。こちらの小さいわらべは杏子。ご挨拶が遅れてしまいすみません。あなたの名は?'
-    text = 'あの、お前以外のみんなは、全員生きてること?'
-    from text.japanese_bert import get_bert_feature
-
+    text = "ええ、僕はおきなと申します。こちらの小さいわらべは杏子。ご挨拶が遅れてしまいすみません。あなたの名は?"
+    text = "あの、お前以外のみんなは、全員生きてること?"
     text = text_normalize(text)
     print(text)
     phones, tones, word2ph = g2p(text)

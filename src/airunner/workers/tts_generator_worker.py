@@ -4,6 +4,9 @@ from typing import Optional, Type, Dict
 
 from airunner.handlers.tts.openvoice_model_manager import OpenVoiceModelManager
 from airunner.handlers.tts.speecht5_model_manager import SpeechT5ModelManager
+from airunner.handlers.tts.espeak_model_manager import (
+    EspeakModelManager,
+)
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import (
     SignalCode,
@@ -13,7 +16,7 @@ from airunner.enums import (
     QueueType,
 )
 from airunner.workers.worker import Worker
-from airunner.settings import AIRUNNER_TTS_ON, AIRUNNER_ENABLE_OPEN_VOICE
+from airunner.settings import AIRUNNER_TTS_ON
 from airunner.handlers.tts.tts_request import (
     OpenVoiceTTSRequest,
     TTSRequest,
@@ -148,16 +151,11 @@ class TTSGeneratorWorker(Worker):
             return
         self._current_model = model
         if model_type is TTSModel.SPEECHT5:
-            tts_model_manager_class_ = SpeechT5ModelManager
-        elif AIRUNNER_ENABLE_OPEN_VOICE and model_type is TTSModel.OPENVOICE:
-            tts_model_manager_class_ = OpenVoiceModelManager
+            self.tts = SpeechT5ModelManager()
+        elif model_type is TTSModel.OPENVOICE:
+            self.tts = OpenVoiceModelManager()
         else:
-            from airunner.handlers.tts.espeak_model_manager import (
-                EspeakModelManager,
-            )
-
-            tts_model_manager_class_ = EspeakModelManager
-        self.tts = tts_model_manager_class_()
+            self.tts = EspeakModelManager()
         self.logger.debug(f"Instantiated new TTS model manager: {self.tts}")
 
     def on_add_to_queue_signal(self, data):
@@ -291,9 +289,7 @@ class TTSGeneratorWorker(Worker):
                 tts_req = TTSRequest(
                     message=message, gender=self.chatbot.gender
                 )
-            elif (
-                AIRUNNER_ENABLE_OPEN_VOICE and model_type is TTSModel.OPENVOICE
-            ):
+            elif model_type is TTSModel.OPENVOICE:
                 tts_req = OpenVoiceTTSRequest(
                     message=message, gender=self.chatbot.gender
                 )
