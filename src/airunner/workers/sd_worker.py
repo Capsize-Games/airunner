@@ -19,7 +19,6 @@ from airunner.enums import (
     ModelAction,
 )
 from airunner.workers.worker import Worker
-from airunner.utils.application.threaded_worker_mixin import ThreadedWorkerMixin
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.data.models.ai_models import AIModels
 from airunner.enums import StableDiffusionVersion
@@ -27,7 +26,7 @@ from airunner.enums import StableDiffusionVersion
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
-class SDWorker(ThreadedWorkerMixin, Worker):
+class SDWorker(Worker):
     queue_type = QueueType.GET_LAST_ITEM
 
     def __init__(self):
@@ -65,6 +64,7 @@ class SDWorker(ThreadedWorkerMixin, Worker):
         self._requested_pipeline = None
         super().__init__()
         self.__requested_action = ModelAction.NONE
+        self._threads = []
         self._workers = []
 
     @property
@@ -260,89 +260,41 @@ class SDWorker(ThreadedWorkerMixin, Worker):
         return data
 
     def load_model_manager(self, data: Dict = None):
-        """Load the SD model manager in a background thread to prevent UI freezing"""
-        data = data or {}
         data["settings"] = self.generator_settings
         data = self._process_image_request(data)
         do_reload = data.get("do_reload", False)
-        
-        # Define the model loading function to run in the background
-        def load_model_task(worker=None):
-            if self.model_manager:
-                if do_reload:
-                    self.model_manager.reload()
-                elif not self.model_manager.sd_is_loaded:
-                    self.model_manager.load()
-            return None
-        
-        # Execute in background thread
-        self.execute_in_background(
-            task_function=load_model_task,
-            task_id="sd_model_loading",
-            callback_data=data,
-            on_finished=self._on_model_loading_finished
-        )
-    
-    def _on_model_loading_finished(self, data):
-        """Handle completion of model loading"""
-        if 'error' in data:
-            self.logger.error(f"Error loading SD model: {data['error']}")
-            self.api.application_error(f"Failed to load SD model: {data['error']}")
-            
-        # Call the original callback if provided
-        callback = data.get("callback", None)
-        if callback is not None:
-            callback(data)
+        if self.model_manager:
+            if do_reload:
+                self.model_manager.reload()
+            elif not self.model_manager.sd_is_loaded:
+                self.model_manager.load()
+        if data:
+            callback = data.get("callback", None)
+            if callback is not None:
+                callback(data)
 
     def unload_model_manager(self, data: Dict = None):
-        """Unload the model manager with proper cleanup"""
-        # Stop any background tasks first
-        self.stop_all_background_tasks()
-        
         if self._model_manager is not None:
             self._model_manager.unload()
             self.model_manager = None
-            
         if data:
             callback = data.get("callback", None)
             if callback is not None:
                 callback(data)
 
     def _load_controlnet(self):
-        """Load controlnet in a background thread"""
-        def load_controlnet_task(worker=None):
-            if self.model_manager:
-                self.model_manager.load_controlnet()
-            return None
-            
-        self.execute_in_background(
-            task_function=load_controlnet_task,
-            task_id="controlnet_loading"
-        )
+        if self.model_manager:
+            self.model_manager.load_controlnet()
 
     def _unload_controlnet(self):
-        """Unload controlnet with proper cleanup"""
-        self.stop_background_task("controlnet_loading")
-        
         if self.model_manager:
             self.model_manager.unload_controlnet()
 
     def _load_safety_checker(self):
-        """Load safety checker in a background thread"""
-        def load_safety_checker_task(worker=None):
-            if self.model_manager:
-                self.model_manager.load_safety_checker()
-            return None
-            
-        self.execute_in_background(
-            task_function=load_safety_checker_task,
-            task_id="safety_checker_loading"
-        )
+        if self.model_manager:
+            self.model_manager.load_safety_checker()
 
     def _unload_safety_checker(self):
-        """Unload safety checker with proper cleanup"""
-        self.stop_background_task("safety_checker_loading")
-        
         if self.model_manager:
             self.model_manager.unload_safety_checker()
 
@@ -415,11 +367,8 @@ class SDWorker(ThreadedWorkerMixin, Worker):
                         self._generate_image(data)
 
     def _generate_image(self, message: Dict):
-        if not self.model_manager:
-            message["callback"] = self._finalize_do_generate_signal
-            self.load_model_manager(message)
-            return
-        self._finalize_do_generate_signal(message)
+        message["callback"] = self._finalize_do_generate_signal
+        self.load_model_manager(message)
 
     def _finalize_do_generate_signal(self, message: Dict):
         if self.model_manager:
@@ -429,6 +378,15 @@ class SDWorker(ThreadedWorkerMixin, Worker):
         self.logger.error(f"SDWorker Error: {error_message}")
 
     def send_missing_model_alert(self, message):
-        self.api.art.clear_progress_bar()
-        self.api.art.missing_required_models(message)
-        self.api.art.toggle_sd(enabled=False)
+        self.emit_signal(
+            SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL,
+            {"do_clear": True},
+        )
+        self.emit_signal(
+            SignalCode.MISSING_REQUIRED_MODELS,
+            {
+                "title": "Model Not Found",
+                "message": message,
+            },
+        )
+        self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, {"enabled": False})
