@@ -48,6 +48,7 @@ class MessageWidget(BaseWidget):
     icons = [
         ("copy", "copy_button"),
         ("x-circle", "delete_button"),
+        ("play", "play_audio_button"),
     ]
 
     # Class-level thread and queue for all instances
@@ -97,6 +98,7 @@ class MessageWidget(BaseWidget):
 
         self.ui.copy_button.setVisible(False)
         self.ui.delete_button.setVisible(False)
+        self.ui.play_audio_button.setVisible(False)
         self.ui.message_container.installEventFilter(self)
         self.set_cursor(Qt.CursorShape.ArrowCursor)
 
@@ -124,9 +126,11 @@ class MessageWidget(BaseWidget):
             if event.type() == QEvent.Type.Enter:
                 self.ui.copy_button.setVisible(True)
                 self.ui.delete_button.setVisible(True)
+                self.ui.play_audio_button.setVisible(True)
             elif event.type() == QEvent.Type.Leave:
                 self.ui.copy_button.setVisible(False)
                 self.ui.delete_button.setVisible(False)
+                self.ui.play_audio_button.setVisible(False)
         return super().eventFilter(obj, event)
 
     def on_application_settings_changed_signal(self):
@@ -185,6 +189,10 @@ class MessageWidget(BaseWidget):
         self.message = self.message.replace("  ", " ")
 
         self.ui.content.setPlainText(self.message)
+
+    @Slot()
+    def on_play_audio_button_clicked(self):
+        self.api.tts.play_audio(self.message)
 
     @Slot()
     def delete(self):

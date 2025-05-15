@@ -133,6 +133,7 @@ class SignalCode(Enum):
     TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL = (
         "TTSGeneratorWorker_add_to_stream_signal"
     )
+    TTS_QUEUE_SIGNAL = "tts_queue_signal"
     TTS_ENABLE_SIGNAL = "tts_enable_signal"
     TTS_DISABLE_SIGNAL = "tts_disable_signal"
     QUIT_APPLICATION = "quit"
