@@ -695,6 +695,18 @@ class LLMAPIService(APIServiceBase):
             SignalCode.DELETE_MESSAGES_AFTER_ID,
             {"message_id": message_id},
         )
+    
+    def send_llm_text_streamed_signal(self, response: LLMResponse):
+        """
+        Send a TTS request with the given response."
+
+        :param response: The LLMResponse object.
+        :return: None
+        """
+        print("EMITTING LLM_TEXT_STREAMED_SIGNAL", response)
+        self.emit_signal(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}
+        )
 
 
 class API(App):
@@ -726,17 +738,6 @@ class API(App):
             setup_database()
             self.model_scanner_worker = create_worker(ModelScannerWorker)
             self.model_scanner_worker.add_to_queue("scan_for_models")
-
-    def send_llm_text_streamed_signal(self, response: LLMResponse):
-        """
-        Send a TTS request with the given response."
-
-        :param response: The LLMResponse object.
-        :return: None
-        """
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}
-        )
 
     def show_hello_world_window(self):
         """

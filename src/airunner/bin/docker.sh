@@ -187,17 +187,17 @@ if [ -d "$TORCH_HUB_DIR" ]; then
   fi
 fi
 
-  # Dynamically generate asound.conf with all available devices
+# Dynamically generate asound.conf with PulseAudio as default and all available devices
 cat <<EOL > package/asound.conf
 pcm.!default {
-    type plug
-    slave.pcm "dmix:1,0"
-    slave.channels 2
+    type pulse
+    fallback "sysdefault"
+    hint.description "Default Audio Device (via PulseAudio)"
 }
 
 ctl.!default {
-    type hw
-    card 1
+    type pulse
+    fallback "sysdefault"
 }
 
 # Add all available recording devices dynamically

@@ -50,6 +50,10 @@ class ChatPromptWidget(BaseWidget):
         self._default_splitter_settings_applied = False
         super().__init__()
         self.token_buffer = []
+        self.ui_update_timer = QTimer(self)
+        self.ui_update_timer.setInterval(50)
+        self.ui_update_timer.timeout.connect(self.flush_token_buffer)
+        self.ui_update_timer.start()
         self.registered: bool = False
         self.scroll_bar = None
         self.is_modal = True
@@ -255,7 +259,7 @@ class ChatPromptWidget(BaseWidget):
         )
 
     def on_add_bot_message_to_conversation(self, data: Dict):
-        llm_response: LLMResponse = data.get("response", None)
+        llm_response = data.get("response", None)
         if not llm_response:
             raise ValueError("No LLMResponse object found in data")
 
