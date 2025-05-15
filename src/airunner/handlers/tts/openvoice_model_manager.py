@@ -5,16 +5,17 @@ import torch
 from airunner.settings import AIRUNNER_BASE_PATH
 
 torch.hub.set_dir(
-    os.environ.get(
-        "TORCH_HOME", os.path.join(AIRUNNER_BASE_PATH, "torch/hub")
-    )
+    os.environ.get("TORCH_HOME", os.path.join(AIRUNNER_BASE_PATH, "torch/hub"))
 )
 import librosa
 
-from openvoice.mel_processing import spectrogram_torch
-from openvoice import se_extractor
-from openvoice.api import OpenVoiceBaseClass, ToneColorConverter
-from melo.api import TTS
+from airunner.vendor.openvoice.mel_processing import spectrogram_torch
+from airunner.vendor.openvoice import se_extractor
+from airunner.vendor.openvoice.api import (
+    OpenVoiceBaseClass,
+    ToneColorConverter,
+)
+from airunner.vendor.melo.api import TTS
 
 from airunner.settings import (
     AIRUNNER_BASE_PATH,
@@ -252,7 +253,6 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             self._target_se, self._audio_name = se_extractor.get_se(
                 audio_path=self._reference_speaker,
                 vc_model=self.tone_color_converter,
-                vad=True,
                 target_dir=target_dir,
             )
             print("loaded")
