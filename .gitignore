@@ -44,3 +44,4 @@ package/asound.conf
 FramePack
 OpenVoice
 docker-compose.local.yml
+*.pickle
