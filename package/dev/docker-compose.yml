@@ -33,7 +33,6 @@ services:
       - HF_CACHE_DIR=/home/appuser/.local/share/airunner/.cache/huggingface
       - HF_HOME=/home/appuser/.local/share/airunner/.cache/huggingface
       - HF_HUB_DISABLE_TELEMETRY=1
-      - XAUTHORITY=/home/appuser/.Xauthority
       - DEBIAN_FRONTEND=noninteractive
       - TZ=America/Denver
       - PATH=/usr/local/bin:/usr/local/cuda/bin:/home/appuser/.local/bin:$PATH
@@ -90,7 +89,6 @@ services:
       - "${HOST_HOME}/.cache/huggingface:/home/appuser/.cache/huggingface:rw,z"
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - /run/user/${HOST_UID}/pulse:/run/user/1000/pulse:ro
-      - ${XAUTHORITY}:${XAUTHORITY}:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/torch/hub:/home/appuser/.cache/torch/hub:rw,z
       - ${AIRUNNER_HOME_DIR:-~/.local/share/airunner}/python/lib/python3.13:/home/appuser/.local/lib/python3.13:rw,z
     working_dir: /app
