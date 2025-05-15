@@ -274,6 +274,14 @@ fi
 - xformers
 - FramePack
 
+**Note**
+
+AI Runner, like all local AI tools, uses code and models from third-party libraries. You should be aware of the licenses and terms of use for these libraries, and ensure you practice responsible AI usage. For an extra layer of security and privacy, consider using a service like [OpenSnitch](https://itsfoss.com/opensnitch-firewall-linux/) on Linux to monitor outgoing connections from the app.
+
+By default, AI Runner only connects to the internet to download models and to get latitude and longitude data should you decide to enter a zipcode. That data is stored on your local machine and is not sent to any third-party services. The latitude and longitude data is used to get the weather data for the weather-based chatbot prompt.
+
+Services used for this are openstreetmap.org for the latitude and longitude data, and open-meteo.com for the weather data. Both of these services are free to use and do not require an API key. If you do not enter a zipcode or use the weather-based chatbot prompt, these services are not used.
+
 ---
 
 ## AI Models
