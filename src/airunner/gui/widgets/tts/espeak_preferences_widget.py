@@ -45,7 +45,6 @@ class EspeakPreferencesWidget(BaseWidget):
             return
 
         elements = [
-            self.ui.language_combobox,
             self.ui.gender_combobox,
             self.ui.voice_combobox,
         ]
@@ -53,7 +52,6 @@ class EspeakPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(True)
 
-        language = settings.language
         gender = settings.gender
         voice = settings.voice
         iso_codes = [country.alpha_2 for country in pycountry.countries]
@@ -62,9 +60,6 @@ class EspeakPreferencesWidget(BaseWidget):
         voices = engine.getProperty("voices")
         voice_names = [voice.name for voice in voices]
 
-        self.ui.language_combobox.clear()
-        self.ui.language_combobox.addItems(iso_codes)
-        self.ui.language_combobox.setCurrentText(language)
         self.ui.gender_combobox.clear()
         self.ui.gender_combobox.addItems(["Male", "Female"])
         self.ui.gender_combobox.setCurrentText(gender)
@@ -90,20 +85,6 @@ class EspeakPreferencesWidget(BaseWidget):
 
     def callback(self, attr_name, value, _widget=None):
         EspeakSettings.objects.update(**{attr_name: value})
-
-    def language_changed(self, text):
-        # self.update_espeak_settings("language", text)
-        # self.update_espeak_settings(
-        #     "gender", self.ui.gender_combobox.currentText()
-        # )
-        # self.update_espeak_settings(
-        #     "voice", self.ui.voice_combobox.currentText()
-        # )
-        EspeakSettings.objects.update(
-            language=text,
-            gender=self.ui.gender_combobox.currentText(),
-            voice=self.ui.voice_combobox.currentText(),
-        )
 
     def voice_changed(self, text):
         self.update_espeak_settings("voice", text)
