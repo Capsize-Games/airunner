@@ -19,7 +19,6 @@ from airunner.vendor.melo.api import TTS
 
 from airunner.settings import (
     AIRUNNER_BASE_PATH,
-    AIRUNNER_TTS_SPEAKER_RECORDING_PATH,
     AIRUNNER_LOG_LEVEL,
 )
 from airunner.enums import (
@@ -99,13 +98,18 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
     """
 
     def __init__(self, *args, **kwargs):
-        print("STARTING OPEN VOICE")
         super().__init__(*args, **kwargs)
         self._target_se = None
         self._audio_name = None
-        speaker_recording_path = os.path.expanduser(
-            AIRUNNER_TTS_SPEAKER_RECORDING_PATH
-        )
+        speaker_recording_path = ""
+        if self.openvoice_settings.reference_speaker_path is not None:
+            speaker_recording_path = os.path.expanduser(
+                os.path.join(self.openvoice_settings.reference_speaker_path)
+            )
+        else:
+            self.logger.error(
+                "Reference speaker path is None, unable to initialize"
+            )
         self._checkpoint_converter_path: str = os.path.join(
             self.path_settings.tts_model_path,
             "openvoice/checkpoints_v2/converter",
