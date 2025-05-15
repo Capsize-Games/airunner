@@ -2,6 +2,8 @@ import queue
 import re
 from typing import Optional, Type, Dict
 
+from airunner.handlers.tts.openvoice_model_manager import OpenVoiceModelManager
+from airunner.handlers.tts.speecht5_model_manager import SpeechT5ModelManager
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import (
     SignalCode,
@@ -146,16 +148,8 @@ class TTSGeneratorWorker(Worker):
             return
         self._current_model = model
         if model_type is TTSModel.SPEECHT5:
-            from airunner.handlers.tts.speecht5_model_manager import (
-                SpeechT5ModelManager,
-            )
-
             tts_model_manager_class_ = SpeechT5ModelManager
         elif AIRUNNER_ENABLE_OPEN_VOICE and model_type is TTSModel.OPENVOICE:
-            from airunner.handlers.tts.openvoice_model_manager import (
-                OpenVoiceModelManager,
-            )
-
             tts_model_manager_class_ = OpenVoiceModelManager
         else:
             from airunner.handlers.tts.espeak_model_manager import (
