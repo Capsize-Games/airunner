@@ -583,6 +583,13 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         llm_request = llm_request or LLMRequest.from_default()
 
         # Call the appropriate chat agent method
+        if not self._chat_agent:
+            self.logger.error("Chat agent not loaded")
+            return AgentChatResponse(
+                node_id=llm_request.node_id,
+                is_end_of_message=True,
+                error="Chat agent not loaded",
+            )
         response = self._chat_agent.chat(
             prompt,
             action=action,
