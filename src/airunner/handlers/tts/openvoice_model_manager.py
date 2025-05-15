@@ -99,6 +99,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
     """
 
     def __init__(self, *args, **kwargs):
+        print("STARTING OPEN VOICE")
         super().__init__(*args, **kwargs)
         self._target_se = None
         self._audio_name = None

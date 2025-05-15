@@ -42,12 +42,12 @@ from airunner.data.models import (
 )
 from airunner.data.models import table_to_class
 from airunner.data.models.rag_settings import RAGSettings
-from airunner.enums import ModelService, SignalCode, TTSModel
+from airunner.enums import ModelService, TTSModel
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
 from airunner.utils.settings import get_qsettings
 from airunner.utils.application.get_logger import get_logger
-from airunner.settings import AIRUNNER_LOG_LEVEL, AIRUNNER_ENABLE_OPEN_VOICE
+from airunner.settings import AIRUNNER_LOG_LEVEL
 
 
 class SettingsMixinSharedInstance:
@@ -382,11 +382,10 @@ class SettingsMixin:
     def _get_settings_for_voice_settings(self, model_type: TTSModel):
         if model_type is TTSModel.SPEECHT5:
             return self.speech_t5_settings
-        elif model_type is TTSModel.OPENVOICE and AIRUNNER_ENABLE_OPEN_VOICE:
+        elif model_type is TTSModel.OPENVOICE:
             return self.openvoice_settings
         else:
             return self.espeak_settings
-        return settings
 
     @property
     def user(self) -> Type[User]:
