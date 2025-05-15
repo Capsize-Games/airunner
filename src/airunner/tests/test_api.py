@@ -65,7 +65,7 @@ class TestAPI(unittest.TestCase):
     def test_send_tts_request(self, mock_emit_signal):
         response = LLMResponse()
 
-        self.api.send_llm_text_streamed_signal(response)
+        self.api.llm.send_llm_text_streamed_signal(response)
 
         mock_emit_signal.assert_called_once_with(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}
