@@ -41,6 +41,7 @@ class TTSGeneratorWorker(Worker):
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_llm_text_streamed_signal,
             SignalCode.TTS_MODEL_CHANGED: self._reload_tts_model_manager,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
+            SignalCode.TTS_QUEUE_SIGNAL: self.on_add_to_queue_signal,
         }
         super().__init__()
 
@@ -164,6 +165,15 @@ class TTSGeneratorWorker(Worker):
             tts_model_manager_class_ = EspeakModelManager
         self.tts = tts_model_manager_class_()
         self.logger.debug(f"Instantiated new TTS model manager: {self.tts}")
+
+    def on_add_to_queue_signal(self, data):
+        self.add_to_queue(
+            {
+                "message": str(data.get("message", "")),
+                "is_end_of_message": data.get("is_end_of_message", False)
+                is True,
+            }
+        )
 
     def add_to_queue(self, message):
         if self.do_interrupt:
