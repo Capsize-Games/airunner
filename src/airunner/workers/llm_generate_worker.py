@@ -1,6 +1,5 @@
+import threading
 from typing import Dict, Optional, Type
-
-from PySide6.QtCore import QThread, Signal, QObject
 
 from airunner.enums import SignalCode
 from airunner.workers.worker import Worker
@@ -9,12 +8,12 @@ from airunner.handlers.llm.llm_model_manager import LLMModelManager
 from airunner.handlers.llm.openrouter_model_manager import (
     OpenRouterModelManager,
 )
+
 # from airunner.handlers.llm.gemma3_model_manager import Gemma3Manager
 from airunner.enums import ModelService
-from airunner.utils.application.threaded_worker_mixin import ThreadedWorkerMixin
 
 
-class LLMGenerateWorker(ThreadedWorkerMixin, Worker):
+class LLMGenerateWorker(Worker):
     def __init__(self, local_agent_class=None):
         self.local_agent_class = local_agent_class
         self.signal_handlers = {
@@ -105,8 +104,6 @@ class LLMGenerateWorker(ThreadedWorkerMixin, Worker):
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
         self.running = False
-        # Stop any active background tasks
-        self.stop_all_background_tasks()
         if self.model_manager:
             self.model_manager.unload()
         if self._llm_thread is not None:
@@ -127,7 +124,7 @@ class LLMGenerateWorker(ThreadedWorkerMixin, Worker):
     def on_llm_load_model_signal(self, data):
         # Reset model manager to ensure proper selection based on current settings
         self._model_manager = None
-        self._load_llm(data)
+        self._load_llm_thread(data)
 
     def on_llm_clear_history_signal(self, data: Optional[Dict] = None):
         if self.model_manager:
@@ -155,46 +152,25 @@ class LLMGenerateWorker(ThreadedWorkerMixin, Worker):
 
     def start_worker_thread(self):
         if self.application_settings.llm_enabled or AIRUNNER_LLM_ON:
-            self._load_llm()
+            self._load_llm_thread()
 
     def handle_message(self, message):
         if self.model_manager:
             self.model_manager.handle_request(message)
 
+    def _load_llm_thread(self, data=None):
+        self._llm_thread = threading.Thread(
+            target=self._load_llm, args=(data,)
+        )
+        self._llm_thread.start()
+
     def load(self):
         self._load_llm()
 
     def _load_llm(self, data=None):
-        """Load the LLM model in a separate thread to prevent UI blocking"""
         data = data or {}
-        
         if self.model_manager is not None:
-            # Define the task function that will be run in the background
-            def load_model_task(worker=None):
-                self.model_manager.load()
-                return None  # No specific result needed
-            
-            # Execute the model loading in a background thread
-            self.execute_in_background(
-                task_function=load_model_task,
-                task_id="model_loading",
-                callback_data=data,
-                on_finished=self._on_model_loading_finished
-            )
-        else:
-            # If no model manager, call the callback directly
-            callback = data.get("callback", None)
-            if callback:
-                callback(data)
-    
-    def _on_model_loading_finished(self, data):
-        """Handle completion of model loading"""
-        # Process any error that occurred during loading
-        if 'error' in data:
-            self.logger.error(f"Error loading model: {data['error']}")
-            self.api.application_error(f"Failed to load LLM model: {data['error']}")
-        
-        # Call the original callback if provided
+            self.model_manager.load()
         callback = data.get("callback", None)
         if callback:
             callback(data)
