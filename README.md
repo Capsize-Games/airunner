@@ -24,8 +24,7 @@ No cloud dependency. No complicated setup. Just install, run, and create.
 - [Overview](#overview)
 - [Features](#features)
 - [System Requirements](#system-requirements)
-- [Installation Quick Start](#installation-quick-start-development-version)
-- [Installation Details](#installation-details)
+- [Installation Quick Start](#installation-quick-start)
 - [AI Models](#ai-models)
 - [Unit Tests](#unit-tests)
 - [Database](#database)
@@ -123,7 +122,7 @@ These are the sizes of the various models that power AI Runner.
 
 ---
 
-## 💾 Installation Quick Start (development version)
+## 💾 Installation Quick Start
 
 ### 🐳 Docker
 
