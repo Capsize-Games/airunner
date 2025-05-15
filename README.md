@@ -41,7 +41,11 @@ AI Runner is a local-first, **open-source** application built with HuggingFace a
 - **Large Language Models (LLMs)** for chat and text generation  
 - **Stable Diffusion** for image generation and manipulation
 - **Text-to-Speech (TTS)**  
-- **Speech-to-Text (STT)**  
+- **Speech-to-Text (STT)** 
+- **Customizable Voice-based chatbots** for real-time conversations
+- **Image filters** and **inpainting** for image editing
+- **Retrieval-Augmented Generation** (RAG) for enhanced LLM responses
+- **Wayland support, Python 3.13, Docker support, and a pure Python codebase** for improved security, performance, and compatibility
 
 Originally created as a GUI-centric AI art and chatbot tool for end users, AI Runner has evolved into a **developer-friendly** platform. With Docker support, an extension API, and a pure Python codebase, you can integrate AI Runner into your own apps or use it as an all-in-one offline inference engine.
 
