@@ -53,48 +53,7 @@ class Ui_espeak_preferences(object):
         self.pitch.setProperty(u"spinbox_single_step", 0.010000000000000)
         self.pitch.setProperty(u"spinbox_page_step", 0.100000000000000)
 
-        self.gridLayout_8.addWidget(self.pitch, 5, 0, 1, 1)
-
-        self.volume = SliderWidget(self.espeak)
-        self.volume.setObjectName(u"volume")
-        self.volume.setProperty(u"slider_minimum", 1)
-        self.volume.setProperty(u"slider_maximum", 100)
-        self.volume.setProperty(u"spinbox_minimum", 0.000000000000000)
-        self.volume.setProperty(u"spinbox_maximum", 1.000000000000000)
-        self.volume.setProperty(u"display_as_float", True)
-        self.volume.setProperty(u"slider_single_step", 1)
-        self.volume.setProperty(u"slider_page_step", 10)
-        self.volume.setProperty(u"spinbox_single_step", 0.010000000000000)
-        self.volume.setProperty(u"spinbox_page_step", 0.100000000000000)
-
-        self.gridLayout_8.addWidget(self.volume, 6, 0, 1, 1)
-
-        self.label_3 = QLabel(self.espeak)
-        self.label_3.setObjectName(u"label_3")
-        font = QFont()
-        font.setPointSize(9)
-        self.label_3.setFont(font)
-
-        self.gridLayout_8.addWidget(self.label_3, 0, 0, 1, 1)
-
-        self.groupBox_3 = QGroupBox(self.espeak)
-        self.groupBox_3.setObjectName(u"groupBox_3")
-        self.groupBox_3.setCheckable(True)
-        self.gridLayout_4 = QGridLayout(self.groupBox_3)
-        self.gridLayout_4.setObjectName(u"gridLayout_4")
-        self.language_combobox = QComboBox(self.groupBox_3)
-        self.language_combobox.setObjectName(u"language_combobox")
-
-        self.gridLayout_4.addWidget(self.language_combobox, 1, 0, 1, 1)
-
-        self.label = QLabel(self.groupBox_3)
-        self.label.setObjectName(u"label")
-        self.label.setFont(font)
-
-        self.gridLayout_4.addWidget(self.label, 0, 0, 1, 1)
-
-
-        self.gridLayout_8.addWidget(self.groupBox_3, 3, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.pitch, 4, 0, 1, 1)
 
         self.groupBox_2 = QGroupBox(self.espeak)
         self.groupBox_2.setObjectName(u"groupBox_2")
@@ -110,19 +69,13 @@ class Ui_espeak_preferences(object):
 
         self.gridLayout_8.addWidget(self.groupBox_2, 1, 0, 1, 1)
 
-        self.rate = SliderWidget(self.espeak)
-        self.rate.setObjectName(u"rate")
-        self.rate.setProperty(u"slider_minimum", 0)
-        self.rate.setProperty(u"slider_maximum", 300)
-        self.rate.setProperty(u"spinbox_minimum", 0.000000000000000)
-        self.rate.setProperty(u"spinbox_maximum", 3.000000000000000)
-        self.rate.setProperty(u"display_as_float", True)
-        self.rate.setProperty(u"slider_single_step", 1)
-        self.rate.setProperty(u"slider_page_step", 10)
-        self.rate.setProperty(u"spinbox_single_step", 0.010000000000000)
-        self.rate.setProperty(u"spinbox_page_step", 0.100000000000000)
+        self.label_3 = QLabel(self.espeak)
+        self.label_3.setObjectName(u"label_3")
+        font = QFont()
+        font.setPointSize(9)
+        self.label_3.setFont(font)
 
-        self.gridLayout_8.addWidget(self.rate, 4, 0, 1, 1)
+        self.gridLayout_8.addWidget(self.label_3, 0, 0, 1, 1)
 
         self.groupBox = QGroupBox(self.espeak)
         self.groupBox.setObjectName(u"groupBox")
@@ -136,12 +89,39 @@ class Ui_espeak_preferences(object):
 
         self.gridLayout_8.addWidget(self.groupBox, 2, 0, 1, 1)
 
+        self.volume = SliderWidget(self.espeak)
+        self.volume.setObjectName(u"volume")
+        self.volume.setProperty(u"slider_minimum", 1)
+        self.volume.setProperty(u"slider_maximum", 100)
+        self.volume.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.volume.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.volume.setProperty(u"display_as_float", True)
+        self.volume.setProperty(u"slider_single_step", 1)
+        self.volume.setProperty(u"slider_page_step", 10)
+        self.volume.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.volume.setProperty(u"spinbox_page_step", 0.100000000000000)
+
+        self.gridLayout_8.addWidget(self.volume, 5, 0, 1, 1)
+
+        self.rate = SliderWidget(self.espeak)
+        self.rate.setObjectName(u"rate")
+        self.rate.setProperty(u"slider_minimum", 0)
+        self.rate.setProperty(u"slider_maximum", 300)
+        self.rate.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.rate.setProperty(u"spinbox_maximum", 3.000000000000000)
+        self.rate.setProperty(u"display_as_float", True)
+        self.rate.setProperty(u"slider_single_step", 1)
+        self.rate.setProperty(u"slider_page_step", 10)
+        self.rate.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.rate.setProperty(u"spinbox_page_step", 0.100000000000000)
+
+        self.gridLayout_8.addWidget(self.rate, 3, 0, 1, 1)
+
 
         self.gridLayout_7.addWidget(self.espeak, 0, 0, 1, 1)
 
 
         self.retranslateUi(espeak_preferences)
-        self.language_combobox.currentTextChanged.connect(espeak_preferences.language_changed)
         self.voice_combobox.currentTextChanged.connect(espeak_preferences.voice_changed)
         self.gender_combobox.currentTextChanged.connect(espeak_preferences.gender_changed)
 
@@ -153,17 +133,15 @@ class Ui_espeak_preferences(object):
         self.espeak.setTitle(QCoreApplication.translate("espeak_preferences", u"Espeak", None))
         self.pitch.setProperty(u"settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.pitch", None))
         self.pitch.setProperty(u"label_text", QCoreApplication.translate("espeak_preferences", u"Pitch", None))
-        self.volume.setProperty(u"settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.volume", None))
-        self.volume.setProperty(u"label_text", QCoreApplication.translate("espeak_preferences", u"Volume", None))
-        self.label_3.setText(QCoreApplication.translate("espeak_preferences", u"Robotic, fast, no VRAM usage", None))
-        self.groupBox_3.setTitle(QCoreApplication.translate("espeak_preferences", u"Language", None))
-        self.label.setText(QCoreApplication.translate("espeak_preferences", u"Override the system language", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("espeak_preferences", u"Gender", None))
         self.gender_combobox.setItemText(0, QCoreApplication.translate("espeak_preferences", u"Male", None))
         self.gender_combobox.setItemText(1, QCoreApplication.translate("espeak_preferences", u"Female", None))
 
+        self.label_3.setText(QCoreApplication.translate("espeak_preferences", u"Robotic, fast, no VRAM usage", None))
+        self.groupBox.setTitle(QCoreApplication.translate("espeak_preferences", u"Language", None))
+        self.volume.setProperty(u"settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.volume", None))
+        self.volume.setProperty(u"label_text", QCoreApplication.translate("espeak_preferences", u"Volume", None))
         self.rate.setProperty(u"settings_property", QCoreApplication.translate("espeak_preferences", u"espeak_settings.rate", None))
         self.rate.setProperty(u"label_text", QCoreApplication.translate("espeak_preferences", u"Rate", None))
-        self.groupBox.setTitle(QCoreApplication.translate("espeak_preferences", u"Voice", None))
     # retranslateUi
 
