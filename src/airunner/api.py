@@ -201,6 +201,15 @@ class TTSAPIService(APIServiceBase):
         """
         self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL, {"enabled": enabled})
 
+    def start(self):
+        self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL, {})
+
+    def stop(self):
+        """
+        Emit a signal to stop TTS.
+        """
+        self.emit_signal(SignalCode.TTS_DISABLE_SIGNAL, {})
+
     def add_to_stream(self, response: str):
         """
         Emit a signal to add text to the TTS stream.

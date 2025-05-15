@@ -172,8 +172,15 @@ RUN pip3.13 install --no-cache-dir pip setuptools wheel --upgrade && \
     pip3.13 install -U timm && \
     python3.13 -c "import nltk; nltk.download('punkt', download_dir='/usr/local/share/nltk_data')" && \
     python3.13 -c "import nltk; nltk.download('punkt_tab', download_dir='/usr/local/share/nltk_data')" && \
-    python3.13 -m unidic download
-rm -rf /tmp/* /var/tmp/* /root/.cache/pip
+    python3.13 -m unidic download && \
+    wget https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_1226.zip && \
+    wget https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip && \
+    mkdir -p /home/appuser/.local/share/airunner/text/models/tts/openvoice && \
+    unzip checkpoints_1226.zip -d /home/appuser/.local/share/airunner/text/models/tts/openvoice && \
+    unzip checkpoints_v2_0417.zip -d /home/appuser/.local/share/airunner/text/models/tts/openvoice && \
+    rm checkpoints_1226.zip && \
+    rm checkpoints_v2_0417.zip && \
+    rm -rf /tmp/* /var/tmp/* /root/.cache/pip
 
 USER ${HOST_UID}:${HOST_GID}
 WORKDIR /app

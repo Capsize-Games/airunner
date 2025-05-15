@@ -1128,10 +1128,16 @@ class MainWindow(
         if application_setting:
             self.update_application_settings(application_setting, val)
         if self._model_status[model_type] is not ModelStatus.LOADING:
-            if val:
-                self.emit_signal(load_signal, data)
+            if model_type is ModelType.TTS:
+                if val:
+                    self.api.tts.start()
+                else:
+                    self.api.tts.stop()
             else:
-                self.emit_signal(unload_signal, data)
+                if val:
+                    self.emit_signal(load_signal, data)
+                else:
+                    self.emit_signal(unload_signal, data)
 
     def save_state(self):
         if self.quitting:
