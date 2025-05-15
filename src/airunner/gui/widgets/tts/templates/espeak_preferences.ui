@@ -69,7 +69,7 @@
       <property name="verticalSpacing">
        <number>10</number>
       </property>
-      <item row="5" column="0">
+      <item row="4" column="0">
        <widget class="SliderWidget" name="pitch" native="true">
         <property name="slider_minimum" stdset="0">
          <number>1</number>
@@ -106,7 +106,54 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="0">
+      <item row="1" column="0">
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="title">
+         <string>Gender</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_3">
+         <item row="0" column="0">
+          <widget class="QComboBox" name="gender_combobox">
+           <item>
+            <property name="text">
+             <string>Male</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Female</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Robotic, fast, no VRAM usage</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>Language</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QComboBox" name="voice_combobox"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="5" column="0">
        <widget class="SliderWidget" name="volume" native="true">
         <property name="slider_minimum" stdset="0">
          <number>1</number>
@@ -143,69 +190,7 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_3">
-        <property name="font">
-         <font>
-          <pointsize>9</pointsize>
-         </font>
-        </property>
-        <property name="text">
-         <string>Robotic, fast, no VRAM usage</string>
-        </property>
-       </widget>
-      </item>
       <item row="3" column="0">
-       <widget class="QGroupBox" name="groupBox_3">
-        <property name="title">
-         <string>Language</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_4">
-         <item row="1" column="0">
-          <widget class="QComboBox" name="language_combobox"/>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label">
-           <property name="font">
-            <font>
-             <pointsize>9</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Override the system language</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QGroupBox" name="groupBox_2">
-        <property name="title">
-         <string>Gender</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_3">
-         <item row="0" column="0">
-          <widget class="QComboBox" name="gender_combobox">
-           <item>
-            <property name="text">
-             <string>Male</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Female</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item row="4" column="0">
        <widget class="SliderWidget" name="rate" native="true">
         <property name="slider_minimum" stdset="0">
          <number>0</number>
@@ -242,18 +227,6 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QGroupBox" name="groupBox">
-        <property name="title">
-         <string>Voice</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="0">
-          <widget class="QComboBox" name="voice_combobox"/>
-         </item>
-        </layout>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
@@ -269,22 +242,6 @@
  </customwidgets>
  <resources/>
  <connections>
-  <connection>
-   <sender>language_combobox</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>espeak_preferences</receiver>
-   <slot>language_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>257</x>
-     <y>278</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>63</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>voice_combobox</sender>
    <signal>currentTextChanged(QString)</signal>
