@@ -125,7 +125,10 @@ RUN apt-get update && apt-get install -y software-properties-common && \
     libstdc++6 \
     wget \
     libportaudio2 \
-    gnupg && \
+    gnupg \
+    mecab \
+    libmecab-dev \
+    mecab-ipadic-utf8 && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install Python 3.13.3 from source
