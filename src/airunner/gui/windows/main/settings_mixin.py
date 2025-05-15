@@ -817,8 +817,14 @@ class SettingsMixin:
     def __settings_updated(
         self, setting_name=None, column_name=None, val=None
     ):
-        if self.api:
+        if hasattr(self, "api") and self.api:
             self.api.application_settings_changed(
+                setting_name=setting_name,
+                column_name=column_name,
+                val=val,
+            )
+        elif hasattr(self, "application_settings_changed"):
+            self.application_settings_changed(
                 setting_name=setting_name,
                 column_name=column_name,
                 val=val,
