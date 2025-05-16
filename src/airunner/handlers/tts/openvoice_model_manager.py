@@ -194,18 +194,6 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self._initialize()
         do_download = False
-
-        import nltk
-
-        nltk.download("averaged_perceptron_tagger_eng")
-
-        # if do_download:
-        #     vad, vad_utils = torch.hub.load(
-        #         repo_or_dir="snakers4/silero-vad",
-        #         model="silero_vad",
-        #         force_reload=False,
-        #         onnx=False,
-        #     )
         self.model = TTS(language=self._language.value, device=self.device)
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
