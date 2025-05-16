@@ -7,7 +7,7 @@
 
 ---
 
-# AI Runner: Offline Inference Engine and LLM Agent Platform
+# AI Runner: Offline Inference Engine
 
 ![image](https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa)
 
