@@ -140,6 +140,26 @@ class InstallWorker(
             self.parent.total_steps += len(files)
             self.total_models_in_current_step += len(files)
 
+        print(
+            f"Downloading {self.total_models_in_current_step} StableDiffusion files"
+        )
+        for model in models:
+            if model["name"] == "CompVis Safety Checker":
+                action_key = "safety_checker"
+                action = f"{model['pipeline_action']}/{action_key}"
+            elif model["name"] == "OpenAI Feature Extractor":
+                action_key = "feature_extractor"
+                action = f"{model['pipeline_action']}/{action_key}"
+            else:
+                action = model["pipeline_action"]
+                action_key = model["pipeline_action"]
+            if not self.models_enabled.get(action, True):
+                continue
+            try:
+                files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
+            except KeyError:
+                continue
+
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -175,6 +195,15 @@ class InstallWorker(
             ]
             self.parent.total_steps += len(files)
             self.total_models_in_current_step += len(files)
+        print(
+            f"Downloading {self.total_models_in_current_step} Controlnet files"
+        )
+        for controlnet_model in controlnet_bootstrap_data:
+            if not self.models_enabled.get(controlnet_model["name"], True):
+                continue
+            files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]][
+                "controlnet"
+            ]
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -211,6 +240,13 @@ class InstallWorker(
                 continue
             self.parent.total_steps += len(files)
             self.total_models_in_current_step += len(files)
+        print(f"Downloading {self.total_models_in_current_step} Flux files")
+        for model in models:
+            action = model["pipeline_action"]
+            try:
+                files = FLUX_FILE_BOOTSTRAP_DATA[model["version"]]
+            except KeyError:
+                continue
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -240,6 +276,9 @@ class InstallWorker(
         )
         self.total_models_in_current_step += len(controlnet_processor_files)
         self.parent.total_steps += len(controlnet_processor_files)
+        print(
+            f"Downloading {self.total_models_in_current_step} ControlNet files"
+        )
         for filename in controlnet_processor_files:
             requested_file_path = os.path.expanduser(
                 os.path.join(
@@ -307,6 +346,9 @@ class InstallWorker(
         )
         for k, v in WHISPER_FILES.items():
             self.total_models_in_current_step += len(v)
+
+        print(f"Downloading {self.total_models_in_current_step} STT files")
+
         for k, v in WHISPER_FILES.items():
             for filename in v:
                 requested_file_path = os.path.expanduser(
@@ -337,6 +379,10 @@ class InstallWorker(
         )
         for k, v in SPEECH_T5_FILES.items():
             self.total_models_in_current_step += len(v)
+
+        print(f"Downloading {self.total_models_in_current_step} TTS files")
+
+        for k, v in SPEECH_T5_FILES.items():
             for filename in v:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -363,6 +409,10 @@ class InstallWorker(
         )
         for k, v in OPENVOICE_FILES.items():
             self.total_models_in_current_step += len(v["files"])
+        print(
+            f"Downloading {self.total_models_in_current_step} OpenVoice files"
+        )
+        for k, v in OPENVOICE_FILES.items():
             for filename in v["files"]:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -554,13 +604,13 @@ class InstallWorker(
     @Slot()
     def download_finished(self, data):
         self.total_models_in_current_step -= 1
-        # if self.current_step == 7:
-        #     # If we're in the openvoice/unidic step, extract after download
-        #     if hasattr(self, "_unidic_zip_path") and hasattr(
-        #         self, "_openvoice_zip_paths"
-        #     ):
-        #         self.extract_openvoice_and_unidic()
         if self.total_models_in_current_step <= 0:
+            if self.current_step == 8:
+                # If we're in the openvoice/unidic step, extract after download
+                if hasattr(self, "_unidic_zip_path") and hasattr(
+                    self, "_openvoice_zip_paths"
+                ):
+                    self.extract_openvoice_and_unidic()
             self.set_page()
 
     @Slot()
@@ -641,6 +691,9 @@ class InstallWorker(
             print("STEP 8")
             self.download_openvoice()
             self.download_openvoice_and_unidic()
+            self.current_step = 8
+        elif self.current_step == 8:
+            self.finalize_installation()
 
     def finalize_installation(self, *_args):
         # Download NLTK averaged_perceptron_tagger_eng, punkt, and punkt_tab silently
