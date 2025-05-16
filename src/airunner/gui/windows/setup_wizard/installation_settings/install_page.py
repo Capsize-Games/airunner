@@ -389,68 +389,120 @@ class InstallWorker(
         """
         Download unidic and OpenVoice checkpoints, using direct URL download for these files.
         Extraction and cleanup will be handled after all downloads are finished.
+        If the unidic and openvoice folders already exist and are non-empty, skip download and extraction.
+        For unidic, extract to the unidic package directory as per `python -m unidic download`.
         """
+        import importlib.util
+
         base_path = self.path_settings.base_path
-        self._unidic_dir = os.path.expanduser(
-            os.path.join(base_path, "text", "models", "tts", "unidic")
-        )
         self._openvoice_dir = os.path.expanduser(
             os.path.join(base_path, "text", "models", "tts", "openvoice")
         )
-        os.makedirs(self._unidic_dir, exist_ok=True)
+
+        # Find unidic package path
+        unidic_spec = importlib.util.find_spec("unidic")
+        if unidic_spec is not None and unidic_spec.submodule_search_locations:
+            self._unidic_dir = os.path.join(
+                unidic_spec.submodule_search_locations[0]
+            )
+        else:
+            self._unidic_dir = None
+
+        # Skip if both folders exist and are non-empty
+        openvoice_exists = os.path.isdir(self._openvoice_dir) and os.listdir(
+            self._openvoice_dir
+        )
+        unidic_exists = (
+            self._unidic_dir
+            and os.path.isdir(self._unidic_dir)
+            and os.listdir(self._unidic_dir)
+        )
+        if unidic_exists and openvoice_exists:
+            self.parent.update_download_log(
+                {
+                    "message": "Unidic and OpenVoice already present, skipping download."
+                }
+            )
+            self.finalize_installation()
+            return
+
+        if self._unidic_dir:
+            os.makedirs(self._unidic_dir, exist_ok=True)
         os.makedirs(self._openvoice_dir, exist_ok=True)
 
-        # Download unidic zip
-        self.parent.on_set_downloading_status_label(
-            {"label": "Downloading unidic dictionary..."}
-        )
-        self._unidic_zip_path = os.path.join(
-            self._unidic_dir, "unidic-3.1.0.zip"
-        )
-        unidic_url = "https://cotonoha-dic.s3-ap-northeast-1.amazonaws.com/unidic-3.1.0.zip"
-        self.total_models_in_current_step += 1  # Track unidic zip
-        self._download_file_with_progress(
-            unidic_url, self._unidic_zip_path, label="unidic-3.1.0.zip"
-        )
+        # Download unidic zip if needed
+        if not unidic_exists and self._unidic_dir:
+            self.parent.on_set_downloading_status_label(
+                {"label": "Downloading unidic dictionary..."}
+            )
+            self._unidic_zip_path = os.path.join(
+                self._unidic_dir, "unidic-3.1.0.zip"
+            )
+            unidic_url = "https://cotonoha-dic.s3-ap-northeast-1.amazonaws.com/unidic-3.1.0.zip"
+            self.total_models_in_current_step += 1  # Track unidic zip
+            self._download_file_with_progress(
+                unidic_url, self._unidic_zip_path, label="unidic-3.1.0.zip"
+            )
+        else:
+            self._unidic_zip_path = None
+            self.parent.update_download_log(
+                {"message": "Unidic already present, skipping download."}
+            )
 
-        # OpenVoice download
-        self.parent.on_set_downloading_status_label(
-            {"label": "Downloading OpenVoice checkpoints..."}
-        )
+        # OpenVoice download if needed
         self._openvoice_zip_paths = []
         urls = [
             "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_1226.zip",
             "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip",
         ]
-        for url in urls:
-            zip_name = os.path.basename(url)
-            zip_path = os.path.join(self._openvoice_dir, zip_name)
-            self._openvoice_zip_paths.append(zip_path)
-            self.total_models_in_current_step += 1  # Track each openvoice zip
-            self._download_file_with_progress(url, zip_path, label=zip_name)
+        if not openvoice_exists:
+            self.parent.on_set_downloading_status_label(
+                {"label": "Downloading OpenVoice checkpoints..."}
+            )
+            for url in urls:
+                zip_name = os.path.basename(url)
+                zip_path = os.path.join(self._openvoice_dir, zip_name)
+                self._openvoice_zip_paths.append(zip_path)
+                self.total_models_in_current_step += (
+                    1  # Track each openvoice zip
+                )
+                self._download_file_with_progress(
+                    url, zip_path, label=zip_name
+                )
+                self.parent.update_download_log(
+                    {"message": f"Started download of {zip_name}"}
+                )
+        else:
+            self._openvoice_zip_paths = []
             self.parent.update_download_log(
-                {"message": f"Started download of {zip_name}"}
+                {"message": "OpenVoice already present, skipping download."}
             )
 
     def extract_openvoice_and_unidic(self):
         """
         Extract and clean up unidic and OpenVoice zips after all downloads are complete.
+        For unidic, extract to the unidic package directory as per `python -m unidic download`.
         """
+        import importlib.util
+
         # Extract unidic
-        try:
-            self.parent.on_set_downloading_status_label(
-                {"label": "Unzipping unidic..."}
-            )
-            with zipfile.ZipFile(self._unidic_zip_path, "r") as zip_ref:
-                zip_ref.extractall(self._unidic_dir)
-            os.remove(self._unidic_zip_path)
-            self.parent.update_download_log(
-                {"message": "Unzipped and removed unidic-3.1.0.zip"}
-            )
-        except Exception as e:
-            self.parent.update_download_log(
-                {"message": f"Failed to unzip unidic: {e}"}
-            )
+        if self._unidic_zip_path and self._unidic_dir:
+            try:
+                self.parent.on_set_downloading_status_label(
+                    {"label": f"Unzipping unidic to {self._unidic_dir}..."}
+                )
+                with zipfile.ZipFile(self._unidic_zip_path, "r") as zip_ref:
+                    zip_ref.extractall(self._unidic_dir)
+                os.remove(self._unidic_zip_path)
+                self.parent.update_download_log(
+                    {
+                        "message": f"Unzipped and removed unidic-3.1.0.zip to {self._unidic_dir}"
+                    }
+                )
+            except Exception as e:
+                self.parent.update_download_log(
+                    {"message": f"Failed to unzip unidic: {e}"}
+                )
 
         # Extract OpenVoice
         for zip_path in self._openvoice_zip_paths:
@@ -550,12 +602,6 @@ class InstallWorker(
             self.download_stt()
         elif self.current_step == 7:
             self.download_openvoice_and_unidic()
-            self.hf_downloader.download_model(
-                requested_path="",
-                requested_file_name="",
-                requested_file_path="",
-                requested_callback=self.finalize_installation,
-            )
 
     def finalize_installation(self, *_args):
         self.parent.on_set_downloading_status_label(

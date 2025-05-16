@@ -39,8 +39,8 @@ AI Runner is a local-first, **open-source** application built with HuggingFace a
 
 - **Large Language Models (LLMs)** for chat and text generation  
 - **Stable Diffusion** for image generation and manipulation
-- **Text-to-Speech (TTS)**  
-- **Speech-to-Text (STT)** 
+- **Text-to-Speech (TTS)** Integrated with **OpenVoice**, **SpeechT5**, and **Espeak** for voice synthesis
+- **Speech-to-Text (STT)** Uses **Whisper** for converting audio to text
 - **Customizable Voice-based chatbots** for real-time conversations
 - **Image filters** and **inpainting** for image editing
 - **Retrieval-Augmented Generation** (RAG) for enhanced LLM responses
@@ -269,7 +269,6 @@ fi
 
 **Optional**
 
-- [OpenVoice](https://github.com/Capsize-Games/airunner/wiki/Modules#openvoice)
 - Flash attention 2
 - xformers
 - FramePack
