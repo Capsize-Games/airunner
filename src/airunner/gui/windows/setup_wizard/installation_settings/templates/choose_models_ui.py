@@ -26,10 +26,6 @@ class Ui_install_success_page(object):
         install_success_page.resize(615, 853)
         self.gridLayout = QGridLayout(install_success_page)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.gridLayout.addItem(self.verticalSpacer, 8, 0, 1, 1)
-
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.page_title = QLabel(install_success_page)
@@ -53,6 +49,10 @@ class Ui_install_success_page(object):
 
         self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
 
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout.addItem(self.verticalSpacer, 9, 0, 1, 1)
+
         self.groupBox = QGroupBox(install_success_page)
         self.groupBox.setObjectName(u"groupBox")
         font1 = QFont()
@@ -66,7 +66,7 @@ class Ui_install_success_page(object):
         self.stable_diffusion_scrollarea.setWidgetResizable(True)
         self.stable_diffusion_layout = QWidget()
         self.stable_diffusion_layout.setObjectName(u"stable_diffusion_layout")
-        self.stable_diffusion_layout.setGeometry(QRect(0, 0, 571, 294))
+        self.stable_diffusion_layout.setGeometry(QRect(0, 0, 571, 279))
         self.verticalLayout = QVBoxLayout(self.stable_diffusion_layout)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.stable_diffusion_scrollarea.setWidget(self.stable_diffusion_layout)
@@ -76,11 +76,23 @@ class Ui_install_success_page(object):
 
         self.gridLayout.addWidget(self.groupBox, 2, 0, 1, 1)
 
+        self.checkBox = QCheckBox(install_success_page)
+        self.checkBox.setObjectName(u"checkBox")
+        self.checkBox.setChecked(True)
+
+        self.gridLayout.addWidget(self.checkBox, 4, 0, 1, 1)
+
         self.speecht5_checkbox = QCheckBox(install_success_page)
         self.speecht5_checkbox.setObjectName(u"speecht5_checkbox")
         self.speecht5_checkbox.setChecked(True)
 
         self.gridLayout.addWidget(self.speecht5_checkbox, 5, 0, 1, 1)
+
+        self.whisper_checkbox = QCheckBox(install_success_page)
+        self.whisper_checkbox.setObjectName(u"whisper_checkbox")
+        self.whisper_checkbox.setChecked(True)
+
+        self.gridLayout.addWidget(self.whisper_checkbox, 7, 0, 1, 1)
 
         self.ministral_checkbox = QCheckBox(install_success_page)
         self.ministral_checkbox.setObjectName(u"ministral_checkbox")
@@ -88,17 +100,11 @@ class Ui_install_success_page(object):
 
         self.gridLayout.addWidget(self.ministral_checkbox, 3, 0, 1, 1)
 
-        self.whisper_checkbox = QCheckBox(install_success_page)
-        self.whisper_checkbox.setObjectName(u"whisper_checkbox")
-        self.whisper_checkbox.setChecked(True)
+        self.openvoice_model = QCheckBox(install_success_page)
+        self.openvoice_model.setObjectName(u"openvoice_model")
+        self.openvoice_model.setChecked(True)
 
-        self.gridLayout.addWidget(self.whisper_checkbox, 6, 0, 1, 1)
-
-        self.checkBox = QCheckBox(install_success_page)
-        self.checkBox.setObjectName(u"checkBox")
-        self.checkBox.setChecked(True)
-
-        self.gridLayout.addWidget(self.checkBox, 4, 0, 1, 1)
+        self.gridLayout.addWidget(self.openvoice_model, 6, 0, 1, 1)
 
 
         self.retranslateUi(install_success_page)
@@ -107,6 +113,7 @@ class Ui_install_success_page(object):
         self.whisper_checkbox.toggled.connect(install_success_page.whisper_toggled)
         self.groupBox.toggled.connect(install_success_page.stable_diffusion_toggled)
         self.checkBox.toggled.connect(install_success_page.embedding_model_toggled)
+        self.openvoice_model.toggled.connect(install_success_page.openvoice_toggled)
 
         QMetaObject.connectSlotsByName(install_success_page)
     # setupUi
@@ -116,9 +123,10 @@ class Ui_install_success_page(object):
         self.page_title.setText(QCoreApplication.translate("install_success_page", u"Choose models to download", None))
         self.total_size_label.setText(QCoreApplication.translate("install_success_page", u"0MB", None))
         self.groupBox.setTitle(QCoreApplication.translate("install_success_page", u"Stable Diffusion Controlnet", None))
-        self.speecht5_checkbox.setText(QCoreApplication.translate("install_success_page", u"SpeechT5: Text-to-Speech", None))
-        self.ministral_checkbox.setText(QCoreApplication.translate("install_success_page", u"Ministral 8B Instruct 4bit: Large Language Model (LLM)", None))
-        self.whisper_checkbox.setText(QCoreApplication.translate("install_success_page", u"Whisper: Speech-to-Text (voice conversations)", None))
         self.checkBox.setText(QCoreApplication.translate("install_success_page", u"e5 Large: Embedding model (RAG search)", None))
+        self.speecht5_checkbox.setText(QCoreApplication.translate("install_success_page", u"SpeechT5: Text-to-Speech", None))
+        self.whisper_checkbox.setText(QCoreApplication.translate("install_success_page", u"Whisper: Speech-to-Text (voice conversations)", None))
+        self.ministral_checkbox.setText(QCoreApplication.translate("install_success_page", u"Ministral 8B Instruct 4bit: Large Language Model (LLM)", None))
+        self.openvoice_model.setText(QCoreApplication.translate("install_success_page", u"OpenVoice: Text-to-Speech", None))
     # retranslateUi
 
