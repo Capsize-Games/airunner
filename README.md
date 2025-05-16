@@ -51,7 +51,7 @@ For extra security, performance, and compatibility, AI Runner is built with **Wa
 2. **Create `airunner` directory**
    ```bash
    sudo mkdir ~/.local/share/airunner
-   sudo chown $USER:USER ~/.local/share/airunner
+   sudo chown $USER:$USER ~/.local/share/airunner
    ```
 3. **Install AI Runner**
    ```bash
