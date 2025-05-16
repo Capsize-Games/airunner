@@ -1,5 +1,5 @@
 OPENVOICE_FILES = {
-    "bert-base-multilingual-uncased": {
+    "google-bert/bert-base-multilingual-uncased": {
         "files": [
             "config.json",
             "model.safetensors",
@@ -8,7 +8,7 @@ OPENVOICE_FILES = {
             "special_tokens_map.json",
         ]
     },
-    "bert-base-uncased": {
+    "google-bert/bert-base-uncased": {
         "files": [
             "config.json",
             "model.safetensors",
