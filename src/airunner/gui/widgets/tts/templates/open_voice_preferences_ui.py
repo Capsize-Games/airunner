@@ -16,7 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
-    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
+    QHBoxLayout, QLineEdit, QPushButton, QSizePolicy,
+    QSpacerItem, QVBoxLayout, QWidget)
 
 from airunner.gui.widgets.slider.slider_widget import SliderWidget
 
@@ -27,6 +28,23 @@ class Ui_open_voice_preferences(object):
         open_voice_preferences.resize(400, 300)
         self.verticalLayout = QVBoxLayout(open_voice_preferences)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.groupBox_2 = QGroupBox(open_voice_preferences)
+        self.groupBox_2.setObjectName(u"groupBox_2")
+        self.horizontalLayout_2 = QHBoxLayout(self.groupBox_2)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.voice_sample_path = QLineEdit(self.groupBox_2)
+        self.voice_sample_path.setObjectName(u"voice_sample_path")
+
+        self.horizontalLayout_2.addWidget(self.voice_sample_path)
+
+        self.browse_voice_sample_path_button = QPushButton(self.groupBox_2)
+        self.browse_voice_sample_path_button.setObjectName(u"browse_voice_sample_path_button")
+
+        self.horizontalLayout_2.addWidget(self.browse_voice_sample_path_button)
+
+
+        self.verticalLayout.addWidget(self.groupBox_2)
+
         self.groupBox = QGroupBox(open_voice_preferences)
         self.groupBox.setObjectName(u"groupBox")
         self.gridLayout = QGridLayout(self.groupBox)
@@ -65,6 +83,13 @@ class Ui_open_voice_preferences(object):
     # setupUi
 
     def retranslateUi(self, open_voice_preferences):
+        self.groupBox_2.setTitle(QCoreApplication.translate("open_voice_preferences", u"MP3 Voice Sample", None))
+        self.voice_sample_path.setText("")
+        self.voice_sample_path.setPlaceholderText(QCoreApplication.translate("open_voice_preferences", u"MP3 voice sample", None))
+#if QT_CONFIG(tooltip)
+        self.browse_voice_sample_path_button.setToolTip(QCoreApplication.translate("open_voice_preferences", u"Browse for an MP3 voice sample to use with OpenVoice", None))
+#endif // QT_CONFIG(tooltip)
+        self.browse_voice_sample_path_button.setText(QCoreApplication.translate("open_voice_preferences", u"Browse", None))
         self.groupBox.setTitle(QCoreApplication.translate("open_voice_preferences", u"Language", None))
         self.language_combobox.setCurrentText("")
         self.speed_slider.setProperty(u"settings_property", QCoreApplication.translate("open_voice_preferences", u"openvoice_settings.speed", None))
