@@ -362,8 +362,8 @@ class InstallWorker(
             {"label": "Downloading OpenVoice models..."}
         )
         for k, v in OPENVOICE_FILES.items():
-            self.total_models_in_current_step += len(v)
-            for filename in v:
+            self.total_models_in_current_step += len(v["files"])
+            for filename in v["files"]:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
                         self.path_settings.base_path,
@@ -639,6 +639,7 @@ class InstallWorker(
             self.download_stt()
         elif self.current_step == 7:
             print("STEP 8")
+            self.download_openvoice()
             self.download_openvoice_and_unidic()
 
     def finalize_installation(self, *_args):
@@ -811,7 +812,7 @@ class InstallPage(BaseWizard):
 
         # if not self.models_enabled["openvoice"]:
         for k, v in OPENVOICE_FILES.items():
-            self.total_files += len(v)
+            self.total_files += len(v["files"])
 
     def start(self):
         """Start the installation process and ensure Next button is disabled"""
