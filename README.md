@@ -105,7 +105,7 @@ Below is a high-level list of capabilities in AI Runner:
 | **Memory**         | 16 GB RAM                                  | 32 GB RAM                                  |
 | **GPU**            | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
 | **Network**        | Broadband (used to download models)        | Broadband (used to download models)        |
-| **Storage**        | 22 GB                                      | 50 GB                                      |
+| **Storage**        | 22 GB (with models), 6 GB (without models) | 100 GB or higher                           |
 ---
 
 ### Models
@@ -123,7 +123,7 @@ These are the sizes of the various models that power AI Runner.
 | e5 large (embedding model) | 1.3 GB   |
 | Whisper Tiny            | 155.4 MB |
 | Speech T5 (Voice)       | 654.4 MB |
-| OpenVoice (Voice)       | ... |
+| OpenVoice (Voice)       | 4.0 GB |
 
 ---
 
