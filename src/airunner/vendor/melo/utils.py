@@ -9,9 +9,10 @@ from scipy.io.wavfile import read
 import torch
 import torchaudio
 import librosa
-from airunner.vendor.openvoice.text import cleaned_text_to_sequence, get_bert
+from airunner.vendor.melo.text import cleaned_text_to_sequence
+from airunner.vendor.melo.text import get_bert
 from airunner.vendor.melo.text.cleaner import clean_text
-from airunner.vendor.openvoice import commons
+from airunner.vendor.melo import commons
 
 MATPLOTLIB_FLAG = False
 
