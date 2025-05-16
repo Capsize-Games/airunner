@@ -734,7 +734,17 @@ class LLMAPIService(APIServiceBase):
 
 
 class API(App):
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, *args, **kwargs):
+        if hasattr(self, "_initialized") and self._initialized:
+            return
+        self._initialized = True
         self.llm = LLMAPIService(emit_signal=self.emit_signal)
         self.art = ARTAPIService(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
@@ -886,8 +896,10 @@ class API(App):
             {"message": message},
         )
 
-    def download_complete(self):
-        self.emit_signal(SignalCode.DOWNLOAD_COMPLETE)
+    def download_complete(self, file_name: str = ""):
+        self.emit_signal(
+            SignalCode.DOWNLOAD_COMPLETE, {"file_name": file_name}
+        )
 
     def clear_status_message(self):
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)

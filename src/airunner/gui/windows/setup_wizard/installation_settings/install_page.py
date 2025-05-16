@@ -1,13 +1,10 @@
 from typing import List, Dict
 import os.path
-import subprocess
-import requests
 import zipfile
 
 from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
 from PySide6.QtWidgets import QWizard
 
-from airunner.data.models import AIModels, ControlnetModel
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 from airunner.data.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
@@ -15,6 +12,7 @@ from airunner.data.bootstrap.controlnet_bootstrap_data import (
 from airunner.data.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
+from airunner.data.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
 from airunner.data.bootstrap.flux_file_bootstrap_data import (
     FLUX_FILE_BOOTSTRAP_DATA,
 )
@@ -62,6 +60,31 @@ CONTROLNET_PATHS = [
     "lllyasviel/control_v11p_sd15_inpaint",
     "lllyasviel/control_v11e_sd15_shuffle",
 ]
+controlnet_processor_files = [
+    "150_16_swin_l_oneformer_coco_100ep.pth",
+    "250_16_swin_l_oneformer_ade20k_160k.pth",
+    "ControlNetHED.pth",
+    "ControlNetLama.pth",
+    "RealESRGAN_x4plus.pth",
+    "ZoeD_M12_N.pt",
+    "body_pose_model.pth",
+    "clip_g.pth",
+    "dpt_hybrid-midas-501f0c75.pt",
+    "erika.pth",
+    "facenet.pth",
+    "hand_pose_model.pth",
+    "lama.ckpt",
+    "latest_net_G.pth",
+    "mlsd_large_512_fp32.pth",
+    "netG.pth",
+    "network-bsds500.pth",
+    "res101.pth",
+    "scannet.pt",
+    "sk_model.pth",
+    "sk_model2.pth",
+    "table5_pidinet.pth",
+    "upernet_global_small.pth",
+]
 
 
 class InstallWorker(
@@ -75,6 +98,7 @@ class InstallWorker(
     def __init__(self, parent, models_enabled: List[str]):
         super().__init__()
         self.parent = parent
+        self.total_files = 0
         self.models_enabled = models_enabled
         self.current_step = -1
         self.total_models_in_current_step = 0
@@ -97,7 +121,6 @@ class InstallWorker(
 
         models = model_bootstrap_data
 
-        self.total_models_in_current_step += len(models)
         for model in models:
             if model["name"] == "CompVis Safety Checker":
                 action_key = "safety_checker"
@@ -115,6 +138,8 @@ class InstallWorker(
             except KeyError:
                 continue
             self.parent.total_steps += len(files)
+            self.total_models_in_current_step += len(files)
+
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -142,7 +167,6 @@ class InstallWorker(
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading Controlnet models..."}
         )
-        self.total_models_in_current_step += len(controlnet_bootstrap_data)
         for controlnet_model in controlnet_bootstrap_data:
             if not self.models_enabled.get(controlnet_model["name"], True):
                 continue
@@ -150,6 +174,7 @@ class InstallWorker(
                 "controlnet"
             ]
             self.parent.total_steps += len(files)
+            self.total_models_in_current_step += len(files)
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -178,7 +203,6 @@ class InstallWorker(
 
         models = model_bootstrap_data
 
-        self.total_models_in_current_step += len(models)
         for model in models:
             action = model["pipeline_action"]
             try:
@@ -186,6 +210,7 @@ class InstallWorker(
             except KeyError:
                 continue
             self.parent.total_steps += len(files)
+            self.total_models_in_current_step += len(files)
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -213,31 +238,7 @@ class InstallWorker(
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading Controlnet processors..."}
         )
-        controlnet_processor_files = [
-            "150_16_swin_l_oneformer_coco_100ep.pth",
-            "250_16_swin_l_oneformer_ade20k_160k.pth",
-            "ControlNetHED.pth",
-            "ControlNetLama.pth",
-            "RealESRGAN_x4plus.pth",
-            "ZoeD_M12_N.pt",
-            "body_pose_model.pth",
-            "clip_g.pth",
-            "dpt_hybrid-midas-501f0c75.pt",
-            "erika.pth",
-            "facenet.pth",
-            "hand_pose_model.pth",
-            "lama.ckpt",
-            "latest_net_G.pth",
-            "mlsd_large_512_fp32.pth",
-            "netG.pth",
-            "network-bsds500.pth",
-            "res101.pth",
-            "scannet.pt",
-            "sk_model.pth",
-            "sk_model2.pth",
-            "table5_pidinet.pth",
-            "upernet_global_small.pth",
-        ]
+        self.total_models_in_current_step += len(controlnet_processor_files)
         self.parent.total_steps += len(controlnet_processor_files)
         for filename in controlnet_processor_files:
             requested_file_path = os.path.expanduser(
@@ -259,6 +260,7 @@ class InstallWorker(
                 print(f"Error downloading {filename}: {e}")
 
     def download_llms(self):
+        print("DOWNLOAD LLMS", self.models_enabled["mistral"])
         if not self.models_enabled["mistral"]:
             self.set_page()
             return
@@ -269,14 +271,11 @@ class InstallWorker(
                 if model["pipeline_action"] == "embedding":
                     if not self.models_enabled["embedding_model"]:
                         continue
-                else:
-                    if not self.models_enabled["mistral"]:
-                        continue
                 models.append(model)
-        self.total_models_in_current_step += len(models)
         for model in models:
             files = LLM_FILE_BOOTSTRAP_DATA[model["path"]]["files"]
             self.parent.total_steps += len(files)
+            self.total_models_in_current_step += len(files)
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -289,6 +288,7 @@ class InstallWorker(
                     )
                 )
                 try:
+                    print("trying to download", filename)
                     self.hf_downloader.download_model(
                         requested_path=model["path"],
                         requested_file_name=filename,
@@ -336,6 +336,32 @@ class InstallWorker(
             {"label": "Downloading TTS models..."}
         )
         for k, v in SPEECH_T5_FILES.items():
+            self.total_models_in_current_step += len(v)
+            for filename in v:
+                requested_file_path = os.path.expanduser(
+                    os.path.join(
+                        self.path_settings.base_path,
+                        "text",
+                        "models",
+                        "tts",
+                        k,
+                    )
+                )
+                try:
+                    self.hf_downloader.download_model(
+                        requested_path=k,
+                        requested_file_name=filename,
+                        requested_file_path=requested_file_path,
+                        requested_callback=self.progress_updated.emit,
+                    )
+                except Exception as e:
+                    print(f"Error downloading {filename}: {e}")
+
+    def download_openvoice(self):
+        self.parent.on_set_downloading_status_label(
+            {"label": "Downloading OpenVoice models..."}
+        )
+        for k, v in OPENVOICE_FILES.items():
             self.total_models_in_current_step += len(v)
             for filename in v:
                 requested_file_path = os.path.expanduser(
@@ -526,14 +552,20 @@ class InstallWorker(
         )
 
     @Slot()
-    def download_finished(self):
+    def download_finished(self, data):
+        print(
+            "DOWNLOAD FINISHED",
+            self.current_step,
+            self.total_models_in_current_step,
+        )
         self.total_models_in_current_step -= 1
+        # if self.current_step == 7:
+        #     # If we're in the openvoice/unidic step, extract after download
+        #     if hasattr(self, "_unidic_zip_path") and hasattr(
+        #         self, "_openvoice_zip_paths"
+        #     ):
+        #         self.extract_openvoice_and_unidic()
         if self.total_models_in_current_step <= 0:
-            # If we're in the openvoice/unidic step, extract after download
-            if hasattr(self, "_unidic_zip_path") and hasattr(
-                self, "_openvoice_zip_paths"
-            ):
-                self.extract_openvoice_and_unidic()
             self.set_page()
 
     @Slot()
@@ -554,6 +586,7 @@ class InstallWorker(
             self.application_settings.stable_diffusion_agreement_checked
             and self.current_step == -1
         ):
+            print("STEP 1")
             """
             Create the airunner paths
             """
@@ -568,6 +601,7 @@ class InstallWorker(
             self.application_settings.stable_diffusion_agreement_checked
             and self.current_step == 1
         ):
+            print("STEP 2")
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Controlnet"}
             )
@@ -577,30 +611,39 @@ class InstallWorker(
             self.application_settings.stable_diffusion_agreement_checked
             and self.current_step == 2
         ):
-            self.current_step = 4
+            print("STEP 3")
+            self.current_step = 3
             self.download_controlnet_processors()
-        # elif self.current_step == 3:
-        #     self.current_step = 4
-        #     self.download_flux()
-        elif self.current_step == 4:
+        elif self.current_step == 3:
+            print("STEP 4")
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading LLM"}
             )
-            self.current_step = 5
+            self.current_step = 4
             self.download_llms()
+        elif self.current_step == 4:
+            print("STEP 5")
+            self.parent.on_set_downloading_status_label(
+                {"label": f"Downloading Text-to-Speech"}
+            )
+            self.current_step = 5
+            self.download_tts()
         elif self.current_step == 5:
+            print("STEP 6")
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Text-to-Speech"}
             )
             self.current_step = 6
             self.download_tts()
         elif self.current_step == 6:
+            print("STEP 7")
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Speech-to-Text"}
             )
             self.current_step = 7
             self.download_stt()
         elif self.current_step == 7:
+            print("STEP 8")
             self.download_openvoice_and_unidic()
 
     def finalize_installation(self, *_args):
@@ -631,6 +674,8 @@ class InstallPage(BaseWizard):
         models_enabled: List[str],
     ):
         super(InstallPage, self).__init__(parent)
+        self.total_files_downloaded = 0
+        self.total_files = 0
         self.stablediffusion_models = stablediffusion_models
         self.models_enabled = models_enabled
         self.steps_completed = 0
@@ -695,6 +740,10 @@ class InstallPage(BaseWizard):
                 LLM_FILE_BOOTSTRAP_DATA["intfloat/e5-large"]["files"]
             )
 
+        # if self.models_enabled["openvoice"]:
+        for k, v in OPENVOICE_FILES.items():
+            self.total_steps += len(v["files"])
+
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.update_progress_bar)
         self.register(SignalCode.DOWNLOAD_PROGRESS, self.download_progress)
         self.register(SignalCode.UPDATE_DOWNLOAD_LOG, self.update_download_log)
@@ -710,6 +759,65 @@ class InstallPage(BaseWizard):
         self.worker = InstallWorker(self, models_enabled=self.models_enabled)
         self.worker.moveToThread(self.thread)
 
+    def calculate_total_files(self):
+        if self.models_enabled["stable_diffusion"]:
+            models = model_bootstrap_data
+            for model in models:
+                if model["name"] == "CompVis Safety Checker":
+                    action_key = "safety_checker"
+                    action = f"{model['pipeline_action']}/{action_key}"
+                elif model["name"] == "OpenAI Feature Extractor":
+                    action_key = "feature_extractor"
+                    action = f"{model['pipeline_action']}/{action_key}"
+                else:
+                    action = model["pipeline_action"]
+                    action_key = model["pipeline_action"]
+                if not self.models_enabled.get(action, True):
+                    continue
+                try:
+                    files = SD_FILE_BOOTSTRAP_DATA[model["version"]][
+                        action_key
+                    ]
+                    self.total_files += len(files)
+                except KeyError:
+                    continue
+
+            for controlnet_model in controlnet_bootstrap_data:
+                if not self.models_enabled.get(controlnet_model["name"], True):
+                    continue
+                files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]][
+                    "controlnet"
+                ]
+                self.total_files += len(files)
+
+            self.total_files += len(controlnet_processor_files)
+
+        if self.models_enabled["mistral"]:
+            models = []
+            for model in model_bootstrap_data:
+                if model["category"] == "llm":
+                    if model["pipeline_action"] == "embedding":
+                        if not self.models_enabled["embedding_model"]:
+                            continue
+                    else:
+                        if not self.models_enabled["mistral"]:
+                            continue
+                    models.append(model)
+                    files = LLM_FILE_BOOTSTRAP_DATA[model["path"]]["files"]
+                    self.total_files += len(files)
+
+        if self.models_enabled["whisper"]:
+            for k, v in WHISPER_FILES.items():
+                self.total_files += len(v)
+
+        if self.models_enabled["speecht5"]:
+            for k, v in SPEECH_T5_FILES.items():
+                self.total_files += len(v)
+
+        # if not self.models_enabled["openvoice"]:
+        for k, v in OPENVOICE_FILES.items():
+            self.total_files += len(v)
+
     def start(self):
         """Start the installation process and ensure Next button is disabled"""
         # Make sure Next button is disabled when downloads start
@@ -721,6 +829,7 @@ class InstallPage(BaseWizard):
             )
 
         # Connect signals and start the thread
+        self.calculate_total_files()
         self.worker.file_download_finished.connect(self.file_download_finished)
         self.worker.progress_updated.connect(self.file_progress_updated)
         self.thread.started.connect(self.worker.run)
@@ -728,7 +837,6 @@ class InstallPage(BaseWizard):
 
     def file_download_finished(self):
         """Handler for when a file download completes"""
-        self.update_progress_bar()
 
     def file_progress_updated(self, current, total):
         """Handler for download progress updates"""
@@ -750,21 +858,31 @@ class InstallPage(BaseWizard):
 
     def update_progress_bar(self, final: bool = False):
         """Update the progress bar and manage Next button state"""
-        if final:
-            self.steps_completed = self.total_steps
-        else:
-            self.steps_completed += 1
+        # Remove incorrect assignment to self.total_files
+        # if final:
+        #     self.total_files = self.total_files_downloaded
+        # else:
+        if self.total_files == 0 and not final:
+            return
+        self.total_files_downloaded += 1
 
-        if self.total_steps == self.steps_completed:
+        print(
+            "TOTAL FILES DOWNLOADED",
+            self.total_files_downloaded,
+            self.total_files,
+        )
+
+        if self.total_files == self.total_files_downloaded:
             self.ui.progress_bar.setValue(100)
 
             # Add a slight delay before enabling the Next button
             # to ensure all processing is complete
             QTimer.singleShot(500, self._enable_next_button)
         else:
-            self.ui.progress_bar.setValue(
-                (self.steps_completed / self.total_steps) * 100
-            )
+            val = 0
+            if self.total_files > 0:
+                val = (self.total_files_downloaded / self.total_files) * 100
+            self.ui.progress_bar.setValue(val)
             # Make sure Next button stays disabled during downloads
             if hasattr(self.parent, "button") and self.parent.button(
                 QWizard.WizardButton.NextButton

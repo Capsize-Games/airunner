@@ -380,3 +380,4 @@ AIRUNNER_DISABLE_FACEHUGGERSHIELD = (
     os.environ.get("AIRUNNER_DISABLE_FACEHUGGERSHIELD", "0") == "1"
 )
 CUDA_ERROR = "CUDA out of memory"
+DEFAULT_HF_ENDPOINT = "https://huggingface.co"
