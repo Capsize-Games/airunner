@@ -1,5 +1,8 @@
 from typing import List, Dict
 import os.path
+import subprocess
+import requests
+import zipfile
 
 from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
 from PySide6.QtWidgets import QWizard
@@ -354,20 +357,131 @@ class InstallWorker(
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
 
-    def finalize_installation(self, *_args):
-        self.parent.on_set_downloading_status_label(
-            {"label": "Installation complete."}
-        )
-        self.parent.update_progress_bar(final=True)
+    def _download_file_with_progress(self, url, dest_path, label=None):
+        """
+        Download a file from a direct URL with progress reporting.
+        """
+        import requests
 
-    @staticmethod
-    def update_progress(current, total):
-        print("update progress", current, total)
+        chunk_size = 8192
+        try:
+            with requests.get(url, stream=True) as r:
+                r.raise_for_status()
+                total = int(r.headers.get("content-length", 0))
+                downloaded = 0
+                with open(dest_path, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=chunk_size):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            if total > 0:
+                                self.progress_updated.emit(downloaded, total)
+            if label:
+                self.parent.update_download_log(
+                    {"message": f"Downloaded {label}"}
+                )
+        except Exception as e:
+            self.parent.update_download_log(
+                {"message": f"Failed to download {label or url}: {e}"}
+            )
+
+    def download_openvoice_and_unidic(self):
+        """
+        Download unidic and OpenVoice checkpoints, using direct URL download for these files.
+        Extraction and cleanup will be handled after all downloads are finished.
+        """
+        base_path = self.path_settings.base_path
+        self._unidic_dir = os.path.expanduser(
+            os.path.join(base_path, "text", "models", "tts", "unidic")
+        )
+        self._openvoice_dir = os.path.expanduser(
+            os.path.join(base_path, "text", "models", "tts", "openvoice")
+        )
+        os.makedirs(self._unidic_dir, exist_ok=True)
+        os.makedirs(self._openvoice_dir, exist_ok=True)
+
+        # Download unidic zip
+        self.parent.on_set_downloading_status_label(
+            {"label": "Downloading unidic dictionary..."}
+        )
+        self._unidic_zip_path = os.path.join(
+            self._unidic_dir, "unidic-3.1.0.zip"
+        )
+        unidic_url = "https://cotonoha-dic.s3-ap-northeast-1.amazonaws.com/unidic-3.1.0.zip"
+        self.total_models_in_current_step += 1  # Track unidic zip
+        self._download_file_with_progress(
+            unidic_url, self._unidic_zip_path, label="unidic-3.1.0.zip"
+        )
+
+        # OpenVoice download
+        self.parent.on_set_downloading_status_label(
+            {"label": "Downloading OpenVoice checkpoints..."}
+        )
+        self._openvoice_zip_paths = []
+        urls = [
+            "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_1226.zip",
+            "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip",
+        ]
+        for url in urls:
+            zip_name = os.path.basename(url)
+            zip_path = os.path.join(self._openvoice_dir, zip_name)
+            self._openvoice_zip_paths.append(zip_path)
+            self.total_models_in_current_step += 1  # Track each openvoice zip
+            self._download_file_with_progress(url, zip_path, label=zip_name)
+            self.parent.update_download_log(
+                {"message": f"Started download of {zip_name}"}
+            )
+
+    def extract_openvoice_and_unidic(self):
+        """
+        Extract and clean up unidic and OpenVoice zips after all downloads are complete.
+        """
+        # Extract unidic
+        try:
+            self.parent.on_set_downloading_status_label(
+                {"label": "Unzipping unidic..."}
+            )
+            with zipfile.ZipFile(self._unidic_zip_path, "r") as zip_ref:
+                zip_ref.extractall(self._unidic_dir)
+            os.remove(self._unidic_zip_path)
+            self.parent.update_download_log(
+                {"message": "Unzipped and removed unidic-3.1.0.zip"}
+            )
+        except Exception as e:
+            self.parent.update_download_log(
+                {"message": f"Failed to unzip unidic: {e}"}
+            )
+
+        # Extract OpenVoice
+        for zip_path in self._openvoice_zip_paths:
+            zip_name = os.path.basename(zip_path)
+            try:
+                self.parent.on_set_downloading_status_label(
+                    {"label": f"Unzipping {zip_name}..."}
+                )
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                    zip_ref.extractall(self._openvoice_dir)
+                os.remove(zip_path)
+                self.parent.update_download_log(
+                    {"message": f"Unzipped and removed {zip_name}"}
+                )
+            except Exception as e:
+                self.parent.update_download_log(
+                    {"message": f"Failed to unzip {zip_name}: {e}"}
+                )
+        self.parent.on_set_downloading_status_label(
+            {"label": "OpenVoice and unidic setup complete."}
+        )
 
     @Slot()
     def download_finished(self):
         self.total_models_in_current_step -= 1
         if self.total_models_in_current_step <= 0:
+            # If we're in the openvoice/unidic step, extract after download
+            if hasattr(self, "_unidic_zip_path") and hasattr(
+                self, "_openvoice_zip_paths"
+            ):
+                self.extract_openvoice_and_unidic()
             self.set_page()
 
     @Slot()
@@ -435,12 +549,19 @@ class InstallWorker(
             self.current_step = 7
             self.download_stt()
         elif self.current_step == 7:
+            self.download_openvoice_and_unidic()
             self.hf_downloader.download_model(
                 requested_path="",
                 requested_file_name="",
                 requested_file_path="",
                 requested_callback=self.finalize_installation,
             )
+
+    def finalize_installation(self, *_args):
+        self.parent.on_set_downloading_status_label(
+            {"label": "Installation complete."}
+        )
+        self.parent.update_progress_bar(final=True)
 
 
 class InstallPage(BaseWizard):
@@ -460,9 +581,11 @@ class InstallPage(BaseWizard):
         # reset the progress bar
         self.ui.progress_bar.setValue(0)
         self.ui.progress_bar.setMaximum(100)
-        
+
         # Disable the Next button when starting downloads
-        if hasattr(parent, 'button') and parent.button(QWizard.WizardButton.NextButton):
+        if hasattr(parent, "button") and parent.button(
+            QWizard.WizardButton.NextButton
+        ):
             parent.button(QWizard.WizardButton.NextButton).setEnabled(False)
 
         # These will increase
@@ -533,9 +656,13 @@ class InstallPage(BaseWizard):
     def start(self):
         """Start the installation process and ensure Next button is disabled"""
         # Make sure Next button is disabled when downloads start
-        if hasattr(self.parent, 'button') and self.parent.button(QWizard.WizardButton.NextButton):
-            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(False)
-            
+        if hasattr(self.parent, "button") and self.parent.button(
+            QWizard.WizardButton.NextButton
+        ):
+            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(
+                False
+            )
+
         # Connect signals and start the thread
         self.worker.file_download_finished.connect(self.file_download_finished)
         self.worker.progress_updated.connect(self.file_progress_updated)
@@ -545,7 +672,7 @@ class InstallPage(BaseWizard):
     def file_download_finished(self):
         """Handler for when a file download completes"""
         self.update_progress_bar()
-        
+
     def file_progress_updated(self, current, total):
         """Handler for download progress updates"""
         self.download_progress({"current": current, "total": total})
@@ -570,10 +697,10 @@ class InstallPage(BaseWizard):
             self.steps_completed = self.total_steps
         else:
             self.steps_completed += 1
-            
+
         if self.total_steps == self.steps_completed:
             self.ui.progress_bar.setValue(100)
-            
+
             # Add a slight delay before enabling the Next button
             # to ensure all processing is complete
             QTimer.singleShot(500, self._enable_next_button)
@@ -582,13 +709,21 @@ class InstallPage(BaseWizard):
                 (self.steps_completed / self.total_steps) * 100
             )
             # Make sure Next button stays disabled during downloads
-            if hasattr(self.parent, 'button') and self.parent.button(QWizard.WizardButton.NextButton):
-                self.parent.button(QWizard.WizardButton.NextButton).setEnabled(False)
-                
+            if hasattr(self.parent, "button") and self.parent.button(
+                QWizard.WizardButton.NextButton
+            ):
+                self.parent.button(QWizard.WizardButton.NextButton).setEnabled(
+                    False
+                )
+
     def _enable_next_button(self):
         """Enable the Next button when installation is complete"""
-        if hasattr(self.parent, 'button') and self.parent.button(QWizard.WizardButton.NextButton):
-            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(True)
+        if hasattr(self.parent, "button") and self.parent.button(
+            QWizard.WizardButton.NextButton
+        ):
+            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(
+                True
+            )
 
     def set_status(self, message: str):
         # set the text of a QProgressBar
