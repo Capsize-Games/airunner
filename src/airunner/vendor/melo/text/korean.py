@@ -4,7 +4,7 @@ import re
 
 from transformers import AutoTokenizer
 
-from . import punctuation, symbols
+from airunner.vendor.melo.text import punctuation, symbols
 
 
 from airunner.vendor.melo.text.ko_dictionary import (
@@ -147,7 +147,7 @@ def g2p(norm_text):
 
 
 def get_bert_feature(text, word2ph, device="cuda"):
-    from . import japanese_bert
+    from airunner.vendor.melo.text import japanese_bert
 
     return japanese_bert.get_bert_feature(
         text, word2ph, device=device, model_id=model_id
@@ -156,7 +156,7 @@ def get_bert_feature(text, word2ph, device="cuda"):
 
 if __name__ == "__main__":
     # tokenizer = AutoTokenizer.from_pretrained("./bert/bert-base-japanese-v3")
-    from text.symbols import symbols
+    from airunner.vendor.melo.text.symbols import symbols
 
     text = "전 제 일의 가치와 폰타인 대중들이 한 일의 의미를 잘 압니다. 앞으로도 전 제 일에 자부심을 갖고 살아갈 겁니다"
     import json

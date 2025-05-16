@@ -4,7 +4,7 @@ import re
 import unicodedata
 
 from transformers import AutoTokenizer
-from . import symbols
+from airunner.vendor.melo.text import symbols
 import pdb
 from pykakasi import kakasi
 from airunner.vendor.melo.text import japanese_bert

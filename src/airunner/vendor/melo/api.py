@@ -6,7 +6,7 @@ import torch.nn as nn
 from tqdm import tqdm
 import torch
 
-from . import utils
+from airunner.vendor.melo import utils
 from airunner.vendor.melo.models import SynthesizerTrn
 from airunner.vendor.melo.split_utils import split_sentence
 from airunner.vendor.melo.download_utils import (
