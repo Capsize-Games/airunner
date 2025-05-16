@@ -7,18 +7,23 @@
 
 ---
 
-# AI Runner: Offline Inference Engine
+# AI Runner: Offline AI Inference Engine for Hackers, Makers, and Builders.
 
 ![image](https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa)
 
-- ✅ **Large Language Models (LLMs)** for chat and text generation  
-- ✅ **Stable Diffusion** for image generation and manipulation
-- ✅ **Text-to-Speech (TTS)** Integrated with **OpenVoice**, **SpeechT5**, and **Espeak** for voice synthesis
-- ✅ **Speech-to-Text (STT)** Uses **Whisper** for converting audio to text
-- ✅ **Customizable Voice-based chatbots** for real-time conversations
+Here are some of the things you can do with AI Runner:
+
+- ✅ **Voice-based chatbots** for real-time conversations
+- ✅ **Text-to-Image** generation with **Stable Diffusion** and **ControlNet**
+- ✅ **Image manipulation** with **inpainting** and **outpainting**
+- ✅ **Text-to-Speech** (TTS) and **Speech-to-Text** (STT) using **OpenVoice**, **SpeechT5**, and **Whisper**
+- ✅ **Customizable AI personalities** for more engaging conversations
 - ✅ **Image filters** and **inpainting** for image editing
 - ✅ **Retrieval-Augmented Generation** (RAG) for enhanced LLM responses
-- ✅ **Wayland support, Python 3.13, Docker support, and a pure Python codebase** for improved security, performance, and compatibility
+
+For extra security, performance, and compatibility, AI Runner is built with **Wayland support**, **Python 3.13**, and the latest stable torch libraries.
+
+---
 
 ## System Requirements
 
@@ -59,6 +64,17 @@
    ```
 
 For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+
+**Note: *AI Runner does not distribute AI art models. You are responsible for obtaining and your own.***
+
+---
+
+## 🛠️ Usage
+
+### Basic Usage
+
+- **Run AI Runner**: `airunner`
+- **Build templates**: `airunner-build-ui`
 
 ---
 
