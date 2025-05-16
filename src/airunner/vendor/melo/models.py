@@ -3,14 +3,14 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from airunner.vendor.melo import commons
-from airunner.vendor.melo import modules
-from airunner.vendor.melo import attentions
+from airunner.vendor.openvoice import commons
+from airunner.vendor.openvoice import modules
+from airunner.vendor.openvoice import attentions
 
 from torch.nn import Conv1d, ConvTranspose1d, Conv2d
 from torch.nn.utils import weight_norm, remove_weight_norm, spectral_norm
 
-from airunner.vendor.melo.commons import init_weights, get_padding
+from airunner.vendor.openvoice.commons import init_weights, get_padding
 import airunner.vendor.melo.monotonic_align as monotonic_align
 
 

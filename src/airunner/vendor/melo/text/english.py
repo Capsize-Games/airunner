@@ -3,12 +3,17 @@ import os
 import re
 from g2p_en import G2p
 
-from . import symbols
-
-from .english_utils.abbreviations import expand_abbreviations
-from .english_utils.time_norm import expand_time_english
-from .english_utils.number_norm import normalize_numbers
-from .japanese import distribute_phone
+from airunner.vendor.melo.text import symbols
+from airunner.vendor.melo.text.english_utils.abbreviations import (
+    expand_abbreviations,
+)
+from airunner.vendor.melo.text.english_utils.time_norm import (
+    expand_time_english,
+)
+from airunner.vendor.melo.text.english_utils.number_norm import (
+    normalize_numbers,
+)
+from airunner.vendor.melo.text.japanese import distribute_phone
 
 from transformers import AutoTokenizer
 
@@ -185,8 +190,11 @@ def text_normalize(text):
     text = expand_abbreviations(text)
     return text
 
-model_id = 'bert-base-uncased'
+
+model_id = "bert-base-uncased"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+
 def g2p_old(text):
     tokenized = tokenizer.tokenize(text)
     # import pdb; pdb.set_trace()
@@ -214,6 +222,7 @@ def g2p_old(text):
     phones = [post_replace_ph(i) for i in phones]
     return phones, tones, word2ph
 
+
 def g2p(text, pad_start_end=True, tokenized=None):
     if tokenized is None:
         tokenized = tokenizer.tokenize(text)
@@ -225,7 +234,7 @@ def g2p(text, pad_start_end=True, tokenized=None):
             ph_groups.append([t])
         else:
             ph_groups[-1].append(t.replace("#", ""))
-    
+
     phones = []
     tones = []
     word2ph = []
@@ -259,21 +268,26 @@ def g2p(text, pad_start_end=True, tokenized=None):
         word2ph = [1] + word2ph + [1]
     return phones, tones, word2ph
 
+
 def get_bert_feature(text, word2ph, device=None):
     from text import english_bert
 
     return english_bert.get_bert_feature(text, word2ph, device=device)
 
+
 if __name__ == "__main__":
     # print(get_dict())
     # print(eng_word_to_phoneme("hello"))
     from text.english_bert import get_bert_feature
+
     text = "In this paper, we propose 1 DSPGAN, a N-F-T GAN-based universal vocoder."
     text = text_normalize(text)
     phones, tones, word2ph = g2p(text)
-    import pdb; pdb.set_trace()
+    import pdb
+
+    pdb.set_trace()
     bert = get_bert_feature(text, word2ph)
-    
+
     print(phones, tones, word2ph, bert.shape)
 
     # all_phones = set()

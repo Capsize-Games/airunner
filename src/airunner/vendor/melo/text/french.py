@@ -1,5 +1,5 @@
-from .fr_phonemizer import cleaner as fr_cleaner
-from .fr_phonemizer import fr_to_ipa
+from airunner.vendor.melo.text.fr_phonemizer import cleaner as fr_cleaner
+from airunner.vendor.melo.text.fr_phonemizer import fr_to_ipa
 from transformers import AutoTokenizer
 
 
