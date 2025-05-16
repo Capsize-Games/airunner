@@ -7,11 +7,18 @@
 
 ---
 
-# Local Inference Made Easy
-
-AI Runner is a local-first, open-source application that allows you to run large language models (LLMs) and image generation tools on your own hardware. It provides a user-friendly interface for creating chatbots, generating images, and performing various AI tasks without relying on external APIs.
+# AI Runner: Offline Inference Engine and LLM Agent Platform
 
 ![image](https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa)
+
+- ✅ **Large Language Models (LLMs)** for chat and text generation  
+- ✅ **Stable Diffusion** for image generation and manipulation
+- ✅ **Text-to-Speech (TTS)** Integrated with **OpenVoice**, **SpeechT5**, and **Espeak** for voice synthesis
+- ✅ **Speech-to-Text (STT)** Uses **Whisper** for converting audio to text
+- ✅ **Customizable Voice-based chatbots** for real-time conversations
+- ✅ **Image filters** and **inpainting** for image editing
+- ✅ **Retrieval-Augmented Generation** (RAG) for enhanced LLM responses
+- ✅ **Wayland support, Python 3.13, Docker support, and a pure Python codebase** for improved security, performance, and compatibility
 
 ## System Requirements
 
@@ -52,25 +59,6 @@ AI Runner is a local-first, open-source application that allows you to run large
    ```
 
 For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
-
----
-
-## Overview
-
-![image](https://github.com/user-attachments/assets/b523c9e3-6a9b-4dfb-b66f-672b9b728f6e)
-
-AI Runner is a local-first, **open-source** application built with HuggingFace and Llama-index libraries that enables you to run:
-
-- ✅ **Large Language Models (LLMs)** for chat and text generation  
-- ✅ **Stable Diffusion** for image generation and manipulation
-- ✅ **Text-to-Speech (TTS)** Integrated with **OpenVoice**, **SpeechT5**, and **Espeak** for voice synthesis
-- ✅ **Speech-to-Text (STT)** Uses **Whisper** for converting audio to text
-- ✅ **Customizable Voice-based chatbots** for real-time conversations
-- ✅ **Image filters** and **inpainting** for image editing
-- ✅ **Retrieval-Augmented Generation** (RAG) for enhanced LLM responses
-- ✅ **Wayland support, Python 3.13, Docker support, and a pure Python codebase** for improved security, performance, and compatibility
-
-![interface/img.png](images/interface.png)
 
 ---
 
