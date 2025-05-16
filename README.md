@@ -34,7 +34,7 @@
 
 ## 💾 Installation Quick Start
 
-### Installation Steps
+### 🔧 Installation Steps
 
 1. **Install system requirements**
    ```bash
@@ -62,7 +62,7 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 
 ---
 
-## Features
+## ⭐ Features
 
 Below is a high-level list of capabilities in AI Runner:
 
@@ -94,7 +94,7 @@ Below is a high-level list of capabilities in AI Runner:
 
 ---
 
-## System Requirements
+## ⚙️ System Requirements
 
 ### System Requirements
 
