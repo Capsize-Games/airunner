@@ -8,6 +8,7 @@ from pypinyin import lazy_pinyin, Style
 from airunner.vendor.melo.text.symbols import language_tone_start_map
 from airunner.vendor.melo.text.tone_sandhi import ToneSandhi
 from airunner.vendor.melo.text.english import g2p as g2p_en
+from airunner.api import API
 from transformers import AutoTokenizer
 
 punctuation = ["!", "?", "…", ",", ".", "'", "-"]
@@ -105,7 +106,7 @@ def _get_initials_finals(word):
     return initials, finals
 
 
-model_id = "bert-base-multilingual-uncased"
+model_id = API().paths["google-bert/bert-base-multilingual-uncased"]
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 
@@ -216,8 +217,9 @@ def text_normalize(text):
 def get_bert_feature(text, word2ph, device):
     from airunner.vendor.melo.text import chinese_bert
 
+    model_id = API().paths["google-bert/bert-base-multilingual-uncased"]
     return chinese_bert.get_bert_feature(
-        text, word2ph, model_id="bert-base-multilingual-uncased", device=device
+        text, word2ph, model_id=model_id, device=device
     )
 
 

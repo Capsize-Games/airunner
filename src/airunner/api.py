@@ -1,3 +1,4 @@
+import os
 from typing import Optional, Dict, List, Any
 
 from NodeGraphQt import NodesPaletteWidget
@@ -744,6 +745,99 @@ class API(App):
     def __init__(self, *args, **kwargs):
         if hasattr(self, "_initialized") and self._initialized:
             return
+        self.paths = {
+            "google-bert/bert-base-multilingual-uncased": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "google-bert/bert-base-multilingual-uncased",
+                )
+            ),
+            "google-bert/bert-base-uncased": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "google-bert/bert-base-uncased",
+                )
+            ),
+            "dbmdz/bert-base-french-europeana-cased": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "dbmdz/bert-base-french-europeana-cased",
+                )
+            ),
+            "dccuchile/bert-base-spanish-wwm-uncased": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "dccuchile/bert-base-spanish-wwm-uncased",
+                )
+            ),
+            "kykim/bert-kor-base": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "kykim/bert-kor-base",
+                )
+            ),
+            "myshell-ai/MeloTTS-English": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-English",
+                )
+            ),
+            "myshell-ai/MeloTTS-English-v3": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-English-v3",
+                )
+            ),
+            "myshell-ai/MeloTTS-French": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-French",
+                )
+            ),
+            "myshell-ai/MeloTTS-Japanese": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-Japanese",
+                )
+            ),
+            "myshell-ai/MeloTTS-Spanish": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-Spanish",
+                )
+            ),
+            "myshell-ai/MeloTTS-Chinese": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-Chinese",
+                )
+            ),
+            "myshell-ai/MeloTTS-Korean": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-Korean",
+                )
+            ),
+            "tohoku-nlp/bert-base-japanese-v3": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "tohoku-nlp/bert-base-japanese-v3",
+                )
+            ),
+        }
         self._initialized = True
         self.llm = LLMAPIService(emit_signal=self.emit_signal)
         self.art = ARTAPIService(emit_signal=self.emit_signal)
