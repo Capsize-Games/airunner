@@ -10,7 +10,6 @@ RUN pip3.13 install --no-cache-dir pip setuptools wheel --upgrade && \
     pip3.13 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 && \
     cd /app && pip3.13 install --no-cache-dir -e .[all_dev] -U langchain-community && \
     pip3.13 install -U timm && \
-    python3.13 -c "import nltk; nltk.download('punkt')" && \
     rm -rf /tmp/* /var/tmp/* /root/.cache/pip
 
 # Switch back to non-root user

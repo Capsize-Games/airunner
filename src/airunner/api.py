@@ -1,3 +1,4 @@
+import os
 from typing import Optional, Dict, List, Any
 
 from NodeGraphQt import NodesPaletteWidget
@@ -200,6 +201,15 @@ class TTSAPIService(APIServiceBase):
         :param enabled: True to enable TTS, False to disable.
         """
         self.emit_signal(SignalCode.TOGGLE_TTS_SIGNAL, {"enabled": enabled})
+
+    def start(self):
+        self.emit_signal(SignalCode.TTS_ENABLE_SIGNAL, {})
+
+    def stop(self):
+        """
+        Emit a signal to stop TTS.
+        """
+        self.emit_signal(SignalCode.TTS_DISABLE_SIGNAL, {})
 
     def add_to_stream(self, response: str):
         """
@@ -725,7 +735,110 @@ class LLMAPIService(APIServiceBase):
 
 
 class API(App):
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, *args, **kwargs):
+        if hasattr(self, "_initialized") and self._initialized:
+            return
+        self.paths = {
+            "google-bert/bert-base-multilingual-uncased": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "google-bert/bert-base-multilingual-uncased",
+                )
+            ),
+            "google-bert/bert-base-uncased": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "google-bert/bert-base-uncased",
+                )
+            ),
+            "dbmdz/bert-base-french-europeana-cased": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "dbmdz/bert-base-french-europeana-cased",
+                )
+            ),
+            "dccuchile/bert-base-spanish-wwm-uncased": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "dccuchile/bert-base-spanish-wwm-uncased",
+                )
+            ),
+            "kykim/bert-kor-base": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "kykim/bert-kor-base",
+                )
+            ),
+            "myshell-ai/MeloTTS-English": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-English",
+                )
+            ),
+            "myshell-ai/MeloTTS-English-v3": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-English-v3",
+                )
+            ),
+            "myshell-ai/MeloTTS-French": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-French",
+                )
+            ),
+            "myshell-ai/MeloTTS-Japanese": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-Japanese",
+                )
+            ),
+            "myshell-ai/MeloTTS-Spanish": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-Spanish",
+                )
+            ),
+            "myshell-ai/MeloTTS-Chinese": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-Chinese",
+                )
+            ),
+            "myshell-ai/MeloTTS-Korean": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "myshell-ai/MeloTTS-Korean",
+                )
+            ),
+            "tohoku-nlp/bert-base-japanese-v3": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "tohoku-nlp/bert-base-japanese-v3",
+                )
+            ),
+        }
+        self._initialized = True
         self.llm = LLMAPIService(emit_signal=self.emit_signal)
         self.art = ARTAPIService(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
@@ -877,8 +990,10 @@ class API(App):
             {"message": message},
         )
 
-    def download_complete(self):
-        self.emit_signal(SignalCode.DOWNLOAD_COMPLETE)
+    def download_complete(self, file_name: str = ""):
+        self.emit_signal(
+            SignalCode.DOWNLOAD_COMPLETE, {"file_name": file_name}
+        )
 
     def clear_status_message(self):
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)

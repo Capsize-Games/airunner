@@ -9,58 +9,78 @@
 
 ---
 
-# AI Runner 
-
-**Run local AI models for text, images, text-to-speech, and speech-to-text—all in one open-source tool.**  
-No cloud dependency. No complicated setup. Just install, run, and create.
+# AI Runner: Offline AI Inference Engine for Hackers, Makers, and Builders.
 
 ![image](https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa)
-<small>**Art tools**</small>
 
-![image](https://github.com/user-attachments/assets/b523c9e3-6a9b-4dfb-b66f-672b9b728f6e)
-<small>**Agent workflows**</small>
+Here are some of the things you can do with AI Runner:
 
----
+- ✅ **Voice-based chatbots** for real-time conversations
+- ✅ **Text-to-Image** generation with **Stable Diffusion** and **ControlNet**
+- ✅ **Image manipulation** with **inpainting** and **outpainting**
+- ✅ **Text-to-Speech** (TTS) and **Speech-to-Text** (STT) using **OpenVoice**, **SpeechT5**, and **Whisper**
+- ✅ **Customizable AI personalities** for more engaging conversations
+- ✅ **Image filters** and **inpainting** for image editing
+- ✅ **Retrieval-Augmented Generation** (RAG) for enhanced LLM responses
 
-## Table of Contents
-- [Overview](#overview)
-- [Features](#features)
-- [System Requirements](#system-requirements)
-- [Installation Quick Start](#installation-quick-start)
-- [AI Models](#ai-models)
-- [Unit Tests](#unit-tests)
-- [Database](#database)
-- [Advanced Features](#advanced-features)
-- [Contributing](#contributing)
+For extra security, performance, and compatibility, AI Runner is built with **Wayland support**, **Python 3.13**, and the latest stable torch libraries.
 
 ---
 
-## Overview
+## System Requirements
 
-AI Runner is a local-first, **open-source** application built with HuggingFace and Llama-index libraries that enables you to run:
+| Specification       | Minimum                              | Recommended                          |
+|---------------------|--------------------------------------------|--------------------------------------------|
+| **OS**             | Ubuntu 22.04, Windows 10                               | Ubuntu 22.04 (Wayland)                              |
+| **CPU**            | Ryzen 2700K or Intel Core i7-8700K         | Ryzen 5800X or Intel Core i7-11700K        |
+| **Memory**         | 16 GB RAM                                  | 32 GB RAM                                  |
+| **GPU**            | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
+| **Network**        | Broadband (used to download models)        | Broadband (used to download models)        |
+| **Storage**        | 22 GB                                      | 50 GB                                      |
+---
 
-- **Large Language Models (LLMs)** for chat and text generation  
-- **Stable Diffusion** for image generation and manipulation
-- **Text-to-Speech (TTS)**  
-- **Speech-to-Text (STT)** 
-- **Customizable Voice-based chatbots** for real-time conversations
-- **Image filters** and **inpainting** for image editing
-- **Retrieval-Augmented Generation** (RAG) for enhanced LLM responses
-- **Wayland support, Python 3.13, Docker support, and a pure Python codebase** for improved security, performance, and compatibility
+## 💾 Installation Quick Start
 
-Originally created as a GUI-centric AI art and chatbot tool for end users, AI Runner has evolved into a **developer-friendly** platform. With Docker support, an extension API, and a pure Python codebase, you can integrate AI Runner into your own apps or use it as an all-in-one offline inference engine.
+### 🔧 Installation Steps
 
-![interface/img.png](images/interface.png)
+1. **Install system requirements**
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme espeak espeak-ng-espeak mecab libmecab-dev mecab-ipadic-utf8
+   ```
+2. **Create `airunner` directory**
+   ```bash
+   sudo mkdir ~/.local/share/airunner
+   sudo chown $USER:USER ~/.local/share/airunner
+   ```
+3. **Install AI Runner**
+   ```bash
+   pip install "typing-extensions==4.13.2"
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+   pip install airunner[all_dev]
+   pip install -U timm
+   ```
+4. **Run AI Runner**
+   ```bash
+   airunner
+   ```
 
-**Typical Uses:**
-- AI prototyping: Quickly test local LLMs and image generation.  
-- Offline scenarios: Work behind firewalls or without internet.  
-- Custom UI/UX: Build plugins/extensions for your particular domain.  
-- End-user tools: Hand off a no-code (GUI) solution for less technical stakeholders.
+For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+
+**Note: *AI Runner does not distribute AI art models. You are responsible for obtaining and your own.***
 
 ---
 
-## Features
+## 🛠️ Usage
+
+### Basic Usage
+
+- **Run AI Runner**: `airunner`
+- **Build templates**: `airunner-build-ui`
+
+---
+
+## ⭐ Features
 
 Below is a high-level list of capabilities in AI Runner:
 
@@ -68,8 +88,8 @@ Below is a high-level list of capabilities in AI Runner:
 |------------------------------------------|----------------------------------------------------------------------------------------------|
 | **LLMs & Communication**                 |                                                                                              |
 | Voice-based chatbot conversations        | Have real-time voice-chat sessions with an LLM (speech-to-text + text-to-speech)            |
-| Text-to-speech (TTS)                     | Convert text to spoken audio using Espeak or SpeechT5                                       |
-| Speech-to-text (STT)                     | Convert spoken audio to text with Whisper                                                   |
+| Text-to-speech (TTS)                     | Convert text to spoken audio using **OpenVoice**, **SpeechT5**, and **Espeak**                                       |
+| Speech-to-text (STT)                     | Convert spoken audio to text with **Whisper**                                                   |
 | Customizable chatbots                    | Create AI personalities and moods for more engaging conversations                            |
 | Retrieval-Augmented Generation           | Use local doc or website data to enrich chat responses                                      |
 | **Image Generation**                     |                                                                                              |
@@ -92,7 +112,7 @@ Below is a high-level list of capabilities in AI Runner:
 
 ---
 
-## System Requirements
+## ⚙️ System Requirements
 
 ### System Requirements
 
@@ -103,7 +123,7 @@ Below is a high-level list of capabilities in AI Runner:
 | **Memory**         | 16 GB RAM                                  | 32 GB RAM                                  |
 | **GPU**            | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
 | **Network**        | Broadband (used to download models)        | Broadband (used to download models)        |
-| **Storage**        | 22 GB                                      | 50 GB                                      |
+| **Storage**        | 22 GB (with models), 6 GB (without models) | 100 GB or higher                           |
 ---
 
 ### Models
@@ -121,167 +141,7 @@ These are the sizes of the various models that power AI Runner.
 | e5 large (embedding model) | 1.3 GB   |
 | Whisper Tiny            | 155.4 MB |
 | Speech T5 (Voice)       | 654.4 MB |
-
----
-
-## 💾 Installation Quick Start
-
-### 🐳 Docker
-
-**Recommended for most developers**—it avoids Python environment headaches and streamlines GPU access.
-
-**Note:** 
-
-AI Runner's Docker setup uses Wayland by default for optimal performance and compatibility with modern Linux desktop environments. This means you will need wayland support on your host system.
-
-1. **Install NVIDIA Container Toolkit**  
-   Follow the [official guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) to enable GPU passthrough for Docker.
-2. **Clone AI Runner**
-   ```bash
-   git clone https://github.com/Capsize-Games/airunner.git
-   cd airunner
-   ./src/airunner/bin/docker.sh airunner
-   ```
-
-#### Custom docker compose file
-
-Docker compose allows you to customize the container environment.
-
-For example, if you want access to a directory on your host machine, you can mount it in the container by creating a `airunner/package/dev/docker-compose.local.yml` file with the following content
-
-```yaml
-version: '3.8'
-
-services:
-  airunner_dev:
-    volumes:
-      - /mnt/YourDrive:/mnt/YourDrive:rw,z
-```
-
----
-
-### 🖥️ Ubuntu (including Windows WSL 2)
-
-Choose this if you want to run AI Runner natively on your machine without Docker.
-
-These instructions will assume the following directory structure. *You should only deviate from this structure if you know what you're doing.*
-
-```plaintext
-~/Projects
-├── airunner
-├── OpenVoice
-└── venv
-```
-
-1. Install system requirements
-   **All platforms**
-   ```bash
-   sudo apt update && sudo apt upgrade -y
-   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme espeak-ng-espeak mecab libmecab-dev mecab-ipadic-utf8
-   ```
-   **Linux**
-   ```bash
-   sudo apt install -y espeak
-   ```
-   **Windows**
-   ```bash
-   sudo apt install -y espeak-ng-espeak
-   ```
-2. Create airunner directory
-   ```bash
-   sudo mkdir ~/.local/share/airunner
-   sudo chown $USER:USER ~/.local/share/airunner
-   ```
-3. Install pyenv (allows management of multiple Python versions)
-   ```bash
-   curl https://pyenv.run | bash
-   ```
-4. Add pyenv to shell configuration
-```bash
-# Check and add pyenv configuration if not already present
-if ! grep -q "Pyenv configuration added by AI Runner" ~/.bashrc; then
-     cat << 'EOF' >> ~/.bashrc
-
-# Pyenv configuration added by AI Runner setup
-export PYENV_ROOT="$HOME/.pyenv"
-if [ -d "$PYENV_ROOT/bin" ]; then
-  export PATH="$PYENV_ROOT/bin:$PATH"
-fi
-if command -v pyenv &>/dev/null; then
-  eval "$(pyenv init - bash)"
-fi
-EOF
-   fi
-
-   # Check and add WSLg XDG_RUNTIME_DIR fix if not already present
-   if ! grep -q "WSLg XDG_RUNTIME_DIR Fix added by AI Runner" ~/.bashrc; then
-     cat << 'EOF' >> ~/.bashrc
-
-# WSLg XDG_RUNTIME_DIR Fix added by AI Runner setup
-if [ -n "$WSL_DISTRO_NAME" ]; then
-    if [ -d "/wslg/runtime-dir" ]; then
-        export XDG_RUNTIME_DIR="/wslg/runtime-dir"
-    elif [ -d "/mnt/wslg/runtime-dir" ]; then # Older WSLg path
-        export XDG_RUNTIME_DIR="/mnt/wslg/runtime-dir"
-    fi
-fi
-EOF
-   fi
-
-   # Check and add Qt environment variables for WSLg if not already present
-   if ! grep -q "Qt environment variables for WSLg added by AI Runner" ~/.bashrc; then
-     cat << 'EOF' >> ~/.bashrc
-
-# Qt environment variables for WSLg added by AI Runner setup
-if [ -n "$WSL_DISTRO_NAME" ]; then
-    export QT_QPA_PLATFORM=wayland
-    export QT_QPA_PLATFORMTHEME=gtk3
-fi
-EOF
-fi
-```
-5. Install python and set to local version
-   ```bash
-   . ~/.bashrc
-   pyenv install 3.13.3
-   ```
-6. Clone repo, set local python version, create virtual env, activate it
-   ```bash
-   mkdir ~/Projects
-   cd ~/Projects
-   pyenv local 3.13.3
-   python -m venv venv
-   source ./venv/bin/activate
-   git clone https://github.com/Capsize-Games/airunner.git
-   ```
-7. Install AI Runner requirements
-   ```bash
-   pip install "typing-extensions==4.13.2"
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install -e .[all_dev]
-   pip install -U timm
-   python -c "import nltk; nltk.download('punkt')"
-   python -c "import nltk; nltk.download('punkt_tab')"
-   ```
-8. Run app 
-   ```bash
-   airunner
-   ```
-
-**Optional**
-
-- [OpenVoice](https://github.com/Capsize-Games/airunner/wiki/Modules#openvoice)
-- Flash attention 2
-- xformers
-- FramePack
-
-**Note**
-
-AI Runner, like all local AI tools, uses code and models from third-party libraries. You should be aware of the licenses and terms of use for these libraries, and ensure you practice responsible AI usage. For an extra layer of security and privacy, consider using a service like [OpenSnitch](https://itsfoss.com/opensnitch-firewall-linux/) on Linux to monitor outgoing connections from the app.
-
-By default, AI Runner only connects to the internet to download models and to get latitude and longitude data should you decide to enter a zipcode. That data is stored on your local machine and is not sent to any third-party services. The latitude and longitude data is used to get the weather data for the weather-based chatbot prompt.
-
-Services used for this are openstreetmap.org for the latitude and longitude data, and open-meteo.com for the weather data. Both of these services are free to use and do not require an API key. If you do not enter a zipcode or use the weather-based chatbot prompt, these services are not used.
+| OpenVoice (Voice)       | 4.0 GB |
 
 ---
 
@@ -353,7 +213,7 @@ Take a look at the [Contributing document](https://github.com/Capsize-Games/airu
 ## Thank You!
 
 Thanks for checking out AI Runner.  
-**Get started** with local AI inference in minutes—no more endless environment setup.  
+Get started with local AI inference in minutes—no more endless environment setup.  
 Questions or ideas? Join our [Discord](https://discord.gg/PUVDDCJ7gz) or open a [GitHub Issue](https://github.com/Capsize-Games/airunner/issues).  
 
 **Happy building!**
