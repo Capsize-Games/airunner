@@ -104,7 +104,7 @@ class DownloadWorker(Worker):
                         SignalCode.UPDATE_DOWNLOAD_LOG,
                         {"message": f"finished with download of {file_name}"},
                     )
-                    self.finished.emit()
+                    self.finished.emit({})
         except Exception as e:
             print(f"Failed to download {url}")
             print(e)
