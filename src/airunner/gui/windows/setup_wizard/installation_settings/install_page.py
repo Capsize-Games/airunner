@@ -456,9 +456,27 @@ class InstallWorker(
                 self.parent.update_download_log(
                     {"message": f"Downloaded {label}"}
                 )
+
+            # Check if this is an OpenVoice zip file
+            if "openvoice" in dest_path and dest_path.endswith(".zip"):
+                # Use the special handler for OpenVoice zip downloads
+                self.handle_openvoice_zip_download_finished(dest_path)
+                # Do NOT emit standard download complete signals here
+                # The special handler will manage the download sequence
+            else:
+                # For regular files, emit standard completion signals
+                self.emit_signal(
+                    SignalCode.DOWNLOAD_COMPLETE, {"file_name": dest_path}
+                )
+                self.file_download_finished.emit()
+
         except Exception as e:
             self.parent.update_download_log(
                 {"message": f"Failed to download {label or url}: {e}"}
+            )
+            # Even on error, decrement the counter so we don't get stuck
+            self.total_models_in_current_step = max(
+                0, self.total_models_in_current_step - 1
             )
 
     def download_openvoice_and_unidic(self):
@@ -469,6 +487,9 @@ class InstallWorker(
         For unidic, extract to the unidic package directory as per `python -m unidic download`.
         """
         import importlib.util
+
+        # Set state flag to track this step has been attempted
+        self._openvoice_unidic_download_attempted = True
 
         base_path = self.path_settings.base_path
         self._openvoice_dir = os.path.expanduser(
@@ -493,13 +514,17 @@ class InstallWorker(
             and os.path.isdir(self._unidic_dir)
             and os.listdir(self._unidic_dir)
         )
+
         if unidic_exists and openvoice_exists:
             self.parent.update_download_log(
                 {
                     "message": "Unidic and OpenVoice already present, skipping download."
                 }
             )
-            self.finalize_installation()
+            # Signal completion through normal flow rather than directly calling finalize_installation
+            self._openvoice_unidic_complete = True
+            self.total_models_in_current_step = 0
+            self.emit_signal(SignalCode.DOWNLOAD_COMPLETE, {})
             return
 
         if self._unidic_dir:
@@ -526,33 +551,75 @@ class InstallWorker(
             )
 
         # OpenVoice download if needed
-        self._openvoice_zip_paths = []
-        urls = [
-            "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_1226.zip",
-            "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip",
-        ]
         if not openvoice_exists:
+            # Initialize OpenVoice tracking variables
+            self._openvoice_zip_urls = [
+                "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_1226.zip",
+                "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip",
+            ]
+            self._openvoice_zip_urls_completed = []
+            self._openvoice_zip_paths = []
+
             self.parent.on_set_downloading_status_label(
                 {"label": "Downloading OpenVoice checkpoints..."}
             )
-            for url in urls:
-                zip_name = os.path.basename(url)
-                zip_path = os.path.join(self._openvoice_dir, zip_name)
-                self._openvoice_zip_paths.append(zip_path)
-                self.total_models_in_current_step += (
-                    1  # Track each openvoice zip
-                )
-                self._download_file_with_progress(
-                    url, zip_path, label=zip_name
-                )
-                self.parent.update_download_log(
-                    {"message": f"Started download of {zip_name}"}
-                )
+
+            # Log the download attempt
+            self.parent.update_download_log(
+                {
+                    "message": f"Starting download of OpenVoice zip files to {self._openvoice_dir}"
+                }
+            )
+
+            # Start with the first zip file - rest will be downloaded sequentially
+            first_url = self._openvoice_zip_urls[0]
+            zip_name = os.path.basename(first_url)
+            zip_path = os.path.join(self._openvoice_dir, zip_name)
+
+            # Track this zip file download
+            self.total_models_in_current_step += 1
+
+            self.parent.update_download_log(
+                {"message": f"Starting download of {zip_name} to {zip_path}"}
+            )
+
+            # Download the first zip file - completion handler will trigger the next one
+            self._download_file_with_progress(
+                first_url, zip_path, label=zip_name
+            )
         else:
-            self._openvoice_zip_paths = []
             self.parent.update_download_log(
                 {"message": "OpenVoice already present, skipping download."}
             )
+
+    def _process_next_openvoice_zip(self):
+        """Process the next OpenVoice zip download in the queue"""
+        if (
+            not hasattr(self, "_openvoice_pending_urls")
+            or not self._openvoice_pending_urls
+        ):
+            # All downloads have been started
+            self.parent.update_download_log(
+                {"message": "All OpenVoice zip downloads have been initiated"}
+            )
+            return
+
+        # Get the next URL to process
+        url = self._openvoice_pending_urls.pop(0)
+        zip_name = os.path.basename(url)
+        zip_path = os.path.join(self._openvoice_dir, zip_name)
+
+        # Add the path to the tracking list
+        self._openvoice_zip_paths.append(zip_path)
+        self.total_models_in_current_step += 1  # Track each openvoice zip
+
+        # Log the specific file being downloaded
+        self.parent.update_download_log(
+            {"message": f"Starting download of {zip_name} to {zip_path}"}
+        )
+
+        # Download the file - the completion will be handled through signals
+        self._download_file_with_progress(url, zip_path, label=zip_name)
 
     def extract_openvoice_and_unidic(self):
         """
@@ -561,11 +628,28 @@ class InstallWorker(
         """
         import importlib.util
 
+        # Set state flag early to prevent multiple calls
+        self._openvoice_unidic_extraction_complete = True
+
+        self.parent.update_download_log(
+            {"message": "Starting extraction of downloaded files..."}
+        )
+
         # Extract unidic
-        if self._unidic_zip_path and self._unidic_dir:
+        if (
+            hasattr(self, "_unidic_zip_path")
+            and self._unidic_zip_path
+            and self._unidic_dir
+            and os.path.exists(self._unidic_zip_path)
+        ):
             try:
                 self.parent.on_set_downloading_status_label(
                     {"label": f"Unzipping unidic to {self._unidic_dir}..."}
+                )
+                self.parent.update_download_log(
+                    {
+                        "message": f"Extracting unidic zip from {self._unidic_zip_path}"
+                    }
                 )
                 with zipfile.ZipFile(self._unidic_zip_path, "r") as zip_ref:
                     zip_ref.extractall(self._unidic_dir)
@@ -577,40 +661,309 @@ class InstallWorker(
                 )
             except Exception as e:
                 self.parent.update_download_log(
-                    {"message": f"Failed to unzip unidic: {e}"}
+                    {"message": f"Failed to unzip unidic: {str(e)}"}
+                )
+        else:
+            self.parent.update_download_log(
+                {"message": "No unidic zip file to extract or file not found"}
+            )
+
+        # Extract OpenVoice - count files for more accurate progress reporting
+        openvoice_extracted = False
+        extraction_count = 0
+        total_to_extract = 0
+
+        if hasattr(self, "_openvoice_zip_paths"):
+            # Count total files to extract first
+            for zip_path in self._openvoice_zip_paths:
+                if os.path.exists(zip_path):
+                    total_to_extract += 1
+
+            # Now extract each zip file
+            for zip_path in self._openvoice_zip_paths:
+                if not os.path.exists(zip_path):
+                    self.parent.update_download_log(
+                        {
+                            "message": f"OpenVoice zip file not found at {zip_path}"
+                        }
+                    )
+                    continue
+
+                zip_name = os.path.basename(zip_path)
+                try:
+                    extraction_count += 1
+                    progress_pct = (
+                        int((extraction_count / total_to_extract) * 100)
+                        if total_to_extract > 0
+                        else 0
+                    )
+
+                    self.parent.on_set_downloading_status_label(
+                        {
+                            "label": f"Unzipping {zip_name}... ({extraction_count}/{total_to_extract})"
+                        }
+                    )
+                    self.parent.update_download_log(
+                        {
+                            "message": f"Extracting OpenVoice zip from {zip_path} ({extraction_count}/{total_to_extract})"
+                        }
+                    )
+
+                    # Update progress bar during extraction
+                    if hasattr(self.parent, "ui") and hasattr(
+                        self.parent.ui, "status_bar"
+                    ):
+                        self.parent.ui.status_bar.setValue(progress_pct)
+
+                    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                        zip_ref.extractall(self._openvoice_dir)
+
+                    os.remove(zip_path)
+                    openvoice_extracted = True
+                    self.parent.update_download_log(
+                        {
+                            "message": f"Unzipped and removed {zip_name} ({extraction_count}/{total_to_extract})"
+                        }
+                    )
+                except Exception as e:
+                    self.parent.update_download_log(
+                        {"message": f"Failed to unzip {zip_name}: {str(e)}"}
+                    )
+        else:
+            self.parent.update_download_log(
+                {"message": "No OpenVoice zip files to extract"}
+            )
+
+        # Final status message based on extraction success
+        if openvoice_extracted:
+            self.parent.on_set_downloading_status_label(
+                {"label": "OpenVoice and unidic setup complete"}
+            )
+
+            # Explicitly emit a download complete signal to ensure proper step progression
+            self.emit_signal(
+                SignalCode.DOWNLOAD_COMPLETE,
+                {"file_name": "openvoice_extraction_complete"},
+            )
+            self.file_download_finished.emit()
+        else:
+            self.parent.on_set_downloading_status_label(
+                {
+                    "label": "OpenVoice setup incomplete - some files may be missing"
+                }
+            )
+
+        # The download_finished method will handle step progression based on total_models_in_current_step
+
+    def verify_openvoice_downloads(self):
+        """
+        Verify that OpenVoice zip files exist and extract them if needed.
+        This is a double-check in case the automatic extraction didn't work.
+        """
+        if not hasattr(self, "_openvoice_dir"):
+            self.parent.update_download_log(
+                {
+                    "message": "OpenVoice directory not initialized, skipping verification"
+                }
+            )
+            return
+
+        # Check for the expected zip files that might still need extraction
+        expected_files = ["checkpoints_1226.zip", "checkpoints_v2_0417.zip"]
+
+        # Also verify the existence of key checkpoint files that should be extracted
+        extracted_key_files = [
+            "hubert_base.pt",  # From first zip
+            "decoder.pth",  # From second zip
+        ]
+
+        # Check for unextracted zip files
+        found_zips = []
+        for filename in expected_files:
+            path = os.path.join(self._openvoice_dir, filename)
+            if os.path.exists(path):
+                found_zips.append(path)
+                self.parent.update_download_log(
+                    {"message": f"Found unextracted file: {path}"}
                 )
 
-        # Extract OpenVoice
-        for zip_path in self._openvoice_zip_paths:
-            zip_name = os.path.basename(zip_path)
-            try:
-                self.parent.on_set_downloading_status_label(
-                    {"label": f"Unzipping {zip_name}..."}
-                )
-                with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                    zip_ref.extractall(self._openvoice_dir)
-                os.remove(zip_path)
-                self.parent.update_download_log(
-                    {"message": f"Unzipped and removed {zip_name}"}
-                )
-            except Exception as e:
-                self.parent.update_download_log(
-                    {"message": f"Failed to unzip {zip_name}: {e}"}
-                )
-        self.parent.on_set_downloading_status_label(
-            {"label": "OpenVoice and unidic setup complete."}
+        # Check if extraction was successful
+        missing_key_files = []
+        for key_file in extracted_key_files:
+            # Check both direct path and possible subdirectories for the files
+            if not any(
+                os.path.exists(os.path.join(dirpath, key_file))
+                for dirpath, _, _ in os.walk(self._openvoice_dir)
+            ):
+                missing_key_files.append(key_file)
+
+        if missing_key_files:
+            self.parent.update_download_log(
+                {
+                    "message": f"Missing expected OpenVoice files after extraction: {', '.join(missing_key_files)}"
+                }
+            )
+
+        # Extract any found zip files
+        if found_zips:
+            self.parent.update_download_log(
+                {
+                    "message": f"Performing backup extraction of {len(found_zips)} OpenVoice zip files..."
+                }
+            )
+
+            for zip_path in found_zips:
+                zip_name = os.path.basename(zip_path)
+                try:
+                    self.parent.on_set_downloading_status_label(
+                        {"label": f"Manually unzipping {zip_name}..."}
+                    )
+                    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                        zip_ref.extractall(self._openvoice_dir)
+                    os.remove(zip_path)
+                    self.parent.update_download_log(
+                        {
+                            "message": f"Successfully unzipped and removed {zip_name} in verification step"
+                        }
+                    )
+                except Exception as e:
+                    self.parent.update_download_log(
+                        {
+                            "message": f"Backup extraction failed for {zip_name}: {str(e)}"
+                        }
+                    )
+        elif missing_key_files:
+            # Missing key files but no zip files to extract
+            self.parent.update_download_log(
+                {
+                    "message": "Warning: Some OpenVoice files appear to be missing, but no zip files found to extract"
+                }
+            )
+        else:
+            self.parent.update_download_log(
+                {"message": "OpenVoice installation verification passed"}
+            )
+
+    def handle_openvoice_zip_download_finished(self, file_path):
+        """
+        Called when an OpenVoice zip file download is complete.
+        Determines if we need to download the next one or proceed to extraction.
+        """
+        # Initialize OpenVoice tracking variables if not already done
+        if not hasattr(self, "_openvoice_zip_urls"):
+            self._openvoice_zip_urls = [
+                "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_1226.zip",
+                "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip",
+            ]
+            self._openvoice_zip_urls_completed = []
+            self._openvoice_zip_paths = []
+
+        # Mark this URL as completed
+        file_name = os.path.basename(file_path)
+        for url in self._openvoice_zip_urls[
+            :
+        ]:  # Use a copy for iteration during modification
+            if file_name in url:
+                self._openvoice_zip_urls.remove(url)
+                self._openvoice_zip_urls_completed.append(url)
+
+        # Add to tracked zip paths if not already present
+        if not hasattr(self, "_openvoice_zip_paths"):
+            self._openvoice_zip_paths = []
+
+        if file_path not in self._openvoice_zip_paths:
+            self._openvoice_zip_paths.append(file_path)
+
+        self.parent.update_download_log(
+            {
+                "message": f"Completed download of {file_name}, {len(self._openvoice_zip_urls)} OpenVoice files remaining"
+            }
         )
+
+        # Check if we have more files to download
+        if self._openvoice_zip_urls:
+            # Start downloading the next file
+            next_url = self._openvoice_zip_urls[0]
+            next_file_name = os.path.basename(next_url)
+            next_file_path = os.path.join(self._openvoice_dir, next_file_name)
+
+            self.parent.update_download_log(
+                {
+                    "message": f"Starting next OpenVoice zip download: {next_file_name}"
+                }
+            )
+
+            # Increment the counter since we're starting another download
+            self.total_models_in_current_step += 1
+
+            # Download the next file (this will be handled by this same handler when complete)
+            self._download_file_with_progress(
+                next_url, next_file_path, label=next_file_name
+            )
+        else:
+            # All downloads are complete, extract files after a brief delay
+            self.parent.update_download_log(
+                {
+                    "message": "All OpenVoice zip downloads complete, starting extraction..."
+                }
+            )
+
+            # Schedule extraction with a brief delay to avoid race conditions
+            # This ensures all signal handlers complete before we begin extraction
+            QTimer.singleShot(100, self.extract_openvoice_and_unidic)
 
     @Slot()
     def download_finished(self, data):
-        self.total_models_in_current_step -= 1
+        self.total_models_in_current_step = max(
+            0, self.total_models_in_current_step - 1
+        )
+        print(
+            f"Remaining downloads for current step: {self.total_models_in_current_step}"
+        )
+
         if self.total_models_in_current_step <= 0:
             if self.current_step == 8:
-                # If we're in the openvoice/unidic step, extract after download
-                if hasattr(self, "_unidic_zip_path") and hasattr(
-                    self, "_openvoice_zip_paths"
+                # Check for state flags to track progress through step 8
+                if not hasattr(self, "_openvoice_unidic_download_attempted"):
+                    # First phase: OpenVoice models are done, now download zip files
+                    print(
+                        "Step 8: Starting download of OpenVoice/unidic zip files"
+                    )
+                    self.download_openvoice_and_unidic()
+                    return
+                elif not hasattr(
+                    self, "_openvoice_unidic_extraction_complete"
                 ):
-                    self.extract_openvoice_and_unidic()
+                    # Check if we have OpenVoice zip files that need extraction
+                    has_unidic = (
+                        hasattr(self, "_unidic_zip_path")
+                        and self._unidic_zip_path
+                        and os.path.exists(self._unidic_zip_path)
+                    )
+
+                    has_openvoice = False
+                    if hasattr(self, "_openvoice_zip_paths"):
+                        for path in self._openvoice_zip_paths:
+                            if os.path.exists(path):
+                                has_openvoice = True
+                                break
+
+                    print(
+                        f"Step 8: Extraction check - has_unidic: {has_unidic}, has_openvoice: {has_openvoice}"
+                    )
+
+                    # Attempt extraction if we have any zip files
+                    if has_unidic or has_openvoice:
+                        print("Step 8: Extracting OpenVoice/unidic files")
+                        self.extract_openvoice_and_unidic()
+                        return
+                    else:
+                        # No files to extract, mark step as complete
+                        self._openvoice_unidic_extraction_complete = True
+                        print("Step 8: Nothing to extract, marking complete")
+
+            # Move to next step only if we get here
+            print(f"Moving from step {self.current_step} to next step")
             self.set_page()
 
     @Slot()
@@ -689,27 +1042,92 @@ class InstallWorker(
             self.download_stt()
         elif self.current_step == 7:
             print("STEP 8")
-            self.download_openvoice()
-            self.download_openvoice_and_unidic()
+            # Set step before downloading to ensure processing in download_finished
             self.current_step = 8
+            self.download_openvoice()
+            # Only download unidic/openvoice zips after OpenVoice models are completed
+            # download_openvoice_and_unidic will be called automatically when OpenVoice models finish
         elif self.current_step == 8:
+            # Only called when set_page() runs after step 8 completes
+            print("Finalizing installation")
             self.finalize_installation()
 
     def finalize_installation(self, *_args):
-        # Download NLTK averaged_perceptron_tagger_eng, punkt, and punkt_tab silently
+        # Check if installation is already finalized to prevent multiple calls
+        if (
+            hasattr(self, "_installation_finalized")
+            and self._installation_finalized
+        ):
+            return
+
+        self._installation_finalized = True
+
+        self.parent.update_download_log(
+            {"message": "Beginning final installation steps..."}
+        )
+
+        # Perform a verification check on OpenVoice files before finalizing
+        # This ensures files are extracted even if the normal process didn't work
+        try:
+            self.parent.update_download_log(
+                {"message": "Verifying OpenVoice files..."}
+            )
+            self.verify_openvoice_downloads()
+        except Exception as e:
+            self.parent.update_download_log(
+                {"message": f"Error during OpenVoice verification: {str(e)}"}
+            )
+
+        # Download NLTK data with proper error handling
+        self.parent.update_download_log(
+            {"message": "Downloading NLTK data..."}
+        )
+        nltk_data = ["averaged_perceptron_tagger_eng", "punkt", "punkt_tab"]
+
         try:
             import nltk
 
-            nltk.download("averaged_perceptron_tagger_eng", quiet=True)
-            nltk.download("punkt", quiet=True)
-            nltk.download("punkt_tab", quiet=True)
+            # Use a maximum recursion limiter to prevent potential recursion errors
+            import sys
+
+            original_limit = sys.getrecursionlimit()
+            sys.setrecursionlimit(1500)  # Set a reasonable limit
+
+            for data_name in nltk_data:
+                try:
+                    nltk.download(data_name, quiet=True)
+                    self.parent.update_download_log(
+                        {"message": f"Downloaded NLTK {data_name}"}
+                    )
+                except Exception as e:
+                    self.parent.update_download_log(
+                        {
+                            "message": f"Failed to download NLTK {data_name}: {e}"
+                        }
+                    )
+
+            # Reset recursion limit
+            sys.setrecursionlimit(original_limit)
+
         except Exception as e:
             self.parent.update_download_log(
                 {"message": f"Failed to download NLTK data: {e}"}
             )
+
         self.parent.on_set_downloading_status_label(
             {"label": "Installation complete."}
         )
+
+        # Log final completion
+        self.parent.update_download_log(
+            {"message": "All installation steps completed successfully"}
+        )
+
+        # Make sure we complete all downloads in the counter
+        if self.parent.total_files != self.parent.total_files_downloaded:
+            self.parent.total_files_downloaded = self.parent.total_files
+
+        # Force progress bar to show completion
         self.parent.update_progress_bar(final=True)
 
 
@@ -793,7 +1211,8 @@ class InstallPage(BaseWizard):
         for k, v in OPENVOICE_FILES.items():
             self.total_steps += len(v["files"])
 
-        self.register(SignalCode.DOWNLOAD_COMPLETE, self.update_progress_bar)
+        # Register update_progress_bar to receive download_complete signals with file data
+        self.register(SignalCode.DOWNLOAD_COMPLETE, self.on_download_complete)
         self.register(SignalCode.DOWNLOAD_PROGRESS, self.download_progress)
         self.register(SignalCode.UPDATE_DOWNLOAD_LOG, self.update_download_log)
         self.register(
@@ -905,15 +1324,25 @@ class InstallPage(BaseWizard):
             progress = data["current"] / data["total"]
         self.ui.status_bar.setValue(progress * 100)
 
-    def update_progress_bar(self, final: bool = False):
+    def update_progress_bar(self, final: bool = False, data: dict = None):
         """Update the progress bar and manage Next button state"""
-        # Remove incorrect assignment to self.total_files
-        # if final:
-        #     self.total_files = self.total_files_downloaded
-        # else:
+        # Only increment counter if this is a file completion event
+        # or final progress update
         if self.total_files == 0 and not final:
             return
-        self.total_files_downloaded += 1
+
+        # If data is provided and contains file_name, this is a download completion event
+        if data and "file_name" in data:
+            self.total_files_downloaded += 1
+        # If this is the final update, don't increment counter
+        elif not final and not data:
+            # This is a generic update_progress_bar call without specific file completion
+            # Only increment if specifically requested (legacy handling)
+            self.total_files_downloaded += 1
+
+        # Never exceed total files
+        if self.total_files_downloaded > self.total_files:
+            self.total_files_downloaded = self.total_files
 
         print(
             "TOTAL FILES DOWNLOADED",
@@ -959,3 +1388,11 @@ class InstallPage(BaseWizard):
     def clear_status_bar(self):
         self.ui.status.setText("")
         self.ui.status_bar.setValue(0)
+
+    def on_download_complete(self, data: dict = None):
+        """
+        Handles download complete signals with proper data tracking.
+        This ensures the progress bar is updated correctly and prevents double-counting.
+        """
+        # Update the progress bar with the file data
+        self.update_progress_bar(data=data)
