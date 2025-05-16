@@ -122,7 +122,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.src_path: str = f"{self._output_dir}/tmp.wav"
         self._speed: float = 1.0
         self._language: AvailableLanguage = AvailableLanguage.EN_NEWEST
-        self._reference_speaker = os.path.expanduser(speaker_recording_path)
+        self._reference_speaker = speaker_recording_path
 
     @property
     def device(self):
@@ -260,7 +260,6 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                 vc_model=self.tone_color_converter,
                 target_dir=target_dir,
             )
-            print("loaded")
         except Exception as e:
             torch_hub_cache_home = torch.hub.get_dir()
             self.logger.error(
