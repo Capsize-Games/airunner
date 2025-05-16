@@ -258,9 +258,6 @@ fi
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
    pip install -e .[all_dev]
    pip install -U timm
-   python -c "import nltk; nltk.download('punkt')"
-   python -c "import nltk; nltk.download('punkt_tab')"
-   python -m unidic download
    ```
 8. Run app 
    ```bash
