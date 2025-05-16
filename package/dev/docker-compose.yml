@@ -54,7 +54,6 @@ services:
       - AIRUNNER_LOG_LEVEL=WARNING
       - AIRUNNER_DISABLE_FACEHUGGERSHIELD=1
       - AIRUNNER_SAVE_LOG_TO_FILE=0
-      - AIRUNNER_ENABLE_OPEN_VOICE=0
       - AIRUNNER_ART_ENABLED=1
       - AIRUNNER_LLM_USE_WEATHER_PROMPT=1
       - AIRUNNER_LLM_MAX_MESSAGES_LENGTH=20
@@ -73,7 +72,6 @@ services:
       - AIRUNNER_DISCORD_URL=https://discord.gg/PUVDDCJ7gz
       - AIRUNNER_DEFAULT_STT_HF_PATH=openai/whisper-tiny
       - AIRUNNER_DEFAULT_LLM_HF_PATH=w4ffl35/Ministral-8B-Instruct-2410-doublequant
-      - AIRUNNER_TTS_SPEAKER_RECORDING_PATH=
       - HOST_HOME=${HOST_HOME}
       - AIRUNNER_HOME_DIR=${HOST_HOME}/.local/share/airunner
     env_file:

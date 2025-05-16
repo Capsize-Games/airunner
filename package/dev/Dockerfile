@@ -125,7 +125,10 @@ RUN apt-get update && apt-get install -y software-properties-common && \
     libstdc++6 \
     wget \
     libportaudio2 \
-    gnupg && \
+    gnupg \
+    mecab \
+    libmecab-dev \
+    mecab-ipadic-utf8 && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install Python 3.13.3 from source
@@ -166,10 +169,7 @@ USER root
 RUN pip3.13 install --no-cache-dir pip setuptools wheel --upgrade && \
     pip3.13 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 && \
     cd /app && pip3.13 install --no-cache-dir -e .[all_dev] -U langchain-community && \
-    pip3.13 install -U timm && \
-    python3.13 -c "import nltk; nltk.download('punkt', download_dir='/usr/local/share/nltk_data')" && \
-    python3.13 -c "import nltk; nltk.download('punkt_tab', download_dir='/usr/local/share/nltk_data')" && \
-    rm -rf /tmp/* /var/tmp/* /root/.cache/pip
+    pip3.13 install -U timm
 
 USER ${HOST_UID}:${HOST_GID}
 WORKDIR /app

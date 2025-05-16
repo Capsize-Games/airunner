@@ -196,22 +196,20 @@ class SDWorker(Worker):
         if image_request is not None:
             model_path = image_request.model_path
 
+        if model_path is None:
+            custom_path = self.generator_settings.custom_path
+            if custom_path is not None and custom_path != "":
+                print("*" * 100)
+                print("custom_path", custom_path)
+                if os.path.exists(custom_path):
+                    model_path = custom_path
+
         if (
             model_path is None or model_path == ""
         ) and self.generator_settings.model is not None:
             aimodel = AIModels.objects.get(self.generator_settings.model)
             if aimodel is not None:
                 model_path = aimodel.path
-
-        if model_path is None or model_path == "":
-            self.send_missing_model_alert(
-                "You have no Stable Diffusion models. Download one and try again."
-            )
-
-        if not os.path.exists(model_path):
-            self.send_missing_model_alert(
-                f"The model at path {model_path} does not exist."
-            )
 
         return model_path
 
