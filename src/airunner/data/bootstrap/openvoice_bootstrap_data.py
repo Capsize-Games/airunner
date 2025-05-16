@@ -43,7 +43,43 @@ OPENVOICE_FILES = {
             "vocab.txt",
         ]
     },
+    "myshell-ai/MeloTTS-English": {
+        "files": [
+            "checkpoint.pth",
+            "config.json",
+        ]
+    },
     "myshell-ai/MeloTTS-English-v3": {
+        "files": [
+            "checkpoint.pth",
+            "config.json",
+        ]
+    },
+    "myshell-ai/MeloTTS-French": {
+        "files": [
+            "checkpoint.pth",
+            "config.json",
+        ]
+    },
+    "myshell-ai/MeloTTS-Japanese": {
+        "files": [
+            "checkpoint.pth",
+            "config.json",
+        ]
+    },
+    "myshell-ai/MeloTTS-Spanish": {
+        "files": [
+            "checkpoint.pth",
+            "config.json",
+        ]
+    },
+    "myshell-ai/MeloTTS-Chinese": {
+        "files": [
+            "checkpoint.pth",
+            "config.json",
+        ]
+    },
+    "myshell-ai/MeloTTS-Korean": {
         "files": [
             "checkpoint.pth",
             "config.json",
