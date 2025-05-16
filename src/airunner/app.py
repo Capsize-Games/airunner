@@ -64,6 +64,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
             return
         application_settings = ApplicationSettings.objects.first()
         path_settings = PathSettings.objects.first()
+        if path_settings is None:
+            PathSettings.objects.create()
+            path_settings = PathSettings.objects.first()
+        if application_settings is None:
+            ApplicationSettings.objects.create()
+            application_settings = ApplicationSettings.objects.first()
         base_path = path_settings.base_path
         if (
             not os.path.exists(base_path)

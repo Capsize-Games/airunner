@@ -23,6 +23,7 @@ class ChooseModelsPage(BaseWizard):
             "whisper": True,
             "mistral": True,
             "embedding_model": True,
+            "openvoice_model": True,
         }
 
         self.models = [
@@ -83,6 +84,8 @@ class ChooseModelsPage(BaseWizard):
             total_kb += speecht5_size
         if self.models_enabled["embedding_model"]:
             total_kb += embedding_model_size
+        if self.models_enabled["openvoice_model"]:
+            total_kb += 4.5 * 1024 * 1024
 
         if total_kb >= 1024 * 1024:
             size_str = f"{total_kb / (1024 * 1024):.2f} GB"
@@ -115,6 +118,11 @@ class ChooseModelsPage(BaseWizard):
     @Slot(bool)
     def speecht5_toggled(self, val: bool):
         self.models_enabled["speecht5"] = val
+        self.update_total_size_label()
+
+    @Slot(bool)
+    def openvoice_model_toggled(self, val: bool):
+        self.models_enabled["openvoice_model"] = val
         self.update_total_size_label()
 
     @Slot(bool)
