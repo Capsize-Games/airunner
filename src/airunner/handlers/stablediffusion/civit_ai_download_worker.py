@@ -93,4 +93,4 @@ class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
 
             except Exception as e:
                 self.failed.emit(e)
-                self.api.download_complete()
+                self.api.download_complete(file_name)
