@@ -13,30 +13,42 @@ AI Runner is a local-first, open-source application that allows you to run large
 
 ![image](https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa)
 
-## 💾 Installation Quick Start
+## System Requirements
 
-**Install**
-```bash
-pip install airunner
-```
-**Run**
-```bash
-airunner
-```
-
-For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
-
+| Specification       | Minimum                              | Recommended                          |
+|---------------------|--------------------------------------------|--------------------------------------------|
+| **OS**             | Ubuntu 22.04, Windows 10                               | Ubuntu 22.04 (Wayland)                              |
+| **CPU**            | Ryzen 2700K or Intel Core i7-8700K         | Ryzen 5800X or Intel Core i7-11700K        |
+| **Memory**         | 16 GB RAM                                  | 32 GB RAM                                  |
+| **GPU**            | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
+| **Network**        | Broadband (used to download models)        | Broadband (used to download models)        |
+| **Storage**        | 22 GB                                      | 50 GB                                      |
 ---
 
-## Table of Contents
-- [Overview](#overview)
-- [Features](#features)
-- [System Requirements](#system-requirements)
-- [AI Models](#ai-models)
-- [Unit Tests](#unit-tests)
-- [Database](#database)
-- [Advanced Features](#advanced-features)
-- [Contributing](#contributing)
+## 💾 Installation Quick Start
+
+### Installation Steps
+
+1. **Install system requirements**
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme espeak espeak-ng-espeak mecab libmecab-dev mecab-ipadic-utf8
+   ```
+2. **Create `airunner` directory**
+   ```bash
+   sudo mkdir ~/.local/share/airunner
+   sudo chown $USER:USER ~/.local/share/airunner
+   ```
+3. **Install AI Runner**
+   ```bash
+   pip install airunner
+   ```
+4. **Run AI Runner**
+   ```bash
+   airunner
+   ```
+
+For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
 ---
 
@@ -120,6 +132,7 @@ These are the sizes of the various models that power AI Runner.
 | e5 large (embedding model) | 1.3 GB   |
 | Whisper Tiny            | 155.4 MB |
 | Speech T5 (Voice)       | 654.4 MB |
+| OpenVoice (Voice)       | ... |
 
 ---
 
@@ -191,7 +204,7 @@ Take a look at the [Contributing document](https://github.com/Capsize-Games/airu
 ## Thank You!
 
 Thanks for checking out AI Runner.  
-**Get started** with local AI inference in minutes—no more endless environment setup.  
+Get started with local AI inference in minutes—no more endless environment setup.  
 Questions or ideas? Join our [Discord](https://discord.gg/PUVDDCJ7gz) or open a [GitHub Issue](https://github.com/Capsize-Games/airunner/issues).  
 
 **Happy building!**
