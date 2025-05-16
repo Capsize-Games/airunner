@@ -121,7 +121,7 @@ class ChooseModelsPage(BaseWizard):
         self.update_total_size_label()
 
     @Slot(bool)
-    def openvoice_model_toggled(self, val: bool):
+    def openvoice_toggled(self, val: bool):
         self.models_enabled["openvoice_model"] = val
         self.update_total_size_label()
 
