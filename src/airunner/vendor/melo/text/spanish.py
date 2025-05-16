@@ -1,8 +1,8 @@
 import re
 
-from . import symbols
-from .es_phonemizer import cleaner as es_cleaner
-from .es_phonemizer import es_to_ipa
+from airunner.vendor.melo.text import symbols
+from airunner.vendor.melo.text.es_phonemizer import cleaner as es_cleaner
+from airunner.vendor.melo.text.es_phonemizer import es_to_ipa
 from transformers import AutoTokenizer
 
 
