@@ -5,6 +5,7 @@ import re
 from transformers import AutoTokenizer
 
 from airunner.vendor.melo.text import punctuation, symbols
+from airunner.api import API
 
 
 from airunner.vendor.melo.text.ko_dictionary import (
@@ -95,9 +96,7 @@ def distribute_phone(n_phone, n_word):
     return phones_per_word
 
 
-# tokenizer = AutoTokenizer.from_pretrained('cl-tohoku/bert-base-japanese-v3')
-
-model_id = "kykim/bert-kor-base"
+model_id = API().paths["kykim/bert-kor-base"]
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 
@@ -155,7 +154,6 @@ def get_bert_feature(text, word2ph, device="cuda"):
 
 
 if __name__ == "__main__":
-    # tokenizer = AutoTokenizer.from_pretrained("./bert/bert-base-japanese-v3")
     from airunner.vendor.melo.text.symbols import symbols
 
     text = "전 제 일의 가치와 폰타인 대중들이 한 일의 의미를 잘 압니다. 앞으로도 전 제 일에 자부심을 갖고 살아갈 겁니다"

@@ -14,6 +14,7 @@ from airunner.vendor.melo.text.english_utils.number_norm import (
     normalize_numbers,
 )
 from airunner.vendor.melo.text.japanese import distribute_phone
+from airunner.api import API
 
 from transformers import AutoTokenizer
 
@@ -191,7 +192,7 @@ def text_normalize(text):
     return text
 
 
-model_id = "bert-base-uncased"
+model_id = API().paths["google-bert/bert-base-uncased"]
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 
