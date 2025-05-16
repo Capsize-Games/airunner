@@ -7,7 +7,7 @@
 
 ---
 
-# AI Runner: Local AI Inference Made Easy
+# Local Inference Made Easy
 
 AI Runner is a local-first, open-source application that allows you to run large language models (LLMs) and image generation tools on your own hardware. It provides a user-friendly interface for creating chatbots, generating images, and performing various AI tasks without relying on external APIs.
 
