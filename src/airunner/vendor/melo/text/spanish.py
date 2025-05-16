@@ -3,6 +3,7 @@ import re
 from airunner.vendor.melo.text import symbols
 from airunner.vendor.melo.text.es_phonemizer import cleaner as es_cleaner
 from airunner.vendor.melo.text.es_phonemizer import es_to_ipa
+from airunner.api import API
 from transformers import AutoTokenizer
 
 
@@ -14,9 +15,11 @@ def distribute_phone(n_phone, n_word):
         phones_per_word[min_index] += 1
     return phones_per_word
 
+
 def text_normalize(text):
     text = es_cleaner.spanish_cleaners(text)
     return text
+
 
 def post_replace_ph(ph):
     rep_map = {
@@ -29,7 +32,7 @@ def post_replace_ph(ph):
         "\n": ".",
         "·": ",",
         "、": ",",
-        "...": "…"
+        "...": "…",
     }
     if ph in rep_map.keys():
         ph = rep_map[ph]
@@ -38,6 +41,7 @@ def post_replace_ph(ph):
     if ph not in symbols:
         ph = "UNK"
     return ph
+
 
 def refine_ph(phn):
     tone = 0
@@ -59,9 +63,9 @@ def refine_syllables(syllables):
     return phonemes, tones
 
 
-# model_id = 'bert-base-uncased'
-model_id = 'dccuchile/bert-base-spanish-wwm-uncased'
+model_id = API().paths["dccuchile/bert-base-spanish-wwm-uncased"]
 tokenizer = AutoTokenizer.from_pretrained(model_id)
+
 
 def g2p(text, pad_start_end=True, tokenized=None):
     if tokenized is None:
@@ -74,7 +78,7 @@ def g2p(text, pad_start_end=True, tokenized=None):
             ph_groups.append([t])
         else:
             ph_groups[-1].append(t.replace("#", ""))
-    
+
     phones = []
     tones = []
     word2ph = []
@@ -83,11 +87,11 @@ def g2p(text, pad_start_end=True, tokenized=None):
         w = "".join(group)
         phone_len = 0
         word_len = len(group)
-        if w == '[UNK]':
-            phone_list = ['UNK']
+        if w == "[UNK]":
+            phone_list = ["UNK"]
         else:
             phone_list = list(filter(lambda p: p != " ", es_to_ipa.es2ipa(w)))
-        
+
         for ph in phone_list:
             phones.append(ph)
             tones.append(0)
@@ -103,9 +107,12 @@ def g2p(text, pad_start_end=True, tokenized=None):
         word2ph = [1] + word2ph + [1]
     return phones, tones, word2ph
 
+
 def get_bert_feature(text, word2ph, device=None):
     from text import spanish_bert
+
     return spanish_bert.get_bert_feature(text, word2ph, device=device)
+
 
 if __name__ == "__main__":
     text = "en nuestros tiempos estos dos pueblos ilustres empiezan a curarse, gracias sólo a la sana y vigorosa higiene de 1789."
@@ -116,5 +123,3 @@ if __name__ == "__main__":
     bert = get_bert_feature(text, word2ph)
     print(phones)
     print(len(phones), tones, sum(word2ph), bert.shape)
-
-

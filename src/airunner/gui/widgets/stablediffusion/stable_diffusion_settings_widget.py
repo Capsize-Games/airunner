@@ -170,7 +170,9 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             generator_settings.save()
 
         self.load_models()
-        self.api.art.model_changed(model=model.id, version=val)
+
+        if model is not None:
+            self.api.art.model_changed(model=model.id, version=val)
 
     def _load_pipelines(self):
         self.ui.pipeline.blockSignals(True)

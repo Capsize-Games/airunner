@@ -10,6 +10,7 @@ from pykakasi import kakasi
 from airunner.vendor.melo.text import japanese_bert
 from airunner.vendor.melo.text.japanese_bert import get_bert_feature
 from num2words import num2words
+from airunner.api import API
 
 try:
     import MeCab
@@ -572,9 +573,8 @@ def distribute_phone(n_phone, n_word):
     return phones_per_word
 
 
-# tokenizer = AutoTokenizer.from_pretrained('cl-tohoku/bert-base-japanese-v3')
 
-model_id = "tohoku-nlp/bert-base-japanese-v3"
+model_id = API().paths["tohoku-nlp/bert-base-japanese-v3"]
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 
@@ -627,7 +627,6 @@ def get_bert_feature(text, word2ph, device):
 
 
 if __name__ == "__main__":
-    # tokenizer = AutoTokenizer.from_pretrained("./bert/bert-base-japanese-v3")
     text = "こんにちは、世界！..."
     text = "ええ、僕はおきなと申します。こちらの小さいわらべは杏子。ご挨拶が遅れてしまいすみません。あなたの名は?"
     text = "あの、お前以外のみんなは、全員生きてること?"
