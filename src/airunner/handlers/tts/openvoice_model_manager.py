@@ -5,20 +5,20 @@ import torch
 from airunner.settings import AIRUNNER_BASE_PATH
 
 torch.hub.set_dir(
-    os.environ.get(
-        "TORCH_HOME", os.path.join(AIRUNNER_BASE_PATH, "torch/hub")
-    )
+    os.environ.get("TORCH_HOME", os.path.join(AIRUNNER_BASE_PATH, "torch/hub"))
 )
 import librosa
 
-from openvoice.mel_processing import spectrogram_torch
-from openvoice import se_extractor
-from openvoice.api import OpenVoiceBaseClass, ToneColorConverter
-from melo.api import TTS
+from airunner.vendor.openvoice.mel_processing import spectrogram_torch
+from airunner.vendor.openvoice import se_extractor
+from airunner.vendor.openvoice.api import (
+    OpenVoiceBaseClass,
+    ToneColorConverter,
+)
+from airunner.vendor.melo.api import TTS
 
 from airunner.settings import (
     AIRUNNER_BASE_PATH,
-    AIRUNNER_TTS_SPEAKER_RECORDING_PATH,
     AIRUNNER_LOG_LEVEL,
 )
 from airunner.enums import (
@@ -101,9 +101,15 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         super().__init__(*args, **kwargs)
         self._target_se = None
         self._audio_name = None
-        speaker_recording_path = os.path.expanduser(
-            AIRUNNER_TTS_SPEAKER_RECORDING_PATH
-        )
+        speaker_recording_path = ""
+        if self.openvoice_settings.reference_speaker_path is not None:
+            speaker_recording_path = os.path.expanduser(
+                os.path.join(self.openvoice_settings.reference_speaker_path)
+            )
+        else:
+            self.logger.error(
+                "Reference speaker path is None, unable to initialize"
+            )
         self._checkpoint_converter_path: str = os.path.join(
             self.path_settings.tts_model_path,
             "openvoice/checkpoints_v2/converter",
@@ -116,7 +122,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.src_path: str = f"{self._output_dir}/tmp.wav"
         self._speed: float = 1.0
         self._language: AvailableLanguage = AvailableLanguage.EN_NEWEST
-        self._reference_speaker = os.path.expanduser(speaker_recording_path)
+        self._reference_speaker = speaker_recording_path
 
     @property
     def device(self):
@@ -187,19 +193,6 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self._initialize()
-        do_download = False
-
-        import nltk
-
-        nltk.download("averaged_perceptron_tagger_eng")
-
-        # if do_download:
-        #     vad, vad_utils = torch.hub.load(
-        #         repo_or_dir="snakers4/silero-vad",
-        #         model="silero_vad",
-        #         force_reload=False,
-        #         onnx=False,
-        #     )
         self.model = TTS(language=self._language.value, device=self.device)
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
@@ -252,10 +245,8 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             self._target_se, self._audio_name = se_extractor.get_se(
                 audio_path=self._reference_speaker,
                 vc_model=self.tone_color_converter,
-                vad=True,
                 target_dir=target_dir,
             )
-            print("loaded")
         except Exception as e:
             torch_hub_cache_home = torch.hub.get_dir()
             self.logger.error(

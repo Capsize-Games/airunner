@@ -12,6 +12,35 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
+      <string>MP3 Voice Sample</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QLineEdit" name="voice_sample_path">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="placeholderText">
+         <string>MP3 voice sample</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="browse_voice_sample_path_button">
+        <property name="toolTip">
+         <string>Browse for an MP3 voice sample to use with OpenVoice</string>
+        </property>
+        <property name="text">
+         <string>Browse</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
       <string>Language</string>
