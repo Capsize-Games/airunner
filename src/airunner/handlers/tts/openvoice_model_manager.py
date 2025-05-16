@@ -193,7 +193,6 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self._initialize()
-        do_download = False
         self.model = TTS(language=self._language.value, device=self.device)
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 

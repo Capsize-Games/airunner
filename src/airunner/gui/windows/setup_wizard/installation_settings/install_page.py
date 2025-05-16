@@ -604,6 +604,15 @@ class InstallWorker(
             self.download_openvoice_and_unidic()
 
     def finalize_installation(self, *_args):
+        # Download NLTK averaged_perceptron_tagger_eng silently
+        try:
+            import nltk
+
+            nltk.download("averaged_perceptron_tagger_eng", quiet=True)
+        except Exception as e:
+            self.parent.update_download_log(
+                {"message": f"Failed to download NLTK tagger: {e}"}
+            )
         self.parent.on_set_downloading_status_label(
             {"label": "Installation complete."}
         )
