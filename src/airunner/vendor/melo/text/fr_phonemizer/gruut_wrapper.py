@@ -2,10 +2,10 @@ import importlib
 from typing import List
 
 import gruut
-from gruut_ipa import IPA # pip install gruut_ipa
+from gruut_ipa import IPA  # pip install gruut_ipa
 
-from .base import BasePhonemizer
-from .punctuation import Punctuation
+from airunner.vendor.melo.text.fr_phonemizer.base import BasePhonemizer
+from airunner.vendor.melo.text.fr_phonemizer.punctuation import Punctuation
 
 # Table for str.translate to fix gruut/TTS phoneme mismatch
 GRUUT_TRANS_TABLE = str.maketrans("g", "ɡ")
@@ -46,7 +46,9 @@ class Gruut(BasePhonemizer):
         use_espeak_phonemes=False,
         keep_stress=False,
     ):
-        super().__init__(language, punctuations=punctuations, keep_puncs=keep_puncs)
+        super().__init__(
+            language, punctuations=punctuations, keep_puncs=keep_puncs
+        )
         self.use_espeak_phonemes = use_espeak_phonemes
         self.keep_stress = keep_stress
 
@@ -54,7 +56,9 @@ class Gruut(BasePhonemizer):
     def name():
         return "gruut"
 
-    def phonemize_gruut(self, text: str, separator: str = "|", tie=False) -> str:  # pylint: disable=unused-argument
+    def phonemize_gruut(
+        self, text: str, separator: str = "|", tie=False
+    ) -> str:  # pylint: disable=unused-argument
         """Convert input text to phonemes.
 
         Gruut phonemizes the given `str` by seperating each phoneme character with `separator`, even for characters
@@ -74,7 +78,9 @@ class Gruut(BasePhonemizer):
                 with '_'. This option requires espeak>=1.49. Default to False.
         """
         ph_list = []
-        for sentence in gruut.sentences(text, lang=self.language, espeak=self.use_espeak_phonemes):
+        for sentence in gruut.sentences(
+            text, lang=self.language, espeak=self.use_espeak_phonemes
+        ):
             for word in sentence:
                 if word.is_break:
                     # Use actual character for break phoneme (e.g., comma)
@@ -93,7 +99,9 @@ class Gruut(BasePhonemizer):
                             # Remove primary/secondary stress
                             word_phoneme = IPA.without_stress(word_phoneme)
 
-                        word_phoneme = word_phoneme.translate(GRUUT_TRANS_TABLE)
+                        word_phoneme = word_phoneme.translate(
+                            GRUUT_TRANS_TABLE
+                        )
 
                         if word_phoneme:
                             # Flatten phonemes
@@ -140,7 +148,12 @@ if __name__ == "__main__":
     from cleaner import french_cleaners
     import json
 
-    e = Gruut(language="fr-fr", keep_puncs=True, keep_stress=True, use_espeak_phonemes=True)
+    e = Gruut(
+        language="fr-fr",
+        keep_puncs=True,
+        keep_stress=True,
+        use_espeak_phonemes=True,
+    )
     symbols = [  # en + sp
         "_",
         ",",
@@ -211,48 +224,48 @@ if __name__ == "__main__":
         "\u2191",
         " ",
         "ɣ",
-        "ɡ", 
-        "r", 
-        "ɲ", 
-        "ʝ", 
+        "ɡ",
+        "r",
+        "ɲ",
+        "ʝ",
         "ʎ",
-        "ː"
+        "ː",
     ]
-    with open('/home/xumin/workspace/VITS-Training-Multiling/230715_fr/metadata.txt', 'r') as f:
+    with open(
+        "/home/xumin/workspace/VITS-Training-Multiling/230715_fr/metadata.txt",
+        "r",
+    ) as f:
         lines = f.readlines()
-    
 
     used_sym = []
     not_existed_sym = []
     phonemes = []
 
     for line in lines:
-        text = line.split('|')[-1].strip()
+        text = line.split("|")[-1].strip()
         text = french_cleaners(text)
-        ipa =  e.phonemize(text, separator="")
+        ipa = e.phonemize(text, separator="")
         phonemes.append(ipa)
         for s in ipa:
             if s not in symbols:
                 if s not in not_existed_sym:
-                    print(f'not_existed char: {s}')
+                    print(f"not_existed char: {s}")
                     not_existed_sym.append(s)
             else:
                 if s not in used_sym:
                     # print(f'used char: {s}')
                     used_sym.append(s)
-    
+
     print(used_sym)
     print(not_existed_sym)
 
-
-    with open('./text/fr_phonemizer/french_symbols.txt', 'w') as g:
+    with open("./text/fr_phonemizer/french_symbols.txt", "w") as g:
         g.writelines(symbols + not_existed_sym)
-        
-    with open('./text/fr_phonemizer/example_ipa.txt', 'w') as g:
+
+    with open("./text/fr_phonemizer/example_ipa.txt", "w") as g:
         g.writelines(phonemes)
 
-    data = {'symbols': symbols + not_existed_sym}
+    data = {"symbols": symbols + not_existed_sym}
 
-    with open('./text/fr_phonemizer/fr_symbols.json', 'w') as f:
+    with open("./text/fr_phonemizer/fr_symbols.json", "w") as f:
         json.dump(data, f, indent=4)
-

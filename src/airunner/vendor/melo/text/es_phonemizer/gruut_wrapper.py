@@ -4,8 +4,8 @@ from typing import List
 import gruut
 from gruut_ipa import IPA # pip install gruut_ipa
 
-from .base import BasePhonemizer
-from .punctuation import Punctuation
+from airunner.vendor.melo.text.es_phonemizer.base import BasePhonemizer
+from airunner.vendor.melo.text.es_phonemizer.punctuation import Punctuation
 
 # Table for str.translate to fix gruut/TTS phoneme mismatch
 GRUUT_TRANS_TABLE = str.maketrans("g", "ɡ")
