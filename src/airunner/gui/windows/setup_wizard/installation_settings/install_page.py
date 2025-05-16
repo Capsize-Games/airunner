@@ -553,11 +553,6 @@ class InstallWorker(
 
     @Slot()
     def download_finished(self, data):
-        print(
-            "DOWNLOAD FINISHED",
-            self.current_step,
-            self.total_models_in_current_step,
-        )
         self.total_models_in_current_step -= 1
         # if self.current_step == 7:
         #     # If we're in the openvoice/unidic step, extract after download

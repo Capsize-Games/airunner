@@ -104,6 +104,8 @@ class DownloadWorker(Worker):
                         SignalCode.UPDATE_DOWNLOAD_LOG,
                         {"message": f"finished with download of {file_name}"},
                     )
+                    # Also emit the DOWNLOAD_COMPLETE signal to update the progress bar
+                    self.api.download_complete(file_name)
                     self.finished.emit({})
         except Exception as e:
             print(f"Failed to download {url}")
