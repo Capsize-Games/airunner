@@ -46,24 +46,16 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 
 AI Runner is a local-first, **open-source** application built with HuggingFace and Llama-index libraries that enables you to run:
 
-- **Large Language Models (LLMs)** for chat and text generation  
-- **Stable Diffusion** for image generation and manipulation
-- **Text-to-Speech (TTS)** Integrated with **OpenVoice**, **SpeechT5**, and **Espeak** for voice synthesis
-- **Speech-to-Text (STT)** Uses **Whisper** for converting audio to text
-- **Customizable Voice-based chatbots** for real-time conversations
-- **Image filters** and **inpainting** for image editing
-- **Retrieval-Augmented Generation** (RAG) for enhanced LLM responses
-- **Wayland support, Python 3.13, Docker support, and a pure Python codebase** for improved security, performance, and compatibility
-
-Originally created as a GUI-centric AI art and chatbot tool for end users, AI Runner has evolved into a **developer-friendly** platform. With Docker support, an extension API, and a pure Python codebase, you can integrate AI Runner into your own apps or use it as an all-in-one offline inference engine.
+- ✅ **Large Language Models (LLMs)** for chat and text generation  
+- ✅ **Stable Diffusion** for image generation and manipulation
+- ✅ **Text-to-Speech (TTS)** Integrated with **OpenVoice**, **SpeechT5**, and **Espeak** for voice synthesis
+- ✅ **Speech-to-Text (STT)** Uses **Whisper** for converting audio to text
+- ✅ **Customizable Voice-based chatbots** for real-time conversations
+- ✅ **Image filters** and **inpainting** for image editing
+- ✅ **Retrieval-Augmented Generation** (RAG) for enhanced LLM responses
+- ✅ **Wayland support, Python 3.13, Docker support, and a pure Python codebase** for improved security, performance, and compatibility
 
 ![interface/img.png](images/interface.png)
-
-**Typical Uses:**
-- AI prototyping: Quickly test local LLMs and image generation.  
-- Offline scenarios: Work behind firewalls or without internet.  
-- Custom UI/UX: Build plugins/extensions for your particular domain.  
-- End-user tools: Hand off a no-code (GUI) solution for less technical stakeholders.
 
 ---
 
@@ -75,8 +67,8 @@ Below is a high-level list of capabilities in AI Runner:
 |------------------------------------------|----------------------------------------------------------------------------------------------|
 | **LLMs & Communication**                 |                                                                                              |
 | Voice-based chatbot conversations        | Have real-time voice-chat sessions with an LLM (speech-to-text + text-to-speech)            |
-| Text-to-speech (TTS)                     | Convert text to spoken audio using Espeak or SpeechT5                                       |
-| Speech-to-text (STT)                     | Convert spoken audio to text with Whisper                                                   |
+| Text-to-speech (TTS)                     | Convert text to spoken audio using **OpenVoice**, **SpeechT5**, and **Espeak**                                       |
+| Speech-to-text (STT)                     | Convert spoken audio to text with **Whisper**                                                   |
 | Customizable chatbots                    | Create AI personalities and moods for more engaging conversations                            |
 | Retrieval-Augmented Generation           | Use local doc or website data to enrich chat responses                                      |
 | **Image Generation**                     |                                                                                              |
