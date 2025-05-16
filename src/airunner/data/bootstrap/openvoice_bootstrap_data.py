@@ -3,18 +3,18 @@ OPENVOICE_FILES = {
         "files": [
             "config.json",
             "model.safetensors",
-            "vocab.txt",
+            "tokenizer.json",
             "tokenizer_config.json",
-            "special_tokens_map.json",
+            "vocab.txt",
         ]
     },
     "google-bert/bert-base-uncased": {
         "files": [
             "config.json",
             "model.safetensors",
-            "vocab.txt",
+            "tokenizer.json",
             "tokenizer_config.json",
-            "special_tokens_map.json",
+            "vocab.txt",
         ]
     },
     "dbmdz/bert-base-french-europeana-cased": {
@@ -23,41 +23,38 @@ OPENVOICE_FILES = {
             "pytorch_model.bin",
             "tokenizer_config.json",
             "vocab.txt",
-            "special_tokens_map.json",
         ]
     },
     "dccuchile/bert-base-spanish-wwm-uncased": {
         "files": [
             "config.json",
-            "model.safetensors",
-            "vocab.txt",
-            "tokenizer_config.json",
+            "pytorch_model.bin",
+            "tokenizer.json",
             "special_tokens_map.json",
+            "tokenizer_config.json",
+            "vocab.txt",
         ]
     },
     "kykim/bert-kor-base": {
         "files": [
             "config.json",
-            "model.safetensors",
-            "vocab.txt",
+            "pytorch_model.bin",
             "tokenizer_config.json",
-            "special_tokens_map.json",
+            "vocab.txt",
         ]
     },
-    "myshell-ai/MelTTS-English-v3": {
+    "myshell-ai/MeloTTS-English-v3": {
         "files": [
             "checkpoint.pth",
             "config.json",
-            "hps.json",
         ]
     },
     "tohoku-nlp/bert-base-japanese-v3": {
         "files": [
             "config.json",
-            "model.safetensors",
-            "vocab.txt",
+            "pytorch_model.bin",
             "tokenizer_config.json",
-            "special_tokens_map.json",
+            "vocab.txt",
         ]
     },
 }
