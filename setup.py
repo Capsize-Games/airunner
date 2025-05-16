@@ -6,6 +6,15 @@ extras_require = {
     "nvidia": [  # NVIDIA dependencies:
         "nvidia-cuda-runtime-cu12",  # This package provides CUDA 12 runtime
     ],
+    "huggingface": [
+        "diffusers==0.33.1",
+        "controlnet_aux==0.0.9",
+        "safetensors==0.5.2",
+        "compel==2.1.0",
+        "transformers==4.51.3",
+        "datasets==3.6.0",
+        "peft==0.15.2",
+    ],
     "gui": [  # GUI dependencies
         "PySide6==6.9.0",
         "PySide6_Addons==6.9.0",
@@ -25,39 +34,34 @@ extras_require = {
     ],
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",
-        "diffusers==0.33.1",
-        "controlnet_aux==0.0.9",
-        "safetensors==0.5.2",
-        "compel==2.1.0",
         "tomesd==0.1.3",
         "timm<=0.6.7",  # Timm is marked at a lower version for compel, we upgrade after installing
     ],
     "llm": [  # LLM dependencies (also text-to-speech and speech-to-text)
-        "transformers==4.51.3",
         "bitsandbytes==0.45.5",
-        "datasets==3.2.0",
         "sentence_transformers==3.4.1",
         "sounddevice==0.5.1",
         "pyttsx3==2.91",
         "cryptography==44.0.3",
-        "llama-index==0.12.14",
-        "llama-index-readers-file==0.4.7",
-        "llama-index-readers-web==0.3.5",
-        "llama-index-llms-huggingface==0.4.2",
-        "llama-index-llms-groq==0.3.1",
-        "llama-index-embeddings-mistralai==0.3.0",
-        "llama-index-vector-stores-faiss==0.3.0",
-        "llama-index-embeddings-huggingface==0.5.1",
-        "llama-index-llms-openrouter==0.3.1",
-        "langchain-community==0.3.17",
-        "EbookLib==0.18",
-        "html2text==2024.2.26",
-        "rake_nltk==1.0.6",
-        "peft==0.15.2",
         # "flash_attn==2.7.4.post1", # flash-attn usually requires specific build steps.
         # Summarizations (basic)
         "sumy==0.11.0",
         "sentencepiece==0.2.0",
+    ],
+    "agents": [
+        "llama-index==0.12.36",
+        "llama-index-readers-file==0.4.7",
+        "llama-index-readers-web==0.4.1",
+        "llama-index-llms-huggingface==0.5.0",
+        "llama-index-llms-groq==0.3.1",
+        "llama-index-embeddings-mistralai==0.3.0",
+        "llama-index-vector-stores-faiss==0.4.0",
+        "llama-index-embeddings-huggingface==0.5.4",
+        "llama-index-llms-openrouter==0.3.1",
+        "langchain-community==0.3.24",
+        "EbookLib==0.19",
+        "html2text==2024.2.26",
+        "rake_nltk==1.0.6",
     ],
     "llm_weather": [  # LLM dependencies for weather (requires llm dependencies)
         "requests-cache==1.2.1",
@@ -70,6 +74,47 @@ extras_require = {
         "librosa==0.11.0",
     ],
     "rabbitmq": ["pika"],
+    "openvoice": [
+        "librosa==0.11.0",
+        "pydub==0.25.1",
+        "wavmark==0.0.3",
+        "eng_to_ipa==0.0.2",
+        "inflect==7.5.0",
+        "unidecode==1.4.0",
+        "langid==1.1.6",
+    ],
+    "melotts": [
+        "txtsplit==1.0.0",
+        "cached_path==1.7.3",
+        "num2words==0.5.14",
+        "g2p_en==2.1.0",
+        "anyascii==0.3.2",
+        "loguru==0.7.3",
+    ],
+    "openvoice_cn": [
+        "pypinyin==0.54.0",
+        "jieba==0.42.1",
+        "cn2an==0.5.23",
+    ],
+    "openvoice_jp": [
+        "unidic_lite==1.0.8",
+        "unidic==1.1.0",
+        "mecab-python3==1.0.10",
+        # Note: fugashi requires MeCab to be installed on the system
+        # Install with: apt-get install mecab libmecab-dev mecab-ipadic-utf8
+        "fugashi==1.4.0",
+        "pykakasi==2.3.0",
+    ],
+    "openvoice_kr": [
+        "jamo==0.4.1",
+    ],
+    "openvoice_tw": [
+        "g2pkk>=0.1.2",
+    ],
+    "gruut_support": [
+        "gruut[de,es,fr]==2.4.0",
+        "networkx==3.4.2",
+    ],
 }
 
 extras_require["all"] = []
@@ -98,7 +143,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.7.4",
+    version="4.8.0",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -115,10 +160,10 @@ setup(
         "torchvision",
         "torchaudio",
         "torchao",
-        "accelerate==1.6.0",
+        "accelerate==1.7.0",
         "huggingface-hub>=0.24.0,<1.0",
         "tokenizers==0.21.1",
-        "optimum==1.24.0",
+        "optimum==1.25.1",
         "numpy==2.2.5",
         "pillow==10.4.0",
         "alembic==1.15.2",
