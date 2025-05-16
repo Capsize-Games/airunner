@@ -97,14 +97,7 @@ from airunner.api import API
 ###############################################################
 # Import Alembic modules to run migrations.
 ################################################################
-from airunner.data.models.application_settings import ApplicationSettings
 from airunner.setup_database import setup_database
-
-
-def run_setup_wizard():
-    from airunner.app_installer import AppInstaller
-
-    AppInstaller()
 
 
 def main():
@@ -145,16 +138,6 @@ def main():
     if args.chatbot_only:
         os.environ["AIRUNNER_ART_ENABLED"] = "0"
     setup_database()
-
-    # Get the first ApplicationSettings record from the database and
-    # check for run_setup_wizard boolean
-    application_settings = ApplicationSettings.objects.first()
-    if not application_settings:
-        ApplicationSettings.objects.create()
-        application_settings = ApplicationSettings.objects.first()
-
-    if application_settings.run_setup_wizard:
-        run_setup_wizard()
 
     # Start the main application
     API()
