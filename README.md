@@ -41,7 +41,10 @@ AI Runner is a local-first, open-source application that allows you to run large
    ```
 3. **Install AI Runner**
    ```bash
-   pip install airunner
+   pip install "typing-extensions==4.13.2"
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+   pip install airunner[all_dev]
+   pip install -U timm
    ```
 4. **Run AI Runner**
    ```bash
