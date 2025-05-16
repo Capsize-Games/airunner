@@ -32,7 +32,6 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 - [Overview](#overview)
 - [Features](#features)
 - [System Requirements](#system-requirements)
-- [Installation Quick Start](#installation-quick-start)
 - [AI Models](#ai-models)
 - [Unit Tests](#unit-tests)
 - [Database](#database)
