@@ -7,6 +7,7 @@ THREADS = []
 
 def create_worker(worker_class_, **kwargs):
     worker = worker_class_(**kwargs)
+    # get existing QApplication instance
     worker_thread = QThread()
     worker.moveToThread(worker_thread)
     worker.finished.connect(worker_thread.quit)

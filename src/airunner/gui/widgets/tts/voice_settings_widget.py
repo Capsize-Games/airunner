@@ -20,7 +20,6 @@ from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.tts.speecht5_preferences_widget import (
     SpeechT5PreferencesWidget,
 )
-from airunner.settings import AIRUNNER_ENABLE_OPEN_VOICE
 from airunner.gui.widgets.tts.open_voice_preferences_widget import (
     OpenVoicePreferencesWidget,
 )
@@ -104,10 +103,12 @@ class VoiceSettingsWidget(BaseWidget):
 
         model_combobox = QComboBox()
         model_combobox.addItems(
-            [TTSModel.SPEECHT5.value, TTSModel.ESPEAK.value]
+            [
+                TTSModel.SPEECHT5.value,
+                TTSModel.ESPEAK.value,
+                TTSModel.OPENVOICE.value,
+            ]
         )
-        if AIRUNNER_ENABLE_OPEN_VOICE:
-            model_combobox.addItem(TTSModel.OPENVOICE.value)
         model_combobox.setCurrentText(voice.model_type)
         model_combobox.currentTextChanged.connect(
             lambda val, v=voice: self.update_voice_model(
@@ -145,10 +146,7 @@ class VoiceSettingsWidget(BaseWidget):
             widget = SpeechT5PreferencesWidget(id=voice.settings_id)
         elif voice.model_type == TTSModel.ESPEAK.value:
             widget = EspeakPreferencesWidget(id=voice.settings_id)
-        elif (
-            AIRUNNER_ENABLE_OPEN_VOICE
-            and voice.model_type == TTSModel.OPENVOICE.value
-        ):
+        elif voice.model_type == TTSModel.OPENVOICE.value:
             widget = OpenVoicePreferencesWidget(id=voice.settings_id)
         else:
             return
@@ -162,11 +160,7 @@ class VoiceSettingsWidget(BaseWidget):
         name = f"{name} ({total + 1})" if total > 0 else name
         voice = VoiceSettings.objects.create(
             name=name,
-            model_type=(
-                TTSModel.SPEECHT5.value
-                if not AIRUNNER_ENABLE_OPEN_VOICE
-                else TTSModel.OPENVOICE.value
-            ),
+            model_type=TTSModel.OPENVOICE.value,
             settings_id=1,
         )
         # if voice.model_type == TTSModel.SPEECHT5.value:
@@ -201,8 +195,7 @@ class VoiceSettingsWidget(BaseWidget):
             elif voice.model_type == TTSModel.ESPEAK:
                 EspeakSettings.objects.delete(voice.settings_id)
             elif (
-                AIRUNNER_ENABLE_OPEN_VOICE
-                and voice.model_type == TTSModel.OPENVOICE
+                voice.model_type == TTSModel.OPENVOICE
             ):
                 OpenVoiceSettings.objects.delete(voice.settings_id)
 
@@ -212,8 +205,7 @@ class VoiceSettingsWidget(BaseWidget):
             elif model_type == TTSModel.ESPEAK.value:
                 settings = EspeakSettings.objects.create()
             elif (
-                AIRUNNER_ENABLE_OPEN_VOICE
-                and model_type == TTSModel.OPENVOICE.value
+                model_type == TTSModel.OPENVOICE.value
             ):
                 settings = OpenVoiceSettings.objects.create()
             else:
@@ -242,8 +234,7 @@ class VoiceSettingsWidget(BaseWidget):
             elif voice.model_type == TTSModel.ESPEAK.value:
                 EspeakSettings.objects.delete(voice.settings_id)
             elif (
-                AIRUNNER_ENABLE_OPEN_VOICE
-                and voice.model_type == TTSModel.OPENVOICE.value
+                voice.model_type == TTSModel.OPENVOICE.value
             ):
                 OpenVoiceSettings.objects.delete(voice.settings_id)
 

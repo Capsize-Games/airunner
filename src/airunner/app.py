@@ -10,6 +10,7 @@ from PySide6.QtCore import QObject, QTimer
 from PySide6.QtGui import QGuiApplication, QPixmap, Qt, QWindow, QPainter
 from PySide6.QtWidgets import QApplication, QSplashScreen
 
+from airunner.data.models.path_settings import PathSettings
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
@@ -62,7 +63,18 @@ class App(MediatorMixin, SettingsMixin, QObject):
         if AIRUNNER_DISABLE_SETUP_WIZARD:
             return
         application_settings = ApplicationSettings.objects.first()
-        if application_settings.run_setup_wizard:
+        path_settings = PathSettings.objects.first()
+        if path_settings is None:
+            PathSettings.objects.create()
+            path_settings = PathSettings.objects.first()
+        if application_settings is None:
+            ApplicationSettings.objects.create()
+            application_settings = ApplicationSettings.objects.first()
+        base_path = path_settings.base_path
+        if (
+            not os.path.exists(base_path)
+            or application_settings.run_setup_wizard
+        ):
             from airunner.app_installer import AppInstaller
 
             AppInstaller()

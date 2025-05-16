@@ -11,7 +11,7 @@ from airunner.enums import (
     QueueType,
 )
 from airunner.workers.worker import Worker
-from airunner.settings import AIRUNNER_TTS_ON, AIRUNNER_ENABLE_OPEN_VOICE
+from airunner.settings import AIRUNNER_TTS_ON
 from airunner.handlers.tts.tts_request import (
     OpenVoiceTTSRequest,
     TTSRequest,
@@ -151,7 +151,7 @@ class TTSGeneratorWorker(Worker):
             )
 
             tts_model_manager_class_ = SpeechT5ModelManager
-        elif AIRUNNER_ENABLE_OPEN_VOICE and model_type is TTSModel.OPENVOICE:
+        elif model_type is TTSModel.OPENVOICE:
             from airunner.handlers.tts.openvoice_model_manager import (
                 OpenVoiceModelManager,
             )
@@ -298,7 +298,7 @@ class TTSGeneratorWorker(Worker):
                     message=message, gender=self.chatbot.gender
                 )
             elif (
-                AIRUNNER_ENABLE_OPEN_VOICE and model_type is TTSModel.OPENVOICE
+                model_type is TTSModel.OPENVOICE
             ):
                 tts_req = OpenVoiceTTSRequest(
                     message=message, gender=self.chatbot.gender
