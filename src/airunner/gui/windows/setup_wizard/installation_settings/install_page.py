@@ -404,6 +404,9 @@ class InstallWorker(
                     print(f"Error downloading {filename}: {e}")
 
     def download_openvoice(self):
+        if not self.models_enabled["openvoice_model"]:
+            self.set_page()
+            return
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading OpenVoice models..."}
         )
@@ -917,9 +920,6 @@ class InstallWorker(
         self.total_models_in_current_step = max(
             0, self.total_models_in_current_step - 1
         )
-        print(
-            f"Remaining downloads for current step: {self.total_models_in_current_step}"
-        )
 
         if self.total_models_in_current_step <= 0:
             if self.current_step == 8:
@@ -1207,9 +1207,9 @@ class InstallPage(BaseWizard):
                 LLM_FILE_BOOTSTRAP_DATA["intfloat/e5-large"]["files"]
             )
 
-        # if self.models_enabled["openvoice"]:
-        for k, v in OPENVOICE_FILES.items():
-            self.total_steps += len(v["files"])
+        if self.models_enabled["openvoice_model"]:
+            for k, v in OPENVOICE_FILES.items():
+                self.total_steps += len(v["files"])
 
         # Register update_progress_bar to receive download_complete signals with file data
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.on_download_complete)
@@ -1282,9 +1282,9 @@ class InstallPage(BaseWizard):
             for k, v in SPEECH_T5_FILES.items():
                 self.total_files += len(v)
 
-        # if not self.models_enabled["openvoice"]:
-        for k, v in OPENVOICE_FILES.items():
-            self.total_files += len(v["files"])
+        if self.models_enabled["openvoice_model"]:
+            for k, v in OPENVOICE_FILES.items():
+                self.total_files += len(v["files"])
 
     def start(self):
         """Start the installation process and ensure Next button is disabled"""
@@ -1343,12 +1343,6 @@ class InstallPage(BaseWizard):
         # Never exceed total files
         if self.total_files_downloaded > self.total_files:
             self.total_files_downloaded = self.total_files
-
-        print(
-            "TOTAL FILES DOWNLOADED",
-            self.total_files_downloaded,
-            self.total_files,
-        )
 
         if self.total_files == self.total_files_downloaded:
             self.ui.progress_bar.setValue(100)
