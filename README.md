@@ -53,7 +53,7 @@ For extra security, performance, and compatibility, AI Runner is built with **Wa
    sudo mkdir ~/.local/share/airunner
    sudo chown $USER:$USER ~/.local/share/airunner
    ```
-3. **Install AI Runner**
+3. **Install AI Runner** - **Python 3.13+ required** `pyenv` and `venv` are recommended ([see wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions) for more info)
    ```bash
    pip install "typing-extensions==4.13.2"
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128

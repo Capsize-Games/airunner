@@ -253,7 +253,13 @@ class CanvasWidget(BaseWidget):
         else:
             cursor = Qt.CursorShape.ArrowCursor
 
-        self.setCursor(cursor)
+        # Only set cursor if it changed
+        if (
+            not hasattr(self, "_current_cursor")
+            or self._current_cursor != cursor
+        ):
+            self.setCursor(cursor)
+            self._current_cursor = cursor
 
     def toggle_grid(self, _val):
         self.do_draw()
