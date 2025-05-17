@@ -374,6 +374,7 @@ class CustomScene(
         self.current_active_image = None
         self.delete_image()
         self._clear_history()
+        self.api.art.canvas.recenter_grid()
 
     def on_mask_layer_toggled(self):
         self.initialize_image()
