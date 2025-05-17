@@ -5,9 +5,11 @@ from PySide6.QtCore import QPointF, Qt
 from NodeGraphQt import BaseNode
 
 from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.application.mediator_mixin import MediatorMixin
 
 
-class BaseWorkflowNode(BaseNode):
+class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
     """
     Base class for all workflow nodes in the application.
     This class provides a structure for defining input and output ports,

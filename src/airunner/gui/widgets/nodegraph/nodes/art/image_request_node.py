@@ -254,6 +254,8 @@ class ImageRequestNode(BaseArtNode):
         },
     ]
 
+    generator_settings = None
+
     def on_widget_button_clicked(self, prop_name, value):
         """
         Handle button clicks for node properties.
@@ -318,7 +320,7 @@ class ImageRequestNode(BaseArtNode):
         except (KeyError, TypeError):
             image_preset = ImagePreset.NONE
 
-        # Create ImageRequest object
+        gs = self.generator_settings
         image_request = ImageRequest(
             pipeline_action=pipeline_action,
             generator_name=generator_name,
@@ -343,14 +345,16 @@ class ImageRequestNode(BaseArtNode):
             width=image_width,
             height=image_height,
             image_preset=image_preset,
-            crops_coords_top_left=self.generator_settings.crops_coords_top_left,
-            negative_crops_coords_top_left=self.generator_settings.negative_crops_coords_top_left,
-            target_size=self.generator_settings.target_size,
-            original_size=self.generator_settings.original_size,
-            negative_target_size=self.generator_settings.negative_target_size,
-            negative_original_size=self.generator_settings.negative_original_size,
+            crops_coords_top_left=getattr(gs, "crops_coords_top_left", None),
+            negative_crops_coords_top_left=getattr(
+                gs, "negative_crops_coords_top_left", None
+            ),
+            target_size=getattr(gs, "target_size", None),
+            original_size=getattr(gs, "original_size", None),
+            negative_target_size=getattr(gs, "negative_target_size", None),
+            negative_original_size=getattr(gs, "negative_original_size", None),
             quality_effects=QualityEffects(
-                self.generator_settings.quality_effects
+                getattr(gs, "quality_effects", QualityEffects.STANDARD)
             ),
         )
         return {"image_request": image_request}
