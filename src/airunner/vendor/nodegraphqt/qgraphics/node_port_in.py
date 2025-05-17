@@ -1,5 +1,4 @@
-#!/usr/bin/python
-from Qt import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui
 
 from airunner.vendor.nodegraphqt.constants import NodeEnum
 from airunner.vendor.nodegraphqt.qgraphics.node_base import NodeItem
