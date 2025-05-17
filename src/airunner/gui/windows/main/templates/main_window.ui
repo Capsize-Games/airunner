@@ -481,7 +481,6 @@
     <addaction name="separator"/>
     <addaction name="actionRun_setup_wizard_2"/>
     <addaction name="separator"/>
-    <addaction name="actionCollapse_to_system_tray"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -889,18 +888,6 @@
    </property>
    <property name="text">
     <string>Discord</string>
-   </property>
-  </action>
-  <action name="actionCollapse_to_system_tray">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
-     <normaloff>:/light/icons/feather/light/x-circle.svg</normaloff>:/light/icons/feather/light/x-circle.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Close to System Tray</string>
    </property>
   </action>
   <action name="workflow_actionRun">
