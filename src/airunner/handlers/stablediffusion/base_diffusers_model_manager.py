@@ -1832,6 +1832,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             "num_inference_steps": int(self.image_request.steps),
             "callback_on_step_end": self.__interrupt_callback,
             "generator": self.generator,
+            "num_images_per_prompt": int(self.image_request.images_per_batch),
         }
 
         if len(self._loaded_lora) > 0:

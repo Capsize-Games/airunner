@@ -536,6 +536,9 @@
            <height>0</height>
           </size>
          </property>
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
         </widget>
         <widget class="CustomGraphicsView" name="canvas_container">
          <property name="sizePolicy">

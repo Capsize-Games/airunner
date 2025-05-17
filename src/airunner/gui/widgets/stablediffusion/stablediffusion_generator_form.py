@@ -548,6 +548,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             seed=self.seed,
             strength=self.generator_settings.strength / 100,
             n_samples=self.generator_settings.n_samples,
+            images_per_batch=self.generator_settings.images_per_batch,
             clip_skip=self.generator_settings.clip_skip,
             width=self.application_settings.working_width,
             height=self.application_settings.working_height,

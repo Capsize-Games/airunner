@@ -25,6 +25,7 @@ class ImageRequest:
     seed: int = 42
     strength: int = 0.5
     n_samples: int = 1
+    images_per_batch: int = 1
     clip_skip: int = 0
     crops_coords_top_left: Dict = None
     original_size: Dict = None

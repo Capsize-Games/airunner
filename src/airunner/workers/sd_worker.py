@@ -238,6 +238,7 @@ class SDWorker(Worker):
                 seed=settings.seed,
                 strength=settings.strength / 100,
                 n_samples=settings.n_samples,
+                images_per_batch=settings.images_per_batch,
                 clip_skip=settings.clip_skip,
                 crops_coords_top_left=settings.crops_coords_top_left,
                 negative_crops_coords_top_left=settings.negative_crops_coords_top_left,

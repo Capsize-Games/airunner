@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>586</width>
+    <width>597</width>
     <height>825</height>
    </rect>
   </property>
@@ -71,7 +71,7 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>586</width>
+           <width>597</width>
            <height>775</height>
           </rect>
          </property>
@@ -235,7 +235,7 @@
             </widget>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="2" column="0">
            <widget class="QWidget" name="sdxl_settings_container" native="true">
             <layout class="QVBoxLayout" name="sdxl_settings">
              <property name="leftMargin">
@@ -479,6 +479,74 @@
                </item>
               </layout>
              </item>
+             <item>
+              <widget class="SliderWidget" name="images_per_batch" native="true">
+               <property name="label_text" stdset="0">
+                <string>Images Per Batch</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <number>24</number>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <number>24</number>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>false</bool>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_page_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="settings_property" stdset="0">
+                <string>generator_settings.images_per_batch</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="SliderWidget" name="n_samples" native="true">
+               <property name="label_text" stdset="0">
+                <string>Samples</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <number>1000</number>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <number>1000</number>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>false</bool>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_page_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="settings_property" stdset="0">
+                <string>generator_settings.n_samples</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>
@@ -593,6 +661,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>prompt</tabstop>
   <tabstop>secondary_prompt</tabstop>
