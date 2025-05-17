@@ -48,6 +48,7 @@ class GeneratorSettings(BaseModel):
     prompt_triggers = Column(String, default="")
     strength = Column(Integer, default=50)
     n_samples = Column(Integer, default=1)
+    images_per_batch = Column(Integer, default=1)
     clip_skip = Column(Integer, default=0)
     crops_coords_top_left = Column(JSON, default={"x": 0, "y": 0})
     negative_crops_coords_top_left = Column(JSON, default={"x": 0, "y": 0})
