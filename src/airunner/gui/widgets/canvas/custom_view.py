@@ -448,14 +448,18 @@ class CustomGraphicsView(
         )
 
         # Calculate size differences
-        delta_width = new_size.width() - old_size.width()
-        delta_height = new_size.height() - old_size.height()
+        delta_width = new_size.width() - old_size
+        delta_height = new_size.height() - old_size
 
-        # Calculate new canvas offset
-        new_offset = QPointF(
-            self.canvas_offset.x() - delta_width / 2,
-            self.canvas_offset.y() - delta_height / 2,
-        )
+        # If only width changes and height is nearly the same, treat as splitter resize (no offset change)
+        if abs(delta_height) < 5 and abs(delta_width) > 0:
+            new_offset = self.canvas_offset  # Do not change offset
+        else:
+            # For window resize, keep center fixed
+            new_offset = QPointF(
+                self.canvas_offset.x() - delta_width / 2,
+                self.canvas_offset.y() - delta_height / 2,
+            )
 
         # Return the calculated values
         return {
