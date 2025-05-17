@@ -2,7 +2,7 @@ from typing import List, Dict, Any, Type
 from PySide6.QtGui import QPolygonF, QBrush
 from PySide6.QtCore import QPointF, Qt
 
-from NodeGraphQt import BaseNode
+from airunner.vendor.nodegraphqt import BaseNode
 
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.windows.main.settings_mixin import SettingsMixin

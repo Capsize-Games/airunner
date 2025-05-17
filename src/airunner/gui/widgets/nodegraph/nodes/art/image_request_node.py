@@ -1,7 +1,7 @@
 from typing import Dict
 from PySide6.QtWidgets import QFileDialog
 
-from NodeGraphQt.constants import NodePropWidgetEnum
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
 from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
     BaseArtNode,

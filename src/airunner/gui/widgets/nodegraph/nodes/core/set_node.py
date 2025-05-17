@@ -4,7 +4,7 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QColor, QPen, QFont
 from PySide6.QtCore import Qt
 
-from NodeGraphQt.constants import NodePropWidgetEnum
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
 from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
     BaseCoreNode,
