@@ -150,7 +150,11 @@ class CustomScene(
 
     @property
     def current_tool(self):
-        return CanvasToolName(self.application_settings.current_tool)
+        return (
+            None
+            if self.application_settings.current_tool is None
+            else CanvasToolName(self.application_settings.current_tool)
+        )
 
     @property
     def settings_key(self):
