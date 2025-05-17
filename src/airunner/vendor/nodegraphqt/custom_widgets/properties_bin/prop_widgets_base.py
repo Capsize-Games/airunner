@@ -1,5 +1,4 @@
-#!/usr/bin/python
-from Qt import QtWidgets, QtCore
+from PySide6 import QtCore, QtWidgets
 
 
 class PropLabel(QtWidgets.QLabel):

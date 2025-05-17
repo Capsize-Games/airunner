@@ -1,10 +1,11 @@
-#!/usr/bin/python
 from collections import defaultdict
 
-from Qt import QtWidgets, QtCore, QtGui, QtCompat
+from PySide6 import QtCore, QtWidgets, QtGui
 
-from .node_property_factory import NodePropertyWidgetFactory
-from .prop_widgets_base import PropLineEdit
+from airunner.vendor.nodegraphqt.custom_widgets.properties_bin.node_property_factory import (
+    NodePropertyWidgetFactory,
+)
+from airunner.vendor.nodegraphqt.custom_widgets.properties_bin.prop_widgets_base import PropLineEdit
 
 
 class _PropertiesDelegate(QtWidgets.QStyledItemDelegate):
@@ -56,11 +57,11 @@ class _PropertiesList(QtWidgets.QTableWidget):
         self.verticalHeader().hide()
         self.horizontalHeader().hide()
 
-        QtCompat.QHeaderView.setSectionResizeMode(
-            self.verticalHeader(), QtWidgets.QHeaderView.ResizeToContents
+        self.verticalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents
         )
-        QtCompat.QHeaderView.setSectionResizeMode(
-            self.horizontalHeader(), 0, QtWidgets.QHeaderView.Stretch
+        self.horizontalHeader().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.Stretch
         )
         self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
 
@@ -220,8 +221,8 @@ class _PortConnectionsContainer(QtWidgets.QWidget):
         tree_widget.setHeaderLabels(headers)
         tree_widget.setHeaderHidden(False)
         tree_widget.header().setStretchLastSection(False)
-        QtCompat.QHeaderView.setSectionResizeMode(
-            tree_widget.header(), 2, QtWidgets.QHeaderView.Stretch
+        tree_widget.header().setSectionResizeMode(
+            2, QtWidgets.QHeaderView.Stretch
         )
 
         group_box.layout().addWidget(tree_widget)
@@ -701,8 +702,7 @@ class PropertiesBinWidget(QtWidgets.QWidget):
             tree_widget.setVisible(visible)
             widget = self._prop_list.cellWidget(items[0].row(), 0)
             widget.adjustSize()
-            QtCompat.QHeaderView.setSectionResizeMode(
-                self._prop_list.verticalHeader(),
+            self._prop_list.verticalHeader().setSectionResizeMode(
                 QtWidgets.QHeaderView.ResizeToContents,
             )
 

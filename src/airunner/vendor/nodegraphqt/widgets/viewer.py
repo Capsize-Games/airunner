@@ -1,9 +1,7 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
 import math
-from distutils.version import LooseVersion
+from packaging.version import parse as LooseVersion
 
-from Qt import QtGui, QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets, QtGui
 
 from airunner.vendor.nodegraphqt.base.menu import BaseMenu
 from airunner.vendor.nodegraphqt.constants import (
@@ -236,11 +234,20 @@ class NodeViewer(QtWidgets.QGraphicsView):
             sensitivity (float): zoom sensitivity.
             pos (QtCore.QPoint): mapped position.
         """
+        print(
+            f"[NodeViewer._set_viewer_zoom] value={value}, sensitivity={sensitivity}, pos={pos}, current transform={self.transform().m11()}, {self.transform().m22()}"
+        )
         if pos:
             pos = self.mapToScene(pos)
         if sensitivity is None:
             scale = 1.001**value
+            print(
+                f"[NodeViewer._set_viewer_zoom] scale (no sensitivity)={scale}"
+            )
             self.scale(scale, scale, pos)
+            print(
+                f"[NodeViewer._set_viewer_zoom] after scale, transform={self.transform().m11()}, {self.transform().m22()}"
+            )
             return
 
         if value == 0.0:
@@ -255,6 +262,9 @@ class NodeViewer(QtWidgets.QGraphicsView):
             if scale == 1.1:
                 return
         self.scale(scale, scale, pos)
+        print(
+            f"[NodeViewer._set_viewer_zoom] after scale (with sensitivity), transform={self.transform().m11()}, {self.transform().m22()}"
+        )
 
     def _set_viewer_pan(self, pos_x, pos_y):
         """
@@ -359,6 +369,9 @@ class NodeViewer(QtWidgets.QGraphicsView):
     # --- reimplemented events ---
 
     def resizeEvent(self, event):
+        print(
+            f"[NodeViewer.resizeEvent] called. Size: {self.size()}, last_size: {self._last_size}, transform: {self.transform().m11()}, {self.transform().m22()}"
+        )
         w, h = self.size().width(), self.size().height()
         if 0 in [w, h]:
             self.resize(self._last_size)
@@ -1615,14 +1628,10 @@ class NodeViewer(QtWidgets.QGraphicsView):
 
     def get_zoom(self):
         """
-        Returns the viewer zoom level.
-
-        Returns:
-            float: zoom level.
+        Returns the viewer zoom scale (transform.m11()).
         """
         transform = self.transform()
-        cur_scale = (transform.m11(), transform.m22())
-        return float("{:0.2f}".format(cur_scale[0] - 1.0))
+        return float(transform.m11())
 
     def set_zoom(self, value=0.0):
         """
@@ -1631,18 +1640,43 @@ class NodeViewer(QtWidgets.QGraphicsView):
         Args:
             value (float): zoom level
         """
+        print(
+            f"[NodeViewer.set_zoom] Called with value={value}, current get_zoom={self.get_zoom()}"
+        )
         if value == 0.0:
             self.reset_zoom()
             return
         zoom = self.get_zoom()
         if zoom < 0.0:
             if not (ZOOM_MIN <= zoom <= ZOOM_MAX):
+                print(f"[NodeViewer.set_zoom] Out of bounds: zoom={zoom}")
                 return
         else:
             if not (ZOOM_MIN <= value <= ZOOM_MAX):
+                print(f"[NodeViewer.set_zoom] Out of bounds: value={value}")
                 return
         value = value - zoom
+        print(f"[NodeViewer.set_zoom] Applying delta value={value}")
         self._set_viewer_zoom(value, 0.0)
+
+    def set_zoom_absolute(self, value: float):
+        """
+        Set the viewer zoom to an absolute scale (transform.m11()).
+
+        Args:
+            value (float): The absolute scale to set (e.g., 1.0 for 100%).
+        """
+        if not (0.01 <= value <= 10.0):  # Reasonable bounds for scale
+            print(
+                f"[NodeViewer.set_zoom_absolute] Out of bounds: value={value}"
+            )
+            return
+        current_scale = self.transform().m11()
+        delta = value / current_scale
+        print(
+            f"[NodeViewer.set_zoom_absolute] Setting absolute scale: current={current_scale}, target={value}, scale delta={delta}"
+        )
+        self.scale(delta, delta)
 
     def zoom_to_nodes(self, nodes):
         self._scene_range = self._combined_rect(nodes)
@@ -1734,3 +1768,16 @@ class NodeViewer(QtWidgets.QGraphicsView):
         elif Qt.IsPyQt5:
             from PyQt5.QtWidgets import QOpenGLWidget
         self.setViewport(QOpenGLWidget())
+
+    def set_scene_center(self, x, y):
+        """
+        Set the center of the scene to the given x, y coordinates.
+
+        Args:
+            x (float): x coordinate for the new center.
+            y (float): y coordinate for the new center.
+        """
+        center = QtCore.QPointF(x, y)
+        # Move the _scene_range so its center is at (x, y)
+        self._scene_range.moveCenter(center)
+        self._update_scene()
