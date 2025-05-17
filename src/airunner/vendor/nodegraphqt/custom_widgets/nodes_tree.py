@@ -1,6 +1,4 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-from Qt import QtWidgets, QtCore, QtGui
+from PySide6 import QtCore, QtWidgets
 
 from airunner.vendor.nodegraphqt.constants import MIME_TYPE, URN_SCHEME
 

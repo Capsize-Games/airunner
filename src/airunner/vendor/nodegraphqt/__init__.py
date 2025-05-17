@@ -45,22 +45,30 @@ example code:
 """
 
 # node graph
-from .base.graph import NodeGraph, SubGraph
-from .base.menu import NodesMenu, NodeGraphMenu, NodeGraphCommand
+from airunner.vendor.nodegraphqt.base.graph import NodeGraph, SubGraph
+from airunner.vendor.nodegraphqt.base.menu import (
+    NodesMenu,
+    NodeGraphMenu,
+    NodeGraphCommand,
+)
 
 # nodes & ports
-from .base.port import Port
-from .base.node import NodeObject
-from .nodes.base_node import BaseNode
-from .nodes.base_node_circle import BaseNodeCircle
-from .nodes.backdrop_node import BackdropNode
-from .nodes.group_node import GroupNode
+from airunner.vendor.nodegraphqt.base.port import Port
+from airunner.vendor.nodegraphqt.base.node import NodeObject
+from airunner.vendor.nodegraphqt.nodes.base_node import BaseNode
+from airunner.vendor.nodegraphqt.nodes.base_node_circle import BaseNodeCircle
+from airunner.vendor.nodegraphqt.nodes.backdrop_node import BackdropNode
+from airunner.vendor.nodegraphqt.nodes.group_node import GroupNode
 
 # widgets
-from .widgets.node_widgets import NodeBaseWidget
-from .custom_widgets.nodes_tree import NodesTreeWidget
-from .custom_widgets.nodes_palette import NodesPaletteWidget
-from .custom_widgets.properties_bin.node_property_widgets import (
+from airunner.vendor.nodegraphqt.widgets.node_widgets import NodeBaseWidget
+from airunner.vendor.nodegraphqt.custom_widgets.nodes_tree import (
+    NodesTreeWidget,
+)
+from airunner.vendor.nodegraphqt.custom_widgets.nodes_palette import (
+    NodesPaletteWidget,
+)
+from airunner.vendor.nodegraphqt.custom_widgets.properties_bin.node_property_widgets import (
     NodePropEditorWidget,
     PropertiesBinWidget,
 )

@@ -1,9 +1,7 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
 import math
-from distutils.version import LooseVersion
+from packaging.version import parse as LooseVersion
 
-from Qt import QtGui, QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets, QtGui
 
 from airunner.vendor.nodegraphqt.base.menu import BaseMenu
 from airunner.vendor.nodegraphqt.constants import (
