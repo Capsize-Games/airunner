@@ -254,9 +254,7 @@ class ImageRequestNode(BaseArtNode):
         },
     ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.generator_settings = None
+    generator_settings = None
 
     def on_widget_button_clicked(self, prop_name, value):
         """
