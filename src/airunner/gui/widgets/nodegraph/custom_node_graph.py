@@ -1,4 +1,4 @@
-from NodeGraphQt import (
+from airunner.vendor.nodegraphqt import (
     NodeGraph,
     PropertiesBinWidget,
 )

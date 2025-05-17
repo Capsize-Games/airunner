@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from NodeGraphQt.constants import NodePropWidgetEnum
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import BaseLLMNode
 from airunner.handlers.llm.gemma3_model_manager import Gemma3Manager
 from airunner.enums import SignalCode, LLMActionType

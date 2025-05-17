@@ -1,6 +1,6 @@
 # Random Number Generator Node
 import random
-from NodeGraphQt.constants import NodePropWidgetEnum
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 from airunner.gui.widgets.nodegraph.nodes.math.base_math_node import (
     BaseMathNode,
 )
