@@ -111,7 +111,7 @@ class NodegraphAPIService(APIServiceBase):
         )
 
     def run_workflow(self, graph: CustomNodeGraph):
-        self.emit_signal(SignalCode.RUN_WORKFLOW_SIGNAL, {"graph": self.graph})
+        self.emit_signal(SignalCode.RUN_WORKFLOW_SIGNAL, {"graph": graph})
 
     def pause_workflow(self, graph: CustomNodeGraph):
         self.emit_signal(SignalCode.PAUSE_WORKFLOW_SIGNAL, {"graph": graph})
