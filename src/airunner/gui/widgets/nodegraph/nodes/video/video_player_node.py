@@ -28,9 +28,9 @@ from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QVideoSink
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtGui import QPixmap
 
-# NodeGraphQt imports
-from NodeGraphQt import NodeBaseWidget, Port
-from NodeGraphQt.constants import NodePropWidgetEnum
+# airunner.vendor.nodegraphqt imports
+from airunner.vendor.nodegraphqt import NodeBaseWidget, Port
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
 # Airunner imports
 from airunner.gui.widgets.nodegraph.nodes.core.base_workflow_node import (
@@ -314,7 +314,7 @@ class VideoPlayerWidget(NodeBaseWidget):
         return self._frame
 
     def set_value(self, value=None):
-        """Required method for NodeGraphQt to restore widget state"""
+        """Required method for airunner.vendor.nodegraphqt to restore widget state"""
         if isinstance(value, str) and os.path.exists(value):
             self.play_video(value)
         self._value = value
@@ -385,7 +385,7 @@ class VideoNode(BaseWorkflowNode):
         )
 
     def on_property_changed(self, prop_name):
-        """Handle property changes in the node - called by NodeGraphQt."""
+        """Handle property changes in the node - called by airunner.vendor.nodegraphqt."""
         if prop_name == "video_path":
             value = self.get_property("video_path")
             if value:

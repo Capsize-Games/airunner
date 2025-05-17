@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QLabel
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 from PIL.ImageQt import ImageQt
-from NodeGraphQt import NodeBaseWidget
+from airunner.vendor.nodegraphqt import NodeBaseWidget
 
 from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
     BaseArtNode,
@@ -13,7 +13,7 @@ from airunner.handlers.stablediffusion.image_response import ImageResponse
 class ImageDisplayWidget(NodeBaseWidget):
     """
     Widget to display images in a node graph.
-    Following the pattern of TextEditNode which works correctly in NodeGraphQt.
+    Following the pattern of TextEditNode which works correctly in airunner.vendor.nodegraphqt.
     """
 
     def __init__(
@@ -35,7 +35,7 @@ class ImageDisplayWidget(NodeBaseWidget):
 
     def set_value(self, value=None):
         """
-        Required method for NodeGraphQt to restore widget state.
+        Required method for airunner.vendor.nodegraphqt to restore widget state.
         For image display, we just store the value and emit change signal.
         """
         self._value = value
@@ -60,7 +60,7 @@ class ImageDisplayWidget(NodeBaseWidget):
     def get_label_size(self):
         return self.image_label.size()
 
-    # Add methods required by NodeGraphQt if needed
+    # Add methods required by airunner.vendor.nodegraphqt if needed
     def setDisabled(self, state):
         self.image_label.setDisabled(state)
         super().setDisabled(state)
@@ -84,7 +84,7 @@ class ImageDisplayNode(BaseArtNode):
         self.add_input("image_response")
         self.add_output("image")
 
-        # Create and add the custom wrapper widget to the node using NodeGraphQt's API
+        # Create and add the custom wrapper widget to the node using airunner.vendor.nodegraphqt's API
         self.image_widget = ImageDisplayWidget(self.view, name="image_display")
         self.add_custom_widget(self.image_widget)
 

@@ -1,4 +1,4 @@
-from NodeGraphQt.constants import NodePropWidgetEnum
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
 from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
     BaseCoreNode,
