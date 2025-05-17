@@ -1,6 +1,6 @@
 from typing import Dict
 
-from NodeGraphQt.constants import NodePropWidgetEnum
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
 from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
     BaseArtNode,

@@ -1,4 +1,4 @@
-from NodeGraphQt.constants import NodePropWidgetEnum
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 from airunner.gui.widgets.nodegraph.nodes.core.textedit_node import (
     TextEditNode,
 )
@@ -72,7 +72,7 @@ class TextboxNode(BaseCoreNode):
         if self.text_box:
             self.text_box.blockSignals(False)
 
-        # Propagation is handled by set_property or NodeGraphQt's mechanisms
+        # Propagation is handled by set_property or airunner.vendor.nodegraphqt's mechanisms
 
     # Override set_property to update the widget when the property changes externally
     def set_property(self, name, value, push_undo=True):

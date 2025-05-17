@@ -19,7 +19,6 @@ extras_require = {
         "PySide6==6.9.0",
         "PySide6_Addons==6.9.0",
         "PySide6_Essentials==6.9.0",
-        "nodegraphqt==0.6.38",
     ],
     "linux": [  # Linux-specific dependencies
         # "faiss-gpu==1.7.2", # If faiss-gpu is from NVIDIA or a custom index, it needs similar handling
@@ -143,7 +142,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.8.2",
+    version="4.8.3",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),

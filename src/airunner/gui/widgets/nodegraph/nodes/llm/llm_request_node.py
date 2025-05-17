@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 import inspect
 
-from NodeGraphQt.constants import NodePropWidgetEnum
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
 from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import (
     BaseLLMNode,

@@ -1,6 +1,6 @@
 import os
 from typing import Dict, Tuple, Optional, List
-from NodeGraphQt import NodesPaletteWidget
+from airunner.vendor.nodegraphqt import NodesPaletteWidget
 from PySide6.QtWidgets import (
     QLineEdit,
     QDialog,
@@ -1346,7 +1346,7 @@ class NodeGraphWidget(BaseWidget):
             self.logger.debug(f"    Skipping property: {prop_name}")
             return
 
-        # Handle color conversion from list back to tuple if needed by NodeGraphQt
+        # Handle color conversion from list back to tuple if needed by airunner.vendor.nodegraphqt
         if prop_name == "color" and isinstance(prop_value, list):
             prop_value = tuple(prop_value)
 
@@ -1371,7 +1371,7 @@ class NodeGraphWidget(BaseWidget):
                 prop_value = (0, 0)
 
         try:
-            # Use NodeGraphQt's property system primarily
+            # Use airunner.vendor.nodegraphqt's property system primarily
             if node_instance.has_property(prop_name):
                 node_instance.set_property(prop_name, prop_value)
                 self.logger.info(
