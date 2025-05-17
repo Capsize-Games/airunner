@@ -402,6 +402,8 @@ class CustomScene(
         data = self.undo_history.pop()
         self._add_image_to_redo()
         self._history_set_image(data)
+        view = self.views()[0]
+        view.updateImagePositions()
 
     def on_action_redo_signal(self):
         if len(self.redo_history) == 0:
@@ -409,6 +411,8 @@ class CustomScene(
         data = self.redo_history.pop()
         self._add_image_to_undo()
         self._history_set_image(data)
+        view = self.views()[0]
+        view.updateImagePositions()
 
     def _history_set_image(self, data: Dict):
         if data is not None:
