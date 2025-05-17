@@ -110,6 +110,24 @@ class NodegraphAPIService(APIServiceBase):
             },
         )
 
+    def zoom_changed(self, zoom_level: float):
+        """
+        Emit a signal when the nodegraph zoom level has changed.
+        :param zoom_level: The current zoom level of the nodegraph.
+        """
+        self.emit_signal(SignalCode.NODEGRAPH_ZOOM, {"zoom_level": zoom_level})
+
+    def pan_changed(self, center_x: int, center_y: int):
+        """
+        Emit a signal when the nodegraph view has been panned.
+        :param center_x: The x-coordinate of the new center.
+        :param center_y: The y-coordinate of the new center.
+        """
+        self.emit_signal(
+            SignalCode.NODEGRAPH_PAN,
+            {"center_x": center_x, "center_y": center_y},
+        )
+
     def run_workflow(self, graph: CustomNodeGraph):
         self.emit_signal(SignalCode.RUN_WORKFLOW_SIGNAL, {"graph": graph})
 

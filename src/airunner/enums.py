@@ -234,6 +234,8 @@ class SignalCode(Enum):
     INTERRUPT_VIDEO_GENERATION_SIGNAL = "interrupt_video_generation_signal"
     VIDEO_PROGRESS_SIGNAL = "video_progress_signal"
     VIDEO_FRAME_UPDATE_SIGNAL = "video_frame_update_signal"
+    NODEGRAPH_ZOOM = "nodegraph_zoom"
+    NODEGRAPH_PAN = "nodegraph_pan"
 
 
 class EngineResponseCode(Enum):
