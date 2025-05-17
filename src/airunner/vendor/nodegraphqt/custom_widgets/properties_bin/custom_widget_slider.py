@@ -1,7 +1,8 @@
-#!/usr/bin/python
-from Qt import QtWidgets, QtCore
+from PySide6 import QtCore, QtWidgets
 
-from .prop_widgets_abstract import BaseProperty
+from airunner.vendor.nodegraphqt.custom_widgets.properties_bin.prop_widgets_abstract import (
+    BaseProperty,
+)
 
 
 class PropSlider(BaseProperty):
@@ -10,7 +11,9 @@ class PropSlider(BaseProperty):
     widget.
     """
 
-    def __init__(self, parent=None, disable_scroll=True, realtime_update=False):
+    def __init__(
+        self, parent=None, disable_scroll=True, realtime_update=False
+    ):
         super(PropSlider, self).__init__(parent)
         self._block = False
         self._realtime_update = realtime_update
@@ -23,8 +26,9 @@ class PropSlider(BaseProperty):
     def _init(self):
         self._slider.setOrientation(QtCore.Qt.Horizontal)
         self._slider.setTickPosition(QtWidgets.QSlider.TicksBelow)
-        self._slider.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                   QtWidgets.QSizePolicy.Preferred)
+        self._slider.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
+        )
         self._spinbox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -87,7 +91,7 @@ class QDoubleSlider(QtWidgets.QSlider):
 
     def __init__(self, decimals=2, *args, **kargs):
         super(QDoubleSlider, self).__init__(*args, **kargs)
-        self._multiplier = 10 ** decimals
+        self._multiplier = 10**decimals
 
         self.valueChanged.connect(self._on_value_change)
 
@@ -105,17 +109,27 @@ class QDoubleSlider(QtWidgets.QSlider):
         return super(QDoubleSlider, self).setMaximum(value * self._multiplier)
 
     def setSingleStep(self, value):
-        return super(QDoubleSlider, self).setSingleStep(value * self._multiplier)
+        return super(QDoubleSlider, self).setSingleStep(
+            value * self._multiplier
+        )
 
     def singleStep(self):
-        return float(super(QDoubleSlider, self).singleStep()) / self._multiplier
+        return (
+            float(super(QDoubleSlider, self).singleStep()) / self._multiplier
+        )
 
     def setValue(self, value):
         super(QDoubleSlider, self).setValue(int(value * self._multiplier))
 
 
 class PropDoubleSlider(PropSlider):
-    def __init__(self, parent=None, decimals=2, disable_scroll=True, realtime_update=False):
+    def __init__(
+        self,
+        parent=None,
+        decimals=2,
+        disable_scroll=True,
+        realtime_update=False,
+    ):
         # Do not initialize Propslider, just its parents
         super(PropSlider, self).__init__(parent)
         self._block = False

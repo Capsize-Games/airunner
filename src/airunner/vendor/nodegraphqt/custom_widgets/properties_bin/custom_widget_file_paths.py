@@ -1,8 +1,9 @@
-#!/usr/bin/python
-from Qt import QtWidgets, QtCore
+from PySide6 import QtCore, QtWidgets
 
 from airunner.vendor.nodegraphqt.widgets.dialogs import FileDialog
-from .prop_widgets_abstract import BaseProperty
+from airunner.vendor.nodegraphqt.custom_widgets.properties_bin.prop_widgets_abstract import (
+    BaseProperty,
+)
 
 
 class PropFilePath(BaseProperty):
