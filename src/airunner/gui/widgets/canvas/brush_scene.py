@@ -261,7 +261,7 @@ class BrushScene(CustomScene):
                 drawing_pad_settings.image = base_64_image
                 self.update_drawing_pad_settings("image", base_64_image)
 
-                if (
+                if self.current_tool and (
                     self.current_tool is CanvasToolName.BRUSH
                     or self.current_tool is CanvasToolName.ERASER
                 ):
