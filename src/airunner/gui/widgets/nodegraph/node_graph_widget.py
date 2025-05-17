@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 from PySide6.QtCore import Slot
+from PySide6 import QtCore
 
 from airunner.enums import SignalCode
 from airunner.gui.widgets.nodegraph.nodes import (
@@ -1072,6 +1073,7 @@ class NodeGraphWidget(BaseWidget):
             self.logger.info(
                 f"Workflow '{workflow.name}' loaded successfully."
             )
+        self._restore_nodegraph_state()
 
     def _clear_graph(self, add_start_node: bool = True):
         self.logger.info("Clearing current graph session and variables...")
@@ -1493,15 +1495,67 @@ class NodeGraphWidget(BaseWidget):
         super().showEvent(event)
 
     def _restore_nodegraph_state(self):
+        """Restore nodegraph zoom and pan (center) from workflow or ApplicationSettings after workflow load."""
+        zoom = None
+        center_x = None
+        center_y = None
+        workflow = None
         try:
-            settings = self.application_settings
-            zoom = getattr(settings, "nodegraph_zoom", 0)
-            center_x = getattr(settings, "nodegraph_center_x", 0)
-            center_y = getattr(settings, "nodegraph_center_y", 0)
-            self.viewer.set_zoom(zoom)
-            self.viewer._set_viewer_pan(center_x, center_y)
+            if self.current_workflow_id is not None:
+                workflow = self._find_workflow_by_id(
+                    int(self.current_workflow_id)
+                )
+                if hasattr(workflow, "nodegraph_zoom"):
+                    zoom = getattr(workflow, "nodegraph_zoom", None)
+                if hasattr(workflow, "nodegraph_center_x"):
+                    center_x = getattr(workflow, "nodegraph_center_x", None)
+                if hasattr(workflow, "nodegraph_center_y"):
+                    center_y = getattr(workflow, "nodegraph_center_y", None)
         except Exception as e:
-            self.logger.error(f"Failed to restore nodegraph zoom/pan: {e}")
+            self.logger.warning(
+                f"Could not fetch nodegraph zoom/center from workflow: {e}"
+            )
+        # Fallback to ApplicationSettings if not found in workflow
+        if zoom is None:
+            zoom = getattr(self.application_settings, "nodegraph_zoom", None)
+        if center_x is None:
+            center_x = getattr(
+                self.application_settings, "nodegraph_center_x", None
+            )
+        if center_y is None:
+            center_y = getattr(
+                self.application_settings, "nodegraph_center_y", None
+            )
+        # Apply zoom and center if available
+        viewer = getattr(self.graph, "_viewer", None)
+        if viewer:
+            try:
+                # Always reset zoom to identity before applying saved zoom
+                if hasattr(viewer, "reset_zoom"):
+                    viewer.reset_zoom()
+                # Set zoom and center immediately
+                if zoom is not None and hasattr(viewer, "set_zoom_absolute"):
+                    viewer.set_zoom_absolute(float(zoom))
+                if (
+                    center_x is not None
+                    and center_y is not None
+                    and hasattr(viewer, "set_scene_center")
+                ):
+                    viewer.set_scene_center(float(center_x), float(center_y))
+
+                # Schedule a single delayed zoom reset to override any late resizeEvent zooming
+                def force_zoom_final():
+                    if hasattr(viewer, "reset_zoom"):
+                        viewer.reset_zoom()
+                    if hasattr(viewer, "set_zoom_absolute"):
+                        viewer.set_zoom_absolute(float(zoom))
+
+                if zoom is not None and hasattr(viewer, "set_zoom_absolute"):
+                    QtCore.QTimer.singleShot(1200, force_zoom_final)
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to restore nodegraph zoom/center: {e}"
+                )
 
     def _save_state(self):
         zoom = self.viewer.get_zoom()
