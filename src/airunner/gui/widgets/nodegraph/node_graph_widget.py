@@ -1439,3 +1439,24 @@ class NodeGraphWidget(BaseWidget):
             self.logger.error(
                 f"Failed to connect viewer signals for live state save: {e}"
             )
+
+    def _restore_nodegraph_state(self):
+        try:
+            settings = self.application_settings
+            zoom = getattr(settings, "nodegraph_zoom", 0)
+            center_x = getattr(settings, "nodegraph_center_x", 0)
+            center_y = getattr(settings, "nodegraph_center_y", 0)
+            self.viewer.set_zoom(zoom)
+            self.viewer._set_viewer_pan(center_x, center_y)
+        except Exception as e:
+            self.logger.error(f"Failed to restore nodegraph zoom/pan: {e}")
+
+    def _save_state(self):
+        zoom = self.viewer.get_zoom()
+        center = self.viewer.scene_center()
+        ApplicationSettings.objects.update(
+            self.application_settings.id,
+            nodegraph_zoom=zoom,
+            nodegraph_center_x=int(center[0]),
+            nodegraph_center_y=int(center[1]),
+        )
