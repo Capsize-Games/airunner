@@ -562,12 +562,13 @@ class CustomGraphicsView(
 
         # Set up the scene (grid, etc.)
         self.do_draw(True)
-        self.scene.initialize_image()  # Ensure image uses loaded offset
         self.toggle_drag_mode()
         self.set_canvas_color(self.scene)
 
         # Show the active grid area using loaded offset
         self.show_active_grid_area()
+        self.scene.initialize_image()
+        self.updateImagePositions()
 
         if not self._initialized:
             self._initialized = True
@@ -592,19 +593,15 @@ class CustomGraphicsView(
 
     def handle_pan_canvas(self, event: QMouseEvent):
         if self._middle_mouse_pressed:
-            delta = (
-                event.pos() - self.last_pos
-            )  # Delta in viewport coordinates
-            # Update canvas offset (absolute scene coordinate of viewport top-left)
-            self.canvas_offset -= (
-                delta  # Subtracting viewport delta moves the scene opposite
-            )
+            delta = event.pos() - self.last_pos
+
+            self.canvas_offset -= delta
             self.last_pos = event.pos()
 
             # Update display positions based on the NEW offset
             self.update_active_grid_area_position()
-            self.updateImagePositions()  # Ensure this also uses absolute pos - offset
-            self.draw_grid()  # Only redraw grid, not full scene
+            self.updateImagePositions()
+            self.draw_grid()
 
     def update_active_grid_area_position(self):
         if self.active_grid_area:
@@ -761,3 +758,11 @@ class CustomGraphicsView(
         if self._current_cursor != cursor:
             self.setCursor(cursor)
             self._current_cursor = cursor
+
+    def on_undo_button_clicked(self):
+        self.api.art.canvas.undo()
+        # Do not sync image to grid area; keep image at its last location
+
+    def on_redo_button_clicked(self):
+        self.api.art.canvas.redo()
+        # Do not sync image to grid area; keep image at its last location
