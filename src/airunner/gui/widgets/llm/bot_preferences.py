@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 from airunner.data.models import TargetFiles, Chatbot
 from airunner.data.models.voice_settings import VoiceSettings
 from airunner.enums import SignalCode, Gender
-from airunner.utils.os import open_file_path
+from airunner.utils.os.open_file_path import open_file_path
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.llm.document_widget import DocumentWidget
 from airunner.gui.widgets.llm.templates.bot_preferences_ui import (
@@ -174,16 +174,17 @@ class BotPreferencesWidget(BaseWidget):
 
     @Slot()
     def browse_documents(self):
-        file_path = open_file_path(
-            self, file_type="Text Files (*.md *.html *.htm *.epub *.pdf *.txt)"
+        file_path, _ = open_file_path(
+            self,
+            label="Select Document",
+            file_type="Text Files (*.md *.html *.htm *.epub *.pdf *.txt)",
         )
 
         # validate file path
         if (
             not file_path
-            or not file_path[0]
-            or not file_path[0].strip()
-            or not file_path[0].endswith(
+            or not file_path.strip()
+            or not file_path.endswith(
                 (
                     ".md",
                     ".html",
@@ -197,7 +198,7 @@ class BotPreferencesWidget(BaseWidget):
             self.logger.error(f"Invalid file path: {file_path}")
             return
 
-        self.add_chatbot_document_to_chatbot(self.chatbot, file_path[0])
+        self.add_chatbot_document_to_chatbot(self.chatbot, file_path)
         self.api.llm.reload_rag()
         self.load_documents()
 
