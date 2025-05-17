@@ -1,12 +1,12 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
 import copy
 import json
 import os
 import re
 from pathlib import Path
 
-from Qt import QtCore, QtWidgets
+from PySide6 import QtWidgets, QtCore
+from PySide6.QtGui import QUndoStack
+from PySide6.QtWidgets import QUndoView
 
 from airunner.vendor.nodegraphqt.base.commands import (
     NodeAddedCmd,
@@ -44,9 +44,6 @@ from airunner.vendor.nodegraphqt.widgets.node_graph import (
     SubGraphWidget,
 )
 from airunner.vendor.nodegraphqt.widgets.viewer import NodeViewer
-from airunner.vendor.nodegraphqt.widgets.viewer_nav import (
-    NodeNavigationWidget,
-)
 
 
 class NodeGraph(QtCore.QObject):
@@ -161,9 +158,7 @@ class NodeGraph(QtCore.QObject):
         self._model = kwargs.get("model") or NodeGraphModel()
         self._node_factory = kwargs.get("node_factory") or NodeFactory()
         self._undo_view = None
-        self._undo_stack = kwargs.get("undo_stack") or QtWidgets.QUndoStack(
-            self
-        )
+        self._undo_stack = kwargs.get("undo_stack") or QUndoStack(self)
         self._widget = None
         self._sub_graphs = {}
         self._viewer = kwargs.get("viewer") or NodeViewer(
@@ -559,10 +554,10 @@ class NodeGraph(QtCore.QObject):
         Returns node graph undo history list widget.
 
         Returns:
-            PySide2.QtWidgets.QUndoView: node graph undo view.
+            QtWidgets.QUndoView: node graph undo view.
         """
         if self._undo_view is None:
-            self._undo_view = QtWidgets.QUndoView(self._undo_stack)
+            self._undo_view = QUndoView(self._undo_stack)
             self._undo_view.setWindowTitle("Undo History")
         return self._undo_view
 
@@ -714,7 +709,7 @@ class NodeGraph(QtCore.QObject):
             :meth:`NodeGraph.end_undo()`
 
         Returns:
-            QtWidgets.QUndoStack: undo stack.
+            QUndoStack: undo stack.
         """
         return self._undo_stack
 

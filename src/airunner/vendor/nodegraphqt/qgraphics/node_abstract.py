@@ -1,5 +1,4 @@
-#!/usr/bin/python
-from Qt import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from airunner.vendor.nodegraphqt.constants import (
     Z_VAL_NODE,

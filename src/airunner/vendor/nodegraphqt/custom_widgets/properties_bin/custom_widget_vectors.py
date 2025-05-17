@@ -1,8 +1,11 @@
-#!/usr/bin/python
-from Qt import QtWidgets
+from PySide6 import QtWidgets
 
-from .custom_widget_value_edit import _NumberValueEdit
-from .prop_widgets_abstract import BaseProperty
+from airunner.vendor.nodegraphqt.custom_widgets.properties_bin.custom_widget_value_edit import (
+    _NumberValueEdit,
+)
+from airunner.vendor.nodegraphqt.custom_widgets.properties_bin.prop_widgets_abstract import (
+    BaseProperty,
+)
 
 
 class _PropVector(BaseProperty):
@@ -42,8 +45,9 @@ class _PropVector(BaseProperty):
 
     def _update_items(self):
         if not isinstance(self._value, (list, tuple)):
-            raise TypeError('Value "{}" must be either list or tuple.'
-                            .format(self._value))
+            raise TypeError(
+                'Value "{}" must be either list or tuple.'.format(self._value)
+            )
         for index, value in enumerate(self._value):
             if (index + 1) > len(self._items):
                 continue
