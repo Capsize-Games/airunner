@@ -2,7 +2,7 @@ from typing import Optional
 
 from PIL.ImageQt import QImage
 
-from PySide6.QtCore import QRect, QPoint, QPointF
+from PySide6.QtCore import QRect, QPointF
 from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, Qt
 from PySide6.QtWidgets import QGraphicsItem
 
@@ -217,10 +217,6 @@ class ActiveGridArea(DraggablePixmap):
 
             # Emit signal if we moved
             if has_moved:
-                self.api.art.canvas.generate_mask()
-                self.api.art.active_grid_area_updated()
-
-                # Save the snapped absolute position
                 if (
                     int(self._current_snapped_pos[0])
                     != self.active_grid_settings.pos_x
@@ -234,6 +230,31 @@ class ActiveGridArea(DraggablePixmap):
                     self.update_active_grid_settings(
                         "pos_y", int(self._current_snapped_pos[1])
                     )
+
+                    # Update the in-memory settings object immediately
+                    self.active_grid_settings.pos_x = int(
+                        self._current_snapped_pos[0]
+                    )
+                    self.active_grid_settings.pos_y = int(
+                        self._current_snapped_pos[1]
+                    )
+
+                # Update the visual position to match the new settings
+                try:
+                    view = self.scene().views()[0]
+                    canvas_offset = view.canvas_offset
+                except (AttributeError, IndexError):
+                    canvas_offset = QPointF(0, 0)
+                display_x = (
+                    int(self._current_snapped_pos[0]) - canvas_offset.x()
+                )
+                display_y = (
+                    int(self._current_snapped_pos[1]) - canvas_offset.y()
+                )
+                self.setPos(display_x, display_y)
+
+                self.api.art.canvas.generate_mask()
+                self.api.art.active_grid_area_updated()
 
             # Accept the event
             event.accept()
