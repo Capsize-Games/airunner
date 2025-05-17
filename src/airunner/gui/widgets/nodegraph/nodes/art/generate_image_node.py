@@ -5,7 +5,7 @@ from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
 )
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.enums import SignalCode
-from NodeGraphQt.constants import NodePropWidgetEnum
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
 
 class GenerateImageNode(BaseArtNode):

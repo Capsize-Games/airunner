@@ -1,7 +1,7 @@
 import time
 from typing import Dict, Optional
 
-from NodeGraphQt.constants import NodePropWidgetEnum
+from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
 from airunner.enums import LLMActionType, SignalCode
 from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import (
