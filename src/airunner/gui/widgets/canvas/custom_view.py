@@ -103,6 +103,9 @@ class CustomGraphicsView(
         self._resize_data = None
         self._is_resizing = False
 
+        self._cursor_cache = {}
+        self._current_cursor = None
+
     @property
     def zero_point(self) -> QPointF:
         return QPointF(0, 0)  # Return QPointF instead of QPoint
@@ -448,14 +451,18 @@ class CustomGraphicsView(
         )
 
         # Calculate size differences
-        delta_width = new_size.width() - old_size.width()
-        delta_height = new_size.height() - old_size.height()
+        delta_width = new_size.width() - old_size
+        delta_height = new_size.height() - old_size
 
-        # Calculate new canvas offset
-        new_offset = QPointF(
-            self.canvas_offset.x() - delta_width / 2,
-            self.canvas_offset.y() - delta_height / 2,
-        )
+        # If only width changes and height is nearly the same, treat as splitter resize (no offset change)
+        if abs(delta_height) < 5 and abs(delta_width) > 0:
+            new_offset = self.canvas_offset  # Do not change offset
+        else:
+            # For window resize, keep center fixed
+            new_offset = QPointF(
+                self.canvas_offset.x() - delta_width / 2,
+                self.canvas_offset.y() - delta_height / 2,
+            )
 
         # Return the calculated values
         return {
@@ -555,12 +562,13 @@ class CustomGraphicsView(
 
         # Set up the scene (grid, etc.)
         self.do_draw(True)
-        self.scene.initialize_image()  # Ensure image uses loaded offset
         self.toggle_drag_mode()
         self.set_canvas_color(self.scene)
 
         # Show the active grid area using loaded offset
         self.show_active_grid_area()
+        self.scene.initialize_image()
+        self.updateImagePositions()
 
         if not self._initialized:
             self._initialized = True
@@ -585,19 +593,15 @@ class CustomGraphicsView(
 
     def handle_pan_canvas(self, event: QMouseEvent):
         if self._middle_mouse_pressed:
-            delta = (
-                event.pos() - self.last_pos
-            )  # Delta in viewport coordinates
-            # Update canvas offset (absolute scene coordinate of viewport top-left)
-            self.canvas_offset -= (
-                delta  # Subtracting viewport delta moves the scene opposite
-            )
+            delta = event.pos() - self.last_pos
+
+            self.canvas_offset -= delta
             self.last_pos = event.pos()
 
             # Update display positions based on the NEW offset
             self.update_active_grid_area_position()
-            self.updateImagePositions()  # Ensure this also uses absolute pos - offset
-            self.draw_grid()  # Only redraw grid, not full scene
+            self.updateImagePositions()
+            self.draw_grid()
 
     def update_active_grid_area_position(self):
         if self.active_grid_area:
@@ -707,3 +711,58 @@ class CustomGraphicsView(
 
         # Ensure the scene updates to show the new image correctly
         self.update_scene()
+
+    def get_cached_cursor(self, tool, size):
+        key = (tool, size)
+        if key not in self._cursor_cache:
+            from airunner.gui.cursors.circle_brush import circle_cursor
+
+            if tool in (CanvasToolName.BRUSH, CanvasToolName.ERASER):
+                # You may want to use different colors for eraser
+                cursor = circle_cursor(
+                    Qt.GlobalColor.white, Qt.GlobalColor.transparent, size
+                )
+                self._cursor_cache[key] = cursor
+        return self._cursor_cache.get(key)
+
+    def _update_cursor(self, event=None, current_tool=None, apply_cursor=True):
+        # event: QEvent or similar, current_tool: CanvasToolName
+        # apply_cursor: bool
+        if current_tool is None:
+            current_tool = self.current_tool
+        cursor = None
+        if apply_cursor:
+            if (
+                event
+                and hasattr(event, "button")
+                and event.button() == Qt.MouseButton.MiddleButton
+            ):
+                cursor = Qt.CursorShape.ClosedHandCursor
+            elif current_tool in (CanvasToolName.BRUSH, CanvasToolName.ERASER):
+                size = getattr(self, "brush_settings", None)
+                size = size.size if size else 32
+                cursor = self.get_cached_cursor(current_tool, size)
+            elif current_tool is CanvasToolName.ACTIVE_GRID_AREA:
+                if (
+                    event
+                    and hasattr(event, "buttons")
+                    and event.buttons() == Qt.MouseButton.LeftButton
+                ):
+                    cursor = Qt.CursorShape.ClosedHandCursor
+                else:
+                    cursor = Qt.CursorShape.OpenHandCursor
+            else:
+                cursor = Qt.CursorShape.ArrowCursor
+        else:
+            cursor = Qt.CursorShape.ArrowCursor
+        if self._current_cursor != cursor:
+            self.setCursor(cursor)
+            self._current_cursor = cursor
+
+    def on_undo_button_clicked(self):
+        self.api.art.canvas.undo()
+        # Do not sync image to grid area; keep image at its last location
+
+    def on_redo_button_clicked(self):
+        self.api.art.canvas.redo()
+        # Do not sync image to grid area; keep image at its last location
