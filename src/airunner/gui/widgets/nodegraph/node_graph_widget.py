@@ -1,5 +1,6 @@
 import os
 from typing import Dict, Tuple, Optional, List
+from airunner.data.models.application_settings import ApplicationSettings
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
 from PySide6.QtWidgets import (
     QLineEdit,
@@ -79,6 +80,7 @@ class NodeGraphWidget(BaseWidget):
         self._register_nodes()
         self._initialize_context_menu()
         self._register_graph()
+        self._connect_viewer_signals()
 
         if self.current_workflow_id is not None:
             self._perform_load(self.current_workflow_id)
@@ -1396,3 +1398,44 @@ class NodeGraphWidget(BaseWidget):
     def _on_node_execution_completed(self, data: Dict):
         self.node_graph_worker.add_to_queue(data)
         self.stop_progress_bar()
+
+    def save_state(self):
+        super().save_state()
+        self._save_state()
+
+    def restore_state(self):
+        super().restore_state()
+        self._restore_nodegraph_state()
+
+    def closeEvent(self, event):
+        zoom = self.viewer.get_zoom()
+        center = self.viewer.scene_center()
+        ApplicationSettings.objects.update(
+            self.application_settings.id,
+            nodegraph_zoom=zoom,
+            nodegraph_center_x=int(center[0]),
+            nodegraph_center_y=int(center[1]),
+        )
+        super().closeEvent(event)
+
+    def showEvent(self, event):
+        self._restore_nodegraph_state()
+        super().showEvent(event)
+
+    def _connect_viewer_signals(self):
+        # Connect zoom and pan changes to save immediately
+        try:
+            viewer = self.viewer
+            # Connect zoom change
+            if hasattr(viewer, "zoom_changed"):
+                viewer.zoom_changed.connect(self._save_state)
+            # Connect pan change (center change)
+            if hasattr(viewer, "centerChanged"):
+                viewer.centerChanged.connect(self._save_state)
+            # Fallback: connect to generic scene changed if available
+            if hasattr(viewer, "sceneChanged"):
+                viewer.sceneChanged.connect(self._save_state)
+        except Exception as e:
+            self.logger.error(
+                f"Failed to connect viewer signals for live state save: {e}"
+            )
