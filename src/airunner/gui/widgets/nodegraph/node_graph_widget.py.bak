@@ -100,6 +100,7 @@ class NodeGraphWidget(BaseWidget):
         self._register_nodes()
         self._initialize_context_menu()
         self._register_graph()
+        self._connect_viewer_signals()
 
         if self.current_workflow_id is not None:
             self._perform_load(self.current_workflow_id)
@@ -1417,7 +1418,7 @@ class NodeGraphWidget(BaseWidget):
     def _on_node_execution_completed(self, data: Dict):
         self.node_graph_worker.add_to_queue(data)
         self.stop_progress_bar()
-
+        
     def _on_nodegraph_zoom_changed(self, data: Dict):
         """Signal handler for NODEGRAPH_ZOOM signal."""
         zoom = data.get("zoom_level", 0)
@@ -1438,15 +1439,13 @@ class NodeGraphWidget(BaseWidget):
             except (TypeError, ValueError):
                 center_x = 0
                 center_y = 0
-
+        
         ApplicationSettings.objects.update(
             self.application_settings.id,
             nodegraph_zoom=zoom,
             nodegraph_center_x=center_x,
             nodegraph_center_y=center_y,
-        )
-
-    def _on_nodegraph_pan_changed(self, data: Dict):
+        )    def _on_nodegraph_pan_changed(self, data: Dict):
         """Signal handler for NODEGRAPH_PAN signal."""
         try:
             center_x = int(data.get("center_x", 0) or 0)
@@ -1456,12 +1455,10 @@ class NodeGraphWidget(BaseWidget):
             center_y = 0
 
         # Get current zoom since we're only updating center
+        # If we can't get current zoom, fallback to existing settings
         settings = self.application_settings
-        try:
-            zoom = int(getattr(settings, "nodegraph_zoom", 0) or 0)
-        except (TypeError, ValueError):
-            zoom = 0
-
+        zoom = getattr(settings, "nodegraph_zoom", 0)
+        
         ApplicationSettings.objects.update(
             self.application_settings.id,
             nodegraph_zoom=zoom,
@@ -1491,6 +1488,12 @@ class NodeGraphWidget(BaseWidget):
     def showEvent(self, event):
         self._restore_nodegraph_state()
         super().showEvent(event)
+
+    def _connect_viewer_signals(self):
+        # We no longer need to connect directly to viewer signals
+        # as we're using the API's signal system with the debounced viewer
+        # The signal handlers for zoom and pan are registered in __init__
+        pass
 
     def _restore_nodegraph_state(self):
         try:
