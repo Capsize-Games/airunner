@@ -199,8 +199,6 @@ class SDWorker(Worker):
         if model_path is None:
             custom_path = self.generator_settings.custom_path
             if custom_path is not None and custom_path != "":
-                print("*" * 100)
-                print("custom_path", custom_path)
                 if os.path.exists(custom_path):
                     model_path = custom_path
 
