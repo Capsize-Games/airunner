@@ -346,6 +346,7 @@ class CustomScene(
                 outpaint_box_rect=outpaint_box_rect,
                 generated=True,
             )
+            self.api.art.update_batch_images(images)
 
     def display_gpu_memory_error(self, message: str):
         msg_box = QMessageBox()
@@ -732,18 +733,18 @@ class CustomScene(
         outpaint_box_rect: Optional[Rect] = None,
         generated: bool = False,
     ):
-        if self.application_settings.resize_on_paste:
+        if not generated and self.application_settings.resize_on_paste:
             image = self._resize_image(image)
 
-        if image is not None:
-            self._add_image_to_scene(
-                image,
-                is_outpaint=is_outpaint,
-                outpaint_box_rect=outpaint_box_rect,
-                generated=generated,
-            )
-            # Emit signal to notify the view to update image positions
-            self.api.art.canvas.image_updated()
+        self._add_image_to_scene(
+            image,
+            is_outpaint=is_outpaint,
+            outpaint_box_rect=outpaint_box_rect,
+            generated=generated,
+        )
+
+        # Emit signal to notify the view to update image positions
+        self.api.art.canvas.image_updated()
 
     def _resize_image(self, image: Image) -> Image:
         if image is None:
