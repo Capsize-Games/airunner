@@ -82,6 +82,9 @@ class NodeGraphWidget(BaseWidget):
 
         if self.current_workflow_id is not None:
             self._perform_load(self.current_workflow_id)
+        else:
+            # If no workflow is loaded, start a new workflow with a StartNode
+            self._add_start_node()
 
         # Check if framepack is available
         here = os.path.dirname(__file__)
@@ -648,11 +651,9 @@ class NodeGraphWidget(BaseWidget):
             variables_data = [
                 var.to_dict() for var in self.ui.variables.variables
             ]
-            # --- Add logging here ---
             self.logger.info(
                 f"Data being saved to workflow.variables: {variables_data}"
             )
-            # --- End logging ---
             workflow.variables = variables_data
             workflow.save()  # Ensure the ORM actually persists the change
             self.logger.info(
