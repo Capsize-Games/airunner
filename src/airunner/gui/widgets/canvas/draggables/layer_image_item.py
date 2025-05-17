@@ -1,6 +1,7 @@
 from typing import Optional, Dict
 from PySide6.QtWidgets import QGraphicsItem
 from PySide6.QtCore import Qt, QPointF
+from airunner.enums import CanvasToolName
 from airunner.utils.application.snap_to_grid import snap_to_grid
 from airunner.gui.widgets.canvas.draggables.draggable_pixmap import (
     DraggablePixmap,
@@ -32,6 +33,10 @@ class LayerImageItem(DraggablePixmap):
             self.update_drawing_pad_settings("y_pos", y)
 
     def mousePressEvent(self, event):
+        if self.current_tool not in [
+            CanvasToolName.ACTIVE_GRID_AREA,
+        ]:
+            return
         # Handle drag initiation similar to ActiveGridArea
         if event.button() == Qt.MouseButton.LeftButton:
             # Store the initial scene position of the mouse
@@ -54,6 +59,10 @@ class LayerImageItem(DraggablePixmap):
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        if self.current_tool not in [
+            CanvasToolName.ACTIVE_GRID_AREA,
+        ]:
+            return
         # Only do the complex drag calculations if we're actually dragging
         if self.initial_mouse_scene_pos is not None:
             # Calculate delta from initial press in scene coordinates
@@ -97,6 +106,10 @@ class LayerImageItem(DraggablePixmap):
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        if self.current_tool not in [
+            CanvasToolName.ACTIVE_GRID_AREA,
+        ]:
+            return
         if self.initial_mouse_scene_pos is not None:
             # Check if the item has actually moved
             has_moved = False
