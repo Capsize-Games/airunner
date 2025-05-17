@@ -154,7 +154,6 @@ class MainWindow(
         ("image", "menuStable_Diffusion"),
         ("activity", "actionStats"),
         ("zap", "actionRun_setup_wizard_2"),
-        ("x-circle", "actionCollapse_to_system_tray"),
         ("slash", "actionSafety_Checker"),
         ("external-link", "actionBug_report"),
         ("external-link", "actionReport_vulnerability"),
@@ -252,8 +251,6 @@ class MainWindow(
         self.single_click_timer.setSingleShot(True)
         self.single_click_timer.timeout.connect(self.handle_single_click)
 
-        self.initialize_system_tray()
-
         # Add plugins directory to Python path
         plugins_path = os.path.join(self.path_settings.base_path, "plugins")
         if plugins_path not in sys.path:
@@ -266,11 +263,6 @@ class MainWindow(
         self._initialize_workers()
         self.last_tray_click_time = 0
         self.settings_window = None
-
-    @property
-    def close_to_system_tray(self) -> bool:
-        val = self.qsettings.value("close_to_system_tray")
-        return val is True or val is None
 
     @property
     def generator_tab_widget(self):
@@ -329,11 +321,6 @@ class MainWindow(
     @Slot()
     def on_actionQuit_triggered(self):
         self.handle_close()
-
-    @Slot(bool)
-    def on_actionCollapse_to_system_tray_toggled(self, val):
-        self.qsettings.setValue("close_to_system_tray", val)
-        self.qsettings.sync()
 
     @Slot(bool)
     def on_actionToggle_Eraser_toggled(self, active: bool):
@@ -642,39 +629,6 @@ class MainWindow(
             file.write(response.content)
         return filename
 
-    def initialize_system_tray(self):
-        """Initialize the system tray icon with a simple menu."""
-        here = os.path.dirname(os.path.abspath(__file__))
-        self.setWindowIcon(
-            QIcon(os.path.join(here, "../../gui/images/icon64x64.png"))
-        )
-        self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(
-            QIcon(os.path.join(here, "../../images/icon64x64.png"))
-        )
-
-        # Create a simple tray menu with actions
-        self.tray_menu = QMenu()
-        self.toggle_visibility_action = QAction("Hide Window", self)
-        quit_action = QAction("Quit Application", self)
-        self.tray_menu.addAction(self.toggle_visibility_action)
-        self.tray_menu.addAction(quit_action)
-
-        # Connect actions
-        self.toggle_visibility_action.triggered.connect(
-            self.toggle_window_visibility
-        )
-        quit_action.triggered.connect(self.quit)
-
-        # Set the menu for the tray icon
-        self.tray_icon.setContextMenu(self.tray_menu)
-
-        # Connect activated signal to our custom handler
-        self.tray_icon.activated.connect(self.on_tray_icon_activated)
-
-        # Show the tray icon
-        self.tray_icon.show()
-
     def on_navigate_to_url(self, _data: Dict = None):
         url, ok = QInputDialog.getText(self, "Browse Web", "Enter your URL:")
         if ok:
@@ -857,10 +811,6 @@ class MainWindow(
         if not AIRUNNER_DISCORD_URL:
             self.ui.actionDiscord.deleteLater()
 
-        self.ui.actionCollapse_to_system_tray.setChecked(
-            self.close_to_system_tray
-        )
-
         self._toggle_agent_workflow_feature(self.enable_workflows)
 
     def update_tab_index(self, section: str, index: int):
@@ -975,22 +925,7 @@ class MainWindow(
 
     def handle_close(self):
         """Override close to minimize to tray instead of exiting."""
-        if self.close_to_system_tray:
-            self.hide()
-            # Update menu text when window is hidden
-            self.toggle_visibility_action.setText("Show Window")
-
-            # Update the tray menu so it reflects the current state immediately
-            self.tray_icon.setContextMenu(self.tray_menu)
-
-            self.tray_icon.showMessage(
-                "AI Runner",
-                "Application minimized to tray. Click the icon to restore.",
-                QSystemTrayIcon.Information,
-                2000,
-            )
-        else:
-            self.quit()
+        self.quit()
 
     def quit(self):
         self.logger.debug("Quitting")
