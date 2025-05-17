@@ -1,7 +1,6 @@
-#!/usr/bin/python
 from collections import OrderedDict
 
-from Qt import QtGui, QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets, QtGui
 
 from airunner.vendor.nodegraphqt.constants import (
     ITEM_CACHE_MODE,
