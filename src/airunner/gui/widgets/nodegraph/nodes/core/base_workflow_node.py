@@ -1,3 +1,4 @@
+import logging
 from typing import List, Dict, Any, Type
 from PySide6.QtGui import QPolygonF, QBrush
 from PySide6.QtCore import QPointF, Qt
@@ -45,6 +46,10 @@ class BaseWorkflowNode(BaseNode):
     _registered_output_ports: Dict[str, Any] = {}
 
     def __init__(self, *args, **kwargs):
+        from airunner.api import API
+
+        self.api = API()
+        self.logger = logging.getLogger(__name__)
         super().__init__(*args, **kwargs)
 
         # Initialize ports specific to BaseWorkflowNode

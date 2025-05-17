@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QLabel
-from PySide6.QtGui import QPixmap, QImage
+from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 from PIL.ImageQt import ImageQt
 from NodeGraphQt import NodeBaseWidget
@@ -90,29 +90,28 @@ class ImageDisplayNode(BaseArtNode):
 
     def execute(self, input_data):
         image_response = self.get_input_data("image_response", input_data)
-        pil_image = None
-        if isinstance(image_response, ImageResponse) and image_response.images:
-            # Display the first image from the list
-            pil_image = image_response.images[0]
-            if pil_image:
-                # Convert PIL Image to QPixmap
-                qimage = ImageQt(
-                    pil_image.convert("RGBA")
-                )  # Ensure RGBA for transparency
-                pixmap = QPixmap.fromImage(qimage)
-                # Scale pixmap to fit the label while maintaining aspect ratio
-                scaled_pixmap = pixmap.scaled(
-                    self.image_widget.widget().size(),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                self.image_widget.set_pixmap(scaled_pixmap)
-            else:
-                self.image_widget.set_text("Image Data Empty")
-        else:
-            self.image_widget.set_text("Invalid Input")
 
-        # Return empty dict as this node primarily displays data
-        # Execution flow is handled by the graph executor via exec ports
+        pil_image = (
+            image_response.images[0]
+            if (
+                image_response is not None
+                and isinstance(image_response, ImageResponse)
+                and len(image_response.images) > 0
+            )
+            else None
+        )
+
+        if pil_image:
+            qimage = ImageQt(pil_image.convert("RGBA"))
+            pixmap = QPixmap.fromImage(qimage)
+            scaled_pixmap = pixmap.scaled(
+                self.image_widget.widget().size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            self.image_widget.set_pixmap(scaled_pixmap)
+        else:
+            self.image_widget.set_text("Invalid or Empty Image")
+
         if pil_image:
             return {"image": pil_image}

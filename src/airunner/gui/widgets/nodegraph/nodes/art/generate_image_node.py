@@ -5,7 +5,6 @@ from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
 )
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.enums import SignalCode
-from airunner.handlers.stablediffusion.image_response import ImageResponse
 from NodeGraphQt.constants import NodePropWidgetEnum
 
 
@@ -48,7 +47,6 @@ class GenerateImageNode(BaseArtNode):
     def _on_image_generated(self, data: Dict):
         image_response = data.get("message", None)
         if image_response is None:
-            # Send completion signal with empty output data
             self.api.nodegraph.node_executed(
                 node_id=self.id,
                 result=self.EXEC_OUT_PORT_NAME,
@@ -57,24 +55,24 @@ class GenerateImageNode(BaseArtNode):
             self._pending_request = False
             return
 
-        # Verify this response belongs to this node
         if image_response.node_id is None or image_response.node_id != self.id:
             return
 
-        # Mark that request is no longer pending
         self._pending_request = False
 
-        # Prepare output data that will be passed to connected nodes
         output_data = {
             "image_response": image_response,
+            "image": (
+                image_response.images[0]
+                if image_response and image_response.images
+                else None
+            ),
         }
 
-        # Emit signal that execution is complete with the result and output data
-        # This continues the workflow execution at this node
         self.api.nodegraph.node_executed(
             node_id=self.id,
             result=self.EXEC_OUT_PORT_NAME,
-            data=output_data,  # Include the output data in the node execution
+            data=output_data,
         )
 
         if self.get_property("unload_after_generation"):
