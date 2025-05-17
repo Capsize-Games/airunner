@@ -1,6 +1,6 @@
 from PySide6 import QtWidgets
-from NodeGraphQt import NodeBaseWidget
-from NodeGraphQt.constants import ViewerEnum
+from airunner.vendor.nodegraphqt import NodeBaseWidget
+from airunner.vendor.nodegraphqt.constants import ViewerEnum
 
 
 class TextEditNode(NodeBaseWidget):
