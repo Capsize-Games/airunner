@@ -13,13 +13,11 @@
 
 Here are some of the things you can do with AI Runner:
 
-- ✅ **Voice-based chatbots** for real-time conversations
+- ✅ **Voice-based chatbots** for real-time conversations (three text-to-speech engines each with multiple voices to choose from)
+- ✅ **Customizable agents with names, moods and personalities** for more engaging conversations
+- ✅ **Retrieval-Augmented Generation** (RAG) for documents and websites
 - ✅ **Text-to-Image** generation with **Stable Diffusion** and **ControlNet**
-- ✅ **Image manipulation** with **inpainting** and **outpainting**
-- ✅ **Text-to-Speech** (TTS) and **Speech-to-Text** (STT) using **OpenVoice**, **SpeechT5**, and **Whisper**
-- ✅ **Customizable AI personalities** for more engaging conversations
-- ✅ **Image filters** and **inpainting** for image editing
-- ✅ **Retrieval-Augmented Generation** (RAG) for enhanced LLM responses
+- ✅ **Image manipulation** with **inpainting**, **outpainting**, **ControlNet** and **Image filters**
 
 For extra security, performance, and compatibility, AI Runner is built with **Wayland support**, **Python 3.13**, and the latest stable torch libraries.
 
