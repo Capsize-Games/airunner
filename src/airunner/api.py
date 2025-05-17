@@ -1,7 +1,7 @@
 import os
 from typing import Optional, Dict, List, Any
 
-from NodeGraphQt import NodesPaletteWidget
+from airunner.vendor.nodegraphqt import NodesPaletteWidget
 from PySide6.QtWidgets import QDialog, QVBoxLayout
 from PySide6.QtCore import QObject, QPoint
 
