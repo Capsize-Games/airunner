@@ -103,6 +103,9 @@ class CustomGraphicsView(
         self._resize_data = None
         self._is_resizing = False
 
+        self._cursor_cache = {}
+        self._current_cursor = None
+
     @property
     def zero_point(self) -> QPointF:
         return QPointF(0, 0)  # Return QPointF instead of QPoint
@@ -711,3 +714,50 @@ class CustomGraphicsView(
 
         # Ensure the scene updates to show the new image correctly
         self.update_scene()
+
+    def get_cached_cursor(self, tool, size):
+        key = (tool, size)
+        if key not in self._cursor_cache:
+            from airunner.gui.cursors.circle_brush import circle_cursor
+
+            if tool in (CanvasToolName.BRUSH, CanvasToolName.ERASER):
+                # You may want to use different colors for eraser
+                cursor = circle_cursor(
+                    Qt.GlobalColor.white, Qt.GlobalColor.transparent, size
+                )
+                self._cursor_cache[key] = cursor
+        return self._cursor_cache.get(key)
+
+    def _update_cursor(self, event=None, current_tool=None, apply_cursor=True):
+        # event: QEvent or similar, current_tool: CanvasToolName
+        # apply_cursor: bool
+        if current_tool is None:
+            current_tool = self.current_tool
+        cursor = None
+        if apply_cursor:
+            if (
+                event
+                and hasattr(event, "button")
+                and event.button() == Qt.MouseButton.MiddleButton
+            ):
+                cursor = Qt.CursorShape.ClosedHandCursor
+            elif current_tool in (CanvasToolName.BRUSH, CanvasToolName.ERASER):
+                size = getattr(self, "brush_settings", None)
+                size = size.size if size else 32
+                cursor = self.get_cached_cursor(current_tool, size)
+            elif current_tool is CanvasToolName.ACTIVE_GRID_AREA:
+                if (
+                    event
+                    and hasattr(event, "buttons")
+                    and event.buttons() == Qt.MouseButton.LeftButton
+                ):
+                    cursor = Qt.CursorShape.ClosedHandCursor
+                else:
+                    cursor = Qt.CursorShape.OpenHandCursor
+            else:
+                cursor = Qt.CursorShape.ArrowCursor
+        else:
+            cursor = Qt.CursorShape.ArrowCursor
+        if self._current_cursor != cursor:
+            self.setCursor(cursor)
+            self._current_cursor = cursor
