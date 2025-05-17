@@ -1,4 +1,4 @@
-from Qt import QtWidgets, QtCore, QtGui
+from PySide6 import QtCore, QtWidgets
 
 
 class NodeTextItem(QtWidgets.QGraphicsTextItem):
@@ -65,9 +65,9 @@ class NodeTextItem(QtWidgets.QGraphicsTextItem):
             return
         if value:
             self.setTextInteractionFlags(
-                QtCore.Qt.TextEditable |
-                QtCore.Qt.TextSelectableByMouse |
-                QtCore.Qt.TextSelectableByKeyboard
+                QtCore.Qt.TextEditable
+                | QtCore.Qt.TextSelectableByMouse
+                | QtCore.Qt.TextSelectableByKeyboard
             )
         else:
             self.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
@@ -100,10 +100,10 @@ class NodeTextItem(QtWidgets.QGraphicsTextItem):
         if self._locked:
             self.setFlag(QtWidgets.QGraphicsItem.ItemIsFocusable, False)
             self.setCursor(QtCore.Qt.ArrowCursor)
-            self.setToolTip('')
+            self.setToolTip("")
         else:
             self.setFlag(QtWidgets.QGraphicsItem.ItemIsFocusable, True)
-            self.setToolTip('double-click to edit node name.')
+            self.setToolTip("double-click to edit node name.")
             self.setCursor(QtCore.Qt.IBeamCursor)
 
     @property

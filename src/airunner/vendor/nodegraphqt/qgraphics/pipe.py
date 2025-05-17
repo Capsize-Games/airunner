@@ -1,7 +1,6 @@
-#!/usr/bin/python
 import math
 
-from Qt import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets, QtGui
 
 from airunner.vendor.nodegraphqt.constants import (
     LayoutDirectionEnum,

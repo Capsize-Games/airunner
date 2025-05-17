@@ -1,8 +1,6 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
 from collections import defaultdict
 
-from Qt import QtWidgets, QtCore, QtGui
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from airunner.vendor.nodegraphqt.constants import MIME_TYPE, URN_SCHEME
 

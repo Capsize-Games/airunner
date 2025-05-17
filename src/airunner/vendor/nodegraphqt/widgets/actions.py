@@ -1,5 +1,5 @@
-#!/usr/bin/python
-from Qt import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6.QtGui import QAction
 
 from airunner.vendor.nodegraphqt.constants import ViewerEnum
 
@@ -88,7 +88,7 @@ class BaseMenu(QtWidgets.QMenu):
         return menus
 
 
-class GraphAction(QtWidgets.QAction):
+class GraphAction(QAction):
 
     executed = QtCore.Signal(object)
 
