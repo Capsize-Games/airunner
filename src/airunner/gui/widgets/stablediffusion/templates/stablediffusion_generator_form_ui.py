@@ -321,19 +321,6 @@ class Ui_stablediffusion_generator_form(object):
 
         self.sdxl_settings.addLayout(self.horizontalLayout_12)
 
-        self.images_per_batch = SliderWidget(self.sdxl_settings_container)
-        self.images_per_batch.setObjectName(u"images_per_batch")
-        self.images_per_batch.setProperty(u"current_value", 1)
-        self.images_per_batch.setProperty(u"slider_maximum", 6)
-        self.images_per_batch.setProperty(u"spinbox_maximum", 6)
-        self.images_per_batch.setProperty(u"display_as_float", False)
-        self.images_per_batch.setProperty(u"spinbox_single_step", 1)
-        self.images_per_batch.setProperty(u"spinbox_page_step", 1)
-        self.images_per_batch.setProperty(u"spinbox_minimum", 1)
-        self.images_per_batch.setProperty(u"slider_minimum", 1)
-
-        self.sdxl_settings.addWidget(self.images_per_batch)
-
         self.n_samples = SliderWidget(self.sdxl_settings_container)
         self.n_samples.setObjectName(u"n_samples")
         self.n_samples.setProperty(u"current_value", 1)
@@ -346,6 +333,19 @@ class Ui_stablediffusion_generator_form(object):
         self.n_samples.setProperty(u"slider_minimum", 1)
 
         self.sdxl_settings.addWidget(self.n_samples)
+
+        self.images_per_batch = SliderWidget(self.sdxl_settings_container)
+        self.images_per_batch.setObjectName(u"images_per_batch")
+        self.images_per_batch.setProperty(u"current_value", 1)
+        self.images_per_batch.setProperty(u"slider_maximum", 6)
+        self.images_per_batch.setProperty(u"spinbox_maximum", 6)
+        self.images_per_batch.setProperty(u"display_as_float", False)
+        self.images_per_batch.setProperty(u"spinbox_single_step", 1)
+        self.images_per_batch.setProperty(u"spinbox_page_step", 1)
+        self.images_per_batch.setProperty(u"spinbox_minimum", 1)
+        self.images_per_batch.setProperty(u"slider_minimum", 1)
+
+        self.sdxl_settings.addWidget(self.images_per_batch)
 
 
         self.gridLayout.addWidget(self.sdxl_settings_container, 2, 0, 1, 1)
@@ -474,10 +474,10 @@ class Ui_stablediffusion_generator_form(object):
         self.groupBox_5.setTitle(QCoreApplication.translate("stablediffusion_generator_form", u"Negative crops top left", None))
         self.negative_crops_coord_top_left_x.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"x position", None))
         self.negative_crops_coord_top_left_y.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"y position", None))
+        self.n_samples.setProperty(u"label_text", QCoreApplication.translate("stablediffusion_generator_form", u"Batches", None))
+        self.n_samples.setProperty(u"settings_property", QCoreApplication.translate("stablediffusion_generator_form", u"generator_settings.n_samples", None))
         self.images_per_batch.setProperty(u"label_text", QCoreApplication.translate("stablediffusion_generator_form", u"Images Per Batch", None))
         self.images_per_batch.setProperty(u"settings_property", QCoreApplication.translate("stablediffusion_generator_form", u"generator_settings.images_per_batch", None))
-        self.n_samples.setProperty(u"label_text", QCoreApplication.translate("stablediffusion_generator_form", u"Samples", None))
-        self.n_samples.setProperty(u"settings_property", QCoreApplication.translate("stablediffusion_generator_form", u"generator_settings.n_samples", None))
 #if QT_CONFIG(tooltip)
         self.generate_button.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Generate image", None))
 #endif // QT_CONFIG(tooltip)
