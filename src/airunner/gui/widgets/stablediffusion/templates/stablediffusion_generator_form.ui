@@ -480,6 +480,40 @@
               </layout>
              </item>
              <item>
+              <widget class="SliderWidget" name="n_samples" native="true">
+               <property name="label_text" stdset="0">
+                <string>Batches</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <number>1000</number>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <number>1000</number>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>false</bool>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_page_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="settings_property" stdset="0">
+                <string>generator_settings.n_samples</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="SliderWidget" name="images_per_batch" native="true">
                <property name="label_text" stdset="0">
                 <string>Images Per Batch</string>
@@ -510,40 +544,6 @@
                </property>
                <property name="settings_property" stdset="0">
                 <string>generator_settings.images_per_batch</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="SliderWidget" name="n_samples" native="true">
-               <property name="label_text" stdset="0">
-                <string>Samples</string>
-               </property>
-               <property name="current_value" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="slider_maximum" stdset="0">
-                <number>1000</number>
-               </property>
-               <property name="spinbox_maximum" stdset="0">
-                <number>1000</number>
-               </property>
-               <property name="display_as_float" stdset="0">
-                <bool>false</bool>
-               </property>
-               <property name="spinbox_single_step" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="spinbox_page_step" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="spinbox_minimum" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="slider_minimum" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="settings_property" stdset="0">
-                <string>generator_settings.n_samples</string>
                </property>
               </widget>
              </item>
