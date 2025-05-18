@@ -115,7 +115,7 @@
        </property>
        <property name="icon">
         <iconset resource="../../../resources/feather.qrc">
-         <normaloff>:/light/icons/feather/light/corner-down-left.svg</normaloff>:/light/icons/feather/light/corner-down-left.svg</iconset>
+         <normaloff>:/light/icons/feather/light/chevron-up.svg</normaloff>:/light/icons/feather/light/chevron-up.svg</iconset>
        </property>
       </widget>
      </item>
@@ -140,14 +140,14 @@
         </size>
        </property>
        <property name="toolTip">
-        <string>Clear conversation</string>
+        <string>New converation</string>
        </property>
        <property name="text">
         <string/>
        </property>
        <property name="icon">
         <iconset resource="../../../resources/feather.qrc">
-         <normaloff>:/light/icons/feather/light/file-plus.svg</normaloff>:/light/icons/feather/light/file-plus.svg</iconset>
+         <normaloff>:/light/icons/feather/light/plus.svg</normaloff>:/light/icons/feather/light/plus.svg</iconset>
        </property>
       </widget>
      </item>
