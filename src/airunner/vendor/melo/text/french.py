@@ -1,6 +1,5 @@
 from airunner.vendor.melo.text.fr_phonemizer import cleaner as fr_cleaner
 from airunner.vendor.melo.text.fr_phonemizer import fr_to_ipa
-from airunner.vendor.melo.text import french_bert
 
 from airunner.vendor.melo.text.language_base import LanguageBase
 
@@ -52,11 +51,3 @@ class French(LanguageBase):
             tones = [0] + tones + [0]
             word2ph = [1] + word2ph + [1]
         return phones, tones, word2ph
-
-    def distribute_phone(self, n_phone, n_word):
-        phones_per_word = [0] * n_word
-        for task in range(n_phone):
-            min_tasks = min(phones_per_word)
-            min_index = phones_per_word.index(min_tasks)
-            phones_per_word[min_index] += 1
-        return phones_per_word
