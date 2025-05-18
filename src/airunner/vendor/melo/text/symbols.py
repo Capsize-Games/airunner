@@ -1,4 +1,7 @@
 # punctuation = ["!", "?", "…", ",", ".", "'", "-"]
+from airunner.enums import AvailableLanguage
+
+
 punctuation = ["!", "?", "…", ",", ".", "'", "-", "¿", "¡"]
 pu_symbols = punctuation + ["SP", "UNK"]
 pad = "_"
@@ -165,121 +168,201 @@ en_symbols = [
 num_en_tones = 4
 
 # Korean
-kr_symbols = ['ᄌ', 'ᅥ', 'ᆫ', 'ᅦ', 'ᄋ', 'ᅵ', 'ᄅ', 'ᅴ', 'ᄀ', 'ᅡ', 'ᄎ', 'ᅪ', 'ᄑ', 'ᅩ', 'ᄐ', 'ᄃ', 'ᅢ', 'ᅮ', 'ᆼ', 'ᅳ', 'ᄒ', 'ᄆ', 'ᆯ', 'ᆷ', 'ᄂ', 'ᄇ', 'ᄉ', 'ᆮ', 'ᄁ', 'ᅬ', 'ᅣ', 'ᄄ', 'ᆨ', 'ᄍ', 'ᅧ', 'ᄏ', 'ᆸ', 'ᅭ', '(', 'ᄊ', ')', 'ᅲ', 'ᅨ', 'ᄈ', 'ᅱ', 'ᅯ', 'ᅫ', 'ᅰ', 'ᅤ', '~', '\\', '[', ']', '/', '^', ':', 'ㄸ', '*']
+kr_symbols = [
+    "ᄌ",
+    "ᅥ",
+    "ᆫ",
+    "ᅦ",
+    "ᄋ",
+    "ᅵ",
+    "ᄅ",
+    "ᅴ",
+    "ᄀ",
+    "ᅡ",
+    "ᄎ",
+    "ᅪ",
+    "ᄑ",
+    "ᅩ",
+    "ᄐ",
+    "ᄃ",
+    "ᅢ",
+    "ᅮ",
+    "ᆼ",
+    "ᅳ",
+    "ᄒ",
+    "ᄆ",
+    "ᆯ",
+    "ᆷ",
+    "ᄂ",
+    "ᄇ",
+    "ᄉ",
+    "ᆮ",
+    "ᄁ",
+    "ᅬ",
+    "ᅣ",
+    "ᄄ",
+    "ᆨ",
+    "ᄍ",
+    "ᅧ",
+    "ᄏ",
+    "ᆸ",
+    "ᅭ",
+    "(",
+    "ᄊ",
+    ")",
+    "ᅲ",
+    "ᅨ",
+    "ᄈ",
+    "ᅱ",
+    "ᅯ",
+    "ᅫ",
+    "ᅰ",
+    "ᅤ",
+    "~",
+    "\\",
+    "[",
+    "]",
+    "/",
+    "^",
+    ":",
+    "ㄸ",
+    "*",
+]
 num_kr_tones = 1
 
 # Spanish
 es_symbols = [
-        "N",
-        "Q",
-        "a",
-        "b",
-        "d",
-        "e",
-        "f",
-        "g",
-        "h",
-        "i",
-        "j",
-        "k",
-        "l",
-        "m",
-        "n",
-        "o",
-        "p",
-        "s",
-        "t",
-        "u",
-        "v",
-        "w",
-        "x",
-        "y",
-        "z",
-        "ɑ",
-        "æ",
-        "ʃ",
-        "ʑ",
-        "ç",
-        "ɯ",
-        "ɪ",
-        "ɔ",
-        "ɛ",
-        "ɹ",
-        "ð",
-        "ə",
-        "ɫ",
-        "ɥ",
-        "ɸ",
-        "ʊ",
-        "ɾ",
-        "ʒ",
-        "θ",
-        "β",
-        "ŋ",
-        "ɦ",
-        "ɡ",
-        "r",
-        "ɲ",
-        "ʝ",
-        "ɣ",
-        "ʎ",
-        "ˈ",
-        "ˌ",
-        "ː"
-    ]
+    "N",
+    "Q",
+    "a",
+    "b",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+    "ɑ",
+    "æ",
+    "ʃ",
+    "ʑ",
+    "ç",
+    "ɯ",
+    "ɪ",
+    "ɔ",
+    "ɛ",
+    "ɹ",
+    "ð",
+    "ə",
+    "ɫ",
+    "ɥ",
+    "ɸ",
+    "ʊ",
+    "ɾ",
+    "ʒ",
+    "θ",
+    "β",
+    "ŋ",
+    "ɦ",
+    "ɡ",
+    "r",
+    "ɲ",
+    "ʝ",
+    "ɣ",
+    "ʎ",
+    "ˈ",
+    "ˌ",
+    "ː",
+]
 num_es_tones = 1
 
-# French 
-fr_symbols = [
-    "\u0303",
-    "œ",
-    "ø",
-    "ʁ",
-    "ɒ",
-    "ʌ",
-    "ɜ",
-    "ɐ"
-]
+# French
+fr_symbols = ["\u0303", "œ", "ø", "ʁ", "ɒ", "ʌ", "ɜ", "ɐ"]
 num_fr_tones = 1
 
-# German 
-de_symbols = [
-    "ʏ",
-    "̩"
-  ]
+# German
+de_symbols = ["ʏ", "̩"]
 num_de_tones = 1
 
-# Russian 
-ru_symbols = [
-    "ɭ",
-    "ʲ",
-    "ɕ",
-    "\"",
-    "ɵ",
-    "^",
-    "ɬ"
-]
+# Russian
+ru_symbols = ["ɭ", "ʲ", "ɕ", '"', "ɵ", "^", "ɬ"]
 num_ru_tones = 1
 
 # combine all symbols
-normal_symbols = sorted(set(zh_symbols + ja_symbols + en_symbols + kr_symbols + es_symbols + fr_symbols + de_symbols + ru_symbols))
+normal_symbols = sorted(
+    set(
+        zh_symbols
+        + ja_symbols
+        + en_symbols
+        + kr_symbols
+        + es_symbols
+        + fr_symbols
+        + de_symbols
+        + ru_symbols
+    )
+)
 symbols = [pad] + normal_symbols + pu_symbols
 sil_phonemes_ids = [symbols.index(i) for i in pu_symbols]
 
 # combine all tones
-num_tones = num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones + num_fr_tones + num_de_tones + num_ru_tones
+num_tones = (
+    num_zh_tones
+    + num_ja_tones
+    + num_en_tones
+    + num_kr_tones
+    + num_es_tones
+    + num_fr_tones
+    + num_de_tones
+    + num_ru_tones
+)
 
 # language maps
-language_id_map = {"ZH": 0, "JP": 1, "EN": 2, "ZH_MIX_EN": 3, 'KR': 4, 'ES': 5, 'SP': 5 ,'FR': 6}
+language_id_map = {
+    AvailableLanguage.ZH: 0,
+    AvailableLanguage.JP: 1,
+    AvailableLanguage.EN: 2,
+    AvailableLanguage.EN_NEWEST: 2,
+    AvailableLanguage.ZH_MIX_EN: 3,
+    AvailableLanguage.KR: 4,
+    AvailableLanguage.ES: 5,
+    AvailableLanguage.SP: 5,
+    AvailableLanguage.FR: 6,
+}
 num_languages = len(language_id_map.keys())
 
 language_tone_start_map = {
-    "ZH": 0,
-    "ZH_MIX_EN": 0,
-    "JP": num_zh_tones,
-    "EN": num_zh_tones + num_ja_tones,
-    'KR': num_zh_tones + num_ja_tones + num_en_tones,
-    "ES": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones,
-    "SP": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones,
-    "FR": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones,
+    AvailableLanguage.ZH: 0,
+    AvailableLanguage.ZH_MIX_EN: 0,
+    AvailableLanguage.JP: num_zh_tones,
+    AvailableLanguage.EN: num_zh_tones + num_ja_tones,
+    AvailableLanguage.EN_NEWEST: num_zh_tones + num_ja_tones,
+    AvailableLanguage.KR: num_zh_tones + num_ja_tones + num_en_tones,
+    AvailableLanguage.ES: num_zh_tones
+    + num_ja_tones
+    + num_en_tones
+    + num_kr_tones,
+    AvailableLanguage.SP: num_zh_tones
+    + num_ja_tones
+    + num_en_tones
+    + num_kr_tones,
+    AvailableLanguage.FR: num_zh_tones
+    + num_ja_tones
+    + num_en_tones
+    + num_kr_tones
+    + num_es_tones,
 }

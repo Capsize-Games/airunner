@@ -1,3 +1,4 @@
+from airunner.enums import AvailableLanguage
 from airunner.vendor.melo.text.chinese import Chinese
 from airunner.vendor.melo.text.japanese import Japanese
 from airunner.vendor.melo.text.english import English
@@ -12,25 +13,25 @@ import copy
 class Cleaner:
     def __init__(self):
         self.language_module_map = {
-            "ZH": Chinese,
-            "JP": Japanese,
-            "EN": English,
-            "ZH_MIX_EN": ChineseMix,
-            "KR": Korean,
-            "FR": French,
-            "SP": Spanish,
-            "ES": Spanish,
+            AvailableLanguage.ZH: Chinese,
+            AvailableLanguage.JP: Japanese,
+            AvailableLanguage.EN: English,
+            AvailableLanguage.EN_NEWEST: English,
+            AvailableLanguage.ZH_MIX_EN: ChineseMix,
+            AvailableLanguage.KR: Korean,
+            AvailableLanguage.FR: French,
+            AvailableLanguage.SP: Spanish,
+            AvailableLanguage.ES: Spanish,
         }
         self._language_module = None
+        self._language: AvailableLanguage = AvailableLanguage.EN
 
     @property
-    def language(self):
+    def language(self) -> AvailableLanguage:
         return self._language
 
     @language.setter
-    def language(self, value):
-        if getattr(self, "_language", None) != value:
-            self._language = None
+    def language(self, value: AvailableLanguage):
         self._language = value
 
     @property
@@ -38,14 +39,16 @@ class Cleaner:
         if not self._language_module:
             self._language_module = self.language_module_map[self.language]()
         return self._language_module
-    
+
     @language_module.setter
     def language_module(self, value):
         if getattr(self, "_language_module", None) != value:
             self._language_module = None
         self._language_module = value
 
-    def clean_text(self, text, language):
+    def clean_text(
+        self, text, language: AvailableLanguage = AvailableLanguage.EN
+    ):
         self.language = language
         norm_text = self.language_module.text_normalize(text)
         phones, tones, word2ph = self.language_module.call(norm_text)
@@ -67,5 +70,5 @@ class Cleaner:
         return norm_text, phones, tones, word2ph_bak, bert
 
     def text_to_sequence(self, text, language):
-        norm_text, phones, tones, word2ph = self.clean_text(text, language)
+        _norm_text, phones, tones, _word2ph = self.clean_text(text, language)
         return cleaned_text_to_sequence(phones, tones, language)
