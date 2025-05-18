@@ -193,7 +193,7 @@ class Ui_stablediffusion_tool_tab_widget(object):
     def retranslateUi(self, stablediffusion_tool_tab_widget):
         stablediffusion_tool_tab_widget.setWindowTitle(QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Form", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Stable Diffusion", None))
-        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Batches", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Images", None))
         self.image_to_image.setProperty(u"settings_key", QCoreApplication.translate("stablediffusion_tool_tab_widget", u"image_to_image_settings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_5), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Input image", None))
         self.controlnet_image.setProperty(u"settings_key", QCoreApplication.translate("stablediffusion_tool_tab_widget", u"controlnet_settings", None))
