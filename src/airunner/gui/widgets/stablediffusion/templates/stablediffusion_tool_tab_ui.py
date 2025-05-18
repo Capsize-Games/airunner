@@ -15,11 +15,12 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QSplitter,
+from PySide6.QtWidgets import (QApplication, QGridLayout, QScrollArea, QSizePolicy,
     QTabWidget, QWidget)
 
 from airunner.gui.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.gui.widgets.brush.brush_container_widget import BrushContainerWidget
+from airunner.gui.widgets.canvas.batch_container import BatchContainer
 from airunner.gui.widgets.canvas.input_image_container import InputImageContainer
 from airunner.gui.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.gui.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
@@ -58,6 +59,16 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_4.addWidget(self.stable_diffusion_widget, 0, 0, 2, 2)
 
         self.tool_tab_widget_container.addTab(self.tab_3, "")
+        self.tab = QWidget()
+        self.tab.setObjectName(u"tab")
+        self.gridLayout_9 = QGridLayout(self.tab)
+        self.gridLayout_9.setObjectName(u"gridLayout_9")
+        self.widget = BatchContainer(self.tab)
+        self.widget.setObjectName(u"widget")
+
+        self.gridLayout_9.addWidget(self.widget, 0, 0, 1, 1)
+
+        self.tool_tab_widget_container.addTab(self.tab, "")
         self.tab_5 = QWidget()
         self.tab_5.setObjectName(u"tab_5")
         self.gridLayout_6 = QGridLayout(self.tab_5)
@@ -142,21 +153,29 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.tool_tab_widget_container.addTab(self.tab_2, "")
         self.tab_4 = QWidget()
         self.tab_4.setObjectName(u"tab_4")
-        self.gridLayout = QGridLayout(self.tab_4)
-        self.gridLayout.setSpacing(0)
+        self.gridLayout_2 = QGridLayout(self.tab_4)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.scrollArea = QScrollArea(self.tab_4)
+        self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 630, 738))
+        self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(10, 10, 0, 0)
-        self.grid_settings_splitter = QSplitter(self.tab_4)
-        self.grid_settings_splitter.setObjectName(u"grid_settings_splitter")
-        self.grid_settings_splitter.setOrientation(Qt.Orientation.Vertical)
-        self.widget = GridPreferencesWidget(self.grid_settings_splitter)
-        self.widget.setObjectName(u"widget")
-        self.grid_settings_splitter.addWidget(self.widget)
-        self.active_grid_settings_widget = ActiveGridSettingsWidget(self.grid_settings_splitter)
+        self.active_grid_settings_widget = ActiveGridSettingsWidget(self.scrollAreaWidgetContents)
         self.active_grid_settings_widget.setObjectName(u"active_grid_settings_widget")
-        self.grid_settings_splitter.addWidget(self.active_grid_settings_widget)
 
-        self.gridLayout.addWidget(self.grid_settings_splitter, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.active_grid_settings_widget, 1, 0, 1, 1)
+
+        self.grid_preferences = GridPreferencesWidget(self.scrollAreaWidgetContents)
+        self.grid_preferences.setObjectName(u"grid_preferences")
+
+        self.gridLayout.addWidget(self.grid_preferences, 0, 0, 1, 1)
+
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        self.gridLayout_2.addWidget(self.scrollArea, 0, 0, 1, 1)
 
         self.tool_tab_widget_container.addTab(self.tab_4, "")
 
@@ -174,6 +193,7 @@ class Ui_stablediffusion_tool_tab_widget(object):
     def retranslateUi(self, stablediffusion_tool_tab_widget):
         stablediffusion_tool_tab_widget.setWindowTitle(QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Form", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Stable Diffusion", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Images", None))
         self.image_to_image.setProperty(u"settings_key", QCoreApplication.translate("stablediffusion_tool_tab_widget", u"image_to_image_settings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_5), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Input image", None))
         self.controlnet_image.setProperty(u"settings_key", QCoreApplication.translate("stablediffusion_tool_tab_widget", u"controlnet_settings", None))
