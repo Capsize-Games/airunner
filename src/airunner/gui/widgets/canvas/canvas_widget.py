@@ -126,9 +126,9 @@ class CanvasWidget(BaseWidget):
         self.update_application_settings("pivot_point_x", value.x())
         self.update_application_settings("pivot_point_y", value.y())
 
-    @Slot()
-    def on_text_button_clicked(self):
-        self.api.art.canvas.toggle_tool(CanvasToolName.TEXT)
+    @Slot(bool)
+    def on_text_button_toggled(self, val: bool):
+        self.api.art.canvas.toggle_tool(CanvasToolName.TEXT, val)
 
     @Slot()
     def on_recenter_button_clicked(self):
@@ -184,6 +184,11 @@ class CanvasWidget(BaseWidget):
         self.ui.grid_button.setChecked(message.get("show_grid", True))
 
     def _update_action_buttons(self, tool, active):
+        self.ui.active_grid_area_button.blockSignals(True)
+        self.ui.brush_button.blockSignals(True)
+        self.ui.eraser_button.blockSignals(True)
+        self.ui.text_button.blockSignals(True)
+        self.ui.grid_button.blockSignals(True)
         self.ui.active_grid_area_button.setChecked(
             tool is CanvasToolName.ACTIVE_GRID_AREA and active
         )
@@ -195,6 +200,11 @@ class CanvasWidget(BaseWidget):
         )
         self.ui.text_button.setChecked(tool is CanvasToolName.TEXT and active)
         self.ui.grid_button.setChecked(self.grid_settings.show_grid)
+        self.ui.active_grid_area_button.blockSignals(False)
+        self.ui.brush_button.blockSignals(False)
+        self.ui.eraser_button.blockSignals(False)
+        self.ui.text_button.blockSignals(False)
+        self.ui.grid_button.blockSignals(False)
 
     def showEvent(self, event):
         super().showEvent(event)
