@@ -4,7 +4,6 @@ import re
 import cn2an
 from pypinyin import lazy_pinyin, Style
 
-from airunner.vendor.melo.text import chinese_bert
 from airunner.vendor.melo.text.symbols import punctuation
 from airunner.vendor.melo.text.tone_sandhi import ToneSandhi
 
@@ -14,6 +13,9 @@ from airunner.vendor.melo.text.language_base import LanguageBase
 
 
 class Chinese(LanguageBase):
+    model_path = "google-bert/bert-base-multilingual-uncased"
+    model_path_bert = "hfl/chinese-roberta-wwm-ext-large"
+
     def __init__(self):
         super().__init__()
         self.pinyin_to_symbol_map = {

@@ -4,17 +4,11 @@ from airunner.vendor.melo.text import symbols
 from airunner.vendor.melo.text.es_phonemizer import cleaner as es_cleaner
 from airunner.vendor.melo.text.es_phonemizer import es_to_ipa
 from airunner.vendor.melo.text.language_base import LanguageBase
-from airunner.vendor.melo.text import spanish_bert
 
 
 class Spanish(LanguageBase):
-    def distribute_phone(self, n_phone, n_word):
-        phones_per_word = [0] * n_word
-        for task in range(n_phone):
-            min_tasks = min(phones_per_word)
-            min_index = phones_per_word.index(min_tasks)
-            phones_per_word[min_index] += 1
-        return phones_per_word
+    model_path = "dccuchile/bert-base-spanish-wwm"
+    model_path_bert = "dccuchile/bert-base-spanish-wwm-uncased"
 
     def text_normalize(self, text):
         text = es_cleaner.spanish_cleaners(text)
@@ -100,6 +94,3 @@ class Spanish(LanguageBase):
             tones = [0] + tones + [0]
             word2ph = [1] + word2ph + [1]
         return phones, tones, word2ph
-
-    def get_bert_feature(self, text, word2ph, device=None):
-        return spanish_bert.get_bert_feature(text, word2ph, device=device)

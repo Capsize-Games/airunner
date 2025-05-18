@@ -1,15 +1,10 @@
-# Convert Japanese text to phonemes which is
-# compatible with Julius https://github.com/julius-speech/segmentation-kit
 import re
 import unicodedata
 
-from transformers import AutoTokenizer
 from airunner.vendor.melo.text import symbols
 import pdb
 from pykakasi import kakasi
-from airunner.vendor.melo.text import japanese_bert
 from num2words import num2words
-from airunner.api import API
 from airunner.vendor.melo.text.japanese_settings import (
     punctuation,
     _CONVRULES,
@@ -45,6 +40,7 @@ from airunner.vendor.melo.text.language_base import LanguageBase
 
 class Japanese(LanguageBase):
     model_path = "tohoku-nlp/bert-base-japanese-v3"
+    model_path_bert = "tohoku-nlp/bert-base-japanese-v3"
 
     def __init__(self):
         super().__init__()
@@ -196,20 +192,12 @@ class Japanese(LanguageBase):
         return replaced_text
 
     def text_normalize(self, text):
-        res = unicodedata.normalize("NFKC", text)
+        res = super().unicode_normalize(text)
         res = self.japanese_convert_numbers_to_words(res)
         res = "".join([i for i in res if self.is_japanese_character(i)])
         res = self.replace_punctuation(res)
         res = self.conv.do(res)
         return res
-
-    def distribute_phone(self, n_phone, n_word):
-        phones_per_word = [0] * n_word
-        for task in range(n_phone):
-            min_tasks = min(phones_per_word)
-            min_index = phones_per_word.index(min_tasks)
-            phones_per_word[min_index] += 1
-        return phones_per_word
 
     def call(self, norm_text):
         tokenized = self.tokenizer.tokenize(norm_text)
@@ -233,25 +221,17 @@ class Japanese(LanguageBase):
                 phs += [text]
                 word2ph += [1]
                 continue
-            # import pdb; pdb.set_trace()
-            # phonemes = japanese_text_to_phonemes(text)
             phonemes = self.kata2phoneme(text)
-            # phonemes = [i for i in phonemes if i in symbols]
             for i in phonemes:
                 assert i in symbols, (group, norm_text, tokenized, i)
             phone_len = len(phonemes)
             word_len = len(group)
-
             aaa = self.distribute_phone(phone_len, word_len)
             assert len(aaa) == word_len
             word2ph += aaa
-
             phs += phonemes
         phones = ["_"] + phs + ["_"]
         tones = [0 for i in phones]
         word2ph = [1] + word2ph + [1]
         assert len(word2ph) == len(tokenized) + 2
         return phones, tones, word2ph
-
-    def get_bert_feature(self, text, word2ph, device):
-        return japanese_bert.get_bert_feature(text, word2ph, device=device)
