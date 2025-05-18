@@ -6,6 +6,8 @@ import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 import torch
+from typing import Dict
+from airunner.utils.memory import clear_memory
 from airunner.vendor.melo import utils
 from airunner.vendor.melo.models import SynthesizerTrn
 from airunner.vendor.melo.split_utils import split_sentence
@@ -26,7 +28,13 @@ class TTS(nn.Module):
         self._language: AvailableLanguage = language
         self.language = language
         self._device: str = None
-        self.voice_model_paths = {
+        self.cleaner = Cleaner()
+        self._hps = None
+        self._model = None
+
+    @property
+    def voice_model_paths(self) -> Dict:
+        return {
             AvailableLanguage.EN: self.api.paths["myshell-ai/MeloTTS-English"],
             AvailableLanguage.EN_NEWEST: self.api.paths[
                 "myshell-ai/MeloTTS-English-v3"
@@ -42,38 +50,51 @@ class TTS(nn.Module):
             ],
             AvailableLanguage.KR: self.api.paths["myshell-ai/MeloTTS-Korean"],
         }
-        self.cleaner = Cleaner()
 
-        config_path = os.path.join(
-            self.voice_model_paths.get(language, None), "config.json"
+    @property
+    def ckpt_path(self) -> str:
+        return os.path.join(
+            self.voice_model_paths.get(self.language, None),
+            "checkpoint.pth",
         )
-        hps = utils.get_hparams_from_file(config_path)
 
-        num_languages = hps.num_languages
-        num_tones = hps.num_tones
-        symbols = hps.symbols
+    @property
+    def checkpoint_dict(self):
+        return torch.load(self.ckpt_path, map_location=self.device)
 
-        model = SynthesizerTrn(
-            len(symbols),
-            hps.data.filter_length // 2 + 1,
-            hps.train.segment_size // hps.data.hop_length,
-            n_speakers=hps.data.n_speakers,
-            num_tones=num_tones,
-            num_languages=num_languages,
-            **hps.model,
-        ).to(self.device)
+    @property
+    def model(self) -> SynthesizerTrn:
+        # Only instantiate if self._model is None
+        if self._model is None:
+            print(f"Loading model from {self.ckpt_path}")
+            self._model = SynthesizerTrn(
+                len(self.hps.symbols),
+                self.hps.data.filter_length // 2 + 1,
+                self.hps.train.segment_size // self.hps.data.hop_length,
+                n_speakers=self.hps.data.n_speakers,
+                num_tones=self.hps.num_tones,
+                num_languages=self.hps.num_languages,
+                **self.hps.model,
+            ).to(self.device)
+            self._model.load_state_dict(
+                self.checkpoint_dict["model"], strict=True
+            )
+            self._model.eval()
+        return self._model
 
-        model.eval()
-        self.model = model
-        self.symbol_to_id = {s: i for i, s in enumerate(symbols)}
-        self.hps = hps
+    @property
+    def hps(self) -> utils.HParams:
+        if self._hps is None:
+            print(f"Loading model from {self.config_path}")
+            self._hps = utils.get_hparams_from_file(self.config_path)
+        return self._hps
 
-        # load state_dict
-        ckpt_path = os.path.join(
-            self.voice_model_paths.get(language, None), "checkpoint.pth"
+    @property
+    def config_path(self) -> str:
+        return os.path.join(
+            self.voice_model_paths.get(self.language, None),
+            "config.json",
         )
-        checkpoint_dict = torch.load(ckpt_path, map_location=self.device)
-        self.model.load_state_dict(checkpoint_dict["model"], strict=True)
 
     @property
     def language(self) -> AvailableLanguage:
@@ -85,6 +106,10 @@ class TTS(nn.Module):
             raise ValueError(
                 f"Invalid language type: {type(value)}. Expected AvailableLanguage."
             )
+        # Only unload if the language actually changes
+        if value is not self._language:
+            self.unload()
+            self.cleaner.language = value
         self._language = value
 
     @property
@@ -105,6 +130,15 @@ class TTS(nn.Module):
             audio_segments += [0] * int((sr * 0.05) / speed)
         audio_segments = np.array(audio_segments).astype(np.float32)
         return audio_segments
+
+    def unload(self):
+        if self._model:
+            del self._model
+            self._model = None
+        if self._hps:
+            del self._hps
+            self._hps = None
+        clear_memory()
 
     def split_sentences_into_pieces(self, text):
         texts = split_sentence(text, language=self.language)
@@ -145,11 +179,7 @@ class TTS(nn.Module):
                 t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
             try:
                 bert, ja_bert, phones, tones, lang_ids = (
-                    self.get_text_for_tts_infer(
-                        t,
-                        self.hps,
-                        self.symbol_to_id,
-                    )
+                    self.get_text_for_tts_infer(t, self.hps)
                 )
             except AssertionError as e:
                 print(
@@ -249,10 +279,11 @@ class TTS(nn.Module):
                     output_path, audio, self.hps.data.sampling_rate
                 )
 
-    def get_text_for_tts_infer(self, text, hps, symbol_to_id=None):
+    def get_text_for_tts_infer(self, text, hps):
         norm_text, phone, tone, word2ph = self.cleaner.clean_text(
             text, self.language
         )
+        symbol_to_id = {s: i for i, s in enumerate(self.hps.symbols)}
         phone, tone, language = cleaned_text_to_sequence(
             phone, tone, self.language, symbol_to_id
         )
