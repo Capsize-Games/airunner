@@ -232,7 +232,6 @@ class MainWindow(
             SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL: self.on_ai_models_save_or_update_signal,
             SignalCode.NAVIGATE_TO_URL: self.on_navigate_to_url,
             SignalCode.MISSING_REQUIRED_MODELS: self.display_missing_models_error,
-            SignalCode.TOGGLE_TOOL: self.on_toggle_tool_signal,
             SignalCode.ENABLE_WORKFLOWS_TOGGLED: self.on_enable_workflows_toggled,
         }
         self.logger.debug("Starting AI Runnner")
@@ -1360,10 +1359,6 @@ class MainWindow(
             self.application_settings.nsfw_filter
         )
         self.ui.actionSafety_Checker.blockSignals(False)
-
-    def toggle_tool(self, tool: CanvasToolName, active: bool):
-        self.update_application_settings("current_tool", tool.value)
-        self.api.art.canvas.tool_changed(tool, active)
 
     def _initialize_window(self):
         # self.center()

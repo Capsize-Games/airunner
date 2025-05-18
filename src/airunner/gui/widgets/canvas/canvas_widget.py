@@ -99,7 +99,11 @@ class CanvasWidget(BaseWidget):
 
     @property
     def current_tool(self):
-        return CanvasToolName(self.application_settings.current_tool)
+        return (
+            None
+            if self.application_settings.current_tool is None
+            else CanvasToolName(self.application_settings.current_tool)
+        )
 
     @property
     def image_pivot_point(self):
@@ -161,6 +165,10 @@ class CanvasWidget(BaseWidget):
     def on_toggle_tool_signal(self, message: Dict):
         tool = message.get("tool", None)
         active = message.get("active", False)
+        self.update_application_settings(
+            "current_tool", tool.value if (tool and active) else None
+        )
+        # self.api.art.canvas.tool_changed(tool, active)
         self._update_action_buttons(tool, active)
         self._update_cursor()
 
@@ -250,6 +258,8 @@ class CanvasWidget(BaseWidget):
                     cursor = Qt.CursorShape.ClosedHandCursor
                 else:
                     cursor = Qt.CursorShape.OpenHandCursor
+            elif current_tool is CanvasToolName.NONE:
+                cursor = Qt.CursorShape.ArrowCursor
         else:
             cursor = Qt.CursorShape.ArrowCursor
 
@@ -258,7 +268,8 @@ class CanvasWidget(BaseWidget):
             not hasattr(self, "_current_cursor")
             or self._current_cursor != cursor
         ):
-            self.setCursor(cursor)
+            if cursor is not None:
+                self.setCursor(cursor)
             self._current_cursor = cursor
 
     def toggle_grid(self, _val):
