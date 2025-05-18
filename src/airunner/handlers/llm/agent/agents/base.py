@@ -120,6 +120,41 @@ class BaseAgent(
         super().__init__(*args, **kwargs)
 
     @property
+    def language(self) -> str:
+        # Use a private attribute to avoid recursion
+        if hasattr(self, "_language") and self._language is not None:
+            lang = self._language
+        elif hasattr(self, "application_settings") and getattr(
+            self.application_settings, "use_detected_language", False
+        ):
+            lang = getattr(
+                self.application_settings, "detected_language", "EN"
+            )
+        else:
+            lang = "EN"
+        # Map language codes to full names if needed
+        if lang == "FR":
+            return "French"
+        elif lang == "DE":
+            return "German"
+        elif lang == "ES":
+            return "Spanish"
+        elif lang == "KO":
+            return "Korean"
+        elif lang == "RU":
+            return "Russian"
+        elif lang == "ZH":
+            return "Chinese"
+        elif lang == "JA":
+            return "Japanese"
+        else:
+            return "English"
+
+    @language.setter
+    def language(self, value: str):
+        self._language = value
+
+    @property
     def use_memory(self) -> bool:
         use_memory = self._use_memory
         if (
@@ -1027,6 +1062,7 @@ class BaseAgent(
             )
         else:
             conversation_timestamp_prompt = ""
+
         prompt = (
             f"Your name is {self.botname}.\n"
             f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"
@@ -1066,7 +1102,12 @@ class BaseAgent(
             f"The conversation is between user ({self.username}) and assistant ({self.botname}).\n"
             f"{conversation_timestamp_prompt}"
             f"{section_prompt}"
+            f"------\n"
         )
+
+        if self.language:
+            prompt += "Response in " + self.language + "\n"
+
         prompt = prompt.replace("{{ username }}", self.username)
         prompt = prompt.replace("{{ botname }}", self.botname)
         prompt = prompt.replace("{{ speaker_name }}", self.username)

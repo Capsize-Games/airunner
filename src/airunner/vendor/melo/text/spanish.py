@@ -7,7 +7,7 @@ from airunner.vendor.melo.text.language_base import LanguageBase
 
 
 class Spanish(LanguageBase):
-    model_path = "dccuchile/bert-base-spanish-wwm"
+    model_path = "dccuchile/bert-base-spanish-wwm-uncased"
     model_path_bert = "dccuchile/bert-base-spanish-wwm-uncased"
 
     def text_normalize(self, text):
