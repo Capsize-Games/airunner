@@ -451,8 +451,8 @@ class CustomGraphicsView(
         )
 
         # Calculate size differences
-        delta_width = new_size.width() - old_size
-        delta_height = new_size.height() - old_size
+        delta_width = new_size.width() - old_size.width()
+        delta_height = new_size.height() - old_size.height()
 
         # If only width changes and height is nearly the same, treat as splitter resize (no offset change)
         if abs(delta_height) < 5 and abs(delta_width) > 0:
