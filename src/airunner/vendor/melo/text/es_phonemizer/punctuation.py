@@ -159,16 +159,3 @@ class Punctuation:
             return cls._restore([text[0] + current.punc], puncs[1:], num)
 
         return cls._restore([text[0] + current.punc + text[1]] + text[2:], puncs[1:], num)
-
-
-# if __name__ == "__main__":
-#     punc = Punctuation()
-#     text = "This is. This is, example!"
-
-#     print(punc.strip(text))
-
-#     split_text, puncs = punc.strip_to_restore(text)
-#     print(split_text, " ---- ", puncs)
-
-#     restored_text = punc.restore(split_text, puncs)
-#     print(restored_text)

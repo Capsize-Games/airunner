@@ -1,11 +1,15 @@
 from typing import Annotated
 from dataclasses import dataclass
+from airunner.enums import AvailableLanguage
 
 
 @dataclass
 class TTSRequest:
     message: Annotated[str, "The message to send to the text-to-speech engine"]
     gender: Annotated[str, "The gender of the voice"] = "Male"
+    language: Annotated[AvailableLanguage, "Language of the voice"] = (
+        AvailableLanguage.EN_NEWEST
+    )
 
 
 @dataclass

@@ -4,6 +4,7 @@ import torch
 import torch.utils.data
 from tqdm import tqdm
 from loguru import logger
+from airunner.enums import AvailableLanguage
 from airunner.vendor.melo.mel_processing import (
     spectrogram_torch,
     mel_spectrogram_torch,
@@ -104,7 +105,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         )
 
         bert, ja_bert, phones, tone, language = self.get_text(
-            text, word2ph, phones, tone, language, audiopath
+            text, word2ph, phones, tone, AvailableLanguage(language), audiopath
         )
 
         spec, wav = self.get_audio(audiopath)
@@ -157,10 +158,10 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             torch.save(spec, spec_filename)
         return spec, audio_norm
 
-    def get_text(self, text, word2ph, phone, tone, language_str, wav_path):
-        phone, tone, language = cleaned_text_to_sequence(
-            phone, tone, language_str
-        )
+    def get_text(
+        self, text, word2ph, phone, tone, language: AvailableLanguage, wav_path
+    ):
+        phone, tone, language = cleaned_text_to_sequence(phone, tone, language)
         if self.add_blank:
             phone = commons.intersperse(phone, 0)
             tone = commons.intersperse(tone, 0)
@@ -173,35 +174,31 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             bert = torch.load(bert_path)
             assert bert.shape[-1] == len(phone)
         except Exception as e:
-            print(e, wav_path, bert_path, bert.shape, len(phone))
-            bert = get_bert(text, word2ph, language_str)
-            torch.save(bert, bert_path)
-            assert bert.shape[-1] == len(phone), phone
+            print(e)
+            return
 
         if self.disable_bert:
             bert = torch.zeros(1024, len(phone))
             ja_bert = torch.zeros(768, len(phone))
         else:
-            if language_str in ["ZH"]:
+            if language is AvailableLanguage.ZH:
                 bert = bert
                 ja_bert = torch.zeros(768, len(phone))
-            elif language_str in [
-                "JP",
-                "EN",
-                "ZH_MIX_EN",
-                "KR",
-                "SP",
-                "ES",
-                "FR",
-                "DE",
-                "RU",
+            elif language in [
+                AvailableLanguage.JP,
+                AvailableLanguage.EN,
+                AvailableLanguage.ZH_MIX_EN,
+                AvailableLanguage.KR,
+                AvailableLanguage.SP,
+                AvailableLanguage.ES,
+                AvailableLanguage.FR,
+                AvailableLanguage.DE,
+                AvailableLanguage.RU,
             ]:
                 ja_bert = bert
                 bert = torch.zeros(1024, len(phone))
             else:
                 raise
-                bert = torch.zeros(1024, len(phone))
-                ja_bert = torch.zeros(768, len(phone))
         assert bert.shape[-1] == len(phone)
         phone = torch.LongTensor(phone)
         tone = torch.LongTensor(tone)

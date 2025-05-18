@@ -1,8 +1,10 @@
-
 from PySide6.QtCore import Slot
 
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.stt.templates.whisper_settings_ui import Ui_whisper_settings
+from airunner.gui.widgets.stt.templates.whisper_settings_ui import (
+    Ui_whisper_settings,
+)
+from airunner.settings import LANGUAGES
 
 
 class WhisperSettingsWidget(BaseWidget):
@@ -14,9 +16,11 @@ class WhisperSettingsWidget(BaseWidget):
         self.ui.language.blockSignals(True)
         self.ui.task.blockSignals(True)
         self.ui.is_multilingual.blockSignals(True)
-        self.ui.language.addItems(["en", "es", "fr", "de", "it", "nl", "pl", "pt", "ru", "zh"])
+        self.ui.language.addItems(LANGUAGES["whisper"])
         self.ui.language.setCurrentText(self.whisper_settings.language)
-        self.ui.is_multilingual.setChecked(self.whisper_settings.is_multilingual)
+        self.ui.is_multilingual.setChecked(
+            self.whisper_settings.is_multilingual
+        )
         self.ui.task.addItems(["transcribe", "translate"])
         self.ui.task.setCurrentText(self.whisper_settings.task)
         self.ui.is_multilingual.blockSignals(False)

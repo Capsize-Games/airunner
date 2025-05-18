@@ -3,7 +3,7 @@ from abc import ABCMeta
 import pyttsx3
 
 from airunner.handlers.tts.tts_model_manager import TTSModelManager
-from airunner.enums import ModelType, ModelStatus, Gender
+from airunner.enums import ModelType, ModelStatus, Gender, AvailableLanguage
 from airunner.handlers.tts.tts_request import TTSRequest
 from airunner.data.models import EspeakSettings
 
@@ -29,10 +29,14 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         return gender if gender != "" else EspeakSettings.gender.default.arg
 
     @property
-    def language(self) -> str:
+    def language(self) -> AvailableLanguage:
         if self.tts_request:
-            return self.tts_request.language
-        return EspeakSettings.language.default.arg
+            lang = self.tts_request.language
+            if isinstance(lang, str):
+                # Convert string to enum if needed
+                return AvailableLanguage[lang]
+            return lang
+        return AvailableLanguage[EspeakSettings.language.default.arg]
 
     @property
     def voice(self) -> str:
