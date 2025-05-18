@@ -150,7 +150,11 @@ class CustomScene(
 
     @property
     def current_tool(self):
-        return CanvasToolName(self.application_settings.current_tool)
+        return (
+            None
+            if self.application_settings.current_tool is None
+            else CanvasToolName(self.application_settings.current_tool)
+        )
 
     @property
     def settings_key(self):
@@ -346,6 +350,7 @@ class CustomScene(
                 outpaint_box_rect=outpaint_box_rect,
                 generated=True,
             )
+            self.api.art.update_batch_images(images)
 
     def display_gpu_memory_error(self, message: str):
         msg_box = QMessageBox()
@@ -432,19 +437,27 @@ class CustomScene(
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event: QDragMoveEvent):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
 
     def dropEvent(self, event: QDropEvent):
         for url in event.mimeData().urls():
             path = url.toLocalFile()
-            if (
-                path.split(".")[-1].lower().encode()
-                in QImageReader.supportedImageFormats()
-            ):
-                self._load_image(path)
+            if path:
+                # Use the API to import the image from the dropped path
+                if (
+                    hasattr(self, "api")
+                    and hasattr(self.api, "art")
+                    and hasattr(self.api.art, "canvas")
+                ):
+                    self.api.art.canvas.image_from_path(path)
+        event.acceptProposedAction()
 
     def wheelEvent(self, event):
         if not hasattr(event, "delta"):
@@ -732,18 +745,18 @@ class CustomScene(
         outpaint_box_rect: Optional[Rect] = None,
         generated: bool = False,
     ):
-        if self.application_settings.resize_on_paste:
+        if not generated and self.application_settings.resize_on_paste:
             image = self._resize_image(image)
 
-        if image is not None:
-            self._add_image_to_scene(
-                image,
-                is_outpaint=is_outpaint,
-                outpaint_box_rect=outpaint_box_rect,
-                generated=generated,
-            )
-            # Emit signal to notify the view to update image positions
-            self.api.art.canvas.image_updated()
+        self._add_image_to_scene(
+            image,
+            is_outpaint=is_outpaint,
+            outpaint_box_rect=outpaint_box_rect,
+            generated=generated,
+        )
+
+        # Emit signal to notify the view to update image positions
+        self.api.art.canvas.image_updated()
 
     def _resize_image(self, image: Image) -> Image:
         if image is None:

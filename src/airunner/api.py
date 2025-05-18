@@ -1,5 +1,6 @@
 import os
 from typing import Optional, Dict, List, Any
+from PIL.Image import Image
 
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
 from PySide6.QtWidgets import QDialog, QVBoxLayout
@@ -443,6 +444,12 @@ class ARTAPIService(APIServiceBase):
         self.lora = LoraAPIServices(emit_signal=self.emit_signal)
         self.image_filter = ImageFilterAPIServices(
             emit_signal=self.emit_signal
+        )
+
+    def update_batch_images(self, images: List[Image]):
+        self.emit_signal(
+            SignalCode.SD_UPDATE_BATCH_IMAGES_SIGNAL,
+            {"images": images},
         )
 
     def save_prompt(
