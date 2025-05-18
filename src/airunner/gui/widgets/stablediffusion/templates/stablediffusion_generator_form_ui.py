@@ -334,6 +334,8 @@ class Ui_stablediffusion_generator_form(object):
 
         self.sdxl_settings.addWidget(self.n_samples)
 
+        self.horizontalLayout_14 = QHBoxLayout()
+        self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
         self.images_per_batch = SliderWidget(self.sdxl_settings_container)
         self.images_per_batch.setObjectName(u"images_per_batch")
         self.images_per_batch.setProperty(u"current_value", 1)
@@ -345,7 +347,22 @@ class Ui_stablediffusion_generator_form(object):
         self.images_per_batch.setProperty(u"spinbox_minimum", 1)
         self.images_per_batch.setProperty(u"slider_minimum", 1)
 
-        self.sdxl_settings.addWidget(self.images_per_batch)
+        self.horizontalLayout_14.addWidget(self.images_per_batch)
+
+        self.infinite_images_button = QPushButton(self.sdxl_settings_container)
+        self.infinite_images_button.setObjectName(u"infinite_images_button")
+        self.infinite_images_button.setMinimumSize(QSize(30, 30))
+        self.infinite_images_button.setMaximumSize(QSize(30, 30))
+        icon = QIcon()
+        icon.addFile(u":/light/icons/feather/light/circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.infinite_images_button.setIcon(icon)
+        self.infinite_images_button.setCheckable(True)
+        self.infinite_images_button.setChecked(False)
+
+        self.horizontalLayout_14.addWidget(self.infinite_images_button)
+
+
+        self.sdxl_settings.addLayout(self.horizontalLayout_14)
 
 
         self.gridLayout.addWidget(self.sdxl_settings_container, 2, 0, 1, 1)
@@ -378,9 +395,9 @@ class Ui_stablediffusion_generator_form(object):
         self.generate_button.setSizePolicy(sizePolicy1)
         self.generate_button.setMinimumSize(QSize(30, 30))
         self.generate_button.setMaximumSize(QSize(30, 30))
-        icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.generate_button.setIcon(icon)
+        icon1 = QIcon()
+        icon1.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.generate_button.setIcon(icon1)
 
         self.horizontalLayout_7.addWidget(self.generate_button)
 
@@ -391,9 +408,9 @@ class Ui_stablediffusion_generator_form(object):
         self.interrupt_button.setMinimumSize(QSize(30, 30))
         self.interrupt_button.setMaximumSize(QSize(30, 30))
         self.interrupt_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.interrupt_button.setIcon(icon1)
+        icon2 = QIcon()
+        icon2.addFile(u":/light/icons/feather/light/x.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.interrupt_button.setIcon(icon2)
 
         self.horizontalLayout_7.addWidget(self.interrupt_button)
 
@@ -478,6 +495,10 @@ class Ui_stablediffusion_generator_form(object):
         self.n_samples.setProperty(u"settings_property", QCoreApplication.translate("stablediffusion_generator_form", u"generator_settings.n_samples", None))
         self.images_per_batch.setProperty(u"label_text", QCoreApplication.translate("stablediffusion_generator_form", u"Images Per Batch", None))
         self.images_per_batch.setProperty(u"settings_property", QCoreApplication.translate("stablediffusion_generator_form", u"generator_settings.images_per_batch", None))
+#if QT_CONFIG(tooltip)
+        self.infinite_images_button.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Toggle infinite image generation", None))
+#endif // QT_CONFIG(tooltip)
+        self.infinite_images_button.setText("")
 #if QT_CONFIG(tooltip)
         self.generate_button.setToolTip(QCoreApplication.translate("stablediffusion_generator_form", u"Generate image", None))
 #endif // QT_CONFIG(tooltip)

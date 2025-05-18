@@ -34,6 +34,7 @@ class CanvasWidget(BaseWidget):
         ("grid", "grid_button"),
         ("corner-up-left", "undo_button"),
         ("corner-up-right", "redo_button"),
+        ("type", "text_button"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -95,6 +96,9 @@ class CanvasWidget(BaseWidget):
         set_widget_state(
             self.ui.eraser_button, current_tool is CanvasToolName.ERASER
         )
+        set_widget_state(
+            self.ui.text_button, current_tool is CanvasToolName.TEXT
+        )
         set_widget_state(self.ui.grid_button, show_grid is True)
 
     @property
@@ -121,6 +125,10 @@ class CanvasWidget(BaseWidget):
         settings.pivot_point_y = value.y()
         self.update_application_settings("pivot_point_x", value.x())
         self.update_application_settings("pivot_point_y", value.y())
+
+    @Slot()
+    def on_text_button_clicked(self):
+        self.api.art.canvas.toggle_tool(CanvasToolName.TEXT)
 
     @Slot()
     def on_recenter_button_clicked(self):
@@ -185,6 +193,7 @@ class CanvasWidget(BaseWidget):
         self.ui.eraser_button.setChecked(
             tool is CanvasToolName.ERASER and active
         )
+        self.ui.text_button.setChecked(tool is CanvasToolName.TEXT and active)
         self.ui.grid_button.setChecked(self.grid_settings.show_grid)
 
     def showEvent(self, event):
