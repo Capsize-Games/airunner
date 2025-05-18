@@ -100,13 +100,7 @@ class English(LanguageBase):
 
         self._g2p = G2p()
 
-    def distribute_phone(self, n_phone, n_word):
-        phones_per_word = [0] * n_word
-        for task in range(n_phone):
-            min_tasks = min(phones_per_word)
-            min_index = phones_per_word.index(min_tasks)
-            phones_per_word[min_index] += 1
-        return phones_per_word
+    # distribute_phone removed; use base class
 
     def post_replace_ph(self, ph):
         rep_map = {
@@ -190,6 +184,7 @@ class English(LanguageBase):
         return phonemes, tones
 
     def text_normalize(self, text):
+        text = super().unicode_normalize(text)
         text = text.lower()
         text = expand_time_english(text)
         text = normalize_numbers(text)
