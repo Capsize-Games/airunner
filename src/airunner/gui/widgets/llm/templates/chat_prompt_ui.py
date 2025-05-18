@@ -93,7 +93,7 @@ class Ui_chat_prompt(object):
         self.pushButton.setMinimumSize(QSize(30, 30))
         self.pushButton.setMaximumSize(QSize(30, 30))
         icon2 = QIcon()
-        icon2.addFile(u":/light/icons/feather/light/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon2.addFile(u":/light/icons/feather/light/x.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.pushButton)

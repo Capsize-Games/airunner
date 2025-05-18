@@ -514,38 +514,74 @@
               </widget>
              </item>
              <item>
-              <widget class="SliderWidget" name="images_per_batch" native="true">
-               <property name="label_text" stdset="0">
-                <string>Images Per Batch</string>
-               </property>
-               <property name="current_value" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="slider_maximum" stdset="0">
-                <number>6</number>
-               </property>
-               <property name="spinbox_maximum" stdset="0">
-                <number>6</number>
-               </property>
-               <property name="display_as_float" stdset="0">
-                <bool>false</bool>
-               </property>
-               <property name="spinbox_single_step" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="spinbox_page_step" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="spinbox_minimum" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="slider_minimum" stdset="0">
-                <number>1</number>
-               </property>
-               <property name="settings_property" stdset="0">
-                <string>generator_settings.images_per_batch</string>
-               </property>
-              </widget>
+              <layout class="QHBoxLayout" name="horizontalLayout_14">
+               <item>
+                <widget class="SliderWidget" name="images_per_batch" native="true">
+                 <property name="label_text" stdset="0">
+                  <string>Images Per Batch</string>
+                 </property>
+                 <property name="current_value" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_maximum" stdset="0">
+                  <number>6</number>
+                 </property>
+                 <property name="spinbox_maximum" stdset="0">
+                  <number>6</number>
+                 </property>
+                 <property name="display_as_float" stdset="0">
+                  <bool>false</bool>
+                 </property>
+                 <property name="spinbox_single_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="spinbox_page_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="spinbox_minimum" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_minimum" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="settings_property" stdset="0">
+                  <string>generator_settings.images_per_batch</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="infinite_images_button">
+                 <property name="minimumSize">
+                  <size>
+                   <width>30</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>30</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>Toggle infinite image generation</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="../../../resources/feather.qrc">
+                   <normaloff>:/light/icons/feather/light/circle.svg</normaloff>:/light/icons/feather/light/circle.svg</iconset>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                 <property name="checked">
+                  <bool>false</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </item>
             </layout>
            </widget>
@@ -650,7 +686,7 @@
           </property>
           <property name="icon">
            <iconset resource="../../../resources/feather.qrc">
-            <normaloff>:/light/icons/feather/light/stop-circle.svg</normaloff>:/light/icons/feather/light/stop-circle.svg</iconset>
+            <normaloff>:/light/icons/feather/light/x.svg</normaloff>:/light/icons/feather/light/x.svg</iconset>
           </property>
          </widget>
         </item>

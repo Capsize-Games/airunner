@@ -338,6 +338,7 @@ class CanvasToolName(Enum):
     ERASER = "eraser"
     SELECTION = "selection"
     GRID = "grid"
+    TEXT = "text"
     NONE = "none"
 
 
