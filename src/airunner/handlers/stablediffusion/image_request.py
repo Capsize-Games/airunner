@@ -26,6 +26,7 @@ class ImageRequest:
     strength: int = 0.5
     n_samples: int = 1
     images_per_batch: int = 1
+    generate_infinite_images: bool = False
     clip_skip: int = 0
     crops_coords_top_left: Dict = None
     original_size: Dict = None

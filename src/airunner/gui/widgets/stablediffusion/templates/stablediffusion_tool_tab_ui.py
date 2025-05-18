@@ -16,7 +16,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QGridLayout, QScrollArea, QSizePolicy,
-    QTabWidget, QWidget)
+    QSpacerItem, QTabWidget, QWidget)
 
 from airunner.gui.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.gui.widgets.brush.brush_container_widget import BrushContainerWidget
@@ -172,6 +172,10 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.grid_preferences.setObjectName(u"grid_preferences")
 
         self.gridLayout.addWidget(self.grid_preferences, 0, 0, 1, 1)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout.addItem(self.verticalSpacer, 2, 0, 1, 1)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 

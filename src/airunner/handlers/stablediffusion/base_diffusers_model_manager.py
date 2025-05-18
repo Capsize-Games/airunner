@@ -872,64 +872,75 @@ class BaseDiffusersModelManager(BaseModelManager):
         data = self._prepare_data(self.active_rect)
         self._current_state = HandlerState.GENERATING
 
-        for results in self._get_results(data):
+        try:
+            for results in self._get_results(data):
 
-            # Benchmark getting images from results
-            images = results.get("images", [])
+                # Benchmark getting images from results
+                images = results.get("images", [])
 
-            images, nsfw_content_detected = self._check_and_mark_nsfw_images(
-                images
+                images, nsfw_content_detected = (
+                    self._check_and_mark_nsfw_images(images)
+                )
+
+                if images is not None:
+                    self.api.art.final_progress_update(
+                        total=self.image_request.steps
+                    )
+
+                    # Benchmark exporting images
+                    self._export_images(images, data)
+                else:
+                    images = images or []
+
+                self._current_state = HandlerState.PREPARING_TO_GENERATE
+                response = None
+                code = EngineResponseCode.NONE
+                try:
+                    response = ImageResponse(
+                        images=images,
+                        data=data,
+                        nsfw_content_detected=any(nsfw_content_detected),
+                        active_rect=self.active_rect,
+                        is_outpaint=self.is_outpaint,
+                        node_id=self.image_request.node_id,
+                    )
+                    code = EngineResponseCode.IMAGE_GENERATED
+                except PipeNotLoadedException as e:
+                    self.logger.error(e)
+                except InterruptedException as e:
+                    code = EngineResponseCode.INTERRUPTED
+                except Exception as e:
+                    code = EngineResponseCode.ERROR
+                    error_message = f"Error generating image: {e}"
+                    response = error_message
+                    if CUDA_ERROR in str(e):
+                        code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
+                        response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
+                    self.logger.error(error_message)
+                if self.image_request.callback:
+                    self.image_request.callback(response)
+                self.api.worker_response(code=code, message=response)
+        except InterruptedException as e:
+            self.logger.debug("Image generation interrupted")
+            self._current_state = HandlerState.READY
+            self.api.worker_response(
+                code=EngineResponseCode.INTERRUPTED,
+                message="Image generation interrupted",
             )
-
-            if images is not None:
-                self.api.art.final_progress_update(
-                    total=self.image_request.steps
-                )
-
-                # Benchmark exporting images
-                self._export_images(images, data)
-            else:
-                images = images or []
-
-            self._current_state = HandlerState.PREPARING_TO_GENERATE
-            response = None
-            code = EngineResponseCode.NONE
-            try:
-                response = ImageResponse(
-                    images=images,
-                    data=data,
-                    nsfw_content_detected=any(nsfw_content_detected),
-                    active_rect=self.active_rect,
-                    is_outpaint=self.is_outpaint,
-                    node_id=self.image_request.node_id,
-                )
-                code = EngineResponseCode.IMAGE_GENERATED
-            except PipeNotLoadedException as e:
-                self.logger.error(e)
-            except InterruptedException as e:
-                code = EngineResponseCode.INTERRUPTED
-            except Exception as e:
-                code = EngineResponseCode.ERROR
-                error_message = f"Error generating image: {e}"
-                response = error_message
-                if CUDA_ERROR in str(e):
-                    code = EngineResponseCode.INSUFFICIENT_GPU_MEMORY
-                    response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
-                self.logger.error(error_message)
-            if self.image_request.callback:
-                self.image_request.callback(response)
-            self.api.worker_response(code=code, message=response)
+            self.do_interrupt_image_generation = False
 
     def _get_results(self, data):
-        # Use torch.amp.autocast for mixed precision handling
         with torch.no_grad(), torch.amp.autocast(
             "cuda", dtype=self.data_type, enabled=True
         ):
-            for n in range(0, self.image_request.n_samples):
+            total = 0
+            while total < self.image_request.n_samples:
                 if self.do_interrupt_image_generation:
                     raise InterruptedException()
                 results = self._pipe(**data)
                 yield results
+                if not self.image_request.generate_infinite_images:
+                    total += 1
 
     def _initialize_metadata(
         self, images: List[Any], data: Dict
