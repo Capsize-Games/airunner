@@ -16,6 +16,8 @@ class LanguageBase:
 
     def __init__(self):
         self._tokenizer = None
+        self._bert_model = None
+        self._bert_tokenizer = None
         self.eng_dict = self.get_dict()
         self.current_file_path = os.path.dirname(__file__)
         self.cmu_dict_path = os.path.join(
@@ -26,9 +28,17 @@ class LanguageBase:
         )
 
     @property
+    def device(self) -> str:
+        if torch.backends.mps.is_available():
+            return "mps"
+        elif torch.cuda.is_available():
+            return "cuda"
+        else:
+            return "cpu"
+
+    @property
     def bert_model_path(self) -> str:
-        model_id = model_id or self.model_path_bert
-        model_id = API().paths[model_id]
+        return API().paths[self.model_path_bert]
 
     @property
     def bert_model(self):
@@ -44,6 +54,7 @@ class LanguageBase:
             self._bert_tokenizer = AutoTokenizer.from_pretrained(
                 self.bert_model_path
             )
+        return self._bert_tokenizer
 
     @property
     def call(self):
@@ -74,7 +85,7 @@ class LanguageBase:
         with torch.no_grad():
             inputs = self.bert_tokenizer(text, return_tensors="pt")
             for i in inputs:
-                inputs[i] = inputs[i].to(device)
+                inputs[i] = inputs[i].to(self.device)
             res = self.bert_model(**inputs, output_hidden_states=True)
             res = torch.cat(res["hidden_states"][-3:-2], -1)[0].cpu()
         assert inputs["input_ids"].shape[-1] == len(word2ph)
