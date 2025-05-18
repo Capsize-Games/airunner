@@ -88,6 +88,16 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>Images</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_9">
+       <item row="0" column="0">
+        <widget class="BatchContainer" name="widget" native="true"/>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="tab_5">
       <attribute name="title">
        <string>Input image</string>
@@ -275,29 +285,30 @@
       <attribute name="title">
        <string>Grid</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout">
-       <property name="leftMargin">
-        <number>10</number>
-       </property>
-       <property name="topMargin">
-        <number>10</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <property name="spacing">
-        <number>0</number>
-       </property>
+      <layout class="QGridLayout" name="gridLayout_2">
        <item row="0" column="0">
-        <widget class="QSplitter" name="grid_settings_splitter">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
+        <widget class="QScrollArea" name="scrollArea">
+         <property name="widgetResizable">
+          <bool>true</bool>
          </property>
-         <widget class="GridPreferencesWidget" name="widget" native="true"/>
-         <widget class="ActiveGridSettingsWidget" name="active_grid_settings_widget" native="true"/>
+         <widget class="QWidget" name="scrollAreaWidgetContents">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>630</width>
+            <height>738</height>
+           </rect>
+          </property>
+          <layout class="QGridLayout" name="gridLayout">
+           <item row="1" column="0">
+            <widget class="ActiveGridSettingsWidget" name="active_grid_settings_widget" native="true"/>
+           </item>
+           <item row="0" column="0">
+            <widget class="GridPreferencesWidget" name="grid_preferences" native="true"/>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
       </layout>
@@ -347,6 +358,12 @@
    <class>InputImageContainer</class>
    <extends>QWidget</extends>
    <header>airunner/gui/widgets/canvas/input_image_container</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>BatchContainer</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/canvas/batch_container</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
