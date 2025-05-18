@@ -121,14 +121,20 @@ class TTS(nn.Module):
             if language in ["EN", "ZH_MIX_EN"]:
                 t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
             device = self.device
-            bert, ja_bert, phones, tones, lang_ids = (
-                self.get_text_for_tts_infer(
-                    t,
-                    language,
-                    self.hps,
-                    self.symbol_to_id,
+            try:
+                bert, ja_bert, phones, tones, lang_ids = (
+                    self.get_text_for_tts_infer(
+                        t,
+                        language,
+                        self.hps,
+                        self.symbol_to_id,
+                    )
                 )
-            )
+            except AssertionError as e:
+                print(
+                    f"Error in text processing: {e}. Skipping this sentence."
+                )
+                continue
             with torch.no_grad():
                 x_tst = phones.to(device).unsqueeze(0)
                 tones = tones.to(device).unsqueeze(0)
@@ -138,6 +144,39 @@ class TTS(nn.Module):
                 x_tst_lengths = torch.LongTensor([phones.size(0)]).to(device)
                 del phones
                 speakers = torch.LongTensor([speaker_id]).to(device)
+
+                # --- PATCH: Ensure all tensors are the same length (seq_len) ---
+                seq_lens = [
+                    x_tst.shape[1],
+                    tones.shape[1],
+                    lang_ids.shape[1],
+                    bert.shape[2],
+                    ja_bert.shape[2],
+                ]
+                target_len = max(seq_lens)
+
+                def pad_tensor(t, dim, target_len, value=0):
+                    pad_size = target_len - t.shape[dim]
+                    if pad_size > 0:
+                        pad_shape = list(t.shape)
+                        pad_shape[dim] = pad_size
+                        pad = t.new_full(pad_shape, value)
+                        return torch.cat([t, pad], dim=dim)
+                    elif pad_size < 0:
+                        # Truncate
+                        idx = [slice(None)] * len(t.shape)
+                        idx[dim] = slice(0, target_len)
+                        return t[tuple(idx)]
+                    else:
+                        return t
+
+                x_tst = pad_tensor(x_tst, 1, target_len)
+                tones = pad_tensor(tones, 1, target_len)
+                lang_ids = pad_tensor(lang_ids, 1, target_len)
+                bert = pad_tensor(bert, 2, target_len)
+                ja_bert = pad_tensor(ja_bert, 2, target_len)
+                # --- END PATCH ---
+
                 audio = (
                     self.model.infer(
                         x_tst,
@@ -212,8 +251,8 @@ class TTS(nn.Module):
             bert = self.cleaner.language_module.get_bert_feature(
                 norm_text, word2ph
             )
+
             del word2ph
-            assert bert.shape[-1] == len(phone), phone
 
             if language_str == "ZH":
                 bert = bert

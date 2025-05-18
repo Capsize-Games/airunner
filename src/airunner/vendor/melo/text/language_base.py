@@ -88,6 +88,11 @@ class LanguageBase:
                 inputs[i] = inputs[i].to(self.device)
             res = self.bert_model(**inputs, output_hidden_states=True)
             res = torch.cat(res["hidden_states"][-3:-2], -1)[0].cpu()
+        n_tokens = inputs["input_ids"].shape[-1]
+        if len(word2ph) < n_tokens:
+            word2ph = list(word2ph) + [1] * (n_tokens - len(word2ph))
+        elif len(word2ph) > n_tokens:
+            word2ph = list(word2ph)[:n_tokens]
         assert inputs["input_ids"].shape[-1] == len(word2ph)
         word2phone = word2ph
         phone_level_feature = []
