@@ -10,6 +10,9 @@ from transformers import AutoTokenizer, AutoModelForMaskedLM
 class LanguageBase:
     model_path = ""
     model_path_bert = ""
+    current_file_path = os.path.dirname(__file__)
+    CMU_DICT_PATH = os.path.join(current_file_path, "cmudict.rep")
+    CACHE_PATH = os.path.join(current_file_path, "cmudict_cache.pickle")
 
     def __init__(self):
         self._tokenizer = None

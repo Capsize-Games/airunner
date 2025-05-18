@@ -16,7 +16,6 @@ from airunner.vendor.melo.text.language_base import LanguageBase
 class Chinese(LanguageBase):
     def __init__(self):
         super().__init__()
-        self.current_file_path = os.path.dirname(__file__)
         self.pinyin_to_symbol_map = {
             line.split("\t")[0]: line.strip().split("\t")[1]
             for line in open(
