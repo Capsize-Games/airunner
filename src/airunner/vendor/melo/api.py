@@ -13,6 +13,7 @@ from airunner.vendor.melo.download_utils import (
     load_or_download_config,
     load_or_download_model,
 )
+from airunner.vendor.melo.text.cleaner import Cleaner
 
 
 class TTS(nn.Module):
@@ -25,6 +26,7 @@ class TTS(nn.Module):
         ckpt_path=None,
     ):
         super().__init__()
+        self.cleaner = Cleaner()
         if device == "auto":
             device = "cpu"
             if torch.cuda.is_available():
@@ -120,7 +122,12 @@ class TTS(nn.Module):
             device = self.device
             bert, ja_bert, phones, tones, lang_ids = (
                 utils.get_text_for_tts_infer(
-                    t, language, self.hps, device, self.symbol_to_id
+                    self.cleaner,
+                    t,
+                    language,
+                    self.hps,
+                    device,
+                    self.symbol_to_id,
                 )
             )
             with torch.no_grad():
