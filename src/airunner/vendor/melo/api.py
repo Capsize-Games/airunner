@@ -5,7 +5,6 @@ import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 import torch
-
 from airunner.vendor.melo import utils
 from airunner.vendor.melo.models import SynthesizerTrn
 from airunner.vendor.melo.split_utils import split_sentence
@@ -14,6 +13,8 @@ from airunner.vendor.melo.download_utils import (
     load_or_download_model,
 )
 from airunner.vendor.melo.text.cleaner import Cleaner
+from airunner.vendor.melo import commons
+from airunner.vendor.melo.text import cleaned_text_to_sequence
 
 
 class TTS(nn.Module):
@@ -121,12 +122,10 @@ class TTS(nn.Module):
                 t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
             device = self.device
             bert, ja_bert, phones, tones, lang_ids = (
-                utils.get_text_for_tts_infer(
-                    self.cleaner,
+                self.get_text_for_tts_infer(
                     t,
                     language,
                     self.hps,
-                    device,
                     self.symbol_to_id,
                 )
             )
@@ -187,3 +186,59 @@ class TTS(nn.Module):
                 soundfile.write(
                     output_path, audio, self.hps.data.sampling_rate
                 )
+
+    def get_text_for_tts_infer(
+        self, text, language_str, hps, symbol_to_id=None
+    ):
+        norm_text, phone, tone, word2ph = self.cleaner.clean_text(
+            text, language_str
+        )
+        phone, tone, language = cleaned_text_to_sequence(
+            phone, tone, language_str, symbol_to_id
+        )
+
+        if hps.data.add_blank:
+            phone = commons.intersperse(phone, 0)
+            tone = commons.intersperse(tone, 0)
+            language = commons.intersperse(language, 0)
+            for i in range(len(word2ph)):
+                word2ph[i] = word2ph[i] * 2
+            word2ph[0] += 1
+
+        if getattr(hps.data, "disable_bert", False):
+            bert = torch.zeros(1024, len(phone))
+            ja_bert = torch.zeros(768, len(phone))
+        else:
+            bert = self.cleaner.language_module.get_bert_feature(
+                norm_text, word2ph
+            )
+            del word2ph
+            assert bert.shape[-1] == len(phone), phone
+
+            if language_str == "ZH":
+                bert = bert
+                ja_bert = torch.zeros(768, len(phone))
+            elif language_str in [
+                "JP",
+                "EN",
+                "ZH_MIX_EN",
+                "KR",
+                "SP",
+                "ES",
+                "FR",
+                "DE",
+                "RU",
+            ]:
+                ja_bert = bert
+                bert = torch.zeros(1024, len(phone))
+            else:
+                raise NotImplementedError()
+
+        assert bert.shape[-1] == len(
+            phone
+        ), f"Bert seq len {bert.shape[-1]} != {len(phone)}"
+
+        phone = torch.LongTensor(phone)
+        tone = torch.LongTensor(tone)
+        language = torch.LongTensor(language)
+        return bert, ja_bert, phone, tone, language
