@@ -179,7 +179,7 @@
        </property>
        <property name="icon">
         <iconset resource="../../../resources/feather.qrc">
-         <normaloff>:/light/icons/feather/light/stop-circle.svg</normaloff>:/light/icons/feather/light/stop-circle.svg</iconset>
+         <normaloff>:/light/icons/feather/light/x.svg</normaloff>:/light/icons/feather/light/x.svg</iconset>
        </property>
       </widget>
      </item>
