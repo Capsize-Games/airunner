@@ -34,7 +34,12 @@ class BatchContainer(BaseWidget):
         )
         image_layer_item = ImageLayerItemWidget()
         image_layer_item.ui.image.setPixmap(pixmap)
-        image_layer_item.ui.total_images.setText(f"{total} in batch")
+        if total is not None:
+            image_layer_item.ui.total_images.setText(f"{total} in batch")
+            image_layer_item.ui.total_images.setVisible(True)
+        else:
+            # Hide the label for individual images (not part of a batch)
+            image_layer_item.ui.total_images.setVisible(False)
         layout.addWidget(image_layer_item)
 
     def _clear_layout(self, layout):
@@ -51,6 +56,18 @@ class BatchContainer(BaseWidget):
         if not self.initialized:
             self.initialized = True
             self.populate_today_batches()
+
+    def find_today_loose_images(self) -> list:
+        """Return a list of loose images (not in batches) for today."""
+        today_folder = get_today_folder(self.path_settings.image_path)
+        loose_images = sorted(
+            [
+                os.path.join(today_folder, f)
+                for f in os.listdir(today_folder)
+                if os.path.isfile(os.path.join(today_folder, f))
+            ]
+        )
+        return loose_images
 
     def find_today_batches(self) -> list:
         """Return a list of batch folders and their images for today."""
@@ -76,16 +93,27 @@ class BatchContainer(BaseWidget):
         return batches
 
     def populate_today_batches(self):
-        """Find today's batches and add them to the layout as image_layer_item widgets."""
+        """Find today's batches and loose images and add them to the layout as image_layer_item widgets."""
+        # Get batches
         batches = self.find_today_batches()
+        # Get loose images
+        loose_images = self.find_today_loose_images()
+
         container = self.ui.scrollArea.widget()
         layout = container.layout()
         self._clear_layout(layout)
+
+        # Add batch images
         for batch in batches:
             images = batch["images"]
             if not images:
                 continue
             self._add_image_layer_item(images[0], len(images), layout)
+
+        # Add loose images
+        for image_path in loose_images:
+            self._add_image_layer_item(image_path, None, layout)
+
         spacer = QSpacerItem(
             20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
         )
