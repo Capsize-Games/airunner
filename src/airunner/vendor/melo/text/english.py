@@ -124,47 +124,6 @@ class English(LanguageBase):
             ph = "UNK"
         return ph
 
-    def read_dict(
-        self,
-    ):
-        g2p_dict = {}
-        start_line = 49
-        with open(self.CMU_DICT_PATH) as f:
-            line = f.readline()
-            line_index = 1
-            while line:
-                if line_index >= start_line:
-                    line = line.strip()
-                    word_split = line.split("  ")
-                    word = word_split[0]
-
-                    syllable_split = word_split[1].split(" - ")
-                    g2p_dict[word] = []
-                    for syllable in syllable_split:
-                        phone_split = syllable.split(" ")
-                        g2p_dict[word].append(phone_split)
-
-                line_index = line_index + 1
-                line = f.readline()
-
-        return g2p_dict
-
-    def cache_dict(self, g2p_dict, file_path):
-        with open(file_path, "wb") as pickle_file:
-            pickle.dump(g2p_dict, pickle_file)
-
-    def get_dict(
-        self,
-    ):
-        if os.path.exists(self.CACHE_PATH):
-            with open(self.CACHE_PATH, "rb") as pickle_file:
-                g2p_dict = pickle.load(pickle_file)
-        else:
-            g2p_dict = self.read_dict()
-            self.cache_dict(g2p_dict, self.CACHE_PATH)
-
-        return g2p_dict
-
     def refine_ph(self, phn):
         tone = 0
         if re.search(r"\d$", phn):

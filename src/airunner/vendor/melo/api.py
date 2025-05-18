@@ -1,3 +1,4 @@
+import os
 import re
 import torch
 import soundfile
@@ -8,39 +9,45 @@ import torch
 from airunner.vendor.melo import utils
 from airunner.vendor.melo.models import SynthesizerTrn
 from airunner.vendor.melo.split_utils import split_sentence
-from airunner.vendor.melo.download_utils import (
-    load_or_download_config,
-    load_or_download_model,
-)
 from airunner.vendor.melo.text.cleaner import Cleaner
 from airunner.vendor.melo import commons
 from airunner.vendor.melo.text import cleaned_text_to_sequence
+from airunner.api import API
+from airunner.enums import AvailableLanguage
 
 
 class TTS(nn.Module):
     def __init__(
         self,
-        language,
-        device="auto",
-        use_hf=True,
-        config_path=None,
-        ckpt_path=None,
+        language: AvailableLanguage = AvailableLanguage.EN,
     ):
         super().__init__()
+        self.api = API()
+        self._language: AvailableLanguage = language
+        self.language = language
+        self._device: str = None
+        self.voice_model_paths = {
+            AvailableLanguage.EN: self.api.paths["myshell-ai/MeloTTS-English"],
+            AvailableLanguage.EN_NEWEST: self.api.paths[
+                "myshell-ai/MeloTTS-English-v3"
+            ],
+            AvailableLanguage.FR: self.api.paths["myshell-ai/MeloTTS-French"],
+            AvailableLanguage.JP: self.api.paths[
+                "myshell-ai/MeloTTS-Japanese"
+            ],
+            AvailableLanguage.ES: self.api.paths["myshell-ai/MeloTTS-Spanish"],
+            AvailableLanguage.ZH: self.api.paths["myshell-ai/MeloTTS-Chinese"],
+            AvailableLanguage.ZH_MIX_EN: self.api.paths[
+                "myshell-ai/MeloTTS-Chinese"
+            ],
+            AvailableLanguage.KR: self.api.paths["myshell-ai/MeloTTS-Korean"],
+        }
         self.cleaner = Cleaner()
-        if device == "auto":
-            device = "cpu"
-            if torch.cuda.is_available():
-                device = "cuda"
-            if torch.backends.mps.is_available():
-                device = "mps"
-        if "cuda" in device:
-            assert torch.cuda.is_available()
 
-        # config_path =
-        hps = load_or_download_config(
-            language, use_hf=use_hf, config_path=config_path
+        config_path = os.path.join(
+            self.voice_model_paths.get(language, None), "config.json"
         )
+        hps = utils.get_hparams_from_file(config_path)
 
         num_languages = hps.num_languages
         num_tones = hps.num_tones
@@ -54,24 +61,41 @@ class TTS(nn.Module):
             num_tones=num_tones,
             num_languages=num_languages,
             **hps.model,
-        ).to(device)
+        ).to(self.device)
 
         model.eval()
         self.model = model
         self.symbol_to_id = {s: i for i, s in enumerate(symbols)}
         self.hps = hps
-        self.device = device
 
         # load state_dict
-        checkpoint_dict = load_or_download_model(
-            language, device, use_hf=use_hf, ckpt_path=ckpt_path
+        ckpt_path = os.path.join(
+            self.voice_model_paths.get(language, None), "checkpoint.pth"
         )
+        checkpoint_dict = torch.load(ckpt_path, map_location=self.device)
         self.model.load_state_dict(checkpoint_dict["model"], strict=True)
 
-        language = language.split("_")[0]
-        self.language = (
-            "ZH_MIX_EN" if language == "ZH" else language
-        )  # we support a ZH_MIX_EN model
+    @property
+    def language(self) -> AvailableLanguage:
+        return self._language
+
+    @language.setter
+    def language(self, value: AvailableLanguage):
+        if not isinstance(value, AvailableLanguage):
+            raise ValueError(
+                f"Invalid language type: {type(value)}. Expected AvailableLanguage."
+            )
+        self._language = value
+
+    @property
+    def device(self) -> str:
+        if self._device is None:
+            self._device = "cpu"
+            if torch.cuda.is_available():
+                self._device = "cuda"
+            if torch.backends.mps.is_available():
+                self._device = "mps"
+        return self._device
 
     @staticmethod
     def audio_numpy_concat(segment_data_list, sr, speed=1.0):
@@ -82,13 +106,8 @@ class TTS(nn.Module):
         audio_segments = np.array(audio_segments).astype(np.float32)
         return audio_segments
 
-    @staticmethod
-    def split_sentences_into_pieces(text, language, quiet=False):
-        texts = split_sentence(text, language_str=language)
-        if not quiet:
-            print(" > Text split to sentences.")
-            print("\n".join(texts))
-            print(" > ===========================")
+    def split_sentences_into_pieces(self, text):
+        texts = split_sentence(text, language=self.language)
         return texts
 
     def tts_to_file(
@@ -106,7 +125,7 @@ class TTS(nn.Module):
         quiet=False,
     ):
         language = self.language
-        texts = self.split_sentences_into_pieces(text, language, quiet)
+        texts = self.split_sentences_into_pieces(text)
         audio_list = []
         if pbar:
             tx = pbar(texts)
@@ -118,14 +137,16 @@ class TTS(nn.Module):
             else:
                 tx = tqdm(texts)
         for t in tx:
-            if language in ["EN", "ZH_MIX_EN"]:
+            if language in [
+                AvailableLanguage.EN,
+                AvailableLanguage.EN_NEWEST,
+                AvailableLanguage.ZH_MIX_EN,
+            ]:
                 t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
-            device = self.device
             try:
                 bert, ja_bert, phones, tones, lang_ids = (
                     self.get_text_for_tts_infer(
                         t,
-                        language,
                         self.hps,
                         self.symbol_to_id,
                     )
@@ -135,17 +156,21 @@ class TTS(nn.Module):
                     f"Error in text processing: {e}. Skipping this sentence."
                 )
                 continue
+            except NotImplementedError as e:
+                print(f"Skipping sentence due to unsupported language: {e}")
+                continue
             with torch.no_grad():
-                x_tst = phones.to(device).unsqueeze(0)
-                tones = tones.to(device).unsqueeze(0)
-                lang_ids = lang_ids.to(device).unsqueeze(0)
-                bert = bert.to(device).unsqueeze(0)
-                ja_bert = ja_bert.to(device).unsqueeze(0)
-                x_tst_lengths = torch.LongTensor([phones.size(0)]).to(device)
+                x_tst = phones.to(self.device).unsqueeze(0)
+                tones = tones.to(self.device).unsqueeze(0)
+                lang_ids = lang_ids.to(self.device).unsqueeze(0)
+                bert = bert.to(self.device).unsqueeze(0)
+                ja_bert = ja_bert.to(self.device).unsqueeze(0)
+                x_tst_lengths = torch.LongTensor([phones.size(0)]).to(
+                    self.device
+                )
                 del phones
-                speakers = torch.LongTensor([speaker_id]).to(device)
+                speakers = torch.LongTensor([speaker_id]).to(self.device)
 
-                # --- PATCH: Ensure all tensors are the same length (seq_len) ---
                 seq_lens = [
                     x_tst.shape[1],
                     tones.shape[1],
@@ -163,7 +188,6 @@ class TTS(nn.Module):
                         pad = t.new_full(pad_shape, value)
                         return torch.cat([t, pad], dim=dim)
                     elif pad_size < 0:
-                        # Truncate
                         idx = [slice(None)] * len(t.shape)
                         idx[dim] = slice(0, target_len)
                         return t[tuple(idx)]
@@ -175,7 +199,6 @@ class TTS(nn.Module):
                 lang_ids = pad_tensor(lang_ids, 1, target_len)
                 bert = pad_tensor(bert, 2, target_len)
                 ja_bert = pad_tensor(ja_bert, 2, target_len)
-                # --- END PATCH ---
 
                 audio = (
                     self.model.infer(
@@ -226,14 +249,12 @@ class TTS(nn.Module):
                     output_path, audio, self.hps.data.sampling_rate
                 )
 
-    def get_text_for_tts_infer(
-        self, text, language_str, hps, symbol_to_id=None
-    ):
+    def get_text_for_tts_infer(self, text, hps, symbol_to_id=None):
         norm_text, phone, tone, word2ph = self.cleaner.clean_text(
-            text, language_str
+            text, self.language
         )
         phone, tone, language = cleaned_text_to_sequence(
-            phone, tone, language_str, symbol_to_id
+            phone, tone, self.language, symbol_to_id
         )
 
         if hps.data.add_blank:
@@ -254,24 +275,28 @@ class TTS(nn.Module):
 
             del word2ph
 
-            if language_str == "ZH":
+            lang_enum = self.language
+            if lang_enum is AvailableLanguage.ZH:
                 bert = bert
                 ja_bert = torch.zeros(768, len(phone))
-            elif language_str in [
-                "JP",
-                "EN",
-                "ZH_MIX_EN",
-                "KR",
-                "SP",
-                "ES",
-                "FR",
-                "DE",
-                "RU",
+            elif lang_enum in [
+                AvailableLanguage.JP,
+                AvailableLanguage.EN,
+                AvailableLanguage.EN_NEWEST,
+                AvailableLanguage.ZH_MIX_EN,
+                AvailableLanguage.KR,
+                AvailableLanguage.ES,
+                AvailableLanguage.FR,
+                AvailableLanguage.DE,
+                AvailableLanguage.RU,
             ]:
                 ja_bert = bert
                 bert = torch.zeros(1024, len(phone))
             else:
-                raise NotImplementedError()
+                print(
+                    f"[get_text_for_tts_infer] NotImplementedError: Unsupported language: {lang_enum}"
+                )
+                raise NotImplementedError(f"Unsupported language: {lang_enum}")
 
         assert bert.shape[-1] == len(
             phone
