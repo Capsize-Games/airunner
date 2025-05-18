@@ -10,17 +10,15 @@ import torch
 import torchaudio
 import librosa
 from airunner.vendor.melo.text import cleaned_text_to_sequence
-from airunner.vendor.melo.text import get_bert
-from airunner.vendor.melo.text.cleaner import clean_text
 from airunner.vendor.melo import commons
-
-MATPLOTLIB_FLAG = False
 
 logger = logging.getLogger(__name__)
 
 
-def get_text_for_tts_infer(text, language_str, hps, device, symbol_to_id=None):
-    norm_text, phone, tone, word2ph = clean_text(text, language_str)
+def get_text_for_tts_infer(
+    cleaner, text, language_str, hps, device, symbol_to_id=None
+):
+    norm_text, phone, tone, word2ph = cleaner.clean_text(text, language_str)
     phone, tone, language = cleaned_text_to_sequence(
         phone, tone, language_str, symbol_to_id
     )
@@ -37,7 +35,7 @@ def get_text_for_tts_infer(text, language_str, hps, device, symbol_to_id=None):
         bert = torch.zeros(1024, len(phone))
         ja_bert = torch.zeros(768, len(phone))
     else:
-        bert = get_bert(norm_text, word2ph, language_str, device)
+        bert = cleaner.language_module.get_bert_feature(norm_text, word2ph)
         del word2ph
         assert bert.shape[-1] == len(phone), phone
 
@@ -182,68 +180,6 @@ def latest_checkpoint_path(dir_path, regex="G_*.pth"):
     f_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
     x = f_list[-1]
     return x
-
-
-def plot_spectrogram_to_numpy(spectrogram):
-    global MATPLOTLIB_FLAG
-    if not MATPLOTLIB_FLAG:
-        import matplotlib
-
-        matplotlib.use("Agg")
-        MATPLOTLIB_FLAG = True
-        mpl_logger = logging.getLogger("matplotlib")
-        mpl_logger.setLevel(logging.WARNING)
-    import matplotlib.pylab as plt
-    import numpy as np
-
-    fig, ax = plt.subplots(figsize=(10, 2))
-    im = ax.imshow(
-        spectrogram, aspect="auto", origin="lower", interpolation="none"
-    )
-    plt.colorbar(im, ax=ax)
-    plt.xlabel("Frames")
-    plt.ylabel("Channels")
-    plt.tight_layout()
-
-    fig.canvas.draw()
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    plt.close()
-    return data
-
-
-def plot_alignment_to_numpy(alignment, info=None):
-    global MATPLOTLIB_FLAG
-    if not MATPLOTLIB_FLAG:
-        import matplotlib
-
-        matplotlib.use("Agg")
-        MATPLOTLIB_FLAG = True
-        mpl_logger = logging.getLogger("matplotlib")
-        mpl_logger.setLevel(logging.WARNING)
-    import matplotlib.pylab as plt
-    import numpy as np
-
-    fig, ax = plt.subplots(figsize=(6, 4))
-    im = ax.imshow(
-        alignment.transpose(),
-        aspect="auto",
-        origin="lower",
-        interpolation="none",
-    )
-    fig.colorbar(im, ax=ax)
-    xlabel = "Decoder timestep"
-    if info is not None:
-        xlabel += "\n\n" + info
-    plt.xlabel(xlabel)
-    plt.ylabel("Encoder timestep")
-    plt.tight_layout()
-
-    fig.canvas.draw()
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    plt.close()
-    return data
 
 
 def load_wav_to_torch(full_path):

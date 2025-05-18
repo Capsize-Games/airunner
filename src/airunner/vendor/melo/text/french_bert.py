@@ -3,13 +3,12 @@ from transformers import AutoTokenizer, AutoModelForMaskedLM
 import sys
 from airunner.api import API
 
-model_id = API().paths["dbmdz/bert-base-french-europeana-cased"]
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = None
 
-
-def get_bert_feature(text, word2ph, device=None):
-    global model
+def get_bert_feature(text, word2ph, device=None, model_id=None):
+    model_id = model_id or "dbmdz/bert-base-french-europeana-cased"
+    model_id = API().paths[model_id]
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = None
     if (
         sys.platform == "darwin"
         and torch.backends.mps.is_available()
