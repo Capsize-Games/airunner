@@ -488,10 +488,10 @@
                 <number>1</number>
                </property>
                <property name="slider_maximum" stdset="0">
-                <number>24</number>
+                <number>6</number>
                </property>
                <property name="spinbox_maximum" stdset="0">
-                <number>24</number>
+                <number>6</number>
                </property>
                <property name="display_as_float" stdset="0">
                 <bool>false</bool>
