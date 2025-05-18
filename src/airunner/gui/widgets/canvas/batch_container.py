@@ -1,5 +1,6 @@
 import os
 import datetime
+import re
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QPushButton
 from PySide6.QtGui import QPixmap, Qt
 from PySide6.QtWidgets import QWidget
@@ -229,7 +230,8 @@ class BatchContainer(BaseWidget):
                 for d in os.listdir(folder_path)
                 if os.path.isdir(os.path.join(folder_path, d))
                 and d.startswith("batch_")
-            ]
+            ],
+            key=lambda x: natural_sort_key(os.path.basename(x)),
         )
         batches = []
         for batch in batch_folders:
@@ -293,32 +295,8 @@ class BatchContainer(BaseWidget):
 
     def update_batch_images(self, data: Dict):
         """Update the layout with new batch images."""
-        images = data.get("images", [])
-        if not images:
-            return
-
-        # If we're currently in a batch view, we should refresh the whole view
-        if self.current_batch_folder:
-            self.populate_current_folder()
-            return
-
-        # Otherwise, add the new batch to the date view
-        container = self.ui.scrollArea.widget()
-        layout = container.layout()
-
-        # Remove any bottom spacer before adding a new item
-        if layout.count() > 0:
-            last_item = layout.itemAt(layout.count() - 1)
-            if isinstance(last_item, QSpacerItem):
-                layout.takeAt(layout.count() - 1)
-
-        self._add_image_layer_item(images[0], len(images), layout)
-
-        # Add spacer at the bottom
-        spacer = QSpacerItem(
-            20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
-        )
-        layout.addItem(spacer)
+        # Always refresh the UI to show new batches or images
+        self.populate_current_folder()
 
 
 class ImageLayerItemWidget(QWidget):
@@ -381,3 +359,11 @@ class ImageLayerItemWidget(QWidget):
         if self.is_batch and self.parent_widget and self.batch_folder:
             self.parent_widget.on_batch_clicked(self.batch_folder)
         self._drag_start_pos = None
+
+
+def natural_sort_key(s):
+    """Helper for natural sorting (e.g., batch_2 before batch_10)."""
+    return [
+        int(text) if text.isdigit() else text.lower()
+        for text in re.split(r"(\d+)", s)
+    ]
