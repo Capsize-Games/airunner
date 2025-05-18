@@ -13,6 +13,8 @@ from PySide6.QtWidgets import (
     QGraphicsView,
     QGraphicsItemGroup,
     QGraphicsScene,
+    QGraphicsTextItem,  # <-- add
+    QInputDialog,  # <-- add
 )
 
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
@@ -57,6 +59,8 @@ class CustomGraphicsView(
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
         self.grid_item = None
+        self._text_items = []  # Store references to QGraphicsTextItem
+        self._editing_text_item = None
 
         # Add settings to handle negative coordinates properly
         self.setAlignment(
@@ -151,7 +155,11 @@ class CustomGraphicsView(
 
     @property
     def current_tool(self):
-        return CanvasToolName(self.application_settings.current_tool)
+        val = getattr(self.application_settings, "current_tool", None)
+        try:
+            return CanvasToolName(val) if val is not None else None
+        except Exception:
+            return None
 
     @property
     def canvas_type(self) -> str:
@@ -506,12 +514,26 @@ class CustomGraphicsView(
         else:
             event.ignore()  # Prevent QGraphicsView from scrolling
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_mouse_pressed = True
             self.last_pos = event.pos()
             event.accept()
             return
+        # Only handle text tool logic if tool is TEXT
+        if self.current_tool is CanvasToolName.TEXT:
+            scene_pos = self.mapToScene(event.pos())
+            item = self._find_text_item_at(scene_pos)
+            if item:
+                # Select and edit existing text item
+                self._edit_text_item(item)
+                return
+            else:
+                # Add new text item
+                self._add_text_item(scene_pos)
+                return
+        # If not text tool, ensure all text items are not movable/editable
+        self._set_text_items_interaction(False)
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
@@ -573,6 +595,7 @@ class CustomGraphicsView(
         self.show_active_grid_area()
         self.scene.initialize_image()
         self.updateImagePositions()
+        self._restore_text_items_from_db()  # Restore text items on load
 
         if not self._initialized:
             self._initialized = True
@@ -591,6 +614,9 @@ class CustomGraphicsView(
 
     def on_tool_changed_signal(self, message):
         self.toggle_drag_mode()
+        # Update text item interaction flags based on tool
+        is_text = self.current_tool is CanvasToolName.TEXT
+        self._set_text_items_interaction(is_text)
 
     def toggle_drag_mode(self):
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
@@ -658,36 +684,6 @@ class CustomGraphicsView(
         # Force entire viewport update to handle negative coordinates
         self.viewport().update()
 
-    def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.MiddleButton:
-            self._middle_mouse_pressed = True
-            self.last_pos = event.pos()
-        super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.MiddleButton:
-            self.save_canvas_offset()
-            self._middle_mouse_pressed = False
-            self.last_pos = None
-
-            # After releasing middle mouse button, trigger a cursor update
-            # Pass a fake enter event to the scene to refresh the cursor
-            if self.scene:
-                # Create a simple "dummy" event just to trigger cursor update
-                class SimpleEvent:
-                    def __init__(self):
-                        pass
-
-                    def type(self):
-                        return QEvent.Type.Enter
-
-                # Tell the scene to update the cursor based on current tool
-                self.scene._handle_cursor(SimpleEvent(), True)
-
-            event.accept()
-            return
-        super().mouseReleaseEvent(event)
-
     def enterEvent(self, event: QEvent) -> None:
         """
         Handle the event when the mouse enters the CustomGraphicsView widget.
@@ -746,6 +742,8 @@ class CustomGraphicsView(
                 size = getattr(self, "brush_settings", None)
                 size = size.size if size else 32
                 cursor = self.get_cached_cursor(current_tool, size)
+            elif current_tool is CanvasToolName.TEXT:
+                cursor = Qt.CursorShape.IBeamCursor
             elif current_tool is CanvasToolName.ACTIVE_GRID_AREA:
                 if (
                     event
@@ -755,7 +753,7 @@ class CustomGraphicsView(
                     cursor = Qt.CursorShape.ClosedHandCursor
                 else:
                     cursor = Qt.CursorShape.OpenHandCursor
-            else:
+            elif current_tool is CanvasToolName.NONE:
                 cursor = Qt.CursorShape.ArrowCursor
         else:
             cursor = Qt.CursorShape.ArrowCursor
@@ -770,3 +768,155 @@ class CustomGraphicsView(
     def on_redo_button_clicked(self):
         self.api.art.canvas.redo()
         # Do not sync image to grid area; keep image at its last location
+
+    def _find_text_item_at(self, pos):
+        if not self.scene:
+            return None
+        items = self.scene.items(pos)
+        for item in items:
+            if isinstance(item, QGraphicsTextItem):
+                return item
+        return None
+
+    def _add_text_item(self, pos):
+        if not self.scene:
+            return
+        text, ok = QInputDialog.getText(self, "Add Text", "Enter text:")
+        if ok and text:
+            text_item = QGraphicsTextItem(text)
+            text_item.setTextInteractionFlags(Qt.TextEditorInteraction)
+            text_item.setFlag(QGraphicsTextItem.ItemIsMovable, True)
+            text_item.setFlag(QGraphicsTextItem.ItemIsSelectable, True)
+            text_item.setFlag(QGraphicsTextItem.ItemIsFocusable, True)
+            text_item.setPos(pos)
+            self.scene.addItem(text_item)
+            self._text_items.append(text_item)
+            text_item.focusOutEvent = self._make_text_focus_out_handler(
+                text_item
+            )
+            text_item.keyPressEvent = self._make_text_key_press_handler(
+                text_item
+            )
+            text_item.setFocus()
+            self._editing_text_item = text_item
+            text_item.setZValue(20)
+            text_item.setDefaultTextColor(QColor("white"))
+            text_item.setFont(self._get_default_text_font())
+            text_item.setFlag(QGraphicsTextItem.ItemSendsGeometryChanges, True)
+            text_item.itemChange = self._make_text_item_change_handler(
+                text_item
+            )
+            self._save_text_items_to_db()
+
+    def _edit_text_item(self, item):
+        # Only allow editing if text tool is active
+        if self.current_tool is CanvasToolName.TEXT:
+            item.setTextInteractionFlags(Qt.TextEditorInteraction)
+            item.setFlag(QGraphicsTextItem.ItemIsMovable, True)
+            item.setFlag(QGraphicsTextItem.ItemIsSelectable, True)
+            item.setFocus()
+            self._editing_text_item = item
+
+    def _make_text_focus_out_handler(self, item):
+        def handler(event):
+            item.setTextInteractionFlags(Qt.NoTextInteraction)
+            self._editing_text_item = None
+            self._save_text_items_to_db()
+            QGraphicsTextItem.focusOutEvent(item, event)
+
+        return handler
+
+    def _make_text_key_press_handler(self, item):
+        def handler(event):
+            if event.key() == Qt.Key.Key_Delete:
+                self.scene.removeItem(item)
+                if item in self._text_items:
+                    self._text_items.remove(item)
+                self._save_text_items_to_db()
+                self._editing_text_item = None
+            else:
+                QGraphicsTextItem.keyPressEvent(item, event)
+
+        return handler
+
+    def _make_text_item_change_handler(self, item):
+        def handler(change, value):
+            if change == QGraphicsTextItem.ItemPositionChange:
+                self._save_text_items_to_db()
+            return QGraphicsTextItem.itemChange(item, change, value)
+
+        return handler
+
+    def _get_default_text_font(self):
+        from PySide6.QtGui import QFont
+
+        font = QFont()
+        font.setPointSize(18)
+        font.setFamily("Arial")
+        return font
+
+    def _save_text_items_to_db(self):
+        # Save all text items to the database (via application_settings or similar)
+        text_items_data = []
+        for item in self._text_items:
+            text_items_data.append(
+                {
+                    "text": item.toPlainText(),
+                    "x": item.pos().x(),
+                    "y": item.pos().y(),
+                    "color": item.defaultTextColor().name(),
+                    "font": item.font().toString(),
+                }
+            )
+        # Store in application_settings (or replace with actual DB call)
+        self.update_drawing_pad_settings("text_items", text_items_data)
+
+    def _restore_text_items_from_db(self):
+        # Restore text items from the database (via application_settings or similar)
+        self._clear_text_items()
+        text_items_data = getattr(self.drawing_pad_settings, "text_items", [])
+        from PySide6.QtGui import QFont
+
+        for data in text_items_data:
+            text = data.get("text", "")
+            x = data.get("x", 0)
+            y = data.get("y", 0)
+            color = QColor(data.get("color", "white"))
+            font = QFont()
+            font.fromString(data.get("font", ""))
+            text_item = QGraphicsTextItem(text)
+            text_item.setPos(QPointF(x, y))
+            text_item.setDefaultTextColor(color)
+            text_item.setFont(font)
+            text_item.setFlag(QGraphicsTextItem.ItemIsMovable, True)
+            text_item.setFlag(QGraphicsTextItem.ItemIsSelectable, True)
+            text_item.setFlag(QGraphicsTextItem.ItemIsFocusable, True)
+            text_item.setFlag(QGraphicsTextItem.ItemSendsGeometryChanges, True)
+            text_item.setZValue(20)
+            text_item.focusOutEvent = self._make_text_focus_out_handler(
+                text_item
+            )
+            text_item.keyPressEvent = self._make_text_key_press_handler(
+                text_item
+            )
+            text_item.itemChange = self._make_text_item_change_handler(
+                text_item
+            )
+            self.scene.addItem(text_item)
+            self._text_items.append(text_item)
+
+    def _clear_text_items(self):
+        for item in self._text_items:
+            self.scene.removeItem(item)
+        self._text_items.clear()
+
+    def _set_text_items_interaction(self, enable: bool):
+        # Enable/disable moving/editing for all text items
+        for item in self._text_items:
+            if enable:
+                item.setFlag(QGraphicsTextItem.ItemIsMovable, True)
+                item.setFlag(QGraphicsTextItem.ItemIsSelectable, True)
+            else:
+                item.setFlag(QGraphicsTextItem.ItemIsMovable, False)
+                item.setFlag(QGraphicsTextItem.ItemIsSelectable, False)
+                item.setTextInteractionFlags(Qt.NoTextInteraction)

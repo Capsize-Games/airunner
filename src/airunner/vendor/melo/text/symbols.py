@@ -283,8 +283,3 @@ language_tone_start_map = {
     "SP": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones,
     "FR": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones,
 }
-
-if __name__ == "__main__":
-    a = set(zh_symbols)
-    b = set(en_symbols)
-    print(sorted(a & b))
