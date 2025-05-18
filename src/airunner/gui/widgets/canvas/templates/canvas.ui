@@ -311,6 +311,35 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="text_button">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Toggle text tool</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/type.svg</normaloff>:/light/icons/feather/light/type.svg</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="brush_button">
               <property name="minimumSize">
                <size>

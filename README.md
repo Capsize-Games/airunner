@@ -39,6 +39,8 @@ For extra security, performance, and compatibility, AI Runner is built with **Wa
 
 ### 🔧 Installation Steps
 
+There are several ways to install and use AI Runner. [See the Installation Wiki for the full instructions](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions). The following steps are for a developer quick start on **Ubuntu 22.04** (these instructions should also work on 24.04 and any LTS version of Ubuntu). The wiki has instructions for the compiled version (currently unavailable), Windows, and Docker.
+
 1. **Install system requirements**
    ```bash
    sudo apt update && sudo apt upgrade -y
