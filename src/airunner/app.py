@@ -55,6 +55,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         if self.initialize_gui:
             self.start()
+            self.run_setup_wizard()
             self.run()
 
     @staticmethod
@@ -117,7 +118,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
         sys.exit(self.app.exec())
 
     def _post_splash_startup(self):
-        self.run_setup_wizard()
         self.show_main_application(self.app)
 
     @staticmethod
