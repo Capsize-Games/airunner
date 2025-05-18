@@ -392,7 +392,7 @@ class Ui_stablediffusion_generator_form(object):
         self.interrupt_button.setMaximumSize(QSize(30, 30))
         self.interrupt_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1.addFile(u":/light/icons/feather/light/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.interrupt_button.setIcon(icon1)
 
         self.horizontalLayout_7.addWidget(self.interrupt_button)
