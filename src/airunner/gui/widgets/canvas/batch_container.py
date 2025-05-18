@@ -352,7 +352,7 @@ class ImageLayerItemWidget(QWidget):
             self._drag_start_pos is not None
             and (event.pos() - self._drag_start_pos).manhattanLength() > 10
         ):
-            from PySide6.QtGui import QDrag
+            from PySide6.QtGui import QDrag, QPixmap
             from PySide6.QtCore import QMimeData, QUrl
 
             drag = QDrag(self)
@@ -361,6 +361,17 @@ class ImageLayerItemWidget(QWidget):
                 mime_data.setUrls([QUrl.fromLocalFile(self.image_path)])
                 mime_data.setText(self.image_path)
             drag.setMimeData(mime_data)
+
+            # Set drag pixmap for visual feedback, centered on cursor
+            pixmap = self.ui.image.pixmap()
+            if pixmap is not None:
+                scaled_pixmap = pixmap.scaled(
+                    128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                )
+                drag.setPixmap(scaled_pixmap)
+                center = scaled_pixmap.rect().center()
+                drag.setHotSpot(center)
+
             drag.exec(Qt.CopyAction)
         super().mouseMoveEvent(event)
 
