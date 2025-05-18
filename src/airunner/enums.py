@@ -33,6 +33,8 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    SD_UPDATE_BATCH_IMAGES_SIGNAL = "sd_update_batch_images_signal"
+    SD_UPDATE_LOOSE_IMAGES_SIGNAL = "sd_update_loose_images_signal"
     CANVAS_UPDATE_IMAGE_POSITIONS = "canvas_update_image_positions"
     WIDGET_ELEMENT_CHANGED_SIGNAL = "widget_element_changed_signal"
     REFRESH_STYLESHEET_SIGNAL = "refresh_stylesheet_signal"
