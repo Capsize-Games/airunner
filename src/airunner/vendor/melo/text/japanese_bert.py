@@ -3,14 +3,12 @@ from transformers import AutoTokenizer, AutoModelForMaskedLM
 import sys
 from airunner.api import API
 
-models = {}
-tokenizers = {}
-model_id = API().paths["tohoku-nlp/bert-base-japanese-v3"]
 
-
-def get_bert_feature(text, word2ph, device=None, model_id=model_id):
-    global model
-    global tokenizer
+def get_bert_feature(text, word2ph, device=None, model_id=None):
+    model_id = model_id or "tohoku-nlp/bert-base-japanese-v3"
+    models = {}
+    tokenizers = {}
+    model_id = model_id or API().paths[model_id]
 
     if (
         sys.platform == "darwin"
