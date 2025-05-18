@@ -14,7 +14,6 @@ from airunner.vendor.melo.text.english_utils.number_norm import (
 )
 
 from airunner.vendor.melo.text.language_base import LanguageBase
-from airunner.vendor.melo.text import english_bert
 
 
 class English(LanguageBase):
@@ -281,6 +280,3 @@ class English(LanguageBase):
             tones = [0] + tones + [0]
             word2ph = [1] + word2ph + [1]
         return phones, tones, word2ph
-
-    def get_bert_feature(self, text, word2ph, device=None):
-        return english_bert.get_bert_feature(text, word2ph, device=device)
