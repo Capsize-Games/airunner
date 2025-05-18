@@ -4,8 +4,7 @@ import re
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QPushButton
 from PySide6.QtGui import QPixmap, Qt
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import QMimeData, QUrl
-from typing import Dict, List, Optional
+from typing import Dict
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.canvas.templates.batch_container_ui import (
     Ui_batch_conatiner,
