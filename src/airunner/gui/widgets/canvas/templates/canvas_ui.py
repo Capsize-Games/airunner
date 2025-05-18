@@ -244,6 +244,7 @@ class Ui_canvas(object):
         self.prompts.setMinimumSize(QSize(350, 0))
         self.prompts.setMaximumSize(QSize(350, 16777215))
         self.prompts.setBaseSize(QSize(350, 0))
+        self.prompts.setStyleSheet(u"")
         self.canvas_splitter.addWidget(self.prompts)
         self.canvas_container = CustomGraphicsView(self.canvas_splitter)
         self.canvas_container.setObjectName(u"canvas_container")

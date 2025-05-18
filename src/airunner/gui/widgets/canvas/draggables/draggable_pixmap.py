@@ -37,7 +37,11 @@ class DraggablePixmap(
 
     @property
     def current_tool(self):
-        return CanvasToolName(self.application_settings.current_tool)
+        val = self.application_settings.current_tool
+        try:
+            return CanvasToolName(val) if val is not None else None
+        except ValueError:
+            return None
 
     def boundingRect(self) -> QRectF:
         if self._qimage is not None:
