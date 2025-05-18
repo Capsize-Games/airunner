@@ -1,10 +1,17 @@
+from airunner.enums import AvailableLanguage
 from airunner.vendor.melo.text.symbols import *
 
 
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
+from airunner.vendor.melo.text import language_tone_start_map
 
 
-def cleaned_text_to_sequence(cleaned_text, tones, language, symbol_to_id=None):
+def cleaned_text_to_sequence(
+    cleaned_text,
+    tones,
+    language: AvailableLanguage = AvailableLanguage.EN,
+    symbol_to_id=None,
+):
     """Converts a string of text to a sequence of IDs corresponding to the symbols in the text.
     Args:
       text: string to convert to a sequence

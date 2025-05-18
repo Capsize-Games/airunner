@@ -62,6 +62,12 @@ class StreamingToneColorConverter(ToneColorConverter):
             print(f"Error: {e}")
             return None
 
+        if audio is None or len(audio) == 0:
+            self.logger.error(
+                f"Loaded audio is empty for path: {audio_src_path}. Skipping conversion."
+            )
+            return None
+
         audio = torch.tensor(audio).float()
 
         with torch.no_grad():
@@ -121,7 +127,9 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.model: Optional[TTS] = None
         self.src_path: str = f"{self._output_dir}/tmp.wav"
         self._speed: float = 1.0
-        self._language: AvailableLanguage = AvailableLanguage.EN_NEWEST
+        self._language: AvailableLanguage = AvailableLanguage(
+            self.openvoice_settings.language
+        )
         self._reference_speaker = speaker_recording_path
 
     @property
@@ -193,7 +201,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self._initialize()
-        self.model = TTS(language=self._language.value, device=self.device)
+        self.model = TTS(language=self._language)
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
     def unload(self):
