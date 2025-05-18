@@ -110,7 +110,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
     _prompt_containers: Dict[str, QWidget] = {}
     icons = [
         ("chevron-up", "generate_button"),
-        ("x-circle", "interrupt_button"),
+        ("x", "interrupt_button"),
+        ("circle", "infinite_images_button"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -146,6 +147,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             == QualityEffects.CUSTOM.value
         )
         self.ui.quality_effects.blockSignals(True)
+        self.ui.infinite_images_button.blockSignals(True)
         self.ui.quality_effects.clear()
         self.ui.quality_effects.addItems(
             [effect.value for effect in QualityEffects]
@@ -153,7 +155,11 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.quality_effects.setCurrentText(
             self.generator_settings.quality_effects
         )
+        self.ui.infinite_images_button.setChecked(
+            self.generator_settings.generate_infinite_images
+        )
         self.ui.quality_effects.blockSignals(False)
+        self.ui.infinite_images_button.blockSignals(False)
 
     @property
     def is_sd_xl_or_turbo(self) -> bool:
@@ -549,6 +555,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             strength=self.generator_settings.strength / 100,
             n_samples=self.generator_settings.n_samples,
             images_per_batch=self.generator_settings.images_per_batch,
+            generate_infinite_images=self.generator_settings.generate_infinite_images,
             clip_skip=self.generator_settings.clip_skip,
             width=self.application_settings.working_width,
             height=self.application_settings.working_height,
@@ -593,6 +600,10 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def handle_generate_button_clicked(self, data=None):
         self.start_progress_bar()
         self.generate(data)
+
+    @Slot(bool)
+    def on_infinite_images_button_toggled(self, val: bool):
+        self.update_generator_settings("generate_infinite_images", val)
 
     @Slot(str)
     def on_original_size_width_textChanged(self, val: str):
