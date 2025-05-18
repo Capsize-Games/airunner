@@ -472,8 +472,12 @@ class AvailableLanguage(enum.Enum):
     ES = "ES"
     FR = "FR"
     ZH = "ZH"
+    ZH_MIX_EN = "ZH_MIX_EN"
     JP = "JP"
     KR = "KR"
+    DE = "DE"
+    RU = "RU"
+    SP = "SP"
 
 
 class ModelService(enum.Enum):
