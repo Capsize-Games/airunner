@@ -198,8 +198,6 @@ kakasi.setMode("J", "K")  # Chinese to Katakana
 kakasi.setMode("H", "K")  # Hiragana to Katakana
 # Convert Chinese characters to Katakana
 conv = kakasi.getConverter()
-model_id = API().paths["tohoku-nlp/bert-base-japanese-v3"]
-tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 
 def text_normalize(text):
@@ -221,7 +219,8 @@ def distribute_phone(n_phone, n_word):
 
 
 def g2p(norm_text):
-
+    model_id = API().paths["tohoku-nlp/bert-base-japanese-v3"]
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
     tokenized = tokenizer.tokenize(norm_text)
     phs = []
     ph_groups = []

@@ -31,7 +31,7 @@ class ChatPromptWidget(BaseWidget):
     icons = [
         ("chevron-up", "send_button"),
         ("plus", "clear_conversation_button"),
-        ("stop-circle", "pushButton"),
+        ("x", "pushButton"),
     ]
 
     def __init__(self, *args, **kwargs):

@@ -49,6 +49,10 @@ class ImageRequestNode(BaseArtNode):
         dict(name="strength", display_name="Strength"),
         dict(name="n_samples", display_name="Number of Samples"),
         dict(name="images_per_batch", display_name="Images Per Batch"),
+        dict(
+            name="generate_infinite_images",
+            display_name="Generate Infinite Images",
+        ),
         dict(name="clip_skip", display_name="Clip Skip"),
         dict(name="lora_scale", display_name="Lora Scale"),
         dict(name="image_width", display_name="Image Width"),
@@ -310,6 +314,9 @@ class ImageRequestNode(BaseArtNode):
         strength = self._get_value(input_data, "strength", float)
         n_samples = self._get_value(input_data, "n_samples", int)
         images_per_batch = self._get_value(input_data, "images_per_batch", int)
+        generate_infinite_images = self._get_value(
+            input_data, "generate_infinite_images", bool
+        )
         clip_skip = self._get_value(input_data, "clip_skip", int)
         lora_scale = self._get_value(input_data, "lora_scale", float)
         image_width = self._get_value(input_data, "image_width", int)
@@ -343,6 +350,7 @@ class ImageRequestNode(BaseArtNode):
             strength=strength,
             n_samples=n_samples,
             images_per_batch=images_per_batch,
+            generate_infinite_images=generate_infinite_images,
             clip_skip=clip_skip,
             lora_scale=lora_scale,
             width=image_width,
