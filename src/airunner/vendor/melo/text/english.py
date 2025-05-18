@@ -22,15 +22,7 @@ class English(LanguageBase):
     model_path_bert = "google-bert/bert-base-uncased"
 
     def __init__(self):
-        self.current_file_path = os.path.dirname(__file__)
-        self.CMU_DICT_PATH = os.path.join(
-            self.current_file_path, "cmudict.rep"
-        )
-        self.CACHE_PATH = os.path.join(
-            self.current_file_path, "cmudict_cache.pickle"
-        )
-        self.eng_dict = self.get_dict()
-
+        super().__init__()
         self.arpa = {
             "AH0",
             "S",
@@ -104,7 +96,10 @@ class English(LanguageBase):
             "L",
             "SH",
         }
-        super().__init__()
+        # G2p instance for fallback
+        from g2p_en import G2p
+
+        self._g2p = G2p()
 
     def distribute_phone(self, n_phone, n_word):
         phones_per_word = [0] * n_word
@@ -216,7 +211,7 @@ class English(LanguageBase):
                     tones = [0] + tones + [0]
                     word2ph = [1] + word2ph + [1]
                 return phones, tones, word2ph
-            # If not in dict, treat as a sequence of characters (phones)
+            # If not in dict, use g2p fallback
             if len(w) == 1:
                 phones = [self.post_replace_ph(w)]
                 tones = [0]
@@ -226,9 +221,26 @@ class English(LanguageBase):
                     tones = [0] + tones + [0]
                     word2ph = [1] + word2ph + [1]
                 return phones, tones, word2ph
+            # Fallback to g2p for OOV
+            phone_list = list(filter(lambda p: p != " ", self._g2p(w)))
+            phones = []
+            tones = []
+            for ph in phone_list:
+                if ph in self.arpa:
+                    ph, tn = self.refine_ph(ph)
+                    phones.append(ph)
+                    tones.append(tn)
+                else:
+                    phones.append(ph)
+                    tones.append(0)
+            word2ph = [1 for _ in phones]
+            if pad_start_end:
+                phones = ["_"] + phones + ["_"]
+                tones = [0] + tones + [0]
+                word2ph = [1] + word2ph + [1]
+            return phones, tones, word2ph
         if tokenized is None:
             tokenized = self.tokenizer.tokenize(text)
-        # import pdb; pdb.set_trace()
         phs = []
         ph_groups = []
         for t in tokenized:
@@ -250,15 +262,8 @@ class English(LanguageBase):
                 tones += tns
                 phone_len += len(phns)
             else:
-                phone_list = list(filter(lambda p: p != " ", self.call(w)))
-                # Flatten phone_list if it contains lists
-                flat_phone_list = []
+                phone_list = list(filter(lambda p: p != " ", self._g2p(w)))
                 for ph in phone_list:
-                    if isinstance(ph, list):
-                        flat_phone_list.extend(ph)
-                    else:
-                        flat_phone_list.append(ph)
-                for ph in flat_phone_list:
                     if ph in self.arpa:
                         ph, tn = self.refine_ph(ph)
                         phones.append(ph)

@@ -26,7 +26,6 @@ class ChineseMix(LanguageBase):
         self.chinese = Chinese()
 
         self.punctuation = ["!", "?", "…", ",", ".", "'", "-"]
-        self.current_file_path = os.path.dirname(__file__)
         self.pinyin_to_symbol_map = {
             line.split("\t")[0]: line.strip().split("\t")[1]
             for line in open(
