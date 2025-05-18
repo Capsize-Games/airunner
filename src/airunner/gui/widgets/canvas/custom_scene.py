@@ -437,19 +437,27 @@ class CustomScene(
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event: QDragMoveEvent):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
 
     def dropEvent(self, event: QDropEvent):
         for url in event.mimeData().urls():
             path = url.toLocalFile()
-            if (
-                path.split(".")[-1].lower().encode()
-                in QImageReader.supportedImageFormats()
-            ):
-                self._load_image(path)
+            if path:
+                # Use the API to import the image from the dropped path
+                if (
+                    hasattr(self, "api")
+                    and hasattr(self.api, "art")
+                    and hasattr(self.api.art, "canvas")
+                ):
+                    self.api.art.canvas.image_from_path(path)
+        event.acceptProposedAction()
 
     def wheelEvent(self, event):
         if not hasattr(event, "delta"):

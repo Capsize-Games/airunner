@@ -3,6 +3,7 @@ import datetime
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QPushButton
 from PySide6.QtGui import QPixmap, Qt
 from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import QMimeData, QUrl
 from typing import Dict, List, Optional
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.canvas.templates.batch_container_ui import (
@@ -333,10 +334,39 @@ class ImageLayerItemWidget(QWidget):
 
         # Set the cursor for better UX
         self.setCursor(Qt.PointingHandCursor)
+        self.setAcceptDrops(
+            False
+        )  # This widget is a drag source, not a target
+        self._drag_start_pos = None
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        if event.button() == Qt.LeftButton:
+            self._drag_start_pos = event.pos()
+
+    def mouseMoveEvent(self, event):
+        if self.is_batch:
+            # Don't allow drag for batch folders
+            return
+        if (
+            self._drag_start_pos is not None
+            and (event.pos() - self._drag_start_pos).manhattanLength() > 10
+        ):
+            from PySide6.QtGui import QDrag
+            from PySide6.QtCore import QMimeData, QUrl
+
+            drag = QDrag(self)
+            mime_data = QMimeData()
+            if self.image_path:
+                mime_data.setUrls([QUrl.fromLocalFile(self.image_path)])
+                mime_data.setText(self.image_path)
+            drag.setMimeData(mime_data)
+            drag.exec(Qt.CopyAction)
+        super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        """Handle mouse click events on the image item."""
         super().mouseReleaseEvent(event)
         # If this is a batch item and we have a parent widget reference, navigate into the batch
         if self.is_batch and self.parent_widget and self.batch_folder:
             self.parent_widget.on_batch_clicked(self.batch_folder)
+        self._drag_start_pos = None
