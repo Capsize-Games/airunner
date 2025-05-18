@@ -18,38 +18,3 @@ def cleaned_text_to_sequence(cleaned_text, tones, language, symbol_to_id=None):
     lang_id = language_id_map[language]
     lang_ids = [lang_id for i in phones]
     return phones, tones, lang_ids
-
-
-def get_bert(norm_text, word2ph, language, device):
-    from airunner.vendor.melo.text.chinese_bert import (
-        get_bert_feature as zh_bert,
-    )
-    from airunner.vendor.melo.text.english_bert import (
-        get_bert_feature as en_bert,
-    )
-    from airunner.vendor.melo.text.japanese_bert import (
-        get_bert_feature as jp_bert,
-    )
-    from airunner.vendor.melo.text.chinese_mix import (
-        get_bert_feature as zh_mix_en_bert,
-    )
-    from airunner.vendor.melo.text.spanish_bert import (
-        get_bert_feature as sp_bert,
-    )
-    from airunner.vendor.melo.text.french_bert import (
-        get_bert_feature as fr_bert,
-    )
-    from airunner.vendor.melo.text.korean import get_bert_feature as kr_bert
-
-    lang_bert_func_map = {
-        "ZH": zh_bert,
-        "EN": en_bert,
-        "JP": jp_bert,
-        "ZH_MIX_EN": zh_mix_en_bert,
-        "FR": fr_bert,
-        "SP": sp_bert,
-        "ES": sp_bert,
-        "KR": kr_bert,
-    }
-    bert = lang_bert_func_map[language](norm_text, word2ph, device)
-    return bert
