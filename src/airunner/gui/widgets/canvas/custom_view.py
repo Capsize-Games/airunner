@@ -499,8 +499,12 @@ class CustomGraphicsView(
         self.draw_grid()
 
     def wheelEvent(self, event):
-        super().wheelEvent(event)
-        self.draw_grid()  # Only redraw grid on zoom
+        # Only allow zooming with Ctrl, otherwise ignore scrolling
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            super().wheelEvent(event)
+            self.draw_grid()  # Only redraw grid on zoom
+        else:
+            event.ignore()  # Prevent QGraphicsView from scrolling
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.MiddleButton:
