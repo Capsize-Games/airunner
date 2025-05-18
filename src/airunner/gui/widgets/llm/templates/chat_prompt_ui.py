@@ -69,7 +69,7 @@ class Ui_chat_prompt(object):
         self.send_button.setMinimumSize(QSize(30, 30))
         self.send_button.setMaximumSize(QSize(30, 30))
         icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/corner-down-left.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.send_button.setIcon(icon)
 
         self.horizontalLayout.addWidget(self.send_button)
@@ -81,7 +81,7 @@ class Ui_chat_prompt(object):
         self.clear_conversation_button.setMinimumSize(QSize(30, 30))
         self.clear_conversation_button.setMaximumSize(QSize(30, 30))
         icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1.addFile(u":/light/icons/feather/light/plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.clear_conversation_button.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.clear_conversation_button)
@@ -187,7 +187,7 @@ class Ui_chat_prompt(object):
 #endif // QT_CONFIG(tooltip)
         self.send_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.clear_conversation_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Clear conversation", None))
+        self.clear_conversation_button.setToolTip(QCoreApplication.translate("chat_prompt", u"New converation", None))
 #endif // QT_CONFIG(tooltip)
         self.clear_conversation_button.setText("")
 #if QT_CONFIG(tooltip)
