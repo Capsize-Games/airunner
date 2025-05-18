@@ -6,6 +6,7 @@ from airunner.enums import (
     GeneratorSection,
     CanvasToolName,
     Mode,
+    AvailableLanguage,
 )
 
 
@@ -64,3 +65,5 @@ class ApplicationSettings(BaseModel):
     nodegraph_zoom = Column(Integer, default=0)
     nodegraph_center_x = Column(Integer, default=0)
     nodegraph_center_y = Column(Integer, default=0)
+    detected_language = Column(String, default=AvailableLanguage.EN.value)
+    use_detected_language = Column(Boolean, default=True)
