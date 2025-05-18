@@ -109,15 +109,16 @@ class App(MediatorMixin, SettingsMixin, QObject):
         Override this method to run the application in a different mode.
         """
         if not self.initialize_gui:
-            return  # Skip running the GUI if the flag is False
+            return
 
-        # Ensure only one splash screen is created
         if not self.no_splash and not self.splash:
             self.splash = self.display_splash_screen(self.app)
 
-        # Show the main application window
-        QTimer.singleShot(50, partial(self.show_main_application, self.app))
+        QTimer.singleShot(50, self._post_splash_startup)
         sys.exit(self.app.exec())
+
+    def _post_splash_startup(self):
+        self.show_main_application(self.app)
 
     @staticmethod
     def signal_handler(_signal, _frame):

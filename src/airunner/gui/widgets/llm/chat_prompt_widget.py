@@ -29,8 +29,8 @@ from airunner.settings import AIRUNNER_ART_ENABLED
 class ChatPromptWidget(BaseWidget):
     widget_class_ = Ui_chat_prompt
     icons = [
-        ("corner-down-left", "send_button"),
-        ("file-plus", "clear_conversation_button"),
+        ("chevron-up", "send_button"),
+        ("plus", "clear_conversation_button"),
         ("stop-circle", "pushButton"),
     ]
 
