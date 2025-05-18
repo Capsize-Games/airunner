@@ -177,23 +177,3 @@ class NodeNavigationWidget(QtWidgets.QListView):
         else:
             rows = [r for r in rows if index < r]
         [self.model().removeRow(r) for r in rows]
-
-
-if __name__ == "__main__":
-    import sys
-
-    def on_nav_changed(selected_id, remove_ids):
-        print(selected_id, remove_ids)
-
-    app = QtWidgets.QApplication(sys.argv)
-
-    widget = NodeNavigationWidget()
-    widget.navigation_changed.connect(on_nav_changed)
-
-    widget.add_label_item("Close Graph", "root")
-    for i in range(1, 5):
-        widget.add_label_item("group node {}".format(i), "node_id{}".format(i))
-    widget.resize(600, 30)
-    widget.show()
-
-    app.exec_()

@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import re
 import soundfile
+from airunner.enums import AvailableLanguage
 from airunner.vendor.openvoice import utils
 from airunner.vendor.openvoice import commons
 import os
@@ -42,11 +43,6 @@ class OpenVoiceBaseClass(object):
 
 
 class BaseSpeakerTTS(OpenVoiceBaseClass):
-    language_marks = {
-        "english": "EN",
-        "chinese": "ZH",
-    }
-
     @staticmethod
     def get_text(text, hps, is_symbol):
         text_norm = text_to_sequence(
@@ -67,23 +63,23 @@ class BaseSpeakerTTS(OpenVoiceBaseClass):
         return audio_segments
 
     @staticmethod
-    def split_sentences_into_pieces(text, language_str):
-        texts = utils.split_sentence(text, language_str=language_str)
-        print(" > Text splitted to sentences.")
-        print("\n".join(texts))
-        print(" > ===========================")
-        return texts
+    def split_sentences_into_pieces(text, language: AvailableLanguage):
+        return utils.split_sentence(text, language=language)
 
-    def tts(self, text, output_path, speaker, language="English", speed=1.0):
-        mark = self.language_marks.get(language.lower(), None)
-        assert mark is not None, f"language {language} is not supported"
-
-        texts = self.split_sentences_into_pieces(text, mark)
+    def tts(
+        self,
+        text,
+        output_path,
+        speaker,
+        language: AvailableLanguage = AvailableLanguage.EN,
+        speed=1.0,
+    ):
+        texts = self.split_sentences_into_pieces(text, language)
 
         audio_list = []
         for t in texts:
             t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
-            t = f"[{mark}]{t}[{mark}]"
+            t = f"[{language.value()}]{t}[{language.value()}]"
             stn_tst = self.get_text(t, self.hps, False)
             device = self.device
             speaker_id = self.hps.speakers[speaker]

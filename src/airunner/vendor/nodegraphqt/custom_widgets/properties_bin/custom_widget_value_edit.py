@@ -288,19 +288,3 @@ class FloatValueEdit(_NumberValueEdit):
 
     def __init__(self, parent=None):
         super(FloatValueEdit, self).__init__(parent, data_type=float)
-
-
-if __name__ == "__main__":
-    app = QtWidgets.QApplication([])
-
-    int_edit = IntValueEdit()
-    int_edit.set_steps([1, 10])
-    float_edit = FloatValueEdit()
-
-    widget = QtWidgets.QWidget()
-    layout = QtWidgets.QVBoxLayout(widget)
-    layout.addWidget(int_edit)
-    layout.addWidget(float_edit)
-    widget.show()
-
-    app.exec_()

@@ -655,20 +655,3 @@ class NodeGraphModel(object):
         data = self.reject_connection_types.get(node_type) or {}
         rejected_types = data.get(port_type) or {}
         return rejected_types.get(port_name) or {}
-
-
-if __name__ == "__main__":
-    p = PortModel(None)
-    # print(p.to_dict)
-
-    n = NodeModel()
-    n.inputs[p.name] = p
-    n.add_property("foo", "bar")
-
-    print("-" * 100)
-    print("property keys\n")
-    print(list(n.properties.keys()))
-    print("-" * 100)
-    print("to_dict\n")
-    for k, v in n.to_dict[n.id].items():
-        print(k, v)

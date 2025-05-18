@@ -1,9 +1,7 @@
 import os
-import glob
 import argparse
 import logging
 import json
-import subprocess
 import numpy as np
 from scipy.io.wavfile import read
 import torch
@@ -11,97 +9,6 @@ import torchaudio
 import librosa
 
 logger = logging.getLogger(__name__)
-
-
-
-
-
-def load_checkpoint(
-    checkpoint_path, model, optimizer=None, skip_optimizer=False
-):
-    assert os.path.isfile(checkpoint_path)
-    checkpoint_dict = torch.load(checkpoint_path, map_location="cpu")
-    iteration = checkpoint_dict.get("iteration", 0)
-    learning_rate = checkpoint_dict.get("learning_rate", 0.0)
-    if (
-        optimizer is not None
-        and not skip_optimizer
-        and checkpoint_dict["optimizer"] is not None
-    ):
-        optimizer.load_state_dict(checkpoint_dict["optimizer"])
-    elif optimizer is None and not skip_optimizer:
-        # else:      Disable this line if Infer and resume checkpoint,then enable the line upper
-        new_opt_dict = optimizer.state_dict()
-        new_opt_dict_params = new_opt_dict["param_groups"][0]["params"]
-        new_opt_dict["param_groups"] = checkpoint_dict["optimizer"][
-            "param_groups"
-        ]
-        new_opt_dict["param_groups"][0]["params"] = new_opt_dict_params
-        optimizer.load_state_dict(new_opt_dict)
-
-    saved_state_dict = checkpoint_dict["model"]
-    if hasattr(model, "module"):
-        state_dict = model.module.state_dict()
-    else:
-        state_dict = model.state_dict()
-
-    new_state_dict = {}
-    for k, v in state_dict.items():
-        try:
-            # assert "emb_g" not in k
-            new_state_dict[k] = saved_state_dict[k]
-            assert saved_state_dict[k].shape == v.shape, (
-                saved_state_dict[k].shape,
-                v.shape,
-            )
-        except Exception as e:
-            print(e)
-            # For upgrading from the old version
-            if "ja_bert_proj" in k:
-                v = torch.zeros_like(v)
-                logger.warn(
-                    f"Seems you are using the old version of the model, the {k} is automatically set to zero for backward compatibility"
-                )
-            else:
-                logger.error(f"{k} is not in the checkpoint")
-
-            new_state_dict[k] = v
-
-    if hasattr(model, "module"):
-        model.module.load_state_dict(new_state_dict, strict=False)
-    else:
-        model.load_state_dict(new_state_dict, strict=False)
-
-    logger.info(
-        "Loaded checkpoint '{}' (iteration {})".format(
-            checkpoint_path, iteration
-        )
-    )
-
-    return model, optimizer, learning_rate, iteration
-
-
-def save_checkpoint(
-    model, optimizer, learning_rate, iteration, checkpoint_path
-):
-    logger.info(
-        "Saving model and optimizer state at iteration {} to {}".format(
-            iteration, checkpoint_path
-        )
-    )
-    if hasattr(model, "module"):
-        state_dict = model.module.state_dict()
-    else:
-        state_dict = model.state_dict()
-    torch.save(
-        {
-            "model": state_dict,
-            "iteration": iteration,
-            "optimizer": optimizer.state_dict(),
-            "learning_rate": learning_rate,
-        },
-        checkpoint_path,
-    )
 
 
 def summarize(
@@ -123,28 +30,9 @@ def summarize(
         writer.add_audio(k, v, global_step, audio_sampling_rate)
 
 
-def latest_checkpoint_path(dir_path, regex="G_*.pth"):
-    f_list = glob.glob(os.path.join(dir_path, regex))
-    f_list.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
-    x = f_list[-1]
-    return x
-
-
 def load_wav_to_torch(full_path):
     sampling_rate, data = read(full_path)
     return torch.FloatTensor(data.astype(np.float32)), sampling_rate
-
-
-def load_wav_to_torch_new(full_path):
-    audio_norm, sampling_rate = torchaudio.load(
-        full_path,
-        frame_offset=0,
-        num_frames=-1,
-        normalize=True,
-        channels_first=True,
-    )
-    audio_norm = audio_norm.mean(dim=0)
-    return audio_norm, sampling_rate
 
 
 def load_wav_to_torch_librosa(full_path, sr):
@@ -211,71 +99,6 @@ def get_hparams(init=True):
     hparams.port = args.port
     return hparams
 
-
-def clean_checkpoints(
-    path_to_models="logs/44k/", n_ckpts_to_keep=2, sort_by_time=True
-):
-    """Freeing up space by deleting saved ckpts
-
-    Arguments:
-    path_to_models    --  Path to the model directory
-    n_ckpts_to_keep   --  Number of ckpts to keep, excluding G_0.pth and D_0.pth
-    sort_by_time      --  True -> chronologically delete ckpts
-                          False -> lexicographically delete ckpts
-    """
-    import re
-
-    ckpts_files = [
-        f
-        for f in os.listdir(path_to_models)
-        if os.path.isfile(os.path.join(path_to_models, f))
-    ]
-
-    def name_key(_f):
-        return int(re.compile("._(\\d+)\\.pth").match(_f).group(1))
-
-    def time_key(_f):
-        return os.path.getmtime(os.path.join(path_to_models, _f))
-
-    sort_key = time_key if sort_by_time else name_key
-
-    def x_sorted(_x):
-        return sorted(
-            [
-                f
-                for f in ckpts_files
-                if f.startswith(_x) and not f.endswith("_0.pth")
-            ],
-            key=sort_key,
-        )
-
-    to_del = [
-        os.path.join(path_to_models, fn)
-        for fn in (
-            x_sorted("G")[:-n_ckpts_to_keep] + x_sorted("D")[:-n_ckpts_to_keep]
-        )
-    ]
-
-    def del_info(fn):
-        return logger.info(f".. Free up space by deleting ckpt {fn}")
-
-    def del_routine(x):
-        return [os.remove(x), del_info(x)]
-
-    [del_routine(fn) for fn in to_del]
-
-
-def get_hparams_from_dir(model_dir):
-    config_save_path = os.path.join(model_dir, "config.json")
-    with open(config_save_path, "r", encoding="utf-8") as f:
-        data = f.read()
-    config = json.loads(data)
-
-    hparams = HParams(**config)
-    hparams.model_dir = model_dir
-    return hparams
-
-
 def get_hparams_from_file(config_path):
     with open(config_path, "r", encoding="utf-8") as f:
         data = f.read()
@@ -283,31 +106,6 @@ def get_hparams_from_file(config_path):
 
     hparams = HParams(**config)
     return hparams
-
-
-def check_git_hash(model_dir):
-    source_dir = os.path.dirname(os.path.realpath(__file__))
-    if not os.path.exists(os.path.join(source_dir, ".git")):
-        logger.warn(
-            "{} is not a git repository, therefore hash value comparison will be ignored.".format(
-                source_dir
-            )
-        )
-        return
-
-    cur_hash = subprocess.getoutput("git rev-parse HEAD")
-
-    path = os.path.join(model_dir, "githash")
-    if os.path.exists(path):
-        saved_hash = open(path).read()
-        if saved_hash != cur_hash:
-            logger.warn(
-                "git hash values are different. {}(saved) != {}(current)".format(
-                    saved_hash[:8], cur_hash[:8]
-                )
-            )
-    else:
-        open(path, "w").write(cur_hash)
 
 
 def get_logger(model_dir, filename="train.log"):
