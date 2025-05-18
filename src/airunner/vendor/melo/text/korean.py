@@ -14,6 +14,7 @@ from airunner.vendor.melo.text.language_base import LanguageBase
 
 class Korean(LanguageBase):
     model_path = "kykim/bert-kor-base"
+    model_path_bert = "tohoku-nlp/bert-base-japanese-v3"
 
     def normalize(self, text):
         self.g2p_kr = None
@@ -125,10 +126,3 @@ class Korean(LanguageBase):
         word2ph = [1] + word2ph + [1]
         assert len(word2ph) == len(tokenized) + 2
         return phones, tones, word2ph
-
-    def get_bert_feature(self, text, word2ph, device="cuda"):
-        from airunner.vendor.melo.text import japanese_bert
-
-        return japanese_bert.get_bert_feature(
-            text, word2ph, device=device, model_id=self.model_id
-        )
