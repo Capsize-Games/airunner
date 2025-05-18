@@ -77,7 +77,7 @@ class Chinese(LanguageBase):
     def call(self, text):
         pattern = r"(?<=[{0}])\s*".format("".join(punctuation))
         sentences = [i for i in re.split(pattern, text) if i.strip() != ""]
-        phones, tones, word2ph = self.g2p(sentences)
+        phones, tones, word2ph = self._g2p(sentences)
         assert sum(word2ph) == len(phones)
         assert len(word2ph) == len(
             text

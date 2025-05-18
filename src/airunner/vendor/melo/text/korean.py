@@ -14,10 +14,13 @@ from airunner.vendor.melo.text.language_base import LanguageBase
 
 class Korean(LanguageBase):
     model_path = "kykim/bert-kor-base"
-    model_path_bert = "tohoku-nlp/bert-base-japanese-v3"
+    model_path_bert = "kykim/bert-kor-base"
+
+    def __init__(self):
+        super().__init__()
+        self.g2p_kr = None
 
     def normalize(self, text):
-        self.g2p_kr = None
         text = text.strip()
         text = re.sub(
             "[⺀-⺙⺛-⻳⼀-⿕々〇〡-〩〸-〺〻㐀-䶵一-鿃豈-鶴侮-頻並-龎]",

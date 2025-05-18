@@ -32,6 +32,8 @@ class Cleaner:
 
     @language.setter
     def language(self, value: AvailableLanguage):
+        if value is not self._language:
+            self.unload()
         self._language = value
 
     @property
@@ -72,3 +74,8 @@ class Cleaner:
     def text_to_sequence(self, text, language):
         _norm_text, phones, tones, _word2ph = self.clean_text(text, language)
         return cleaned_text_to_sequence(phones, tones, language)
+
+    def unload(self):
+        if self._language_module:
+            del self._language_module
+            self._language_module = None
