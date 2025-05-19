@@ -1137,9 +1137,9 @@ class MainWindow(
 
     def on_enable_workflows_toggled(self, message: Dict):
         self._toggle_agent_workflow_feature(message.get("enabled", False))
-    
+
     def on_retranslate_ui_signal(self):
-        self.ui.retranslate_ui()
+        self.ui.retranslateUi(self)
 
     tab_backup = {}
     workflow_tab = None

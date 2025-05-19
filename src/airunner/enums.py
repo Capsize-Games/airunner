@@ -470,6 +470,7 @@ class AvailableLanguage(enum.Enum):
     Enum for available languages in OpenVoice.
     """
 
+    AUTO = "Automatic"
     EN_NEWEST = "EN_NEWEST"
     EN = "EN"
     ES = "ES"
@@ -484,6 +485,7 @@ class AvailableLanguage(enum.Enum):
 
 
 LANGUAGE_DISPLAY_MAP = {
+    AvailableLanguage.AUTO: "Automatic",
     AvailableLanguage.EN_NEWEST: "English (Newest)",
     AvailableLanguage.EN: "English",
     AvailableLanguage.ES: "Spanish",
