@@ -1,4 +1,5 @@
 from PySide6.QtCore import Slot
+from PySide6.QtCore import QSignalBlocker
 
 from airunner.data.models.language_settings import LanguageSettings
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -27,38 +28,42 @@ class LanguageSettingsWidget(BaseWidget, AIModelMixin):
         self._signals_connected = False
         self._connect_signals()
 
-        self.ui.gui_language.blockSignals(True)
-        self.ui.user_language.blockSignals(True)
-        self.ui.bot_language.blockSignals(True)
-        self.ui.gui_language.clear()
-        self.ui.user_language.clear()
-        self.ui.bot_language.clear()
-        self.ui.gui_language.addItems(
-            LANGUAGE_DISPLAY_MAP[lang]
-            for lang in AVAILABLE_LANGUAGES["gui_language"]
-        )
-        self.ui.user_language.addItems(
-            LANGUAGE_DISPLAY_MAP[lang]
-            for lang in AVAILABLE_LANGUAGES["user_language"]
-        )
-        self.ui.bot_language.addItems(
-            LANGUAGE_DISPLAY_MAP[lang]
-            for lang in AVAILABLE_LANGUAGES["bot_language"]
-        )
-        settings = LanguageSettings.objects.first()
-        if settings:
-            self.ui.gui_language.setCurrentText(
-                LANGUAGE_DISPLAY_MAP[AvailableLanguage(settings.gui_language)]
+        # Use QSignalBlocker to safely block signals during setup
+        with QSignalBlocker(self.ui.gui_language), QSignalBlocker(
+            self.ui.user_language
+        ), QSignalBlocker(self.ui.bot_language):
+            self.ui.gui_language.clear()
+            self.ui.user_language.clear()
+            self.ui.bot_language.clear()
+            self.ui.gui_language.addItems(
+                LANGUAGE_DISPLAY_MAP[lang]
+                for lang in AVAILABLE_LANGUAGES["gui_language"]
             )
-            self.ui.user_language.setCurrentText(
-                LANGUAGE_DISPLAY_MAP[AvailableLanguage(settings.user_language)]
+            self.ui.user_language.addItems(
+                LANGUAGE_DISPLAY_MAP[lang]
+                for lang in AVAILABLE_LANGUAGES["user_language"]
             )
-            self.ui.bot_language.setCurrentText(
-                LANGUAGE_DISPLAY_MAP[AvailableLanguage(settings.bot_language)]
+            self.ui.bot_language.addItems(
+                LANGUAGE_DISPLAY_MAP[lang]
+                for lang in AVAILABLE_LANGUAGES["bot_language"]
             )
-        self.ui.gui_language.blockSignals(False)
-        self.ui.user_language.blockSignals(False)
-        self.ui.bot_language.blockSignals(False)
+            settings = LanguageSettings.objects.first()
+            if settings:
+                self.ui.gui_language.setCurrentText(
+                    LANGUAGE_DISPLAY_MAP[
+                        AvailableLanguage(settings.gui_language)
+                    ]
+                )
+                self.ui.user_language.setCurrentText(
+                    LANGUAGE_DISPLAY_MAP[
+                        AvailableLanguage(settings.user_language)
+                    ]
+                )
+                self.ui.bot_language.setCurrentText(
+                    LANGUAGE_DISPLAY_MAP[
+                        AvailableLanguage(settings.bot_language)
+                    ]
+                )
 
     def _connect_signals(self):
         if not self._signals_connected:
@@ -137,4 +142,5 @@ class LanguageSettingsWidget(BaseWidget, AIModelMixin):
             bot_language=settings.bot_language,
         )
 
-        self.api.update_locale(data)
+        if key == "gui_language":
+            self.api.update_locale(data)
