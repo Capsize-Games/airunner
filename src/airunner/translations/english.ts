@@ -2316,6 +2316,29 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     </message>
 </context>
 <context>
+    <name>language_settings_widget</name>
+    <message>
+        <location filename="../gui/widgets/language/templates/language_settings.ui" line="14"/>
+        <source>Form</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../gui/widgets/language/templates/language_settings.ui" line="33"/>
+        <source>GUI Langauge</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../gui/widgets/language/templates/language_settings.ui" line="45"/>
+        <source>User Language</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../gui/widgets/language/templates/language_settings.ui" line="57"/>
+        <source>Bot Language</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>llama_license</name>
     <message>
         <location filename="../gui/windows/setup_wizard/llama_license/templates/llama_license.ui" line="14"/>

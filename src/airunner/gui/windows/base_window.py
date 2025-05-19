@@ -54,4 +54,4 @@ class BaseWindow(
         """
         Callback for the RETRANSLATE_UI_SIGNAL signal.
         """
-        self.ui.retranslate_ui()
+        self.ui.retranslateUi(self)
