@@ -210,7 +210,9 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         Generate speech using OpenVoice and apply tone color conversion.
         """
         message = tts_request.message
-        language = AvailableLanguage(detect_language(tts_request.message))
+        language = AvailableLanguage(self.language_settings.bot_language)
+        if language is AvailableLanguage.AUTO:
+            language = detect_language(tts_request.message)
         if self.language != language:
             self._source_se = None
             self.language = language
