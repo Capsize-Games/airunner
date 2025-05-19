@@ -31,6 +31,7 @@ class LanguageBase:
         return unicodedata.normalize("NFKC", text)
 
     def __init__(self):
+        self.logger = API().logger
         self._tokenizer = None
         self._bert_model = None
         self._bert_tokenizer = None
@@ -59,9 +60,14 @@ class LanguageBase:
     @property
     def bert_model(self):
         if not self._bert_model:
-            self._bert_model = AutoModelForMaskedLM.from_pretrained(
-                self.bert_model_path
-            ).to(self.device)
+            try:
+                self._bert_model = AutoModelForMaskedLM.from_pretrained(
+                    self.bert_model_path
+                ).to(self.device)
+            except OSError as e:
+                self.logger.error(
+                    f"Error loading model {self.bert_model_path}: {e}"
+                )
         return self._bert_model
 
     @property
