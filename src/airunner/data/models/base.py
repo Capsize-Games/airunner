@@ -31,7 +31,6 @@ class BaseModel(Base):
             session.add(self)
             try:
                 session.commit()
-                logger.debug(f"Saved {self}")
             except Exception as e:
                 logger.error(f"Error in save(): {e}")
             finally:
@@ -43,7 +42,6 @@ class BaseModel(Base):
             try:
                 session.delete(self)
                 session.commit()
-                logger.debug(f"Deleted {self.cls}")
                 success = True
             except Exception as e:
                 logger.error(f"Error in delete(): {e}")

@@ -238,7 +238,7 @@ AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get(
 AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get(
     "AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE", "NSFW content detected"
 )
-AIRUNNER_DISCORD_URL = os.environ.get("AIRUNNER_DISCORD_URL", None)
+AIRUNNER_DISCORD_URL = os.environ.get("AIRUNNER_DISCORD_URL", "https://discord.gg/PUVDDCJ7gz")
 AIRUNNER_SLEEP_TIME_IN_MS = os.environ.get("AIRUNNER_SLEEP_TIME_IN_MS", 10)
 
 default_name = "airunner.db"

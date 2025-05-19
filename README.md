@@ -7,7 +7,7 @@
 
 ---
 
-# AI Runner: Offline AI Inference Engine for Hackers, Makers, and Builders.
+# Offline AI interface for Hackers, Makers, and Builders.
 
 ![image](https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa)
 
@@ -18,6 +18,7 @@ Here are some of the things you can do with AI Runner:
 - ✅ **Retrieval-Augmented Generation** (RAG) for documents and websites
 - ✅ **Text-to-Image** generation with **Stable Diffusion** and **ControlNet**
 - ✅ **Image manipulation** with **inpainting**, **outpainting**, **ControlNet** and **Image filters**
+- ✅ **Multi-lingual** Partial multi-lingual support for **text-to-speech** and **speech-to-text** and interface.
 
 For extra security, performance, and compatibility, AI Runner is built with **Wayland support**, **Python 3.13**, and the latest stable torch libraries.
 
@@ -109,6 +110,21 @@ Below is a high-level list of capabilities in AI Runner:
 | **Extensions**                           | Build your own feature add-ons via the extension API                                        |
 | **Python Library**                       | `pip install airunner` and embed it in your own projects                                    |
 | **API Support**                          | Optionally use OpenRouter or other external LLMs                                            |
+
+---
+
+## Language Support
+
+AI Runner is primarily designed for English, but we are working towards multi-lingual support. Here's a list of supported languages and their current status. Language support will vary based on the model used for a given task. Language support will improve over time if there is demand.
+
+| Language         | TTS Support | LLM Support | STT Support | GUI Support |
+|------------------|-------------|-------------|-------------|-------------|
+| English          | ✅          | ✅          | ✅          | ✅          |
+| Japanese         | ✅          | ✅          | ❌          | ✅          |
+| Spanish          | ✅          | ✅          | ❌          | ❌          |
+| French           | ✅          | ✅          | ❌          | ❌          |
+| Chinese          | ✅          | ✅          | ❌          | ❌          |
+| Korean           | ✅          | ✅          | ❌          | ❌          |
 
 ---
 
