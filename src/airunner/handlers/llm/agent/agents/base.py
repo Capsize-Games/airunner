@@ -79,6 +79,7 @@ class BaseAgent(
         self.default_tool_choice: Optional[Union[str, dict]] = (
             default_tool_choice
         )
+        self._prompt = None
         self._language = None
         self._llm_request: Optional[LLMRequest] = None
         self.llm_settings: LLMSettings = llm_settings
@@ -124,10 +125,18 @@ class BaseAgent(
         super().__init__(*args, **kwargs)
 
     @property
+    def prompt(self) -> str:
+        return self._prompt
+
+    @prompt.setter
+    def prompt(self, value: str):
+        self._prompt = value
+
+    @property
     def language(self) -> str:
         bot_lang = AvailableLanguage(self.language_settings.bot_language)
         if bot_lang is AvailableLanguage.AUTO:
-            bot_lang = detect_language(self.llm_request.prompt)
+            bot_lang = detect_language(self.prompt)
         return LANGUAGE_DISPLAY_MAP.get(bot_lang)
 
     @language.setter
@@ -1481,6 +1490,7 @@ class BaseAgent(
         llm_request: Optional[LLMRequest] = None,
         **kwargs,
     ) -> AgentChatResponse:
+        self.prompt = message
         self.action = action
         # system_prompt = system_prompt or self.system_prompt
         system_prompt = self.system_prompt
