@@ -53,10 +53,12 @@ class TTS(nn.Module):
 
     @property
     def ckpt_path(self) -> str:
-        return os.path.join(
-            self.voice_model_paths.get(self.language, None),
-            "checkpoint.pth",
-        )
+        model_path = self.voice_model_paths.get(self.language, None)
+        if model_path is None:
+            raise ValueError(
+                f"No model path found for language: {self.language}. Available: {list(self.voice_model_paths.keys())}"
+            )
+        return os.path.join(model_path, "checkpoint.pth")
 
     @property
     def checkpoint_dict(self):
@@ -91,10 +93,12 @@ class TTS(nn.Module):
 
     @property
     def config_path(self) -> str:
-        return os.path.join(
-            self.voice_model_paths.get(self.language, None),
-            "config.json",
-        )
+        model_path = self.voice_model_paths.get(self.language, None)
+        if model_path is None:
+            raise ValueError(
+                f"No model path found for language: {self.language}. Available: {list(self.voice_model_paths.keys())}"
+            )
+        return os.path.join(model_path, "config.json")
 
     @property
     def language(self) -> AvailableLanguage:

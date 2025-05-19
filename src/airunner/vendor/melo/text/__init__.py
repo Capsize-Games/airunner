@@ -20,8 +20,12 @@ def cleaned_text_to_sequence(
     """
     symbol_to_id_map = symbol_to_id if symbol_to_id else _symbol_to_id
     phones = [symbol_to_id_map[symbol] for symbol in cleaned_text]
-    tone_start = language_tone_start_map[language]
+    if language not in language_tone_start_map:
+        tone_start = language_tone_start_map[AvailableLanguage.EN]
+        lang_id = language_id_map[AvailableLanguage.EN]
+    else:
+        tone_start = language_tone_start_map[language]
+        lang_id = language_id_map[language]
     tones = [i + tone_start for i in tones]
-    lang_id = language_id_map[language]
     lang_ids = [lang_id for i in phones]
     return phones, tones, lang_ids
