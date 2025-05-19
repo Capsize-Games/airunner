@@ -17,6 +17,7 @@ from PySide6.QtCore import (
     Signal,
     QProcess,
     QTimer,
+    QCoreApplication,
 )
 from PySide6.QtGui import QGuiApplication, QKeySequence, QAction, QCursor
 from PySide6.QtWidgets import (
@@ -178,6 +179,8 @@ class MainWindow(
         self.ui = self.ui_class_()
         self.qsettings = get_qsettings()
         self.icon_manager: Optional[IconManager] = None
+        self.tab_backup = {}
+        self.workflow_tab = None
         self.quitting = False
         self.update_popup = None
         self._document_path = None
@@ -233,6 +236,7 @@ class MainWindow(
             SignalCode.NAVIGATE_TO_URL: self.on_navigate_to_url,
             SignalCode.MISSING_REQUIRED_MODELS: self.display_missing_models_error,
             SignalCode.ENABLE_WORKFLOWS_TOGGLED: self.on_enable_workflows_toggled,
+            SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
         }
         self.logger.debug("Starting AI Runnner")
         super().__init__()
@@ -1137,8 +1141,8 @@ class MainWindow(
     def on_enable_workflows_toggled(self, message: Dict):
         self._toggle_agent_workflow_feature(message.get("enabled", False))
 
-    tab_backup = {}
-    workflow_tab = None
+    def on_retranslate_ui_signal(self):
+        self.ui.retranslateUi(self)
 
     def _toggle_agent_workflow_feature(self, enabled: bool):
         """

@@ -56,7 +56,10 @@ class BaseWidget(AbstractBaseWidget):
         self.icon_manager: Optional[IconManager] = None
         self.signal_handlers = self.signal_handlers or {}
         self.signal_handlers.update(
-            {SignalCode.QUIT_APPLICATION: self.handle_close}
+            {
+                SignalCode.QUIT_APPLICATION: self.handle_close,
+                SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
+            }
         )
         self.settings = get_qsettings()
         super().__init__(*args, **kwargs)
@@ -154,6 +157,14 @@ class BaseWidget(AbstractBaseWidget):
         """
         Callback for the QUIT_APPLICATION signal.
         """
+
+    def on_retranslate_ui_signal(self):
+        """
+        Callback for the RETRANSLATE_UI_SIGNAL signal.
+        """
+        # Safely call the correct retranslateUi method if it exists
+        if self.ui:
+            self.ui.retranslateUi(self)
 
     def set_icons(self):
         """

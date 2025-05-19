@@ -753,7 +753,6 @@ class LLMAPIService(APIServiceBase):
         :param response: The LLMResponse object.
         :return: None
         """
-        print("EMITTING LLM_TEXT_STREAMED_SIGNAL", response)
         self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}
         )
@@ -1084,3 +1083,9 @@ class API(App):
                 "override_system_theme": override_system_theme,
             },
         )
+
+    def retranslate_ui_signal(self):
+        self.emit_signal(SignalCode.RETRANSLATE_UI_SIGNAL)
+
+    def update_locale(self, data: Dict):
+        self.emit_signal(SignalCode.UPATE_LOCALE, data)
