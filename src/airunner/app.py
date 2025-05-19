@@ -3,12 +3,12 @@ import os.path
 import sys
 import signal
 import traceback
-from functools import partial
 from pathlib import Path
 from PySide6 import QtCore
 from PySide6.QtCore import QObject, QTimer
 from PySide6.QtGui import QGuiApplication, QPixmap, Qt, QWindow, QPainter
 from PySide6.QtWidgets import QApplication, QSplashScreen
+from PySide6.QtCore import QTranslator, QLocale, QCoreApplication
 
 from airunner.data.models.path_settings import PathSettings
 from airunner.enums import SignalCode
@@ -55,6 +55,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         if self.initialize_gui:
             self.start()
+            self._load_translations()
             self.run_setup_wizard()
             self.run()
 
@@ -78,6 +79,41 @@ class App(MediatorMixin, SettingsMixin, QObject):
             from airunner.app_installer import AppInstaller
 
             AppInstaller()
+
+    def _load_translations(self, locale: Optional[QLocale] = None):
+        """
+        Loads and installs the appropriate translation file.
+        If locale is None, uses the system locale.
+        """
+        if not locale:
+            locale = QLocale.system()
+        translations_dir = os.path.join(
+            os.path.dirname(__file__), "translations"
+        )
+        translator = QTranslator()
+        language_map = {
+            QLocale.English: "english",
+            QLocale.Japanese: "japanese",
+        }
+        base_name = language_map.get(locale.language(), "english")
+        qm_path = os.path.join(translations_dir, f"{base_name}.qm")
+        self.app.removeTranslator(translator)
+        if os.path.exists(qm_path) and translator.load(qm_path):
+            self.app.installTranslator(translator)
+            self.app.translator = translator
+            self.retranslate_ui_signal()
+        else:
+            if base_name != "english":
+                english_qm_path = os.path.join(translations_dir, "english.qm")
+                fallback_translator = QTranslator()
+                if os.path.exists(
+                    english_qm_path
+                ) and fallback_translator.load(english_qm_path):
+                    self.app.installTranslator(fallback_translator)
+                    self.app.translator = fallback_translator
+                    self.retranslate_ui_signal()
+                else:
+                    self.app.translator = None
 
     def on_log_logged_signal(self, data: dict):
         message = data["message"].split(" - ")
