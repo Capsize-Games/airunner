@@ -39,7 +39,10 @@ class Cleaner:
     @property
     def language_module(self):
         if not self._language_module:
-            self._language_module = self.language_module_map[self.language]()
+            lang = self.language
+            if lang not in self.language_module_map:
+                lang = AvailableLanguage.EN
+            self._language_module = self.language_module_map[lang]()
         return self._language_module
 
     @language_module.setter
