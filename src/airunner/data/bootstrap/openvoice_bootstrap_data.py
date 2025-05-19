@@ -93,4 +93,15 @@ OPENVOICE_FILES = {
             "vocab.txt",
         ]
     },
+    "hfl/chinese-roberta-wwm-ext-large": {
+        "files": [
+            "added_tokens.json",
+            "config.json",
+            "pytorch_model.bin",
+            "special_tokens_map.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "vocab.txt",
+        ]
+    },
 }

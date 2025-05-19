@@ -46,6 +46,7 @@ extras_require = {
         # Summarizations (basic)
         "sumy==0.11.0",
         "sentencepiece==0.2.0",
+        "lingua-language-detector==2.1.0",
     ],
     "agents": [
         "llama-index==0.12.36",
@@ -106,6 +107,8 @@ extras_require = {
     ],
     "openvoice_kr": [
         "jamo==0.4.1",
+        "python-mecab-ko==1.3.7",
+        "python-mecab-ko-dic==2.1.1.post2",
     ],
     "openvoice_tw": [
         "g2pkk>=0.1.2",
