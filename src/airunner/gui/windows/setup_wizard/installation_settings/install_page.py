@@ -95,7 +95,7 @@ class InstallWorker(
     file_download_finished = Signal()
     progress_updated = Signal(int, int)
 
-    def __init__(self, parent, models_enabled: List[str]):
+    def __init__(self, parent, models_enabled: List[str], initialize_gui=True):
         super().__init__()
         self.parent = parent
         self.total_files = 0
@@ -103,7 +103,8 @@ class InstallWorker(
         self.current_step = -1
         self.total_models_in_current_step = 0
         self.hf_downloader = HuggingfaceDownloader(
-            lambda a, b: self.progress_updated.emit(a, b)
+            lambda a, b: self.progress_updated.emit(a, b),
+            initialize_gui=initialize_gui,
         )
         self.hf_downloader.completed.connect(
             lambda: self.file_download_finished.emit()
@@ -1224,7 +1225,9 @@ class InstallPage(BaseWizard):
         )
 
         self.thread = QThread()
-        self.worker = InstallWorker(self, models_enabled=self.models_enabled)
+        self.worker = InstallWorker(
+            self, models_enabled=self.models_enabled, initialize_gui=False
+        )
         self.worker.moveToThread(self.thread)
 
     def calculate_total_files(self):
