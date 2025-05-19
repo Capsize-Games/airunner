@@ -24,6 +24,7 @@ from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models.application_settings import ApplicationSettings
 from airunner.settings import (
     AIRUNNER_DISABLE_SETUP_WIZARD,
+    AIRUNNER_DISCORD_URL,
 )
 
 

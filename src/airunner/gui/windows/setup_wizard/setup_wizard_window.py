@@ -1,6 +1,5 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWizard
-from airunner.api import API
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.windows.setup_wizard.age_restriction.age_restriction_warning import (
@@ -92,6 +91,10 @@ class SetupWizardWindow(
             setattr(self, f"{key}_id", page_id)
             self.page_order.append(page_id)
 
+        # Mark the last page as final so QWizard will call accept() when finished
+        last_page_key = list(self.pages.keys())[-1]
+        self.pages[last_page_key].setFinalPage(True)
+
         # attach to parent page id changed signal
         self.button(QWizard.WizardButton.CancelButton).clicked.connect(
             self.cancel
@@ -110,90 +113,31 @@ class SetupWizardWindow(
         self.page_order.append(self.pageIds()[page_index])
 
     def nextId(self):
-        # Get the ID of the current page
         current_id = self.currentId()
-
-        # If the ID of the current page is in the order list, return the ID of the next page
         if current_id in self.page_order:
             current_index = self.page_order.index(current_id)
-
-            # If this is not the last page in the list, return the ID of the next page
             if current_index < len(self.page_order) - 1:
-
-                # final page conditional
-                if current_id == self.final_page_id:
-                    age_restriction_warning = self.pages[
-                        "age_restriction_warning"
-                    ].read_age_restriction_agreement
-                    self.setup_settings = dict(
-                        age_restriction_agreed=self.pages[
-                            "age_restriction_warning"
-                        ].age_restriction_agreed,
-                        read_age_restriction_agreement=age_restriction_warning,
-                        user_agreement_completed=self.pages[
-                            "user_agreement"
-                        ].agreed,
-                        airunner_license_completed=self.pages[
-                            "airunner_license"
-                        ].agreed,
-                        sd_license_completed=self.pages[
-                            "stable_diffusion_license"
-                        ].agreed,
-                    )
-
-                    return -1
-
-                elif current_id == self.age_restriction_warning_id:
-                    if (
-                        self.pages[
-                            "age_restriction_warning"
-                        ].age_restriction_agreed
-                        and self.pages[
-                            "age_restriction_warning"
-                        ].read_age_restriction_agreement
-                    ):
-                        return self.page_order[current_index + 1]
-                    else:
-                        return self.page_order[current_index]
-
-                elif current_id == self.welcome_page_id:
-                    return self.page_order[current_index + 1]
-
-                # User agreement conditional
-                elif current_id == self.user_agreement_id:
-                    if self.pages["user_agreement"].agreed:
-                        return self.page_order[current_index + 1]
-                    else:
-                        return self.page_order[current_index]
-
-                # AI Runner license conditional
-                elif current_id == self.airunner_license_id:
-                    if self.pages["airunner_license"].agreed:
-                        return self.page_order[current_index + 1]
-                    else:
-                        return self.page_order[current_index]
-
-                # Stable Diffusion license conditional
-                elif current_id == self.stable_diffusion_license_id:
-                    if self.pages["stable_diffusion_license"].agreed:
-                        return self.page_order[current_index + 1]
-                    else:
-                        return self.page_order[current_index]
-
-                # # AI Runner license conditional
-                # elif current_id == self.airunner_license_id:
-                #     if self.application_settings.airunner_agreement_checked:
-                #         return self.page_order[current_index + 1]
-                #     else:
-                #         return self.page_order[current_index]
-
                 return self.page_order[current_index + 1]
             else:
+                # Last page: trigger finish
                 return -1
-
-        # If the ID of the current page is not in the order list, use the default next page logic
         return super(SetupWizardWindow, self).nextId()
+
+    def accept(self):
+        print("SetupWizardWindow.accept() called")
+        self.canceled = False
+        super().accept()
 
     @Slot()
     def cancel(self):
+        print("SetupWizardWindow.cancel() called")
         self.canceled = True
+        super().reject()
+
+    def update_application_settings(self, key, value):
+        # Only print for non-agreement keys
+        if not key.endswith("_agreement_checked"):
+            print(f"update_application_settings: {key} = {value}")
+        # Fix: Use setattr instead of update for ApplicationSettings
+        setattr(self.application_settings, key, value)
+        self.application_settings.save()
