@@ -33,6 +33,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    RETRANSLATE_UI_SIGNAL = "retranslate_ui_signal"
     SD_UPDATE_BATCH_IMAGES_SIGNAL = "sd_update_batch_images_signal"
     SD_UPDATE_LOOSE_IMAGES_SIGNAL = "sd_update_loose_images_signal"
     CANVAS_UPDATE_IMAGE_POSITIONS = "canvas_update_image_positions"
