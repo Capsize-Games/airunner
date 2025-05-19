@@ -14,13 +14,15 @@ class HuggingfaceDownloader(
 ):
     completed = Signal()
 
-    def __init__(self, callback=None):
+    def __init__(self, callback=None, initialize_gui=True):
         super().__init__()
         self.thread = None
         self.worker = None
         self.downloading = False
 
-        self.worker = create_worker(DownloadWorker)
+        self.worker = create_worker(
+            DownloadWorker, initialize_gui=initialize_gui
+        )
 
         # Connect signals
         self.worker.progress.connect(
