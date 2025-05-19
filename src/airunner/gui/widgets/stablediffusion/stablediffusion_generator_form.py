@@ -156,7 +156,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.generator_settings.quality_effects
         )
         self.ui.infinite_images_button.setChecked(
-            self.generator_settings.generate_infinite_images
+            self.generator_settings.generate_infinite_images if self.generator_settings.generate_infinite_images is not None else False
         )
         self.ui.quality_effects.blockSignals(False)
         self.ui.infinite_images_button.blockSignals(False)
