@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Product Launch - Airunner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, #101010 0%, #23272f 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            margin-top: 60px;
+            background: rgba(255, 255, 255, 0.97);
+            padding: 2.5rem 2.5rem 2.5rem 2.5rem;
+            border-radius: 18px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.13);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 340px;
+            max-width: 520px;
+            border: none;
+        }
+
+        .content {
+            width: 360px;
+        }
+
+        .logo {
+            width: 380px;
+            height: auto;
+            background: none;
+            border-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo img {
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            border-radius: 8px;
+        }
+
+        h1 {
+            margin: 0 0 1.2rem 0;
+            padding: 10px 0;
+            font-size: 1rem;
+            color: #1a202c;
+            font-weight: 800;
+            letter-spacing: -1px;
+            text-align: center;
+            border-top: 1px solid #4299e1;
+            border-bottom: 1px solid #4299e1;
+        }
+
+        p {
+            color: #3b4252;
+            max-width: 440px;
+            margin-bottom: 1.5rem;
+            padding-left: 15px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            width: 250px;
+            margin: 0 auto 20px 30px;
+            border-left: 4px solid #4299e1;
+        }
+
+        ul {
+            color: #2d3748;
+            text-align: left;
+            max-width: 340px;
+            margin: 0 0 2rem 0;
+            padding-left: 1.2em;
+            font-size: 1.05rem;
+            list-style: none;
+        }
+
+        ul li {
+            margin-bottom: 0.5em;
+            position: relative;
+            padding-left: 1.2em;
+        }
+
+        ul li:before {
+            content: '\2714';
+            color: #4299e1;
+            position: absolute;
+            left: 0;
+            font-size: 1em;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            width: 100%;
+            max-width: 340px;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="text"],
+        input[type="email"] {
+            padding: 0.85rem;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1.08rem;
+            outline: none;
+            transition: border 0.2s, box-shadow 0.2s;
+            background: #f7fafc;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus {
+            border-color: #4299e1;
+            box-shadow: 0 0 0 2px #4299e133;
+        }
+
+        button {
+            padding: 0.85rem;
+            background: linear-gradient(90deg, #4299e1 0%, #38b2ac 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.08rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(66, 153, 225, 0.10);
+        }
+
+        button:hover {
+            background: linear-gradient(90deg, #2b6cb0 0%, #319795 100%);
+            box-shadow: 0 4px 16px rgba(66, 153, 225, 0.13);
+        }
+
+        .success-message {
+            color: #38a169;
+            margin-top: 1rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.08rem;
+        }
+
+        .footer-links {
+            margin-top: 2rem;
+            color: #718096;
+            font-size: 1em;
+            text-align: center;
+        }
+
+        .footer-links a {
+            color: #4299e1;
+            text-decoration: none;
+            margin: 0 0.5em;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: #2b6cb0;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 1.2rem 0.5rem;
+                min-width: unset;
+                max-width: 98vw;
+            }
+
+            .logo {
+                width: 98vw;
+                max-width: 98vw;
+            }
+
+            h1 {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo" aria-label="AI Runner Logo">
+            <img src="./logo.png" alt="AI Runner Logo">
+        </div>
+        <div class="content">
+            <h1>Offline AI interface for Hackers, Makers, and Builders</h1>
+            <p>
+                Run powerful AI models - chatbots, voice, and image generation - <b>locally</b> on your own
+                hardware.<br>
+                No cloud. No subscriptions. Just fast, private, open AI.
+            </p>
+            <ul>
+                <li>Voice-based chatbots & custom agents</li>
+                <li>Text-to-image & image manipulation</li>
+                <li>Retrieval-augmented generation (RAG)</li>
+                <li>Works on Linux & Windows</li>
+            </ul>
+        </div>
+        <form action="https://formspree.io/f/meogdanb" method="POST" id="notify-form" autocomplete="off">
+            <input type="text" id="name" name="name" placeholder="Your Name" required>
+            <input type="email" id="email" name="email" placeholder="Your Email Address" required>
+            <button type="submit">Notify Me</button>
+        </form>
+        <div id="success" class="success-message" style="display:none;">
+            Thank you! You'll be the first to know.
+        </div>
+        <div class="footer-links">
+            <a href="https://github.com/Capsize-Games/airunner" target="_blank">GitHub</a>
+            |
+            <a href="https://discord.gg/PUVDDCJ7gz" target="_blank">Discord</a>
+        </div>
+    </div>
+</body>
+
+</html>
