@@ -1,5 +1,6 @@
 import enum
 from enum import Enum, auto
+from PySide6.QtCore import QLocale
 
 
 class WorkerState(Enum):
@@ -33,6 +34,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    UPATE_LOCALE = "update_locale_signal"
     RETRANSLATE_UI_SIGNAL = "retranslate_ui_signal"
     SD_UPDATE_BATCH_IMAGES_SIGNAL = "sd_update_batch_images_signal"
     SD_UPDATE_LOOSE_IMAGES_SIGNAL = "sd_update_loose_images_signal"
@@ -479,6 +481,68 @@ class AvailableLanguage(enum.Enum):
     DE = "DE"
     RU = "RU"
     SP = "SP"
+
+
+LANGUAGE_DISPLAY_MAP = {
+    AvailableLanguage.EN_NEWEST: "English (Newest)",
+    AvailableLanguage.EN: "English",
+    AvailableLanguage.ES: "Spanish",
+    AvailableLanguage.FR: "French",
+    AvailableLanguage.ZH: "Chinese",
+    AvailableLanguage.ZH_MIX_EN: "Chinese (Mixed English)",
+    AvailableLanguage.JP: "Japanese",
+    AvailableLanguage.KR: "Korean",
+    AvailableLanguage.DE: "German",
+    AvailableLanguage.RU: "Russian",
+    AvailableLanguage.SP: "Spanish",
+}
+LANGUAGE_TO_LOCALE_MAP = {
+    AvailableLanguage.EN_NEWEST: QLocale.English,
+    AvailableLanguage.EN: QLocale.English,
+    AvailableLanguage.ES: QLocale.Spanish,
+    AvailableLanguage.FR: QLocale.French,
+    AvailableLanguage.ZH: QLocale.Chinese,
+    AvailableLanguage.ZH_MIX_EN: QLocale.Chinese,
+    AvailableLanguage.JP: QLocale.Japanese,
+    AvailableLanguage.KR: QLocale.Korean,
+    AvailableLanguage.DE: QLocale.German,
+    AvailableLanguage.RU: QLocale.Russian,
+    AvailableLanguage.SP: QLocale.Spanish,
+}
+LOCALE_TO_LANGUAGE_MAP = {
+    QLocale.English: AvailableLanguage.EN,
+    QLocale.Spanish: AvailableLanguage.ES,
+    QLocale.French: AvailableLanguage.FR,
+    QLocale.Chinese: AvailableLanguage.ZH,
+    QLocale.Japanese: AvailableLanguage.JP,
+    QLocale.Korean: AvailableLanguage.KR,
+    QLocale.German: AvailableLanguage.DE,
+    QLocale.Russian: AvailableLanguage.RU,
+}
+AVAILABLE_LANGUAGES = {
+    "gui_language": [
+        AvailableLanguage.EN,
+        AvailableLanguage.JP,
+    ],
+    "user_language": [
+        lang
+        for lang in AvailableLanguage
+        if lang
+        not in (
+            AvailableLanguage.EN_NEWEST,
+            AvailableLanguage.ZH_MIX_EN,
+        )
+    ],
+    "bot_language": [
+        lang
+        for lang in AvailableLanguage
+        if lang
+        not in (
+            AvailableLanguage.EN_NEWEST,
+            AvailableLanguage.ZH_MIX_EN,
+        )
+    ],
+}
 
 
 class ModelService(enum.Enum):

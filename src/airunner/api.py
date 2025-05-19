@@ -1086,3 +1086,6 @@ class API(App):
 
     def retranslate_ui_signal(self):
         self.emit_signal(SignalCode.RETRANSLATE_UI_SIGNAL)
+
+    def update_locale(self, data: Dict):
+        self.emit_signal(SignalCode.UPATE_LOCALE, data)
