@@ -1,5 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
+from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
@@ -21,6 +22,11 @@ class BaseWindow(
 
     def __init__(self, prevent_always_on_top: bool = False, **kwargs):
         self.prevent_always_on_top = prevent_always_on_top
+        self.signal_handlers.update(
+            {
+                SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
+            }
+        )
         super().__init__()
         self.do_exec = kwargs.get("exec", True)
 
@@ -43,3 +49,9 @@ class BaseWindow(
 
         Override this method in subclasses to perform any additional setup.
         """
+
+    def on_retranslate_ui_signal(self):
+        """
+        Callback for the RETRANSLATE_UI_SIGNAL signal.
+        """
+        self.ui.retranslateUi(self)

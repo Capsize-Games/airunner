@@ -18,11 +18,11 @@ def detect_language(txt: str) -> str:
     language = detector.detect_language_of(txt)
     name = language.iso_code_639_1.name
     if name == "JA":
-        return AvailableLanguage.JP.value
+        return AvailableLanguage.JP
     if name == "KO":
-        return AvailableLanguage.KR.value
+        return AvailableLanguage.KR
     try:
-        return AvailableLanguage(name).value
+        return AvailableLanguage(name)
     except KeyError:
         print(f"Language {name} not found in AvailableLanguage enum.")
-        return AvailableLanguage.EN.value
+        return AvailableLanguage.EN
