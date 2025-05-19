@@ -162,7 +162,9 @@ class BaseWidget(AbstractBaseWidget):
         """
         Callback for the RETRANSLATE_UI_SIGNAL signal.
         """
-        self.ui.retranslate_ui()
+        # Safely call the correct retranslateUi method if it exists
+        if self.ui:
+            self.ui.retranslateUi(self)
 
     def set_icons(self):
         """
