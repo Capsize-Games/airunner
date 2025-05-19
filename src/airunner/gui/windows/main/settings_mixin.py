@@ -41,6 +41,7 @@ from airunner.data.models import (
     User,
 )
 from airunner.data.models import table_to_class
+from airunner.data.models.language_settings import LanguageSettings
 from airunner.data.models.rag_settings import RAGSettings
 from airunner.enums import ModelService, TTSModel
 from airunner.utils.image import convert_binary_to_image
@@ -100,6 +101,10 @@ class SettingsMixin:
     @property
     def application_settings(self) -> ApplicationSettings:
         return self.load_settings_from_db(ApplicationSettings)
+    
+    @property
+    def language_settings(self) -> LanguageSettings:
+        return self.load_settings_from_db(LanguageSettings)
 
     @property
     def sound_settings(self) -> SoundSettings:

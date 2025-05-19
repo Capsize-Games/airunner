@@ -22,6 +22,8 @@ from llama_index.core.storage.chat_store import SimpleChatStore
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from airunner.enums import (
+    LANGUAGE_DISPLAY_MAP,
+    AvailableLanguage,
     GeneratorSection,
     LLMActionType,
     SignalCode,
@@ -49,6 +51,7 @@ from airunner.settings import (
     AIRUNNER_ART_ENABLED,
     AIRUNNER_MOOD_PROMPT_OVERRIDE,
 )
+from airunner.utils.llm.language import detect_language
 
 
 class BaseAgent(
@@ -76,6 +79,7 @@ class BaseAgent(
         self.default_tool_choice: Optional[Union[str, dict]] = (
             default_tool_choice
         )
+        self._language = None
         self._llm_request: Optional[LLMRequest] = None
         self.llm_settings: LLMSettings = llm_settings
         self._use_memory: bool = use_memory
@@ -121,34 +125,10 @@ class BaseAgent(
 
     @property
     def language(self) -> str:
-        # Use a private attribute to avoid recursion
-        if hasattr(self, "_language") and self._language is not None:
-            lang = self._language
-        elif hasattr(self, "application_settings") and getattr(
-            self.application_settings, "use_detected_language", False
-        ):
-            lang = getattr(
-                self.application_settings, "detected_language", "EN"
-            )
-        else:
-            lang = "EN"
-        # Map language codes to full names if needed
-        if lang == "FR":
-            return "French"
-        elif lang == "DE":
-            return "German"
-        elif lang == "ES":
-            return "Spanish"
-        elif lang == "KO":
-            return "Korean"
-        elif lang == "RU":
-            return "Russian"
-        elif lang == "ZH":
-            return "Chinese"
-        elif lang == "JA":
-            return "Japanese"
-        else:
-            return "English"
+        bot_lang = AvailableLanguage(self.language_settings.bot_language)
+        if bot_lang is AvailableLanguage.AUTO:
+            bot_lang = detect_language(self.llm_request.prompt)
+        return LANGUAGE_DISPLAY_MAP.get(bot_lang)
 
     @language.setter
     def language(self, value: str):
@@ -1106,7 +1086,7 @@ class BaseAgent(
         )
 
         if self.language:
-            prompt += "Response in " + self.language + "\n"
+            prompt += f"Respond to {{ username }} in {self.language}. Only deviate from this if the user asks you to.\n"
 
         prompt = prompt.replace("{{ username }}", self.username)
         prompt = prompt.replace("{{ botname }}", self.botname)
