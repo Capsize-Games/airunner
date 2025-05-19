@@ -145,7 +145,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.9.2",
+    version="4.9.3",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -171,7 +171,7 @@ setup(
         "alembic==1.15.2",
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
-        "setuptools==78.1.0",
+        "setuptools==78.1.1",
         "facehuggershield==0.1.13",
         "etils[epath]==1.12.2",
     ],

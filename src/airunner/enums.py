@@ -471,7 +471,6 @@ class AvailableLanguage(enum.Enum):
     """
 
     AUTO = "Automatic"
-    EN_NEWEST = "EN_NEWEST"
     EN = "EN"
     ES = "ES"
     FR = "FR"
@@ -486,7 +485,6 @@ class AvailableLanguage(enum.Enum):
 
 LANGUAGE_DISPLAY_MAP = {
     AvailableLanguage.AUTO: "Automatic",
-    AvailableLanguage.EN_NEWEST: "English (Newest)",
     AvailableLanguage.EN: "English",
     AvailableLanguage.ES: "Spanish",
     AvailableLanguage.FR: "French",
@@ -497,7 +495,6 @@ LANGUAGE_DISPLAY_MAP = {
     AvailableLanguage.SP: "Spanish",
 }
 LANGUAGE_TO_LOCALE_MAP = {
-    AvailableLanguage.EN_NEWEST: QLocale.English,
     AvailableLanguage.EN: QLocale.English,
     AvailableLanguage.ES: QLocale.Spanish,
     AvailableLanguage.FR: QLocale.French,
@@ -525,7 +522,7 @@ AVAILABLE_LANGUAGES = {
         for lang in AvailableLanguage
         if lang
         not in (
-            AvailableLanguage.EN_NEWEST,
+            AvailableLanguage.EN,
             AvailableLanguage.ZH_MIX_EN,
         )
     ],
@@ -534,7 +531,7 @@ AVAILABLE_LANGUAGES = {
         for lang in AvailableLanguage
         if lang
         not in (
-            AvailableLanguage.EN_NEWEST,
+            AvailableLanguage.EN,
             AvailableLanguage.ZH_MIX_EN,
         )
     ],
