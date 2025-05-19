@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="ja" sourcelanguage="en">
+<TS version="2.1">
 <context>
     <name>Form</name>
     <message>
@@ -21,35 +21,35 @@
         <location filename="../gui/widgets/stats/templates/stats_widget.ui" line="14"/>
         <location filename="../gui/windows/setup_wizard/user_settings/templates/user_settings.ui" line="14"/>
         <source>Form</source>
-        <translation>フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/blend_option/templates/blend_option_widget.ui" line="100"/>
         <source>Import new image</source>
-        <translation>新しい画像をインポート</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/blend_option/templates/blend_option_widget.ui" line="138"/>
         <source>Image</source>
-        <translation>画像</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/blend_option/templates/blend_option_widget.ui" line="143"/>
         <source>Text</source>
-        <translation>テキスト</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/blend_option/templates/blend_option_widget.ui" line="151"/>
         <location filename="../gui/widgets/generated_image/templates/generated_image.ui" line="89"/>
         <location filename="../gui/widgets/llm/templates/prompt_template_editor.ui" line="67"/>
         <source>Delete</source>
-        <translation>削除</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/dropdown/templates/dropdown.ui" line="27"/>
         <location filename="../gui/widgets/prompt/templates/prompt.ui" line="27"/>
         <source>Caption label</source>
-        <translation>キャプションラベル</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/dropdown/templates/dropdown.ui" line="34"/>
@@ -59,17 +59,17 @@
     <message>
         <location filename="../gui/widgets/generated_image/templates/generated_image.ui" line="75"/>
         <source>Send to canvas</source>
-        <translation>キャンバスに送信</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/generated_image/templates/generated_image.ui" line="82"/>
         <source>Export</source>
-        <translation>エクスポート</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/generated_image/templates/generated_image.ui" line="103"/>
         <source>Send to slot</source>
-        <translation>スロットに送信</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/action_menu_item.ui" line="20"/>
@@ -81,37 +81,37 @@
     <message>
         <location filename="../gui/widgets/llm/templates/chat_template.ui" line="20"/>
         <source>User name</source>
-        <translation>ユーザー名</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/chat_template.ui" line="32"/>
         <source>Template name</source>
-        <translation>テンプレート名</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/chat_template.ui" line="44"/>
         <source>Bot name</source>
-        <translation>ボット名</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/chat_template.ui" line="56"/>
         <source>Toggle guardrails</source>
-        <translation>ガードレールを切り替える</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/chat_template.ui" line="59"/>
         <source>Guardrails</source>
-        <translation>ガードレール</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/chat_template.ui" line="91"/>
         <source>Instructions</source>
-        <translation>手順</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/prompt_template_editor.ui" line="20"/>
         <source>System Instructions</source>
-        <translation>システム手順</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/prompt_template_editor.ui" line="26"/>
@@ -121,59 +121,59 @@
     <message>
         <location filename="../gui/widgets/llm/templates/prompt_template_editor.ui" line="33"/>
         <source>Keep the instructions brief, but be descriptive.</source>
-        <translation>手順は簡潔に、ただし具体的に。</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/prompt_template_editor.ui" line="43"/>
         <source>LLM Category</source>
-        <translation>LLMカテゴリ</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/prompt_template_editor.ui" line="60"/>
         <source>Save</source>
-        <translation>保存</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/prompt_template_editor.ui" line="74"/>
         <source>New</source>
-        <translation>新規</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/prompt_template_editor.ui" line="83"/>
         <location filename="../gui/widgets/model_scheduler/templates/model_scheduler_widget.ui" line="52"/>
         <source>Model</source>
-        <translation>モデル</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/model_scheduler/templates/model_scheduler_widget.ui" line="78"/>
         <source>Scheduler</source>
-        <translation>スケジューラー</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/slider/templates/slider_spinbox.ui" line="26"/>
         <location filename="../gui/widgets/slider/templates/slider_spinbox_double.ui" line="26"/>
         <source>Label</source>
-        <translation>ラベル</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/user_settings/templates/user_settings.ui" line="33"/>
         <source>Preferred language</source>
-        <translation>希望言語</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/user_settings/templates/user_settings.ui" line="40"/>
         <source>Your name</source>
-        <translation>あなたの名前</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/user_settings/templates/user_settings.ui" line="56"/>
         <source>Gender</source>
-        <translation>性別</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/user_settings/templates/user_settings.ui" line="69"/>
         <source>About you</source>
-        <translation>あなたについて</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -181,69 +181,69 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="32"/>
         <source>AI Runner</source>
-        <translation>AIランナー</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="186"/>
         <location filename="../gui/windows/main/templates/main_window.ui" line="349"/>
         <source>Art</source>
-        <translation>アート</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="233"/>
         <source>Agent Workflow</source>
-        <translation>エージェントワークフロー</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="342"/>
         <source>File</source>
-        <translation>ファイル</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="361"/>
         <source>Chat</source>
-        <translation>チャット</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="372"/>
         <source>Workflow</source>
-        <translation>ワークフロー</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="400"/>
         <location filename="../gui/windows/main/templates/main_window.ui" line="944"/>
         <source>Edit</source>
-        <translation>編集</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="416"/>
         <source>Filters</source>
-        <translation>フィルター</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="425"/>
         <source>Help</source>
-        <translation>ヘルプ</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="435"/>
         <source>Canvas</source>
-        <translation>キャンバス</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="449"/>
         <source>View</source>
-        <translation>表示</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="460"/>
         <source>Tools</source>
-        <translation>ツール</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="464"/>
         <source>Stable Diffusion</source>
-        <translation>ステーブルディフュージョン</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="496"/>
@@ -253,7 +253,7 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="537"/>
         <source>Copy</source>
-        <translation>コピー</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="540"/>
@@ -263,7 +263,7 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="549"/>
         <source>Paste</source>
-        <translation>ペースト</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="552"/>
@@ -273,12 +273,12 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="557"/>
         <source>About</source>
-        <translation>について</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="566"/>
         <source>Quit</source>
-        <translation>終了</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="569"/>
@@ -288,17 +288,17 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="578"/>
         <source>Bug report</source>
-        <translation>バグ報告</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="587"/>
         <source>Report vulnerability</source>
-        <translation>脆弱性の報告</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="596"/>
         <source>Rotate 90° clockwise</source>
-        <translation>時計回りに90°回転</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="599"/>
@@ -308,7 +308,7 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="608"/>
         <source>Rotate 90° counter clockwise</source>
-        <translation>反時計回りに90°回転</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="611"/>
@@ -318,22 +318,22 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="620"/>
         <source>Prompt browser</source>
-        <translation>プロンプトブラウザ</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="629"/>
         <source>Clear all prompts</source>
-        <translation>全てのプロンプトをクリア</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="632"/>
         <source>Remove text from all prompts and negative prompts</source>
-        <translation>全てのプロンプトとネガティブプロンプトからテキストを削除</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="641"/>
         <source>Cut</source>
-        <translation>カット</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="644"/>
@@ -343,87 +343,87 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="653"/>
         <source>Browse AI Runner Path</source>
-        <translation>AIランナーパスを参照</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="662"/>
         <source>Browse Images</source>
-        <translation>画像を参照</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="671"/>
         <source>Reset Settings</source>
-        <translation>設定をリセット</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="686"/>
         <source>Safety Checker</source>
-        <translation>安全性チェッカ</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="695"/>
         <source>Run Setup Wizard</source>
-        <translation>セットアップウィザードを実行</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="704"/>
         <source>Stats</source>
-        <translation>統計</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="713"/>
         <source>Preferences</source>
-        <translation>環境設定</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="728"/>
         <source>Toggle LLM</source>
-        <translation>LLMを切り替え</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="740"/>
         <source>Toggle Text to Speech</source>
-        <translation>テキスト読み上げを切り替え</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="752"/>
         <source>Toggle Speech to Text</source>
-        <translation>音声認識を切り替え</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="764"/>
         <source>Toggle Stable Diffusion</source>
-        <translation>ステーブルディフュージョンを切り替え</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="779"/>
         <source>Toggle Controlnet</source>
-        <translation>Controlnetを切り替え</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="791"/>
         <source>Toggle Active Grid Area</source>
-        <translation>アクティブグリッドエリアを切り替え</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="803"/>
         <source>Toggle Brush</source>
-        <translation>ブラシを切り替え</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="815"/>
         <source>Toggle Grid</source>
-        <translation>グリッドを切り替え</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="827"/>
         <source>Toggle Eraser</source>
-        <translation>消しゴムを切り替え</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="836"/>
         <source>New</source>
-        <translation>新規</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="839"/>
@@ -433,7 +433,7 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="848"/>
         <source>Import image</source>
-        <translation>画像をインポート</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="851"/>
@@ -443,7 +443,7 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="860"/>
         <source>Export image</source>
-        <translation>画像をエクスポート</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="863"/>
@@ -453,12 +453,12 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="872"/>
         <source>New Conversation</source>
-        <translation>新しい会話</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="881"/>
         <source>Delete conversation</source>
-        <translation>会話を削除</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="890"/>
@@ -468,52 +468,52 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="899"/>
         <source>Run</source>
-        <translation>実行</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="908"/>
         <source>Pause</source>
-        <translation>一時停止</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="917"/>
         <source>Stop</source>
-        <translation>停止</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="926"/>
         <source>Save</source>
-        <translation>保存</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="935"/>
         <source>Clear</source>
-        <translation>クリア</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="953"/>
         <source>Load</source>
-        <translation>読み込み</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="962"/>
         <source>Save As</source>
-        <translation>名前を付けて保存</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="971"/>
         <source>Undo</source>
-        <translation>元に戻す</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="980"/>
         <source>Redo</source>
-        <translation>やり直し</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="989"/>
         <source>Recenter</source>
-        <translation>再中央揃え</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -522,7 +522,7 @@
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/installation_settings.ui" line="14"/>
         <location filename="../gui/windows/setup_wizard/path_settings/templates/path_settings.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/installation_settings.ui" line="38"/>
@@ -574,7 +574,7 @@
     <message>
         <location filename="../gui/windows/about/templates/about.ui" line="32"/>
         <source>About</source>
-        <translation type="unfinished">について</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/about/templates/about.ui" line="58"/>
@@ -597,7 +597,7 @@
     <message>
         <location filename="../gui/widgets/active_grid_settings/templates/active_grid_settings.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/active_grid_settings/templates/active_grid_settings.ui" line="89"/>
@@ -671,7 +671,7 @@
     <message>
         <location filename="../gui/windows/setup_wizard/age_restriction/templates/age_restriction.ui" line="26"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/age_restriction/templates/age_restriction.ui" line="46"/>
@@ -716,7 +716,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/ai_runner_license/templates/airunner_license.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/ai_runner_license/templates/airunner_license.ui" line="35"/>
@@ -948,7 +948,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/api_token/templates/api_token.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/api_token/templates/api_token.ui" line="33"/>
@@ -981,7 +981,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/canvas/templates/batch_container.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -989,12 +989,12 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="65"/>
         <source>System Instructions</source>
-        <translation type="unfinished">システム手順</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="86"/>
@@ -1014,12 +1014,12 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="119"/>
         <source>AI Runner</source>
-        <translation type="unfinished">AIランナー</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="125"/>
         <source>Bot name</source>
-        <translation type="unfinished">ボット名</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="137"/>
@@ -1094,7 +1094,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="333"/>
         <source>Guardrails</source>
-        <translation type="unfinished">ガードレール</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="354"/>
@@ -1104,7 +1104,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="364"/>
         <source>Gender</source>
-        <translation type="unfinished">性別</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="371"/>
@@ -1127,7 +1127,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/brush/templates/brush_widget.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/brush/templates/brush_widget.ui" line="119"/>
@@ -1155,7 +1155,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/canvas/templates/brushes_container.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1163,7 +1163,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/canvas/templates/canvas.ui" line="26"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/canvas/templates/canvas.ui" line="264"/>
@@ -1206,7 +1206,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/canvas/templates/canvas_node.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1214,7 +1214,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/llm/templates/chat_prompt.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/chat_prompt.ui" line="111"/>
@@ -1237,7 +1237,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/choose_model.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/choose_model.ui" line="26"/>
@@ -1295,7 +1295,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/choose_style.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/choose_style.ui" line="34"/>
@@ -1328,7 +1328,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/civitai_preferences/templates/civitai_preferences_widget.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/civitai_preferences/templates/civitai_preferences_widget.ui" line="20"/>
@@ -1341,7 +1341,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/installer/templates/completion_page.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/installer/templates/completion_page.ui" line="26"/>
@@ -1354,7 +1354,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/controlnet/templates/controlnet_settings_widget.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/controlnet/templates/controlnet_settings_widget.ui" line="104"/>
@@ -1372,7 +1372,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/controlnet/templates/controlnet_setup.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/controlnet/templates/controlnet_setup.ui" line="20"/>
@@ -1405,12 +1405,12 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/llm/templates/document_widget.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/document_widget.ui" line="44"/>
         <source>Delete</source>
-        <translation type="unfinished">削除</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/document_widget.ui" line="54"/>
@@ -1423,7 +1423,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/embeddings/templates/embedding.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/embeddings/templates/embedding.ui" line="38"/>
@@ -1446,7 +1446,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/embeddings/templates/embedding_trigger_word.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/embeddings/templates/embedding_trigger_word.ui" line="20"/>
@@ -1484,7 +1484,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/embeddings/templates/embeddings_container.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/embeddings/templates/embeddings_container.ui" line="86"/>
@@ -1517,7 +1517,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/tts/templates/espeak_preferences.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/tts/templates/espeak_preferences.ui" line="48"/>
@@ -1537,7 +1537,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/tts/templates/espeak_preferences.ui" line="112"/>
         <source>Gender</source>
-        <translation type="unfinished">性別</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/tts/templates/espeak_preferences.ui" line="119"/>
@@ -1585,7 +1585,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/export_preferences/templates/export_preferences.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/export_preferences/templates/export_preferences.ui" line="25"/>
@@ -1630,7 +1630,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/export_preferences/templates/export_preferences.ui" line="122"/>
         <source>Model</source>
-        <translation type="unfinished">モデル</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/export_preferences/templates/export_preferences.ui" line="134"/>
@@ -1640,7 +1640,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/export_preferences/templates/export_preferences.ui" line="141"/>
         <source>Scheduler</source>
-        <translation type="unfinished">スケジューラー</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/export_preferences/templates/export_preferences.ui" line="148"/>
@@ -1736,7 +1736,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/llm/templates/flan_generator_form.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/flan_generator_form.ui" line="22"/>
@@ -1874,7 +1874,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/image/templates/folder_widget.ui" line="26"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/image/templates/folder_widget.ui" line="98"/>
@@ -1887,12 +1887,12 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/generator_form/templates/generatorform.ui" line="22"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/generator_form/templates/generatorform.ui" line="53"/>
         <source>Chat</source>
-        <translation type="unfinished">チャット</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1901,13 +1901,13 @@ Please be aware that AI-generated content could unintentionally replicate copyri
         <location filename="../gui/widgets/generator_form/templates/generator_tab.ui" line="20"/>
         <location filename="../gui/widgets/generator_form/templates/generator_tab_backup.ui" line="20"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/generator_form/templates/generator_tab.ui" line="54"/>
         <location filename="../gui/widgets/generator_form/templates/generator_tab_backup.ui" line="54"/>
         <source>Stable Diffusion</source>
-        <translation type="unfinished">ステーブルディフュージョン</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/generator_form/templates/generator_tab.ui" line="72"/>
@@ -2025,7 +2025,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/grid_preferences/templates/grid_preferences.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/grid_preferences/templates/grid_preferences.ui" line="70"/>
@@ -2068,7 +2068,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/huggingface_settings/templates/huggingface_settings.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/huggingface_settings/templates/huggingface_settings.ui" line="20"/>
@@ -2086,7 +2086,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/image_generator_preferences/templates/image_generator_preferences.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/image_generator_preferences/templates/image_generator_preferences.ui" line="39"/>
@@ -2109,7 +2109,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/canvas/templates/image_layer_item.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/canvas/templates/image_layer_item.ui" line="38"/>
@@ -2122,7 +2122,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/image/templates/image_panel_widget.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2130,7 +2130,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/image/templates/image_widget.ui" line="32"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2138,7 +2138,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/canvas/templates/input_image.ui" line="20"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/canvas/templates/input_image.ui" line="115"/>
@@ -2183,7 +2183,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/canvas/templates/input_image.ui" line="300"/>
         <source>Delete</source>
-        <translation type="unfinished">削除</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2191,7 +2191,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/canvas/templates/input_image_container.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/canvas/templates/input_image_container.ui" line="42"/>
@@ -2204,7 +2204,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/install_failed_page.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/install_failed_page.ui" line="20"/>
@@ -2222,7 +2222,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/install_page.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/install_page.ui" line="26"/>
@@ -2241,7 +2241,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/choose_models.ui" line="14"/>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/install_success_page.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/choose_models.ui" line="28"/>
@@ -2299,7 +2299,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/keyboard_shortcuts/templates/keyboard_shortcut_widget.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/keyboard_shortcuts/templates/keyboard_shortcut_widget.ui" line="25"/>
@@ -2312,7 +2312,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/keyboard_shortcuts/templates/keyboard_shortcuts.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2320,7 +2320,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/llama_license/templates/llama_license.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/llama_license/templates/llama_license.ui" line="35"/>
@@ -2459,7 +2459,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_history_item.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_history_item.ui" line="56"/>
@@ -2469,7 +2469,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_history_item.ui" line="70"/>
         <source>Bot name</source>
-        <translation type="unfinished">ボット名</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_history_item.ui" line="84"/>
@@ -2487,7 +2487,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_history_widget.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2495,7 +2495,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_preferences.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_preferences.ui" line="24"/>
@@ -2555,7 +2555,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_preferences.ui" line="117"/>
         <source>User name</source>
-        <translation type="unfinished">ユーザー名</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_preferences.ui" line="123"/>
@@ -2573,7 +2573,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_settings.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_settings.ui" line="120"/>
@@ -2726,7 +2726,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/llm/templates/llm_setup.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/llm/templates/llm_setup.ui" line="27"/>
@@ -2754,7 +2754,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/llm/templates/llm_welcome_screen.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/llm/templates/llm_welcome_screen.ui" line="26"/>
@@ -2787,17 +2787,17 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_widget.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_widget.ui" line="40"/>
         <source>Chat</source>
-        <translation type="unfinished">チャット</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_widget.ui" line="66"/>
         <source>Preferences</source>
-        <translation type="unfinished">環境設定</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/llm_widget.ui" line="92"/>
@@ -2810,7 +2810,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/llm/templates/loading.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -2818,7 +2818,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/lora/templates/lora.ui" line="31"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/lora/templates/lora.ui" line="78"/>
@@ -2856,7 +2856,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/lora/templates/lora_container.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/lora/templates/lora_container.ui" line="38"/>
@@ -2899,7 +2899,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/lora/templates/lora_trigger_word.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/lora/templates/lora_trigger_word.ui" line="20"/>
@@ -2937,7 +2937,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/memory_preferences/templates/memory_preferences.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/memory_preferences/templates/memory_preferences.ui" line="54"/>
@@ -3131,7 +3131,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/llm/templates/message.ui" line="26"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/message.ui" line="29"/>
@@ -3164,7 +3164,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/metadata.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/metadata.ui" line="20"/>
@@ -3197,7 +3197,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/llm/templates/mistral_license.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/llm/templates/mistral_license.ui" line="35"/>
@@ -3241,7 +3241,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/nodegraph/templates/node_graph.ui" line="68"/>
@@ -3327,7 +3327,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/openrouter_settings/templates/openrouter_settings.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/openrouter_settings/templates/openrouter_settings.ui" line="20"/>
@@ -3345,7 +3345,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/paths/templates/path.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/paths/templates/path.ui" line="33"/>
@@ -3368,7 +3368,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/paths/templates/paths.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/paths/templates/paths.ui" line="32"/>
@@ -3464,7 +3464,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/prompt_container.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/prompt_container.ui" line="34"/>
@@ -3482,7 +3482,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/llm/templates/prompt_templates.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/prompt_templates.ui" line="38"/>
@@ -3521,7 +3521,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/windows/prompt_browser/templates/prompt_browser_prompt_widget.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/prompt_browser/templates/prompt_browser_prompt_widget.ui" line="46"/>
@@ -3536,12 +3536,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/windows/prompt_browser/templates/prompt_browser_prompt_widget.ui" line="97"/>
         <source>Load</source>
-        <translation type="unfinished">読み込み</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/prompt_browser/templates/prompt_browser_prompt_widget.ui" line="109"/>
         <source>Delete</source>
-        <translation type="unfinished">削除</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/prompt_browser/templates/prompt_browser_prompt_widget.ui" line="126"/>
@@ -3559,7 +3559,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/rag_settings/templates/rag_settings.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/rag_settings/templates/rag_settings.ui" line="20"/>
@@ -3582,12 +3582,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/nodegraph/nodes/art/templates/scheduler.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/nodegraph/nodes/art/templates/scheduler.ui" line="20"/>
         <source>Scheduler</source>
-        <translation type="unfinished">スケジューラー</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -3595,7 +3595,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/seed/templates/seed.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/seed/templates/seed.ui" line="40"/>
@@ -3618,7 +3618,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/slider/templates/slider.ui" line="32"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/slider/templates/slider.ui" line="79"/>
@@ -3631,7 +3631,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/tts/templates/speecht5_license.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/tts/templates/speecht5_license.ui" line="35"/>
@@ -3664,7 +3664,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/tts/templates/speecht5_preferences.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/tts/templates/speecht5_preferences.ui" line="48"/>
@@ -3732,7 +3732,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/tts/templates/speech_t5.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/tts/templates/speech_t5.ui" line="27"/>
@@ -3760,7 +3760,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/stable_diffusion_license.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/stable_diffusion_license.ui" line="26"/>
@@ -3998,7 +3998,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/stable_diffusion_model_setup.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/stable_diffusion_model_setup.ui" line="32"/>
@@ -4051,7 +4051,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stable_diffusion_settings.ui" line="20"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stable_diffusion_settings.ui" line="107"/>
@@ -4076,7 +4076,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stable_diffusion_settings.ui" line="248"/>
         <source>Model</source>
-        <translation type="unfinished">モデル</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stable_diffusion_settings.ui" line="273"/>
@@ -4116,12 +4116,12 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stable_diffusion_settings.ui" line="471"/>
         <source>Scheduler</source>
-        <translation type="unfinished">スケジューラー</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stable_diffusion_settings.ui" line="502"/>
         <source>Stable Diffusion</source>
-        <translation type="unfinished">ステーブルディフュージョン</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -4129,7 +4129,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/stable_diffusion_welcome_screen.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stable_diffusion_setup/templates/stable_diffusion_welcome_screen.ui" line="46"/>
@@ -4162,7 +4162,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stablediffusion_generator_form.ui" line="22"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stablediffusion_generator_form.ui" line="122"/>
@@ -4324,12 +4324,12 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stablediffusion_tool_tab.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stablediffusion_tool_tab.ui" line="65"/>
         <source>Stable Diffusion</source>
-        <translation type="unfinished">ステーブルディフュージョン</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/stablediffusion/templates/stablediffusion_tool_tab.ui" line="93"/>
@@ -4392,7 +4392,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/widgets/stats/templates/stats.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -4400,7 +4400,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/widgets/status/templates/status.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/status/templates/status.ui" line="38"/>
@@ -4415,7 +4415,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/widgets/status/templates/status.ui" line="84"/>
         <source>Safety Checker</source>
-        <translation type="unfinished">安全性チェッカ</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/status/templates/status.ui" line="107"/>
@@ -4453,7 +4453,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/widgets/stt/templates/stt_settings.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/stt/templates/stt_settings.ui" line="41"/>
@@ -4486,7 +4486,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stt/templates/stt_setup.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stt/templates/stt_setup.ui" line="27"/>
@@ -4514,7 +4514,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stt/templates/stt_welcome_screen.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stt/templates/stt_welcome_screen.ui" line="26"/>
@@ -4547,7 +4547,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/widgets/tool_tab/templates/tool_tab.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/tool_tab/templates/tool_tab.ui" line="71"/>
@@ -4565,7 +4565,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/tts/templates/tts_setup.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/tts/templates/tts_setup.ui" line="27"/>
@@ -4593,7 +4593,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/tts/templates/tts_welcome_screen.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/tts/templates/tts_welcome_screen.ui" line="26"/>
@@ -4654,7 +4654,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/windows/setup_wizard/user_agreement/templates/user_agreement.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/user_agreement/templates/user_agreement.ui" line="35"/>
@@ -4715,7 +4715,7 @@ By using AI Runner, you acknowledge that you have read, understood, and agree to
     <message>
         <location filename="../gui/widgets/user/templates/user_settings.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/user/templates/user_settings.ui" line="20"/>
@@ -4748,7 +4748,7 @@ By using AI Runner, you acknowledge that you have read, understood, and agree to
     <message>
         <location filename="../gui/widgets/nodegraph/templates/variables_panel.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/nodegraph/templates/variables_panel.ui" line="39"/>
@@ -4761,7 +4761,7 @@ By using AI Runner, you acknowledge that you have read, understood, and agree to
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/vision_setup/templates/download_vision_models.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/vision_setup/templates/download_vision_models.ui" line="26"/>
@@ -4802,7 +4802,7 @@ By using AI Runner, you acknowledge that you have read, understood, and agree to
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stt/templates/whisper_license.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/stt/templates/whisper_license.ui" line="35"/>
@@ -4868,7 +4868,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../gui/widgets/stt/templates/whisper_settings.ui" line="14"/>
         <source>Form</source>
-        <translation type="unfinished">フォーム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../gui/widgets/stt/templates/whisper_settings.ui" line="59"/>
