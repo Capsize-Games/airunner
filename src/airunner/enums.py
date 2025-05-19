@@ -494,8 +494,6 @@ LANGUAGE_DISPLAY_MAP = {
     AvailableLanguage.ZH_MIX_EN: "Chinese (Mixed English)",
     AvailableLanguage.JP: "Japanese",
     AvailableLanguage.KR: "Korean",
-    AvailableLanguage.DE: "German",
-    AvailableLanguage.RU: "Russian",
     AvailableLanguage.SP: "Spanish",
 }
 LANGUAGE_TO_LOCALE_MAP = {
@@ -507,8 +505,6 @@ LANGUAGE_TO_LOCALE_MAP = {
     AvailableLanguage.ZH_MIX_EN: QLocale.Chinese,
     AvailableLanguage.JP: QLocale.Japanese,
     AvailableLanguage.KR: QLocale.Korean,
-    AvailableLanguage.DE: QLocale.German,
-    AvailableLanguage.RU: QLocale.Russian,
     AvailableLanguage.SP: QLocale.Spanish,
 }
 LOCALE_TO_LANGUAGE_MAP = {
@@ -518,8 +514,6 @@ LOCALE_TO_LANGUAGE_MAP = {
     QLocale.Chinese: AvailableLanguage.ZH,
     QLocale.Japanese: AvailableLanguage.JP,
     QLocale.Korean: AvailableLanguage.KR,
-    QLocale.German: AvailableLanguage.DE,
-    QLocale.Russian: AvailableLanguage.RU,
 }
 AVAILABLE_LANGUAGES = {
     "gui_language": [
