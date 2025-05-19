@@ -24,6 +24,9 @@ class LanguageSettingsWidget(BaseWidget, AIModelMixin):
             v: k for k, v in LANGUAGE_DISPLAY_MAP.items()
         }
 
+        self._signals_connected = False
+        self._connect_signals()
+
         self.ui.gui_language.blockSignals(True)
         self.ui.user_language.blockSignals(True)
         self.ui.bot_language.blockSignals(True)
@@ -56,6 +59,45 @@ class LanguageSettingsWidget(BaseWidget, AIModelMixin):
         self.ui.gui_language.blockSignals(False)
         self.ui.user_language.blockSignals(False)
         self.ui.bot_language.blockSignals(False)
+
+    def _connect_signals(self):
+        if not self._signals_connected:
+            self.ui.gui_language.currentTextChanged.connect(
+                self.on_gui_language_currentTextChanged
+            )
+            self.ui.user_language.currentTextChanged.connect(
+                self.on_user_language_currentTextChanged
+            )
+            self.ui.bot_language.currentTextChanged.connect(
+                self.on_bot_language_currentTextChanged
+            )
+            self._signals_connected = True
+
+    def _disconnect_signals(self):
+        if self._signals_connected:
+            try:
+                self.ui.gui_language.currentTextChanged.disconnect(
+                    self.on_gui_language_currentTextChanged
+                )
+            except Exception:
+                pass
+            try:
+                self.ui.user_language.currentTextChanged.disconnect(
+                    self.on_user_language_currentTextChanged
+                )
+            except Exception:
+                pass
+            try:
+                self.ui.bot_language.currentTextChanged.disconnect(
+                    self.on_bot_language_currentTextChanged
+                )
+            except Exception:
+                pass
+            self._signals_connected = False
+
+    def closeEvent(self, event):
+        self._disconnect_signals()
+        super().closeEvent(event)
 
     @Slot(str)
     def on_gui_language_currentTextChanged(self, val: str):

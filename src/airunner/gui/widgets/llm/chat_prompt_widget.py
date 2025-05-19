@@ -343,12 +343,6 @@ class ChatPromptWidget(BaseWidget):
             self.logger.warning("Prompt is empty")
             return
 
-        language = detect_language(prompt)
-        ApplicationSettings.objects.update(
-            self.application_settings.id,
-            detected_language=language,
-        )
-
         if self.generating:
             if self.held_message is None:
                 self.held_message = prompt
