@@ -862,6 +862,13 @@ class API(App):
                     "tohoku-nlp/bert-base-japanese-v3",
                 )
             ),
+            "hfl/chinese-roberta-wwm-ext-large": os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text/models/tts",
+                    "hfl/chinese-roberta-wwm-ext-large",
+                )
+            ),
         }
         self._initialized = True
         self.llm = LLMAPIService(emit_signal=self.emit_signal)

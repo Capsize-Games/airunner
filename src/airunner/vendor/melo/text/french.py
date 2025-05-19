@@ -8,7 +8,7 @@ class French(LanguageBase):
     model_path = "dbmdz/bert-base-french-europeana-cased"
     model_path_bert = "dbmdz/bert-base-french-europeana-cased"
 
-    def text_normalize(text):
+    def text_normalize(self, text):
         text = fr_cleaner.french_cleaners(text)
         return text
 

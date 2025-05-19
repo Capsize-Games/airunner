@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from PySide6.QtCore import Slot, QPropertyAnimation, QTimer, Qt
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QApplication
 
+from airunner.data.models.application_settings import ApplicationSettings
 from airunner.enums import (
     SignalCode,
     LLMActionType,
@@ -15,13 +16,13 @@ from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.gui.widgets.llm.message_widget import MessageWidget
 from airunner.data.models import Conversation
+from airunner.utils.llm.language import detect_language
 from airunner.utils.llm.strip_names_from_message import (
     strip_names_from_message,
 )
 from airunner.utils import create_worker
 from airunner.utils.widgets import load_splitter_settings
 from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.workers.llm_response_worker import LLMResponseWorker
 from airunner.settings import AIRUNNER_ART_ENABLED
 
@@ -341,6 +342,12 @@ class ChatPromptWidget(BaseWidget):
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")
             return
+
+        language = detect_language(prompt)
+        ApplicationSettings.objects.update(
+            self.application_settings.id,
+            detected_language=language,
+        )
 
         if self.generating:
             if self.held_message is None:
