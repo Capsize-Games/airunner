@@ -181,7 +181,7 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="32"/>
         <source>AI Runner</source>
-        <translation>AIランナー</translation>
+        <translation>AIエンジン</translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="186"/>
@@ -343,7 +343,7 @@
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="653"/>
         <source>Browse AI Runner Path</source>
-        <translation>AIランナーパスを参照</translation>
+        <translation>AIエンジンのパスを参照</translation>
     </message>
     <message>
         <location filename="../gui/windows/main/templates/main_window.ui" line="662"/>
@@ -533,7 +533,7 @@
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/installation_settings.ui" line="47"/>
         <source>Choose a directory to install AI Runner to</source>
-        <translation></translation>
+        <translation>AIエンジンをインストールするディレクトリを選択してください</translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/installation_settings.ui" line="66"/>
@@ -543,12 +543,12 @@
     <message>
         <location filename="../gui/windows/setup_wizard/path_settings/templates/path_settings.ui" line="20"/>
         <source>Let&apos;s begin by setting up the path to your AI Runner directory. This directory will contain subdirectories which will contain your models, generated images and more.</source>
-        <translation></translation>
+        <translation>まず、AIエンジンのディレクトリパスを設定しましょう。このディレクトリには、モデルや生成された画像などが含まれるサブディレクトリが作成されます。</translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/path_settings/templates/path_settings.ui" line="52"/>
         <source>AI Runner path</source>
-        <translation></translation>
+        <translation>AIエンジンのパス</translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/path_settings/templates/path_settings.ui" line="59"/>
@@ -579,7 +579,7 @@
     <message>
         <location filename="../gui/windows/about/templates/about.ui" line="58"/>
         <source>AI Runner v</source>
-        <translation></translation>
+        <translation>AIエンジン v</translation>
     </message>
     <message>
         <location filename="../gui/windows/about/templates/about.ui" line="82"/>
@@ -708,7 +708,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/age_restriction/templates/age_restriction.ui" line="196"/>
         <source>AI Runner is for users of 18 years of age or older</source>
-        <translation></translation>
+        <translation>AIエンジンは18歳以上のユーザーを対象としています</translation>
     </message>
 </context>
 <context>
@@ -927,12 +927,12 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/ai_runner_license/templates/airunner_license.ui" line="256"/>
         <source>AI Runner License</source>
-        <translation></translation>
+        <translation>AIエンジンライセンス</translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/ai_runner_license/templates/airunner_license.ui" line="263"/>
         <source>I have read and agree to the terms of the AI Runner license</source>
-        <translation></translation>
+        <translation>AIエンジンライセンスの条項を読み、同意します</translation>
     </message>
 </context>
 <context>
@@ -940,7 +940,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/settings/templates/airunner_settings.ui" line="14"/>
         <source>AI Runner Settings</source>
-        <translation></translation>
+        <translation>AIエンジンの設定</translation>
     </message>
 </context>
 <context>
@@ -1014,7 +1014,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="119"/>
         <source>AI Runner</source>
-        <translation></translation>
+        <translation>AIエンジン</translation>
     </message>
     <message>
         <location filename="../gui/widgets/llm/templates/bot_preferences.ui" line="125"/>
@@ -1346,7 +1346,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/installer/templates/completion_page.ui" line="26"/>
         <source>Your installation is complete. Please use AI Runner responsibly.</source>
-        <translation></translation>
+        <translation>AIエンジンのインストールが完了しました。責任を持ってご利用ください。</translation>
     </message>
 </context>
 <context>
@@ -1392,7 +1392,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/controlnet/templates/controlnet_setup.ui" line="70"/>
         <source>These models allow for greater control over the output of your AI Art and are required for AI Runner to function properly</source>
-        <translation></translation>
+        <translation>これらのモデルを使用することで、AIアートの出力の制御が向上し、AIエンジンが適切に機能するために必要です。</translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/model_setup/controlnet/templates/controlnet_setup.ui" line="80"/>
@@ -2286,7 +2286,7 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/install_success_page.ui" line="33"/>
         <source>Click finish and run AI Runner to begin using the application.</source>
-        <translation></translation>
+        <translation>「完了」をクリックしてAIエンジンを実行し、アプリケーションの使用を開始してください。</translation>
     </message>
     <message>
         <location filename="../gui/windows/setup_wizard/installation_settings/templates/install_success_page.ui" line="49"/>
@@ -2970,7 +2970,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/memory_preferences/templates/memory_preferences.ui" line="57"/>
         <source>Model CPU offload</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../gui/widgets/memory_preferences/templates/memory_preferences.ui" line="70"/>
@@ -2980,7 +2980,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/memory_preferences/templates/memory_preferences.ui" line="73"/>
         <source>Vae Slicing</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../gui/widgets/memory_preferences/templates/memory_preferences.ui" line="86"/>
@@ -2990,7 +2990,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/memory_preferences/templates/memory_preferences.ui" line="89"/>
         <source>Attention Slicing</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../gui/widgets/memory_preferences/templates/memory_preferences.ui" line="102"/>
@@ -3000,7 +3000,7 @@ exclusive jurisdiction of any dispute arising out of this Agreement.</source>
     <message>
         <location filename="../gui/widgets/memory_preferences/templates/memory_preferences.ui" line="105"/>
         <source>Tile vae</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../gui/widgets/memory_preferences/templates/memory_preferences.ui" line="118"/>
@@ -4654,7 +4654,7 @@ remain valid as if such provision had not been set forth herein.
     <message>
         <location filename="../gui/windows/update/templates/update.ui" line="35"/>
         <source>New Version of AI Runner available</source>
-        <translation>AI Runnerの新しいバージョンが利用可能です</translation>
+        <translation>AIエンジンの新しいバージョンが利用可能です</translation>
     </message>
     <message>
         <location filename="../gui/windows/update/templates/update.ui" line="42"/>

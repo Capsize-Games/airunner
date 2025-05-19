@@ -23,7 +23,6 @@ from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models.application_settings import ApplicationSettings
 from airunner.settings import (
-    AIRUNNER_DISCORD_URL,
     AIRUNNER_DISABLE_SETUP_WIZARD,
 )
 

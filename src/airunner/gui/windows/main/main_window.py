@@ -17,6 +17,7 @@ from PySide6.QtCore import (
     Signal,
     QProcess,
     QTimer,
+    QCoreApplication,
 )
 from PySide6.QtGui import QGuiApplication, QKeySequence, QAction, QCursor
 from PySide6.QtWidgets import (
@@ -178,6 +179,8 @@ class MainWindow(
         self.ui = self.ui_class_()
         self.qsettings = get_qsettings()
         self.icon_manager: Optional[IconManager] = None
+        self.tab_backup = {}
+        self.workflow_tab = None
         self.quitting = False
         self.update_popup = None
         self._document_path = None
@@ -1140,9 +1143,6 @@ class MainWindow(
 
     def on_retranslate_ui_signal(self):
         self.ui.retranslateUi(self)
-
-    tab_backup = {}
-    workflow_tab = None
 
     def _toggle_agent_workflow_feature(self, enabled: bool):
         """
