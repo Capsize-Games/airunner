@@ -22,6 +22,8 @@ Here are some of the things you can do with AI Runner:
 
 For extra security, performance, and compatibility, AI Runner is built with **Wayland support**, **Python 3.13**, and the latest stable torch libraries.
 
+**Up next**: support for more TTS languages using Whisper.
+
 ---
 
 ## System Requirements
