@@ -8,10 +8,17 @@ from PySide6 import QtCore
 from PySide6.QtCore import QObject, QTimer
 from PySide6.QtGui import QGuiApplication, QPixmap, Qt, QWindow, QPainter
 from PySide6.QtWidgets import QApplication, QSplashScreen
-from PySide6.QtCore import QTranslator, QLocale, QCoreApplication
+from PySide6.QtCore import QTranslator, QLocale
 
+from airunner.data.models.language_settings import LanguageSettings
 from airunner.data.models.path_settings import PathSettings
-from airunner.enums import SignalCode
+from airunner.enums import (
+    LANGUAGE_TO_LOCALE_MAP,
+    AVAILABLE_LANGUAGES,
+    LOCALE_TO_LANGUAGE_MAP,
+    AvailableLanguage,
+    SignalCode,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models.application_settings import ApplicationSettings
@@ -52,12 +59,60 @@ class App(MediatorMixin, SettingsMixin, QObject):
         super().__init__()
 
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
+        self.register(SignalCode.UPATE_LOCALE, self.on_update_locale_signal)
 
         if self.initialize_gui:
             self.start()
-            self._load_translations()
+            self.set_translations()
             self.run_setup_wizard()
             self.run()
+
+    def on_update_locale_signal(self, data: dict):
+        self.set_translations(data)
+
+    def set_translations(self, data: Optional[Dict] = None):
+        locale_language = None
+        print(data)
+
+        # Get the locale language from the data dictionary
+        locale_language_string = (
+            data.get("gui_language", None) if data else None
+        )
+        if locale_language_string:
+            locale_language = LANGUAGE_TO_LOCALE_MAP[
+                AvailableLanguage(locale_language_string)
+            ]
+            print("1 locale_language set to", locale_language)
+
+        # If no locale language is provided, use the default from LanguageSettings
+        if not locale_language:
+            settings = LanguageSettings.objects.first()
+            if settings:
+                locale_language = LANGUAGE_TO_LOCALE_MAP[
+                    AvailableLanguage(settings.gui_language)
+                ]
+                print("2 locale_language set to", locale_language)
+
+        # If still no locale language, use the system locale
+        if not locale_language:
+            locale_language = QLocale.system().language()
+            print("3 locale_language set to", locale_language)
+
+        # If we have a locale but it's not in the available languages, set it to None
+        if locale_language is not None and (
+            LOCALE_TO_LANGUAGE_MAP[locale_language]
+            not in AVAILABLE_LANGUAGES["gui_language"]
+        ):
+            locale_language = None
+            print("4 locale_language set to", locale_language)
+
+        # If still no locale language, use English as default
+        if not locale_language:
+            locale_language = locale_language or QLocale.English
+            print("5 locale_language set to", locale_language)
+
+        # Set the locale language in the LanguageSettings model
+        self._load_translations(locale=QLocale(locale_language))
 
     @staticmethod
     def run_setup_wizard():

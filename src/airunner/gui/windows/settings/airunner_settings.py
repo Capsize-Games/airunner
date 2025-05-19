@@ -45,6 +45,9 @@ from airunner.gui.widgets.openrouter_settings.openrouter_settings_widget import 
 from airunner.gui.windows.settings.templates.airunner_settings_ui import (
     Ui_airunner_settings,
 )
+from airunner.gui.widgets.language.language_settings_widget import (
+    LanguageSettingsWidget,
+)
 from airunner.gui.windows.base_window import BaseWindow
 from airunner.utils.settings import get_qsettings
 
@@ -125,6 +128,8 @@ class SettingsWindow(BaseWindow):
             return RAGSettingsWidget
         elif name == "openrouter_settings":
             return OpenrouterSettingsWidget
+        elif name == "language_settings":
+            return LanguageSettingsWidget
         # elif name == "stt_preferences":
         #     return STTSettingsWidget
 
@@ -243,6 +248,11 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "openrouter_settings",
                         "display_name": "Openrouter Settings",
+                        "checkable": False,
+                    },
+                    {
+                        "name": "language_settings",
+                        "display_name": "Language Settings",
                         "checkable": False,
                     },
                 ],
