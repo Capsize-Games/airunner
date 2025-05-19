@@ -5,35 +5,25 @@
 import sys
 import signal
 
-from PySide6.QtCore import (
-    QObject
-)
-from PySide6.QtGui import (
-    Qt
-)
-from PySide6.QtWidgets import (
-    QApplication
-)
+from PySide6.QtCore import QObject
+from PySide6.QtGui import Qt
+from PySide6.QtWidgets import QApplication
 
-from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.gui.windows.download_wizard.download_wizard_window import DownloadWizardWindow
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.windows.setup_wizard.setup_wizard_window import SetupWizardWindow
+from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.gui.windows.download_wizard.download_wizard_window import (
+    DownloadWizardWindow,
+)
+from airunner.gui.windows.main.settings_mixin import SettingsMixin
 
 
-class AppInstaller(
-    QObject,
-    SettingsMixin,
-    MediatorMixin
-):
+class AppInstaller(QObject, SettingsMixin, MediatorMixin):
     """
     The main application class for AI Runner.
     This class can be run as a GUI application or as a socket server.
     """
-    def __init__(
-        self,
-        close_on_cancel: bool = True
-    ):
+
+    def __init__(self, close_on_cancel: bool = True):
         """
         Initialize the application and run as a GUI application or a socket server.
         """
@@ -60,12 +50,10 @@ class AppInstaller(
         :return: bool
         """
         return (
-            (
-                # self.wizard.setup_settings["paths_initialized"] and
-                self.application_settings.user_agreement_checked and
-                self.application_settings.stable_diffusion_agreement_checked and
-                self.application_settings.airunner_agreement_checked
-            )
+            # self.wizard.setup_settings["paths_initialized"] and
+            self.application_settings.user_agreement_checked
+            and self.application_settings.stable_diffusion_agreement_checked
+            and self.application_settings.airunner_agreement_checked
         )
 
     def start(self):
@@ -78,7 +66,7 @@ class AppInstaller(
         self.app = QApplication.instance()
         if self.app is None:
             self.app = QApplication([])
-
+        
         self.wizard = SetupWizardWindow()
         self.wizard.exec()
 
@@ -88,13 +76,12 @@ class AppInstaller(
             return
 
         self.download_wizard = DownloadWizardWindow()
-        self.download_wizard.exec()
+        self.download_wizard.show()
+        result = self.app.exec()
+        return
 
     @staticmethod
-    def signal_handler(
-        _signal,
-        _frame
-    ):
+    def signal_handler(_signal, _frame):
         """
         Handle the SIGINT signal in a clean way.
         :param _signal:

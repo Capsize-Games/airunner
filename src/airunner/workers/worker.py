@@ -25,7 +25,11 @@ class Worker(
     finished = Signal()
     prefix = "Worker"
 
-    def __init__(self, sleep_time_in_ms: int = AIRUNNER_SLEEP_TIME_IN_MS):
+    def __init__(
+        self,
+        sleep_time_in_ms: int = AIRUNNER_SLEEP_TIME_IN_MS,
+        initialize_gui=True,
+    ):
         super().__init__()
         self._sleep_time_in_ms: int = sleep_time_in_ms
         self.state = WorkerState.HALTED
@@ -34,7 +38,7 @@ class Worker(
         self.items = {}
         self.current_index = 0
         self.paused = False
-        self.api = API()
+        self.api = API(initialize_gui=initialize_gui)
         self.register(SignalCode.QUIT_APPLICATION, self.stop)
 
         # Remove thread creation and management from here

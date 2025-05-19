@@ -73,29 +73,26 @@ class DownloadWizardWindow(
             current_page.start()
 
     def init_pages(self):
-        """
-        Initialize the wizard pages based on setup settings.
-        """
         failed = True
-
-        if (
-            self.application_settings.user_agreement_checked
-            and self.application_settings.stable_diffusion_agreement_checked
-            and self.application_settings.airunner_agreement_checked
-        ):
-            self.setPage(0, PathSettings(self))
-            choose_models_page = ChooseModelsPage(self)
-            self.setPage(1, choose_models_page)
+        self.setPage(0, PathSettings(self))
+        choose_models_page = ChooseModelsPage(self)
+        self.setPage(1, choose_models_page)
+        try:
             self.install_page = InstallPage(
                 self,
                 stablediffusion_models=choose_models_page.models,
                 models_enabled=choose_models_page.models_enabled,
             )
             self.setPage(2, self.install_page)
+        except BaseException as e:
+            print(f"Exception creating InstallPage: {e}")
+        try:
             self.setPage(3, InstallSuccessPage(self))
-            failed = False
-
+        except BaseException as e:
+            print(f"Exception creating InstallSuccessPage: {e}")
+        failed = False
         if failed:
+            print("Setting InstallFailedPage")
             self.setPage(1, InstallFailedPage(self))
 
     def on_page_changed(self, id):
