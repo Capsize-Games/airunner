@@ -8,7 +8,7 @@ class TTSRequest:
     message: Annotated[str, "The message to send to the text-to-speech engine"]
     gender: Annotated[str, "The gender of the voice"] = "Male"
     language: Annotated[AvailableLanguage, "Language of the voice"] = (
-        AvailableLanguage.EN_NEWEST
+        AvailableLanguage.EN
     )
 
 
@@ -23,7 +23,7 @@ class EspeakTTSRequest(TTSRequest):
 
 @dataclass
 class OpenVoiceTTSRequest(TTSRequest):
-    language: Annotated[str, "Language of the voice"] = "EN_NEWEST"
+    language: Annotated[str, "Language of the voice"] = "EN"
     speed: Annotated[int, "Speed of speech"] = 100
     tone_color: Annotated[str, "Tone color of the voice"] = "default"
     pitch: Annotated[int, "Pitch of the voice"] = 100

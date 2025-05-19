@@ -35,10 +35,7 @@ class TTS(nn.Module):
     @property
     def voice_model_paths(self) -> Dict:
         return {
-            AvailableLanguage.EN: self.api.paths["myshell-ai/MeloTTS-English"],
-            AvailableLanguage.EN_NEWEST: self.api.paths[
-                "myshell-ai/MeloTTS-English-v3"
-            ],
+            AvailableLanguage.EN: self.api.paths["myshell-ai/MeloTTS-English-v3"],
             AvailableLanguage.FR: self.api.paths["myshell-ai/MeloTTS-French"],
             AvailableLanguage.JP: self.api.paths[
                 "myshell-ai/MeloTTS-Japanese"
@@ -177,7 +174,6 @@ class TTS(nn.Module):
         for t in tx:
             if language in [
                 AvailableLanguage.EN,
-                AvailableLanguage.EN_NEWEST,
                 AvailableLanguage.ZH_MIX_EN,
             ]:
                 t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
@@ -317,7 +313,6 @@ class TTS(nn.Module):
             elif lang_enum in [
                 AvailableLanguage.JP,
                 AvailableLanguage.EN,
-                AvailableLanguage.EN_NEWEST,
                 AvailableLanguage.ZH_MIX_EN,
                 AvailableLanguage.KR,
                 AvailableLanguage.ES,
