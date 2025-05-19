@@ -3,6 +3,7 @@ from abc import ABCMeta
 import os
 import torch
 from airunner.settings import AIRUNNER_BASE_PATH
+from airunner.utils.llm.language import detect_language
 
 torch.hub.set_dir(
     os.environ.get("TORCH_HOME", os.path.join(AIRUNNER_BASE_PATH, "torch/hub"))
@@ -127,10 +128,28 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.model: Optional[TTS] = None
         self.src_path: str = f"{self._output_dir}/tmp.wav"
         self._speed: float = 1.0
-        self._language: AvailableLanguage = AvailableLanguage(
-            self.openvoice_settings.language
-        )
         self._reference_speaker = speaker_recording_path
+        self._language: AvailableLanguage = (
+            AvailableLanguage.EN_NEWEST
+        )  # Use a private attribute
+
+    @property
+    def language(self) -> AvailableLanguage:
+        """
+        Get the language setting for TTS.
+        """
+        if hasattr(self, "application_settings") and getattr(
+            self.application_settings, "use_detected_language", False
+        ):
+            language = self.application_settings.detected_language
+            lang = AvailableLanguage[language]
+        else:
+            lang = self._language
+        return lang
+
+    @language.setter
+    def language(self, value: AvailableLanguage):
+        self._language = value
 
     @property
     def device(self):
@@ -156,42 +175,77 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             )
         return self._tone_color_converter
 
+    _source_se: Optional[torch.Tensor] = None
+
+    @property
+    def speaker_key(self) -> str:
+        """
+        Get the speaker key for the TTS model.
+        """
+        if self.language is AvailableLanguage.EN:
+            return "en-newest"
+        return self.language.value.lower()
+
+    @property
+    def speaker_id(self) -> str:
+        # ['EN-US', 'EN-BR', 'EN_INDIA', 'EN-AU', 'EN-Default']
+        if self.language is AvailableLanguage.EN:
+            return "EN-Default"
+        return self.language.value
+
+    @property
+    def source_se(self) -> torch.Tensor:
+        if self._source_se is None:
+            self._source_se = torch.load(
+                os.path.join(
+                    self.path_settings.tts_model_path,
+                    f"openvoice/checkpoints_v2/base_speakers/ses/{self.speaker_key}.pth",
+                ),
+                map_location=self.device,
+            )
+        return self._source_se
+
     def generate(self, tts_request: Type[TTSRequest]):
         """
         Generate speech using OpenVoice and apply tone color conversion.
         """
         message = tts_request.message
+        language = AvailableLanguage(detect_language(tts_request.message))
+        if self.language != language:
+            self._source_se = None
+            self.language = language
+            self.model.language = self.language
         speaker_ids = self.model.hps.data.spk2id
-        for speaker_key in speaker_ids.keys():
-            speaker_id = speaker_ids[speaker_key]
-            speaker_key = speaker_key.lower().replace("_", "-")
+        print(speaker_ids.keys())
+        # print("SPEAKER KEY", speaker_key)
+        # key = speaker_key.replace("-", "_").split("_")[0].upper()
+        # if key == "En-Default":
+        #     key = "EN_NEWEST"
+        # speaker_key = speaker_key.lower().replace("_", "-")
 
-            source_se = torch.load(
-                os.path.join(
-                    self.path_settings.tts_model_path,
-                    f"openvoice/checkpoints_v2/base_speakers/ses/{speaker_key}.pth",
-                ),
-                map_location=self.device,
-            )
+        print(self.model.language)
 
-            self.model.tts_to_file(
-                message, speaker_id, self.src_path, speed=self._speed
-            )
+        self.model.tts_to_file(
+            message,
+            speaker_ids[self.speaker_id],
+            self.src_path,
+            speed=self._speed,
+        )
 
-            output_path = os.path.join(
-                self.path_settings.tts_model_path,
-                f"openvoice/{self._output_dir}/output_v2_{speaker_key}.wav",
-            )
+        output_path = os.path.join(
+            self.path_settings.tts_model_path,
+            f"openvoice/{self._output_dir}/output_v2_{self.speaker_key}.wav",
+        )
 
-            response = self.tone_color_converter.convert(
-                audio_src_path=self.src_path,
-                src_se=source_se,
-                tgt_se=self._target_se,
-                output_path=output_path,
-            )
+        response = self.tone_color_converter.convert(
+            audio_src_path=self.src_path,
+            src_se=self.source_se,
+            tgt_se=self._target_se,
+            output_path=output_path,
+        )
 
-            if response is not None:
-                self.api.tts.add_to_stream(response)
+        if response is not None:
+            self.api.tts.add_to_stream(response)
 
     def load(self, _target_model=None):
         """
@@ -201,7 +255,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self._initialize()
-        self.model = TTS(language=self._language)
+        self.model = TTS(language=self.language)
         self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
     def unload(self):
