@@ -130,7 +130,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         self._speed: float = 1.0
         self._reference_speaker = speaker_recording_path
         self._language: AvailableLanguage = (
-            AvailableLanguage.EN_NEWEST
+            AvailableLanguage.EN
         )  # Use a private attribute
 
     @property
@@ -196,14 +196,17 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
     @property
     def source_se(self) -> torch.Tensor:
         if self._source_se is None:
+            speaker_key = self.speaker_key
+            if speaker_key == "en-us":
+                speaker_key = "en-newest"
             path = os.path.join(
                 self.path_settings.tts_model_path,
-                f"openvoice/checkpoints_v2/base_speakers/ses/{self.speaker_key}.pth",
+                f"openvoice/checkpoints_v2/base_speakers/ses/{speaker_key}.pth",
             )
             if not os.path.exists(path):
                 path = os.path.join(
                     self.path_settings.tts_model_path,
-                    f"openvoice/checkpoints_v2/base_speakers/ses/en-us.pth",
+                    f"openvoice/checkpoints_v2/base_speakers/ses/en-newest.pth",
                 )
             self._source_se = torch.load(
                 path,
@@ -225,17 +228,11 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             self.model.language = self.language
         speaker_ids = self.model.hps.data.spk2id
         print(speaker_ids.keys())
-        # print("SPEAKER KEY", speaker_key)
-        # key = speaker_key.replace("-", "_").split("_")[0].upper()
-        # if key == "En-Default":
-        #     key = "EN_NEWEST"
-        # speaker_key = speaker_key.lower().replace("_", "-")
-
         print(self.model.language)
 
         speaker_id = self.speaker_id
         if speaker_id not in speaker_ids:
-            speaker_id = "EN-US"
+            speaker_id = "EN-Newest"
 
         self.model.tts_to_file(
             message,
