@@ -196,11 +196,17 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
     @property
     def source_se(self) -> torch.Tensor:
         if self._source_se is None:
-            self._source_se = torch.load(
-                os.path.join(
+            path = os.path.join(
+                self.path_settings.tts_model_path,
+                f"openvoice/checkpoints_v2/base_speakers/ses/{self.speaker_key}.pth",
+            )
+            if not os.path.exists(path):
+                path = os.path.join(
                     self.path_settings.tts_model_path,
-                    f"openvoice/checkpoints_v2/base_speakers/ses/{self.speaker_key}.pth",
-                ),
+                    f"openvoice/checkpoints_v2/base_speakers/ses/en-us.pth",
+                )
+            self._source_se = torch.load(
+                path,
                 map_location=self.device,
             )
         return self._source_se
@@ -227,9 +233,13 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
         print(self.model.language)
 
+        speaker_id = self.speaker_id
+        if speaker_id not in speaker_ids:
+            speaker_id = "EN-US"
+
         self.model.tts_to_file(
             message,
-            speaker_ids[self.speaker_id],
+            speaker_ids[speaker_id],
             self.src_path,
             speed=self._speed,
         )
