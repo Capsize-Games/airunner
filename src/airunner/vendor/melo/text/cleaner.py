@@ -16,7 +16,6 @@ class Cleaner:
             AvailableLanguage.ZH: Chinese,
             AvailableLanguage.JP: Japanese,
             AvailableLanguage.EN: English,
-            AvailableLanguage.EN_NEWEST: English,
             AvailableLanguage.ZH_MIX_EN: ChineseMix,
             AvailableLanguage.KR: Korean,
             AvailableLanguage.FR: French,

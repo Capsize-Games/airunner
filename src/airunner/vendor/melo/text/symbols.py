@@ -336,7 +336,6 @@ language_id_map = {
     AvailableLanguage.ZH: 0,
     AvailableLanguage.JP: 1,
     AvailableLanguage.EN: 2,
-    AvailableLanguage.EN_NEWEST: 2,
     AvailableLanguage.ZH_MIX_EN: 3,
     AvailableLanguage.KR: 4,
     AvailableLanguage.ES: 5,
@@ -350,7 +349,6 @@ language_tone_start_map = {
     AvailableLanguage.ZH_MIX_EN: 0,
     AvailableLanguage.JP: num_zh_tones,
     AvailableLanguage.EN: num_zh_tones + num_ja_tones,
-    AvailableLanguage.EN_NEWEST: num_zh_tones + num_ja_tones,
     AvailableLanguage.KR: num_zh_tones + num_ja_tones + num_en_tones,
     AvailableLanguage.ES: num_zh_tones
     + num_ja_tones
