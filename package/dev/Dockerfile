@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y software-properties-common && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && apt-get install -y \
     build-essential \
+    libxslt-dev \
     libssl-dev \
     zlib1g-dev \
     libbz2-dev \
