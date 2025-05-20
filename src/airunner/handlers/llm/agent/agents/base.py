@@ -1565,15 +1565,45 @@ class BaseAgent(
 
         self.conversation_id = conversation_id
 
+        # Only reset memory if chat_engine can be loaded
+        try:
+            _ = self.chat_engine  # will trigger property and log if error
+        except Exception as e:
+            self.logger.warning(
+                f"clear_history: chat_engine not available, skipping reset_memory and continuing UI: {e}"
+            )
+            return  # Do nothing else, let UI proceed
+        if self.chat_engine is None:
+            self.logger.warning(
+                "clear_history: chat_engine is None after property, skipping reset_memory and continuing UI."
+            )
+            return
         self.reset_memory()
 
     def reset_memory(self):
         self.chat_memory = None
         self.chat_store = None
-        messages = self.chat_store.get_messages(key=str(self.conversation_id))
-        self.chat_memory.set(messages)
-        self.chat_engine.memory = self.chat_memory
-        self.react_tool_agent.memory = self.chat_memory
+        # Defensive: check for None before using
+        if self.chat_store is not None:
+            messages = self.chat_store.get_messages(
+                key=str(self.conversation_id)
+            )
+        else:
+            messages = []
+        if self.chat_memory is not None:
+            self.chat_memory.set(messages)
+        # Only set memory if chat_engine is initialized
+        if self.chat_engine is not None:
+            self.chat_engine.memory = self.chat_memory
+        else:
+            self.logger.warning(
+                "reset_memory: chat_engine is None, cannot set memory."
+            )
+        if (
+            hasattr(self, "react_tool_agent")
+            and self.react_tool_agent is not None
+        ):
+            self.react_tool_agent.memory = self.chat_memory
         self.reload_rag_engine()
 
     def save_chat_history(self):
