@@ -227,7 +227,7 @@ class MarkdownWidget(BaseContentWidget):
         }}
         .codehilite pre {{
             margin: 0;
-            padding: 10px;
+            padding: 10px 5px 10px 5px; /* Reduced left and right padding */
             background-color: transparent;
             border: none;
         }}
@@ -235,11 +235,11 @@ class MarkdownWidget(BaseContentWidget):
         .linenodiv {{
             background-color: #262626;
             border-right: 1px solid #444;
-            padding: 10px 5px;
+            padding: 3px 5px 3px 3px; /* Reduced left and top/bottom padding */
             color: #777;
             text-align: right;
             user-select: none;
-            margin-right: 10px;
+            margin-right: 5px; /* Reduced margin */
         }}
         /* Syntax colors - based on the monokai theme */
         .codehilite .hll {{ background-color: #49483e }}
