@@ -1,14 +1,7 @@
-# filename: formatter_extended.py
-
 import re
-import os
-import tempfile
-import matplotlib.pyplot as plt
 import markdown
 from markdown.extensions.codehilite import CodeHiliteExtension
 from markdown.extensions.fenced_code import FencedCodeExtension
-from PIL import Image, ImageDraw, ImageFont
-import html
 import pygments
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name, guess_lexer
@@ -283,6 +276,73 @@ class FormatterExtended:
         text = re.sub(r"```[\w\W]*?```", " ", text)
         # Remove inline code (`...`)
         text = re.sub(r"`[^`]+`", " ", text)
+        # Remove extra whitespace
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
+    @staticmethod
+    def to_speakable_text(text: str) -> str:
+        """
+        Converts input text to a version suitable for text-to-speech:
+        - Replaces code blocks and inline code with a placeholder (e.g., "[code block omitted]").
+        - Replaces LaTeX math with a speakable version (removes delimiters, optionally replaces common LaTeX commands with words),
+          and inserts a 1 second pause after the word 'formula'.
+        - Leaves natural language text untouched.
+        """
+        # Replace code blocks (```...```)
+        text = re.sub(r"```[\w\W]*?```", "[code block omitted]", text)
+        # Replace inline code (`...`)
+        text = re.sub(r"`[^`]+`", "[inline code omitted]", text)
+
+        # Replace LaTeX math environments with a speakable version
+        def latex_to_speakable(match):
+            latex = match.group(0)
+            # Remove delimiters
+            if latex.startswith("$$") and latex.endswith("$$"):
+                latex = latex[2:-2]
+            elif latex.startswith("$") and latex.endswith("$"):
+                latex = latex[1:-1]
+            elif latex.startswith(r"\\[") and latex.endswith(r"\\]"):
+                latex = latex[2:-2]
+            elif latex.startswith(r"\\(") and latex.endswith(r"\\)"):
+                latex = latex[2:-2]
+            # Optionally, replace some common LaTeX commands with words
+            replacements = [
+                (r"\\frac\s*{([^}]*)}\s*{([^}]*)}", r"fraction \1 over \2"),
+                (r"\\sqrt\s*{([^}]*)}", r"square root of \1"),
+                (r"\\sum", "sum"),
+                (r"\\int", "integral"),
+                (r"\\alpha", "alpha"),
+                (r"\\beta", "beta"),
+                (r"\\cos", "cosine"),
+                (r"\\sin", "sine"),
+                (r"\\theta", "theta"),
+                (r"\\pi", "pi"),
+            ]
+            for pattern, repl in replacements:
+                latex = re.sub(pattern, repl, latex)
+            # Remove remaining backslashes (for simple symbols)
+            latex = re.sub(r"\\([a-zA-Z]+)", r"\1", latex)
+            # Collapse whitespace
+            latex = re.sub(r"\s+", " ", latex)
+            # Just return a speakable formula, no pause markup
+            return f"[formula: {latex.strip()}]"
+
+        # Replace $$...$$
+        text = re.sub(
+            r"\$\$.*?\$\$", latex_to_speakable, text, flags=re.DOTALL
+        )
+        # Replace $...$
+        text = re.sub(r"\$[^$]+\$", latex_to_speakable, text)
+        # Replace \[...\]
+        text = re.sub(
+            r"\\\[.*?\\\]", latex_to_speakable, text, flags=re.DOTALL
+        )
+        # Replace \(...\)
+        text = re.sub(
+            r"\\\(.*?\\\)", latex_to_speakable, text, flags=re.DOTALL
+        )
+
         # Remove extra whitespace
         text = re.sub(r"\s+", " ", text)
         return text.strip()
