@@ -1,5 +1,3 @@
-
-https://github.com/user-attachments/assets/72c4da1c-c97d-4ef5-ae68-ad867e9165a0
 [![AI Runner Logo](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
 [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz)
