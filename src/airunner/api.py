@@ -726,14 +726,13 @@ class LLMAPIService(APIServiceBase):
         )
 
     def load_conversation(
-        self, conversation_id: int, conversation: Conversation, chatbot_id: int
+        self, conversation_id: int
     ):
         self.emit_signal(
-            SignalCode.LOAD_CONVERSATION,
+            SignalCode.QUEUE_LOAD_CONVERSATION,
             {
-                "conversation_id": conversation_id,
-                "conversation": conversation,
-                "chatbot_id": chatbot_id,
+                "action": "load_conversation",
+                "index": conversation_id
             },
         )
 
