@@ -143,10 +143,10 @@ class MessageWidget(BaseWidget):
         self.delete_opacity = QGraphicsOpacityEffect()
         self.play_opacity = QGraphicsOpacityEffect()
 
-        # Set initial opacity to 0 (invisible)
-        self.copy_opacity.setOpacity(0)
-        self.delete_opacity.setOpacity(0)
-        self.play_opacity.setOpacity(0)
+        # Set initial opacity to 0.05 (almost invisible but still clickable)
+        self.copy_opacity.setOpacity(0.05)
+        self.delete_opacity.setOpacity(0.05)
+        self.play_opacity.setOpacity(0.05)
 
         # Apply effects to buttons
         self.ui.copy_button.setGraphicsEffect(self.copy_opacity)
@@ -165,6 +165,46 @@ class MessageWidget(BaseWidget):
 
         self.ui.message_container.installEventFilter(self)
         self.set_cursor(Qt.CursorShape.ArrowCursor)
+
+        # Set a global tooltip style for readability
+        QApplication.instance().setStyleSheet(
+            QApplication.instance().styleSheet()
+            + """
+        QToolTip {
+            color: #fff;
+            background-color: #222;
+            border: 1px solid #555;
+            padding: 4px 8px;
+            font-size: 13px;
+            border-radius: 4px;
+        }
+        """
+        )
+
+        # Add a stylesheet for action buttons for hover/pressed feedback
+        button_style = """
+        QPushButton {
+            background: transparent;
+            border: none;
+            border-radius: 3px;
+        }
+        QPushButton:hover {
+            background: #333;
+            border: 1px solid #666;
+        }
+        QPushButton:pressed {
+            background: #444;
+            border: 1px solid #888;
+        }
+        """
+        self.ui.copy_button.setStyleSheet(button_style)
+        self.ui.delete_button.setStyleSheet(button_style)
+        self.ui.play_audio_button.setStyleSheet(button_style)
+
+        # Set the cursor to pointing hand for action buttons
+        self.ui.copy_button.setCursor(Qt.PointingHandCursor)
+        self.ui.delete_button.setCursor(Qt.PointingHandCursor)
+        self.ui.play_audio_button.setCursor(Qt.PointingHandCursor)
 
         # Hide image_content by default
         self.ui.image_content.setVisible(False)
@@ -249,13 +289,12 @@ class MessageWidget(BaseWidget):
                     anim.setStartValue(
                         anim.currentValue()
                         if anim.state() == QPropertyAnimation.State.Running
-                        else 0
+                        else 0.05
                     )
                     anim.setEndValue(1.0)
                     anim.start()
-
             elif event.type() == QEvent.Type.Leave:
-                # Hide buttons with smooth animation
+                # Hide buttons with smooth animation (to 0.05, not 0)
                 for anim in [self.copy_anim, self.delete_anim, self.play_anim]:
                     anim.stop()
                     anim.setStartValue(
@@ -263,9 +302,8 @@ class MessageWidget(BaseWidget):
                         if anim.state() == QPropertyAnimation.State.Running
                         else 1.0
                     )
-                    anim.setEndValue(0.0)
+                    anim.setEndValue(0.05)
                     anim.start()
-
         return super().eventFilter(obj, event)
 
     def on_application_settings_changed_signal(self):
