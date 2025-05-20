@@ -1,3 +1,5 @@
+
+https://github.com/user-attachments/assets/72c4da1c-c97d-4ef5-ae68-ad867e9165a0
 [![AI Runner Logo](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
 [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz)
@@ -11,9 +13,17 @@
 
 ![image](https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa)
 
-Here are some of the things you can do with AI Runner:
+## Here are some of the things you can do with AI Runner
 
-- ✅ **Voice-based chatbots** for real-time conversations (three text-to-speech engines each with multiple voices to choose from)
+<video src="https://github.com/user-attachments/assets/2d5b41ff-a0cd-4239-945b-d9e7a1bc5644" controls width="640" height="360"></video>
+
+**🗣️ Real-time conversations with custom chatbots and custom voices**
+
+- Choose from three different speech engines: espeak, SpeechT5, and OpenVoice.
+- Optional auto language detection: User's language will be detected and the appropriate voice will be chosen (limited to OpenVoice).
+
+---
+
 - ✅ **Customizable agents with names, moods and personalities** for more engaging conversations
 - ✅ **Retrieval-Augmented Generation** (RAG) for documents and websites
 - ✅ **Text-to-Image** generation with **Stable Diffusion** and **ControlNet**
