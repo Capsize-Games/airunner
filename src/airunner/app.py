@@ -72,7 +72,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
     def set_translations(self, data: Optional[Dict] = None):
         locale_language = None
-        print(data)
 
         # Get the locale language from the data dictionary
         locale_language_string = (
@@ -82,7 +81,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
             locale_language = LANGUAGE_TO_LOCALE_MAP[
                 AvailableLanguage(locale_language_string)
             ]
-            print("1 locale_language set to", locale_language)
 
         # If no locale language is provided, use the default from LanguageSettings
         if not locale_language:
@@ -91,12 +89,13 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 locale_language = LANGUAGE_TO_LOCALE_MAP[
                     AvailableLanguage(settings.gui_language)
                 ]
-                print("2 locale_language set to", locale_language)
 
         # If still no locale language, use the system locale
         if not locale_language:
             locale_language = QLocale.system().language()
-            print("3 locale_language set to", locale_language)
+
+        if locale_language not in LANGUAGE_TO_LOCALE_MAP:
+            locale_language = None
 
         # If we have a locale but it's not in the available languages, set it to None
         if locale_language is not None and (
@@ -104,12 +103,10 @@ class App(MediatorMixin, SettingsMixin, QObject):
             not in AVAILABLE_LANGUAGES["gui_language"]
         ):
             locale_language = None
-            print("4 locale_language set to", locale_language)
 
         # If still no locale language, use English as default
         if not locale_language:
             locale_language = locale_language or QLocale.English
-            print("5 locale_language set to", locale_language)
 
         # Set the locale language in the LanguageSettings model
         self._load_translations(locale=QLocale(locale_language))
