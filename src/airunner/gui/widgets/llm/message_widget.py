@@ -123,40 +123,46 @@ class MessageWidget(BaseWidget):
         self.ui.copy_button.setVisible(True)
         self.ui.delete_button.setVisible(True)
         self.ui.play_audio_button.setVisible(True)
-        
+
         # Set opacity to make them invisible but keep their layout space
-        self.ui.copy_button.setStyleSheet("background: transparent; border: none;")
-        self.ui.delete_button.setStyleSheet("background: transparent; border: none;")
-        self.ui.play_audio_button.setStyleSheet("background: transparent; border: none;")
-        
+        self.ui.copy_button.setStyleSheet(
+            "background: transparent; border: none;"
+        )
+        self.ui.delete_button.setStyleSheet(
+            "background: transparent; border: none;"
+        )
+        self.ui.play_audio_button.setStyleSheet(
+            "background: transparent; border: none;"
+        )
+
         # Create opacity effects for smooth transitions
         from PySide6.QtWidgets import QGraphicsOpacityEffect
-        
+
         # Create opacity effects for each button
         self.copy_opacity = QGraphicsOpacityEffect()
         self.delete_opacity = QGraphicsOpacityEffect()
         self.play_opacity = QGraphicsOpacityEffect()
-        
+
         # Set initial opacity to 0 (invisible)
         self.copy_opacity.setOpacity(0)
         self.delete_opacity.setOpacity(0)
         self.play_opacity.setOpacity(0)
-        
+
         # Apply effects to buttons
         self.ui.copy_button.setGraphicsEffect(self.copy_opacity)
         self.ui.delete_button.setGraphicsEffect(self.delete_opacity)
         self.ui.play_audio_button.setGraphicsEffect(self.play_opacity)
-        
+
         # Create animations
         self.copy_anim = QPropertyAnimation(self.copy_opacity, b"opacity")
         self.delete_anim = QPropertyAnimation(self.delete_opacity, b"opacity")
         self.play_anim = QPropertyAnimation(self.play_opacity, b"opacity")
-        
+
         # Configure animations
         for anim in [self.copy_anim, self.delete_anim, self.play_anim]:
             anim.setDuration(150)  # 150ms duration for smooth transition
             anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
-        
+
         self.ui.message_container.installEventFilter(self)
         self.set_cursor(Qt.CursorShape.ArrowCursor)
 
@@ -240,18 +246,26 @@ class MessageWidget(BaseWidget):
                 # Show buttons with smooth animation
                 for anim in [self.copy_anim, self.delete_anim, self.play_anim]:
                     anim.stop()
-                    anim.setStartValue(anim.currentValue() if anim.state() == QPropertyAnimation.State.Running else 0)
+                    anim.setStartValue(
+                        anim.currentValue()
+                        if anim.state() == QPropertyAnimation.State.Running
+                        else 0
+                    )
                     anim.setEndValue(1.0)
                     anim.start()
-            
+
             elif event.type() == QEvent.Type.Leave:
                 # Hide buttons with smooth animation
                 for anim in [self.copy_anim, self.delete_anim, self.play_anim]:
                     anim.stop()
-                    anim.setStartValue(anim.currentValue() if anim.state() == QPropertyAnimation.State.Running else 1.0)
+                    anim.setStartValue(
+                        anim.currentValue()
+                        if anim.state() == QPropertyAnimation.State.Running
+                        else 1.0
+                    )
                     anim.setEndValue(0.0)
                     anim.start()
-        
+
         return super().eventFilter(obj, event)
 
     def on_application_settings_changed_signal(self):
