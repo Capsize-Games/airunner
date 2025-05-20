@@ -86,8 +86,6 @@ class MessageWidget(BaseWidget):
 
         self._deleted = False
         self.ui.content.setReadOnly(True)
-        self.ui.content.insertPlainText(self.message)
-        self.ui.content.document().contentsChanged.connect(self.sizeChange)
         self.ui.user_name.setText(f"{self.name}")
         self.font_family = None
         self.font_size = None
@@ -101,6 +99,84 @@ class MessageWidget(BaseWidget):
         self.ui.play_audio_button.setVisible(False)
         self.ui.message_container.installEventFilter(self)
         self.set_cursor(Qt.CursorShape.ArrowCursor)
+
+        # Hide image_content by default
+        self.ui.image_content.setVisible(False)
+
+        # Set message content (text or image)
+        self.set_message_content(self.message)
+
+    def set_message_content(self, message):
+        """
+        Set the message content in the widget, displaying either text/HTML or an image depending on formatter output.
+        """
+        from airunner.utils.text.formatter import Formatter
+        import os
+        from PySide6.QtGui import QPixmap
+        import re
+
+        # Helper for mixed text + LaTeX
+        def render_mixed_content(msg):
+            parts = re.split(r"(\$\$.*?\$\$)", msg, flags=re.DOTALL)
+            html = ""
+            for part in parts:
+                if part.startswith("$$") and part.endswith("$$"):
+                    img_path = Formatter._render_latex_to_image(
+                        part, f"/tmp/latex_{os.urandom(4).hex()}.png"
+                    )
+                    if img_path and os.path.exists(img_path):
+                        html += f'<img src="file://{img_path}" style="vertical-align:middle;"/>'
+                else:
+                    html += part.replace("\n", "<br>")
+            self.ui.content.setHtml(html)
+            self.ui.content.setVisible(True)
+            self.ui.image_content.setVisible(False)
+
+        # Only treat as pure LaTeX if the whole string is a LaTeX formula
+        result = Formatter.format_content(message)
+        print(
+            f"[MessageWidget] Formatter result: type={result['type']}, output={result['output']}"
+        )
+        # Mixed text + LaTeX: show as HTML with embedded images
+        if re.search(
+            r"\$\$.*?\$\$", message, re.DOTALL
+        ) and not Formatter._is_pure_latex(message):
+            render_mixed_content(message)
+        elif (
+            result["type"]
+            in (Formatter._FORMAT_LATEX, Formatter._FORMAT_PLAINTEXT)
+            and isinstance(result["output"], str)
+            and result["output"].endswith(".png")
+            and os.path.exists(result["output"])
+        ):
+            self.ui.content.setVisible(False)
+            self.ui.image_content.setVisible(True)
+            pixmap = QPixmap(result["output"])
+            # Scale to fit the message_container width, keeping aspect ratio
+            container_width = (
+                self.ui.message_container.width() - 40
+            )  # 40px padding
+            if container_width > 0:
+                scaled_pixmap = pixmap.scaledToWidth(
+                    container_width, Qt.SmoothTransformation
+                )
+                self.ui.image_content.setPixmap(scaled_pixmap)
+            else:
+                self.ui.image_content.setPixmap(pixmap)
+            self.ui.image_content.setScaledContents(
+                False
+            )  # Prevent QLabel from stretching
+            self.ui.image_content.adjustSize()
+            self.adjustSize()
+        elif result["type"] == Formatter._FORMAT_MARKDOWN:
+            self.ui.image_content.setVisible(False)
+            self.ui.content.setVisible(True)
+            self.ui.content.setHtml(result["output"])
+        else:
+            # Fallback: show as plain text
+            self.ui.image_content.setVisible(False)
+            self.ui.content.setVisible(True)
+            self.ui.content.setPlainText(result["output"])
 
     def on_delete_messages_after_id(self, data):
         message_id = data.get("message_id", None)
@@ -170,6 +246,23 @@ class MessageWidget(BaseWidget):
         self.textChanged.emit()
 
     def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # If an image is currently displayed, rescale it to fit the new width
+        if (
+            self.ui.image_content.isVisible()
+            and self.ui.image_content.pixmap() is not None
+        ):
+            pixmap = self.ui.image_content.pixmap()
+            container_width = (
+                self.ui.message_container.width() - 40
+            )  # 40px padding
+            if container_width > 0:
+                scaled_pixmap = pixmap.scaledToWidth(
+                    container_width, Qt.SmoothTransformation
+                )
+                self.ui.image_content.setPixmap(scaled_pixmap)
+                self.ui.image_content.adjustSize()
+        self.adjustSize()
         # Add this widget to the resize queue instead of creating a new thread
         self.resize_queue.put(self)
         super().resizeEvent(event)
