@@ -1,8 +1,8 @@
 from PySide6.QtGui import QFontDatabase, QFont
-from PySide6.QtWidgets import QTextEdit, QApplication, QWidget
+from PySide6.QtWidgets import QTextEdit, QApplication, QWidget, QVBoxLayout
 from PySide6.QtGui import QFontMetrics
 from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer, QThread, QObject
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, QPropertyAnimation, QEasingCurve
 import queue
 
 from airunner.enums import SignalCode
@@ -10,6 +10,13 @@ from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.llm.templates.message_ui import Ui_message
 from airunner.data.models import Conversation
 from airunner.data.session_manager import session_scope
+from airunner.gui.widgets.llm.content_widgets import (
+    PlainTextWidget,
+    LatexWidget,
+    MarkdownWidget,
+    MixedContentWidget,
+)
+from airunner.utils.text.formatter_extended import FormatterExtended
 
 
 class AutoResizingTextEdit(QTextEdit):
@@ -85,22 +92,179 @@ class MessageWidget(BaseWidget):
         self.__class__.initialize_resize_worker()
 
         self._deleted = False
-        self.ui.content.setReadOnly(True)
-        self.ui.content.insertPlainText(self.message)
-        self.ui.content.document().contentsChanged.connect(self.sizeChange)
         self.ui.user_name.setText(f"{self.name}")
         self.font_family = None
         self.font_size = None
+
+        # Set up content container layout
+        self.content_layout = QVBoxLayout(self.ui.content_container)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(0)
+
+        # Initialize content widget to None
+        self.content_widget = None
+
+        # Set the chat font
         self.set_chat_font()
 
         if self.is_bot:
             self.ui.message_container.setProperty("class", "alternate")
 
-        self.ui.copy_button.setVisible(False)
-        self.ui.delete_button.setVisible(False)
-        self.ui.play_audio_button.setVisible(False)
+        # Set size policies for better expansion
+        from PySide6.QtWidgets import QSizePolicy
+
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.ui.content_container.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Minimum
+        )
+
+        # Always keep buttons in the layout but make them transparent when not visible
+        # This prevents layout shifts when hovering
+        self.ui.copy_button.setVisible(True)
+        self.ui.delete_button.setVisible(True)
+        self.ui.play_audio_button.setVisible(True)
+
+        # Set opacity to make them invisible but keep their layout space
+        self.ui.copy_button.setStyleSheet(
+            "background: transparent; border: none;"
+        )
+        self.ui.delete_button.setStyleSheet(
+            "background: transparent; border: none;"
+        )
+        self.ui.play_audio_button.setStyleSheet(
+            "background: transparent; border: none;"
+        )
+
+        # Create opacity effects for smooth transitions
+        from PySide6.QtWidgets import QGraphicsOpacityEffect
+
+        # Create opacity effects for each button
+        self.copy_opacity = QGraphicsOpacityEffect()
+        self.delete_opacity = QGraphicsOpacityEffect()
+        self.play_opacity = QGraphicsOpacityEffect()
+
+        # Set initial opacity to 0.05 (almost invisible but still clickable)
+        self.copy_opacity.setOpacity(0.05)
+        self.delete_opacity.setOpacity(0.05)
+        self.play_opacity.setOpacity(0.05)
+
+        # Apply effects to buttons
+        self.ui.copy_button.setGraphicsEffect(self.copy_opacity)
+        self.ui.delete_button.setGraphicsEffect(self.delete_opacity)
+        self.ui.play_audio_button.setGraphicsEffect(self.play_opacity)
+
+        # Create animations
+        self.copy_anim = QPropertyAnimation(self.copy_opacity, b"opacity")
+        self.delete_anim = QPropertyAnimation(self.delete_opacity, b"opacity")
+        self.play_anim = QPropertyAnimation(self.play_opacity, b"opacity")
+
+        # Configure animations
+        for anim in [self.copy_anim, self.delete_anim, self.play_anim]:
+            anim.setDuration(150)  # 150ms duration for smooth transition
+            anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
         self.ui.message_container.installEventFilter(self)
         self.set_cursor(Qt.CursorShape.ArrowCursor)
+
+        # Set a global tooltip style for readability
+        QApplication.instance().setStyleSheet(
+            QApplication.instance().styleSheet()
+            + """
+        QToolTip {
+            color: #fff;
+            background-color: #222;
+            border: 1px solid #555;
+            padding: 4px 8px;
+            font-size: 13px;
+            border-radius: 4px;
+        }
+        """
+        )
+
+        # Add a stylesheet for action buttons for hover/pressed feedback
+        button_style = """
+        QPushButton {
+            background: transparent;
+            border: none;
+            border-radius: 3px;
+        }
+        QPushButton:hover {
+            background: #333;
+            border: 1px solid #666;
+        }
+        QPushButton:pressed {
+            background: #444;
+            border: 1px solid #888;
+        }
+        """
+        self.ui.copy_button.setStyleSheet(button_style)
+        self.ui.delete_button.setStyleSheet(button_style)
+        self.ui.play_audio_button.setStyleSheet(button_style)
+
+        # Set the cursor to pointing hand for action buttons
+        self.ui.copy_button.setCursor(Qt.PointingHandCursor)
+        self.ui.delete_button.setCursor(Qt.PointingHandCursor)
+        self.ui.play_audio_button.setCursor(Qt.PointingHandCursor)
+
+        # Remove tooltips from action buttons
+        self.ui.copy_button.setToolTip("")
+        self.ui.delete_button.setToolTip("")
+        self.ui.play_audio_button.setToolTip("")
+
+        # Hide image_content by default
+        self.ui.image_content.setVisible(False)
+
+        # Set message content
+        self.set_message_content(self.message)
+
+    def set_message_content(self, message):
+        """
+        Set the message content in the widget, displaying the appropriate specialized widget
+        based on content type.
+        """
+        # Clear any existing content widget
+        if self.content_widget is not None:
+            self.content_layout.removeWidget(self.content_widget)
+            self.content_widget.deleteLater()
+            self.content_widget = None
+
+        # Use the extended formatter to get detailed content information
+        result = FormatterExtended.format_content(message)
+
+        # Create and configure the appropriate content widget based on content type
+        if result["type"] == FormatterExtended.FORMAT_MIXED:
+            self.content_widget = MixedContentWidget(self.ui.content_container)
+            self.content_widget.setContent(result["parts"])
+
+        elif result["type"] == FormatterExtended.FORMAT_LATEX:
+            self.content_widget = LatexWidget(self.ui.content_container)
+            self.content_widget.setContent(result["content"])
+
+        elif result["type"] == FormatterExtended.FORMAT_MARKDOWN:
+            self.content_widget = MarkdownWidget(self.ui.content_container)
+            self.content_widget.setContent(result["content"])
+
+        else:  # Plain text (default)
+            self.content_widget = PlainTextWidget(self.ui.content_container)
+            self.content_widget.setContent(result["content"])
+
+        # Apply font settings to the content widget
+        if self.font_family and self.font_size:
+            font = QFont(self.font_family, self.font_size)
+            self.content_widget.setFont(font)
+
+        # Add the content widget to the container
+        self.content_layout.addWidget(self.content_widget)
+
+        # Connect size changed signal
+        if hasattr(self.content_widget, "sizeChanged"):
+            self.content_widget.sizeChanged.connect(self.content_size_changed)
+
+    def content_size_changed(self):
+        """Handle content widget size changes."""
+        # Update our own size hints based on the content widget
+        if self.content_widget:
+            self.updateGeometry()
 
     def on_delete_messages_after_id(self, data):
         message_id = data.get("message_id", None)
@@ -124,13 +288,27 @@ class MessageWidget(BaseWidget):
     def eventFilter(self, obj, event):
         if obj == self.ui.message_container:
             if event.type() == QEvent.Type.Enter:
-                self.ui.copy_button.setVisible(True)
-                self.ui.delete_button.setVisible(True)
-                self.ui.play_audio_button.setVisible(True)
+                # Show buttons with smooth animation
+                for anim in [self.copy_anim, self.delete_anim, self.play_anim]:
+                    anim.stop()
+                    anim.setStartValue(
+                        anim.currentValue()
+                        if anim.state() == QPropertyAnimation.State.Running
+                        else 0.05
+                    )
+                    anim.setEndValue(1.0)
+                    anim.start()
             elif event.type() == QEvent.Type.Leave:
-                self.ui.copy_button.setVisible(False)
-                self.ui.delete_button.setVisible(False)
-                self.ui.play_audio_button.setVisible(False)
+                # Hide buttons with smooth animation (to 0.05, not 0)
+                for anim in [self.copy_anim, self.delete_anim, self.play_anim]:
+                    anim.stop()
+                    anim.setStartValue(
+                        anim.currentValue()
+                        if anim.state() == QPropertyAnimation.State.Running
+                        else 1.0
+                    )
+                    anim.setEndValue(0.05)
+                    anim.start()
         return super().eventFilter(obj, event)
 
     def on_application_settings_changed_signal(self):
@@ -157,38 +335,62 @@ class MessageWidget(BaseWidget):
                     "Noto Color Emoji",
                 ]
             )
-            self.ui.content.setFont(font)
+
+            # Apply the font to the content widget if it exists
+            if self.content_widget:
+                self.content_widget.setFont(font)
 
     def set_content_size(self):
-        doc_height = self.ui.content.document().size().height()
-        doc_width = self.ui.content.document().size().width()
-        self.setMinimumHeight(int(doc_height) + 45)
-        self.setMinimumWidth(int(doc_width))
+        # Let the content widget handle its own sizing
+        pass
 
     def sizeChange(self):
-        self.set_content_size()
+        # Notify that the text has changed
         self.textChanged.emit()
 
     def resizeEvent(self, event):
-        # Add this widget to the resize queue instead of creating a new thread
-        self.resize_queue.put(self)
         super().resizeEvent(event)
 
     def sizeHint(self):
-        fm = QFontMetrics(self.font())
-        h = fm.height() * (self.ui.content.document().lineCount() + 1)
-        return QSize(self.width(), h)
+        # Use the content widget's size hint if available
+        if self.content_widget:
+            content_size = self.content_widget.sizeHint()
+            return QSize(
+                content_size.width(), content_size.height() + 60
+            )  # Add space for header
+
+        # Fallback sizing logic
+        lines = self.message.count("\n") + 1
+        chars_per_line = (
+            max(len(line) for line in self.message.split("\n") if line)
+            if self.message
+            else 30
+        )
+
+        # Estimate size based on content
+        width = min(max(chars_per_line * 10, 300), 1000)  # Reasonable width
+        height = max(100, min(lines * 24, 800))  # Reasonable height per line
+
+        return QSize(width, height + 50)  # Add space for header
 
     def minimumSizeHint(self):
-        return self.sizeHint()
+        # Use the content widget's minimum size hint if available
+        if self.content_widget:
+            content_min_size = self.content_widget.minimumSizeHint()
+            return QSize(
+                content_min_size.width(), content_min_size.height() + 60
+            )  # Add space for header
+
+        # Reasonable minimum size
+        return QSize(300, 100)
 
     def update_message(self, text):
         self.message += text
-
         # strip double spaces from self.message
         self.message = self.message.replace("  ", " ")
 
-        self.ui.content.setPlainText(self.message)
+        # Update the content
+        self.set_message_content(self.message)
 
     @Slot()
     def on_play_audio_button_clicked(self):
