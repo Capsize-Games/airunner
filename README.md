@@ -88,7 +88,7 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 Below is a high-level list of capabilities in AI Runner:
 
 | Feature                                  | Description                                                                                  |
-|------------------------------------------|----------------------------------------------------------------------------------------------|
+made by regan------------------------------------------|----------------------------------------------------------------------------------------------|
 | **LLMs & Communication**                 |                                                                                              |
 | Voice-based chatbot conversations        | Have real-time voice-chat sessions with an LLM (speech-to-text + text-to-speech)            |
 | Text-to-speech (TTS)                     | Convert text to spoken audio using **OpenVoice**, **SpeechT5**, and **Espeak**                                       |
