@@ -89,6 +89,13 @@ class Ui_message(object):
 
         self.gridLayout.addWidget(self.content, 1, 0, 1, 1)
 
+        self.image_content = QLabel(self.message_container)
+        self.image_content.setObjectName(u"image_content")
+        self.image_content.setVisible(False)
+        self.image_content.setAlignment(Qt.AlignCenter)
+
+        self.gridLayout.addWidget(self.image_content, 2, 0, 1, 1)
+
 
         self.gridLayout_2.addWidget(self.message_container, 0, 0, 1, 1)
 
