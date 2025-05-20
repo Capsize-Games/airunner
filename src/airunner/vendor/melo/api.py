@@ -317,8 +317,6 @@ class TTS(nn.Module):
                 AvailableLanguage.KR,
                 AvailableLanguage.ES,
                 AvailableLanguage.FR,
-                AvailableLanguage.DE,
-                AvailableLanguage.RU,
             ]:
                 ja_bert = bert
                 bert = torch.zeros(1024, len(phone))
