@@ -20,6 +20,7 @@ from airunner.handlers.tts.tts_request import (
     TTSRequest,
     EspeakTTSRequest,
 )
+from airunner.utils.text.formatter_extended import FormatterExtended
 
 
 class TTSGeneratorWorker(Worker):
@@ -267,6 +268,9 @@ class TTSGeneratorWorker(Worker):
 
         if type(message) == dict:
             message = message.get("message", "")
+
+        # Preprocess message for TTS: replace code/LaTeX with speakable text
+        message = FormatterExtended.to_speakable_text(message)
 
         model = (
             AIRUNNER_TTS_MODEL_TYPE or self.chatbot_voice_settings.model_type

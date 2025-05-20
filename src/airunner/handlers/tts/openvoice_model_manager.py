@@ -227,8 +227,6 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             self.language = language
             self.model.language = self.language
         speaker_ids = self.model.hps.data.spk2id
-        print(speaker_ids.keys())
-        print(self.model.language)
 
         speaker_id = self.speaker_id
         if speaker_id not in speaker_ids:
