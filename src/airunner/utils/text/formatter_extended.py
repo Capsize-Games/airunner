@@ -136,6 +136,9 @@ class FormatterExtended:
                     cssclass=f"codehilite lang-{language}",
                     linenos=True,
                     linenostart=1,
+                    linenospecial=0,  # Disable special line styling
+                    lineseparator="",  # No extra separator between lines
+                    hl_lines=[],  # No highlighted lines by default
                 )
                 highlighted_code = highlight(code, lexer, formatter)
                 return highlighted_code
@@ -176,6 +179,22 @@ class FormatterExtended:
             margin: 10px 0;
             overflow-x: auto;
             border: 1px solid #3c3c3c;
+        }}
+        /* Custom line number styles to make gutter more compact */
+        .linenodiv {{
+            background-color: #262626;
+            border-right: 1px solid #444;
+            padding: 3px 5px 3px 3px; /* Reduced left and top/bottom padding */
+            color: #777;
+            text-align: right;
+            user-select: none;
+            margin-right: 5px; /* Reduced margin */
+        }}
+        .codehilite pre {{
+            margin: 0;
+            padding: 10px 5px 10px 5px; /* Reduced left and right padding */
+            background-color: transparent;
+            border: none;
         }}
         </style>
         {html_content}
