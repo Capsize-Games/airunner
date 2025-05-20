@@ -1,8 +1,12 @@
-from PySide6.QtWidgets import QVBoxLayout, QSpacerItem, QSizePolicy, QGridLayout
+from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.llm.llm_history_item_widget import LLMHistoryItemWidget
-from airunner.gui.widgets.llm.templates.llm_history_widget_ui import Ui_llm_history_widget
+from airunner.gui.widgets.llm.llm_history_item_widget import (
+    LLMHistoryItemWidget,
+)
+from airunner.gui.widgets.llm.templates.llm_history_widget_ui import (
+    Ui_llm_history_widget,
+)
 from airunner.data.models import Conversation
 
 
@@ -11,7 +15,9 @@ class LLMHistoryWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super(LLMHistoryWidget, self).__init__(*args, **kwargs)
-        self.spacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.spacer = QSpacerItem(
+            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+        )
 
     def showEvent(self, event):
         super(LLMHistoryWidget, self).showEvent(event)
@@ -20,7 +26,7 @@ class LLMHistoryWidget(BaseWidget):
     def load_conversations(self):
         conversations = Conversation.objects.order_by(
             Conversation.id.desc()
-        ).all()        
+        ).all()
 
         # Get the existing layout - keep using the original QGridLayout from the UI file
         layout = self.ui.gridLayout_2
@@ -34,8 +40,10 @@ class LLMHistoryWidget(BaseWidget):
                 layout.removeItem(item.spacerItem())
 
         # Make sure scroll area widget contents has the right size policy
-        self.ui.scrollAreaWidgetContents.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        
+        self.ui.scrollAreaWidgetContents.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+        )
+
         # Add conversation widgets to the grid layout
         row = 0
         for conversation in conversations:
@@ -50,6 +58,6 @@ class LLMHistoryWidget(BaseWidget):
 
         # Add a vertical spacer at the end to push widgets to top
         layout.addItem(self.spacer, row, 0, 1, 1)
-        
+
         # Set widget resizable for proper scrolling
         self.ui.conversations_scroll_area.setWidgetResizable(True)
