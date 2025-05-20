@@ -15,8 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QLabel,
-    QPushButton, QSizePolicy, QSpacerItem, QTextEdit,
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
+    QLabel, QPushButton, QSizePolicy, QSpacerItem,
     QWidget)
 import airunner.feather_rc
 
@@ -82,17 +83,22 @@ class Ui_message(object):
 
         self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
 
-        self.content = QTextEdit(self.message_container)
-        self.content.setObjectName(u"content")
-        self.content.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.content.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.content_container = QFrame(self.message_container)
+        self.content_container.setObjectName(u"content_container")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.content_container.sizePolicy().hasHeightForWidth())
+        self.content_container.setSizePolicy(sizePolicy1)
+        self.content_container.setFrameShape(QFrame.StyledPanel)
+        self.content_container.setFrameShadow(QFrame.Raised)
 
-        self.gridLayout.addWidget(self.content, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.content_container, 1, 0, 1, 1)
 
         self.image_content = QLabel(self.message_container)
         self.image_content.setObjectName(u"image_content")
         self.image_content.setVisible(False)
-        self.image_content.setAlignment(Qt.AlignCenter)
+        self.image_content.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.gridLayout.addWidget(self.image_content, 2, 0, 1, 1)
 
