@@ -265,3 +265,24 @@ class FormatterExtended:
                 "original_content": content_string,
                 "parts": [{"type": "text", "content": content_string}],
             }
+
+    @staticmethod
+    def strip_nonlinguistic(text: str) -> str:
+        """
+        Remove LaTeX, code blocks, and inline code from the text to improve language detection.
+        - Removes LaTeX ($...$, $$...$$, \[...\], \(...\))
+        - Removes fenced code blocks (```...```)
+        - Removes inline code (`...`)
+        """
+        # Remove LaTeX math environments
+        text = re.sub(r"\$\$.*?\$\$", " ", text, flags=re.DOTALL)  # $$...$$
+        text = re.sub(r"\$[^$]+\$", " ", text)  # $...$
+        text = re.sub(r"\\\[.*?\\\]", " ", text, flags=re.DOTALL)  # \[...\]
+        text = re.sub(r"\\\(.*?\\\)", " ", text, flags=re.DOTALL)  # \(...\)
+        # Remove fenced code blocks (```...```)
+        text = re.sub(r"```[\w\W]*?```", " ", text)
+        # Remove inline code (`...`)
+        text = re.sub(r"`[^`]+`", " ", text)
+        # Remove extra whitespace
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
