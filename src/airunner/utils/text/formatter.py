@@ -134,8 +134,8 @@ class Formatter:
             )
 
             fig = plt.figure(
-                figsize=(1, 0.5), dpi=dpi
-            )  # Initial small size, will be auto-adjusted
+                figsize=(3, 1.2), dpi=dpi
+            )  # Increased size for better visibility
             ax = fig.add_axes([0, 0, 1, 1])
             ax.text(
                 0.5,
@@ -144,6 +144,7 @@ class Formatter:
                 fontsize=20,
                 horizontalalignment="center",
                 verticalalignment="center",
+                color="black",  # Ensure text is black
             )
             ax.set_axis_off()  # Hide axes and ticks
 
@@ -159,7 +160,7 @@ class Formatter:
                 f"Warning: LaTeX rendering with usetex=True failed ({e}). Attempting without it."
             )
             plt.rcParams["text.usetex"] = False  # Disable usetex
-            fig = plt.figure(figsize=(1, 0.5), dpi=dpi)
+            fig = plt.figure(figsize=(3, 1.2), dpi=dpi)
             ax = fig.add_axes([0, 0, 1, 1])
             ax.text(
                 0.5,
@@ -168,6 +169,7 @@ class Formatter:
                 fontsize=20,
                 horizontalalignment="center",
                 verticalalignment="center",
+                color="black",  # Ensure text is black
             )
             ax.set_axis_off()
             plt.savefig(
@@ -275,24 +277,12 @@ class Formatter:
                 "original_content": content_string,
             }
 
-        # If neither LaTeX nor Markdown, treat as plain text and render to image for consistency
-        image_path = f"{temp_filename_base}_{os.urandom(4).hex()}.png"
-        rendered_path = Formatter._render_plaintext_to_image(
-            content_string, image_path
-        )
-        if rendered_path:
-            return {
-                "type": Formatter._FORMAT_PLAINTEXT,
-                "output": rendered_path,  # Path to the image file
-                "original_content": content_string,
-            }
-        else:
-            # Fallback if even plain text rendering fails
-            return {
-                "type": Formatter._FORMAT_PLAINTEXT,
-                "output": content_string,  # Return original string if rendering failed
-                "original_content": content_string,
-            }
+        # If neither LaTeX nor Markdown, treat as plain text and return as string (do NOT render to image)
+        return {
+            "type": Formatter._FORMAT_PLAINTEXT,
+            "output": content_string,  # Return original string
+            "original_content": content_string,
+        }
 
 
 # --- Example Usage in your Chatbot Context ---
