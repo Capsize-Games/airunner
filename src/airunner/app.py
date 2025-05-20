@@ -188,6 +188,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
         if self.app is None:
             self.app = QApplication([])
         self.app.api = self
+        # Set global tooltip style ONCE at startup
+        from airunner.gui.widgets.llm.message_widget import (
+            set_global_tooltip_style,
+        )
+
+        set_global_tooltip_style()
 
     def run(self):
         """

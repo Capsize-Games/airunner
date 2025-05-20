@@ -49,6 +49,24 @@ class ResizeWorker(QObject):
         self.running = False
 
 
+def set_global_tooltip_style():
+    app = QApplication.instance()
+    if app is not None:
+        app.setStyleSheet(
+            app.styleSheet()
+            + """
+            QToolTip {
+                color: #fff;
+                background-color: #222;
+                border: 1px solid #555;
+                padding: 4px 8px;
+                font-size: 13px;
+                border-radius: 4px;
+            }
+            """
+        )
+
+
 class MessageWidget(BaseWidget):
     widget_class_ = Ui_message
     textChanged = Signal()
@@ -166,21 +184,6 @@ class MessageWidget(BaseWidget):
         self.ui.message_container.installEventFilter(self)
         self.set_cursor(Qt.CursorShape.ArrowCursor)
 
-        # Set a global tooltip style for readability
-        QApplication.instance().setStyleSheet(
-            QApplication.instance().styleSheet()
-            + """
-        QToolTip {
-            color: #fff;
-            background-color: #222;
-            border: 1px solid #555;
-            padding: 4px 8px;
-            font-size: 13px;
-            border-radius: 4px;
-        }
-        """
-        )
-
         # Add a stylesheet for action buttons for hover/pressed feedback
         button_style = """
         QPushButton {
@@ -235,15 +238,12 @@ class MessageWidget(BaseWidget):
         if result["type"] == FormatterExtended.FORMAT_MIXED:
             self.content_widget = MixedContentWidget(self.ui.content_container)
             self.content_widget.setContent(result["parts"])
-
         elif result["type"] == FormatterExtended.FORMAT_LATEX:
             self.content_widget = LatexWidget(self.ui.content_container)
             self.content_widget.setContent(result["content"])
-
         elif result["type"] == FormatterExtended.FORMAT_MARKDOWN:
             self.content_widget = MarkdownWidget(self.ui.content_container)
             self.content_widget.setContent(result["content"])
-
         else:  # Plain text (default)
             self.content_widget = PlainTextWidget(self.ui.content_container)
             self.content_widget.setContent(result["content"])
