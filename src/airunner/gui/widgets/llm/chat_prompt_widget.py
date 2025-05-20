@@ -1,4 +1,5 @@
 import json
+import time
 
 from typing import Dict, Optional
 
@@ -21,6 +22,7 @@ from airunner.utils.llm.strip_names_from_message import (
 from airunner.utils.application import create_worker
 from airunner.utils.widgets import load_splitter_settings
 from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.workers.llm_chat_prompt_worker import LLMChatPromptWorker
 from airunner.workers.llm_response_worker import LLMResponseWorker
 from airunner.settings import AIRUNNER_ART_ENABLED
 
@@ -36,11 +38,11 @@ class ChatPromptWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
             SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL: self.on_hear_signal,
-            SignalCode.SET_CONVERSATION: self.on_set_conversation,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.CHATBOT_CHANGED: self.on_chatbot_changed,
             SignalCode.CONVERSATION_DELETED: self.on_delete_conversation,
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_clear_conversation,
+            SignalCode.QUEUE_LOAD_CONVERSATION: self.on_queue_load_conversation,
             SignalCode.LOAD_CONVERSATION: self.on_load_conversation,
             SignalCode.LLM_TOKEN_SIGNAL: self.on_token_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
@@ -48,6 +50,7 @@ class ChatPromptWidget(BaseWidget):
         self._splitters = ["chat_prompt_splitter"]
         self._default_splitter_settings_applied = False
         super().__init__()
+        self.llm_chat_prompt_worker = create_worker(LLMChatPromptWorker)
         self.token_buffer = []
         self.ui_update_timer = QTimer(self)
         self.ui_update_timer.setInterval(50)
@@ -99,7 +102,7 @@ class ChatPromptWidget(BaseWidget):
         self._llm_response_worker = create_worker(
             LLMResponseWorker, sleep_time_in_ms=1
         )
-        self.load_conversation()
+        self.loading = True
 
     def _apply_default_splitter_settings(self):
         """
@@ -151,7 +154,17 @@ class ChatPromptWidget(BaseWidget):
             self._conversation = None
 
     def on_load_conversation(self, data):
-        self.load_conversation(data["conversation_id"])
+        conversation_id = data.get("conversation_id")
+        messages = data.get("messages", [])
+        if conversation_id is not None:
+            self.conversation_id = conversation_id
+            self.api.llm.clear_history(conversation_id=conversation_id)
+            self._clear_conversation(skip_update=True)
+            self._set_conversation_widgets(messages, skip_scroll=True)
+        else:
+            self._clear_conversation(skip_update=True)
+            self.conversation = None
+        QTimer.singleShot(100, self.scroll_to_bottom)
 
     def on_delete_conversation(self, data):
         if (
@@ -161,36 +174,16 @@ class ChatPromptWidget(BaseWidget):
             self._clear_conversation_widgets()
         self.conversation = None
 
-    def load_conversation(self, index: Optional[int] = None):
-        conversation = None
-        if index is not None:
-            conversation = Conversation.objects.get(index)
+    def on_queue_load_conversation(self, data):
+        self.llm_chat_prompt_worker.add_to_queue(data)
 
-        if conversation is None:
-            conversation = Conversation.objects.order_by(
-                Conversation.id.desc()
-            ).first()
-        if conversation is not None:
-            self.conversation = conversation
-            self.api.llm.clear_history(conversation_id=self.conversation_id)
-            self.on_clear_conversation()
-            self._set_conversation_widgets(
-                [
-                    {
-                        "name": (
-                            self.user.username
-                            if message["role"] == "user"
-                            else self.chatbot.botname
-                        ),
-                        "content": message["blocks"][0]["text"],
-                        "is_bot": message["role"] == "assistant",
-                        "id": message_id,
-                    }
-                    for message_id, message in enumerate(
-                        self.conversation.value or []
-                    )
-                ]
-            )
+    def load_conversation(self, index: Optional[int] = None):
+        self.on_queue_load_conversation(
+            {
+                "action": "load_conversation",
+                "index": index,
+            }
+        )
 
     @Slot(str)
     def handle_token_signal(self, val: str):
@@ -214,38 +207,21 @@ class ChatPromptWidget(BaseWidget):
 
     def on_chatbot_changed(self):
         self.api.llm.clear_history()
-        self.on_clear_conversation()
+        self._clear_conversation()
 
-    def on_set_conversation(self, message):
-        self._clear_conversation_widgets()
-        if len(message["messages"]) > 0:
-            conversation_id = message["messages"][0]["conversation_id"]
-            self.conversation = Conversation.objects.filter_by_first(
-                id=conversation_id
-            )
-        self._set_conversation_widgets(
-            [
-                {
-                    "name": message["additional_kwargs"]["name"],
-                    "content": message["text"],
-                    "is_bot": message["role"] == "assistant",
-                    "id": index,
-                }
-                for index, message in enumerate(
-                    json.loads(self.conversation.value)
-                )
-            ]
-        )
-
-    def _set_conversation_widgets(self, messages):
+    def _set_conversation_widgets(self, messages, skip_scroll: bool = False):
+        start = time.perf_counter()
         for message in messages:
             self.add_message_to_conversation(
                 name=message["name"],
                 message=message["content"],
                 is_bot=message["is_bot"],
                 first_message=True,
+                _profile_widget=True,  # Pass profiling flag
             )
-        QTimer.singleShot(100, self.scroll_to_bottom)
+        if not skip_scroll:
+            QTimer.singleShot(100, self.scroll_to_bottom)
+        end = time.perf_counter()
 
     def on_hear_signal(self, data: Dict):
         transcription = data["transcription"]
@@ -303,19 +279,26 @@ class ChatPromptWidget(BaseWidget):
     def on_clear_conversation(self):
         self._clear_conversation()
 
-    def _clear_conversation(self):
+    def _clear_conversation(self, skip_update: bool = False):
+        start = time.perf_counter()
         self.conversation_history = []
-        self._clear_conversation_widgets()
+        self._clear_conversation_widgets(skip_update=skip_update)
+        end = time.perf_counter()
 
-    def _clear_conversation_widgets(self):
-        # Iterate through the layout items and delete the widgets
-        while self.ui.scrollAreaWidgetContents.layout().count():
-            item = self.ui.scrollAreaWidgetContents.layout().takeAt(0)
+    def _clear_conversation_widgets(self, skip_update: bool = False):
+        start = time.perf_counter()
+        layout = self.ui.scrollAreaWidgetContents.layout()
+        while layout.count():
+            item = layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
+                widget.setParent(None)
                 widget.deleteLater()
-        # Ensure the layout is updated
-        self.ui.scrollAreaWidgetContents.layout().update()
+            else:
+                del item
+        if not skip_update:
+            layout.update()
+        end = time.perf_counter()
 
     @Slot(bool)
     def action_button_clicked_send(self):
@@ -376,6 +359,7 @@ class ChatPromptWidget(BaseWidget):
 
         if not self.registered:
             self.registered = True
+            self.load_conversation()
 
         # handle return pressed on QPlainTextEdit
         # there is no returnPressed signal for QPlainTextEdit
@@ -398,6 +382,7 @@ class ChatPromptWidget(BaseWidget):
         except RuntimeError as e:
             if AIRUNNER_ART_ENABLED:
                 self.logger.warning(f"Error setting SD status text: {e}")
+        self.loading = False
 
     def llm_action_changed(self, val: str):
         if val == "Chat":
@@ -472,16 +457,15 @@ class ChatPromptWidget(BaseWidget):
         is_bot: bool,
         first_message: bool = True,
         _message_id: Optional[int] = None,
+        _profile_widget: bool = False,
     ):
+        start = time.perf_counter() if _profile_widget else None
         message = strip_names_from_message(
             message.lstrip() if first_message else message,
             self.user.username,
             self.chatbot.botname,
         )
         if not first_message:
-            # get the last widget from the scrollAreaWidgetContents.layout()
-            # and append the message to it. must be a MessageWidget object
-            # must start at the end of the layout and work backwards
             for i in range(
                 self.ui.scrollAreaWidgetContents.layout().count() - 1, -1, -1
             ):
@@ -494,12 +478,9 @@ class ChatPromptWidget(BaseWidget):
                     if current_widget.is_bot:
                         if message != "":
                             current_widget.update_message(message)
-                        self.scroll_to_bottom()
                         return
                     break
-
         self.remove_spacer()
-
         widget = None
         if message != "":
             total_widgets = (
@@ -507,6 +488,7 @@ class ChatPromptWidget(BaseWidget):
             )
             if total_widgets < 0:
                 total_widgets = 0
+            widget_start = time.perf_counter() if _profile_widget else None
             widget = MessageWidget(
                 name=name,
                 message=message,
@@ -514,13 +496,9 @@ class ChatPromptWidget(BaseWidget):
                 message_id=total_widgets,
                 conversation_id=self.conversation_id,
             )
+            widget_end = time.perf_counter() if _profile_widget else None
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
-
         self.add_spacer()
-
-        # automatically scroll to the bottom of the scrollAreaWidgetContents
-        self.scroll_to_bottom()
-
         return widget
 
     def remove_spacer(self):
@@ -544,6 +522,8 @@ class ChatPromptWidget(BaseWidget):
         pass
 
     def scroll_to_bottom(self):
+        if self.loading:
+            return
         if self.scroll_bar is None:
             self.scroll_bar = self.ui.chat_container.verticalScrollBar()
 
