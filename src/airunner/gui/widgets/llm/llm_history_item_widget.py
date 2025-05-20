@@ -2,7 +2,6 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 
 from airunner.data.models import LLMGeneratorSettings
-from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.llm.templates.llm_history_item_ui import (
     Ui_llm_history_item_widget,
@@ -39,11 +38,7 @@ class LLMHistoryItemWidget(BaseWidget):
             current_chatbot=chatbot_id,
             current_conversation=self.conversation.id,
         )
-        self.api.llm.load_conversation(
-            conversation_id=self.conversation.id,
-            conversation=self.conversation,
-            chatbot_id=chatbot_id,
-        )
+        self.api.llm.load_conversation(conversation_id=self.conversation.id)
 
     @Slot()
     def action_delete_conversation_clicked(self):
