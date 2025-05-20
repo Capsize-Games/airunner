@@ -206,6 +206,11 @@ class MessageWidget(BaseWidget):
         self.ui.delete_button.setCursor(Qt.PointingHandCursor)
         self.ui.play_audio_button.setCursor(Qt.PointingHandCursor)
 
+        # Remove tooltips from action buttons
+        self.ui.copy_button.setToolTip("")
+        self.ui.delete_button.setToolTip("")
+        self.ui.play_audio_button.setToolTip("")
+
         # Hide image_content by default
         self.ui.image_content.setVisible(False)
 
