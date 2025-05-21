@@ -27,9 +27,7 @@
 | - Fast generation (~2s on RTX 2080s)<br>- Docker-based setup & GPU acceleration<br>- Theming (Light/Dark/System)<br>- NSFW toggles<br>- Extension API<br>- Python library & API support |
 
 </div>
-<div style="border: 2px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
 
-</div>
 <div style="border: 2px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
 
 ### 🌍 Language Support
@@ -52,6 +50,10 @@
 <img src="https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa" alt="AI Runner Screenshot" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002;">
 
 <video src="https://github.com/user-attachments/assets/2d5b41ff-a0cd-4239-945b-d9e7a1bc5644" controls width="100%" style="border-radius: 8px; box-shadow: 0 2px 8px #0002;"></video>
+
+</td>
+</tr>
+</table>
 
 ## 💾 Installation Quick Start
 
@@ -86,12 +88,6 @@ There are several ways to install and use AI Runner. [See the Installation Wiki 
 For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
 **Note: *AI Runner does not distribute AI art models. You are responsible for obtaining and your own.***
-
----
-
-</td>
-</tr>
-</table>
 
 ---
 
