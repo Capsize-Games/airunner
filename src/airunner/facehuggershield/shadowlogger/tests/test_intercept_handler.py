@@ -1,8 +1,8 @@
 import unittest
-from unittest.mock import Mock, call
+from unittest.mock import Mock
 from logging import LogRecord
-from shadowlogger.intercept_handler import InterceptHandler
-from shadowlogger.shadowlogger import ShadowLogger
+from airunner.facehuggershield.shadowlogger.intercept_handler import InterceptHandler
+from airunner.facehuggershield.shadowlogger.shadowlogger import ShadowLogger
 
 class TestInterceptHandler(unittest.TestCase):
     def setUp(self):

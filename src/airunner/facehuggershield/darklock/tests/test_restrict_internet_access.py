@@ -1,7 +1,7 @@
 import unittest
 import socket
-from darklock.no_internet_socket import NoInternetSocket
-from darklock.restrict_network_access import RestrictNetworkAccess
+from airunner.facehuggershield.darklock.no_internet_socket import NoInternetSocket
+from airunner.facehuggershield.darklock.restrict_network_access import RestrictNetworkAccess
 
 
 class TestRestrictInternetAccess(unittest.TestCase):

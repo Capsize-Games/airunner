@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 import logging
-from shadowlogger.shadowlogger import ShadowLogger
+from airunner.facehuggershield.shadowlogger.shadowlogger import ShadowLogger
 
 
 class TestShadowLogger(unittest.TestCase):
