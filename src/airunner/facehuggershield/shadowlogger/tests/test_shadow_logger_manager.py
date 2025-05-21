@@ -1,7 +1,7 @@
 import logging
 import unittest
 from unittest.mock import patch, MagicMock
-from shadowlogger.shadowlogger_manager import ShadowLoggerManager
+from airunner.facehuggershield.shadowlogger.shadowlogger_manager import ShadowLoggerManager
 
 
 class TestShadowLoggerManager(unittest.TestCase):

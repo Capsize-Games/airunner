@@ -1,6 +1,6 @@
 import unittest
 
-from shadowlogger.shadowlogger import ShadowLogger
+from airunner.facehuggershield.shadowlogger.shadowlogger import ShadowLogger
 
 
 class CustomPrefixShadowLogger(ShadowLogger):
