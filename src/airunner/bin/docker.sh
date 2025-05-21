@@ -261,6 +261,22 @@ COMMON_ARGS="--rm \
              -u $(id -u):$(id -g) \
              -w /app"
 
+# Ensure MathJax is present (for Docker)
+# Use the correct MathJax 3.2.2 release asset
+MATHJAX_URL="https://github.com/mathjax/MathJax/releases/download/3.2.2/mathjax-3.2.2.zip"
+
+# In main/entry logic, before starting the app:
+MATHJAX_DIR="/app/src/static/mathjax/MathJax-3.2.2/es5"
+MATHJAX_ENTRY="$MATHJAX_DIR/tex-mml-chtml.js"
+if [ ! -f "$MATHJAX_ENTRY" ]; then
+    echo "MathJax not found, downloading..."
+    mkdir -p "$MATHJAX_DIR"
+    TMP_ZIP="/tmp/mathjax.zip"
+    wget -O "$TMP_ZIP" "$MATHJAX_URL"
+    unzip -o "$TMP_ZIP" -d /app/src/static/mathjax/
+    rm "$TMP_ZIP"
+fi
+
 # Handle different command options
 if [ "$1" == "build_dev_runtime" ]; then
   echo "Building the Docker Compose services for Linux dev packaging..."
