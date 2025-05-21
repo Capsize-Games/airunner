@@ -8,6 +8,8 @@ class NoInternetSocket(socket.socket):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not hasattr(self.__class__, 'allowed_port') or not (1 <= self.allowed_port <= 65535):
+            raise ConnectionError("No valid allowed_port set. Please use set_allowed_port() to set a valid port.")
         self.__init_logger()
 
     def __init_logger(self):
