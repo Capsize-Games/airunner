@@ -238,7 +238,9 @@ AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG = os.environ.get(
 AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE = os.environ.get(
     "AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE", "NSFW content detected"
 )
-AIRUNNER_DISCORD_URL = os.environ.get("AIRUNNER_DISCORD_URL", "https://discord.gg/PUVDDCJ7gz")
+AIRUNNER_DISCORD_URL = os.environ.get(
+    "AIRUNNER_DISCORD_URL", "https://discord.gg/PUVDDCJ7gz"
+)
 AIRUNNER_SLEEP_TIME_IN_MS = os.environ.get("AIRUNNER_SLEEP_TIME_IN_MS", 10)
 
 default_name = "airunner.db"
@@ -387,3 +389,5 @@ LANGUAGES = {
     "openvoice": ["en", "es", "fr", "ja", "zh", "zh_mix_en", "ko"],
     "speecht5": ["en"],
 }
+LOCAL_SERVER_HOST = os.environ.get("LOCAL_SERVER_HOST", "127.0.0.1")
+LOCAL_SERVER_PORT = os.environ.get("LOCAL_SERVER_PORT", 8765)
