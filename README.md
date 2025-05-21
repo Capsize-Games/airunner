@@ -13,8 +13,6 @@
   <tr>
     <td valign="top">
 
-<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
-
 | ✨ Key Features |
 |:--------------------------------|
 | **🗣️ Real-time conversations** |
@@ -32,10 +30,6 @@
 | **⚡ Performance & Utility** |
 | - Fast generation (~2s on RTX 2080s)<br>- Docker-based setup & GPU acceleration<br>- Theming (Light/Dark/System)<br>- NSFW toggles<br>- Extension API<br>- Python library & API support |
 
-</div>
-
-<div style="border: 2px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
-
 ### 🌍 Language Support
 
 | Language         | TTS | LLM | STT | GUI |
@@ -47,15 +41,18 @@
 | Chinese          | ✅          | ✅          | ❌          | ❌          |
 | Korean           | ✅          | ✅          | ❌          | ❌          |
 
-[Request language support](https://github.com/Capsize-Games/airunner/issues/new?template=language_support.md)
+[🫰 Request language support](https://github.com/Capsize-Games/airunner/issues/new?template=language_support.md)
+---
 
-</div>
 </td>
 <td valign="top">
 
 <img src="https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa" alt="AI Runner Screenshot" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002;">
 
 <video src="https://github.com/user-attachments/assets/2d5b41ff-a0cd-4239-945b-d9e7a1bc5644" controls width="100%" style="border-radius: 8px; box-shadow: 0 2px 8px #0002;"></video>
+
+[✉️ Get notified when the packaged version releases](https://airunner.org/)
+---
 
 </td>
 </tr>
@@ -101,19 +98,15 @@
    airunner
    ```
 
-[See the Installation Wiki for the full instructions](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions) for more ways to install AI Runner, including instructions for Docker.
+For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
-<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
+---
 
 ### Basic Usage
 
 - **Run AI Runner**: `airunner`
 - **Run the downloader**: `airunner-setup`
 - **Build templates**: `airunner-build-ui`
-
-For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
-
-</div>
 
 ---
 
@@ -122,8 +115,6 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 <table>
   <tr>
     <td valign="top">
-
-<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
 
 **These are the sizes of the optional models that power AI Runner.**
 
@@ -148,9 +139,6 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 | SD 1.5 | 1.6 MB |
 | SDXL 1.0 | 6.45 MB |
 
-</div>
-<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
-
 ## Stack
 
 AI Runner uses the following stack
@@ -164,11 +152,8 @@ AI Runner uses the following stack
 - **PySide6**: For the GUI
 - A variety of other libraries for TTS, STT, LLMs, and image generation
 
-</div>
 </td>
 <td valign="top">
-
-<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
 
 ### ✨ LLM Vendors
 
@@ -176,9 +161,6 @@ AI Runner uses the following stack
 - **Ollama:**: A variety of local models to choose from (requires Ollama CLI)
 - **OpenRouter**: Remove server-side LLMs (requires API key)
 - **Huggingface**: Coming soon
-
-</div>
-<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
 
 ### 🎨 Art Models
 
@@ -201,8 +183,6 @@ Organize them under your local AI Runner data directory:
 │           ├── lora
 │           └── embeddings
 ```
-
-</div>
 
 </td>
 </tr>
