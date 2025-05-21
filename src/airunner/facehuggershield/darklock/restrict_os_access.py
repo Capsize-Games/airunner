@@ -36,7 +36,7 @@ class RestrictOSAccess(metaclass=Singleton):
             "ast",
         ]
 
-        self.log_disc_writter = LogDiscWriter()
+        self.log_disc_writer = LogDiscWriter()
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
