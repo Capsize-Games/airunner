@@ -1,7 +1,7 @@
 import builtins
 import os
 import unittest
-from darklock.restrict_os_access import RestrictOSAccess
+from airunner.facehuggershield.darklock.restrict_os_access import RestrictOSAccess
 
 
 class TestRestrictOSAccess(unittest.TestCase):
