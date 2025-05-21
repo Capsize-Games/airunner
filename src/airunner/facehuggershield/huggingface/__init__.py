@@ -28,7 +28,7 @@ def activate(
         "huggingface_hub.templates",
         "huggingface_hub._commit_api",
         "huggingface_hub._commit_scheduler",
-        "huggingface_hub._infernece_endpoints",
+        "huggingface_hub._inference_endpoints",
         "huggingface_hub._login",
         "huggingface_hub._snapshot_download",
         "huggingface_hub._space_api",
