@@ -3,6 +3,12 @@
 
 # Offline AI interface for Hackers, Makers, and Builders [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz) ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner) [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
 
+**🐞 [Report Bug](https://github.com/Capsize-Games/airunner/issues/new?template=bug_report.md)**
+**✨ [Request Feature](https://github.com/Capsize-Games/airunner/issues/new?template=feature_request.md)**
+**🛡️ [Report Vulnerability](https://github.com/Capsize-Games/airunner/security/policy)**
+**📄 [Wiki](https://github.com/Capsize-Games/airunner/wiki)**
+---
+
 <table>
   <tr>
     <td valign="top">
@@ -41,7 +47,7 @@
 | Chinese          | ✅          | ✅          | ❌          | ❌          |
 | Korean           | ✅          | ✅          | ❌          | ❌          |
 
-[Request language support](https://github.com/Capsize-Games/airunner/issues/new/choose)
+[Request language support](https://github.com/Capsize-Games/airunner/issues/new?template=language_support.md)
 
 </div>
 </td>
