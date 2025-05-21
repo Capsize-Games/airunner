@@ -49,21 +49,29 @@ class LanguageSettingsWidget(BaseWidget, AIModelMixin):
             )
             settings = LanguageSettings.objects.first()
             if settings:
-                self.ui.gui_language.setCurrentText(
-                    LANGUAGE_DISPLAY_MAP[
-                        AvailableLanguage(settings.gui_language)
-                    ]
-                )
-                self.ui.user_language.setCurrentText(
-                    LANGUAGE_DISPLAY_MAP[
-                        AvailableLanguage(settings.user_language)
-                    ]
-                )
-                self.ui.bot_language.setCurrentText(
-                    LANGUAGE_DISPLAY_MAP[
-                        AvailableLanguage(settings.bot_language)
-                    ]
-                )
+                try:
+                    lang = AvailableLanguage(settings.gui_language)
+                except ValueError:
+                    lang = AvailableLanguage.EN
+                try:
+                    txt = LANGUAGE_DISPLAY_MAP[lang]
+                except KeyError:
+                    txt = LANGUAGE_DISPLAY_MAP[AvailableLanguage.EN]
+                self.ui.gui_language.setCurrentText(txt)
+
+                try:
+                    lang = AvailableLanguage(settings.user_language)
+                except ValueError:
+                    lang = AvailableLanguage.EN
+                txt = LANGUAGE_DISPLAY_MAP[lang]
+                self.ui.user_language.setCurrentText(txt)
+
+                try:
+                    lang = AvailableLanguage(settings.bot_language)
+                except ValueError:
+                    lang = AvailableLanguage.EN
+                txt = LANGUAGE_DISPLAY_MAP[lang]
+                self.ui.bot_language.setCurrentText(txt)
 
     def _connect_signals(self):
         if not self._signals_connected:

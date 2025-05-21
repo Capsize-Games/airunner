@@ -134,7 +134,10 @@ class BaseAgent(
 
     @property
     def language(self) -> str:
-        bot_lang = AvailableLanguage(self.language_settings.bot_language)
+        try:
+            bot_lang = AvailableLanguage(self.language_settings.bot_language)
+        except ValueError:
+            bot_lang = AvailableLanguage.EN
         if bot_lang is AvailableLanguage.AUTO:
             bot_lang = detect_language(self.prompt)
         return LANGUAGE_DISPLAY_MAP.get(bot_lang)
