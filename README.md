@@ -125,24 +125,28 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 
 <div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
 
-**These are the sizes of the various models that power AI Runner.**
+**These are the sizes of the optional models that power AI Runner.**
 
-| Modality         | Model | Size |
-|------------------|-------|------|
-| **Text-to-Speech** | OpenVoice (Voice) | 4.0 GB |
-| | Speech T5 (Voice) | 654.4 MB |
-| | Whisper Tiny | 155.4 MB |
-| **Speech-to-Text** | Whisper Tiny | 155.4 MB |
-| **Text Generation** | Ministral 8b (default) | 4.0 GB |
-| | Ollama (various models) | 1.5 GB - 20 GB |
-| | OpenRouter (various models) | 1.5 GB - 20 GB |
-| | Huggingface (various models) | 1.5 GB - 20 GB |
-| | Local (Ministral instruct 8b 4bit doublequantized) | 5.8bit |
-| **Image Generation** | Controlnet (SD 1.5) | 10.6 GB |
-| | Controlnet (SDXL) | 320.2 MB |
-| | Safety Checker + Feature Extractor | 3.2 GB |
-| | SD 1.5 | 1.6 MB |
-| | SDXL 1.0 | 6.45 MB |
+| Modality         | Size |
+|------------------|------|
+| **Text-to-Speech** | |
+| OpenVoice (Voice) | 4.0 GB |
+| Speech T5 (Voice) | 654.4 MB |
+| **Speech-to-Text** | |
+| Whisper Tiny | 155.4 MB |
+| **Text Generation** | |
+| Ministral 8b (default) | 4.0 GB |
+| Whisper Tiny | 155.4 MB |
+| Ollama (various models) | 1.5 GB - 20 GB |
+| OpenRouter (various models) | 1.5 GB - 20 GB |
+| Huggingface (various models) | 1.5 GB - 20 GB |
+| Ministral instruct 8b (4bit) | 5.8bit |
+| **Image Generation** | |
+| Controlnet (SD 1.5) | 10.6 GB |
+| Controlnet (SDXL) | 320.2 MB |
+| Safety Checker + Feature Extractor | 3.2 GB |
+| SD 1.5 | 1.6 MB |
+| SDXL 1.0 | 6.45 MB |
 
 </div>
 <div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
