@@ -47,7 +47,6 @@ extras_require = {
         "sumy==0.11.0",
         "sentencepiece==0.2.0",
         "lingua-language-detector==2.1.0",
-        "matplotlib==3.10.3",
         "markdown==3.8",
     ],
     "agents": [
@@ -147,7 +146,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.9.7",
+    version="4.9.9",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
