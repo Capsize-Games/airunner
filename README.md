@@ -1,7 +1,7 @@
 [![AI Runner Logo](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
 
-# Offline AI interface for Hackers, Makers, and Builders [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz)
+# Offline AI interface for Hackers, Makers, and Builders [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz) ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner) [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
 
 <table>
   <tr>
@@ -9,10 +9,7 @@
 
 <div style="border: 2px solid blue; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
 
-
-### ✨ Key Features
-
-| ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner) [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner) |
+| ✨ Key Features |
 |:--------------------------------|
 | **🗣️ Real-time conversations** |
 | - Three speech engines: espeak, SpeechT5, OpenVoice<br>- Auto language detection (OpenVoice)<br>- Real-time voice-chat with LLMs |
@@ -45,6 +42,8 @@
 | French           | ✅          | ✅          | ❌          | ❌          |
 | Chinese          | ✅          | ✅          | ❌          | ❌          |
 | Korean           | ✅          | ✅          | ❌          | ❌          |
+
+[Request language support](https://github.com/Capsize-Games/airunner/issues/new/choose)
 
 </div>
 </td>
