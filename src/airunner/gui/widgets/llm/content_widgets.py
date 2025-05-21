@@ -18,6 +18,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
 import html
+import os
 
 
 class BaseContentWidget(QWidget):
@@ -183,10 +184,25 @@ class MarkdownWidget(BaseContentWidget):
             self.sizeChanged.emit()
 
     def _wrap_html_content(self, content):
-        """Wrap the HTML content with proper styling for dark theme and code blocks."""
+        # Support CDN fallback if AIRUNNER_MATHJAX_CDN=1 is set
+        use_cdn = os.environ.get("AIRUNNER_MATHJAX_CDN", "0") == "1"
+        if use_cdn:
+            mathjax_url = (
+                "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+            )
+        else:
+            mathjax_url = "http://127.0.0.1:8765/tex-mml-chtml.js"
         return f"""
         <html style='height:auto;width:100%;background:transparent;'>
         <head>
+        <script type='text/javascript'>
+          window.MathJax = {{
+            tex: {{inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]}},
+            options: {{ skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }},
+            svg: {{ fontCache: 'global' }}
+          }};
+        </script>
+        <script type='text/javascript' src='{mathjax_url}'></script>
         <style>
         html, body {{
             background: transparent !important;
@@ -364,37 +380,25 @@ class LatexWidget(BaseContentWidget):
             self.setContent(self._content)
 
     def _wrap_latex_html(self, latex_content):
-        """Wrap LaTeX content in HTML with MathJax for rendering."""
-        escaped_content = html.escape(latex_content)
-
+        use_cdn = os.environ.get("AIRUNNER_MATHJAX_CDN", "0") == "1"
+        if use_cdn:
+            mathjax_url = (
+                "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+            )
+        else:
+            mathjax_url = "http://127.0.0.1:8765/tex-mml-chtml.js"
+        # MathJax 3.x config is set via window.MathJax global before script load
         return f"""
         <html style='height:auto;width:100%;background:transparent;'>
         <head>
-        <script type="text/javascript" async
-          src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
+        <script type='text/javascript'>
+          window.MathJax = {{
+            tex: {{inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]}},
+            options: {{ skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }},
+            svg: {{ fontCache: 'global' }}
+          }};
         </script>
-        <script type="text/x-mathjax-config">
-          MathJax.Hub.Config({{
-            tex2jax: {{inlineMath: [['$','$'], ['\\\\(','\\\\)']],
-                       displayMath: [['$$','$$'], ['\\\\[','\\\\]']]}},
-            "HTML-CSS": {{
-              scale: 100,
-              availableFonts: ["TeX"],
-              preferredFont: "TeX",
-              webFont: "TeX",
-              imageFont: "TeX",
-              linebreaks: {{ automatic: true }}
-            }},
-            CommonHTML: {{
-              linebreaks: {{ automatic: true }}
-            }}
-          }});
-          
-          MathJax.Hub.Queue(function() {{
-            var height = document.body.scrollHeight;
-            window.qtWidgetResize && window.qtWidgetResize(height);
-          }});
-        </script>
+        <script type='text/javascript' src='{mathjax_url}'></script>
         <style>
         html, body {{
             background: transparent !important;
@@ -411,7 +415,7 @@ class LatexWidget(BaseContentWidget):
         </style>
         </head>
         <body style='background:transparent !important;height:auto;width:100%;margin:0;padding:0;overflow:visible !important;'>
-          {escaped_content}
+          {latex_content}
         </body>
         </html>
         """
@@ -481,43 +485,30 @@ class MixedContentWidget(BaseContentWidget):
             self.setContent(self._content)
 
     def _wrap_mixed_html(self, parts):
-        """Wrap mixed content in HTML with MathJax for rendering LaTeX parts."""
+        use_cdn = os.environ.get("AIRUNNER_MATHJAX_CDN", "0") == "1"
+        if use_cdn:
+            mathjax_url = (
+                "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+            )
+        else:
+            mathjax_url = "http://127.0.0.1:8765/tex-mml-chtml.js"
         html_body = ""
-
         for part in parts:
             if part["type"] == "latex":
-                html_body += f"<span class='latex-formula'>{html.escape(part['content'])}</span>"
-            else:  # text
-                html_body += f"<span class='text'>{html.escape(part['content']).replace('\n', '<br>')}</span>"
-
+                html_body += part["content"]
+            else:
+                html_body += f"<span class='text'>{html.escape(part['content']).replace('\\n', '<br>')}</span>"
         return f"""
         <html style='height:auto;width:100%;background:transparent;'>
         <head>
-        <script type="text/javascript" async
-          src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
+        <script type='text/javascript'>
+          window.MathJax = {{
+            tex: {{inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]}},
+            options: {{ skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }},
+            svg: {{ fontCache: 'global' }}
+          }};
         </script>
-        <script type="text/x-mathjax-config">
-          MathJax.Hub.Config({{
-            tex2jax: {{inlineMath: [['$','$'], ['\\\\(','\\\\)']],
-                       displayMath: [['$$','$$'], ['\\\\[','\\\\]']]}},
-            "HTML-CSS": {{
-              scale: 100,
-              availableFonts: ["TeX"],
-              preferredFont: "TeX",
-              webFont: "TeX",
-              imageFont: "TeX",
-              linebreaks: {{ automatic: true }}
-            }},
-            CommonHTML: {{
-              linebreaks: {{ automatic: true }}
-            }}
-          }});
-          
-          MathJax.Hub.Queue(function() {{
-            var height = document.body.scrollHeight;
-            window.qtWidgetResize && window.qtWidgetResize(height);
-          }});
-        </script>
+        <script type='text/javascript' src='{mathjax_url}'></script>
         <style>
         html, body {{
             background: transparent !important;
