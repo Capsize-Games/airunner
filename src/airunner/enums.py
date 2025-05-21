@@ -540,6 +540,7 @@ class ModelService(enum.Enum):
     LOCAL = "local"
     HUGGINGFACE = "huggingface"
     OPENROUTER = "openrouter"
+    OLLAMA = "ollama"
 
 
 class QualityEffects(enum.Enum):

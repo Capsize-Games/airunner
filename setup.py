@@ -59,6 +59,7 @@ extras_require = {
         "llama-index-vector-stores-faiss==0.4.0",
         "llama-index-embeddings-huggingface==0.5.4",
         "llama-index-llms-openrouter==0.3.1",
+        "llama-index-llms-ollama==0.5.4",
         "langchain-community==0.3.24",
         "EbookLib==0.19",
         "html2text==2024.2.26",
