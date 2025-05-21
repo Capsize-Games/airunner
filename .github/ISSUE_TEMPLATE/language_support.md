@@ -1,8 +1,8 @@
 ---
 name: Language support
 about: Request for language support
-title: ''
-labels: ''
+title: 'Language support request: {{ language }}'
+labels: 'Internationalization, 🛸 enhancement'
 assignees: ''
 
 ---
