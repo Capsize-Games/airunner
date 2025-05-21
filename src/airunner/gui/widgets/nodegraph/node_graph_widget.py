@@ -78,6 +78,7 @@ class NodeGraphWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.q_settings = get_qsettings()
         self.graph = CustomNodeGraph()
+        self.graph.widget_ref = (self)
 
         # Replace the default viewer with our debounced viewer
         debounced_viewer = DebouncedNodeViewer(
