@@ -23,13 +23,11 @@ from airunner.facehuggershield.huggingface.settings import (
 
 
 def set_huggingface_environment_variables(
-    allow_downloads: bool = None,
-    allow_remote_inference: bool = None
+    allow_downloads: bool = None
 ):
     """
     Set the environment variables for the Hugging Face Hub.
     :param allow_downloads:
-    :param allow_remote_inference:
     :return:
     """
     print("Setting Hugging Face environment variables")
