@@ -49,51 +49,41 @@ class RestrictOSAccess(metaclass=Singleton):
         return False
 
     def restrict_os_write(self, *args, **kwargs):
-        stack = traceback.extract_stack()
-        filename = stack[-2].filename
-        if (
-            self.is_directory_whitelisted(args[0])
-            or "write"
-            in self.whitelisted_operations  # Corrected: was self.whitelisted_directories
-            or self.check_stack_trace()
+        # Only block if the blacklist is non-empty and a pattern matches
+        if self.blacklisted_filenames and any(
+            re.search(pattern, str(args[0]))
+            for pattern in self.blacklisted_filenames
         ):
-            return self.original_os_write(*args, **kwargs)
-        self.log_disc_writter(filename=filename)
-        self.logger.error(
-            "OS write operations are not allowed"
-        )  # Added logger
-        raise PermissionError("OS write operations are not allowed")
+            self.log_disc_writer(filename=args[0])
+            self.logger.warning(
+                "OS write operations are blacklisted, but write will proceed (soft block mode)"
+            )
+            # Optionally: return or raise, but here we just log and proceed
+        return self.original_os_write(*args, **kwargs)
 
     def restricted_open(self, *args, **kwargs):
-        # Check if args is not empty and args[0] is a string before using it
         file_path_arg = args[0] if args and isinstance(args[0], str) else ""
-
-        if (
-            (file_path_arg and self.is_directory_whitelisted(file_path_arg))
-            or "open" in self.whitelisted_operations
-            or self.check_stack_trace()
+        if self.blacklisted_filenames and any(
+            re.search(pattern, file_path_arg)
+            for pattern in self.blacklisted_filenames
         ):
-            return self.original_open(*args, **kwargs)
-        self.logger.error(
-            f"File system open operations are not allowed. Attempted: open({args}, {kwargs})"
-        )
-        raise PermissionError("File system open operations are not allowed")
+            self.logger.warning(
+                f"File system open operation is blacklisted, but open will proceed (soft block mode). Attempted: open({args}, {kwargs})"
+            )
+            # Optionally: return or raise, but here we just log and proceed
+        return self.original_open(*args, **kwargs)
 
     def restricted_os_makedirs(self, *args, **kwargs):
-        # Check if args is not empty and args[0] is a string before using it
         dir_path_arg = args[0] if args and isinstance(args[0], str) else ""
-        if (
-            (dir_path_arg and self.is_directory_whitelisted(dir_path_arg))
-            or "makedirs" in self.whitelisted_operations
-            or self.check_stack_trace()
+        if self.blacklisted_filenames and any(
+            re.search(pattern, dir_path_arg)
+            for pattern in self.blacklisted_filenames
         ):
-            return self.original_makedirs(*args, **kwargs)
-        self.logger.error(
-            f"File system makedirs operations are not allowed. Attempted to create directory: {args}"
-        )
-        raise PermissionError(
-            "File system makedirs operations are not allowed"
-        )
+            self.logger.warning(
+                f"File system makedirs operation is blacklisted, but makedirs will proceed (soft block mode). Attempted to create directory: {args}"
+            )
+            # Optionally: return or raise, but here we just log and proceed
+        return self.original_makedirs(*args, **kwargs)
 
     def restricted_exec(self, *args, **kwargs):
         # Check if args is not empty and args[0] is a string before using it
@@ -144,19 +134,15 @@ class RestrictOSAccess(metaclass=Singleton):
         )
 
     def restricted_import(self, name, *args, **kwargs):
-        # Allow core internal imports unconditionally
-        if name in self.core_internal_imports:
-            return self.original_import(name, *args, **kwargs)
-
-        if "import" in self.whitelisted_operations or self.check_stack_trace():
-            return self.original_import(name, *args, **kwargs)
-        if any(
-            re.search(pattern, name) for pattern in self.whitelisted_imports
+        # Only block if the blacklist is non-empty and a pattern matches
+        if self.blacklisted_filenames and any(
+            re.search(pattern, name) for pattern in self.blacklisted_filenames
         ):
-            return self.original_import(name, *args, **kwargs)
-        # print(f"Failed to import: {name}") # This print might be too noisy
-        self.logger.error(f"Importing module '{name}' is not allowed")
-        raise PermissionError(f"Importing module '{name}' is not allowed")
+            self.logger.warning(
+                f"Importing module '{name}' is blacklisted, but import will proceed (soft block mode)"
+            )
+            # Optionally: return None or a dummy module, but here we just log and proceed
+        return self.original_import(name, *args, **kwargs)
 
     def log_imports(self, name, *args, **kwargs):
         # self.logging_importer = LoggingImporter()
@@ -174,32 +160,20 @@ class RestrictOSAccess(metaclass=Singleton):
         self.logger.error("Module operations are not allowed")
         raise PermissionError("Module operations are not allowed")
 
-    def activate(self):
-        self.logger.info("Activating OS restrictions")
-        # Store originals if not already stored (e.g. if activate is called multiple times)
-        if (
-            builtins.open == self.restricted_open
-            and builtins.__import__ == self.restricted_import
-            and os.write == self.restrict_os_write
-            and os.makedirs == self.restricted_os_makedirs
-        ):
-            self.logger.warning(
-                "OS restrictions seem to be already active or originals not properly restored previously."
-            )
-            # Potentially restore them first before re-patching, or just log and proceed
-            # For now, we assume deactivate will be called correctly.
-
+    def activate(
+        self,
+        blacklisted_filenames=None,
+        *args,
+        **kwargs,
+    ):
+        self.logger.info("Activating OS restrictions (blacklist mode)")
+        if blacklisted_filenames is not None:
+            self.blacklisted_filenames = blacklisted_filenames
         # Patch builtins and os module
         builtins.open = self.restricted_open
         builtins.__import__ = self.restricted_import
         os.write = self.restrict_os_write
         os.makedirs = self.restricted_os_makedirs
-        # Add other restrictions as needed, e.g., for os.system, os.exec*
-        # For example:
-        # self.original_os_system = os.system
-        # os.system = self.restricted_subprocess
-        # self.original_os_execv = os.execv # and other exec variants
-        # os.execv = self.restricted_exec # (restricted_exec needs to handle different exec signatures)
 
     def deactivate(self):
         self.logger.info("Deactivating OS restrictions")
@@ -260,6 +234,10 @@ class RestrictOSAccess(metaclass=Singleton):
         self.whitelisted_imports = []
         self.whitelisted_directories = []
         self.logger.info("Cleared all whitelists.")
+
+    def clear_blacklist(self):
+        self.blacklisted_filenames = []
+        self.logger.info("Cleared all blacklists.")
 
 
 # Example of a LoggingImporter (conceptual)
