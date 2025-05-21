@@ -63,6 +63,18 @@
 
 ## 💾 Installation Quick Start
 
+### ⚙️ System Requirements
+
+| Specification       | Minimum                              | Recommended                          |
+|---------------------|--------------------------------------------|--------------------------------------------|
+| **OS** | Ubuntu 22.04, Windows 10                   | Ubuntu 22.04 (Wayland)                     |
+| **CPU** | Ryzen 2700K or Intel Core i7-8700K         | Ryzen 5800X or Intel Core i7-11700K        |
+| **Memory** | 16 GB RAM                                  | 32 GB RAM                                  |
+| **GPU** | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
+| **Network** | Broadband (used to download models)        | Broadband (used to download models)        |
+| **Storage** | 22 GB (with models), 6 GB (without models) | 100 GB or higher                           |
+
+
 ### 🔧 Installation Steps
 
 There are several ways to install and use AI Runner. [See the Installation Wiki for the full instructions](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions). The following steps are for a developer quick start on **Ubuntu 22.04** (these instructions should also work on 24.04 and any LTS version of Ubuntu). The wiki has instructions for the compiled version (currently unavailable), Windows, and Docker.
@@ -91,53 +103,29 @@ There are several ways to install and use AI Runner. [See the Installation Wiki 
    airunner
    ```
 
-For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
-
-**Note: *AI Runner does not distribute AI art models. You are responsible for obtaining and your own.***
-
----
-
-## ⚙️ System Requirements
-
-| Specification       | Minimum                              | Recommended                          |
-|---------------------|--------------------------------------------|--------------------------------------------|
-| **OS** | Ubuntu 22.04, Windows 10                   | Ubuntu 22.04 (Wayland)                     |
-| **CPU** | Ryzen 2700K or Intel Core i7-8700K         | Ryzen 5800X or Intel Core i7-11700K        |
-| **Memory** | 16 GB RAM                                  | 32 GB RAM                                  |
-| **GPU** | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
-| **Network** | Broadband (used to download models)        | Broadband (used to download models)        |
-| **Storage** | 22 GB (with models), 6 GB (without models) | 100 GB or higher                           |
-
----
-
-## LLM Support
-
-- **Default model:** Ministral 8b instruct 4bit
-- **Ollama:**: A variety of local models to choose from (requires Ollama CLI)
-- **OpenRouter**: Remove server-side LLMs (requires API key)
-- **Huggingface**: Coming soon
-
----
+<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
 
 ### Basic Usage
 
 - **Run AI Runner**: `airunner`
+- **Run the downloader**: `airunner-setup`
 - **Build templates**: `airunner-build-ui`
 
----
+For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
 
-## ✨ LLM Vendors
-
-- **Default local model:** Ministral 8b instruct 4bit
-- **Ollama:**: A variety of local models to choose from (requires Ollama CLI)
-- **OpenRouter**: Remove server-side LLMs (requires API key)
-- **Huggingface**: Coming soon
+</div>
 
 ---
 
 ## 🤖 Models
 
-These are the sizes of the various models that power AI Runner.
+<table>
+  <tr>
+    <td valign="top">
+
+<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
+
+**These are the sizes of the various models that power AI Runner.**
 
 | Modality         | Model | Size |
 |------------------|-------|------|
@@ -156,14 +144,44 @@ These are the sizes of the various models that power AI Runner.
 | | SD 1.5 | 1.6 MB |
 | | SDXL 1.0 | 6.45 MB |
 
----
+</div>
+<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
 
-## AI Models
+## Stack
 
-By default, AI Runner installs essential TTS/STT and minimal LLM components.  
-You **must supply** additional Stable Diffusion models (e.g., from [Hugging Face](https://huggingface.co/) or [Civitai](https://civitai.com/)).
+AI Runner uses the following stack
+
+- **SQLite**: For local data storage
+- **Alembic**: For database migrations
+- **SQLAlchemy**: For ORM
+- **Pydantic**: For data validation
+- **FastAPI**: For the API
+- **http.server**: Basic local server for static files
+- **PySide6**: For the GUI
+- A variety of other libraries for TTS, STT, LLMs, and image generation
+
+</div>
+</td>
+<td valign="top">
+
+<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
+
+### ✨ LLM Vendors
+
+- **Default local model:** Ministral 8b instruct 4bit
+- **Ollama:**: A variety of local models to choose from (requires Ollama CLI)
+- **OpenRouter**: Remove server-side LLMs (requires API key)
+- **Huggingface**: Coming soon
+
+</div>
+<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
+
+### 🎨 Art Models
+
+By default, AI Runner installs essential TTS/STT and minimal LLM components, but AI art models must be supplied by the user.
 
 Organize them under your local AI Runner data directory:
+
 ```plaintext
 ~/.local/share/airunner
 ├── art
@@ -180,39 +198,12 @@ Organize them under your local AI Runner data directory:
 │           └── embeddings
 ```
 
----
+</div>
 
-## Unit Tests
+</td>
+</tr>
 
-To run all tests:
-
-```bash
-python -m unittest discover -s src/airunner/tests
-```
-
-Or a single test:
-
-```bash
-python -m unittest src/airunner/tests/test_prompt_weight_convert.py
-```
-
----
-
-## Database
-
-AI Runner supports a simple database system. See the [Wiki](https://github.com/Capsize-Games/airunner/wiki/Database) for how to:
-- Switch engines (SQLite, etc.)
-- Make schema changes
-- Run migrations
-
----
-
-## Advanced Features
-
-- **Memory Optimization**: TF32 Mode, VAE/Attention Slicing, Torch 2.0, sequential CPU offload, ToMe token merging.  
-- **Experimental Integrations**: Weather-based chatbot prompts, advanced command-line arguments (`--perform-llm-analysis`, `--disable-setup-wizard`, etc.).  
-- **Safety & Guardrails**: Optional NSFW content detection and adjustable guardrails for LLMs.
-- **Wayland support**, **Python 3.13**, and the latest stable torch libraries for extra security, performance, and compatibility.
+</table>
 
 ---
 
@@ -221,10 +212,3 @@ AI Runner supports a simple database system. See the [Wiki](https://github.com/C
 We welcome pull requests for new features, bug fixes, or documentation improvements. You can also build and share **extensions** to expand AI Runner’s functionality. For details, see the [Extensions Wiki](https://github.com/Capsize-Games/airunner/wiki/Extensions).
 
 Take a look at the [Contributing document](https://github.com/Capsize-Games/airunner/CONTRIBUTING.md) and the [Development wiki page](https://github.com/Capsize-Games/airunner/wiki/Development) for detailed instructions.
-
----
-
-## Thank You!
-
-Thanks for checking out AI Runner.
-Questions or ideas? Join our [Discord](https://discord.gg/PUVDDCJ7gz) or open a [GitHub Issue](https://github.com/Capsize-Games/airunner/issues).
