@@ -1,13 +1,7 @@
-# filename: formatter.py
-
 import re
 import os
-import tempfile
-import matplotlib.pyplot as plt
 import markdown
 from PIL import Image, ImageDraw, ImageFont
-
-from airunner.api import API
 
 
 class Formatter:
@@ -95,93 +89,6 @@ class Formatter:
         return False
 
     @staticmethod
-    def _render_latex_to_image(
-        latex_code: str, output_path: str, dpi: int = 300
-    ) -> str:
-        """
-        Renders a LaTeX mathematical string into a PNG image.
-        Uses matplotlib for rendering.
-
-        Args:
-            latex_code (str): The LaTeX mathematical string (e.g., r'\frac{1}{2}').
-            output_path (str): The full path including filename where the image will be saved.
-            dpi (int): Dots per inch for the output image resolution.
-
-        Returns:
-            str: The path to the generated image file.
-        """
-        try:
-            # Clean up delimiters if present (e.g., remove $$, $ , \[ \] )
-            cleaned_latex = latex_code.strip()
-            if cleaned_latex.startswith("$$") and cleaned_latex.endswith("$$"):
-                cleaned_latex = cleaned_latex[2:-2].strip()
-            elif cleaned_latex.startswith("$") and cleaned_latex.endswith("$"):
-                cleaned_latex = cleaned_latex[1:-1].strip()
-            elif cleaned_latex.startswith(r"\[") and cleaned_latex.endswith(
-                r"\]"
-            ):
-                cleaned_latex = cleaned_latex[2:-2].strip()
-            elif cleaned_latex.startswith(r"\(") and cleaned_latex.endswith(
-                r"\)"
-            ):
-                cleaned_latex = cleaned_latex[2:-2].strip()
-
-            # Matplotlib requires raw string for LaTeX for proper escaping
-            # We'll try with usetex=True first for best quality, then fallback
-            plt.rcParams["text.usetex"] = True
-            plt.rcParams["font.family"] = (
-                "serif"  # Often looks better with LaTeX
-            )
-
-            fig = plt.figure(
-                figsize=(3, 1.2), dpi=dpi
-            )  # Increased size for better visibility
-            ax = fig.add_axes([0, 0, 1, 1])
-            ax.text(
-                0.5,
-                0.5,
-                r"$" + cleaned_latex + r"$",
-                fontsize=20,
-                horizontalalignment="center",
-                verticalalignment="center",
-                color="black",  # Ensure text is black
-            )
-            ax.set_axis_off()  # Hide axes and ticks
-
-            # Save with tight bounding box to remove extra whitespace
-            plt.savefig(
-                output_path, dpi=dpi, bbox_inches="tight", pad_inches=0.05
-            )
-            plt.close(fig)
-            return output_path
-        except RuntimeError as e:
-            # Fallback for systems without full LaTeX installation for usetex=True
-            print(
-                f"Warning: LaTeX rendering with usetex=True failed ({e}). Attempting without it."
-            )
-            plt.rcParams["text.usetex"] = False  # Disable usetex
-            fig = plt.figure(figsize=(3, 1.2), dpi=dpi)
-            ax = fig.add_axes([0, 0, 1, 1])
-            ax.text(
-                0.5,
-                0.5,
-                r"$" + cleaned_latex + r"$",
-                fontsize=20,
-                horizontalalignment="center",
-                verticalalignment="center",
-                color="black",  # Ensure text is black
-            )
-            ax.set_axis_off()
-            plt.savefig(
-                output_path, dpi=dpi, bbox_inches="tight", pad_inches=0.05
-            )
-            plt.close(fig)
-            return output_path
-        except Exception as e:
-            print(f"Error rendering LaTeX: {e}")
-            return ""
-
-    @staticmethod
     def _render_markdown_to_html(markdown_string: str) -> str:
         """
         Converts a Markdown string to HTML.
@@ -252,24 +159,8 @@ class Formatter:
                 - 'original_content': The original input string.
         """
         os.makedirs(output_dir, exist_ok=True)
-        temp_filename_base = os.path.join(
-            output_dir,
-            "formatted_content",
-        )
-
         # Only treat as LaTeX if the whole string is a LaTeX formula
-        if Formatter._is_pure_latex(content_string):
-            image_path = f"{temp_filename_base}_{os.urandom(4).hex()}.png"
-            rendered_path = Formatter._render_latex_to_image(
-                content_string, image_path
-            )
-            if rendered_path:
-                return {
-                    "type": Formatter._FORMAT_LATEX,
-                    "output": rendered_path,  # Path to the image file
-                    "original_content": content_string,
-                }
-        elif Formatter._is_markdown(content_string):
+        if Formatter._is_markdown(content_string):
             html_output = Formatter._render_markdown_to_html(content_string)
             return {
                 "type": Formatter._FORMAT_MARKDOWN,
