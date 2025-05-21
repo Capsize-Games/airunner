@@ -108,7 +108,14 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 
 ---
 
-## 🛠️ Usage
+## LLM Support
+
+- **Default model:** Ministral 8b instruct 4bit
+- **Ollama:**: A variety of local models to choose from (requires Ollama CLI)
+- **OpenRouter**: Remove server-side LLMs (requires API key)
+- **Huggingface**: Coming soon
+
+---
 
 ### Basic Usage
 
