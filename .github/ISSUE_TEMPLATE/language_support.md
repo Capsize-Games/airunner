@@ -7,14 +7,16 @@ assignees: ''
 
 ---
 
-- **Language (eg Spanish, French, Etc):** 
-- **Modality:**
+## Language (eg Spanish, French, Etc)
+
+## Modality
   - [ ] Text-to-speech
   - [ ] Speech-to-text
   - [ ] LLM
   - [ ] GUI
     - [ ] Other (please specify)
-- **Use case:**
+
+## Use case
   - [ ] Personal
   - [ ] Commercial
   - [ ] Other (please specify)
