@@ -174,7 +174,6 @@ setup(
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
         "setuptools==78.1.1",
-        "facehuggershield==0.1.13",
         "etils[epath]==1.12.2",
     ],
     extras_require=extras_require,
