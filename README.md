@@ -5,7 +5,7 @@
 [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
 
-# 👨‍💻 Offline AI interface for Hackers, Makers, and Builders.
+# Offline AI interface for Hackers, Makers, and Builders.
 
 <table>
   <tr>
