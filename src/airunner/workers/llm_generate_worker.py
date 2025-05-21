@@ -2,6 +2,7 @@ import threading
 from typing import Dict, Optional, Type
 
 from airunner.enums import SignalCode
+from airunner.handlers.llm.ollama_model_manager import OllamaModelManager
 from airunner.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
 from airunner.handlers.llm.llm_model_manager import LLMModelManager
@@ -32,6 +33,7 @@ class LLMGenerateWorker(Worker):
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
         }
         self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
+        self._ollama_model_manager: Optional[OllamaModelManager] = None
         self._local_model_manager: Optional[LLMModelManager] = None
         # self._gemma3_model_manager: Optional[Gemma3Manager] = None
         self._model_manager: Optional[Type[LLMModelManager]] = None
@@ -43,6 +45,13 @@ class LLMGenerateWorker(Worker):
         return (
             self.llm_generator_settings.model_service
             == ModelService.OPENROUTER.value
+        )
+
+    @property
+    def use_ollama(self) -> bool:
+        return (
+            self.llm_generator_settings.model_service
+            == ModelService.OLLAMA.value
         )
 
     # @property
@@ -58,6 +67,14 @@ class LLMGenerateWorker(Worker):
                 local_agent_class=self.local_agent_class
             )
         return self._openrouter_model_manager
+
+    @property
+    def ollama_model_manager(self) -> OllamaModelManager:
+        if not self._ollama_model_manager:
+            self._ollama_model_manager = OllamaModelManager(
+                local_agent_class=self.local_agent_class
+            )
+        return self._ollama_model_manager
 
     @property
     def local_model_manager(self) -> LLMModelManager:
@@ -78,6 +95,8 @@ class LLMGenerateWorker(Worker):
         if self._model_manager is None:
             if self.use_openrouter:
                 self._model_manager = self.openrouter_model_manager
+            elif self.use_ollama:
+                self._model_manager = self.ollama_model_manager
             # elif self.use_gemma3:
             #     self._model_manager = self.gemma3_model_manager
             else:

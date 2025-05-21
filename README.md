@@ -123,6 +123,15 @@ Below is a high-level list of capabilities in AI Runner:
 
 ---
 
+## LLM Support
+
+- **Default model:** Ministral 8b instruct 4bit
+- **Ollama:**: A variety of local models to choose from (requires Ollama CLI)
+- **OpenRouter**: Remove server-side LLMs (requires API key)
+- **Huggingface**: Coming soon
+
+---
+
 ## Language Support
 
 AI Runner is primarily designed for English, but we are working towards multi-lingual support. Here's a list of supported languages and their current status. Language support will vary based on the model used for a given task. Language support will improve over time if there is demand.
