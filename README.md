@@ -1,50 +1,74 @@
 [![AI Runner Logo](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
-[![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz)
-![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner)
-[![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml)
-![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
+
+# Offline AI interface for Hackers, Makers, and Builders [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz) ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner) [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
+
+<table>
+  <tr>
+    <td valign="top">
+
+<div style="border: 2px solid blue; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
+
+| ✨ Key Features |
+|:--------------------------------|
+| **🗣️ Real-time conversations** |
+| - Three speech engines: espeak, SpeechT5, OpenVoice<br>- Auto language detection (OpenVoice)<br>- Real-time voice-chat with LLMs |
+| **🤖 Customizable AI Agents** |
+| - Custom agent names, moods, personalities<br>- Retrieval-Augmented Generation (RAG)<br>- Create AI personalities and moods |
+| **📚 Enhanced Knowledge Retrieval** |
+| - RAG for documents/websites<br>- Use local data to enrich chat |
+| **🖼️ Image Generation & Manipulation** |
+| - Text-to-Image (Stable Diffusion 1.5, SDXL, Turbo)<br>- Drawing tools & ControlNet<br>- LoRA & Embeddings<br>- Inpainting, outpainting, filters |
+| **🌍 Multi-lingual Capabilities** |
+| - Partial multi-lingual TTS/STT/interface<br>- English & Japanese GUI |
+| **🔒 Privacy and Security** |
+| - Runs locally, no external API (default)<br>- Customizable LLM guardrails & image safety<br>- Disables HuggingFace telemetry<br> - Restricts network access |
+| **⚡ Performance & Utility** |
+| - Fast generation (~2s on RTX 2080s)<br>- Docker-based setup & GPU acceleration<br>- Theming (Light/Dark/System)<br>- NSFW toggles<br>- Extension API<br>- Python library & API support |
+
+</div>
+<div style="border: 2px solid pink; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
+
+</div>
+<div style="border: 2px solid green; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
+
+### 🌍 Language Support
+
+| Language         | TTS | LLM | STT | GUI |
+|------------------|-------------|-------------|-------------|-------------|
+| English          | ✅          | ✅          | ✅          | ✅          |
+| Japanese         | ✅          | ✅          | ❌          | ✅          |
+| Spanish          | ✅          | ✅          | ❌          | ❌          |
+| French           | ✅          | ✅          | ❌          | ❌          |
+| Chinese          | ✅          | ✅          | ❌          | ❌          |
+| Korean           | ✅          | ✅          | ❌          | ❌          |
+
+[Request language support](https://github.com/Capsize-Games/airunner/issues/new/choose)
+
+</div>
+</td>
+<td valign="top">
+
+<img src="https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa" alt="AI Runner Screenshot" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002;">
+
+<video src="https://github.com/user-attachments/assets/2d5b41ff-a0cd-4239-945b-d9e7a1bc5644" controls width="100%" style="border-radius: 8px; box-shadow: 0 2px 8px #0002;"></video>
+
+</td>
+</tr>
+</table>
 
 ---
 
-# Offline AI interface for Hackers, Makers, and Builders.
-
-![image](https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa)
-
-## Here are some of the things you can do with AI Runner
-
-<video src="https://github.com/user-attachments/assets/2d5b41ff-a0cd-4239-945b-d9e7a1bc5644" controls width="640" height="360"></video>
-
-**🗣️ Real-time conversations with custom chatbots and custom voices**
-
-- Choose from three different speech engines: espeak, SpeechT5, and OpenVoice.
-- Optional auto language detection: User's language will be detected and the appropriate voice will be chosen (limited to OpenVoice).
-
----
-
-- ✅ **Customizable agents with names, moods and personalities** for more engaging conversations
-- ✅ **Retrieval-Augmented Generation** (RAG) for documents and websites
-- ✅ **Text-to-Image** generation with **Stable Diffusion** and **ControlNet**
-- ✅ **Image manipulation** with **inpainting**, **outpainting**, **ControlNet** and **Image filters**
-- ✅ **Multi-lingual** Partial multi-lingual support for **text-to-speech** and **speech-to-text** and interface.
-
-For extra security, performance, and compatibility, AI Runner is built with **Wayland support**, **Python 3.13**, and the latest stable torch libraries.
-
-**Up next**: support for more TTS languages using Whisper.
-
----
-
-## System Requirements
+## ⚙️ System Requirements
 
 | Specification       | Minimum                              | Recommended                          |
 |---------------------|--------------------------------------------|--------------------------------------------|
-| **OS**             | Ubuntu 22.04, Windows 10                               | Ubuntu 22.04 (Wayland)                              |
-| **CPU**            | Ryzen 2700K or Intel Core i7-8700K         | Ryzen 5800X or Intel Core i7-11700K        |
-| **Memory**         | 16 GB RAM                                  | 32 GB RAM                                  |
-| **GPU**            | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
-| **Network**        | Broadband (used to download models)        | Broadband (used to download models)        |
-| **Storage**        | 22 GB                                      | 50 GB                                      |
----
+| **OS** | Ubuntu 22.04, Windows 10                   | Ubuntu 22.04 (Wayland)                     |
+| **CPU** | Ryzen 2700K or Intel Core i7-8700K         | Ryzen 5800X or Intel Core i7-11700K        |
+| **Memory** | 16 GB RAM                                  | 32 GB RAM                                  |
+| **GPU** | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
+| **Network** | Broadband (used to download models)        | Broadband (used to download models)        |
+| **Storage** | 22 GB (with models), 6 GB (without models) | 100 GB or higher                           |
 
 ## 💾 Installation Quick Start
 
@@ -91,83 +115,35 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 
 ---
 
-## ⭐ Features
+## ✨ LLM Vendors
 
-Below is a high-level list of capabilities in AI Runner:
-
-| Feature                                  | Description                                                                                  |
-|------------------------------------------|----------------------------------------------------------------------------------------------|
-| **LLMs & Communication**                 |                                                                                              |
-| Voice-based chatbot conversations        | Have real-time voice-chat sessions with an LLM (speech-to-text + text-to-speech)            |
-| Text-to-speech (TTS)                     | Convert text to spoken audio using **OpenVoice**, **SpeechT5**, and **Espeak**                                       |
-| Speech-to-text (STT)                     | Convert spoken audio to text with **Whisper**                                                   |
-| Customizable chatbots                    | Create AI personalities and moods for more engaging conversations                            |
-| Retrieval-Augmented Generation           | Use local doc or website data to enrich chat responses                                      |
-| **Image Generation**                     |                                                                                              |
-| Stable Diffusion (1.5, SDXL, Turbo)      | Generate images from textual prompts, sketches, or existing images                           |
-| Drawing tools & ControlNet              | Fine-tune image outputs with extra input or guides                                          |
-| LoRA & Embeddings                        | Load LoRA models or textual embeddings for specialized image generation                     |
-| **Image Manipulation**                   |                                                                                              |
-| Inpaint & Outpaint                       | Modify portions of generated images while keeping context                                   |
-| Image filters                            | Blur, film grain, pixel art, etc.                                                            |
-| **Utility**                              |                                                                                              |
-| **Offline**                              | Everything runs locally, no external API required                                           |
-| Fast generation                          | E.g., ~2 seconds on an RTX 2080s for stable diffusion                                        |
-| Docker-based approach                    | Simplifies setup & ensures GPU acceleration works out of the box                            |
-| Dark mode                                | Built-in theming (Light / Dark / System)                                                    |
-| NSFW toggles                             | Enable or disable NSFW detection for images                                                 |
-| Ethical guardrails                       | Basic guardrails for safe LLM usage (optional)                                              |
-| **Extensions**                           | Build your own feature add-ons via the extension API                                        |
-| **Python Library**                       | `pip install airunner` and embed it in your own projects                                    |
-| **API Support**                          | Optionally use OpenRouter or other external LLMs                                            |
+- **Default local model:** Ministral 8b instruct 4bit
+- **Ollama:**: A variety of local models to choose from (requires Ollama CLI)
+- **OpenRouter**: Remove server-side LLMs (requires API key)
+- **Huggingface**: Coming soon
 
 ---
 
-## Language Support
-
-AI Runner is primarily designed for English, but we are working towards multi-lingual support. Here's a list of supported languages and their current status. Language support will vary based on the model used for a given task. Language support will improve over time if there is demand.
-
-| Language         | TTS Support | LLM Support | STT Support | GUI Support |
-|------------------|-------------|-------------|-------------|-------------|
-| English          | ✅          | ✅          | ✅          | ✅          |
-| Japanese         | ✅          | ✅          | ❌          | ✅          |
-| Spanish          | ✅          | ✅          | ❌          | ❌          |
-| French           | ✅          | ✅          | ❌          | ❌          |
-| Chinese          | ✅          | ✅          | ❌          | ❌          |
-| Korean           | ✅          | ✅          | ❌          | ❌          |
-
----
-
-## ⚙️ System Requirements
-
-### System Requirements
-
-| Specification       | Minimum                              | Recommended                          |
-|---------------------|--------------------------------------------|--------------------------------------------|
-| **OS**             | Ubuntu 22.04, Windows 10                               | Ubuntu 22.04 (Wayland)                              |
-| **CPU**            | Ryzen 2700K or Intel Core i7-8700K         | Ryzen 5800X or Intel Core i7-11700K        |
-| **Memory**         | 16 GB RAM                                  | 32 GB RAM                                  |
-| **GPU**            | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
-| **Network**        | Broadband (used to download models)        | Broadband (used to download models)        |
-| **Storage**        | 22 GB (with models), 6 GB (without models) | 100 GB or higher                           |
----
-
-### Models
+## 🤖 Models
 
 These are the sizes of the various models that power AI Runner.
 
-| Model                | Size     |
-|-------------------------|----------|
-| Controlnet (SD 1.5)             | 10.6 GB  |
-| Controlnet (SDXL)             | 320.2 MB  |
-| Safety Checker + Feature Extractor               | 3.2 GB   |
-| SD 1.5                | 1.6 MB   |
-| SDXL 1.0                | 6.45 MB   |
-| LLM                     | 5.8 GB   |
-| e5 large (embedding model) | 1.3 GB   |
-| Whisper Tiny            | 155.4 MB |
-| Speech T5 (Voice)       | 654.4 MB |
-| OpenVoice (Voice)       | 4.0 GB |
+| Modality         | Model | Size |
+|------------------|-------|------|
+| **Text-to-Speech** | OpenVoice (Voice) | 4.0 GB |
+| | Speech T5 (Voice) | 654.4 MB |
+| | Whisper Tiny | 155.4 MB |
+| **Speech-to-Text** | Whisper Tiny | 155.4 MB |
+| **Text Generation** | Ministral 8b (default) | 4.0 GB |
+| | Ollama (various models) | 1.5 GB - 20 GB |
+| | OpenRouter (various models) | 1.5 GB - 20 GB |
+| | Huggingface (various models) | 1.5 GB - 20 GB |
+| | Local (Ministral instruct 8b 4bit doublequantized) | 5.8bit |
+| **Image Generation** | Controlnet (SD 1.5) | 10.6 GB |
+| | Controlnet (SDXL) | 320.2 MB |
+| | Safety Checker + Feature Extractor | 3.2 GB |
+| | SD 1.5 | 1.6 MB |
+| | SDXL 1.0 | 6.45 MB |
 
 ---
 
@@ -224,7 +200,8 @@ AI Runner supports a simple database system. See the [Wiki](https://github.com/C
 
 - **Memory Optimization**: TF32 Mode, VAE/Attention Slicing, Torch 2.0, sequential CPU offload, ToMe token merging.  
 - **Experimental Integrations**: Weather-based chatbot prompts, advanced command-line arguments (`--perform-llm-analysis`, `--disable-setup-wizard`, etc.).  
-- **Safety & Guardrails**: Optional NSFW content detection and adjustable guardrails for LLMs.  
+- **Safety & Guardrails**: Optional NSFW content detection and adjustable guardrails for LLMs.
+- **Wayland support**, **Python 3.13**, and the latest stable torch libraries for extra security, performance, and compatibility.
 
 ---
 
@@ -238,8 +215,5 @@ Take a look at the [Contributing document](https://github.com/Capsize-Games/airu
 
 ## Thank You!
 
-Thanks for checking out AI Runner.  
-Get started with local AI inference in minutes—no more endless environment setup.  
-Questions or ideas? Join our [Discord](https://discord.gg/PUVDDCJ7gz) or open a [GitHub Issue](https://github.com/Capsize-Games/airunner/issues).  
-
-**Happy building!**
+Thanks for checking out AI Runner.
+Questions or ideas? Join our [Discord](https://discord.gg/PUVDDCJ7gz) or open a [GitHub Issue](https://github.com/Capsize-Games/airunner/issues).
