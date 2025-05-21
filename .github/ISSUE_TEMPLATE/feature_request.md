@@ -1,8 +1,8 @@
 ---
 name: Feature request
 about: Request for a new feature
-title: ''
-labels: ''
+title: 'Feature request: {{ feature }}'
+labels: '🛸 enhancement'
 assignees: ''
 
 ---
