@@ -7,7 +7,7 @@
   <tr>
     <td valign="top">
 
-<div style="border: 2px solid blue; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
+<div style="border: 2px solid blue; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
 
 | ✨ Key Features |
 |:--------------------------------|
@@ -22,7 +22,7 @@
 | **🌍 Multi-lingual Capabilities** |
 | - Partial multi-lingual TTS/STT/interface<br>- English & Japanese GUI |
 | **🔒 Privacy and Security** |
-| - Runs locally, no external API (default)<br>- Customizable LLM guardrails & image safety<br>- FacehuggerShield disables telemetry, restricts network access |
+| - Runs locally, no external API (default)<br>- Customizable LLM guardrails & image safety<br>- Disables HuggingFace telemetry<br> - Restricts network access |
 | **⚡ Performance & Utility** |
 | - Fast generation (~2s on RTX 2080s)<br>- Docker-based setup & GPU acceleration<br>- Theming (Light/Dark/System)<br>- NSFW toggles<br>- Extension API<br>- Python library & API support |
 
