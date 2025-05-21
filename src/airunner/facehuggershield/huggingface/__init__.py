@@ -44,7 +44,6 @@ def activate(
         "huggingface_hub.repocard_data",
         "huggingface_hub.utils._gitcredential",
         "huggingface_hub.utils._headers",
-        "huggingface_hub.utils._headers",
         "huggingface_hub.utils._telemetry",
         "huggingface_hub.utils._cache_manager",
         "transformers.utils.hub.PushToHubMixin",
