@@ -8,6 +8,12 @@ class ReusableTCPServer(ThreadingTCPServer):
     allow_reuse_address = True
 
 
+class CORSRequestHandler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        super().end_headers()
+
+
 class LocalHttpServerThread(QThread):
     def __init__(self, directory, port=8765, parent=None):
         super().__init__(parent)
@@ -17,7 +23,7 @@ class LocalHttpServerThread(QThread):
 
     def run(self):
         os.chdir(self.directory)
-        handler = SimpleHTTPRequestHandler
+        handler = CORSRequestHandler
         self._server = ReusableTCPServer(("127.0.0.1", self.port), handler)
         self._server.serve_forever()
 

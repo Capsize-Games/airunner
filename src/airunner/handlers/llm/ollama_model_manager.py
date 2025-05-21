@@ -1,33 +1,23 @@
-from typing import Type, Optional, Any
-
-from llama_index.core.llms.llm import LLM
-from llama_index.llms.openrouter import OpenRouter
-from llama_index.core.chat_engine.types import AgentChatResponse
-
-from airunner.enums import LLMActionType
-from airunner.handlers.llm.llm_request import OpenrouterMistralRequest
-from airunner.handlers.llm.agent.agents.local import LocalAgent
-from airunner.utils.application.get_logger import get_logger
-from airunner.settings import AIRUNNER_LOG_LEVEL
-from logging import Logger
-
 import asyncio
-from typing import AsyncGenerator, Sequence
+from typing import Optional, Type, AsyncGenerator, Sequence, Any
+from llama_index.core.llms.llm import LLM
+from llama_index.core.base.llms.types import ChatMessage, CompletionResponse
 from llama_index.core.base.llms.types import (
     ChatResponseGen,
     ChatResponseAsyncGen,
 )
-from llama_index.core.base.llms.types import ChatMessage, CompletionResponse
-from llama_index.core.bridge.pydantic import Field
+from llama_index.core.chat_engine.types import AgentChatResponse
 import openai
+from airunner.handlers.llm.agent.agents import OpenRouterQObject
+from airunner.handlers.llm.agent.agents.local import LocalAgent
+from airunner.handlers.llm.llm_model_manager import LLMModelManager
+from airunner.enums import LLMActionType, ModelType, ModelStatus
+from airunner.handlers.llm.llm_request import OpenrouterMistralRequest
 from airunner.utils.settings.get_qsettings import get_qsettings
+from llama_index.llms.ollama import Ollama
 
 
-class OpenRouterEnhanced(OpenRouter):
-    logger: Type[Logger] = Field(
-        default_factory=lambda: get_logger(__name__, AIRUNNER_LOG_LEVEL)
-    )
-
+class OllamaEnhanced(Ollama):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._cancel_event = asyncio.Event()
@@ -86,10 +76,10 @@ class OpenRouterEnhanced(OpenRouter):
         self._cancel_event.set()
 
     def unload(self):
-        self.logger.info("Unloading OpenRouterEnhanced: TODO")
+        pass
 
 
-class OpenRouterQObject(LocalAgent):
+class OllamaQObject(LocalAgent):
     @property
     def llm(self) -> Type[LLM]:
         if not self._llm:
@@ -103,15 +93,13 @@ class OpenRouterQObject(LocalAgent):
                 return None
 
             try:
-                self._llm = OpenRouterEnhanced(
+                self._llm = OllamaEnhanced(
                     model=self.llm_generator_settings.model_path,
                     api_key=api_key,
                     **llm_request.to_dict(),
                 )
             except openai.APIError as e:
-                self.logger.error(
-                    f"Failed to initialize OpenRouterEnhanced: {e}"
-                )
+                print(f"Failed to initialize OpenRouterEnhanced: {e}")
 
         return self._llm
 
@@ -136,3 +124,27 @@ class OpenRouterQObject(LocalAgent):
             llm_request=llm_request,
             **llm_request.to_dict(),
         )
+
+
+class OllamaModelManager(LLMModelManager):
+    def _load_tokenizer(self):
+        pass
+
+    def _load_model(self):
+        pass
+
+    def _update_model_status(self):
+        if self._chat_agent:
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
+
+    def _load_agent(self) -> None:
+        """
+        Load the appropriate chat agent based on settings.
+
+        Sets self._chat_agent to the loaded agent instance or None if loading fails.
+        """
+        # Skip if already loaded
+        if self._chat_agent is not None:
+            return
+        self._chat_agent = OllamaQObject(llm_settings=self.llm_settings)
+        self.logger.info("Chat agent loaded")
