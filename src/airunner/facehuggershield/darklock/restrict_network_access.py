@@ -26,9 +26,12 @@ class RestrictNetworkAccess(metaclass=Singleton):
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.INFO)
 
-    def activate(self, allowed_port):
+    def activate(self, allowed_port=None):
         self.logger.info("Activating network restrictions")
-        NoInternetSocket.set_allowed_port(allowed_port)
+        if allowed_port is None:
+            self.logger.warning("No allowed port specified. Skipping port restriction.")
+        else:
+            NoInternetSocket.set_allowed_port(allowed_port)
         socket.socket = NoInternetSocket
 
     def deactivate(self):
