@@ -1,6 +1,6 @@
 import unittest
 
-import nullscream
+import airunner.facehuggershield.nullscream
 
 
 class TestBlacklist(unittest.TestCase):

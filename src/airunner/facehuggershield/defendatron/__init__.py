@@ -61,8 +61,8 @@ def deactivate(
     # Nullscream properties
     nullscream_blacklist: list = None,
 ):
-    shadowlogger.manager.deactivate()
-    darklock.manager.deactivate()
-    nullscream.manager.deactivate(
+    airunner.facehuggershield.shadowlogger.manager.deactivate()
+    airunner.facehuggershield.darklock.manager.deactivate()
+    airunner.facehuggershield.nullscream.manager.deactivate(
         blacklist=nullscream_blacklist,
     )

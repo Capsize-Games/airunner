@@ -1,5 +1,5 @@
 import unittest
-from darklock.no_internet_socket import NoInternetSocket
+from airunner.facehuggershield.darklock.no_internet_socket import NoInternetSocket
 
 
 class TestNoInternetSocket(unittest.TestCase):

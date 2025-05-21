@@ -1,5 +1,5 @@
 import os
-from .settings import (
+from airunner.facehuggershield.huggingface.settings import (
     HF_HUB_DISABLE_TELEMETRY,
     HF_HOME,
     HF_ENDPOINT,
