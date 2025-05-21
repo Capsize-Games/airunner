@@ -45,3 +45,4 @@ FramePack
 OpenVoice
 docker-compose.local.yml
 *.pickle
+mathjax

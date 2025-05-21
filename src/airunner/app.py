@@ -26,6 +26,10 @@ from airunner.settings import (
     AIRUNNER_DISABLE_SETUP_WIZARD,
     AIRUNNER_DISCORD_URL,  # Add this import
 )
+from airunner.gui.widgets.llm.local_http_server import LocalHttpServerThread
+import os
+import subprocess
+import sys
 
 
 class App(MediatorMixin, SettingsMixin, QObject):
@@ -51,6 +55,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self.app = None
         self.splash = None
         self.initialize_gui = initialize_gui  # Store the flag
+        self.http_server_thread = None
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
@@ -61,11 +66,34 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self.register(SignalCode.LOG_LOGGED_SIGNAL, self.on_log_logged_signal)
         self.register(SignalCode.UPATE_LOCALE, self.on_update_locale_signal)
 
-        if self.initialize_gui:
+        self._ensure_mathjax()
+
+        # Only start HTTP server if MathJax is present
+        mathjax_dir = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "static",
+                "mathjax",
+                "MathJax-3.2.2",
+                "es5",
+            )
+        )
+        if self.initialize_gui and os.path.isdir(mathjax_dir):
+            self.http_server_thread = LocalHttpServerThread(
+                directory=mathjax_dir, port=8765
+            )
+            self.http_server_thread.start()
             self.start()
             self.set_translations()
-            self.run_setup_wizard()
             self.run()
+        elif self.initialize_gui:
+            print(
+                f"ERROR: MathJax directory not found: {mathjax_dir}\nPlease run the MathJax setup script or follow the manual instructions in the README."
+            )
+            raise RuntimeError(
+                "MathJax is required for LaTeX rendering. See README.md for setup instructions."
+            )
 
     def on_update_locale_signal(self, data: dict):
         self.set_translations(data)
@@ -86,9 +114,17 @@ class App(MediatorMixin, SettingsMixin, QObject):
         if not locale_language:
             settings = LanguageSettings.objects.first()
             if settings:
-                locale_language = LANGUAGE_TO_LOCALE_MAP[
-                    AvailableLanguage(settings.gui_language)
-                ]
+                try:
+                    lang = AvailableLanguage(settings.gui_language)
+                except ValueError:
+                    lang = AvailableLanguage.EN
+
+                try:
+                    locale_language = LANGUAGE_TO_LOCALE_MAP[lang]
+                except KeyError:
+                    locale_language = LANGUAGE_TO_LOCALE_MAP.get(
+                        AvailableLanguage.EN
+                    )
 
         # If still no locale language, use the system locale
         if not locale_language:
@@ -327,3 +363,38 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 An error occurred while initializing the application.
                 Please report this issue on GitHub or Discord {AIRUNNER_DISCORD_URL}."""
             )
+
+    def quit(self):
+        if self.http_server_thread:
+            self.http_server_thread.stop()
+            self.http_server_thread.wait()
+
+    def _ensure_mathjax(self):
+        # Only run setup if MathJax is not present
+        mathjax_dir = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "static",
+            "mathjax",
+            "MathJax-3.2.2",
+            "es5",
+        )
+        entry = os.path.join(mathjax_dir, "tex-mml-chtml.js")
+        if not os.path.exists(entry):
+            print("MathJax not found, attempting to download and set up...")
+            try:
+                subprocess.check_call(
+                    [
+                        sys.executable,
+                        os.path.join(
+                            os.path.dirname(__file__),
+                            "bin",
+                            "setup_mathjax.py",
+                        ),
+                    ]
+                )
+            except Exception as e:
+                print("ERROR: MathJax setup failed:", e)
+                raise RuntimeError(
+                    "MathJax is required but could not be set up. See README.md for instructions."
+                )
