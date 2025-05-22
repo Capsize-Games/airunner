@@ -148,11 +148,6 @@ class NodeGraph(QtCore.QObject):
     """
 
     def __init__(self, parent=None, **kwargs):
-        """
-        Args:
-            parent (object): object parent.
-            **kwargs (dict): Used for overriding internal objects at init time.
-        """
         super(NodeGraph, self).__init__(parent)
         self.setObjectName("NodeGraph")
         self._model = kwargs.get("model") or NodeGraphModel()
@@ -353,17 +348,6 @@ class NodeGraph(QtCore.QObject):
         self.node_selection_changed.emit(sel_nodes, unsel_nodes)
 
     def _on_node_data_dropped(self, mimedata, pos):
-        """
-        called when data has been dropped on the viewer.
-
-        Example Identifiers:
-            URI = ngqt://path/to/node/session.graph
-            URN = ngqt::node:com.nodes.MyNode1;node:com.nodes.MyNode2
-
-        Args:
-            mimedata (QtCore.QMimeData): mime data.
-            pos (QtCore.QPoint): scene position relative to the drop.
-        """
         uri_regex = re.compile(r"{}(?:/*)([\w/]+)(\.\w+)".format(URI_SCHEME))
         urn_regex = re.compile(r"{}([\w\.:;]+)".format(URN_SCHEME))
         if mimedata.hasFormat(MIME_TYPE):
