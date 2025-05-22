@@ -5,3 +5,7 @@ from airunner.gui.windows.setup_wizard.ai_runner_license.templates.airunner_lice
 class AIRunnerLicense(AgreementPage):
     class_name_ = Ui_airunner_license
     setting_key = "airunner_agreement_checked"
+
+    def __init__(self, *args):
+        super(AgreementPage, self).__init__(*args)
+        self.agreed = True
