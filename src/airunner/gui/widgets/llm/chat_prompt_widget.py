@@ -556,3 +556,22 @@ class ChatPromptWidget(BaseWidget):
     def _force_scroll_to_bottom(self):
         if self.scroll_bar is not None:
             self.scroll_bar.setValue(self.scroll_bar.maximum())
+
+    def resizeEvent(self, event):
+        """
+        Resize event handler to adjust the width of the chat container and its contents.
+        """
+        super().resizeEvent(event)
+        if hasattr(self.ui, "chat_container"):
+            self.ui.chat_container.setMinimumWidth(self.width())
+            self.ui.chat_container.setMaximumWidth(self.width())
+            if hasattr(self.ui, "scrollAreaWidgetContents"):
+                self.ui.scrollAreaWidgetContents.setMinimumWidth(self.width())
+                self.ui.scrollAreaWidgetContents.setMaximumWidth(self.width())
+            layout = self.ui.scrollAreaWidgetContents.layout()
+            if layout is not None:
+                for i in range(layout.count()):
+                    item = layout.itemAt(i)
+                    widget = item.widget()
+                    if widget is not None and hasattr(widget, "setFixedWidth"):
+                        widget.setFixedWidth(self.width())
