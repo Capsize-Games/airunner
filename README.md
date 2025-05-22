@@ -204,15 +204,24 @@ Organize them under your local AI Runner data directory:
 ├── art
 │   └── models
 │       ├── SD 1.5
+│       │   ├── controlnet
+│       │   ├── embeddings
+│       │   ├── inpaint
 │       │   ├── lora
-│       │   └── embeddings
-│       ├── Flux
+│       │   └── txt2img
+│       ├── Flux (not supported yet)
 │       ├── SDXL 1.0
+│       │   ├── controlnet
+│       │   ├── embeddings
+│       │   ├── inpaint
 │       │   ├── lora
-│       │   └── embeddings
+│       │   └── txt2img
 │       └── SDXL Turbo
+│           ├── controlnet
+│           ├── embeddings
+│           ├── inpaint
 │           ├── lora
-│           └── embeddings
+│           └── txt2img
 ```
 
 </div>
