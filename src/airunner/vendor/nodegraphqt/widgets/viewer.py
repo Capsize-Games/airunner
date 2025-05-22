@@ -169,8 +169,8 @@ class NodeViewer(QtWidgets.QGraphicsView):
 
         # connection constrains.
         # TODO: maybe this should be a reference to the graph model instead?
-        self.accept_connection_types = None
-        self.reject_connection_types = None
+        self.accept_connection_types = {}
+        self.reject_connection_types = {}
 
     def __repr__(self):
         return "<{}() object at {}>".format(
@@ -234,20 +234,11 @@ class NodeViewer(QtWidgets.QGraphicsView):
             sensitivity (float): zoom sensitivity.
             pos (QtCore.QPoint): mapped position.
         """
-        print(
-            f"[NodeViewer._set_viewer_zoom] value={value}, sensitivity={sensitivity}, pos={pos}, current transform={self.transform().m11()}, {self.transform().m22()}"
-        )
         if pos:
             pos = self.mapToScene(pos)
         if sensitivity is None:
             scale = 1.001**value
-            print(
-                f"[NodeViewer._set_viewer_zoom] scale (no sensitivity)={scale}"
-            )
             self.scale(scale, scale, pos)
-            print(
-                f"[NodeViewer._set_viewer_zoom] after scale, transform={self.transform().m11()}, {self.transform().m22()}"
-            )
             return
 
         if value == 0.0:
@@ -262,9 +253,6 @@ class NodeViewer(QtWidgets.QGraphicsView):
             if scale == 1.1:
                 return
         self.scale(scale, scale, pos)
-        print(
-            f"[NodeViewer._set_viewer_zoom] after scale (with sensitivity), transform={self.transform().m11()}, {self.transform().m22()}"
-        )
 
     def _set_viewer_pan(self, pos_x, pos_y):
         """
@@ -369,9 +357,6 @@ class NodeViewer(QtWidgets.QGraphicsView):
     # --- reimplemented events ---
 
     def resizeEvent(self, event):
-        print(
-            f"[NodeViewer.resizeEvent] called. Size: {self.size()}, last_size: {self._last_size}, transform: {self.transform().m11()}, {self.transform().m22()}"
-        )
         w, h = self.size().width(), self.size().height()
         if 0 in [w, h]:
             self.resize(self._last_size)
