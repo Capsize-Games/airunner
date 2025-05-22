@@ -174,6 +174,7 @@ AI Runner uses the following stack
 - **Huggingface**: Coming soon
 
 </div>
+
 <div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
 
 ### 🎨 Art Models
@@ -199,6 +200,11 @@ Organize them under your local AI Runner data directory:
 ```
 
 </div>
+
+### Optional third-party services
+
+- **OpenStreetMap:** Map API
+- **OpenMeteo:** Weather API
 
 </td>
 </tr>
