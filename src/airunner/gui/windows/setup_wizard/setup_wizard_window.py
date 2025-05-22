@@ -55,24 +55,7 @@ class SetupWizardWindow(
         self.stt_welcome_page_id = None
         self.stable_diffusion_license_id = None
         self.meta_data_settings_id = None
-        # self.llama_license_id = None
         self.airunner_license_id = None
-        self.setup_settings = dict(
-            age_restriction_agreed=False,
-            read_age_restriction_agreement=False,
-            user_agreement_completed=False,
-            airunner_license_completed=False,
-            sd_license_completed=False,
-            enable_controlnet=False,
-            enable_sd=False,
-            enable_llm=False,
-            enable_tts=False,
-            enable_stt=False,
-            model_version="",
-            model="",
-            custom_model="",
-            using_custom_model=False,
-        )
         self.page_ids = {}
         self.page_order = []
         self.pages = {
@@ -85,6 +68,12 @@ class SetupWizardWindow(
             "whisper_license": WhisperLicense(self),
             "speech_t5_license": SpeechT5License(self),
         }
+
+        if self.application_settings.age_agreement_checked:
+            del self.pages["age_restriction_warning"]
+        
+        if self.application_settings.user_agreement_checked:
+            del self.pages["user_agreement"]
 
         for index, key in enumerate(self.pages.keys()):
             page_id = self.addPage(self.pages[key])
@@ -133,11 +122,3 @@ class SetupWizardWindow(
         print("SetupWizardWindow.cancel() called")
         self.canceled = True
         super().reject()
-
-    def update_application_settings(self, key, value):
-        # Only print for non-agreement keys
-        if not key.endswith("_agreement_checked"):
-            print(f"update_application_settings: {key} = {value}")
-        # Fix: Use setattr instead of update for ApplicationSettings
-        setattr(self.application_settings, key, value)
-        self.application_settings.save()
