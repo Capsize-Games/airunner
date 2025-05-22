@@ -473,9 +473,7 @@ class ChatPromptWidget(BaseWidget):
                 if item:
                     current_widget = item.widget()
                     if isinstance(current_widget, MessageWidget):
-                        if (
-                            current_widget.is_bot
-                        ):
+                        if current_widget.is_bot:
                             if message != "":
                                 current_widget.update_message(message)
                                 QTimer.singleShot(0, self.scroll_to_bottom)
@@ -516,7 +514,7 @@ class ChatPromptWidget(BaseWidget):
         if self.spacer is None:
             self.spacer = QSpacerItem(
                 20,
-                40,
+                0,
                 QSizePolicy.Policy.Minimum,
                 QSizePolicy.Policy.Expanding,
             )
@@ -539,6 +537,9 @@ class ChatPromptWidget(BaseWidget):
                 self.scroll_bar, b"value"
             )
             self.scroll_animation.setDuration(500)
+            self.scroll_animation.finished.connect(
+                self._force_scroll_to_bottom
+            )
 
         # Stop any ongoing animation
         if (
@@ -551,3 +552,7 @@ class ChatPromptWidget(BaseWidget):
         self.scroll_animation.setStartValue(self.scroll_bar.value())
         self.scroll_animation.setEndValue(self.scroll_bar.maximum())
         self.scroll_animation.start()
+
+    def _force_scroll_to_bottom(self):
+        if self.scroll_bar is not None:
+            self.scroll_bar.setValue(self.scroll_bar.maximum())
