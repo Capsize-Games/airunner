@@ -69,6 +69,12 @@ class SetupWizardWindow(
             "speech_t5_license": SpeechT5License(self),
         }
 
+        if self.application_settings.age_agreement_checked:
+            del self.pages["age_restriction_warning"]
+        
+        if self.application_settings.user_agreement_checked:
+            del self.pages["user_agreement"]
+
         for index, key in enumerate(self.pages.keys()):
             page_id = self.addPage(self.pages[key])
             setattr(self, f"{key}_id", page_id)
@@ -116,9 +122,3 @@ class SetupWizardWindow(
         print("SetupWizardWindow.cancel() called")
         self.canceled = True
         super().reject()
-
-    def update_application_settings(self, key, value):
-        if not key.endswith("_agreement_checked"):
-            print(f"update_application_settings: {key} = {value}")
-        setattr(self.application_settings, key, value)
-        self.application_settings.save()

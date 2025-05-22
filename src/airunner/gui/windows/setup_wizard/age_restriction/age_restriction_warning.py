@@ -1,4 +1,5 @@
 from PySide6.QtCore import Slot
+from airunner.data.models.application_settings import ApplicationSettings
 from airunner.gui.windows.setup_wizard.age_restriction.templates.age_restriction_ui import (
     Ui_age_restriction_warning,
 )
@@ -19,17 +20,23 @@ class AgeRestrictionWarning(AgreementPage):
     @Slot(bool)
     def read_agreement_clicked(self, val: bool):
         self.read_age_restriction_agreement = val
-        if self.age_restriction_agreed and self.read_age_restriction_agreement:
-            self.agreed = val
-        else:
-            self.agreed = False
+        self.agreed = val
         self.completeChanged.emit()
+        self.update_settings()
 
     @Slot(bool)
     def age_agreement_clicked(self, val: bool):
         self.age_restriction_agreed = val
-        if self.age_restriction_agreed and self.read_age_restriction_agreement:
-            self.agreed = val
-        else:
-            self.agreed = False
+        self.update_application_settings(self.setting_key, val)
+        self.agreed = val
         self.completeChanged.emit()
+        self.update_settings()
+
+    def update_settings(self):
+        ApplicationSettings.objects.update(
+            ApplicationSettings.objects.first().id,
+            age_agreement_checked=(
+                self.age_restriction_agreed
+                and self.read_age_restriction_agreement
+            ),
+        )
