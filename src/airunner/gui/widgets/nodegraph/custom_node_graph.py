@@ -77,22 +77,18 @@ class CustomNodeGraph(MediatorMixin, SettingsMixin, NodeGraph):
     # --- Drag and Drop Event Handling ---
 
     def dragEnterEvent(self, event):
-        """Accept drag events if they contain our custom variable MIME type."""
         if event.mimeData().hasFormat(VARIABLE_MIME_TYPE):
             event.acceptProposedAction()
         else:
-            # Important: Pass unhandled events to the base class
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
-        """Accept move events if they contain our custom variable MIME type."""
         if event.mimeData().hasFormat(VARIABLE_MIME_TYPE):
             event.acceptProposedAction()
         else:
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
-        """Handle drop events for variables."""
         if event.mimeData().hasFormat(VARIABLE_MIME_TYPE):
             event.acceptProposedAction()
 
@@ -144,10 +140,9 @@ class CustomNodeGraph(MediatorMixin, SettingsMixin, NodeGraph):
                             f"Dropped variable '{variable_name}' not found."
                         )
             else:
-                print(
+                self.logger.error(
                     "Error: Cannot access variable list from graph (widget_ref missing or invalid)."
                 )
 
         else:
-            # Important: Pass unhandled events to the base class for default node dropping etc.
-            super().dropEvent(event)
+            event.ignore()
