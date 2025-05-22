@@ -5,3 +5,7 @@ from airunner.gui.windows.setup_wizard.user_agreement.agreement_page import Agre
 class LlamaLicense(AgreementPage):
     class_name_ = Ui_llama_license
     setting_key = "llama_license"
+
+    def __init__(self, *args):
+        super(AgreementPage, self).__init__(*args)
+        self.agreed = True

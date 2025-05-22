@@ -5,4 +5,6 @@ from airunner.gui.windows.setup_wizard.user_agreement.agreement_page import Agre
 class MistralLicense(AgreementPage):
     class_name_ = Ui_mistral_license
 
-
+    def __init__(self, *args):
+        super(AgreementPage, self).__init__(*args)
+        self.agreed = True

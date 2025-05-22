@@ -78,7 +78,7 @@ class NodeGraphWidget(BaseWidget):
         super().__init__(*args, **kwargs)
         self.q_settings = get_qsettings()
         self.graph = CustomNodeGraph()
-        self.graph.widget_ref = (self)
+        self.graph.widget_ref = self
 
         # Replace the default viewer with our debounced viewer
         debounced_viewer = DebouncedNodeViewer(
@@ -93,6 +93,8 @@ class NodeGraphWidget(BaseWidget):
         )
         # Replace the viewer in the graph
         self.graph._viewer = debounced_viewer
+        # Reconnect all signals from the new viewer to the NodeGraph instance
+        self.graph._wire_signals()
         self.viewer = self.graph.widget
 
         self._node_outputs = {}
