@@ -6,7 +6,7 @@ from airunner.gui.widgets.llm.templates.llm_settings_ui import (
     Ui_llm_settings_widget,
 )
 from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
-from airunner.enums import ModelService
+from airunner.enums import ModelService, SignalCode
 
 
 class LLMSettingsWidget(BaseWidget, AIModelMixin):
@@ -19,6 +19,11 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             self.llm_generator_settings.model_service
             != ModelService.LOCAL.value
         )
+        self.register(
+            SignalCode.LLM_MODEL_DOWNLOAD_PROGRESS,
+            self.on_llm_model_download_progress,
+        )
+        self.ui.progressBar.setVisible(False)
 
     @Slot(str)
     def on_model_path_textChanged(self, val: str):
@@ -191,3 +196,11 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             self.logger.error(f"Attribute {key} does not exist in Chatbot")
             return
         chatbot.save()
+
+    def on_llm_model_download_progress(self, data):
+        percent = data.get("percent", 0)
+        if percent == 0 or percent == 100:
+            self.ui.progressBar.setVisible(False)
+        else:
+            self.ui.progressBar.setVisible(True)
+            self.ui.progressBar.setValue(percent)
