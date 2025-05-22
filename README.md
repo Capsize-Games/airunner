@@ -155,7 +155,7 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 | Ollama (various models) | 1.5 GB - 20 GB |
 | OpenRouter (various models) | 1.5 GB - 20 GB |
 | Huggingface (various models) | 1.5 GB - 20 GB |
-| Ministral instruct 8b (4bit) | 5.8bit |
+| Ministral instruct 8b (4bit) | 5.8 GB |
 | **Image Generation** | |
 | Controlnet (SD 1.5) | 10.6 GB |
 | Controlnet (SDXL) | 320.2 MB |
