@@ -225,6 +225,26 @@ class NodeViewer(QtWidgets.QGraphicsView):
             self._ctx_graph_menu.addAction(self._redo_action)
             self._ctx_graph_menu.addSeparator()
 
+        # Add delete selected nodes action to the graph context menu
+        delete_action = QtGui.QAction("Delete Selected Nodes", self)
+        delete_action.setShortcut(QtGui.QKeySequence.Delete)
+        delete_action.triggered.connect(self._on_delete_selected_nodes)
+        self._ctx_graph_menu.addAction(delete_action)
+        self._ctx_graph_menu.addSeparator()
+
+    def _on_delete_selected_nodes(self):
+        """
+        Slot function triggered when the Delete Selected Nodes action is triggered.
+        Emits the node_selection_changed signal with the IDs of selected nodes and a special marker
+        in the deselected nodes list to indicate this is a delete request.
+        """
+        nodes = self.selected_nodes()
+        if nodes:
+            # Emit signal with selected node IDs to inform the graph to delete these nodes
+            # Use ["__DELETE_NODES__"] as a special marker in the deselected list to indicate delete operation
+            node_ids = [n.id for n in nodes]
+            self.node_selection_changed.emit(node_ids, ["__DELETE_NODES__"])
+
     def _set_viewer_zoom(self, value, sensitivity=None, pos=None):
         """
         Sets the zoom level.
@@ -752,6 +772,18 @@ class NodeViewer(QtWidgets.QGraphicsView):
         self.ALT_state = event.modifiers() == QtCore.Qt.AltModifier
         self.CTRL_state = event.modifiers() == QtCore.Qt.ControlModifier
         self.SHIFT_state = event.modifiers() == QtCore.Qt.ShiftModifier
+
+        # Handle Delete key to delete selected nodes
+        if event.key() == QtCore.Qt.Key_Delete:
+            nodes = self.selected_nodes()
+            if nodes:
+                # Emit signal with selected node IDs to inform the graph to delete these nodes
+                # Use ["__DELETE_NODES__"] as a special marker in the deselected list to indicate delete operation
+                node_ids = [n.id for n in nodes]
+                self.node_selection_changed.emit(
+                    node_ids, ["__DELETE_NODES__"]
+                )
+                return
 
         # Todo: find a better solution to catch modifier keys.
         if event.modifiers() == (
