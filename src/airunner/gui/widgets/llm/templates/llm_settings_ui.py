@@ -17,8 +17,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
     QGridLayout, QGroupBox, QHBoxLayout, QLabel,
-    QLayout, QLineEdit, QPushButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
+    QLayout, QLineEdit, QProgressBar, QPushButton,
+    QScrollArea, QSizePolicy, QSpacerItem, QVBoxLayout,
+    QWidget)
 
 from airunner.gui.widgets.slider.slider_widget import SliderWidget
 
@@ -39,7 +40,7 @@ class Ui_llm_settings_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 579, 546))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 579, 519))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -386,6 +387,12 @@ class Ui_llm_settings_widget(object):
         self.model_path.setObjectName(u"model_path")
 
         self.verticalLayout_2.addWidget(self.model_path)
+
+        self.progressBar = QProgressBar(self.remote_model_path)
+        self.progressBar.setObjectName(u"progressBar")
+        self.progressBar.setValue(24)
+
+        self.verticalLayout_2.addWidget(self.progressBar)
 
 
         self.gridLayout_4.addWidget(self.remote_model_path, 3, 0, 1, 1)

@@ -61,6 +61,7 @@ class ApplicationSettings(BaseModel):
     stable_diffusion_agreement_checked = Column(Boolean, default=True)
     airunner_agreement_checked = Column(Boolean, default=True)
     user_agreement_checked = Column(Boolean, default=True)
+    age_agreement_checked = Column(Boolean, default=True)
     llama_license_agreement_checked = Column(Boolean, default=True)
     nodegraph_zoom = Column(Integer, default=0)
     nodegraph_center_x = Column(Integer, default=0)

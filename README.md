@@ -163,6 +163,7 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 | SD 1.5 | 1.6 MB |
 | SDXL 1.0 | 6.45 MB |
 
+
 ## Stack
 
 AI Runner uses the following stack
@@ -179,12 +180,18 @@ AI Runner uses the following stack
 </td>
 <td valign="top">
 
+<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
+
 ### ✨ LLM Vendors
 
 - **Default local model:** Ministral 8b instruct 4bit
 - **Ollama:**: A variety of local models to choose from (requires Ollama CLI)
 - **OpenRouter**: Remove server-side LLMs (requires API key)
 - **Huggingface**: Coming soon
+
+</div>
+
+<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
 
 ### 🎨 Art Models
 
@@ -207,6 +214,13 @@ Organize them under your local AI Runner data directory:
 │           ├── lora
 │           └── embeddings
 ```
+
+</div>
+
+### Optional third-party services
+
+- **OpenStreetMap:** Map API
+- **OpenMeteo:** Weather API
 
 </td>
 </tr>
