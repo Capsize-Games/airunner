@@ -172,7 +172,6 @@ AI Runner uses the following stack
 - **Alembic**: For database migrations
 - **SQLAlchemy**: For ORM
 - **Pydantic**: For data validation
-- **FastAPI**: For the API
 - **http.server**: Basic local server for static files
 - **PySide6**: For the GUI
 - A variety of other libraries for TTS, STT, LLMs, and image generation
