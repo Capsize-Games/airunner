@@ -559,19 +559,20 @@ class ChatPromptWidget(BaseWidget):
 
     def resizeEvent(self, event):
         """
-        Resize event handler to adjust the width of the chat container and its contents.
+        Resize event handler to adjust the width of the message widgets only, avoiding horizontal scrollbars.
         """
         super().resizeEvent(event)
-        if hasattr(self.ui, "chat_container"):
-            self.ui.chat_container.setMinimumWidth(self.width())
-            self.ui.chat_container.setMaximumWidth(self.width())
-            if hasattr(self.ui, "scrollAreaWidgetContents"):
-                self.ui.scrollAreaWidgetContents.setMinimumWidth(self.width())
-                self.ui.scrollAreaWidgetContents.setMaximumWidth(self.width())
+        # Only set maximum width for message widgets, based on the scrollAreaWidgetContents actual width
+        if hasattr(self.ui, "scrollAreaWidgetContents"):
             layout = self.ui.scrollAreaWidgetContents.layout()
+            content_width = self.ui.scrollAreaWidgetContents.width()
+            margin = 12  # Leave room for scrollbar and padding
+            max_msg_width = max(0, content_width - margin)
             if layout is not None:
                 for i in range(layout.count()):
                     item = layout.itemAt(i)
                     widget = item.widget()
-                    if widget is not None and hasattr(widget, "setFixedWidth"):
-                        widget.setFixedWidth(self.width())
+                    if widget is not None and hasattr(
+                        widget, "setMaximumWidth"
+                    ):
+                        widget.setMaximumWidth(max_msg_width)
