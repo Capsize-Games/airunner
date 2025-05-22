@@ -9,8 +9,20 @@ class AgreementPage(BaseWizard):
         super(AgreementPage, self).__init__(*args)
         self.agreed = False
 
+        # Force refresh of isComplete status when initialized
+        self.completeChanged.emit()
+
     @Slot(bool)
     def agreement_clicked(self, val):
         self.agreed = val
         self.update_application_settings(self.setting_key, val)
 
+        # Emit signal to update Next button state
+        self.completeChanged.emit()
+
+    def isComplete(self):
+        """
+        Control whether the Next button is enabled based on checkbox state.
+        Returns True only if the agreement checkbox has been checked.
+        """
+        return self.agreed
