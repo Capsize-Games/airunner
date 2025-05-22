@@ -469,17 +469,19 @@ class ChatPromptWidget(BaseWidget):
             for i in range(
                 self.ui.scrollAreaWidgetContents.layout().count() - 1, -1, -1
             ):
-                current_widget = (
-                    self.ui.scrollAreaWidgetContents.layout()
-                    .itemAt(i)
-                    .widget()
-                )
-                if isinstance(current_widget, MessageWidget):
-                    if current_widget.is_bot:
-                        if message != "":
-                            current_widget.update_message(message)
-                        return
-                    break
+                item = self.ui.scrollAreaWidgetContents.layout().itemAt(i)
+                if item:
+                    current_widget = item.widget()
+                    if isinstance(current_widget, MessageWidget):
+                        if (
+                            current_widget.is_bot
+                        ):
+                            if message != "":
+                                current_widget.update_message(message)
+                                QTimer.singleShot(0, self.scroll_to_bottom)
+                            return
+                        break
+
         self.remove_spacer()
         widget = None
         if message != "":
@@ -497,7 +499,12 @@ class ChatPromptWidget(BaseWidget):
                 conversation_id=self.conversation_id,
             )
             widget_end = time.perf_counter() if _profile_widget else None
+
+            widget.messageResized.connect(self.scroll_to_bottom)
+
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
+            QTimer.singleShot(0, self.scroll_to_bottom)
+
         self.add_spacer()
         return widget
 
