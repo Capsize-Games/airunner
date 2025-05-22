@@ -15,6 +15,19 @@ from airunner.enums import LLMActionType, ModelType, ModelStatus
 from airunner.handlers.llm.llm_request import OpenrouterMistralRequest
 from airunner.utils.settings.get_qsettings import get_qsettings
 from llama_index.llms.ollama import Ollama
+import ollama
+
+try:
+    from PyQt5.QtCore import QMetaObject, Qt
+except ImportError:
+    try:
+        from PyQt6.QtCore import QMetaObject, Qt
+    except ImportError:
+        try:
+            from PySide2.QtCore import QMetaObject, Qt
+        except ImportError:
+            QMetaObject = None
+            Qt = None
 
 
 class OllamaEnhanced(Ollama):
@@ -57,18 +70,62 @@ class OllamaEnhanced(Ollama):
     def stream_chat(
         self, messages: Sequence[ChatMessage], **kwargs: Any
     ) -> ChatResponseGen:
-        # Reset the cancel event before starting the streaming
         self._cancel_event.clear()
+        tried_pull = False
+        while True:
+            try:
+                for response in super().stream_chat(messages, **kwargs):
+                    if self._cancel_event.is_set():
+                        break
+                    yield response
+                break  # Success, exit loop
+            except Exception as e:
+                if (
+                    not tried_pull
+                    and hasattr(e, "args")
+                    and any(
+                        "not found, try pulling it first" in str(arg)
+                        for arg in e.args
+                    )
+                ):
+                    import subprocess
+                    import sys
+                    import re
+                    from airunner.api import API
 
-        try:
-            for response in super().stream_chat(messages, **kwargs):
-                if self._cancel_event.is_set():
-                    break
-                yield response
-        except asyncio.CancelledError:
-            # Handle any cleanup if necessary
-            raise
-        # Handle any cleanup if necessary
+                    model_name = getattr(self, "model", None) or kwargs.get(
+                        "model"
+                    )
+                    if not model_name:
+                        raise  # Can't determine model name
+                    print(
+                        f"Model '{model_name}' not found. Downloading with ollama..."
+                    )
+                    try:
+                        process = subprocess.Popen(
+                            ["ollama", "pull", model_name],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            text=True,
+                        )
+                        API().llm_model_download_progress(0)
+                        for line in process.stdout:
+                            match = re.search(r"(\d+)%", line)
+                            if match:
+                                progress = int(match.group(1))
+                                API().llm_model_download_progress(progress)
+                            else:
+                                print(line, end="")
+                        process.wait()
+                        API().llm_model_download_progress(100)
+                        print(f"\nModel '{model_name}' download complete.")
+                    except Exception as ex:
+                        API().llm_model_download_progress(0)
+                        print(f"Error running ollama pull: {ex}")
+                        raise
+                    tried_pull = True
+                    continue  # Retry
+                raise  # Other errors, or already tried pull
 
     def interrupt_process(self):
         """Interrupt the process."""

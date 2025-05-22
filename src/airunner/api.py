@@ -7,7 +7,6 @@ from PySide6.QtWidgets import QDialog, QVBoxLayout
 from PySide6.QtCore import QObject, QPoint
 
 from airunner.app import App
-from airunner.data.models.conversation import Conversation
 from airunner.data.models.workflow import Workflow
 from airunner.gui.widgets.nodegraph.custom_node_graph import CustomNodeGraph
 from airunner.handlers.llm.llm_request import LLMRequest
@@ -725,15 +724,10 @@ class LLMAPIService(APIServiceBase):
             {"target_files": target_files} if target_files else None,
         )
 
-    def load_conversation(
-        self, conversation_id: int
-    ):
+    def load_conversation(self, conversation_id: int):
         self.emit_signal(
             SignalCode.QUEUE_LOAD_CONVERSATION,
-            {
-                "action": "load_conversation",
-                "index": conversation_id
-            },
+            {"action": "load_conversation", "index": conversation_id},
         )
 
     def interrupt(self):
@@ -1088,3 +1082,15 @@ class API(App):
 
     def update_locale(self, data: Dict):
         self.emit_signal(SignalCode.UPATE_LOCALE, data)
+
+    def llm_model_download_progress(self, percent: int):
+        self.emit_signal(
+            SignalCode.LLM_MODEL_DOWNLOAD_PROGRESS, {"percent": percent}
+        )
+
+    def connect_signal(self, signal_code, handler):
+        # Use MediatorMixin's register_signal_handler, not QApplication
+        self.register_signal_handler(signal_code, handler)
+
+    def register_signal_handler(self, signal_code, handler):
+        MediatorMixin.register_signal_handler(self, signal_code, handler)
