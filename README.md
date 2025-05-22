@@ -1,19 +1,41 @@
-[![AI Runner Logo](images/banner.png)](https://github.com/Capsize-Games/airunner)
-
-
-# Offline AI interface for Hackers, Makers, and Builders [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7gz) ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner) [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
-
-**🐞 [Report Bug](https://github.com/Capsize-Games/airunner/issues/new?template=bug_report.md)**
-**✨ [Request Feature](https://github.com/Capsize-Games/airunner/issues/new?template=feature_request.md)**
-**🛡️ [Report Vulnerability](https://github.com/Capsize-Games/airunner/security/policy)**
-**📄 [Wiki](https://github.com/Capsize-Games/airunner/wiki)**
----
+[![AI Runner](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
 <table>
   <tr>
-    <td valign="top">
+    <td valign="top" colspan="4">
 
-<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent; max-width: 250px">
+# The Offline AI interface for Hackers, Makers, and Builders
+
+  [![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/PUVDDCJ7g) ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner) [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
+    
+  </td></tr>
+  <tr>
+  <td valign="top">
+    
+**🐞 [Report Bug](https://github.com/Capsize-Games/airunner/issues/new?template=bug_report.md)**
+
+</td>
+  <td>
+
+**✨ [Request Feature](https://github.com/Capsize-Games/airunner/issues/new?template=feature_request.md)**
+    
+  </td>
+  <td>
+    
+**🛡️ [Report Vulnerability](https://github.com/Capsize-Games/airunner/security/policy)**
+    
+</td>
+<td>
+  
+**🛡️ [Wiki](https://github.com/Capsize-Games/airunner/wiki)**
+
+</td>
+</tr>
+
+</table>
+<table>
+  <tr>
+    <td valign="top">
 
 | ✨ Key Features |
 |:--------------------------------|
@@ -32,10 +54,6 @@
 | **⚡ Performance & Utility** |
 | - Fast generation (~2s on RTX 2080s)<br>- Docker-based setup & GPU acceleration<br>- Theming (Light/Dark/System)<br>- NSFW toggles<br>- Extension API<br>- Python library & API support |
 
-</div>
-
-<div style="border: 2px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
-
 ### 🌍 Language Support
 
 | Language         | TTS | LLM | STT | GUI |
@@ -47,15 +65,18 @@
 | Chinese          | ✅          | ✅          | ❌          | ❌          |
 | Korean           | ✅          | ✅          | ❌          | ❌          |
 
-[Request language support](https://github.com/Capsize-Games/airunner/issues/new?template=language_support.md)
+[🫰 Request language support](https://github.com/Capsize-Games/airunner/issues/new?template=language_support.md)
+---
 
-</div>
 </td>
 <td valign="top">
 
 <img src="https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa" alt="AI Runner Screenshot" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002;">
 
 <video src="https://github.com/user-attachments/assets/2d5b41ff-a0cd-4239-945b-d9e7a1bc5644" controls width="100%" style="border-radius: 8px; box-shadow: 0 2px 8px #0002;"></video>
+
+[✉️ Get notified when the packaged version releases](https://airunner.org/)
+---
 
 </td>
 </tr>
@@ -76,8 +97,6 @@
 
 
 ### 🔧 Installation Steps
-
-There are several ways to install and use AI Runner. [See the Installation Wiki for the full instructions](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions). The following steps are for a developer quick start on **Ubuntu 22.04** (these instructions should also work on 24.04 and any LTS version of Ubuntu). The wiki has instructions for the compiled version (currently unavailable), Windows, and Docker.
 
 1. **Install system requirements**
    ```bash
@@ -103,17 +122,15 @@ There are several ways to install and use AI Runner. [See the Installation Wiki 
    airunner
    ```
 
-<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
+For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+
+---
 
 ### Basic Usage
 
 - **Run AI Runner**: `airunner`
 - **Run the downloader**: `airunner-setup`
 - **Build templates**: `airunner-build-ui`
-
-For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
-
-</div>
 
 ---
 
@@ -123,29 +140,29 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
   <tr>
     <td valign="top">
 
-<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
+**These are the sizes of the optional models that power AI Runner.**
 
-**These are the sizes of the various models that power AI Runner.**
+| Modality         | Size |
+|------------------|------|
+| **Text-to-Speech** | |
+| OpenVoice (Voice) | 4.0 GB |
+| Speech T5 (Voice) | 654.4 MB |
+| **Speech-to-Text** | |
+| Whisper Tiny | 155.4 MB |
+| **Text Generation** | |
+| Ministral 8b (default) | 4.0 GB |
+| Whisper Tiny | 155.4 MB |
+| Ollama (various models) | 1.5 GB - 20 GB |
+| OpenRouter (various models) | 1.5 GB - 20 GB |
+| Huggingface (various models) | 1.5 GB - 20 GB |
+| Ministral instruct 8b (4bit) | 5.8bit |
+| **Image Generation** | |
+| Controlnet (SD 1.5) | 10.6 GB |
+| Controlnet (SDXL) | 320.2 MB |
+| Safety Checker + Feature Extractor | 3.2 GB |
+| SD 1.5 | 1.6 MB |
+| SDXL 1.0 | 6.45 MB |
 
-| Modality         | Model | Size |
-|------------------|-------|------|
-| **Text-to-Speech** | OpenVoice (Voice) | 4.0 GB |
-| | Speech T5 (Voice) | 654.4 MB |
-| | Whisper Tiny | 155.4 MB |
-| **Speech-to-Text** | Whisper Tiny | 155.4 MB |
-| **Text Generation** | Ministral 8b (default) | 4.0 GB |
-| | Ollama (various models) | 1.5 GB - 20 GB |
-| | OpenRouter (various models) | 1.5 GB - 20 GB |
-| | Huggingface (various models) | 1.5 GB - 20 GB |
-| | Local (Ministral instruct 8b 4bit doublequantized) | 5.8bit |
-| **Image Generation** | Controlnet (SD 1.5) | 10.6 GB |
-| | Controlnet (SDXL) | 320.2 MB |
-| | Safety Checker + Feature Extractor | 3.2 GB |
-| | SD 1.5 | 1.6 MB |
-| | SDXL 1.0 | 6.45 MB |
-
-</div>
-<div style="border: 1px solid white; border-radius: 8px; margin-bottom: 10px; padding: 16px; background-color: #f9f9f9; box-shadow: 0 2px 8px #0002; background: transparent;">
 
 ## Stack
 
@@ -160,7 +177,6 @@ AI Runner uses the following stack
 - **PySide6**: For the GUI
 - A variety of other libraries for TTS, STT, LLMs, and image generation
 
-</div>
 </td>
 <td valign="top">
 

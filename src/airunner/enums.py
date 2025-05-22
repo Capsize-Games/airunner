@@ -241,6 +241,7 @@ class SignalCode(Enum):
     VIDEO_FRAME_UPDATE_SIGNAL = "video_frame_update_signal"
     NODEGRAPH_ZOOM = "nodegraph_zoom"
     NODEGRAPH_PAN = "nodegraph_pan"
+    LLM_MODEL_DOWNLOAD_PROGRESS = "llm_model_download_progress"
 
 
 class EngineResponseCode(Enum):
