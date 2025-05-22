@@ -566,6 +566,8 @@ class NodeGraphWidget(BaseWidget):
         workflow.description = description
         try:
             workflow.save()
+            # Re-fetch the workfow to ensure it is session-bound and attributes are accessible
+            workflow = self._find_workflow_by_id(workflow_id)
         except Exception as e:
             self.logger.error(
                 f"Error updating workflow metadata: {e}", exc_info=True
@@ -679,8 +681,7 @@ class NodeGraphWidget(BaseWidget):
             self.logger.info(
                 f"Data being saved to workflow.variables: {variables_data}"
             )
-            workflow.variables = variables_data
-            workflow.save()  # Ensure the ORM actually persists the change
+            Workflow.objects.update(workflow.id, variables=variables_data)
             self.logger.info(
                 f"Saved {len(variables_data)} variables to workflow ID {workflow.id}"
             )
@@ -796,6 +797,7 @@ class NodeGraphWidget(BaseWidget):
                         exc_info=True,
                     )
 
+        # Delete nodes that are no longer in the graph
         # Delete nodes that are no longer in the graph
         nodes_to_delete = [
             db_node.id
@@ -1060,6 +1062,7 @@ class NodeGraphWidget(BaseWidget):
             workflow_id=workflow_id,
             db_nodes=db_nodes,
             db_connections=db_connections,
+            workflow=workflow,  # Ensure workflow is included for downstream use
         )
         self.api.nodegraph.load_workflow(
             workflow=workflow,
@@ -1073,9 +1076,19 @@ class NodeGraphWidget(BaseWidget):
         if db_nodes is not None:
             node_map = self._load_workflow_nodes(db_nodes)
             self._load_workflow_connections(db_connections, node_map)
+            if not node_map:
+                self.logger.warning(
+                    "No nodes were loaded for this workflow. The node_map is empty."
+                )
+            else:
+                # Center the view on the loaded nodes and reset zoom
+                self._center_view_on_nodes(list(node_map.values()))
+                self._reset_zoom_level()
             self.logger.info(
-                f"Workflow '{workflow.name}' loaded successfully."
+                f"Workflow '{workflow.name if workflow else ''}' loaded successfully."
             )
+        else:
+            self.logger.warning("No db_nodes found in workflow data.")
         self._restore_nodegraph_state()
 
     def _clear_graph(self, add_start_node: bool = True):
@@ -1289,56 +1302,22 @@ class NodeGraphWidget(BaseWidget):
                     db_node.node_identifier,
                     name=db_node.name,
                     pos=(db_node.pos_x, db_node.pos_y),
-                    push_undo=False,  # Avoid polluting undo stack during load
+                    push_undo=False,
                 )
-
-                if not node_instance:
-                    self.logger.error(
-                        f"  Failed to create node instance for identifier: {db_node.node_identifier}, name: {db_node.name}"
-                    )
-                    continue
-
-                # Restore dynamic ports BEFORE restoring other properties
-                if (
-                    isinstance(node_instance, BaseWorkflowNode)
-                    and db_node.properties
-                ):
-                    # Retrieve saved dynamic port names
-                    dynamic_input_names = db_node.properties.get(
-                        "_dynamic_input_names", []
-                    )
-                    for name in dynamic_input_names:
-                        # Ensure the add_dynamic_input method also updates the node's internal list (_dynamic_input_names)
-                        node_instance.add_dynamic_input(name)
-                        self.logger.info(
-                            f"  Restored dynamic input '{name}' for node {node_instance.name()}"
-                        )
-
-                    dynamic_output_names = db_node.properties.get(
-                        "_dynamic_output_names", []
-                    )
-                    for name in dynamic_output_names:
-                        # Ensure the add_dynamic_output method also updates the node's internal list (_dynamic_output_names)
-                        node_instance.add_dynamic_output(name)
-                        self.logger.info(
-                            f"  Restored dynamic output '{name}' for node {node_instance.name()}"
-                        )
-
-                # Restore other properties
-                if db_node.properties:
+                if node_instance:
+                    node_map[db_node.id] = node_instance
+                    # Restore properties
                     self._restore_node_properties(
-                        node_instance, db_node.properties
+                        node_instance, db_node.properties or {}
                     )
-
-                node_map[db_node.id] = node_instance
-                self.logger.info(
-                    f"  Loaded node: {node_instance.name()} (DB ID: {db_node.id}, Graph ID: {node_instance.id})"
-                )
-
+                else:
+                    self.logger.warning(
+                        f"Failed to create node for identifier {db_node.node_identifier}"
+                    )
             except Exception as e:
                 self.logger.error(
-                    f"  FATAL Error loading node DB ID {db_node.id} ({db_node.name}): {e}",
-                    exc_info=True,  # Log traceback for debugging
+                    f"Error loading node {getattr(db_node, 'name', '?')}: {e}",
+                    exc_info=True,
                 )
 
         self.graph.undo_stack().clear()  # Clear undo stack after loading
@@ -1346,6 +1325,36 @@ class NodeGraphWidget(BaseWidget):
             f"Finished loading nodes. Total loaded: {len(node_map)}/{len(db_nodes)}"
         )
         return node_map
+
+    def _center_view_on_nodes(self, node_instances):
+        """Center the nodegraph view on the loaded nodes."""
+        if not node_instances:
+            return
+        positions = [
+            node.pos() for node in node_instances if hasattr(node, "pos")
+        ]
+        if not positions:
+            return
+        min_x = min(pos[0] for pos in positions)
+        max_x = max(pos[0] for pos in positions)
+        min_y = min(pos[1] for pos in positions)
+        max_y = max(pos[1] for pos in positions)
+        center_x = (min_x + max_x) / 2
+        center_y = (min_y + max_y) / 2
+        if hasattr(self.viewer, "centerOn"):
+            self.viewer.centerOn(center_x, center_y)
+        elif hasattr(self.viewer, "setSceneRect"):
+            # Fallback: set scene rect to fit all nodes
+            self.viewer.setSceneRect(
+                min_x, min_y, max_x - min_x + 1, max_y - min_y + 1
+            )
+
+    def _reset_zoom_level(self):
+        """Reset the nodegraph view zoom to default (100%)."""
+        if hasattr(self.viewer, "set_zoom"):
+            self.viewer.set_zoom(1.0)
+        elif hasattr(self.viewer, "resetTransform"):
+            self.viewer.resetTransform()
 
     def _restore_node_properties(self, node_instance, properties):
         """Restore node properties from saved data."""
