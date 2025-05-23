@@ -33,9 +33,19 @@ class TestStableDiffusionModelManager(unittest.TestCase):
         cls.app = QApplication.instance()
         if not cls.app:
             cls.app = QApplication([])
+            cls._created_qapp = True
+        else:
+            cls._created_qapp = False
 
         # Setup the test database
         setup_database.setup_database()
+
+    @classmethod
+    def tearDownClass(cls):
+        # Clean up the QApplication instance if we created it
+        if hasattr(cls, "_created_qapp") and cls._created_qapp:
+            cls.app.quit()
+            cls.app.processEvents()  # Process any pending events before continuing
 
     def setUp(self):
         # Mock dependencies
