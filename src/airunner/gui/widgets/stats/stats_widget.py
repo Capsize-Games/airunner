@@ -51,8 +51,6 @@ class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
         self.ui.memory_stats.setHorizontalHeaderLabels(headers)
 
         # Get nvidia-smi stats
-        import subprocess
-
         nvidia_smi_stats = []
         try:
             result = subprocess.run(
