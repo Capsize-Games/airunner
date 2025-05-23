@@ -1389,31 +1389,26 @@ class NodeGraphWidget(BaseWidget):
 
     def _on_nodegraph_zoom_changed(self, data: Dict):
         """Signal handler for NODEGRAPH_ZOOM signal."""
-        zoom = data.get("zoom_level", 0)
-        # Get the center directly from the signal data if available, or use current viewer center
-        if "center_x" in data and "center_y" in data:
-            try:
-                center_x = int(data.get("center_x", 0) or 0)
-                center_y = int(data.get("center_y", 0) or 0)
-            except (TypeError, ValueError):
-                center_x = 0
-                center_y = 0
-        else:
-            # If no center data in signal, don't update center values
-            settings = self.application_settings
-            try:
-                center_x = int(getattr(settings, "nodegraph_center_x", 0) or 0)
-                center_y = int(getattr(settings, "nodegraph_center_y", 0) or 0)
-            except (TypeError, ValueError):
-                center_x = 0
-                center_y = 0
+        # zoom = data.get("zoom_level", 0)
+        # # Get the center directly from the signal data if available, or use current viewer center
+        # if "center_x" in data and "center_y" in data:
+        #     try:
+        #         center_x = int(data.get("center_x", 0) or 0)
+        #         center_y = int(data.get("center_y", 0) or 0)
+        #     except (TypeError, ValueError):
+        #         center_x = 0
+        #         center_y = 0
+        # else:
+        #     # If no center data in signal, don't update center values
+        #     settings = self.application_settings
+        #     try:
+        #         center_x = int(getattr(settings, "nodegraph_center_x", 0) or 0)
+        #         center_y = int(getattr(settings, "nodegraph_center_y", 0) or 0)
+        #     except (TypeError, ValueError):
+        #         center_x = 0
+        #         center_y = 0
 
-        ApplicationSettings.objects.update(
-            self.application_settings.id,
-            nodegraph_zoom=zoom,
-            nodegraph_center_x=center_x,
-            nodegraph_center_y=center_y,
-        )
+        self._save_state()
 
     def _on_nodegraph_pan_changed(self, data: Dict):
         """Signal handler for NODEGRAPH_PAN signal."""
@@ -1431,30 +1426,10 @@ class NodeGraphWidget(BaseWidget):
         except (TypeError, ValueError):
             zoom = 0
 
-        ApplicationSettings.objects.update(
-            self.application_settings.id,
-            nodegraph_zoom=zoom,
-            nodegraph_center_x=center_x,
-            nodegraph_center_y=center_y,
-        )
-
-    def save_state(self):
-        super().save_state()
         self._save_state()
 
-    # def restore_state(self):
-    #     super().restore_state()
-    #     self._restore_nodegraph_state()
-
     def closeEvent(self, event):
-        zoom = self.viewer.get_zoom()
-        center = self.viewer.scene_center()
-        ApplicationSettings.objects.update(
-            self.application_settings.id,
-            nodegraph_zoom=zoom,
-            nodegraph_center_x=int(center[0]),
-            nodegraph_center_y=int(center[1]),
-        )
+        self._save_state()
         super().closeEvent(event)
 
     def showEvent(self, event):
@@ -1516,10 +1491,11 @@ class NodeGraphWidget(BaseWidget):
 
                 # Schedule a single delayed zoom reset to override any late resizeEvent zooming
                 def force_zoom_final():
-                    if hasattr(viewer, "reset_zoom"):
-                        viewer.reset_zoom()
-                    if hasattr(viewer, "set_zoom_absolute"):
-                        viewer.set_zoom_absolute(float(zoom))
+                    # if hasattr(viewer, "reset_zoom"):
+                    #     viewer.reset_zoom()
+                    # if hasattr(viewer, "set_zoom_absolute"):
+                    #     viewer.set_zoom_absolute(float(zoom))
+                    pass
 
                 if zoom is not None and hasattr(viewer, "set_zoom_absolute"):
                     QtCore.QTimer.singleShot(1200, force_zoom_final)
@@ -1529,8 +1505,8 @@ class NodeGraphWidget(BaseWidget):
                 )
 
     def _save_state(self):
-        zoom = self.viewer.get_zoom()
-        center = self.viewer.scene_center()
+        zoom = self.graph._viewer.get_zoom()
+        center = self.graph._viewer.scene_center()
         ApplicationSettings.objects.update(
             self.application_settings.id,
             nodegraph_zoom=zoom,
