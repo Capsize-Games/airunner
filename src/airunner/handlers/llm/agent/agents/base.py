@@ -1151,6 +1151,17 @@ class BaseAgent(
     def chat_memory(self, value: Optional[ChatMemoryBuffer]):
         self._chat_memory = value
 
+    @property
+    def chatbot(self):
+        if hasattr(self, "_chatbot") and self._chatbot is not None:
+            return self._chatbot
+        # fallback to SettingsMixin property
+        return super().chatbot
+
+    @chatbot.setter
+    def chatbot(self, value):
+        self._chatbot = value
+
     def _llm_updated(self):
         pass
 
