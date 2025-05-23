@@ -1442,9 +1442,9 @@ class NodeGraphWidget(BaseWidget):
         super().save_state()
         self._save_state()
 
-    def restore_state(self):
-        super().restore_state()
-        self._restore_nodegraph_state()
+    # def restore_state(self):
+    #     super().restore_state()
+    #     self._restore_nodegraph_state()
 
     def closeEvent(self, event):
         zoom = self.viewer.get_zoom()
@@ -1459,11 +1459,13 @@ class NodeGraphWidget(BaseWidget):
 
     def showEvent(self, event):
         if not self.initialized:
-            self._restore_nodegraph_state()
             super().showEvent(event)
             self.initialized = True
 
     def _restore_nodegraph_state(self):
+        if self.initialized:
+            return
+        self.initialized = True
         """Restore nodegraph zoom and pan (center) from workflow or ApplicationSettings after workflow load."""
         zoom = None
         center_x = None
