@@ -690,7 +690,7 @@ class NodeGraphWidget(BaseWidget):
                 f"Error saving variables for workflow ID {workflow.id}: {e}"
             )
 
-    def _save_nodes(self, workflow_id: int) -> Dict:
+    def _save_nodes(self, workflow_id: int) -> dict:
         """
         Save nodes in the graph to the database using CRUD operations.
         Updates existing nodes, creates new ones, and removes obsolete ones.
@@ -710,7 +710,6 @@ class NodeGraphWidget(BaseWidget):
             self.logger.warning(
                 f"Multiple StartNodes ({len(start_nodes)}) detected in graph. Will save only the first one."
             )
-            # Keep only the first StartNode - remove others from processing
             kept_start_node = start_nodes[0]
             all_graph_nodes = [
                 node
@@ -722,16 +721,15 @@ class NodeGraphWidget(BaseWidget):
                 f"Keeping StartNode: {kept_start_node.name()} (ID: {kept_start_node.id}), filtering out {len(start_nodes) - 1} duplicate StartNodes."
             )
 
-        # First, get all existing nodes for this workflow
+        # Get all existing nodes for this workflow (returns detached instances)
         try:
-            existing_nodes = WorkflowNode.objects.filter_by(
-                workflow_id=workflow_id
+            existing_nodes = (
+                WorkflowNode.objects.filter_by(workflow_id=workflow_id) or []
             )
             existing_node_map = {}
             for db_node in existing_nodes:
-                # Create a key based on node identifier and position to find matching nodes
                 key = f"{db_node.node_identifier}_{db_node.pos_x}_{db_node.pos_y}"
-                existing_node_map[key] = db_node
+                existing_node_map[key] = db_node.id  # Only store the id!
             self.logger.info(
                 f"Found {len(existing_node_map)} existing nodes in the database"
             )
@@ -741,37 +739,35 @@ class NodeGraphWidget(BaseWidget):
             )
             existing_node_map = {}
 
-        # Track which database nodes are still in use
         used_db_node_ids = set()
 
-        # Process all graph nodes
         for node in all_graph_nodes:
             properties_to_save = self._extract_node_properties(node)
-
-            # Create a key to match with existing nodes
             node_key = f"{node.type_}_{node.pos()[0]}_{node.pos()[1]}"
-            db_node = existing_node_map.get(node_key)
+            db_node_id = existing_node_map.get(node_key)
 
-            if db_node:
-                # Update existing node
-                self.logger.info(
-                    f"Updating existing node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id})"
-                )
-                db_node.name = node.name()
-                db_node.pos_x = node.pos()[0]
-                db_node.pos_y = node.pos()[1]
-                db_node.properties = properties_to_save
+            if db_node_id:
+                # Update using the manager method
                 try:
-                    db_node.save()
-                    nodes_map[node.id] = db_node.id
-                    used_db_node_ids.add(db_node.id)
+                    WorkflowNode.objects.update(
+                        db_node_id,
+                        name=node.name(),
+                        pos_x=node.pos()[0],
+                        pos_y=node.pos()[1],
+                        properties=properties_to_save,
+                    )
+                    nodes_map[node.id] = db_node_id
+                    used_db_node_ids.add(db_node_id)
+                    self.logger.info(
+                        f"Updated node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node_id})"
+                    )
                 except Exception as e:
                     self.logger.error(
                         f"Error updating node {node.name()}: {e}",
                         exc_info=True,
                     )
             else:
-                # Create new node
+                # Create new node and use the returned dataclass
                 try:
                     db_node = WorkflowNode.objects.create(
                         workflow_id=workflow_id,
@@ -781,7 +777,7 @@ class NodeGraphWidget(BaseWidget):
                         pos_y=node.pos()[1],
                         properties=properties_to_save,
                     )
-                    if db_node:
+                    if db_node and hasattr(db_node, "id"):
                         nodes_map[node.id] = db_node.id
                         used_db_node_ids.add(db_node.id)
                         self.logger.info(
@@ -798,7 +794,6 @@ class NodeGraphWidget(BaseWidget):
                     )
 
         # Delete nodes that are no longer in the graph
-        # Delete nodes that are no longer in the graph
         nodes_to_delete = [
             db_node.id
             for db_node in existing_nodes
@@ -807,7 +802,7 @@ class NodeGraphWidget(BaseWidget):
         if nodes_to_delete:
             try:
                 for node_id in nodes_to_delete:
-                    WorkflowNode.objects.delete_by(id=node_id)
+                    WorkflowNode.objects.delete(node_id)
                 self.logger.info(
                     f"Deleted {len(nodes_to_delete)} obsolete nodes from the database"
                 )
@@ -815,48 +810,6 @@ class NodeGraphWidget(BaseWidget):
                 self.logger.error(
                     f"Error deleting obsolete nodes: {e}", exc_info=True
                 )
-
-        # Check if we have any StartNodes at all in the database after saving
-        start_node_identifiers = [
-            node_type
-            for node_type in self.graph.registered_nodes()
-            if isinstance(node_type, type) and issubclass(node_type, StartNode)
-        ]
-
-        if start_node_identifiers:
-            start_node_db_check = WorkflowNode.objects.filter_by_first(
-                workflow_id=workflow_id,
-                node_identifier__in=start_node_identifiers,
-            )
-
-            if not start_node_db_check:
-                self.logger.warning(
-                    "No StartNode found in database after saving. Adding one automatically."
-                )
-                # We need to update the nodes_map to include the newly created StartNode
-                for node in self.graph.all_nodes():
-                    if (
-                        isinstance(node, StartNode)
-                        and node.id not in nodes_map
-                    ):
-                        try:
-                            db_node = WorkflowNode.objects.create(
-                                workflow_id=workflow_id,
-                                node_identifier=node.type_,
-                                name=node.name(),
-                                pos_x=node.pos()[0],
-                                pos_y=node.pos()[1],
-                                properties=self._extract_node_properties(node),
-                            )
-                            if db_node:
-                                nodes_map[node.id] = db_node.id
-                                self.logger.info(
-                                    f"Created new StartNode: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id})"
-                                )
-                        except Exception as e:
-                            self.logger.error(
-                                f"Error creating StartNode: {e}", exc_info=True
-                            )
 
         return nodes_map
 
@@ -1020,6 +973,7 @@ class NodeGraphWidget(BaseWidget):
                     f"Skipping connection due to missing node DB ID mapping: {conn['out_port_name']} -> {conn['in_port_name']}"
                 )
 
+        # Delete connections that are no longer in the graph
         # Delete connections that are no longer in the graph
         connections_to_delete = [
             db_conn
