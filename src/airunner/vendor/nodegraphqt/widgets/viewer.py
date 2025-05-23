@@ -1683,6 +1683,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         Args:
             value (float): The absolute scale to set (e.g., 1.0 for 100%).
         """
+        print("SET ABSOLUTE ZOOM ", value)
         if not (0.01 <= value <= 10.0):  # Reasonable bounds for scale
             print(
                 f"[NodeViewer.set_zoom_absolute] Out of bounds: value={value}"
