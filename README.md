@@ -155,7 +155,7 @@ For more options, including Docker, see the [Installation Wiki](https://github.c
 | Ollama (various models) | 1.5 GB - 20 GB |
 | OpenRouter (various models) | 1.5 GB - 20 GB |
 | Huggingface (various models) | 1.5 GB - 20 GB |
-| Ministral instruct 8b (4bit) | 5.8bit |
+| Ministral instruct 8b (4bit) | 5.8 GB |
 | **Image Generation** | |
 | Controlnet (SD 1.5) | 10.6 GB |
 | Controlnet (SDXL) | 320.2 MB |
@@ -172,7 +172,6 @@ AI Runner uses the following stack
 - **Alembic**: For database migrations
 - **SQLAlchemy**: For ORM
 - **Pydantic**: For data validation
-- **FastAPI**: For the API
 - **http.server**: Basic local server for static files
 - **PySide6**: For the GUI
 - A variety of other libraries for TTS, STT, LLMs, and image generation
@@ -204,15 +203,24 @@ Organize them under your local AI Runner data directory:
 ├── art
 │   └── models
 │       ├── SD 1.5
+│       │   ├── controlnet
+│       │   ├── embeddings
+│       │   ├── inpaint
 │       │   ├── lora
-│       │   └── embeddings
-│       ├── Flux
+│       │   └── txt2img
+│       ├── Flux (not supported yet)
 │       ├── SDXL 1.0
+│       │   ├── controlnet
+│       │   ├── embeddings
+│       │   ├── inpaint
 │       │   ├── lora
-│       │   └── embeddings
+│       │   └── txt2img
 │       └── SDXL Turbo
+│           ├── controlnet
+│           ├── embeddings
+│           ├── inpaint
 │           ├── lora
-│           └── embeddings
+│           └── txt2img
 ```
 
 </div>

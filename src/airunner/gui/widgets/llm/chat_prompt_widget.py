@@ -469,17 +469,17 @@ class ChatPromptWidget(BaseWidget):
             for i in range(
                 self.ui.scrollAreaWidgetContents.layout().count() - 1, -1, -1
             ):
-                current_widget = (
-                    self.ui.scrollAreaWidgetContents.layout()
-                    .itemAt(i)
-                    .widget()
-                )
-                if isinstance(current_widget, MessageWidget):
-                    if current_widget.is_bot:
-                        if message != "":
-                            current_widget.update_message(message)
-                        return
-                    break
+                item = self.ui.scrollAreaWidgetContents.layout().itemAt(i)
+                if item:
+                    current_widget = item.widget()
+                    if isinstance(current_widget, MessageWidget):
+                        if current_widget.is_bot:
+                            if message != "":
+                                current_widget.update_message(message)
+                                QTimer.singleShot(0, self.scroll_to_bottom)
+                            return
+                        break
+
         self.remove_spacer()
         widget = None
         if message != "":
@@ -497,7 +497,12 @@ class ChatPromptWidget(BaseWidget):
                 conversation_id=self.conversation_id,
             )
             widget_end = time.perf_counter() if _profile_widget else None
+
+            widget.messageResized.connect(self.scroll_to_bottom)
+
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
+            QTimer.singleShot(0, self.scroll_to_bottom)
+
         self.add_spacer()
         return widget
 
@@ -509,7 +514,7 @@ class ChatPromptWidget(BaseWidget):
         if self.spacer is None:
             self.spacer = QSpacerItem(
                 20,
-                40,
+                0,
                 QSizePolicy.Policy.Minimum,
                 QSizePolicy.Policy.Expanding,
             )
@@ -532,6 +537,9 @@ class ChatPromptWidget(BaseWidget):
                 self.scroll_bar, b"value"
             )
             self.scroll_animation.setDuration(500)
+            self.scroll_animation.finished.connect(
+                self._force_scroll_to_bottom
+            )
 
         # Stop any ongoing animation
         if (
@@ -544,3 +552,27 @@ class ChatPromptWidget(BaseWidget):
         self.scroll_animation.setStartValue(self.scroll_bar.value())
         self.scroll_animation.setEndValue(self.scroll_bar.maximum())
         self.scroll_animation.start()
+
+    def _force_scroll_to_bottom(self):
+        if self.scroll_bar is not None:
+            self.scroll_bar.setValue(self.scroll_bar.maximum())
+
+    def resizeEvent(self, event):
+        """
+        Resize event handler to adjust the width of the message widgets only, avoiding horizontal scrollbars.
+        """
+        super().resizeEvent(event)
+        # Only set maximum width for message widgets, based on the scrollAreaWidgetContents actual width
+        if hasattr(self.ui, "scrollAreaWidgetContents"):
+            layout = self.ui.scrollAreaWidgetContents.layout()
+            content_width = self.ui.scrollAreaWidgetContents.width()
+            margin = 12  # Leave room for scrollbar and padding
+            max_msg_width = max(0, content_width - margin)
+            if layout is not None:
+                for i in range(layout.count()):
+                    item = layout.itemAt(i)
+                    widget = item.widget()
+                    if widget is not None and hasattr(
+                        widget, "setMaximumWidth"
+                    ):
+                        widget.setMaximumWidth(max_msg_width)

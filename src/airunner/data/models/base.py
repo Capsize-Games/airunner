@@ -31,11 +31,9 @@ class BaseModel(Base):
             session.add(self)
             try:
                 session.commit()
+                session.refresh(self)
             except Exception as e:
                 logger.error(f"Error in save(): {e}")
-            finally:
-                session.expunge(self)
-
     def delete(self):
         success = False
         with session_scope() as session:
