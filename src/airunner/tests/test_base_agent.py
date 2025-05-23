@@ -96,44 +96,9 @@ def agent(monkeypatch):
         lambda *a, **kw: DummyUser(),
     )
     # Only patch classes that are imported or used directly in BaseAgent
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.RefreshSimpleChatEngine",
-        DummyEngine,
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.ChatEngineTool",
-        DummyChatEngineTool,
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.FunctionTool", DummyTool
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.ReActAgentTool",
-        DummyReActAgentTool,
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.DatabaseChatStore", MagicMock
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.SimpleChatStore", MagicMock
-    )
     # Patch ChatMemoryBuffer with MagicMock and add from_defaults
     chat_memory_mock = MagicMock()
     chat_memory_mock.from_defaults = MagicMock(return_value=MagicMock())
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.ChatMemoryBuffer",
-        chat_memory_mock,
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.ExternalConditionStoppingCriteria",
-        MagicMock,
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.HuggingFaceLLM", MagicMock
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.Tab", MagicMock
-    )
     # Construct agent and set all other dependencies directly
     a = BaseAgent()
     a._chatbot = DummyChatbot()
@@ -142,6 +107,14 @@ def agent(monkeypatch):
     a._conversation = DummyConversation()
     a.llm_settings = DummySettings()
     a.api = MagicMock()
+    # Patch chat_engine property at the class level for all tests needing it
+    monkeypatch.setattr(
+        type(a), "chat_engine", PropertyMock(return_value=DummyEngine())
+    )
+    # Patch llm property at the class level for all tests needing it
+    mock_llm = MagicMock()
+    mock_llm.metadata.system_role = "system"
+    monkeypatch.setattr(type(a), "llm", PropertyMock(return_value=mock_llm))
     # Do NOT set weather_prompt, application_settings, logger, language_settings, rag_settings
     return a
 
