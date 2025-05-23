@@ -13,13 +13,17 @@ class TestBasePlugin(unittest.TestCase):
         """Set up QApplication instance for the test suite."""
         if not QApplication.instance():
             cls.qapp = QApplication([])
+            cls._created_qapp = True
         else:
             cls.qapp = QApplication.instance()
+            cls._created_qapp = False
 
     @classmethod
     def tearDownClass(cls):
         """Clean up QApplication instance after tests."""
-        cls.qapp.quit()
+        if hasattr(cls, "_created_qapp") and cls._created_qapp:
+            cls.qapp.quit()
+            cls.qapp.processEvents()  # Process any pending events before continuing
 
     def test_base_plugin_abstract_methods(self):
         """Test that BasePlugin enforces implementation of its abstract methods."""
@@ -29,6 +33,7 @@ class TestBasePlugin(unittest.TestCase):
 
     def test_base_plugin_implementation(self):
         """Test a concrete implementation of BasePlugin."""
+
         # Create a concrete implementation of BasePlugin
         class TestPlugin(BasePlugin):
             name = "Test Plugin"
@@ -39,19 +44,20 @@ class TestBasePlugin(unittest.TestCase):
 
         # Instantiate the concrete implementation
         plugin = TestPlugin()
-        
+
         # Verify plugin name
         self.assertEqual(plugin.name, "Test Plugin")
-        
+
         # Verify get_widget method returns a QWidget
         widget = plugin.get_widget()
         self.assertIsInstance(widget, QWidget)
 
     def test_base_plugin_multiple_implementations(self):
         """Test multiple concrete implementations of BasePlugin."""
+
         class Plugin1(BasePlugin):
             name = "Plugin 1"
-            
+
             def get_widget(self):
                 widget = QWidget()
                 widget.setObjectName("widget1")
@@ -59,7 +65,7 @@ class TestBasePlugin(unittest.TestCase):
 
         class Plugin2(BasePlugin):
             name = "Plugin 2"
-            
+
             def get_widget(self):
                 widget = QWidget()
                 widget.setObjectName("widget2")
@@ -68,11 +74,11 @@ class TestBasePlugin(unittest.TestCase):
         # Create instances
         plugin1 = Plugin1()
         plugin2 = Plugin2()
-        
+
         # Verify different names
         self.assertEqual(plugin1.name, "Plugin 1")
         self.assertEqual(plugin2.name, "Plugin 2")
-        
+
         # Verify widgets have different object names
         widget1 = plugin1.get_widget()
         widget2 = plugin2.get_widget()

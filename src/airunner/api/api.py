@@ -20,6 +20,7 @@ from airunner.enums import (
     SignalCode,
     LLMActionType,
 )
+from airunner.setup_database import setup_database
 from airunner.utils.application.create_worker import create_worker
 from airunner.gui.utils.ui_dispatcher import render_ui_from_spec
 from airunner.handlers.stablediffusion.image_response import ImageResponse
@@ -31,7 +32,6 @@ from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
-from airunner.api import api as api_module
 from airunner.api.api_service_base import APIServiceBase
 from airunner.api.image_filter_services import ImageFilterAPIServices
 from airunner.api.embedding_services import EmbeddingAPIServices
@@ -44,6 +44,7 @@ from airunner.api.canvas_services import CanvasAPIService
 from airunner.api.art_services import ARTAPIService
 from airunner.api.chatbot_services import ChatbotAPIService
 from airunner.api.llm_services import LLMAPIService
+from airunner.api import api as api_module
 
 
 class API(App):
@@ -160,13 +161,6 @@ class API(App):
         self._initialized = True
         self.llm = LLMAPIService(emit_signal=self.emit_signal)
         self.art = ARTAPIService(emit_signal=self.emit_signal)
-        self.image_filter = ImageFilterAPIServices(
-            emit_signal=self.emit_signal
-        )
-        self.embedding = EmbeddingAPIServices(emit_signal=self.emit_signal)
-        self.lora = LoraAPIServices(emit_signal=self.emit_signal)
-        self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
-        self.chatbot = ChatbotAPIService(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
         self.stt = STTAPIService(emit_signal=self.emit_signal)
         self.video = VideoAPIService(emit_signal=self.emit_signal)
@@ -185,13 +179,18 @@ class API(App):
             api_module.setup_database()
         self._initialize_model_scanner()
 
+    @property
+    def emit_signal(self):
+        # Always return the instance method, so LLMAPIService uses the patched version in tests
+        return super().emit_signal
+
     def _initialize_model_scanner(self):
         from airunner.workers.model_scanner_worker import (
             ModelScannerWorker,
         )
 
         if self._initialize_app:
-            api_module.setup_database()
+            setup_database()
             self.model_scanner_worker = create_worker(ModelScannerWorker)
             self.model_scanner_worker.add_to_queue("scan_for_models")
 
@@ -398,3 +397,12 @@ class API(App):
 
     def register_signal_handler(self, signal_code, handler):
         MediatorMixin.register_signal_handler(self, signal_code, handler)
+
+    def send_image_request(self, image_request: ImageRequest):
+        """
+        Emit a signal to request image generation.
+        :param image_request: The image request object.
+        """
+        self.emit_signal(
+            SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request}
+        )
