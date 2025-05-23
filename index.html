@@ -213,6 +213,30 @@
         <form action="https://formspree.io/f/meogdanb" method="POST" id="notify-form" autocomplete="off">
             <input type="text" id="name" name="name" placeholder="Your Name" required>
             <input type="email" id="email" name="email" placeholder="Your Email Address" required>
+
+            <input type="text" id="company" name="company" placeholder="Company Name (optional)">
+
+            <label for="purpose" style="font-size:0.95em;color:#3b4252;">Purpose of use (optional):</label>
+            <select id="purpose" name="purpose">
+                <option value="">-- Select --</option>
+                <option value="personal">Personal</option>
+                <option value="professional">Professional</option>
+            </select>
+
+            <label for="interest" style="font-size:0.95em;color:#3b4252;">Primary interest (optional):</label>
+            <select id="interest" name="interest"
+                onchange="document.getElementById('other-interest').style.display = this.value === 'other' ? 'block' : 'none';">
+                <option value="">-- Select --</option>
+                <option value="art">Art</option>
+                <option value="llm">LLM (Large Language Models)</option>
+                <option value="tts">Real-time Text-to-Speech</option>
+                <option value="nodegraph">Nodegraph Workflows</option>
+                <option value="all">All of the above</option>
+                <option value="other">Other (please specify)</option>
+            </select>
+            <input type="text" id="other-interest" name="other_interest" placeholder="Please specify..."
+                style="display:none;">
+
             <button type="submit">Notify Me</button>
         </form>
         <div id="success" class="success-message" style="display:none;">
