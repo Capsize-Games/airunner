@@ -1,6 +1,5 @@
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget, QVBoxLayout
-from PySide6.QtGui import QFontMetrics
 from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer, QThread, QObject
 from PySide6.QtCore import Signal, QPropertyAnimation, QEasingCurve
 import queue
@@ -70,6 +69,7 @@ def set_global_tooltip_style():
 class MessageWidget(BaseWidget):
     widget_class_ = Ui_message
     textChanged = Signal()
+    messageResized = Signal()
     icons = [
         ("copy", "copy_button"),
         ("x-circle", "delete_button"),
@@ -262,9 +262,14 @@ class MessageWidget(BaseWidget):
 
     def content_size_changed(self):
         """Handle content widget size changes."""
-        # Update our own size hints based on the content widget
         if self.content_widget:
+            self.adjustSize()
             self.updateGeometry()
+            parent = self.parentWidget()
+            while parent is not None:
+                parent.updateGeometry()
+                parent = parent.parentWidget()
+        self.messageResized.emit()
 
     def on_delete_messages_after_id(self, data):
         message_id = data.get("message_id", None)
@@ -341,8 +346,17 @@ class MessageWidget(BaseWidget):
                 self.content_widget.setFont(font)
 
     def set_content_size(self):
-        # Let the content widget handle its own sizing
-        pass
+        """
+        Set the content size of the widget based on the content widget's size hint.
+        This method is called from the resize worker thread.
+        """
+        if self.content_widget:
+            self.content_widget.adjustSize()
+            self.adjustSize()
+            self.updateGeometry()
+            parent = self.parentWidget()
+            if parent:
+                parent.updateGeometry()
 
     def sizeChange(self):
         # Notify that the text has changed
@@ -384,13 +398,70 @@ class MessageWidget(BaseWidget):
         # Reasonable minimum size
         return QSize(300, 100)
 
-    def update_message(self, text):
-        self.message += text
-        # strip double spaces from self.message
+    def update_message(self, text_chunk: str):
+        """
+        Update the message content with a new chunk of text.
+        This method is responsible for determining the type of content
+        and updating the content widget accordingly.
+        It also handles the case where the content type changes and
+        a new widget needs to be created.
+        """
+        self.message += text_chunk
         self.message = self.message.replace("  ", " ")
 
-        # Update the content
-        self.set_message_content(self.message)
+        # Determine the type of the entire accumulated message
+        new_format_result = FormatterExtended.format_content(self.message)
+        new_full_message_type = new_format_result["type"]
+
+        rebuild_widget = False
+        if self.content_widget is None:
+            rebuild_widget = True
+        elif isinstance(self.content_widget, PlainTextWidget):
+            # If current is PlainText, rebuild if new type is NOT plain (i.e., it's a special format)
+            if new_full_message_type in [
+                FormatterExtended.FORMAT_LATEX,
+                FormatterExtended.FORMAT_MARKDOWN,
+                FormatterExtended.FORMAT_MIXED,
+            ]:
+                rebuild_widget = True
+        elif isinstance(self.content_widget, LatexWidget):
+            if new_full_message_type != FormatterExtended.FORMAT_LATEX:
+                rebuild_widget = True
+        elif isinstance(self.content_widget, MarkdownWidget):
+            if new_full_message_type != FormatterExtended.FORMAT_MARKDOWN:
+                rebuild_widget = True
+        elif isinstance(self.content_widget, MixedContentWidget):
+            if new_full_message_type != FormatterExtended.FORMAT_MIXED:
+                rebuild_widget = True
+        else:
+            rebuild_widget = True
+
+        if rebuild_widget:
+            self.set_message_content(self.message)
+        else:
+            if isinstance(self.content_widget, PlainTextWidget):
+                self.content_widget.appendText(text_chunk)
+            elif isinstance(
+                self.content_widget, (LatexWidget, MarkdownWidget)
+            ):
+                # For Latex or Markdown, update with the full accumulated message
+                # as they typically re-render their entire content.
+                self.content_widget.setContent(self.message)
+            elif isinstance(self.content_widget, MixedContentWidget):
+                # MixedContentWidget expects 'parts'. We already have new_format_result.
+                self.content_widget.setContent(new_format_result["parts"])
+
+    def append_streamed_text(self, text):
+        """
+        Append streamed text to the content widget (for plain text streaming).
+        This will trigger sizeChanged and thus content_size_changed.
+        """
+        if isinstance(self.content_widget, PlainTextWidget):
+            self.content_widget.appendText(text)
+            self.message += text
+        else:
+            self.message += text
+            self.set_message_content(self.message)
 
     @Slot()
     def on_play_audio_button_clicked(self):

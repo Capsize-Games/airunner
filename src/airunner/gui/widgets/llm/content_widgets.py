@@ -2,19 +2,16 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QWidget,
     QVBoxLayout,
-    QTextBrowser,
-    QLabel,
     QSizePolicy,
     QFrame,
 )
-from PySide6.QtCore import Qt, QSize, Signal, QEvent, QRectF, QObject
+from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import (
-    QFont,
     QFontMetrics,
-    QPainter,
     QTextOption,
     QColor,
     QPalette,
+    QTextCursor,
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
 import html
@@ -37,6 +34,15 @@ class BaseContentWidget(QWidget):
         # Configure the widget for transparent background
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAutoFillBackground(False)
+
+    @property
+    def mathjax_url(self) -> str:
+        use_cdn = os.environ.get("AIRUNNER_MATHJAX_CDN", "0") == "1"
+        return (
+            ("https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js")
+            if use_cdn
+            else "http://127.0.0.1:8765/tex-mml-chtml.js"
+        )
 
     def setContent(self, content):
         """Set the content for this widget - to be implemented by subclasses."""
@@ -67,11 +73,12 @@ class PlainTextWidget(BaseContentWidget):
         self.textEdit = QTextEdit(self)
         self.textEdit.setReadOnly(True)
         self.textEdit.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
         self.textEdit.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
+        self.textEdit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         # Make the background transparent
         palette = self.textEdit.palette()
@@ -97,29 +104,51 @@ class PlainTextWidget(BaseContentWidget):
         super().setContent(content)
         self.textEdit.setPlainText(content)
         self.updateSize()
+        self.sizeChanged.emit()  # Ensure sizeChanged is always emitted on content update
+
+    def appendText(self, text):
+        # Append text as it is streamed in
+        cursor = self.textEdit.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self.textEdit.setTextCursor(cursor)
+        self.textEdit.insertPlainText(text)
+        self._content += text
+        self.updateSize()
+        self.sizeChanged.emit()
 
     def setFont(self, font):
         self.textEdit.setFont(font)
         self.updateSize()
 
     def updateSize(self):
-        # Calculate the size based on the document
+        """
+        Update the size of the widget based on the content height.
+        """
         doc = self.textEdit.document()
-        docHeight = doc.size().height()
-
-        # Add a small padding
-        height = docHeight + 10
-        self.textEdit.setMinimumHeight(height)
+        doc_height = doc.documentLayout().documentSize().height()
+        height = doc_height + 10  # Add a little padding
+        self.textEdit.setMinimumHeight(int(height))
         self.sizeChanged.emit()
 
     def sizeHint(self):
-        doc = self.textEdit.document()
-        width = min(max(500, doc.idealWidth() + 20), 1000)
-        height = max(50, doc.size().height() + 10)
+        """
+        Provide a size hint based on the content size and the parent widget's width.
+        """
+        doc_layout = self.textEdit.document().documentLayout()
+        width = min(
+            max(300, int(self.textEdit.document().idealWidth()) + 20),
+            self.parentWidget().width() if self.parentWidget() else 800,
+        )
+        height = max(50, int(doc_layout.documentSize().height()) + 10)
         return QSize(width, height)
 
     def minimumSizeHint(self):
-        return QSize(300, 50)
+        """
+        Provide a minimum size hint based on the font metrics.
+        """
+        font_metrics = QFontMetrics(self.textEdit.font())
+        min_height = font_metrics.lineSpacing() * 2 + 10
+        return QSize(200, int(min_height))
 
 
 class MarkdownWidget(BaseContentWidget):
@@ -133,6 +162,8 @@ class MarkdownWidget(BaseContentWidget):
         # Configure the web view
         self.webView.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.webView.page().setBackgroundColor(Qt.GlobalColor.transparent)
+        self.webView.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.webView.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         # Set up scrollbar policies - don't use WebEngine settings for this
         # as it may vary across Qt versions
@@ -159,6 +190,7 @@ class MarkdownWidget(BaseContentWidget):
 
         # Adjust height after content is loaded
         self.webView.loadFinished.connect(self._adjust_height)
+        self.sizeChanged.emit()  # Emit on content update
 
     def _adjust_height(self, success):
         if success:
@@ -184,14 +216,6 @@ class MarkdownWidget(BaseContentWidget):
             self.sizeChanged.emit()
 
     def _wrap_html_content(self, content):
-        # Support CDN fallback if AIRUNNER_MATHJAX_CDN=1 is set
-        use_cdn = os.environ.get("AIRUNNER_MATHJAX_CDN", "0") == "1"
-        if use_cdn:
-            mathjax_url = (
-                "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
-            )
-        else:
-            mathjax_url = "http://127.0.0.1:8765/tex-mml-chtml.js"
         return f"""
         <html style='height:auto;width:100%;background:transparent;'>
         <head>
@@ -202,7 +226,7 @@ class MarkdownWidget(BaseContentWidget):
             svg: {{ fontCache: 'global' }}
           }};
         </script>
-        <script type='text/javascript' src='{mathjax_url}'></script>
+        <script type='text/javascript' src='{self.mathjax_url}'></script>
         <style>
         html, body {{
             background: transparent !important;
@@ -339,6 +363,10 @@ class LatexWidget(BaseContentWidget):
         # Configure the web view
         self.webView.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.webView.page().setBackgroundColor(Qt.GlobalColor.transparent)
+        self.webView.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
+        self.webView.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         # Set size policy
         self.webView.setSizePolicy(
@@ -371,6 +399,7 @@ class LatexWidget(BaseContentWidget):
             }
             """
         )
+        self.sizeChanged.emit()
 
     def setFont(self, font):
         self.font_family = font.family()
@@ -380,14 +409,6 @@ class LatexWidget(BaseContentWidget):
             self.setContent(self._content)
 
     def _wrap_latex_html(self, latex_content):
-        use_cdn = os.environ.get("AIRUNNER_MATHJAX_CDN", "0") == "1"
-        if use_cdn:
-            mathjax_url = (
-                "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
-            )
-        else:
-            mathjax_url = "http://127.0.0.1:8765/tex-mml-chtml.js"
-        # MathJax 3.x config is set via window.MathJax global before script load
         return f"""
         <html style='height:auto;width:100%;background:transparent;'>
         <head>
@@ -398,7 +419,7 @@ class LatexWidget(BaseContentWidget):
             svg: {{ fontCache: 'global' }}
           }};
         </script>
-        <script type='text/javascript' src='{mathjax_url}'></script>
+        <script type='text/javascript' src='{self.mathjax_url}'></script>
         <style>
         html, body {{
             background: transparent !important;
@@ -438,6 +459,8 @@ class MixedContentWidget(BaseContentWidget):
         # Configure the web view
         self.webView.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.webView.page().setBackgroundColor(Qt.GlobalColor.transparent)
+        self.webView.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.webView.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         # Set size policy
         self.webView.setSizePolicy(
@@ -476,6 +499,7 @@ class MixedContentWidget(BaseContentWidget):
             }
             """
         )
+        self.sizeChanged.emit()
 
     def setFont(self, font):
         self.font_family = font.family()
@@ -485,13 +509,6 @@ class MixedContentWidget(BaseContentWidget):
             self.setContent(self._content)
 
     def _wrap_mixed_html(self, parts):
-        use_cdn = os.environ.get("AIRUNNER_MATHJAX_CDN", "0") == "1"
-        if use_cdn:
-            mathjax_url = (
-                "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
-            )
-        else:
-            mathjax_url = "http://127.0.0.1:8765/tex-mml-chtml.js"
         html_body = ""
         for part in parts:
             if part["type"] == "latex":
@@ -508,7 +525,7 @@ class MixedContentWidget(BaseContentWidget):
             svg: {{ fontCache: 'global' }}
           }};
         </script>
-        <script type='text/javascript' src='{mathjax_url}'></script>
+        <script type='text/javascript' src='{self.mathjax_url}'></script>
         <style>
         html, body {{
             background: transparent !important;
