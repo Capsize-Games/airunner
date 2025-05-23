@@ -48,7 +48,7 @@ class GenerateImageNode(BaseArtNode):
         image_response = data.get("message", None)
         if image_response is None:
             self.api.nodegraph.node_executed(
-                node_id=self.id,
+                node_id=data.get("node_id", self.id),
                 result=self.EXEC_OUT_PORT_NAME,
                 data={"image_response": None, "image": None},
             )

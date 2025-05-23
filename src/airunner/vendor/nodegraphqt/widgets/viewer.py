@@ -24,6 +24,7 @@ from airunner.vendor.nodegraphqt.qgraphics.slicer import SlicerPipeItem
 from airunner.vendor.nodegraphqt.widgets.dialogs import BaseDialog, FileDialog
 from airunner.vendor.nodegraphqt.widgets.scene import NodeScene
 from airunner.vendor.nodegraphqt.widgets.tab_search import TabSearchMenuWidget
+from airunner.utils.application.get_logger import get_logger
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
@@ -63,6 +64,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
                                                graph controller.
         """
         super(NodeViewer, self).__init__(parent)
+        self.logger = get_logger(__name__)
 
         self.setScene(NodeScene(self))
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
@@ -169,8 +171,8 @@ class NodeViewer(QtWidgets.QGraphicsView):
 
         # connection constrains.
         # TODO: maybe this should be a reference to the graph model instead?
-        self.accept_connection_types = None
-        self.reject_connection_types = None
+        self.accept_connection_types = {}
+        self.reject_connection_types = {}
 
     def __repr__(self):
         return "<{}() object at {}>".format(
@@ -225,6 +227,26 @@ class NodeViewer(QtWidgets.QGraphicsView):
             self._ctx_graph_menu.addAction(self._redo_action)
             self._ctx_graph_menu.addSeparator()
 
+        # Add delete selected nodes action to the graph context menu
+        delete_action = QtGui.QAction("Delete Selected Nodes", self)
+        delete_action.setShortcut(QtGui.QKeySequence.Delete)
+        delete_action.triggered.connect(self._on_delete_selected_nodes)
+        self._ctx_graph_menu.addAction(delete_action)
+        self._ctx_graph_menu.addSeparator()
+
+    def _on_delete_selected_nodes(self):
+        """
+        Slot function triggered when the Delete Selected Nodes action is triggered.
+        Emits the node_selection_changed signal with the IDs of selected nodes and a special marker
+        in the deselected nodes list to indicate this is a delete request.
+        """
+        nodes = self.selected_nodes()
+        if nodes:
+            # Emit signal with selected node IDs to inform the graph to delete these nodes
+            # Use ["__DELETE_NODES__"] as a special marker in the deselected list to indicate delete operation
+            node_ids = [n.id for n in nodes]
+            self.node_selection_changed.emit(node_ids, ["__DELETE_NODES__"])
+
     def _set_viewer_zoom(self, value, sensitivity=None, pos=None):
         """
         Sets the zoom level.
@@ -234,20 +256,11 @@ class NodeViewer(QtWidgets.QGraphicsView):
             sensitivity (float): zoom sensitivity.
             pos (QtCore.QPoint): mapped position.
         """
-        print(
-            f"[NodeViewer._set_viewer_zoom] value={value}, sensitivity={sensitivity}, pos={pos}, current transform={self.transform().m11()}, {self.transform().m22()}"
-        )
         if pos:
             pos = self.mapToScene(pos)
         if sensitivity is None:
             scale = 1.001**value
-            print(
-                f"[NodeViewer._set_viewer_zoom] scale (no sensitivity)={scale}"
-            )
             self.scale(scale, scale, pos)
-            print(
-                f"[NodeViewer._set_viewer_zoom] after scale, transform={self.transform().m11()}, {self.transform().m22()}"
-            )
             return
 
         if value == 0.0:
@@ -262,9 +275,6 @@ class NodeViewer(QtWidgets.QGraphicsView):
             if scale == 1.1:
                 return
         self.scale(scale, scale, pos)
-        print(
-            f"[NodeViewer._set_viewer_zoom] after scale (with sensitivity), transform={self.transform().m11()}, {self.transform().m22()}"
-        )
 
     def _set_viewer_pan(self, pos_x, pos_y):
         """
@@ -369,9 +379,6 @@ class NodeViewer(QtWidgets.QGraphicsView):
     # --- reimplemented events ---
 
     def resizeEvent(self, event):
-        print(
-            f"[NodeViewer.resizeEvent] called. Size: {self.size()}, last_size: {self._last_size}, transform: {self.transform().m11()}, {self.transform().m22()}"
-        )
         w, h = self.size().width(), self.size().height()
         if 0 in [w, h]:
             self.resize(self._last_size)
@@ -767,6 +774,18 @@ class NodeViewer(QtWidgets.QGraphicsView):
         self.ALT_state = event.modifiers() == QtCore.Qt.AltModifier
         self.CTRL_state = event.modifiers() == QtCore.Qt.ControlModifier
         self.SHIFT_state = event.modifiers() == QtCore.Qt.ShiftModifier
+
+        # Handle Delete key to delete selected nodes
+        if event.key() == QtCore.Qt.Key_Delete:
+            nodes = self.selected_nodes()
+            if nodes:
+                # Emit signal with selected node IDs to inform the graph to delete these nodes
+                # Use ["__DELETE_NODES__"] as a special marker in the deselected list to indicate delete operation
+                node_ids = [n.id for n in nodes]
+                self.node_selection_changed.emit(
+                    node_ids, ["__DELETE_NODES__"]
+                )
+                return
 
         # Todo: find a better solution to catch modifier keys.
         if event.modifiers() == (
@@ -1640,7 +1659,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         Args:
             value (float): zoom level
         """
-        print(
+        self.logger.debug(
             f"[NodeViewer.set_zoom] Called with value={value}, current get_zoom={self.get_zoom()}"
         )
         if value == 0.0:
@@ -1649,14 +1668,20 @@ class NodeViewer(QtWidgets.QGraphicsView):
         zoom = self.get_zoom()
         if zoom < 0.0:
             if not (ZOOM_MIN <= zoom <= ZOOM_MAX):
-                print(f"[NodeViewer.set_zoom] Out of bounds: zoom={zoom}")
+                self.logger.debug(
+                    f"[NodeViewer.set_zoom] Out of bounds: zoom={zoom}"
+                )
                 return
         else:
             if not (ZOOM_MIN <= value <= ZOOM_MAX):
-                print(f"[NodeViewer.set_zoom] Out of bounds: value={value}")
+                self.logger.debug(
+                    f"[NodeViewer.set_zoom] Out of bounds: value={value}"
+                )
                 return
         value = value - zoom
-        print(f"[NodeViewer.set_zoom] Applying delta value={value}")
+        self.logger.debug(
+            f"[NodeViewer.set_zoom] Applying delta value={value}"
+        )
         self._set_viewer_zoom(value, 0.0)
 
     def set_zoom_absolute(self, value: float):
@@ -1667,13 +1692,13 @@ class NodeViewer(QtWidgets.QGraphicsView):
             value (float): The absolute scale to set (e.g., 1.0 for 100%).
         """
         if not (0.01 <= value <= 10.0):  # Reasonable bounds for scale
-            print(
+            self.logger.debug(
                 f"[NodeViewer.set_zoom_absolute] Out of bounds: value={value}"
             )
             return
         current_scale = self.transform().m11()
         delta = value / current_scale
-        print(
+        self.logger.debug(
             f"[NodeViewer.set_zoom_absolute] Setting absolute scale: current={current_scale}, target={value}, scale delta={delta}"
         )
         self.scale(delta, delta)

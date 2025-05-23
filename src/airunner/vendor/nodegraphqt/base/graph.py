@@ -343,8 +343,19 @@ class NodeGraph(QtCore.QObject):
             sel_ids (list[str]): new selected node ids.
             desel_ids (list[str]): deselected node ids.
         """
+        # Check for deletion signal - a special marker in the desel_ids list
+        if sel_ids and desel_ids and desel_ids == ["__DELETE_NODES__"]:
+            nodes_to_delete = [self.get_node_by_id(nid) for nid in sel_ids]
+            self.delete_nodes(nodes_to_delete)
+            return
+
+        # Normal selection change
         sel_nodes = [self.get_node_by_id(nid) for nid in sel_ids]
-        unsel_nodes = [self.get_node_by_id(nid) for nid in desel_ids]
+        unsel_nodes = [
+            self.get_node_by_id(nid)
+            for nid in desel_ids
+            if nid != "__DELETE_NODES__"
+        ]
         self.node_selection_changed.emit(sel_nodes, unsel_nodes)
 
     def _on_node_data_dropped(self, mimedata, pos):

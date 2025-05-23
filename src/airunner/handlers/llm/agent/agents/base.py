@@ -1075,7 +1075,6 @@ class BaseAgent(
             f"- Generate dialogue that is realistic for the {self.botname} character.\n"
             f"- The generate dialogue can contain questions, make statements, and provide information.\n"
             f"- Generated dialogue should be consistent with {self.botname}'s personality and mood.\n"
-            f"- Don't try to change the subject. Stick to the current conversation.\n"
             f"{backstory_prompt}"
             f"{system_instructions}"
             f"{guardrails}"
@@ -1151,6 +1150,17 @@ class BaseAgent(
     @chat_memory.setter
     def chat_memory(self, value: Optional[ChatMemoryBuffer]):
         self._chat_memory = value
+
+    @property
+    def chatbot(self):
+        if hasattr(self, "_chatbot") and self._chatbot is not None:
+            return self._chatbot
+        # fallback to SettingsMixin property
+        return super().chatbot
+
+    @chatbot.setter
+    def chatbot(self, value):
+        self._chatbot = value
 
     def _llm_updated(self):
         pass

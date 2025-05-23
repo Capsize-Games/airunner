@@ -19,22 +19,6 @@ from airunner.vendor.melo.text.japanese_settings import (
     rep_map,
 )
 
-try:
-    import MeCab
-
-    try:
-        import unidic_lite
-
-        _DICDIR = unidic_lite.DICDIR
-    except ImportError:
-        import unidic
-
-        _DICDIR = unidic.DICDIR
-except ImportError as e:
-    raise ImportError(
-        "Japanese requires mecab-python3 and unidic-lite or unidic."
-    ) from e
-
 from airunner.vendor.melo.text.language_base import LanguageBase
 
 
