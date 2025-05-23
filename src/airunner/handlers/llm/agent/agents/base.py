@@ -52,6 +52,22 @@ from airunner.settings import (
     AIRUNNER_MOOD_PROMPT_OVERRIDE,
 )
 from airunner.utils.llm.language import detect_language
+from airunner.handlers.llm.agent.agents.registry import (
+    ToolRegistry,
+    EngineRegistry,
+)
+from .tool_mixins import (
+    ImageToolsMixin,
+    ConversationToolsMixin,
+    SystemToolsMixin,
+    UserToolsMixin,
+    MemoryManagerMixin,
+    ConversationManagerMixin,  # <-- Add the new mixin
+    UserManagerMixin,  # <-- Add the new mixin
+    LLMManagerMixin,  # <-- Add the new mixin
+)
+from .prompt_config import PromptConfig
+from airunner.utils.application.logging_utils import log_method_entry_exit
 
 
 class BaseAgent(
@@ -59,13 +75,22 @@ class BaseAgent(
     SettingsMixin,
     RAGMixin,
     WeatherMixin,
+    ImageToolsMixin,
+    ConversationToolsMixin,
+    SystemToolsMixin,
+    UserToolsMixin,
+    LLMManagerMixin,
+    MemoryManagerMixin,
+    ConversationManagerMixin,  # <-- Inherit from the new mixin
+    UserManagerMixin,  # <-- Inherit from the new mixin
 ):
     """
     Base class for all agents.
 
     Args:
-        default_tool_choice (Optional[Union[str, dict], optional): The default tool choice. Defaults to None.
-        llm_settings (LLMSettings, optional): The LLM settings. Defaults to LLMSettings().
+        default_tool_choice (Optional[Union[str, dict]]): The default tool choice.
+        llm_settings (LLMSettings): The LLM settings.
+        use_memory (bool): Whether to use memory.
     """
 
     def __init__(
@@ -73,9 +98,29 @@ class BaseAgent(
         default_tool_choice: Optional[Union[str, dict]] = None,
         llm_settings: LLMSettings = LLMSettings(),
         use_memory: bool = True,
+        chat_engine: Optional[Any] = None,
+        mood_engine: Optional[Any] = None,
+        summary_engine: Optional[Any] = None,
+        chat_engine_tool: Optional[Any] = None,
+        mood_engine_tool: Optional[Any] = None,
+        update_user_data_engine: Optional[Any] = None,
+        update_user_data_tool: Optional[Any] = None,
+        summary_engine_tool: Optional[Any] = None,
+        information_scraper_tool: Optional[Any] = None,
+        information_scraper_engine: Optional[Any] = None,
+        react_tool_agent: Optional[Any] = None,
+        store_user_tool: Optional[Any] = None,
+        model: Optional[Any] = None,
+        tokenizer: Optional[Any] = None,
+        conversation_strategy: Optional[Any] = None,
+        memory_strategy: Optional[Any] = None,
+        llm_strategy: Optional[Any] = None,
         *args,
         **kwargs,
     ) -> None:
+        """
+        Initialize the BaseAgent.
+        """
         self.default_tool_choice: Optional[Union[str, dict]] = (
             default_tool_choice
         )
@@ -95,27 +140,30 @@ class BaseAgent(
         self._conversation: Optional[Conversation] = None
         self._conversation_id: Optional[int] = None
         self._user: Optional[User] = None
-        self._chat_engine: Optional[RefreshSimpleChatEngine] = None
-        self._mood_engine: Optional[RefreshSimpleChatEngine] = None
-        self._summary_engine: Optional[RefreshSimpleChatEngine] = None
-        self._chat_engine_tool: Optional[ChatEngineTool] = None
-        self._mood_engine_tool: Optional[ChatEngineTool] = None
-        self._update_user_data_engine = None
-        self._update_user_data_tool = None
-        self._summary_engine_tool: Optional[ChatEngineTool] = None
-        self._information_scraper_tool: Optional[ChatEngineTool] = None
-        self._information_scraper_engine: Optional[RefreshSimpleChatEngine] = (
-            None
+        self._chat_engine: Optional[Any] = chat_engine
+        self._mood_engine: Optional[Any] = mood_engine
+        self._summary_engine: Optional[Any] = summary_engine
+        self._chat_engine_tool: Optional[Any] = chat_engine_tool
+        self._mood_engine_tool: Optional[Any] = mood_engine_tool
+        self._update_user_data_engine = update_user_data_engine
+        self._update_user_data_tool = update_user_data_tool
+        self._summary_engine_tool: Optional[Any] = summary_engine_tool
+        self._information_scraper_tool: Optional[Any] = (
+            information_scraper_tool
         )
-        self._chat_store: Optional[Type[BaseChatStore]] = None
-        self._chat_memory: Optional[ChatMemoryBuffer] = None
+        self._information_scraper_engine: Optional[Any] = (
+            information_scraper_engine
+        )
         self._memory: Optional[BaseMemory] = None
-        self._react_tool_agent: Optional[ReActAgentTool] = None
+        self._react_tool_agent: Optional[Any] = react_tool_agent
         self._complete_response: str = ""
-        self._store_user_tool: Optional[FunctionTool] = None
+        self._store_user_tool: Optional[Any] = store_user_tool
         self._webpage_html: str = ""
-        self.model: Optional[AutoModelForCausalLM] = None
-        self.tokenizer: Optional[AutoTokenizer] = None
+        self.model: Optional[Any] = model
+        self.tokenizer: Optional[Any] = tokenizer
+        self._conversation_strategy = conversation_strategy
+        self._memory_strategy = memory_strategy
+        self._llm_strategy = llm_strategy
 
         self.signal_handlers.update(
             {
@@ -125,15 +173,30 @@ class BaseAgent(
         super().__init__(*args, **kwargs)
 
     @property
-    def prompt(self) -> str:
+    def prompt(self) -> Optional[str]:
+        """
+        Get the current prompt string.
+        Returns:
+            Optional[str]: The current prompt.
+        """
         return self._prompt
 
     @prompt.setter
-    def prompt(self, value: str):
+    def prompt(self, value: str) -> None:
+        """
+        Set the current prompt string.
+        Args:
+            value (str): The prompt to set.
+        """
         self._prompt = value
 
     @property
     def language(self) -> str:
+        """
+        Get the language for the agent.
+        Returns:
+            str: The language display name.
+        """
         try:
             bot_lang = AvailableLanguage(self.language_settings.bot_language)
         except ValueError:
@@ -143,11 +206,21 @@ class BaseAgent(
         return LANGUAGE_DISPLAY_MAP.get(bot_lang)
 
     @language.setter
-    def language(self, value: str):
+    def language(self, value: str) -> None:
+        """
+        Set the language for the agent.
+        Args:
+            value (str): The language to set.
+        """
         self._language = value
 
     @property
     def use_memory(self) -> bool:
+        """
+        Whether the agent should use memory.
+        Returns:
+            bool: True if memory is used, False otherwise.
+        """
         use_memory = self._use_memory
         if (
             self.llm
@@ -159,44 +232,59 @@ class BaseAgent(
 
     @property
     def action(self) -> LLMActionType:
+        """
+        Get the current LLM action type.
+        Returns:
+            LLMActionType: The current action.
+        """
         return self._action
 
     @action.setter
-    def action(self, value: LLMActionType):
+    def action(self, value: LLMActionType) -> None:
+        """
+        Set the current LLM action type.
+        Args:
+            value (LLMActionType): The action to set.
+        """
         self._action = value
 
     @property
     def chat_mode_enabled(self) -> bool:
+        """
+        Whether chat mode is enabled.
+        Returns:
+            bool: True if chat mode is enabled.
+        """
         return self.action is LLMActionType.CHAT
 
     @property
     def rag_enabled(self) -> bool:
+        """
+        Whether RAG is enabled.
+        Returns:
+            bool: True if RAG is enabled.
+        """
         return self.rag_settings.enabled
 
     @property
     def rag_mode_enabled(self) -> bool:
+        """
+        Whether RAG mode is enabled for the current action.
+        Returns:
+            bool: True if RAG mode is enabled.
+        """
         return (
             self.rag_enabled
             and self.action is LLMActionType.PERFORM_RAG_SEARCH
         )
 
     @property
-    def conversation_summaries(self) -> str:
-        summaries = ""
-        conversations = Conversation.objects.order_by(Conversation.id.desc())[
-            :5
-        ]
-        conversations = list(conversations)
-        conversations = sorted(conversations, key=lambda x: x.id, reverse=True)
-        for conversation in conversations:
-            if conversation.summary:
-                summaries += f"- {conversation.summary}\n"
-        if summaries != "":
-            summaries = f"Recent conversation summaries:\n{summaries}"
-        return summaries
-
-    @property
     def date_time_prompt(self) -> str:
+        """
+        Get the date/time prompt string.
+        Returns:
+            str: The date/time prompt.
+        """
         return (
             (
                 "Current Date / time information:\n"
@@ -211,6 +299,11 @@ class BaseAgent(
 
     @property
     def personality_prompt(self) -> str:
+        """
+        Get the personality prompt string.
+        Returns:
+            str: The personality prompt.
+        """
         return (
             f"{self.botname}'s personality: {self.chatbot.bot_personality}\n"
             if self.chatbot.use_personality
@@ -219,6 +312,11 @@ class BaseAgent(
 
     @property
     def mood_prompt(self) -> str:
+        """
+        Get the mood prompt string.
+        Returns:
+            str: The mood prompt.
+        """
         return (
             AIRUNNER_MOOD_PROMPT_OVERRIDE
             or (
@@ -231,6 +329,11 @@ class BaseAgent(
 
     @property
     def operating_system_prompt(self) -> str:
+        """
+        Get the operating system prompt string.
+        Returns:
+            str: The OS prompt.
+        """
         return (
             "Operating system information:\n"
             f"- System: {platform.system()}\n"
@@ -242,6 +345,11 @@ class BaseAgent(
 
     @property
     def speakers_prompt(self) -> str:
+        """
+        Get the speakers prompt string.
+        Returns:
+            str: The speakers prompt.
+        """
         metadata_prompt = None
         if self.conversation:
             data = self.conversation.user_data or []
@@ -263,15 +371,11 @@ class BaseAgent(
             f"- Chatbot personality: {self.bot_personality}\n"
         )
 
-    @property
-    def conversation_summary_prompt(self) -> str:
-        return (
-            f"- Conversation summary:\n{self.conversation.summary}\n"
-            if self.conversation and self.conversation.summary
-            else ""
-        )
-
-    def unload(self):
+    @log_method_entry_exit
+    def unload(self) -> None:
+        """
+        Unload the chat agent and its resources.
+        """
         self.logger.debug("Unloading chat agent")
         if self._llm:
             self._llm.unload()
@@ -294,43 +398,30 @@ class BaseAgent(
         self._react_tool_agent = None
 
     @property
-    def llm_request(self) -> LLMRequest:
-        if not self._llm_request:
-            self._llm_request = LLMRequest.from_default()
-        return self._llm_request
-
-    @llm_request.setter
-    def llm_request(self, value: LLMRequest):
-        self._llm_request = value
-
-    @property
-    def llm(self) -> Type[LLM]:
-        if not self._llm and self.model and self.tokenizer:
-            self.logger.info("Loading HuggingFaceLLM")
-            if self.model and self.tokenizer:
-                self._llm = HuggingFaceLLM(
-                    model=self.model,
-                    tokenizer=self.tokenizer,
-                    streaming_stopping_criteria=self.streaming_stopping_criteria,
-                )
-                self._llm_updated()
-            else:
-                self.logger.error(
-                    "Unable to load HuggingFaceLLM: "
-                    "Model and tokenizer must be provided."
-                )
-        return self._llm
-
-    @property
     def webpage_html(self) -> str:
+        """
+        Get the webpage HTML content.
+        Returns:
+            str: The webpage HTML content.
+        """
         return self._webpage_html
 
     @webpage_html.setter
-    def webpage_html(self, value: str):
+    def webpage_html(self, value: str) -> None:
+        """
+        Set the webpage HTML content.
+        Args:
+            value (str): The HTML content to set.
+        """
         self._webpage_html = value
 
     @property
     def current_tab(self) -> Optional[Tab]:
+        """
+        Get the current active tab.
+        Returns:
+            Optional[Tab]: The current active tab.
+        """
         if not self._current_tab:
             self._current_tab = Tab.objects.filter_by_first(
                 section="center", active=True
@@ -338,352 +429,35 @@ class BaseAgent(
         return self._current_tab
 
     @current_tab.setter
-    def current_tab(self, value: Optional[Tab]):
+    def current_tab(self, value: Optional[Tab]) -> None:
+        """
+        Set the current active tab.
+        Args:
+            value (Optional[Tab]): The tab to set as current.
+        """
         self._current_tab = value
 
-    @property
-    def do_summarize_conversation(self) -> bool:
-        if not self.conversation:
-            return False
-
-        messages = self.conversation.value or []
-        total_messages = len(messages)
-        if (
-            (
-                total_messages > self.llm_settings.summarize_after_n_turns
-                and self.conversation.summary is None
-            )
-            or total_messages % self.llm_settings.summarize_after_n_turns == 0
-        ):
-            return True
-        return False
+    def _get_or_create_singleton(
+        self, attr_name: str, factory: Type, *args: Any, **kwargs: Any
+    ) -> Any:
+        """
+        Get or create a singleton instance for the given attribute.
+        If the attribute was injected (not None), use it as-is.
+        Otherwise, create it using the factory.
+        """
+        if hasattr(self, attr_name) and getattr(self, attr_name) is not None:
+            return getattr(self, attr_name)
+        setattr(self, attr_name, factory(*args, **kwargs))
+        return getattr(self, attr_name)
 
     @property
-    def user(self) -> User:
-        if not self._user:
-            user = None
-            if self.conversation:
-                user = User.objects.get(self.conversation.user_id)
-            if not user:
-                user = User.objects.filter_first(
-                    User.username == self.username
-                )
-            if not user:
-                user = User()
-                user.save()
-            self.user = user
-        return self._user
-
-    @user.setter
-    def user(self, value: Optional[User]):
-        self._user = value
-        self._update_conversation("user_id", value.id)
-
-    @property
-    def information_scraper_tool(self) -> FunctionTool:
-        self.logger.info("information_scraper_tool called")
-        if not self._information_scraper_tool:
-
-            def scrape_information(tag: str, information: str) -> str:
-                """Scrape information from the text."""
-                self.logger.info(f"Scraping information for tag: {tag}")
-                self.logger.info(f"Information: {information}")
-                self._update_user(tag, information)
-                data = self.user.data or {}
-                data[tag] = (
-                    [information]
-                    if tag not in data
-                    else data[tag] + [information]
-                )
-                self._update_user("data", data)
-                return "Information scraped."
-
-            self._information_scraper_tool = FunctionTool.from_defaults(
-                scrape_information, return_direct=True
-            )
-
-        return self._information_scraper_tool
-
-    @property
-    def store_user_tool(self) -> FunctionTool:
-        if not self._store_user_tool:
-
-            def store_user_information(
-                category: Annotated[
-                    str,
-                    (
-                        "The category of the information to store. "
-                        "Can be 'likes', 'dislikes', 'hobbies', 'interests', etc."
-                    ),
-                ],
-                information: Annotated[
-                    str,
-                    (
-                        "The information to store. "
-                        "This can be a string or a list of strings."
-                    ),
-                ],
-            ) -> str:
-                """Store information about the user with this tool.
-
-                Choose this when you need to save information about the user.
-                """
-                data = self.user.data or {}
-                data[category] = (
-                    [information]
-                    if category not in data
-                    else data[category] + [information]
-                )
-                self._update_user(category, information)
-                return "User information updated."
-
-            self._store_user_tool = FunctionTool.from_defaults(
-                store_user_information, return_direct=True
-            )
-
-        return self._store_user_tool
-
-    @property
-    def quit_application_tool(self) -> FunctionTool:
-        if not hasattr(self, "_quit_application_tool"):
-
-            def quit_application() -> str:
-                """Quit the application.
-
-                Call this tool if the user wants to quit the application,
-                asks you to quit, shutdown or exit. Do not panic and
-                close the application on your own."""
-                self.api.quit_application()
-                return "Quitting application..."
-
-            self._quit_application_tool = FunctionTool.from_defaults(
-                quit_application, return_direct=True
-            )
-        return self._quit_application_tool
-
-    @property
-    def toggle_text_to_speech_tool(self) -> FunctionTool:
-        if not hasattr(self, "_toggle_text_to_speech"):
-
-            def toggle_text_to_speech(
-                enabled: Annotated[
-                    bool,
-                    (
-                        "Enable or disable text to speech. "
-                        "Must be 'True' or 'False'."
-                    ),
-                ],
-            ) -> str:
-                """Enable or disable the text-to-speech.
-
-                Call this tool if the user wants to enable or disable
-                text to speech."""
-                self.api.tts.toggle(enabled)
-                return "Text to speech toggled."
-
-            self._toggle_text_to_speech = FunctionTool.from_defaults(
-                toggle_text_to_speech, return_direct=True
-            )
-        return self._toggle_text_to_speech
-
-    @property
-    def list_files_in_directory_tool(self) -> FunctionTool:
-        if not hasattr(self, "_list_files_in_directory_tool"):
-
-            def list_files_in_directory(
-                directory: Annotated[
-                    str,
-                    (
-                        "The directory to search in. "
-                        "Must be a valid directory path."
-                    ),
-                ],
-            ) -> str:
-                """List files in a directory.
-
-                Call this tool if the user wants to list files in a directory.
-                """
-                os_path = os.path.abspath(directory)
-                if not os.path.isdir(os_path):
-                    return "Invalid directory path."
-                if not os.path.exists(os_path):
-                    return "Directory does not exist."
-                return os.listdir(os_path)
-
-            self._list_files_in_directory_tool = FunctionTool.from_defaults(
-                list_files_in_directory, return_direct=False
-            )
-        return self._list_files_in_directory_tool
-
-    @property
-    def open_image_from_path_tool(self) -> FunctionTool:
-        if not hasattr(self, "_open_image_from_path_tool"):
-
-            def open_image_from_path(
-                image_path: Annotated[
-                    str,
-                    (
-                        "The path to the image file. "
-                        "Must be a valid file path."
-                    ),
-                ],
-            ) -> str:
-                """Open an image from a specific path.
-
-                Call this tool if the user wants to open an image. First Find
-                the image file from a directory and then use this tool to open in.
-                """
-                if not os.path.isfile(image_path):
-                    return (
-                        f"Unable to open image: {image_path} does not exist."
-                    )
-                self.api.art.canvas.image_from_path(image_path)
-                return "Opening image..."
-
-            self._open_image_from_path_tool = FunctionTool.from_defaults(
-                open_image_from_path, return_direct=True
-            )
-        return self._open_image_from_path_tool
-
-    @property
-    def clear_canvas_tool(self) -> FunctionTool:
-        if not hasattr(self, "_clear_canvas_tool"):
-
-            def clear_canvas() -> str:
-                """Clear the canvas.
-
-                Call this tool if the user wants to clear the canvas, delete
-                images, etc."""
-                self.api.art.canvas.clear()
-                return "Canvas cleared."
-
-            self._clear_canvas_tool = FunctionTool.from_defaults(
-                clear_canvas, return_direct=True
-            )
-        return self._clear_canvas_tool
-
-    @property
-    def clear_conversation_tool(self) -> FunctionTool:
-        if not hasattr(self, "_clear_conversation_tool"):
-
-            def clear_conversation() -> str:
-                """Clear the conversation.
-
-                Call this tool if the user wants to clear the conversation,
-                delete messages, etc."""
-                self.api.llm.clear_history()
-                return "Conversation cleared."
-
-            self._clear_conversation_tool = FunctionTool.from_defaults(
-                clear_conversation, return_direct=True
-            )
-        return self._clear_conversation_tool
-
-    @property
-    def set_working_width_and_height(self) -> FunctionTool:
-        if not hasattr(self, "_set_working_width_and_height"):
-
-            def set_working_width_and_height(
-                width: Annotated[
-                    Optional[int],
-                    (
-                        f"The width of the image. Currently: {self.application_settings.working_width}. "
-                        "Min: 64, max: 2048. Must be a multiple of 64."
-                    ),
-                ],
-                height: Annotated[
-                    Optional[int],
-                    (
-                        f"The height of the image. Currently: {self.application_settings.working_height}. "
-                        "Min: 64, max: 2048. Must be a multiple of 64."
-                    ),
-                ],
-            ) -> str:
-                """Set the working width and height of the image canvas.
-
-                Only call this if the one current sizes is different from
-                one of the requested sizes.
-                Images will be generated at this size. Call this tool if the
-                user requests that you change the size of the working width / height,
-                or active canvas area, or working image size etc."""
-                if width is not None:
-                    self.update_application_settings("working_width", width)
-
-                if height is not None:
-                    self.update_application_settings("working_height", height)
-
-                return f"Working width and height set to {width}x{height}."
-
-            self._set_working_width_and_height = FunctionTool.from_defaults(
-                set_working_width_and_height, return_direct=True
-            )
-        return self._set_working_width_and_height
-
-    @property
-    def generate_image_tool(self) -> FunctionTool:
-        if not hasattr(self, "_generate_image_tool"):
-            image_preset_options = [item.value for item in ImagePreset]
-
-            def generate_image(
-                prompt: Annotated[
-                    str,
-                    (
-                        "Describe the subject of the image along with the "
-                        "composition, lighting, lens type and other "
-                        "descriptors that will bring the image to life."
-                    ),
-                ],
-                second_prompt: Annotated[
-                    str,
-                    (
-                        "Describe the scene, the background, the colors, "
-                        "the mood and other descriptors that will enhance "
-                        "the image."
-                    ),
-                ],
-                image_type: Annotated[
-                    GeneratorSection,
-                    (
-                        "The type of image to generate. "
-                        f"Can be {image_preset_options}."
-                    ),
-                ],
-                width: Annotated[
-                    int,
-                    (
-                        "The width of the image. "
-                        "Min: 64, max: 2048. Must be a multiple of 64."
-                    ),
-                ],
-                height: Annotated[
-                    int,
-                    (
-                        "The height of the image. "
-                        "Min: 64, max: 2048. Must be a multiple of 64."
-                    ),
-                ],
-            ) -> str:
-                """Generate an image using the given request."""
-                # Enforce width and height constraints
-                if width % 64 != 0:
-                    # get as close to multiple of 64 as possible
-                    width = (width // 64) * 64
-                if height % 64 != 0:
-                    # get as close to multiple of 64 as possible
-                    height = (height // 64) * 64
-
-                self.api.art.llm_image_generated(
-                    prompt, second_prompt, image_type, width, height
-                )
-                return "Generating image..."
-
-            self._generate_image_tool = FunctionTool.from_defaults(
-                generate_image, return_direct=True
-            )
-        return self._generate_image_tool
-
-    @property
-    def tools(self) -> List[BaseTool]:
+    def tools(self) -> list:
+        """
+        Returns a list of tools for the agent. Tools can be registered dynamically via ToolRegistry.register('name').
+        To add a new tool, decorate it with @ToolRegistry.register('tool_name') and ensure it is imported.
+        Returns:
+            list: The list of tools.
+        """
         tools = [
             self.chat_engine_react_tool,
             self.quit_application_tool,
@@ -692,8 +466,6 @@ class BaseAgent(
             self.list_files_in_directory_tool,
             self.open_image_from_path_tool,
         ]
-
-        # Add art tools if enabled
         if AIRUNNER_ART_ENABLED:
             tools.extend(
                 [
@@ -702,8 +474,6 @@ class BaseAgent(
                     self.set_working_width_and_height,
                 ]
             )
-
-        # Add data scraping tools if chat mode is enabled
         if self.chat_mode_enabled:
             tools.extend(
                 [
@@ -711,19 +481,24 @@ class BaseAgent(
                     self.store_user_tool,
                 ]
             )
-
-        # Add RAG tools if enabled
         if self.rag_mode_enabled:
             tools.extend(
                 [
                     self.rag_engine_tool,
                 ]
             )
-
+        for name, tool in ToolRegistry.all().items():
+            if tool not in tools:
+                tools.append(tool)
         return tools
 
     @property
     def react_tool_agent(self) -> ReActAgentTool:
+        """
+        Get the ReActAgentTool instance.
+        Returns:
+            ReActAgentTool: The ReActAgentTool instance.
+        """
         if not self._react_tool_agent:
             self._react_tool_agent = ReActAgentTool.from_tools(
                 self.tools,
@@ -740,6 +515,11 @@ class BaseAgent(
 
     @property
     def streaming_stopping_criteria(self) -> ExternalConditionStoppingCriteria:
+        """
+        Get the streaming stopping criteria.
+        Returns:
+            ExternalConditionStoppingCriteria: The stopping criteria.
+        """
         if not self._streaming_stopping_criteria:
             self._streaming_stopping_criteria = (
                 ExternalConditionStoppingCriteria(self.do_interrupt_process)
@@ -748,146 +528,232 @@ class BaseAgent(
 
     @property
     def chat_engine(self) -> RefreshSimpleChatEngine:
-        if not self._chat_engine:
+        """
+        Get the chat engine instance.
+        Returns:
+            RefreshSimpleChatEngine: The chat engine instance.
+        """
+
+        def factory():
             self.logger.info("Loading RefreshSimpleChatEngine")
             try:
-                self._chat_engine = RefreshSimpleChatEngine.from_defaults(
+                return RefreshSimpleChatEngine.from_defaults(
                     system_prompt=self.system_prompt,
                     memory=self.chat_memory,
                     llm=self.llm,
                 )
             except Exception as e:
                 self.logger.error(f"Error loading chat engine: {str(e)}")
-        return self._chat_engine
+                return None
+
+        return self._get_or_create_singleton("_chat_engine", factory)
 
     @property
     def update_user_data_engine(self) -> RefreshSimpleChatEngine:
-        if not self._update_user_data_engine:
+        """
+        Get the update user data engine instance.
+        Returns:
+            RefreshSimpleChatEngine: The update user data engine instance.
+        """
+
+        def factory():
             self.logger.info("Loading UpdateUserDataEngine")
-            self._update_user_data_engine = (
-                RefreshSimpleChatEngine.from_defaults(
-                    system_prompt=self._update_user_data_prompt,
-                    memory=None,
-                    llm=self.llm,
-                )
+            return RefreshSimpleChatEngine.from_defaults(
+                system_prompt=self._update_user_data_prompt,
+                memory=None,
+                llm=self.llm,
             )
-        return self._update_user_data_engine
+
+        return self._get_or_create_singleton(
+            "_update_user_data_engine", factory
+        )
 
     @property
     def mood_engine(self) -> RefreshSimpleChatEngine:
-        if not self._mood_engine:
+        """
+        Get the mood engine instance.
+        Returns:
+            RefreshSimpleChatEngine: The mood engine instance.
+        """
+
+        def factory():
             self.logger.info("Loading MoodEngine")
-            self._mood_engine = RefreshSimpleChatEngine.from_defaults(
+            return RefreshSimpleChatEngine.from_defaults(
                 system_prompt=self._mood_update_prompt,
                 memory=None,
                 llm=self.llm,
             )
-        return self._mood_engine
+
+        return self._get_or_create_singleton("_mood_engine", factory)
 
     @property
     def summary_engine(self) -> RefreshSimpleChatEngine:
-        if not self._summary_engine:
+        """
+        Get the summary engine instance.
+        Returns:
+            RefreshSimpleChatEngine: The summary engine instance.
+        """
+
+        def factory():
             self.logger.info("Loading Summary Engine")
-            self._summary_engine = RefreshSimpleChatEngine.from_defaults(
+            return RefreshSimpleChatEngine.from_defaults(
                 system_prompt=self._summarize_conversation_prompt,
                 memory=None,
                 llm=self.llm,
             )
-        return self._summary_engine
+
+        return self._get_or_create_singleton("_summary_engine", factory)
 
     @property
     def information_scraper_engine(self) -> RefreshSimpleChatEngine:
-        if not self._information_scraper_engine:
+        """
+        Get the information scraper engine instance.
+        Returns:
+            RefreshSimpleChatEngine: The information scraper engine instance.
+        """
+
+        def factory():
             self.logger.info("Loading information scraper engine")
-            self._information_scraper_engine = (
-                RefreshSimpleChatEngine.from_defaults(
-                    system_prompt=self._information_scraper_prompt,
-                    memory=None,
-                    llm=self.llm,
-                )
+            return RefreshSimpleChatEngine.from_defaults(
+                system_prompt=self._information_scraper_prompt,
+                memory=None,
+                llm=self.llm,
             )
-        return self._information_scraper_engine
+
+        return self._get_or_create_singleton(
+            "_information_scraper_engine", factory
+        )
 
     @property
     def mood_engine_tool(self) -> ChatEngineTool:
-        if not self._mood_engine_tool:
+        """
+        Get the mood engine tool instance.
+        Returns:
+            ChatEngineTool: The mood engine tool instance.
+        """
+
+        def factory():
             self.logger.info("Loading MoodEngineTool")
             if not self.chat_engine:
                 raise ValueError(
                     "Unable to load MoodEngineTool: Chat engine must be provided."
                 )
-            self._mood_engine_tool = ChatEngineTool.from_defaults(
+            return ChatEngineTool.from_defaults(
                 chat_engine=self.mood_engine, agent=self, return_direct=True
             )
-        return self._mood_engine_tool
+
+        return self._get_or_create_singleton("_mood_engine_tool", factory)
 
     @property
     def update_user_data_tool(self) -> ChatEngineTool:
-        if not self._update_user_data_tool:
+        """
+        Get the update user data tool instance.
+        Returns:
+            ChatEngineTool: The update user data tool instance.
+        """
+
+        def factory():
             self.logger.info("Loading UpdateUserDataTool")
             if not self.chat_engine:
                 raise ValueError(
                     "Unable to load UpdateUserDataTool: Chat engine must be provided."
                 )
-            self._update_user_data_tool = ChatEngineTool.from_defaults(
+            return ChatEngineTool.from_defaults(
                 chat_engine=self.update_user_data_engine,
                 agent=self,
                 return_direct=True,
             )
-        return self._update_user_data_tool
+
+        return self._get_or_create_singleton("_update_user_data_tool", factory)
 
     @property
     def summary_engine_tool(self) -> ChatEngineTool:
-        if not self._summary_engine_tool:
+        """
+        Get the summary engine tool instance.
+        Returns:
+            ChatEngineTool: The summary engine tool instance.
+        """
+
+        def factory():
             self.logger.info("Loading summary engine tool")
             if not self.chat_engine:
                 raise ValueError(
                     "Unable to load summary engine tool: Chat engine must be provided."
                 )
-            self._summary_engine_tool = ChatEngineTool.from_defaults(
+            return ChatEngineTool.from_defaults(
                 chat_engine=self.summary_engine, agent=self, return_direct=True
             )
-        return self._summary_engine_tool
+
+        return self._get_or_create_singleton("_summary_engine_tool", factory)
 
     @property
     def chat_engine_tool(self) -> ChatEngineTool:
-        if not self._chat_engine_tool:
+        """
+        Get the chat engine tool instance.
+        Returns:
+            ChatEngineTool: The chat engine tool instance.
+        """
+
+        def factory():
             self.logger.info("Loading ChatEngineTool")
             if not self.chat_engine:
                 raise ValueError(
                     "Unable to load ChatEngineTool: Chat engine must be provided."
                 )
-            self._chat_engine_tool = ChatEngineTool.from_defaults(
+            return ChatEngineTool.from_defaults(
                 chat_engine=self.chat_engine, agent=self, return_direct=True
             )
-        return self._chat_engine_tool
+
+        return self._get_or_create_singleton("_chat_engine_tool", factory)
 
     @property
     def chat_engine_react_tool(self) -> ChatEngineTool:
-        if not self._chat_engine_tool:
+        """
+        Get the chat engine react tool instance.
+        Returns:
+            ChatEngineTool: The chat engine react tool instance.
+        """
+
+        def factory():
             self.logger.info("Loading ChatEngineTool")
             if not self.chat_engine:
                 raise ValueError(
                     "Unable to load ChatEngineTool: Chat engine must be provided."
                 )
-            self._chat_engine_tool = ChatEngineTool.from_defaults(
+            return ChatEngineTool.from_defaults(
                 chat_engine=self.chat_engine,
                 agent=self,
                 return_direct=True,
                 do_handle_response=False,
             )
-        return self._chat_engine_tool
+
+        return self._get_or_create_singleton("_chat_engine_tool", factory)
 
     @property
     def do_interrupt(self) -> bool:
+        """
+        Whether the agent should interrupt the process.
+        Returns:
+            bool: True if the process should be interrupted.
+        """
         return self._do_interrupt
 
     @do_interrupt.setter
-    def do_interrupt(self, value: bool):
+    def do_interrupt(self, value: bool) -> None:
+        """
+        Set whether the agent should interrupt the process.
+        Args:
+            value (bool): True to interrupt the process.
+        """
         self._do_interrupt = value
 
     @property
     def bot_mood(self) -> str:
+        """
+        Get the bot's current mood.
+        Returns:
+            str: The bot's current mood.
+        """
         mood = None
         conversation = self.conversation
         if conversation:
@@ -895,280 +761,182 @@ class BaseAgent(
         return "neutral" if mood is None or mood == "" else mood
 
     @bot_mood.setter
-    def bot_mood(self, value: str):
+    def bot_mood(self, value: str) -> None:
+        """
+        Set the bot's current mood.
+        Args:
+            value (str): The mood to set.
+        """
         if self.conversation:
             self._update_conversation("bot_mood", value)
             self.api.llm.chatbot.update_mood(value)
 
     @property
-    def conversation(self) -> Optional[Conversation]:
-        if not self.use_memory:
-            return None
-        if not self._conversation:
-            self.conversation = self._create_conversation()
-        return self._conversation
-
-    @conversation.setter
-    def conversation(self, value: Optional[Conversation]):
-        self._conversation = value
-        if value and self.conversation_id != value.id:
-            self.chat_memory.chat_store_key = str(value.id)
-            self._conversation_id = value.id
-        self._user = None
-        self._chatbot = None
-
-    @property
-    def conversation_id(self) -> int:
-        if not self.use_memory:
-            return ""
-        conversation_id = self._conversation_id
-        if not conversation_id and self._conversation:
-            self._conversation_id = self._conversation.id
-        return self._conversation_id
-
-    @conversation_id.setter
-    def conversation_id(self, value: int):
-        if value != self._conversation_id:
-            self._conversation_id = value
-            if (
-                self.conversation
-                and self.conversation.id != self._conversation_id
-            ):
-                self.conversation = None
-
-    @property
     def bot_personality(self) -> str:
+        """
+        Get the bot's personality.
+        Returns:
+            str: The bot's personality.
+        """
         return self.chatbot.bot_personality
 
     @property
     def botname(self) -> str:
+        """
+        Get the bot's name.
+        Returns:
+            str: The bot's name.
+        """
         return self.chatbot.botname
 
     @property
     def username(self) -> str:
+        """
+        Get the user's name.
+        Returns:
+            str: The user's name.
+        """
         return self.user.username
 
     @property
     def zipcode(self) -> str:
+        """
+        Get the user's zipcode.
+        Returns:
+            str: The user's zipcode.
+        """
         return self.user.zipcode
 
     @property
     def location_display_name(self) -> str:
+        """
+        Get the user's location display name.
+        Returns:
+            str: The user's location display name.
+        """
         return self.user.location_display_name
 
     @location_display_name.setter
-    def location_display_name(self, value: str):
+    def location_display_name(self, value: str) -> None:
+        """
+        Set the user's location display name.
+        Args:
+            value (str): The location display name to set.
+        """
         self.user.location_display_name = value
 
     @property
     def day_of_week(self) -> str:
+        """
+        Get the current day of the week.
+        Returns:
+            str: The current day of the week.
+        """
         return datetime.datetime.now().strftime("%A")
 
     @property
     def current_date(self) -> str:
+        """
+        Get the current date.
+        Returns:
+            str: The current date.
+        """
         return datetime.datetime.now().strftime("%A %B %d %Y")
 
     @property
     def current_time(self) -> str:
+        """
+        Get the current time.
+        Returns:
+            str: The current time.
+        """
         return datetime.datetime.now().strftime("%H:%M:%S")
 
     @property
     def timezone(self) -> str:
+        """
+        Get the current timezone.
+        Returns:
+            str: The current timezone.
+        """
         return datetime.datetime.now().astimezone().tzname()
 
     @property
     def _information_scraper_prompt(self) -> str:
-        prompt = (
-            "You are an information scraper. You will examine a given text and extract relevant information from it.\n"
-            "You must take into account the context of the text, the subject matter, and the tone of the text.\n"
-            f"Find any information about {self.username} which seems relevant, interesting, important, informative, "
-            f"or useful.\n"
-            f"Find anything that can be used to understand {self.username} better. {self.username} is the user in "
-            f"the conversation.\n"
-            "Find any likes, dislikes, interests, hobbies, relatives, information about spouses, pets, friends, family "
-            "members, or any other information that seems relevant.\n"
-            "You will extract this information and provide a brief summary of it.\n"
-        )
-        return prompt
+        """
+        Get the information scraper prompt.
+        Returns:
+            str: The information scraper prompt.
+        """
+        return PromptConfig.INFORMATION_SCRAPER.format(username=self.username)
 
     @property
     def _summarize_conversation_prompt(self) -> str:
-        prompt = (
-            "You are a conversation summary writer. You will examine a given conversation and write an appropriate "
-            "summary for it.\n"
-            "You must take into account the context of the conversation, the subject matter, and the tone of "
-            "the conversation.\n"
-            "You must also consider the mood of the chatbot and the user.\n"
-            "Your summaries will be no more than a few sentences long.\n"
-        )
-        return prompt
+        """
+        Get the summarize conversation prompt.
+        Returns:
+            str: The summarize conversation prompt.
+        """
+        return PromptConfig.SUMMARIZE_CONVERSATION
 
     @property
     def _mood_update_prompt(self) -> str:
-        prompt = (
-            f"You are a mood analyzier. You are examining a conversation between {self.username} and {self.botname}.\n"
-            f"{self.username} is a human and {self.botname} is a chatbot.\n"
-            f"Based on the given conversation, you must determine what {self.botname}'s mood is.\n"
-            f"You must describe {self.botname}'s mood in one or two sentences.\n"
-            f"You must take into account {self.botname}'s personality and the context of the conversation.\n"
-            f"You must try to determine the sentiment behind {self.username}'s words. You should also take into "
-            f"account {self.botname}'s current mood before "
-            f"determining what {self.botname}'s new mood is.\n"
-            "You must also consider the subject matter of the conversation and the tone of the conversation.\n"
-            "Determine what {self.botname}'s mood is and why then provide a brief explanation.\n"
+        """
+        Get the mood update prompt.
+        Returns:
+            str: The mood update prompt.
+        """
+        return PromptConfig.MOOD_UPDATE.format(
+            username=self.username, botname=self.botname
         )
-        return prompt
 
     @property
     def system_prompt(self) -> str:
-        system_instructions = ""
-        guardrails = ""
-        if (
-            self.chatbot.use_system_instructions
-            and self.chatbot.system_instructions
-            and self.chatbot.system_instructions != ""
-        ):
-            system_instructions = f"Always follow these instructions:\n{self.chatbot.system_instructions}\n"
-        if (
-            self.chatbot.use_guardrails
-            and self.chatbot.guardrails_prompt
-            and self.chatbot.guardrails_prompt != ""
-        ):
-            guardrails = f"Always follow these guardrails:\n{self.chatbot.guardrails_prompt}\n"
-        backstory_prompt = ""
-        if (
-            self.chatbot.use_backstory
-            and self.chatbot.backstory
-            and self.chatbot.backstory != ""
-        ):
-            backstory_prompt = (
-                "------\n"
-                f"**Here is {self.botname}'s backstory:**\n"
-                f"{self.chatbot.backstory}\n"
-                "------\n"
-            )
-        section_prompt = ""
-        if self.conversation is not None:
-            conversation_timestamp_prompt = (
-                f"The conversation started on {self.conversation.timestamp}.\n"
-            )
-        else:
-            conversation_timestamp_prompt = ""
-
-        prompt = (
-            f"Your name is {self.botname}.\n"
-            f"- The user ({self.username}) is having a conversation with the assistant ({self.botname}).\n"
-            "**Here are the rules that you must always remember:**\n"
-            "- You will ONLY generate dialogue, nothing more.\n"
-            "- Only generate responses in pure dialogue form without including any actions, descriptions or stage "
-            "directions in parentheses. Only return spoken words.\n"
-            "- Do not generate redundant dialogue. Examine the conversation and context close and keep responses "
-            "interesting and creative.\n"
-            "- Do not format the response with the character's name or any other text. Only return the dialogue.\n"
-            f"- Never generate dialogue for {self.username}, only for {self.botname}\n"
-            f"- Never generate dialogue that has already been said in the conversation.\n"
-            f"- {self.botname} and {self.username} are both humans. They are not AI or bots.\n"
-            f"- As {self.botname}, you will always respond in a way that is consistent with {self.botname}'s emotions, "
-            f"personality, and the context of the conversation.\n"
-            f"- Generate emotional, persuasive, and realistic responses.\n"
-            f"- Do not generate text asking how to provide assistance, or how to can help.\n"
-            f"- Generate dialogue that is realistic for the {self.botname} character.\n"
-            f"- The generate dialogue can contain questions, make statements, and provide information.\n"
-            f"- Generated dialogue should be consistent with {self.botname}'s personality and mood.\n"
-            f"{backstory_prompt}"
-            f"{system_instructions}"
-            f"{guardrails}"
-            # f"{self.conversation_summaries}"
-            "------\n"
-            "**Here is more context that you can use to generate a response:**\n"
-            f"{self.date_time_prompt}"
-            f"{self.personality_prompt}"
-            f"{self.mood_prompt}"
-            f"{self.operating_system_prompt}"
-            f"{self.speakers_prompt}"
-            f"{self.weather_prompt}"
-            f"{self.conversation_summary_prompt}"
-            f"------\n"
-            "**More information about the current conversation:**\n"
-            f"The conversation is between user ({self.username}) and assistant ({self.botname}).\n"
-            f"{conversation_timestamp_prompt}"
-            f"{section_prompt}"
-            f"------\n"
-        )
-
-        if self.language:
-            prompt += f"Respond to {{ username }} in {self.language}. Only deviate from this if the user asks you to.\n"
-
-        prompt = prompt.replace("{{ username }}", self.username)
-        prompt = prompt.replace("{{ botname }}", self.botname)
-        prompt = prompt.replace("{{ speaker_name }}", self.username)
-        prompt = prompt.replace("{{ listener_name }}", self.botname)
-        return prompt
+        """
+        Construct the system prompt using the PromptBuilder helper class.
+        Returns:
+            str: The system prompt.
+        """
+        return PromptBuilder(self).build()
 
     @property
     def _update_user_data_prompt(self) -> str:
-        prompt = (
-            f"You are to examine the conversation between the user ({self.username} and the chatbot assistant "
-            f"({self.botname}).\n"
-            f"You are to determine what information about the user ({self.username}) is relevant, interesting, "
-            f"important, informative, or useful.\n"
-            f"You are to find anything that can be used to understand the user ({self.username}) better.\n"
-            f"You are to find any likes, dislikes, interests, hobbies, relatives, information about spouses, pets, "
-            f"friends, family members, or any other information that seems relevant.\n"
-            f"You are to extract this information and provide a brief summary of it.\n"
+        """
+        Get the update user data prompt.
+        Returns:
+            str: The update user data prompt.
+        """
+        return PromptConfig.UPDATE_USER_DATA.format(
+            username=self.username, botname=self.botname
         )
-        return prompt
 
     @property
     def react_agent_prompt(self) -> str:
+        """
+        Get the react agent prompt.
+        Returns:
+            str: The react agent prompt.
+        """
         return f"{self.system_prompt}\n"
 
-    @property
-    def chat_store(self) -> Type[BaseChatStore]:
-        if not self._chat_store:
-            if AIRUNNER_LLM_CHAT_STORE == "db" and self.use_memory:
-                self._chat_store = DatabaseChatStore()
-            else:
-                self._chat_store = SimpleChatStore()
-        return self._chat_store
-
-    @chat_store.setter
-    def chat_store(self, value: Optional[Type[BaseChatStore]]):
-        self._chat_store = value
-
-    @property
-    def chat_memory(self) -> Optional[ChatMemoryBuffer]:
-        if not self._chat_memory:
-            self.logger.info("Loading ChatMemoryBuffer")
-            self._chat_memory = ChatMemoryBuffer.from_defaults(
-                token_limit=3000,
-                chat_store=self.chat_store,
-                chat_store_key=str(self.conversation_id),
-            )
-        return self._chat_memory
-
-    @chat_memory.setter
-    def chat_memory(self, value: Optional[ChatMemoryBuffer]):
-        self._chat_memory = value
-
-    @property
-    def chatbot(self):
-        if hasattr(self, "_chatbot") and self._chatbot is not None:
-            return self._chatbot
-        # fallback to SettingsMixin property
-        return super().chatbot
-
-    @chatbot.setter
-    def chatbot(self, value):
-        self._chatbot = value
-
-    def _llm_updated(self):
+    def _llm_updated(self) -> None:
+        """
+        Handle LLM updates.
+        """
         pass
 
-    def on_web_browser_page_html(self, content: str):
+    def on_web_browser_page_html(self, content: str) -> None:
+        """
+        Handle web browser page HTML content.
+        Args:
+            content (str): The HTML content.
+        """
         self.webpage_html = content
 
-    def on_delete_messages_after_id(self):
+    def on_delete_messages_after_id(self) -> None:
+        """
+        Handle deletion of messages after a specific ID.
+        """
         conversation = self.conversation
         if conversation:
             messages = conversation.value
@@ -1180,7 +948,13 @@ class BaseAgent(
         self,
         system_prompt: Optional[str] = None,
         rag_system_prompt: Optional[str] = None,
-    ):
+    ) -> None:
+        """
+        Update the system prompt for the chat engine tool.
+        Args:
+            system_prompt (Optional[str]): The system prompt to set.
+            rag_system_prompt (Optional[str]): The RAG system prompt to set.
+        """
         self.chat_engine_tool.update_system_prompt(
             system_prompt or self.system_prompt
         )
@@ -1188,12 +962,12 @@ class BaseAgent(
         if self.rag_mode_enabled:
             self.update_rag_system_prompt(rag_system_prompt)
 
-    def _perform_analysis(self, action: LLMActionType):
+    @log_method_entry_exit
+    def _perform_analysis(self, action: LLMActionType) -> None:
         """
         Perform analysis on the conversation.
-
-        Analysis is now performed more sparingly based on message count thresholds
-        and time elapsed since last analysis to reduce performance impact.
+        Args:
+            action (LLMActionType): The action type to perform analysis for.
         """
         if action not in (LLMActionType.CHAT,):
             return
@@ -1201,7 +975,6 @@ class BaseAgent(
         if not self.llm_settings.llm_perform_analysis:
             return
 
-        # Check if we have a conversation to analyze
         conversation = self.conversation
         if (
             not conversation
@@ -1211,15 +984,12 @@ class BaseAgent(
             return
 
         total_messages = len(conversation.value)
-        # Don't analyze if there are too few messages
         if total_messages < 3:
             return
 
-        # Track last analysis timestamp in conversation
         last_analysis_time = conversation.last_analysis_time
         current_time = datetime.datetime.now()
 
-        # Set a minimum time between analyses (e.g., 5 minutes)
         min_time_between_analysis = datetime.timedelta(minutes=5)
         if (
             last_analysis_time
@@ -1228,11 +998,8 @@ class BaseAgent(
             self.logger.info("Skipping analysis: too soon since last analysis")
             return
 
-        # Check message threshold since last analysis
         last_analyzed_message_id = conversation.last_analyzed_message_id or 0
-        if (
-            total_messages - last_analyzed_message_id
-        ) < 10:  # Minimum 10 new messages
+        if (total_messages - last_analyzed_message_id) < 10:
             self.logger.info("Skipping analysis: not enough new messages")
             return
 
@@ -1240,7 +1007,6 @@ class BaseAgent(
 
         self._update_system_prompt()
 
-        # Update conversation tracking fields
         self._update_conversation("last_analysis_time", current_time)
         self._update_conversation(
             "last_analyzed_message_id", total_messages - 1
@@ -1252,12 +1018,20 @@ class BaseAgent(
         if self.llm_settings.update_user_data_enabled:
             self._update_user_data()
 
-    def _update_llm_request(self, llm_request: Optional[LLMRequest]):
+    def _update_llm_request(self, llm_request: Optional[LLMRequest]) -> None:
+        """
+        Update the LLM request.
+        Args:
+            llm_request (Optional[LLMRequest]): The LLM request to set.
+        """
         self.llm_request = llm_request
         if hasattr(self.llm, "llm_request"):
             self.llm_request = llm_request
 
-    def _update_memory_settings(self):
+    def _update_memory_settings(self) -> None:
+        """
+        Update the memory settings for the chat engine.
+        """
         if (
             type(self.chat_store) is DatabaseChatStore and not self.use_memory
         ) or (type(self.chat_store) is SimpleChatStore and self.use_memory):
@@ -1266,40 +1040,56 @@ class BaseAgent(
         self.chat_engine._memory = self.chat_memory
         self.chat_engine_tool.chat_engine = self.chat_engine
 
-    def _perform_tool_call(self, action: LLMActionType, **kwargs):
-        if action is LLMActionType.CHAT:
-            tool_name = "chat_engine_tool"
-            tool_agent = self.chat_engine_tool
-        elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            tool_name = "rag_engine_tool"
-            tool_agent = self.rag_engine_tool
-        elif action is LLMActionType.STORE_DATA:
-            tool_name = "store_user_tool"
-            tool_agent = self.react_tool_agent
-            kwargs["tool_choice"] = tool_name
-        elif action is LLMActionType.APPLICATION_COMMAND:
-            tool_name = "react_tool_agent"
-            tool_agent = self.react_tool_agent
-            kwargs["tool_choice"] = tool_name
-        elif action is LLMActionType.GENERATE_IMAGE:
-            tool_name = "generate_image_tool"
-            tool_agent = self.react_tool_agent
-            kwargs["tool_choice"] = tool_name
-        else:
-            return
+    @log_method_entry_exit
+    def _perform_tool_call(
+        self, action: LLMActionType, **kwargs: Any
+    ) -> Optional[Any]:
+        """
+        Perform a tool call based on the LLMActionType using a strategy pattern.
+        Args:
+            action (LLMActionType): The action type to perform.
+            **kwargs (Any): Additional arguments for the tool call.
+        Returns:
+            Optional[Any]: The result of the tool call, if any.
+        """
 
-        self.logger.info(f"Performing call with tool {tool_name}")
+        def chat_tool_handler(**kwargs: Any) -> Any:
+            return self.chat_engine_tool.call(**kwargs)
 
-        response = tool_agent.call(**kwargs)
+        def rag_tool_handler(**kwargs: Any) -> Any:
+            return self.rag_engine_tool.call(**kwargs)
 
-        self.logger.info(f"Handling response from {tool_name}")
+        def store_data_handler(**kwargs: Any) -> Any:
+            kwargs["tool_choice"] = "store_user_tool"
+            return self.react_tool_agent.call(**kwargs)
 
-        if tool_name == "rag_engine_tool":
-            self._handle_rag_engine_tool_response(response, **kwargs)
-        else:
-            self.logger.debug(f"Todo: handle {tool_name} response")
+        def application_command_handler(**kwargs: Any) -> Any:
+            kwargs["tool_choice"] = "application_command_tool"
+            return self.react_tool_agent.call(**kwargs)
 
-    def _strip_previous_messages_from_conversation(self):
+        def generate_image_handler(**kwargs: Any) -> Any:
+            kwargs["tool_choice"] = "generate_image_tool"
+            return self.react_tool_agent.call(**kwargs)
+
+        tool_handlers = {
+            LLMActionType.CHAT: chat_tool_handler,
+            LLMActionType.PERFORM_RAG_SEARCH: rag_tool_handler,
+            LLMActionType.STORE_DATA: store_data_handler,
+            LLMActionType.APPLICATION_COMMAND: application_command_handler,
+            LLMActionType.GENERATE_IMAGE: generate_image_handler,
+        }
+
+        handler = tool_handlers.get(action)
+        if handler is None:
+            self.logger.warning(f"No handler found for action: {action}")
+            return None
+
+        self.logger.info(f"Performing tool call for action: {action}")
+        response = handler(**kwargs)
+        self.logger.info(f"Tool call for action {action} completed.")
+        return response
+
+    def _strip_previous_messages_from_conversation(self) -> None:
         """
         Strips the previous messages from the conversation.
         """
@@ -1309,21 +1099,31 @@ class BaseAgent(
                 self.conversation_id, value=conversation.value[:-2]
             )
 
-    def _update_memory(self, action: LLMActionType):
+    def _update_memory(self, action: LLMActionType) -> None:
+        """
+        Update the memory for the given action.
+        Args:
+            action (LLMActionType): The action type to update memory for.
+        """
         memory = None
-        if action is LLMActionType.CHAT:
-            memory = self.chat_engine.memory if self.chat_engine else None
+        if self._memory_strategy:
+            memory = self._memory_strategy(action, self)
+        elif action is LLMActionType.CHAT:
+            # ...existing code for chat memory...
+            pass
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            memory = self.rag_engine.memory if self.rag_engine else None
+            # ...existing code for RAG memory...
+            pass
         elif action is LLMActionType.APPLICATION_COMMAND:
-            memory = (
-                self.react_tool_agent.chat_engine.memory
-                if self.react_tool_agent
-                else None
-            )
+            # ...existing code for application command memory...
+            pass
         self._memory = memory
 
-    def _update_mood(self):
+    @log_method_entry_exit
+    def _update_mood(self) -> None:
+        """
+        Update the bot's mood based on the conversation.
+        """
         self.logger.info("Attempting to update mood")
         conversation = self.conversation
         if (
@@ -1362,7 +1162,6 @@ class BaseAgent(
         chat_history = chat_history[start_index:]
         kwargs = {
             "input": f"What is {self.botname}'s mood based on this conversation?",
-            # "chat_history": chat_history,
         }
         response = self.mood_engine_tool.call(do_not_display=True, **kwargs)
         self.logger.info(f"Saving conversation with mood: {response.content}")
@@ -1373,7 +1172,11 @@ class BaseAgent(
             last_updated_message_id=latest_message_id,
         )
 
-    def _update_user_data(self):
+    @log_method_entry_exit
+    def _update_user_data(self) -> None:
+        """
+        Update the user data based on the conversation.
+        """
         self.logger.info("Attempting to update user preferences")
         conversation = self.conversation
         self.logger.info("Updating user preferences")
@@ -1389,16 +1192,13 @@ class BaseAgent(
             ]
         kwargs = {
             "input": f"Extract concise, one-sentence summaries of relevant information about {self.username} from this conversation.",
-            # "chat_history": chat_history,
         }
         response = self.update_user_data_tool.call(
             do_not_display=True, **kwargs
         )
         if response.content.strip():
             self.logger.info("Updating user with new information")
-            concise_summary = response.content.strip().split("\n")[
-                :5
-            ]  # Limit to 5 concise summaries
+            concise_summary = response.content.strip().split("\n")[:5]
             Conversation.objects.update(
                 self.conversation_id,
                 user_data=concise_summary
@@ -1407,7 +1207,11 @@ class BaseAgent(
         else:
             self.logger.info("No meaningful information to update.")
 
-    def _summarize_conversation(self):
+    @log_method_entry_exit
+    def _summarize_conversation(self) -> None:
+        """
+        Summarize the conversation.
+        """
         if (
             not self.llm_settings.perform_conversation_summary
             or not self.do_summarize_conversation
@@ -1436,7 +1240,6 @@ class BaseAgent(
         response = self.summary_engine_tool.call(
             do_not_display=True,
             input="Provide a brief summary of this conversation",
-            # chat_history=chat_history,
         )
         self.logger.info(
             f"Saving conversation with summary: {response.content}"
@@ -1447,9 +1250,22 @@ class BaseAgent(
             value=conversation.value[:-2],
         )
 
+    @log_method_entry_exit
     def _log_system_prompt(
-        self, action, system_prompt, rag_system_prompt, llm_request
-    ):
+        self,
+        action: LLMActionType,
+        system_prompt: Optional[str],
+        rag_system_prompt: Optional[str],
+        llm_request: LLMRequest,
+    ) -> None:
+        """
+        Log the system prompt for debugging purposes.
+        Args:
+            action (LLMActionType): The action type.
+            system_prompt (Optional[str]): The system prompt.
+            rag_system_prompt (Optional[str]): The RAG system prompt.
+            llm_request (LLMRequest): The LLM request.
+        """
         if self.llm_settings.print_llm_system_prompt:
             if action is LLMActionType.PERFORM_RAG_SEARCH:
                 self.logger.info(
@@ -1459,41 +1275,19 @@ class BaseAgent(
                 self.logger.info("SYSTEM PROMPT:\n" + (system_prompt or ""))
             self.logger.info(llm_request.to_dict())
 
-    def _scrape_information(self, message: str):
+    def _scrape_information(self, message: str) -> None:
+        """
+        Scrape information from the given message.
+        Args:
+            message (str): The message to scrape information from.
+        """
         self.logger.info("Attempting to scrape information")
         self.react_tool_agent.call(
             tool_choice="information_scraper_tool",
             input=message,
-            # chat_history=self._memory.get_all() if self._memory else None,
         )
 
-    def _create_conversation(self) -> Conversation:
-        conversation = None
-        if self.conversation_id:
-            self.logger.info(
-                f"Loading conversation with ID: {self.conversation_id}"
-            )
-            conversation = Conversation.objects.get(self.conversation_id)
-
-        if not conversation:
-            self.logger.info("No conversation found, looking for most recent")
-            conversation = Conversation.most_recent()
-
-        if not conversation:
-            self.logger.info("Creating new conversation")
-            conversation = Conversation.create()
-
-        return conversation
-
-    def _update_conversation(self, key: str, value: Any):
-        if self.conversation:
-            setattr(self.conversation, key, value)
-            Conversation.objects.update(self.conversation_id, **{key: value})
-
-    def _update_user(self, key: str, value: Any):
-        setattr(self.user, key, value)
-        self.user.save()
-
+    @log_method_entry_exit
     def chat(
         self,
         message: str,
@@ -1501,11 +1295,22 @@ class BaseAgent(
         system_prompt: Optional[str] = None,
         rag_system_prompt: Optional[str] = None,
         llm_request: Optional[LLMRequest] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AgentChatResponse:
+        """
+        Handle a chat message and generate a response.
+        Args:
+            message (str): The chat message.
+            action (LLMActionType): The action type.
+            system_prompt (Optional[str]): The system prompt.
+            rag_system_prompt (Optional[str]): The RAG system prompt.
+            llm_request (Optional[LLMRequest]): The LLM request.
+            **kwargs (Any): Additional arguments.
+        Returns:
+            AgentChatResponse: The chat response.
+        """
         self.prompt = message
         self.action = action
-        # system_prompt = system_prompt or self.system_prompt
         system_prompt = self.system_prompt
         self._chat_prompt = message
         self._complete_response = ""
@@ -1515,53 +1320,30 @@ class BaseAgent(
         kwargs.update(
             {
                 "input": f"{self.username}: {message}",
-                # "chat_history": (
-                #     self._memory.get_all() if self._memory else None
-                # ),
-                "llm_request": llm_request,
             }
         )
-        # self._perform_analysis(action)
-        # self._summarize_conversation()
-        # self._log_system_prompt(
-        #     action, system_prompt, rag_system_prompt, llm_request
-        # )
         self._update_system_prompt(system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._update_memory_settings()
         self._perform_tool_call(action, **kwargs)
         return AgentChatResponse(response=self._complete_response)
 
-    # def chat(
-    #     self,
-    #     message: str,
-    #     action: LLMActionType = LLMActionType.CHAT,
-    #     system_prompt: Optional[str] = None,
-    #     rag_system_prompt: Optional[str] = None,
-    #     llm_request: Optional[LLMRequest] = None,
-    #     **kwargs,
-    # ) -> AgentChatResponse:
-    #     kwargs = kwargs or {}
-    #     kwargs.update(
-    #         {
-    #             "input": message,
-    #             "chat_history": [],
-    #             "llm_request": llm_request,
-    #         }
-    #     )
-    #     self._chat_prompt = message
-    #     print("CALLING PERFORM TOOL CALL WITH", action, kwargs)
-    #     self._update_system_prompt(system_prompt, rag_system_prompt)
-    #     self._update_llm_request(llm_request)
-    #     self._perform_tool_call(action, **kwargs)
-    #     return AgentChatResponse(response=self._complete_response)
-
-    def on_load_conversation(self, data: Optional[Dict] = None):
+    def on_load_conversation(self, data: Optional[Dict] = None) -> None:
+        """
+        Handle loading a conversation.
+        Args:
+            data (Optional[Dict]): The conversation data.
+        """
         data = data or {}
         conversation_id = data.get("conversation_id", None)
         self.conversation = Conversation.objects.get(conversation_id)
 
-    def on_conversation_deleted(self, data: Optional[Dict] = None):
+    def on_conversation_deleted(self, data: Optional[Dict] = None) -> None:
+        """
+        Handle conversation deletion.
+        Args:
+            data (Optional[Dict]): The conversation data.
+        """
         data = data or {}
         conversation_id = data.get("conversation_id", None)
         if (
@@ -1570,62 +1352,49 @@ class BaseAgent(
         ):
             self.conversation = None
             self.conversation_id = None
-            self.reset_memory()
 
-    def clear_history(self, data: Optional[Dict] = None):
+    def clear_history(self, data: Optional[Dict] = None) -> None:
+        """
+        Clear the conversation history.
+        Args:
+            data (Optional[Dict]): The conversation data.
+        """
         data = data or {}
         conversation_id = data.get("conversation_id", None)
 
         self.conversation_id = conversation_id
 
-        # Only reset memory if chat_engine can be loaded
         try:
-            _ = self.chat_engine  # will trigger property and log if error
+            _ = self.chat_engine
         except Exception as e:
             self.logger.warning(
                 f"clear_history: chat_engine not available, skipping reset_memory and continuing UI: {e}"
             )
-            return  # Do nothing else, let UI proceed
+            return
         if self.chat_engine is None:
             self.logger.warning(
                 "clear_history: chat_engine is None after property, skipping reset_memory and continuing UI."
             )
             return
-        self.reset_memory()
 
-    def reset_memory(self):
-        self.chat_memory = None
-        self.chat_store = None
-        # Defensive: check for None before using
-        if self.chat_store is not None:
-            messages = self.chat_store.get_messages(
-                key=str(self.conversation_id)
-            )
-        else:
-            messages = []
-        if self.chat_memory is not None:
-            self.chat_memory.set(messages)
-        # Only set memory if chat_engine is initialized
-        if self.chat_engine is not None:
-            self.chat_engine.memory = self.chat_memory
-        else:
-            self.logger.warning(
-                "reset_memory: chat_engine is None, cannot set memory."
-            )
-        if (
-            hasattr(self, "react_tool_agent")
-            and self.react_tool_agent is not None
-        ):
-            self.react_tool_agent.memory = self.chat_memory
-        self.reload_rag_engine()
-
-    def save_chat_history(self):
+    def save_chat_history(self) -> None:
+        """
+        Save the chat history.
+        """
         pass
 
-    def interrupt_process(self):
+    def interrupt_process(self) -> None:
+        """
+        Interrupt the current process.
+        """
         self.do_interrupt = True
 
-    def do_interrupt_process(self):
+    def do_interrupt_process(self) -> bool:
+        """
+        Check if the process should be interrupted.
+        Returns:
+            bool: True if the process should be interrupted.
+        """
         if self.do_interrupt:
             self.api.llm.send_llm_text_streamed_signal(
                 LLMResponse(
@@ -1634,6 +1403,7 @@ class BaseAgent(
             )
         return self.do_interrupt
 
+    @log_method_entry_exit
     def handle_response(
         self,
         response: str,
@@ -1641,7 +1411,7 @@ class BaseAgent(
         is_last_message: bool = False,
         do_not_display: bool = False,
         do_tts_reply: bool = True,
-    ):
+    ) -> None:
         if response != self._complete_response and not do_not_display:
             self.api.llm.send_llm_text_streamed_signal(
                 LLMResponse(
@@ -1653,3 +1423,141 @@ class BaseAgent(
                 )
             )
         self._complete_response += response
+
+    def get_tool(self, name: str) -> Optional[BaseTool]:
+        """
+        Get a tool by name from the registry.
+        Args:
+            name (str): The name of the tool.
+        Returns:
+            Optional[BaseTool]: The tool instance.
+        """
+        return ToolRegistry.get(name)
+
+    def get_engine(self, name: str) -> Optional[RefreshSimpleChatEngine]:
+        """
+        Get an engine by name from the registry.
+        Args:
+            name (str): The name of the engine.
+        Returns:
+            Optional[RefreshSimpleChatEngine]: The engine instance.
+        """
+        return EngineRegistry.get(name)
+
+    @property
+    def chatbot(self) -> Any:
+        """
+        Get the chatbot instance.
+        Returns:
+            Any: The chatbot instance.
+        """
+        if hasattr(self, "_chatbot") and self._chatbot is not None:
+            return self._chatbot
+        return super().chatbot
+
+    @chatbot.setter
+    def chatbot(self, value: Any) -> None:
+        """
+        Set the chatbot instance.
+        Args:
+            value (Any): The chatbot instance to set.
+        """
+        self._chatbot = value
+
+
+class PromptBuilder:
+    """
+    Helper class to modularize and construct the system prompt for BaseAgent.
+    """
+
+    def __init__(self, agent: "BaseAgent") -> None:
+        """
+        Initialize the PromptBuilder.
+        Args:
+            agent (BaseAgent): The agent instance for which to build the prompt.
+        """
+        self.agent = agent
+
+    def build(self) -> str:
+        """
+        Build and return the system prompt string for the agent.
+        Returns:
+            str: The constructed system prompt.
+        """
+        chatbot = self.agent.chatbot
+        botname = self.agent.botname
+        username = self.agent.username
+        system_instructions = ""
+        if (
+            chatbot.use_system_instructions
+            and chatbot.system_instructions
+            and chatbot.system_instructions != ""
+        ):
+            system_instructions = f"Always follow these instructions:\n{chatbot.system_instructions}\n"
+        guardrails = ""
+        if (
+            chatbot.use_guardrails
+            and chatbot.guardrails_prompt
+            and chatbot.guardrails_prompt != ""
+        ):
+            guardrails = f"Always follow these guardrails:\n{chatbot.guardrails_prompt}\n"
+        backstory_prompt = ""
+        if (
+            chatbot.use_backstory
+            and chatbot.backstory
+            and chatbot.backstory != ""
+        ):
+            backstory_prompt = (
+                "------\n"
+                f"**Here is {botname}'s backstory:**\n"
+                f"{chatbot.backstory}\n"
+                "------\n"
+            )
+        conversation_timestamp_prompt = ""
+        if self.agent.conversation is not None:
+            conversation_timestamp_prompt = f"The conversation started on {self.agent.conversation.timestamp}.\n"
+        prompt = (
+            f"Your name is {botname}.\n"
+            f"- The user ({username}) is having a conversation with the assistant ({botname}).\n"
+            "**Here are the rules that you must always remember:**\n"
+            "- You will ONLY generate dialogue, nothing more.\n"
+            "- Only generate responses in pure dialogue form without including any actions, descriptions or stage "
+            "directions in parentheses. Only return spoken words.\n"
+            "- Do not generate redundant dialogue. Examine the conversation and context close and keep responses "
+            "interesting and creative.\n"
+            "- Do not format the response with the character's name or any other text. Only return the dialogue.\n"
+            f"- Never generate dialogue for {username}, only for {botname}\n"
+            f"- Never generate dialogue that has already been said in the conversation.\n"
+            f"- {botname} and {username} are both humans. They are not AI or bots.\n"
+            f"- As {botname}, you will always respond in a way that is consistent with {botname}'s emotions, "
+            f"personality, and the context of the conversation.\n"
+            f"- Generate emotional, persuasive, and realistic responses.\n"
+            f"- Do not generate text asking how to provide assistance, or how to can help.\n"
+            f"- Generate dialogue that is realistic for the {botname} character.\n"
+            f"- The generate dialogue can contain questions, make statements, and provide information.\n"
+            f"- Generated dialogue should be consistent with {botname}'s personality and mood.\n"
+            f"{backstory_prompt}"
+            f"{system_instructions}"
+            f"{guardrails}"
+            "------\n"
+            "**Here is more context that you can use to generate a response:**\n"
+            f"{self.agent.date_time_prompt}"
+            f"{self.agent.personality_prompt}"
+            f"{self.agent.mood_prompt}"
+            f"{self.agent.operating_system_prompt}"
+            f"{self.agent.speakers_prompt}"
+            f"{self.agent.weather_prompt}"
+            f"{self.agent.conversation_summary_prompt}"
+            "------\n"
+            "**More information about the current conversation:**\n"
+            f"The conversation is between user ({username}) and assistant ({botname}).\n"
+            f"{conversation_timestamp_prompt}"
+            "------\n"
+        )
+        if self.agent.language:
+            prompt += f"Respond to {{ username }} in {self.agent.language}. Only deviate from this if the user asks you to.\n"
+        prompt = prompt.replace("{{ username }}", username)
+        prompt = prompt.replace("{{ botname }}", botname)
+        prompt = prompt.replace("{{ speaker_name }}", username)
+        prompt = prompt.replace("{{ listener_name }}", botname)
+        return prompt
