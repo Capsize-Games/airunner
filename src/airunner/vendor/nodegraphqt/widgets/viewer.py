@@ -24,6 +24,7 @@ from airunner.vendor.nodegraphqt.qgraphics.slicer import SlicerPipeItem
 from airunner.vendor.nodegraphqt.widgets.dialogs import BaseDialog, FileDialog
 from airunner.vendor.nodegraphqt.widgets.scene import NodeScene
 from airunner.vendor.nodegraphqt.widgets.tab_search import TabSearchMenuWidget
+from airunner.utils.application.get_logger import get_logger
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
@@ -63,6 +64,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
                                                graph controller.
         """
         super(NodeViewer, self).__init__(parent)
+        self.logger = get_logger(__name__)
 
         self.setScene(NodeScene(self))
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
@@ -1657,7 +1659,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         Args:
             value (float): zoom level
         """
-        print(
+        self.logger.debug(
             f"[NodeViewer.set_zoom] Called with value={value}, current get_zoom={self.get_zoom()}"
         )
         if value == 0.0:
@@ -1666,14 +1668,20 @@ class NodeViewer(QtWidgets.QGraphicsView):
         zoom = self.get_zoom()
         if zoom < 0.0:
             if not (ZOOM_MIN <= zoom <= ZOOM_MAX):
-                print(f"[NodeViewer.set_zoom] Out of bounds: zoom={zoom}")
+                self.logger.debug(
+                    f"[NodeViewer.set_zoom] Out of bounds: zoom={zoom}"
+                )
                 return
         else:
             if not (ZOOM_MIN <= value <= ZOOM_MAX):
-                print(f"[NodeViewer.set_zoom] Out of bounds: value={value}")
+                self.logger.debug(
+                    f"[NodeViewer.set_zoom] Out of bounds: value={value}"
+                )
                 return
         value = value - zoom
-        print(f"[NodeViewer.set_zoom] Applying delta value={value}")
+        self.logger.debug(
+            f"[NodeViewer.set_zoom] Applying delta value={value}"
+        )
         self._set_viewer_zoom(value, 0.0)
 
     def set_zoom_absolute(self, value: float):
@@ -1683,15 +1691,14 @@ class NodeViewer(QtWidgets.QGraphicsView):
         Args:
             value (float): The absolute scale to set (e.g., 1.0 for 100%).
         """
-        print("SET ABSOLUTE ZOOM ", value)
         if not (0.01 <= value <= 10.0):  # Reasonable bounds for scale
-            print(
+            self.logger.debug(
                 f"[NodeViewer.set_zoom_absolute] Out of bounds: value={value}"
             )
             return
         current_scale = self.transform().m11()
         delta = value / current_scale
-        print(
+        self.logger.debug(
             f"[NodeViewer.set_zoom_absolute] Setting absolute scale: current={current_scale}, target={value}, scale delta={delta}"
         )
         self.scale(delta, delta)
