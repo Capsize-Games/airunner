@@ -156,7 +156,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.generator_settings.quality_effects
         )
         self.ui.infinite_images_button.setChecked(
-            self.generator_settings.generate_infinite_images if self.generator_settings.generate_infinite_images is not None else False
+            self.generator_settings.generate_infinite_images
+            if self.generator_settings.generate_infinite_images is not None
+            else False
         )
         self.ui.quality_effects.blockSignals(False)
         self.ui.infinite_images_button.blockSignals(False)
@@ -455,8 +457,21 @@ class StableDiffusionGeneratorForm(BaseWidget):
     # End LLM Generated Image handlers
     ##########################################################################
 
+    def connect_prompt_container_signals(self, prompt_container):
+        """Connects the textChanged signals of a prompt container to save settings on edit."""
+        prompt_container.ui.prompt.textChanged.connect(
+            self.on_additional_prompt_text_changed
+        )
+        prompt_container.ui.secondary_prompt.textChanged.connect(
+            self.on_additional_prompt_text_changed
+        )
+
+    def on_additional_prompt_text_changed(self):
+        """Slot to save prompt containers when any additional prompt text is changed."""
+        self.save_prompt_containers_to_settings()
+
     @Slot()
-    def handle_add_prompt_clicked(self):
+    def on_add_prompt_button_clicked(self):
         additional_prompts_container_layout = (
             self.ui.additional_prompts_container_layout
         )
@@ -466,6 +481,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
         # store prompt container in self._prompt_containers
         self._prompt_containers[prompt_container.prompt_id] = prompt_container
+
+        # Connect signals for saving on text change
+        self.connect_prompt_container_signals(prompt_container)
 
         # Save the updated prompt containers
         self.save_prompt_containers_to_settings()
@@ -821,25 +839,16 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 self.ui.interrupt_button.setEnabled(False)
 
     def showEvent(self, event):
-        super().showEvent(event)
-        self.set_form_values()
-        self.initialized = True
-        self.thread.start()
+        if not self.initialized:
+            super().showEvent(event)
+            self.set_form_values()
+            self.initialized = True
+            self.thread.start()
 
-        load_splitter_settings(self.ui, ["generator_form_splitter"])
+            load_splitter_settings(self.ui, ["generator_form_splitter"])
 
-        # Restore prompt containers when widget is shown
-        self.restore_prompt_containers_from_settings()
-
-    def hideEvent(self, event):
-        """When widget is hidden, save prompt containers."""
-        super().hideEvent(event)
-        self.save_prompt_containers_to_settings()
-
-    def closeEvent(self, event):
-        """When widget is closed, save prompt containers."""
-        self.save_prompt_containers_to_settings()
-        super().closeEvent(event)
+            # Restore prompt containers when widget is shown
+            self.restore_prompt_containers_from_settings()
 
     def set_form_values(self, _data=None):
         self.ui.prompt.blockSignals(True)
@@ -972,5 +981,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 prompt_container
             )
             self._prompt_containers[prompt_id] = prompt_container
+
+            # Connect signals for saving on text change
+            self.connect_prompt_container_signals(prompt_container)
 
         settings.endGroup()
