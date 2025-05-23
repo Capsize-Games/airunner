@@ -74,6 +74,7 @@ class NodeGraphWidget(BaseWidget):
             SignalCode.NODEGRAPH_ZOOM: self._on_nodegraph_zoom_changed,
             SignalCode.NODEGRAPH_PAN: self._on_nodegraph_pan_changed,
         }
+        self.initialized = False
         self._splitters = ["splitter"]
         super().__init__(*args, **kwargs)
         self.q_settings = get_qsettings()
@@ -1457,8 +1458,10 @@ class NodeGraphWidget(BaseWidget):
         super().closeEvent(event)
 
     def showEvent(self, event):
-        self._restore_nodegraph_state()
-        super().showEvent(event)
+        if not self.initialized:
+            self._restore_nodegraph_state()
+            super().showEvent(event)
+            self.initialized = True
 
     def _restore_nodegraph_state(self):
         """Restore nodegraph zoom and pan (center) from workflow or ApplicationSettings after workflow load."""
