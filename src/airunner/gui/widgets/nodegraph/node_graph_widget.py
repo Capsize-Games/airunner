@@ -74,6 +74,7 @@ class NodeGraphWidget(BaseWidget):
             SignalCode.NODEGRAPH_ZOOM: self._on_nodegraph_zoom_changed,
             SignalCode.NODEGRAPH_PAN: self._on_nodegraph_pan_changed,
         }
+        self.initialized = False
         self._splitters = ["splitter"]
         super().__init__(*args, **kwargs)
         self.q_settings = get_qsettings()
@@ -566,6 +567,8 @@ class NodeGraphWidget(BaseWidget):
         workflow.description = description
         try:
             workflow.save()
+            # Re-fetch the workfow to ensure it is session-bound and attributes are accessible
+            workflow = self._find_workflow_by_id(workflow_id)
         except Exception as e:
             self.logger.error(
                 f"Error updating workflow metadata: {e}", exc_info=True
@@ -679,8 +682,7 @@ class NodeGraphWidget(BaseWidget):
             self.logger.info(
                 f"Data being saved to workflow.variables: {variables_data}"
             )
-            workflow.variables = variables_data
-            workflow.save()  # Ensure the ORM actually persists the change
+            Workflow.objects.update(workflow.id, variables=variables_data)
             self.logger.info(
                 f"Saved {len(variables_data)} variables to workflow ID {workflow.id}"
             )
@@ -689,7 +691,7 @@ class NodeGraphWidget(BaseWidget):
                 f"Error saving variables for workflow ID {workflow.id}: {e}"
             )
 
-    def _save_nodes(self, workflow_id: int) -> Dict:
+    def _save_nodes(self, workflow_id: int) -> dict:
         """
         Save nodes in the graph to the database using CRUD operations.
         Updates existing nodes, creates new ones, and removes obsolete ones.
@@ -709,7 +711,6 @@ class NodeGraphWidget(BaseWidget):
             self.logger.warning(
                 f"Multiple StartNodes ({len(start_nodes)}) detected in graph. Will save only the first one."
             )
-            # Keep only the first StartNode - remove others from processing
             kept_start_node = start_nodes[0]
             all_graph_nodes = [
                 node
@@ -721,16 +722,15 @@ class NodeGraphWidget(BaseWidget):
                 f"Keeping StartNode: {kept_start_node.name()} (ID: {kept_start_node.id}), filtering out {len(start_nodes) - 1} duplicate StartNodes."
             )
 
-        # First, get all existing nodes for this workflow
+        # Get all existing nodes for this workflow (returns detached instances)
         try:
-            existing_nodes = WorkflowNode.objects.filter_by(
-                workflow_id=workflow_id
+            existing_nodes = (
+                WorkflowNode.objects.filter_by(workflow_id=workflow_id) or []
             )
             existing_node_map = {}
             for db_node in existing_nodes:
-                # Create a key based on node identifier and position to find matching nodes
                 key = f"{db_node.node_identifier}_{db_node.pos_x}_{db_node.pos_y}"
-                existing_node_map[key] = db_node
+                existing_node_map[key] = db_node.id  # Only store the id!
             self.logger.info(
                 f"Found {len(existing_node_map)} existing nodes in the database"
             )
@@ -740,37 +740,35 @@ class NodeGraphWidget(BaseWidget):
             )
             existing_node_map = {}
 
-        # Track which database nodes are still in use
         used_db_node_ids = set()
 
-        # Process all graph nodes
         for node in all_graph_nodes:
             properties_to_save = self._extract_node_properties(node)
-
-            # Create a key to match with existing nodes
             node_key = f"{node.type_}_{node.pos()[0]}_{node.pos()[1]}"
-            db_node = existing_node_map.get(node_key)
+            db_node_id = existing_node_map.get(node_key)
 
-            if db_node:
-                # Update existing node
-                self.logger.info(
-                    f"Updating existing node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id})"
-                )
-                db_node.name = node.name()
-                db_node.pos_x = node.pos()[0]
-                db_node.pos_y = node.pos()[1]
-                db_node.properties = properties_to_save
+            if db_node_id:
+                # Update using the manager method
                 try:
-                    db_node.save()
-                    nodes_map[node.id] = db_node.id
-                    used_db_node_ids.add(db_node.id)
+                    WorkflowNode.objects.update(
+                        db_node_id,
+                        name=node.name(),
+                        pos_x=node.pos()[0],
+                        pos_y=node.pos()[1],
+                        properties=properties_to_save,
+                    )
+                    nodes_map[node.id] = db_node_id
+                    used_db_node_ids.add(db_node_id)
+                    self.logger.info(
+                        f"Updated node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node_id})"
+                    )
                 except Exception as e:
                     self.logger.error(
                         f"Error updating node {node.name()}: {e}",
                         exc_info=True,
                     )
             else:
-                # Create new node
+                # Create new node and use the returned dataclass
                 try:
                     db_node = WorkflowNode.objects.create(
                         workflow_id=workflow_id,
@@ -780,7 +778,7 @@ class NodeGraphWidget(BaseWidget):
                         pos_y=node.pos()[1],
                         properties=properties_to_save,
                     )
-                    if db_node:
+                    if db_node and hasattr(db_node, "id"):
                         nodes_map[node.id] = db_node.id
                         used_db_node_ids.add(db_node.id)
                         self.logger.info(
@@ -805,7 +803,7 @@ class NodeGraphWidget(BaseWidget):
         if nodes_to_delete:
             try:
                 for node_id in nodes_to_delete:
-                    WorkflowNode.objects.delete_by(id=node_id)
+                    WorkflowNode.objects.delete(node_id)
                 self.logger.info(
                     f"Deleted {len(nodes_to_delete)} obsolete nodes from the database"
                 )
@@ -813,48 +811,6 @@ class NodeGraphWidget(BaseWidget):
                 self.logger.error(
                     f"Error deleting obsolete nodes: {e}", exc_info=True
                 )
-
-        # Check if we have any StartNodes at all in the database after saving
-        start_node_identifiers = [
-            node_type
-            for node_type in self.graph.registered_nodes()
-            if isinstance(node_type, type) and issubclass(node_type, StartNode)
-        ]
-
-        if start_node_identifiers:
-            start_node_db_check = WorkflowNode.objects.filter_by_first(
-                workflow_id=workflow_id,
-                node_identifier__in=start_node_identifiers,
-            )
-
-            if not start_node_db_check:
-                self.logger.warning(
-                    "No StartNode found in database after saving. Adding one automatically."
-                )
-                # We need to update the nodes_map to include the newly created StartNode
-                for node in self.graph.all_nodes():
-                    if (
-                        isinstance(node, StartNode)
-                        and node.id not in nodes_map
-                    ):
-                        try:
-                            db_node = WorkflowNode.objects.create(
-                                workflow_id=workflow_id,
-                                node_identifier=node.type_,
-                                name=node.name(),
-                                pos_x=node.pos()[0],
-                                pos_y=node.pos()[1],
-                                properties=self._extract_node_properties(node),
-                            )
-                            if db_node:
-                                nodes_map[node.id] = db_node.id
-                                self.logger.info(
-                                    f"Created new StartNode: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id})"
-                                )
-                        except Exception as e:
-                            self.logger.error(
-                                f"Error creating StartNode: {e}", exc_info=True
-                            )
 
         return nodes_map
 
@@ -1019,6 +975,7 @@ class NodeGraphWidget(BaseWidget):
                 )
 
         # Delete connections that are no longer in the graph
+        # Delete connections that are no longer in the graph
         connections_to_delete = [
             db_conn
             for key, db_conn in existing_conn_map.items()
@@ -1060,6 +1017,7 @@ class NodeGraphWidget(BaseWidget):
             workflow_id=workflow_id,
             db_nodes=db_nodes,
             db_connections=db_connections,
+            workflow=workflow,  # Ensure workflow is included for downstream use
         )
         self.api.nodegraph.load_workflow(
             workflow=workflow,
@@ -1073,9 +1031,19 @@ class NodeGraphWidget(BaseWidget):
         if db_nodes is not None:
             node_map = self._load_workflow_nodes(db_nodes)
             self._load_workflow_connections(db_connections, node_map)
+            if not node_map:
+                self.logger.warning(
+                    "No nodes were loaded for this workflow. The node_map is empty."
+                )
+            else:
+                # Center the view on the loaded nodes and reset zoom
+                self._center_view_on_nodes(list(node_map.values()))
+                self._reset_zoom_level()
             self.logger.info(
-                f"Workflow '{workflow.name}' loaded successfully."
+                f"Workflow '{workflow.name if workflow else ''}' loaded successfully."
             )
+        else:
+            self.logger.warning("No db_nodes found in workflow data.")
         self._restore_nodegraph_state()
 
     def _clear_graph(self, add_start_node: bool = True):
@@ -1289,56 +1257,22 @@ class NodeGraphWidget(BaseWidget):
                     db_node.node_identifier,
                     name=db_node.name,
                     pos=(db_node.pos_x, db_node.pos_y),
-                    push_undo=False,  # Avoid polluting undo stack during load
+                    push_undo=False,
                 )
-
-                if not node_instance:
-                    self.logger.error(
-                        f"  Failed to create node instance for identifier: {db_node.node_identifier}, name: {db_node.name}"
-                    )
-                    continue
-
-                # Restore dynamic ports BEFORE restoring other properties
-                if (
-                    isinstance(node_instance, BaseWorkflowNode)
-                    and db_node.properties
-                ):
-                    # Retrieve saved dynamic port names
-                    dynamic_input_names = db_node.properties.get(
-                        "_dynamic_input_names", []
-                    )
-                    for name in dynamic_input_names:
-                        # Ensure the add_dynamic_input method also updates the node's internal list (_dynamic_input_names)
-                        node_instance.add_dynamic_input(name)
-                        self.logger.info(
-                            f"  Restored dynamic input '{name}' for node {node_instance.name()}"
-                        )
-
-                    dynamic_output_names = db_node.properties.get(
-                        "_dynamic_output_names", []
-                    )
-                    for name in dynamic_output_names:
-                        # Ensure the add_dynamic_output method also updates the node's internal list (_dynamic_output_names)
-                        node_instance.add_dynamic_output(name)
-                        self.logger.info(
-                            f"  Restored dynamic output '{name}' for node {node_instance.name()}"
-                        )
-
-                # Restore other properties
-                if db_node.properties:
+                if node_instance:
+                    node_map[db_node.id] = node_instance
+                    # Restore properties
                     self._restore_node_properties(
-                        node_instance, db_node.properties
+                        node_instance, db_node.properties or {}
                     )
-
-                node_map[db_node.id] = node_instance
-                self.logger.info(
-                    f"  Loaded node: {node_instance.name()} (DB ID: {db_node.id}, Graph ID: {node_instance.id})"
-                )
-
+                else:
+                    self.logger.warning(
+                        f"Failed to create node for identifier {db_node.node_identifier}"
+                    )
             except Exception as e:
                 self.logger.error(
-                    f"  FATAL Error loading node DB ID {db_node.id} ({db_node.name}): {e}",
-                    exc_info=True,  # Log traceback for debugging
+                    f"Error loading node {getattr(db_node, 'name', '?')}: {e}",
+                    exc_info=True,
                 )
 
         self.graph.undo_stack().clear()  # Clear undo stack after loading
@@ -1346,6 +1280,36 @@ class NodeGraphWidget(BaseWidget):
             f"Finished loading nodes. Total loaded: {len(node_map)}/{len(db_nodes)}"
         )
         return node_map
+
+    def _center_view_on_nodes(self, node_instances):
+        """Center the nodegraph view on the loaded nodes."""
+        if not node_instances:
+            return
+        positions = [
+            node.pos() for node in node_instances if hasattr(node, "pos")
+        ]
+        if not positions:
+            return
+        min_x = min(pos[0] for pos in positions)
+        max_x = max(pos[0] for pos in positions)
+        min_y = min(pos[1] for pos in positions)
+        max_y = max(pos[1] for pos in positions)
+        center_x = (min_x + max_x) / 2
+        center_y = (min_y + max_y) / 2
+        if hasattr(self.viewer, "centerOn"):
+            self.viewer.centerOn(center_x, center_y)
+        elif hasattr(self.viewer, "setSceneRect"):
+            # Fallback: set scene rect to fit all nodes
+            self.viewer.setSceneRect(
+                min_x, min_y, max_x - min_x + 1, max_y - min_y + 1
+            )
+
+    def _reset_zoom_level(self):
+        """Reset the nodegraph view zoom to default (100%)."""
+        if hasattr(self.viewer, "set_zoom"):
+            self.viewer.set_zoom(1.0)
+        elif hasattr(self.viewer, "resetTransform"):
+            self.viewer.resetTransform()
 
     def _restore_node_properties(self, node_instance, properties):
         """Restore node properties from saved data."""
@@ -1425,31 +1389,26 @@ class NodeGraphWidget(BaseWidget):
 
     def _on_nodegraph_zoom_changed(self, data: Dict):
         """Signal handler for NODEGRAPH_ZOOM signal."""
-        zoom = data.get("zoom_level", 0)
-        # Get the center directly from the signal data if available, or use current viewer center
-        if "center_x" in data and "center_y" in data:
-            try:
-                center_x = int(data.get("center_x", 0) or 0)
-                center_y = int(data.get("center_y", 0) or 0)
-            except (TypeError, ValueError):
-                center_x = 0
-                center_y = 0
-        else:
-            # If no center data in signal, don't update center values
-            settings = self.application_settings
-            try:
-                center_x = int(getattr(settings, "nodegraph_center_x", 0) or 0)
-                center_y = int(getattr(settings, "nodegraph_center_y", 0) or 0)
-            except (TypeError, ValueError):
-                center_x = 0
-                center_y = 0
+        # zoom = data.get("zoom_level", 0)
+        # # Get the center directly from the signal data if available, or use current viewer center
+        # if "center_x" in data and "center_y" in data:
+        #     try:
+        #         center_x = int(data.get("center_x", 0) or 0)
+        #         center_y = int(data.get("center_y", 0) or 0)
+        #     except (TypeError, ValueError):
+        #         center_x = 0
+        #         center_y = 0
+        # else:
+        #     # If no center data in signal, don't update center values
+        #     settings = self.application_settings
+        #     try:
+        #         center_x = int(getattr(settings, "nodegraph_center_x", 0) or 0)
+        #         center_y = int(getattr(settings, "nodegraph_center_y", 0) or 0)
+        #     except (TypeError, ValueError):
+        #         center_x = 0
+        #         center_y = 0
 
-        ApplicationSettings.objects.update(
-            self.application_settings.id,
-            nodegraph_zoom=zoom,
-            nodegraph_center_x=center_x,
-            nodegraph_center_y=center_y,
-        )
+        self._save_state()
 
     def _on_nodegraph_pan_changed(self, data: Dict):
         """Signal handler for NODEGRAPH_PAN signal."""
@@ -1467,37 +1426,21 @@ class NodeGraphWidget(BaseWidget):
         except (TypeError, ValueError):
             zoom = 0
 
-        ApplicationSettings.objects.update(
-            self.application_settings.id,
-            nodegraph_zoom=zoom,
-            nodegraph_center_x=center_x,
-            nodegraph_center_y=center_y,
-        )
-
-    def save_state(self):
-        super().save_state()
         self._save_state()
 
-    def restore_state(self):
-        super().restore_state()
-        self._restore_nodegraph_state()
-
     def closeEvent(self, event):
-        zoom = self.viewer.get_zoom()
-        center = self.viewer.scene_center()
-        ApplicationSettings.objects.update(
-            self.application_settings.id,
-            nodegraph_zoom=zoom,
-            nodegraph_center_x=int(center[0]),
-            nodegraph_center_y=int(center[1]),
-        )
+        self._save_state()
         super().closeEvent(event)
 
     def showEvent(self, event):
-        self._restore_nodegraph_state()
-        super().showEvent(event)
+        if not self.initialized:
+            super().showEvent(event)
+            self.initialized = True
 
     def _restore_nodegraph_state(self):
+        if self.initialized:
+            return
+        self.initialized = True
         """Restore nodegraph zoom and pan (center) from workflow or ApplicationSettings after workflow load."""
         zoom = None
         center_x = None
@@ -1548,10 +1491,11 @@ class NodeGraphWidget(BaseWidget):
 
                 # Schedule a single delayed zoom reset to override any late resizeEvent zooming
                 def force_zoom_final():
-                    if hasattr(viewer, "reset_zoom"):
-                        viewer.reset_zoom()
-                    if hasattr(viewer, "set_zoom_absolute"):
-                        viewer.set_zoom_absolute(float(zoom))
+                    # if hasattr(viewer, "reset_zoom"):
+                    #     viewer.reset_zoom()
+                    # if hasattr(viewer, "set_zoom_absolute"):
+                    #     viewer.set_zoom_absolute(float(zoom))
+                    pass
 
                 if zoom is not None and hasattr(viewer, "set_zoom_absolute"):
                     QtCore.QTimer.singleShot(1200, force_zoom_final)
@@ -1561,8 +1505,8 @@ class NodeGraphWidget(BaseWidget):
                 )
 
     def _save_state(self):
-        zoom = self.viewer.get_zoom()
-        center = self.viewer.scene_center()
+        zoom = self.graph._viewer.get_zoom()
+        center = self.graph._viewer.scene_center()
         ApplicationSettings.objects.update(
             self.application_settings.id,
             nodegraph_zoom=zoom,

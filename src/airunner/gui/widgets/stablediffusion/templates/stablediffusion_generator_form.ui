@@ -751,30 +751,14 @@
    </hints>
   </connection>
   <connection>
-   <sender>add_prompt_button</sender>
-   <signal>clicked()</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_add_prompt_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>60</x>
-     <y>243</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-3</x>
-     <y>291</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>image_presets</sender>
    <signal>currentTextChanged(QString)</signal>
    <receiver>stablediffusion_generator_form</receiver>
    <slot>handle_image_presets_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>116</x>
-     <y>540</y>
+     <x>117</x>
+     <y>499</y>
     </hint>
     <hint type="destinationlabel">
      <x>-4</x>
@@ -789,8 +773,8 @@
    <slot>handle_quality_effects_changed(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>404</x>
-     <y>532</y>
+     <x>584</x>
+     <y>499</y>
     </hint>
     <hint type="destinationlabel">
      <x>-3</x>
@@ -878,7 +862,6 @@
   <slot>handle_second_negative_prompt_changed()</slot>
   <slot>handle_quality_effects_changed(QString)</slot>
   <slot>past_conversations_clicked()</slot>
-  <slot>handle_add_prompt_clicked()</slot>
   <slot>on_use_refiner_checkbox_toggled(bool)</slot>
  </slots>
 </ui>

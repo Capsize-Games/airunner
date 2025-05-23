@@ -342,7 +342,7 @@ class CustomScene(
         images = image_response.images
         if len(images) == 0:
             self.logger.debug("No images received from engine")
-        elif image_response:
+        elif image_response and not getattr(image_response, "node_id", None):
             outpaint_box_rect = image_response.active_rect
             self._create_image(
                 image=images[0].convert("RGBA"),
