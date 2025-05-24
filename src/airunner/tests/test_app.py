@@ -37,6 +37,13 @@ class TestApp(unittest.TestCase):
         """Set up common test variables."""
         self.mock_main_window_class = MagicMock()
         self.mock_window_class_params = {}
+        # Ensure .api.llm is always a MagicMock with required methods
+        self.mock_llm = MagicMock()
+        self.mock_llm.send_request = MagicMock()
+        self.mock_llm.reload_rag = MagicMock()
+        self.mock_llm.clear_history = MagicMock()
+        self.mock_llm.converation_deleted = MagicMock()
+        self.mock_api = MagicMock(llm=self.mock_llm, nodegraph=MagicMock())
 
     @patch("airunner.app.QApplication.setAttribute")
     @patch("airunner.app.QApplication.instance")
@@ -54,7 +61,7 @@ class TestApp(unittest.TestCase):
         mock_instance.return_value.exec.return_value = 0
         # Patch the MainWindow so that any access to .api or .nodegraph is safe
         mock_window_instance = MagicMock()
-        mock_window_instance.api = MagicMock(nodegraph=MagicMock())
+        mock_window_instance.api = self.mock_api
         mock_main_window.return_value = mock_window_instance
         app = App(no_splash=True, initialize_gui=True)
         self.assertIsNotNone(app.app)

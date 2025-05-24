@@ -3,6 +3,10 @@ from airunner.enums import SignalCode
 from airunner.data.models.workflow import Workflow
 from airunner.gui.widgets.nodegraph.custom_node_graph import CustomNodeGraph
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
+import sys
+
+print(f"IMPORTING NODEGRAPH_SERVICES.PY: {__name__}", file=sys.stderr)
+
 
 class NodegraphAPIService(APIServiceBase):
     def node_executed(self, node_id, result, data=None):
@@ -32,7 +36,11 @@ class NodegraphAPIService(APIServiceBase):
     def register_graph(self, graph, nodes_palette, finalize):
         self.emit_signal(
             SignalCode.REGISTER_GRAPH_SIGNAL,
-            {"graph": graph, "nodes_palette": nodes_palette, "callback": finalize},
+            {
+                "graph": graph,
+                "nodes_palette": nodes_palette,
+                "callback": finalize,
+            },
         )
 
     def load_workflow(self, workflow: Workflow, callback):
