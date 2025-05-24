@@ -6,8 +6,12 @@ import pytest
 
 
 def test_parse_template_causallm(monkeypatch):
-    monkeypatch.setattr(
-        "airunner.settings.AIRUNNER_DEFAULT_LLM_HF_PATH", "hf-path"
+    import airunner.utils.llm.parse_template as parse_template_mod
+
+    monkeypatch.setitem(
+        parse_template_mod.__globals__,
+        "AIRUNNER_DEFAULT_LLM_HF_PATH",
+        "hf-path",
     )
     from airunner.utils import parse_template
 
@@ -24,8 +28,12 @@ def test_parse_template_causallm(monkeypatch):
 
 
 def test_parse_template_nonmatch(monkeypatch):
-    monkeypatch.setattr(
-        "airunner.settings.AIRUNNER_DEFAULT_LLM_HF_PATH", "hf-path"
+    import airunner.utils.llm.parse_template as parse_template_mod
+
+    monkeypatch.setitem(
+        parse_template_mod.__globals__,
+        "AIRUNNER_DEFAULT_LLM_HF_PATH",
+        "hf-path",
     )
     from airunner.utils import parse_template
 

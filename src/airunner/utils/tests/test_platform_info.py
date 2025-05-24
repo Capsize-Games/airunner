@@ -43,3 +43,12 @@ def test_is_windows(monkeypatch):
 
     importlib.reload(platinfo)
     assert platinfo.is_windows() is True
+
+
+def test_get_platform_name_unknown(monkeypatch):
+    import sys
+
+    monkeypatch.setattr(sys, "platform", "solaris")
+    from airunner.utils.application.platform_info import get_platform_name
+
+    assert get_platform_name() == "unknown"

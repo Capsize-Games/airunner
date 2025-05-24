@@ -64,9 +64,8 @@ def alter_column(
 ):
     # check if column already equals new column
     if getattr(cls, col_a.name).type == col_b.type:
-        print(
-            f"Column '{col_a}' already has the same type as '{col_b}', skipping modify."
-        )
+        msg = f"Column '{col_a}' already has the same type as '{col_b}', skipping modify."
+        print(msg)
         return
 
     with op.batch_alter_table(cls.__tablename__, recreate="auto") as batch_op:

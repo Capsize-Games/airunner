@@ -95,6 +95,11 @@ def agent(monkeypatch):
         "airunner.data.models.User.objects.filter_first",
         lambda *a, **kw: DummyUser(),
     )
+    # Patch MainWindow and QApplication to prevent GUI from opening
+    monkeypatch.setattr(
+        "airunner.gui.windows.main.main_window.MainWindow", MagicMock()
+    )
+    monkeypatch.setattr("airunner.app.QApplication", MagicMock())
     # Only patch classes that are imported or used directly in BaseAgent
     # Patch ChatMemoryBuffer with MagicMock and add from_defaults
     chat_memory_mock = MagicMock()

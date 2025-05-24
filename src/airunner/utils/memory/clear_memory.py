@@ -1,12 +1,20 @@
 import gc
-import torch
+
+try:
+    import torch
+except ImportError:
+    torch = None
 
 
 def clear_memory(device=0):
     """
     Clear the GPU ram.
     """
-    if torch.cuda.is_available():
+    if (
+        torch is not None
+        and hasattr(torch, "cuda")
+        and torch.cuda.is_available()
+    ):
         try:
             torch.cuda.set_device(device)
             torch.cuda.empty_cache()
