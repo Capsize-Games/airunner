@@ -95,6 +95,33 @@ def test_initialize_input_stream_error(mock_idx, mock_stream, sdm):
     assert not sdm.initialize_input_stream(device_name="pulse")
 
 
+@patch("sounddevice.InputStream", side_effect=ImportError)
+@patch.object(SoundDeviceManager, "get_input_device_index", return_value=2)
+def test_initialize_input_stream_unexpected_error(mock_idx, mock_stream, sdm):
+    with patch.object(sdm.logger, "error") as mock_log:
+        assert not sdm.initialize_input_stream(device_name="pulse")
+        mock_log.assert_called()
+
+
+@patch("sounddevice.InputStream", side_effect=Exception("fail"))
+@patch.object(SoundDeviceManager, "get_input_device_index", return_value=None)
+def test_initialize_input_stream_device_none(mock_idx, mock_stream, sdm):
+    with patch.object(sdm.logger, "error") as mock_log:
+        assert not sdm.initialize_input_stream(device_name="pulse")
+        mock_log.assert_called()
+
+
+@patch("sounddevice.InputStream", side_effect=Exception("fail"))
+@patch.object(SoundDeviceManager, "get_input_device_index", return_value=None)
+def test_initialize_input_stream_device_none_error_branch(
+    mock_idx, mock_stream, sdm
+):
+    # Covers the branch where device_index is None and error is logged
+    with patch.object(sdm.logger, "error") as mock_log:
+        assert not sdm.initialize_input_stream(device_name="pulse")
+        mock_log.assert_called_with("Input device 'pulse' not found")
+
+
 @patch("sounddevice.OutputStream")
 @patch.object(SoundDeviceManager, "get_output_device_index", return_value=3)
 def test_initialize_output_stream_success(mock_idx, mock_stream, sdm):
@@ -109,6 +136,33 @@ def test_initialize_output_stream_success(mock_idx, mock_stream, sdm):
 def test_initialize_output_stream_error(mock_idx, mock_stream, sdm):
     _ensure_logger_for_test()
     assert not sdm.initialize_output_stream(device_name="pulse")
+
+
+@patch("sounddevice.OutputStream", side_effect=ImportError)
+@patch.object(SoundDeviceManager, "get_output_device_index", return_value=2)
+def test_initialize_output_stream_unexpected_error(mock_idx, mock_stream, sdm):
+    with patch.object(sdm.logger, "error") as mock_log:
+        assert not sdm.initialize_output_stream(device_name="pulse")
+        mock_log.assert_called()
+
+
+@patch("sounddevice.OutputStream", side_effect=Exception("fail"))
+@patch.object(SoundDeviceManager, "get_output_device_index", return_value=None)
+def test_initialize_output_stream_device_none(mock_idx, mock_stream, sdm):
+    with patch.object(sdm.logger, "error") as mock_log:
+        assert not sdm.initialize_output_stream(device_name="pulse")
+        mock_log.assert_called()
+
+
+@patch("sounddevice.OutputStream", side_effect=Exception("fail"))
+@patch.object(SoundDeviceManager, "get_output_device_index", return_value=None)
+def test_initialize_output_stream_device_none_error_branch(
+    mock_idx, mock_stream, sdm
+):
+    # Covers the branch where device_index is None and error is logged
+    with patch.object(sdm.logger, "error") as mock_log:
+        assert not sdm.initialize_output_stream(device_name="pulse")
+        mock_log.assert_called_with("Output device 'pulse' not found")
 
 
 @patch.object(SoundDeviceManager, "_out_stream", create=True)
@@ -151,6 +205,36 @@ def test_write_to_output_error(mock_out, sdm):
     assert not sdm.write_to_output(np.ones(10))
 
 
+@patch.object(SoundDeviceManager, "_out_stream", create=True)
+def test_write_to_output_exception(mock_out, sdm):
+    mock_out.active = True
+    mock_out.channels = 1
+
+    def raise_exception(*a, **k):
+        raise Exception("fail")
+
+    mock_out.write = raise_exception
+    sdm._out_stream = mock_out
+    with patch.object(sdm.logger, "error") as mock_log:
+        assert not sdm.write_to_output(np.ones(10))
+        mock_log.assert_called()
+
+
+@patch.object(SoundDeviceManager, "_out_stream", create=True)
+def test_write_to_output_none_stream(mock_out, sdm):
+    # Covers the branch where _out_stream is None
+    sdm._out_stream = None
+    assert not sdm.write_to_output(np.ones(10))
+
+
+@patch.object(SoundDeviceManager, "_out_stream", create=True)
+def test_write_to_output_inactive_stream(mock_out, sdm):
+    # Covers the branch where _out_stream is present but not active
+    mock_out.active = False
+    sdm._out_stream = mock_out
+    assert not sdm.write_to_output(np.ones(10))
+
+
 @patch.object(SoundDeviceManager, "_in_stream", create=True)
 def test_read_from_input_success(mock_in, sdm):
     mock_in.active = True
@@ -170,6 +254,25 @@ def test_read_from_input_error(mock_in, sdm):
     data, ok = sdm.read_from_input(10)
     assert not ok
     assert data is None
+
+
+@patch.object(SoundDeviceManager, "_in_stream", create=True)
+def test_read_from_input_inactive_stream(mock_in, sdm):
+    # Covers the branch where _in_stream is present but not active
+    mock_in.active = False
+    sdm._in_stream = mock_in
+    data, ok = sdm.read_from_input(10)
+    assert data is None
+    assert ok is False
+
+
+@patch.object(SoundDeviceManager, "_in_stream", create=True)
+def test_read_from_input_none_stream(mock_in, sdm):
+    # Covers the branch where _in_stream is None
+    sdm._in_stream = None
+    data, ok = sdm.read_from_input(10)
+    assert data is None
+    assert ok is False
 
 
 @patch.object(SoundDeviceManager, "_in_stream", create=True)
@@ -202,3 +305,102 @@ def test_stop_all_streams(sdm):
         stop_in.assert_called_once()
         stop_out.assert_called_once()
         assert not sdm.initialized
+
+
+@patch.object(SoundDeviceManager, "_in_stream", create=True)
+def test_in_stream_property_triggers_init(mock_in, sdm):
+    sdm._in_stream = None
+    with patch.object(sdm, "initialize_input_stream") as mock_init:
+        mock_init.return_value = True
+        _ = sdm.in_stream
+        mock_init.assert_called_once()
+
+
+@patch.object(SoundDeviceManager, "_out_stream", create=True)
+def test_out_stream_property_triggers_init(mock_out, sdm):
+    sdm._out_stream = None
+    with patch.object(sdm, "initialize_output_stream") as mock_init:
+        mock_init.return_value = True
+        _ = sdm.out_stream
+        mock_init.assert_called_once()
+
+
+@patch("sounddevice.query_devices", side_effect=Exception("fail"))
+def test_get_devices_error(mock_query, sdm):
+    # Should raise and be caught in _get_device_index
+    with patch.object(sdm.logger, "error") as mock_log:
+        idx = sdm._get_device_index("foo")
+        assert idx is None
+        mock_log.assert_called()
+
+
+@patch(
+    "sounddevice.query_devices",
+    return_value=[
+        {
+            "name": "pulse",
+            "index": 0,
+            "max_input_channels": 2,
+            "max_output_channels": 2,
+        }
+    ],
+)
+def test_get_device_index_no_kind_match(mock_query, sdm):
+    # Should return None if no kind matches
+    idx = sdm._get_device_index("pulse", kind="nonexistent")
+    assert idx is None
+
+
+@patch.object(SoundDeviceManager, "_in_stream", create=True)
+def test_stop_input_stream_error(mock_in, sdm):
+    mock_in.stop = MagicMock(side_effect=Exception("fail"))
+    mock_in.close = MagicMock()
+    with patch.object(sdm.logger, "error") as mock_log:
+        sdm._in_stream = mock_in
+        sdm._stop_input_stream()
+        mock_log.assert_called()
+
+
+@patch.object(SoundDeviceManager, "_out_stream", create=True)
+def test_stop_output_stream_error(mock_out, sdm):
+    mock_out.stop = MagicMock(side_effect=Exception("fail"))
+    mock_out.close = MagicMock()
+    with patch.object(sdm.logger, "error") as mock_log:
+        sdm._out_stream = mock_out
+        sdm._stop_output_stream()
+        mock_log.assert_called()
+
+
+@patch.object(SoundDeviceManager, "_out_stream", create=True)
+def test_write_to_output_portaudioerror(mock_out, sdm):
+    import sounddevice as sd
+
+    mock_out.active = True
+    mock_out.channels = 1
+
+    def raise_portaudio(*a, **k):
+        raise sd.PortAudioError("fail")
+
+    mock_out.write = raise_portaudio
+    sdm._out_stream = mock_out
+    with patch.object(sdm.logger, "error") as mock_log:
+        assert not sdm.write_to_output(np.ones(10))
+        mock_log.assert_called()
+
+
+@patch.object(SoundDeviceManager, "_in_stream", create=True)
+def test_read_from_input_portaudioerror(mock_in, sdm):
+    import sounddevice as sd
+
+    mock_in.active = True
+
+    def raise_portaudio(*a, **k):
+        raise sd.PortAudioError("fail")
+
+    mock_in.read = raise_portaudio
+    sdm._in_stream = mock_in
+    with patch.object(sdm.logger, "error") as mock_log:
+        data, ok = sdm.read_from_input(10)
+        assert not ok
+        assert data is None
+        mock_log.assert_called()
