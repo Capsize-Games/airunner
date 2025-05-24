@@ -31,16 +31,20 @@ class DummyChatbot:
     botname = "TestBot"
 
 
-class DummyUser:
-    username = "testuser"
-    zipcode = "12345"
-    location_display_name = "Testville"
-    data = {}
-    latitude = 0.0
-    longitude = 0.0
+@pytest.fixture
+def dummy_user():
+    class DummyUser:
+        username = "testuser"
+        zipcode = "12345"
+        location_display_name = "Testville"
+        data = {}
+        latitude = 0.0
+        longitude = 0.0
 
-    def save(self):
-        pass
+        def save(self):
+            pass
+
+    return DummyUser()
 
 
 class DummyConversation:
@@ -86,14 +90,14 @@ class DummyReActAgentTool:
 
 
 @pytest.fixture
-def agent(monkeypatch):
+def agent(monkeypatch, dummy_user):
     # Patch User.objects.get and filter_first to always return DummyUser
     monkeypatch.setattr(
-        "airunner.data.models.User.objects.get", lambda *a, **kw: DummyUser()
+        "airunner.data.models.User.objects.get", lambda *a, **kw: dummy_user
     )
     monkeypatch.setattr(
         "airunner.data.models.User.objects.filter_first",
-        lambda *a, **kw: DummyUser(),
+        lambda *a, **kw: dummy_user,
     )
     # Patch MainWindow and QApplication to prevent GUI from opening
     monkeypatch.setattr(
@@ -107,7 +111,7 @@ def agent(monkeypatch):
     # Construct agent and set all other dependencies directly
     a = BaseAgent()
     a._chatbot = DummyChatbot()
-    a._user = DummyUser()  # Ensure DummyUser is always set
+    a._user = dummy_user  # Use dummy_user fixture
     a._user_set_by_test = True  # Mark as set by test
     a._conversation = DummyConversation()
     a.llm_settings = DummySettings()
@@ -417,36 +421,17 @@ def test_botname_property(agent):
     assert agent.botname == "TestBot"
 
 
-def test_username_property(agent, monkeypatch):
-    class DummyUser:
-        username = "testuser"
-        zipcode = "12345"
-        location_display_name = "Testville"
-
-    monkeypatch.setattr(
-        type(agent), "user", property(lambda self: DummyUser())
-    )
+def test_username_property(agent, monkeypatch, dummy_user):
+    monkeypatch.setattr(type(agent), "user", property(lambda self: dummy_user))
     assert agent.username == "testuser"
 
 
-def test_zipcode_property(agent, monkeypatch):
-    class DummyUser:
-        username = "testuser"
-        zipcode = "12345"
-        location_display_name = "Testville"
-
-    monkeypatch.setattr(
-        type(agent), "user", property(lambda self: DummyUser())
-    )
+def test_zipcode_property(agent, monkeypatch, dummy_user):
+    monkeypatch.setattr(type(agent), "user", property(lambda self: dummy_user))
     assert agent.zipcode == "12345"
 
 
-def test_location_display_name_property(agent, monkeypatch):
-    class DummyUser:
-        def __init__(self):
-            self.location_display_name = "Testville"
-
-    dummy_user = DummyUser()
+def test_location_display_name_property(agent, monkeypatch, dummy_user):
     monkeypatch.setattr(type(agent), "user", property(lambda self: dummy_user))
     agent.location_display_name = "NewName"
     assert agent.user.location_display_name == "NewName"
