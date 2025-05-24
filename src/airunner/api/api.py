@@ -396,7 +396,7 @@ class API(App):
         self.register_signal_handler(signal_code, handler)
 
     def register_signal_handler(self, signal_code, handler):
-        MediatorMixin.register_signal_handler(self, signal_code, handler)
+        self.register(signal_code, handler)
 
     def send_image_request(self, image_request: ImageRequest):
         """

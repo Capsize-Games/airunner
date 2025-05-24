@@ -181,13 +181,28 @@ class NodeGraphWidget(BaseWidget):
 
     def run_workflow(self):
         self.start_progress_bar()
+        if not self.api or not hasattr(self.api, "nodegraph"):
+            self.logger.warning(
+                "NodeGraphWidget: self.api or self.api.nodegraph is missing. Cannot run workflow."
+            )
+            return
         self.api.nodegraph.run_workflow(self.graph)
 
     def pause_workflow(self):
+        if not self.api or not hasattr(self.api, "nodegraph"):
+            self.logger.warning(
+                "NodeGraphWidget: self.api or self.api.nodegraph is missing. Cannot pause workflow."
+            )
+            return
         self.api.nodegraph.pause_workflow(self.graph)
 
     def stop_workflow(self):
         self.stop_progress_bar()
+        if not self.api or not hasattr(self.api, "nodegraph"):
+            self.logger.warning(
+                "NodeGraphWidget: self.api or self.api.nodegraph is missing. Cannot stop workflow."
+            )
+            return
         self.api.nodegraph.stop_workflow(self.graph)
 
     def save_workflow(self):
@@ -425,10 +440,11 @@ class NodeGraphWidget(BaseWidget):
             self.graph.register_node(node_cls)
 
     def _register_graph(self):
-        """
-        Emit a register graph signal so that other widgets can
-        interact with the node graph.
-        """
+        if not self.api or not hasattr(self.api, "nodegraph"):
+            self.logger.warning(
+                "NodeGraphWidget: self.api or self.api.nodegraph is missing. Cannot register graph."
+            )
+            return
         self.api.nodegraph.register_graph(
             graph=self.graph,
             nodes_palette=self._nodes_palette,
@@ -998,7 +1014,6 @@ class NodeGraphWidget(BaseWidget):
         )
 
     def _perform_load(self, workflow_id: int):
-        """Loads a workflow, including variables, from the database."""
         self.logger.info(f"Loading workflow ID '{workflow_id}'...")
 
         try:
@@ -1019,6 +1034,12 @@ class NodeGraphWidget(BaseWidget):
             db_connections=db_connections,
             workflow=workflow,  # Ensure workflow is included for downstream use
         )
+        if not self.api or not hasattr(self.api, "nodegraph"):
+            self.logger.warning(
+                "NodeGraphWidget: self.api or self.api.nodegraph is missing. Cannot load workflow."
+            )
+            self._finalize_load_workflow(data)
+            return
         self.api.nodegraph.load_workflow(
             workflow=workflow,
             callback=lambda _data=data: self._finalize_load_workflow(_data),
@@ -1048,6 +1069,12 @@ class NodeGraphWidget(BaseWidget):
 
     def _clear_graph(self, add_start_node: bool = True):
         self.logger.info("Clearing current graph session and variables...")
+        if not self.api or not hasattr(self.api, "nodegraph"):
+            self.logger.warning(
+                "NodeGraphWidget: self.api or self.api.nodegraph is missing. Cannot clear workflow."
+            )
+            self._finalize_clear_graph(add_start_node)
+            return
         self.api.nodegraph.clear_workflow(
             callback=lambda: self._finalize_clear_graph(add_start_node)
         )
