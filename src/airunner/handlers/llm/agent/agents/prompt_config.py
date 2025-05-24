@@ -19,7 +19,7 @@ class PromptConfig:
         "Your summaries will be no more than a few sentences long.\n"
     )
     MOOD_UPDATE = (
-        "You are a mood analyzier. You are examining a conversation between {username} and {botname}.\n"
+        "You are a mood analyzer. You are examining a conversation between {username} and {botname}.\n"
         "{username} is a human and {botname} is a chatbot.\n"
         "Based on the given conversation, you must determine what {botname}'s mood is.\n"
         "You must describe {botname}'s mood in one or two sentences.\n"
