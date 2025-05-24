@@ -49,4 +49,5 @@ mathjax
 docs
 .coverage*
 .github/instructions
+.github/prompts
 .github/*.md
