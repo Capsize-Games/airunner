@@ -630,8 +630,6 @@ class InstallWorker(
         Extract and clean up unidic and OpenVoice zips after all downloads are complete.
         For unidic, extract to the unidic package directory as per `python -m unidic download`.
         """
-        import importlib.util
-
         # Set state flag early to prevent multiple calls
         self._openvoice_unidic_extraction_complete = True
 

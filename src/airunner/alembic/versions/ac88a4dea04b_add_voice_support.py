@@ -9,6 +9,8 @@ Create Date: 2025-04-02 05:20:25.495089
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from alembic import op
+from sqlalchemy import inspect
 
 from airunner.utils.db import (
     add_table,
@@ -35,6 +37,14 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    drop_constraint(Chatbot, "uq_chatbots_voice_id")
+    # Check if the constraint exists before trying to drop it
+    connection = op.get_bind()
+    constraint_name = "uq_chatbots_voice_id"
+    inspector = inspect(connection)
+    constraints = inspector.get_unique_constraints("chatbots")
+    if any(
+        constraint["name"] == constraint_name for constraint in constraints
+    ):
+        drop_constraint(Chatbot, "uq_chatbots_voice_id")
     drop_column(Chatbot, "voice_id")
     drop_table(VoiceSettings)

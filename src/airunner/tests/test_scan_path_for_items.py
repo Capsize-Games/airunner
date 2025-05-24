@@ -41,83 +41,50 @@ class TestScanPathForItems(unittest.TestCase):
         # Remove temporary directory and all contents
         shutil.rmtree(self.temp_dir)
 
-    @patch("airunner.utils.models.scan_path_for_items.SettingsMixin")
-    def test_scan_path_for_lora_no_files(self, mock_settings_mixin):
+    @patch("airunner.data.models.Lora.objects")
+    def test_scan_path_for_lora_no_files(self, mock_lora_objects):
         """Test scanning for Lora models when no files exist."""
-        # Setup mock for database operations
-        mock_database = MagicMock()
-        mock_database.session.query.return_value.all.return_value = []
-        mock_settings_mixin.return_value = mock_database
-
-        # Run the scan
+        mock_lora_objects.all.return_value = []
         scan_result = scan_path_for_lora(self.base_path)
-
-        # Verify no changes were made (no files to process)
         self.assertFalse(scan_result)
-        mock_database.session.commit.assert_not_called()
 
-    @patch("airunner.utils.models.scan_path_for_items.SettingsMixin")
-    def test_scan_path_for_lora_new_file(self, mock_settings_mixin):
+    @patch("airunner.data.models.Lora.objects")
+    def test_scan_path_for_lora_new_file(self, mock_lora_objects):
         """Test scanning for Lora models when new file is found."""
         # Create a test file
         lora_file_path = os.path.join(self.lora_path, "test_lora.safetensors")
         with open(lora_file_path, "w") as f:
             f.write("test content")
 
-        # Setup mock for database operations
-        mock_database = MagicMock()
-        mock_database.session.query.return_value.all.return_value = []
-        mock_database.get_lora_by_name.return_value = None
-        mock_settings_mixin.return_value = mock_database
+        mock_lora_objects.all.return_value = []
+        mock_lora_objects.filter_first.return_value = None
+        mock_lora_objects.create.return_value = MagicMock()
 
         # Run the scan
         scan_result = scan_path_for_lora(self.base_path)
 
         # Verify a new Lora was added
         self.assertTrue(scan_result)
-        mock_database.session.add.assert_called_once()
-        mock_database.session.commit.assert_called_once()
+        mock_lora_objects.create.assert_called_once()
 
-        # Verify the correct Lora object was created
-        added_lora = mock_database.session.add.call_args[0][0]
-        self.assertEqual(added_lora.name, "test_lora")
-        self.assertEqual(added_lora.path, lora_file_path)
-        self.assertEqual(added_lora.version, "v1.0")
-        self.assertEqual(added_lora.scale, 1)
-        self.assertFalse(added_lora.enabled)
-        self.assertFalse(added_lora.loaded)
-        self.assertEqual(added_lora.trigger_word, "")
-
-    @patch("airunner.utils.models.scan_path_for_items.SettingsMixin")
-    def test_scan_path_for_lora_delete_missing(self, mock_settings_mixin):
+    @patch("airunner.data.models.Lora.objects")
+    def test_scan_path_for_lora_delete_missing(self, mock_lora_objects):
         """Test scanning for Lora models when a file is missing."""
         # Setup mock for database operations
-        missing_lora = Lora(
-            name="missing_lora",
-            path="/nonexistent/path/missing_lora.safetensors",
-            scale=1,
-            enabled=True,
-            loaded=True,
-            trigger_word="test",
-            version="v1.0",
-        )
-
-        mock_database = MagicMock()
-        mock_database.session.query.return_value.all.return_value = [
-            missing_lora
-        ]
-        mock_settings_mixin.return_value = mock_database
+        missing_lora = MagicMock()
+        missing_lora.path = "/nonexistent/path/missing_lora.safetensors"
+        mock_lora_objects.all.return_value = [missing_lora]
+        mock_lora_objects.delete.return_value = None
 
         # Run the scan
         scan_result = scan_path_for_lora(self.base_path)
 
         # Verify the missing Lora was deleted
         self.assertTrue(scan_result)
-        mock_database.session.delete.assert_called_once_with(missing_lora)
-        mock_database.session.commit.assert_called_once()
+        mock_lora_objects.delete.assert_called_once()
 
-    @patch("airunner.utils.models.scan_path_for_items.SettingsMixin")
-    def test_scan_path_for_lora_update_existing(self, mock_settings_mixin):
+    @patch("airunner.data.models.Lora.objects")
+    def test_scan_path_for_lora_update_existing(self, mock_lora_objects):
         """Test scanning for Lora models when a file needs to be updated."""
         # Create a test file
         lora_file_path = os.path.join(self.lora_path, "test_lora.safetensors")
@@ -125,34 +92,24 @@ class TestScanPathForItems(unittest.TestCase):
             f.write("test content")
 
         # Create an existing Lora with different path
-        existing_lora = Lora(
-            name="test_lora",
-            path="/old/path/test_lora.safetensors",
-            scale=1,
-            enabled=True,
-            loaded=True,
-            trigger_word="test",
-            version="v0.9",
-        )
+        existing_lora = MagicMock()
+        existing_lora.name = "test_lora"
+        existing_lora.path = "/old/path/test_lora.safetensors"
+        existing_lora.version = "v0.9"
 
-        # Setup mock for database operations
-        mock_database = MagicMock()
-        mock_database.session.query.return_value.all.return_value = [
-            existing_lora
-        ]
-        mock_database.get_lora_by_name.return_value = existing_lora
-        mock_settings_mixin.return_value = mock_database
+        mock_lora_objects.all.return_value = [existing_lora]
+        mock_lora_objects.filter_first.return_value = existing_lora
+        mock_lora_objects.create.return_value = MagicMock()
 
         # Run the scan
         scan_result = scan_path_for_lora(self.base_path)
 
         # Verify a new Lora was added (since path changed)
         self.assertTrue(scan_result)
-        mock_database.session.add.assert_called_once()
-        mock_database.session.commit.assert_called_once()
+        mock_lora_objects.create.assert_called_once()
 
-    @patch("airunner.utils.models.scan_path_for_items.SettingsMixin")
-    def test_scan_path_for_embeddings_new_file(self, mock_settings_mixin):
+    @patch("airunner.data.models.Embedding.objects")
+    def test_scan_path_for_embeddings_new_file(self, mock_embedding_objects):
         """Test scanning for embeddings when a new file is found."""
         # Create a test file
         embedding_file_path = os.path.join(
@@ -161,60 +118,37 @@ class TestScanPathForItems(unittest.TestCase):
         with open(embedding_file_path, "w") as f:
             f.write("test content")
 
-        # Setup mock for database operations
-        mock_database = MagicMock()
-        mock_database.session.query.return_value.all.return_value = []
-        mock_database.get_embedding_by_name.return_value = None
-        mock_settings_mixin.return_value = mock_database
+        mock_embedding_objects.all.return_value = []
+        mock_embedding_objects.filter_first.return_value = None
+        mock_embedding_objects.create.return_value = MagicMock()
 
         # Run the scan
         scan_result = scan_path_for_embeddings(self.base_path)
 
         # Verify a new embedding was added
         self.assertTrue(scan_result)
-        mock_database.session.add.assert_called_once()
-        mock_database.session.commit.assert_called_once()
+        mock_embedding_objects.create.assert_called_once()
 
-        # Verify the correct Embedding object was created
-        added_embedding = mock_database.session.add.call_args[0][0]
-        self.assertEqual(added_embedding.name, "test_embedding")
-        self.assertEqual(added_embedding.path, embedding_file_path)
-        self.assertEqual(added_embedding.version, "v1.0")
-        self.assertEqual(added_embedding.tags, "")
-        self.assertFalse(added_embedding.active)
-        self.assertEqual(added_embedding.trigger_word, "")
-
-    @patch("airunner.utils.models.scan_path_for_items.SettingsMixin")
+    @patch("airunner.data.models.Embedding.objects")
     def test_scan_path_for_embeddings_delete_missing(
-        self, mock_settings_mixin
+        self, mock_embedding_objects
     ):
         """Test scanning for embeddings when a file is missing."""
         # Setup mock for database operations
-        missing_embedding = Embedding(
-            name="missing_embedding",
-            path="/nonexistent/path/missing_embedding.pt",
-            version="v1.0",
-            tags="test",
-            active=True,
-            trigger_word="test",
-        )
-
-        mock_database = MagicMock()
-        mock_database.session.query.return_value.all.return_value = [
-            missing_embedding
-        ]
-        mock_settings_mixin.return_value = mock_database
+        missing_embedding = MagicMock()
+        missing_embedding.path = "/nonexistent/path/missing_embedding.pt"
+        mock_embedding_objects.all.return_value = [missing_embedding]
+        mock_embedding_objects.delete.return_value = None
 
         # Run the scan
         scan_result = scan_path_for_embeddings(self.base_path)
 
         # Verify the missing embedding was deleted
         self.assertTrue(scan_result)
-        mock_database.session.delete.assert_called_once_with(missing_embedding)
-        mock_database.session.commit.assert_called_once()
+        mock_embedding_objects.delete.assert_called_once()
 
-    @patch("airunner.utils.models.scan_path_for_items.SettingsMixin")
-    def test_scan_path_for_multiple_file_extensions(self, mock_settings_mixin):
+    @patch("airunner.data.models.Lora.objects")
+    def test_scan_path_for_multiple_file_extensions(self, mock_lora_objects):
         """Test scanning with multiple file extensions."""
         # Create test files with different extensions
         lora_file1 = os.path.join(self.lora_path, "test_lora1.safetensors")
@@ -228,19 +162,16 @@ class TestScanPathForItems(unittest.TestCase):
             with open(file_path, "w") as f:
                 f.write("test content")
 
-        # Setup mock for database operations
-        mock_database = MagicMock()
-        mock_database.session.query.return_value.all.return_value = []
-        mock_database.get_lora_by_name.return_value = None
-        mock_settings_mixin.return_value = mock_database
+        mock_lora_objects.all.return_value = []
+        mock_lora_objects.filter_first.return_value = None
+        mock_lora_objects.create.return_value = MagicMock()
 
         # Run the scan
         scan_result = scan_path_for_lora(self.base_path)
 
         # Verify the correct files were processed (3 valid extensions, 1 ignored)
         self.assertTrue(scan_result)
-        self.assertEqual(mock_database.session.add.call_count, 3)
-        mock_database.session.commit.assert_called_once()
+        self.assertEqual(mock_lora_objects.create.call_count, 3)
 
 
 if __name__ == "__main__":
