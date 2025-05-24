@@ -190,7 +190,7 @@ def test_retranslate_ui_signal(api):
 def test_update_locale(api):
     api.update_locale({"lang": "en"})
     api.emit_signal.assert_called_once_with(
-        SignalCode.UPDATE_LOCALE, {"lang": "en"}
+        SignalCode.UPATE_LOCALE, {"lang": "en"}
     )
 
 
