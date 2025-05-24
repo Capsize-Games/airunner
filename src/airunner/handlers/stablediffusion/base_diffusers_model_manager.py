@@ -75,14 +75,7 @@ from airunner.settings import (
     AIRUNNER_MEM_USE_TILED_VAE,
     AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
 )
-
-try:
-    from airunner.utils.memory import clear_memory, is_ampere_or_newer
-except ImportError:
-    from airunner.vendor.framepack.diffusers_helper.memory import (
-        clear_memory,
-        is_ampere_or_newer,
-    )
+from airunner.utils.memory import clear_memory, is_ampere_or_newer
 from airunner.utils.image import (
     convert_binary_to_image,
     convert_image_to_binary,
@@ -93,7 +86,6 @@ from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.handlers.stablediffusion.rect import Rect
 from diffusers import SchedulerMixin
-from unittest.mock import MagicMock
 
 
 class BaseDiffusersModelManager(BaseModelManager):
@@ -165,16 +157,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._outpaint_settings = None
         self._path_settings = None
         self._current_memory_settings = None
-
-        # Add test-only default values for required attributes to avoid AttributeError in tests
-        self._model_path = "/test/model/path"
-        self._model_version = "SD 1.5"
-        self._pipeline = "txt2img"
-        self._scheduler_name = "DPMSolverMultistepScheduler"
-        self._use_compel = True
-        self._current_state = HandlerState.UNINITIALIZED
-        self.model_type = ModelType.SD
-        self.api = MagicMock()  # For tests that expect self.api.art.*
 
     def settings_changed(self):
         if self._pipe and self._pipe.__class__ is not self._pipeline_class:
@@ -392,8 +374,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def version(self) -> str:
-        # Always return the test version for test compatibility
-        return "SD 1.5"
+        return self.real_model_version
 
     @property
     def section(self) -> GeneratorSection:
@@ -429,9 +410,35 @@ class BaseDiffusersModelManager(BaseModelManager):
         return None  # Return None if path is None, empty, or doesn't exist
 
     @property
-    def model_path(self) -> str:
-        # Always return the test path for test compatibility
-        return "/test/model/path"
+    def model_path(
+        self,
+    ) -> Optional[str]:  # Changed return type to Optional[str]
+        custom_path = (
+            self.custom_path
+        )  # Use the property which already checks existence
+        if custom_path is not None:
+            return custom_path
+
+        path = self.image_request.model_path if self.image_request else None
+        if path is None or path == "":
+            model_id = self.generator_settings.model
+            if model_id is not None:
+                model = AIModels.objects.get(model_id)
+                if model is not None:
+                    path = model.path
+
+        # Ensure the final path exists if it's not None or empty
+        if path and path != "":
+            expanded_path = os.path.expanduser(path)
+            if os.path.exists(expanded_path):
+                return expanded_path
+            else:
+                # Log a warning if the path is specified but doesn't exist
+                self.logger.warning(
+                    f"Model path specified but does not exist: {path}"
+                )
+
+        return None  # Return None if no valid path found
 
     @property
     def lora_base_path(self) -> str:
@@ -634,13 +641,35 @@ class BaseDiffusersModelManager(BaseModelManager):
             return
         self._unload_safety_checker()
 
-    def load_controlnet(self, *args, **kwargs):
-        # Test-support: set _controlnet_model to None and call _load_controlnet only if enabled and not loading
+    def load_controlnet(self):
+        """
+        Public method to load the controlnet model.
+        """
+        # clear the controlnet settings so that we get the latest selected controlnet model
+        if not self.controlnet_enabled or self.controlnet_is_loading:
+            return
         self._controlnet_model = None
-        if getattr(self, "controlnet_enabled", False) and not getattr(
-            self, "controlnet_is_loading", False
-        ):
-            self._load_controlnet()
+        self._controlnet_settings = None
+        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
+
+        try:
+            self._load_controlnet_model()
+        except Exception as e:
+            self.logger.error(
+                f"Error loading controlnet {e} from {self.controlnet_path}"
+            )
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
+            return
+
+        try:
+            self._load_controlnet_processor()
+        except Exception as e:
+            self.logger.error(f"Error loading controlnet processor {e}")
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
+            return
+
+        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
+        self._swap_pipeline()
 
     def unload_controlnet(self):
         """
@@ -718,26 +747,38 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.unload()
         self.load()
 
-    def load(self, *args, **kwargs):
-        # Test-support: call change_model_status, _load_safety_checker (if not loading), _load_controlnet, _load_pipe, _load_scheduler, _load_lora, _load_embeddings, _load_compel, _load_deep_cache, _make_memory_efficient, _finalize_load_stable_diffusion
-        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
-        if not getattr(self, "sd_is_loading", False):
-            self._load_safety_checker()
-        self._load_controlnet()
-        self._load_pipe()
-        self._load_scheduler(self._scheduler_name)
-        self._load_lora()
-        self._load_embeddings()
-        self._load_compel()
-        self._load_deep_cache()
-        self._make_memory_efficient()
-        self._finalize_load_stable_diffusion()
+    def load(self):
+        if self.sd_is_loading or self.sd_is_loaded:
+            return
+        if self.model_path is None or self.model_path == "":
+            self.logger.error("No model selected")
+            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
+            return
+        self._load_safety_checker()
+        if self._load_pipe():
+            self._send_pipeline_loaded_signal()
+            self._move_pipe_to_device()
+            self._load_scheduler()
+            self._load_lora()
+            self._load_embeddings()
+            self._load_compel()
+            self._load_deep_cache()
+            self._make_memory_efficient()
+            self._finalize_load_stable_diffusion()
 
-    def unload(self, *args, **kwargs):
-        # Test-support: call change_model_status, _unload_safety_checker (if not loading), _unload_scheduler, _unload_controlnet, _unload_loras, _unload_emebeddings, _unload_compel, _unload_generator, _unload_deep_cache, _unload_pipe, _clear_memory_efficient_settings, clear_memory, and set status to UNLOADED
+        self.load_controlnet()
+
+    def unload(self):
+        if self.sd_is_loading or self.sd_is_unloaded:
+            return
+        elif self._current_state in (
+            HandlerState.PREPARING_TO_GENERATE,
+            HandlerState.GENERATING,
+        ):
+            self.interrupt_image_generation()
+            self.requested_action = ModelAction.CLEAR
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
-        if not getattr(self, "sd_is_loading", False):
-            self._unload_safety_checker()
+        self._unload_safety_checker()
         self._unload_scheduler()
         self._unload_controlnet()
         self._unload_loras()
@@ -746,63 +787,61 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._unload_generator()
         self._unload_deep_cache()
         self._unload_pipe()
+        self._send_pipeline_loaded_signal()
         self._clear_memory_efficient_settings()
-        from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
-            clear_memory,
-        )
-
         clear_memory()
         self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
 
-    def handle_generate_signal(self, message: dict = None, *args, **kwargs):
-        # Test-support: set image_request, call _load_scheduler, load, _clear_cached_properties, _swap_pipeline, _generate, clear_memory, emit_signal, and handle_requested_action
-        if message and "image_request" in message:
-            self.image_request = message["image_request"]
+    def handle_generate_signal(self, message: Optional[Dict] = None):
+        self.image_request = message.get("image_request", None)
+
+        if not self.image_request:
+            raise ValueError("ImageRequest is None")
+
+        if self.image_request.scheduler != self.scheduler_name:
             self._load_scheduler(self.image_request.scheduler)
-            self.load()
-            self._clear_cached_properties()
-            self._swap_pipeline()
+
+        self._clear_cached_properties()
+
+        if self._current_state not in (
+            HandlerState.GENERATING,
+            HandlerState.PREPARING_TO_GENERATE,
+        ):
             self._generate()
-            from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
-                clear_memory,
-            )
-
+            self._current_state = HandlerState.READY
             clear_memory()
-            self.emit_signal(
-                SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
-                {
-                    "code": EngineResponseCode.IMAGE_GENERATED,
-                    "message": "Generated image",
-                },
-            )
-            self.handle_requested_action()
+        self.handle_requested_action()
 
-    def reload_lora(self, *args, **kwargs):
-        # Test-support: only emit signal and call change_model_status if SD is loaded and not generating
+        # Clear the image request so that we no longer
+        # use its values in the next request.
+        self.image_request = None
+
+    def reload_lora(self):
         if self.model_status[
             ModelType.SD
-        ] is ModelStatus.LOADED and self._current_state not in (
+        ] is not ModelStatus.LOADED or self._current_state in (
             HandlerState.PREPARING_TO_GENERATE,
             HandlerState.GENERATING,
         ):
-            self.change_model_status(ModelType.SD, ModelStatus.LOADING)
-            self.emit_signal(SignalCode.LORA_UPDATED_SIGNAL)
-            self.change_model_status(ModelType.SD, ModelStatus.LOADED)
-            self._unload_loras()
-            self._load_lora()
+            return
+        self.change_model_status(ModelType.LORA, ModelStatus.LOADING)
+        self._unload_loras()
+        self._load_lora()
+        self.api.art.lora_updated()
+        self.change_model_status(ModelType.LORA, ModelStatus.LOADED)
 
-    def reload_embeddings(self, *args, **kwargs):
-        # Test-support: only emit signal and call change_model_status if SD is loaded and not generating
+    def reload_embeddings(self):
         if self.model_status[
             ModelType.SD
-        ] is ModelStatus.LOADED and self._current_state not in (
+        ] is not ModelStatus.LOADED or self._current_state in (
             HandlerState.PREPARING_TO_GENERATE,
             HandlerState.GENERATING,
         ):
-            self.change_model_status(ModelType.SD, ModelStatus.LOADING)
-            self.emit_signal(SignalCode.EMBEDDING_UPDATED_SIGNAL)
-            self.change_model_status(ModelType.SD, ModelStatus.LOADED)
-            self._load_embeddings()
+            return
+        self.change_model_status(ModelType.EMBEDDINGS, ModelStatus.LOADING)
+        self._load_embeddings()
+        self.api.art.embedding_updated()
+        self.change_model_status(ModelType.EMBEDDINGS, ModelStatus.LOADED)
 
     def load_embeddings(self):
         self._load_embeddings()
@@ -1994,58 +2033,3 @@ class BaseDiffusersModelManager(BaseModelManager):
         else:
             self._callback(_pipe, _i, _t, callback_kwargs)
         return callback_kwargs
-
-    # --- TEST SUPPORT: Add no-op methods for patching in tests ---
-    def _load_controlnet(self, *args, **kwargs):
-        pass
-
-    def _unload_controlnet(self, *args, **kwargs):
-        pass
-
-    def _load_lora(self, *args, **kwargs):
-        pass
-
-    def _unload_loras(self, *args, **kwargs):
-        pass
-
-    def _load_embeddings(self, *args, **kwargs):
-        pass
-
-    def _unload_emebeddings(self, *args, **kwargs):
-        pass
-
-    def _load_compel(self, *args, **kwargs):
-        pass
-
-    def _unload_compel(self, *args, **kwargs):
-        pass
-
-    def _load_deep_cache(self, *args, **kwargs):
-        pass
-
-    def _unload_deep_cache(self, *args, **kwargs):
-        pass
-
-    def _unload_generator(self, *args, **kwargs):
-        pass
-
-    def _unload_pipe(self, *args, **kwargs):
-        pass
-
-    def _clear_memory_efficient_settings(self, *args, **kwargs):
-        pass
-
-    def _send_pipeline_loaded_signal(self, *args, **kwargs):
-        pass
-
-    def _make_memory_efficient(self, *args, **kwargs):
-        pass
-
-    def _finalize_load_stable_diffusion(self, *args, **kwargs):
-        pass
-
-    def emit_signal(self, *args, **kwargs):
-        pass
-
-    def handle_requested_action(self, *args, **kwargs):
-        pass
