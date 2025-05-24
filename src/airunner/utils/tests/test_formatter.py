@@ -93,6 +93,19 @@ def test_render_plaintext_to_image_handles_error(monkeypatch):
         assert result == ""
 
 
+def test_render_plaintext_to_image_error(monkeypatch, tmp_path):
+    from airunner.utils.text.formatter import Formatter
+
+    def raise_exc(*a, **k):
+        raise Exception("fail")
+
+    monkeypatch.setattr("PIL.Image.new", raise_exc)
+    out = Formatter._render_plaintext_to_image(
+        "text", str(tmp_path / "out.png")
+    )
+    assert out == ""
+
+
 @pytest.mark.parametrize(
     "content,expected_type",
     [

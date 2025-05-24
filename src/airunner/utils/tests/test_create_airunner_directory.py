@@ -95,3 +95,10 @@ def test_create_airunner_paths_sanitizes_path(dummy_paths):
         # The path passed to makedirs should not contain '..'
         args, kwargs = makedirs.call_args
         assert ".." not in args[0]
+
+
+def test_create_airunner_paths_file_exists_error(dummy_paths):
+    # Simulate FileExistsError for one path
+    with patch("os.makedirs", side_effect=FileExistsError):
+        # Should not raise
+        create_airunner_paths(dummy_paths)

@@ -21,8 +21,6 @@ def llm_manager():
     ), patch.object(
         LLMModelManager, "logger", new_callable=PropertyMock
     ) as mock_logger, patch.object(
-        LLMModelManager, "chatbot", new_callable=PropertyMock
-    ) as mock_chatbot, patch.object(
         LLMModelManager, "path_settings", new_callable=PropertyMock
     ) as mock_path_settings, patch.object(
         LLMModelManager, "device", new_callable=PropertyMock
@@ -48,25 +46,26 @@ def llm_manager():
         LLMModelManager, "llm_generator_settings", new_callable=PropertyMock
     ) as mock_llm_settings:
         mock_logger.return_value = MagicMock()
-        # This is the settings object that will be returned by the llm_generator_settings property mock
-        # and also assigned to _test_settings for direct manipulation in the test.
         settings = SimpleNamespace(
-            override_parameters=False,  # Initial value, will be changed by the test
+            override_parameters=False,
             use_cache=True,
             model_version="v1",
-            seed=42,  # Initial value, will be changed by the test
-            random_seed=False,  # Initial value, will be changed by the test
+            seed=42,
+            random_seed=False,
         )
-        mock_llm_settings.return_value = (
-            settings  # Configure the mock to return this specific object
-        )
+        mock_llm_settings.return_value = settings
 
+        # Directly assign a mock agent with a mock chatbot property
         mock_chatbot_instance = MagicMock()
         mock_chatbot_instance.use_cache = True
         mock_chatbot_instance.model_version = "v1"
         mock_chatbot_instance.seed = 42
         mock_chatbot_instance.random_seed = False
-        mock_chatbot.return_value = mock_chatbot_instance
+        mock_agent = MagicMock()
+        type(mock_agent).chatbot = PropertyMock(
+            return_value=mock_chatbot_instance
+        )
+
         mock_path_settings_instance = MagicMock()
         mock_path_settings_instance.base_path = "/tmp"
         mock_path_settings.return_value = mock_path_settings_instance
@@ -76,8 +75,9 @@ def llm_manager():
         mock_adapter_path.return_value = "/tmp/adapter"
         manager = LLMModelManager()
         manager.api = MagicMock()
-        manager._test_settings = (
-            settings  # Assign the same settings object for test manipulation
+        manager._test_settings = settings
+        manager._chat_agent = (
+            mock_agent  # Ensure chatbot property is always mocked
         )
         return manager
 
@@ -243,3 +243,168 @@ def test_do_set_seed_sets_seed(llm_manager):
         tcmsa.assert_called_with(123)
         rseed.assert_called_with(123)
         assert llm_manager._tokenizer.seed == 123
+
+
+def test_is_mistral_and_llama_instruct(llm_manager):
+    llm_manager._current_model_path = None
+    assert not llm_manager.is_mistral
+    assert not llm_manager.is_llama_instruct
+    llm_manager._current_model_path = "/models/mistral-7b"
+    assert llm_manager.is_mistral
+    llm_manager._current_model_path = "/models/llama-2-instruct"
+    assert llm_manager.is_llama_instruct
+    llm_manager._current_model_path = "/models/llama-2"
+    assert not llm_manager.is_llama_instruct
+
+
+def test_use_cache_and_model_version(llm_manager):
+    mock_chatbot = MagicMock()
+    mock_chatbot.use_cache = True
+    mock_chatbot.model_version = "v1"
+    mock_chatbot.seed = 42
+    mock_chatbot.random_seed = False
+    mock_settings = SimpleNamespace(
+        override_parameters=False,
+        use_cache=True,
+        model_version="v1",
+        seed=42,
+        random_seed=False,
+    )
+    with patch.object(
+        type(llm_manager), "chatbot", new_callable=PropertyMock
+    ) as mock_chatbot_prop, patch.object(
+        type(llm_manager), "llm_generator_settings", new_callable=PropertyMock
+    ) as mock_settings_prop:
+        mock_chatbot_prop.return_value = mock_chatbot
+        mock_settings_prop.return_value = mock_settings
+        # override_parameters False: uses chatbot values
+        mock_settings.override_parameters = False
+        chatbot = llm_manager.chatbot
+        assert hasattr(chatbot, "model_version")
+        assert chatbot.model_version == "v1"
+        assert llm_manager.use_cache is True
+        # override_parameters True: uses llm_generator_settings values
+        mock_settings.override_parameters = True
+        mock_settings.model_version = "override-v2"
+        mock_settings.use_cache = False
+        assert llm_manager.model_version == "override-v2"
+        assert llm_manager.use_cache is False
+
+
+def test_model_path_expansion(llm_manager):
+    # Should expanduser and join path
+    path = llm_manager.model_path
+    assert "llm" in path and "causallm" in path
+
+
+def test_handle_request_calls_do_generate(llm_manager):
+    llm_manager._do_set_seed = MagicMock()
+    llm_manager.load = MagicMock()
+    llm_manager._do_generate = MagicMock(return_value="resp")
+    data = {
+        "request_data": {
+            "prompt": "hi",
+            "action": LLMActionType.CHAT,
+            "llm_request": MagicMock(),
+        }
+    }
+    result = llm_manager.handle_request(data)
+    llm_manager._do_set_seed.assert_called_once()
+    llm_manager.load.assert_called_once()
+    llm_manager._do_generate.assert_called_once()
+    assert result == "resp"
+
+
+def test_do_interrupt_and_on_conversation_deleted(llm_manager):
+    # _chat_agent is None: should not error
+    llm_manager._chat_agent = None
+    llm_manager.do_interrupt()  # Should not raise
+    llm_manager.on_conversation_deleted({})  # Should not raise
+    # _chat_agent present: should call methods
+    agent = MagicMock()
+    llm_manager._chat_agent = agent
+    llm_manager.do_interrupt()
+    agent.interrupt_process.assert_called_once()
+    llm_manager.on_conversation_deleted({"id": 1})
+    agent.on_conversation_deleted.assert_called_once()
+
+
+def test_clear_history_creates_and_updates(llm_manager):
+    # _chat_agent is None: should not error
+    llm_manager._chat_agent = None
+    with patch(
+        "airunner.handlers.llm.llm_model_manager.LLMGeneratorSettings"
+    ) as mock_settings, patch(
+        "airunner.handlers.llm.llm_model_manager.Conversation"
+    ) as mock_conversation:
+        mock_settings.objects.first.return_value = MagicMock(id=1)
+        mock_conversation.objects.first.return_value = MagicMock(id=2)
+        mock_conversation.create.return_value = MagicMock(id=3)
+        llm_manager.clear_history()
+        # Should update settings with new conversation id
+        mock_settings.objects.update.assert_called()
+    # _chat_agent present: should call clear_history
+    agent = MagicMock()
+    llm_manager._chat_agent = agent
+    with patch(
+        "airunner.handlers.llm.llm_model_manager.LLMGeneratorSettings"
+    ) as mock_settings, patch(
+        "airunner.handlers.llm.llm_model_manager.Conversation"
+    ) as mock_conversation:
+        mock_settings.objects.first.return_value = MagicMock(id=1)
+        mock_conversation.objects.first.return_value = MagicMock(id=2)
+        llm_manager.clear_history({"conversation_id": 2})
+        agent.clear_history.assert_called_once()
+
+
+def test_add_chatbot_response_to_history_and_load_conversation(llm_manager):
+    # _chat_agent is None: should log warning
+    llm_manager._chat_agent = None
+    llm_manager.logger.warning = MagicMock()
+    llm_manager.add_chatbot_response_to_history("msg")
+    llm_manager.logger.warning.assert_called_with(
+        "Cannot add response - chat agent not loaded"
+    )
+    llm_manager.load_conversation({"id": 1})
+    assert llm_manager.logger.warning.call_count >= 2
+    # _chat_agent present: should call methods
+    agent = MagicMock()
+    llm_manager._chat_agent = agent
+    llm_manager.add_chatbot_response_to_history("msg2")
+    agent.add_chatbot_response_to_history.assert_called_once_with("msg2")
+    llm_manager.load_conversation({"id": 2})
+    agent.on_load_conversation.assert_called_once()
+
+
+def test_reload_rag_engine_and_on_section_changed(llm_manager):
+    # _chat_agent is None: should log warning
+    llm_manager._chat_agent = None
+    llm_manager.logger.warning = MagicMock()
+    llm_manager.reload_rag_engine()
+    llm_manager.logger.warning.assert_called_with(
+        "Cannot reload RAG engine - chat agent not loaded"
+    )
+    llm_manager.on_section_changed()
+    llm_manager.logger.warning.assert_called_with(
+        "Cannot update section - chat agent not loaded"
+    )
+    # _chat_agent present: should call methods
+    agent = MagicMock()
+    llm_manager._chat_agent = agent
+    llm_manager.reload_rag_engine()
+    agent.reload_rag_engine.assert_called_once()
+    llm_manager.on_section_changed()
+    assert agent.current_tab is None
+
+
+def test_on_web_browser_page_html(llm_manager):
+    # _chat_agent is None: should log error
+    llm_manager._chat_agent = None
+    llm_manager.logger.error = MagicMock()
+    llm_manager.on_web_browser_page_html("<html></html>")
+    llm_manager.logger.error.assert_called_with("Chat agent not loaded")
+    # _chat_agent present: should call method
+    agent = MagicMock()
+    llm_manager._chat_agent = agent
+    llm_manager.on_web_browser_page_html("<html>foo</html>")
+    agent.on_web_browser_page_html.assert_called_once_with("<html>foo</html>")
