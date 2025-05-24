@@ -5,8 +5,6 @@ from airunner.gui.widgets.nodegraph.custom_node_graph import CustomNodeGraph
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
 import sys
 
-print(f"IMPORTING NODEGRAPH_SERVICES.PY: {__name__}", file=sys.stderr)
-
 
 class NodegraphAPIService(APIServiceBase):
     def node_executed(self, node_id, result, data=None):
