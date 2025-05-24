@@ -29,7 +29,7 @@ class PromptConfig:
         "Determine what {botname}'s mood is and why then provide a brief explanation.\n"
     )
     UPDATE_USER_DATA = (
-        "You are to examine the conversation between the user ({username} and the chatbot assistant ({botname}).\n"
+        "You are to examine the conversation between the user ({username}) and the chatbot assistant ({botname}).\n"
         "You are to determine what information about the user ({username}) is relevant, interesting, important, informative, or useful.\n"
         "You are to find anything that can be used to understand the user ({username}) better.\n"
         "You are to find any likes, dislikes, interests, hobbies, relatives, information about spouses, pets, friends, family members, or any other information that seems relevant.\n"
