@@ -477,7 +477,7 @@ def test_summarize_conversation_prompt(agent):
 
 
 def test_mood_update_prompt(agent):
-    assert "mood analyzier" in agent._mood_update_prompt
+    assert "mood analyzer" in agent._mood_update_prompt
 
 
 def test_system_prompt(agent):
