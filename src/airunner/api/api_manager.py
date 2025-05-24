@@ -25,7 +25,7 @@ class APIManager:
                 # No-op fallback for legacy/worker code
                 pass
 
-            self._emit_signal = emit_signal
+            self._emit_signal = emit_signal  # Use the inner function
         else:
             self._emit_signal = emit_signal
         self.llm = LLMAPIService(emit_signal=self._emit_signal)
