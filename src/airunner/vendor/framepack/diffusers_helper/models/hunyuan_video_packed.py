@@ -18,8 +18,8 @@ from diffusers.models.embeddings import (
 )
 from diffusers.models.modeling_outputs import Transformer2DModelOutput
 from diffusers.models.modeling_utils import ModelMixin
-from airunner.FramePack.diffusers_helper.dit_common import LayerNorm
-from airunner.FramePack.diffusers_helper.utils import zero_module
+from airunner.vendor.framepack.diffusers_helper.dit_common import LayerNorm
+from airunner.vendor.framepack.diffusers_helper.utils import zero_module
 
 
 enabled_backends = []
