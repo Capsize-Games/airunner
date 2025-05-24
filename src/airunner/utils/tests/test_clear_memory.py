@@ -69,3 +69,30 @@ def test_clear_memory_runtimeerror(capfd):
             clear_memory_mod.torch = old_torch
         else:
             delattr(clear_memory_mod, "torch")
+
+
+def test_clear_memory_importerror(monkeypatch):
+    # Simulate ImportError for torch at import time
+    import importlib
+    import sys
+
+    mod_name = "airunner.utils.memory.clear_memory"
+    # Remove from sys.modules to force re-import
+    sys.modules.pop(mod_name, None)
+    # Patch builtins.__import__ to raise ImportError for torch
+    import builtins
+
+    orig_import = builtins.__import__
+
+    def fake_import(name, *a, **k):
+        if name == "torch":
+            raise ImportError
+        return orig_import(name, *a, **k)
+
+    builtins.__import__ = fake_import
+    try:
+        clear_memory_mod = importlib.import_module(mod_name)
+        clear_memory_mod.clear_memory()
+    finally:
+        builtins.__import__ = orig_import
+        sys.modules.pop(mod_name, None)
