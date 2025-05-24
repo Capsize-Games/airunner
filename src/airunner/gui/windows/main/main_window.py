@@ -310,6 +310,7 @@ class MainWindow(
     signals in the corresponding ui file.
     """
 
+    @Slot()
     def on_tray_icon_activated(self, reason: QSystemTrayIcon.ActivationReason):
         """Handle tray icon activation events."""
         print(f"Tray icon activated with reason: {reason}")
@@ -341,6 +342,15 @@ class MainWindow(
 
     @Slot()
     def on_actionRecenter_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot recenter grid."
+            )
+            return
         self.api.art.canvas.recenter_grid()
 
     @Slot()
@@ -365,42 +375,132 @@ class MainWindow(
 
     @Slot()
     def on_actionExport_image_button_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot export image."
+            )
+            return
         self.api.art.canvas.export_image()
 
     @Slot()
     def on_actionImport_image_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot import image."
+            )
+            return
         self.api.art.canvas.import_image()
 
     @Slot()
     def on_artActionNew_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot clear canvas."
+            )
+            return
         self.api.art.canvas.clear()
 
     @Slot()
     def on_actionUndo_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot undo."
+            )
+            return
         self.api.art.canvas.undo()
 
     @Slot()
     def on_actionRedo_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot redo."
+            )
+            return
         self.api.art.canvas.redo()
 
     @Slot()
     def on_actionPaste_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot paste image."
+            )
+            return
         self.api.art.canvas.paste_image()
 
     @Slot()
     def on_actionCopy_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot copy image."
+            )
+            return
         self.api.art.canvas.copy_image()
 
     @Slot()
     def on_actionCut_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot cut image."
+            )
+            return
         self.api.art.canvas.cut_image()
 
     @Slot()
     def on_actionRotate_90_clockwise_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 clockwise."
+            )
+            return
         self.api.art.canvas.rotate_image_90_clockwise()
 
     @Slot()
     def on_actionRotate_90_counter_clockwise_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 counterclockwise."
+            )
+            return
         self.api.art.canvas.rotate_image_90_counterclockwise()
 
     @Slot()
@@ -452,6 +552,419 @@ class MainWindow(
         if val is True and self.drawing_pad_mask is None:
             self._generate_drawingpad_mask()
         self.update_drawing_pad_settings("mask_layer_enabled", val)
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot toggle mask layer."
+            )
+            return
+        self.api.art.canvas.mask_layer_toggled()
+
+    @Slot(bool)
+    def action_outpaint_toggled(self, val: bool):
+        self.update_outpaint_settings("enabled", val)
+
+    @Slot()
+    def action_outpaint_export(self):
+        pass
+
+    @Slot()
+    def action_outpaint_import(self):
+        pass
+
+    @Slot()
+    def on_actionExport_image_button_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot export image."
+            )
+            return
+        self.api.art.canvas.export_image()
+
+    @Slot()
+    def on_actionImport_image_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot import image."
+            )
+            return
+        self.api.art.canvas.import_image()
+
+    @Slot()
+    def on_artActionNew_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot clear canvas."
+            )
+            return
+        self.api.art.canvas.clear()
+
+    @Slot()
+    def on_actionUndo_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot undo."
+            )
+            return
+        self.api.art.canvas.undo()
+
+    @Slot()
+    def on_actionRedo_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot redo."
+            )
+            return
+        self.api.art.canvas.redo()
+
+    @Slot()
+    def on_actionPaste_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot paste image."
+            )
+            return
+        self.api.art.canvas.paste_image()
+
+    @Slot()
+    def on_actionCopy_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot copy image."
+            )
+            return
+        self.api.art.canvas.copy_image()
+
+    @Slot()
+    def on_actionCut_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot cut image."
+            )
+            return
+        self.api.art.canvas.cut_image()
+
+    @Slot()
+    def on_actionRotate_90_clockwise_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 clockwise."
+            )
+            return
+        self.api.art.canvas.rotate_image_90_clockwise()
+
+    @Slot()
+    def on_actionRotate_90_counter_clockwise_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 counterclockwise."
+            )
+            return
+        self.api.art.canvas.rotate_image_90_counterclockwise()
+
+    @Slot()
+    def on_actionClear_all_prompts_triggered(self):
+        self.clear_all_prompts()
+
+    @Slot()
+    def on_actionBrowse_AI_Runner_Path_triggered(self):
+        path = self.path_settings.base_path
+        if path == "":
+            path = AIRUNNER_BASE_PATH
+        show_path(path)
+
+    @Slot()
+    def action_show_model_path_txt2img(self):
+        self.show_settings_path("txt2img_model_path")
+
+    @Slot()
+    def action_show_model_path_inpaint(self):
+        self.show_settings_path("inpaint_model_path")
+
+    @Slot()
+    def action_show_model_path_embeddings(self):
+        self.show_settings_path("embeddings_model_path")
+
+    @Slot()
+    def action_show_model_path_lora(self):
+        self.show_settings_path("lora_model_path")
+
+    @Slot()
+    def action_show_llm(self):
+        pass
+
+    @Slot()
+    def on_actionReport_vulnerability_triggered(self):
+        webbrowser.open(AIRUNNER_VULNERABILITY_REPORT_LINK)
+
+    @Slot()
+    def on_actionBug_report_triggered(self):
+        webbrowser.open(AIRUNNER_BUG_REPORT_LINK)
+
+    @Slot()
+    def on_actionDiscord_triggered(self):
+        if AIRUNNER_DISCORD_URL:
+            webbrowser.open(AIRUNNER_DISCORD_URL)
+
+    @Slot(bool)
+    def action_toggle_mask_layer(self, val: bool):
+        if val is True and self.drawing_pad_mask is None:
+            self._generate_drawingpad_mask()
+        self.update_drawing_pad_settings("mask_layer_enabled", val)
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot toggle mask layer."
+            )
+            return
+        self.api.art.canvas.mask_layer_toggled()
+
+    @Slot(bool)
+    def action_outpaint_toggled(self, val: bool):
+        self.update_outpaint_settings("enabled", val)
+
+    @Slot()
+    def action_outpaint_export(self):
+        pass
+
+    @Slot()
+    def action_outpaint_import(self):
+        pass
+
+    @Slot()
+    def on_actionExport_image_button_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot export image."
+            )
+            return
+        self.api.art.canvas.export_image()
+
+    @Slot()
+    def on_actionImport_image_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot import image."
+            )
+            return
+        self.api.art.canvas.import_image()
+
+    @Slot()
+    def on_artActionNew_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot clear canvas."
+            )
+            return
+        self.api.art.canvas.clear()
+
+    @Slot()
+    def on_actionUndo_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot undo."
+            )
+            return
+        self.api.art.canvas.undo()
+
+    @Slot()
+    def on_actionRedo_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot redo."
+            )
+            return
+        self.api.art.canvas.redo()
+
+    @Slot()
+    def on_actionPaste_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot paste image."
+            )
+            return
+        self.api.art.canvas.paste_image()
+
+    @Slot()
+    def on_actionCopy_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot copy image."
+            )
+            return
+        self.api.art.canvas.copy_image()
+
+    @Slot()
+    def on_actionCut_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot cut image."
+            )
+            return
+        self.api.art.canvas.cut_image()
+
+    @Slot()
+    def on_actionRotate_90_clockwise_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 clockwise."
+            )
+            return
+        self.api.art.canvas.rotate_image_90_clockwise()
+
+    @Slot()
+    def on_actionRotate_90_counter_clockwise_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 counterclockwise."
+            )
+            return
+        self.api.art.canvas.rotate_image_90_counterclockwise()
+
+    @Slot()
+    def on_actionClear_all_prompts_triggered(self):
+        self.clear_all_prompts()
+
+    @Slot()
+    def on_actionBrowse_AI_Runner_Path_triggered(self):
+        path = self.path_settings.base_path
+        if path == "":
+            path = AIRUNNER_BASE_PATH
+        show_path(path)
+
+    @Slot()
+    def action_show_model_path_txt2img(self):
+        self.show_settings_path("txt2img_model_path")
+
+    @Slot()
+    def action_show_model_path_inpaint(self):
+        self.show_settings_path("inpaint_model_path")
+
+    @Slot()
+    def action_show_model_path_embeddings(self):
+        self.show_settings_path("embeddings_model_path")
+
+    @Slot()
+    def action_show_model_path_lora(self):
+        self.show_settings_path("lora_model_path")
+
+    @Slot()
+    def action_show_llm(self):
+        pass
+
+    @Slot()
+    def on_actionReport_vulnerability_triggered(self):
+        webbrowser.open(AIRUNNER_VULNERABILITY_REPORT_LINK)
+
+    @Slot()
+    def on_actionBug_report_triggered(self):
+        webbrowser.open(AIRUNNER_BUG_REPORT_LINK)
+
+    @Slot()
+    def on_actionDiscord_triggered(self):
+        if AIRUNNER_DISCORD_URL:
+            webbrowser.open(AIRUNNER_DISCORD_URL)
+
+    @Slot(bool)
+    def action_toggle_mask_layer(self, val: bool):
+        if val is True and self.drawing_pad_mask is None:
+            self._generate_drawingpad_mask()
+        self.update_drawing_pad_settings("mask_layer_enabled", val)
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot toggle mask layer."
+            )
+            return
         self.api.art.canvas.mask_layer_toggled()
 
     @Slot(bool)
@@ -514,6 +1027,15 @@ class MainWindow(
     @Slot(bool)
     def on_actionToggle_Grid_toggled(self, val: bool):
         self.update_grid_settings("show_grid", val)
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot toggle grid."
+            )
+            return
         self.api.art.canvas.toggle_grid(val)
 
     @Slot(bool)
@@ -527,6 +1049,11 @@ class MainWindow(
         else:
             self.update_application_settings("nsfw_filter", val)
             self.toggle_nsfw_filter()
+            if not self.api or not hasattr(self.api, "art"):
+                self.logger.warning(
+                    "MainWindow: self.api.art is missing. Cannot load safety checker."
+                )
+                return
             self.api.art.load_safety_checker()
 
     @Slot(bool)
@@ -594,10 +1121,20 @@ class MainWindow(
 
     @Slot()
     def on_actionNew_Conversation_triggered(self):
+        if not self.api or not hasattr(self.api, "llm"):
+            self.logger.warning(
+                "MainWindow: self.api.llm is missing. Cannot clear LLM history."
+            )
+            return
         self.api.llm.clear_history()
 
     @Slot()
     def on_actionDelete_conversation_triggered(self):
+        if not self.api or not hasattr(self.api, "llm"):
+            self.logger.warning(
+                "MainWindow: self.api.llm is missing. Cannot delete conversation."
+            )
+            return
         current_conversation = self.llm_generator_settings.current_conversation
         self.api.llm.converation_deleted(current_conversation.id)
 
@@ -675,14 +1212,34 @@ class MainWindow(
             self.update_chatbot(
                 "target_files", [os.path.join(filepath, filename)]
             )
+            if not self.api or not hasattr(self.api, "llm"):
+                self.logger.warning(
+                    "MainWindow: self.api.llm is missing. Cannot reload RAG."
+                )
+                return
             self.api.llm.reload_rag(self.chatbot.target_files)
+            if not self.api or not hasattr(self.api, "llm"):
+                self.logger.warning(
+                    "MainWindow: self.api.llm is missing. Cannot send LLM request."
+                )
+                return
             self.api.llm.send_request(
                 action=LLMActionType.RAG,
                 prompt="Summarize the text and provide a synopsis of the content. Be concise and informative.",
                 llm_request=LLMRequest.from_default(),
             )
 
+    @Slot()
     def show_layers(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot show layers."
+            )
+            return
         self.api.art.canvas.show_layers()
 
     def on_reset_paths_signal(self):
@@ -816,9 +1373,19 @@ class MainWindow(
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
+        if not self.api:
+            self.logger.warning(
+                "MainWindow: self.api is missing. Cannot clear status message."
+            )
+            return
         self.api.clear_status_message()
         self.initialize_widget_elements()
         self._load_plugins()
+        if not self.api:
+            self.logger.warning(
+                "MainWindow: self.api is missing. Cannot load main window."
+            )
+            return
         self.api.main_window_loaded(self)
 
         if not AIRUNNER_DISCORD_URL:
@@ -898,6 +1465,15 @@ class MainWindow(
         self.initialized = True
 
     def layer_opacity_changed(self, _attr_name, value=None, _widget=None):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot change layer opacity."
+            )
+            return
         self.api.art.canvas.layer_opacity_changed(value)
 
     def keyPressEvent(self, event):
@@ -930,6 +1506,11 @@ class MainWindow(
 
     def on_nsfw_content_detected_signal(self):
         # display message in status
+        if not self.api:
+            self.logger.warning(
+                "MainWindow: self.api is missing. Cannot display NSFW content detected message."
+            )
+            return
         self.api.application_error(AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE)
 
     def closeEvent(self, event):
@@ -943,6 +1524,11 @@ class MainWindow(
     def quit(self):
         self.logger.debug("Quitting")
         self.save_state()
+        if not self.api:
+            self.logger.warning(
+                "MainWindow: self.api is missing. Cannot quit application."
+            )
+            return
         self.api.quit_application()
 
     def handle_quit_application_signal(self):
@@ -1078,8 +1664,18 @@ class MainWindow(
         if self._model_status[model_type] is not ModelStatus.LOADING:
             if model_type is ModelType.TTS:
                 if val:
+                    if not self.api or not hasattr(self.api, "tts"):
+                        self.logger.warning(
+                            "MainWindow: self.api.tts is missing. Cannot start TTS."
+                        )
+                        return
                     self.api.tts.start()
                 else:
+                    if not self.api or not hasattr(self.api, "tts"):
+                        self.logger.warning(
+                            "MainWindow: self.api.tts is missing. Cannot stop TTS."
+                        )
+                        return
                     self.api.tts.stop()
             else:
                 if val:
@@ -1253,11 +1849,21 @@ class MainWindow(
                 "show_nsfw_warning", show_nsfw_warning
             )
         self.toggle_nsfw_filter()
+        if not self.api or not hasattr(self.api, "art"):
+            self.logger.warning(
+                "MainWindow: self.api.art is missing. Cannot unload safety checker."
+            )
+            return
         self.api.art.unload_safety_checker()
 
     ###### End window handlers ######
 
     def show_update_message(self):
+        if not self.api:
+            self.logger.warning(
+                "MainWindow: self.api is missing. Cannot display update message."
+            )
+            return
         self.api.application_status(
             f"New version available: {self.latest_version}"
         )
@@ -1436,6 +2042,11 @@ class MainWindow(
     def clear_all_prompts(self):
         self.prompt = ""
         self.negative_prompt = ""
+        if not self.api:
+            self.logger.warning(
+                "MainWindow: self.api is missing. Cannot clear prompts."
+            )
+            return
         self.api.clear_prompts()
 
     def new_batch(self, index, image, data):

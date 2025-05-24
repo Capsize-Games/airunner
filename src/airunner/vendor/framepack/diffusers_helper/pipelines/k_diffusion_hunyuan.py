@@ -1,11 +1,15 @@
 import torch
 import math
 
-from airunner.FramePack.diffusers_helper.k_diffusion.uni_pc_fm import (
+from airunner.vendor.framepack.diffusers_helper.k_diffusion.uni_pc_fm import (
     sample_unipc,
 )
-from airunner.FramePack.diffusers_helper.k_diffusion.wrapper import fm_wrapper
-from airunner.FramePack.diffusers_helper.utils import repeat_to_batch_size
+from airunner.vendor.framepack.diffusers_helper.k_diffusion.wrapper import (
+    fm_wrapper,
+)
+from airunner.vendor.framepack.diffusers_helper.utils import (
+    repeat_to_batch_size,
+)
 
 
 def flux_time_shift(t, mu=1.15, sigma=1.0):
