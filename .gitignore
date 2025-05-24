@@ -47,3 +47,6 @@ docker-compose.local.yml
 *.pickle
 mathjax
 docs
+.coverage*
+.github/instructions
+.github/*.md
