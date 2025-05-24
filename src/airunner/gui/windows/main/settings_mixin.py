@@ -101,7 +101,7 @@ class SettingsMixin:
     @property
     def application_settings(self) -> ApplicationSettings:
         return self.load_settings_from_db(ApplicationSettings)
-    
+
     @property
     def language_settings(self) -> LanguageSettings:
         return self.load_settings_from_db(LanguageSettings)
@@ -517,15 +517,13 @@ class SettingsMixin:
     def load_settings_from_db(
         model_class_, eager_load: Optional[List[str]] = None
     ) -> Type:
+        settings_instance = None
         try:
             with session_scope() as session:
-                # Try to fetch existing settings first
                 query = session.query(model_class_)
                 if eager_load:
-                    # Skip eager loading if we can't resolve the attribute
                     for relation in eager_load:
                         try:
-                            # Get the actual attribute instead of using string
                             relation_attr = getattr(
                                 model_class_, relation, None
                             )
@@ -534,32 +532,78 @@ class SettingsMixin:
                                     joinedload(relation_attr)
                                 )
                         except Exception as e:
-                            logger = get_logger(
-                                "AI Runner", AIRUNNER_LOG_LEVEL
+                            # Use a local logger instance to avoid issues with shared state during initialization
+                            local_logger = get_logger(
+                                "AI Runner SettingsMixin", AIRUNNER_LOG_LEVEL
                             )
-                            logger.warning(
-                                f"Could not eager load {relation}: {e}"
+                            local_logger.warning(
+                                f"Could not eager load {relation} for {model_class_.__name__}: {e}"
                             )
 
-                settings = query.first()
+                settings_instance = query.first()
 
-                # If settings don't exist, create them
-                if settings is None:
-                    settings = model_class_()
-                    session.add(settings)
+                if settings_instance is None:
+                    local_logger = get_logger(
+                        "AI Runner SettingsMixin", AIRUNNER_LOG_LEVEL
+                    )
+                    local_logger.info(
+                        f"No settings found for {model_class_.__name__}, creating new entry."
+                    )
+                    settings_instance = model_class_()
+                    session.add(settings_instance)
                     session.commit()
-                    # Re-query to ensure we have a fresh instance
-                    settings = query.first()
+                    if settings_instance.id is not None:
+                        query_after_create = session.query(model_class_)
+                        if eager_load:
+                            for relation in eager_load:
+                                try:
+                                    relation_attr = getattr(
+                                        model_class_, relation, None
+                                    )
+                                    if relation_attr is not None:
+                                        query_after_create = (
+                                            query_after_create.options(
+                                                joinedload(relation_attr)
+                                            )
+                                        )
+                                except Exception:
+                                    pass
+                        settings_instance = query_after_create.filter(
+                            model_class_.id == settings_instance.id
+                        ).first()
+                    else:
+                        local_logger.error(
+                            f"Failed to get ID for new {model_class_.__name__} instance after commit."
+                        )
+                        settings_instance = None
 
-                # Make a copy of the settings to return after the session closes
-                session.expunge_all()
-                return settings
+                if settings_instance:
+                    session.expunge(settings_instance)
+
+                return settings_instance
 
         except Exception as e:
-            logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
-            logger.error(f"Error in load_settings_from_db: {e}")
-            # Create new settings with defaults if there was an error
-            return model_class_()
+            local_logger = get_logger(
+                "AI Runner SettingsMixin", AIRUNNER_LOG_LEVEL
+            )
+            local_logger.error(
+                f"Error loading settings for {model_class_.__name__}: {e}. Attempting to return a new transient default instance.",
+                exc_info=True,
+            )
+            try:
+                return model_class_()
+            except Exception as e_create_fallback:
+                local_logger.critical(
+                    f"CRITICAL: Failed to create even a fallback default instance for {model_class_.__name__} "
+                    f"during error handling for the original error ({e}). Fallback creation error: {e_create_fallback}",
+                    exc_info=True,
+                )
+                raise RuntimeError(
+                    f"Fatal error in settings: Could not instantiate default for {model_class_.__name__} "
+                    f"after initial load failed. Original error: {e}"
+                ) from e_create_fallback
+
+        return settings_instance
 
     def update_setting(self, model_class_, name, value):
         setting = model_class_.objects.order_by(model_class_.id.desc()).first()
