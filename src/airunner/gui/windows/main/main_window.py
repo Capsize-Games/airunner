@@ -262,6 +262,16 @@ class MainWindow(
         self._updating_settings = True
         self._updating_settings = False
         self._worker_manager = None
+        # Add WorkerManager for test and app compatibility
+        try:
+            from airunner.gui.windows.main.worker_manager import WorkerManager
+
+            self.worker_manager = WorkerManager(
+                logger=getattr(self, "logger", None)
+            )
+            self.worker_manager.initialize_workers()
+        except Exception as e:
+            self.worker_manager = None  # Fallback if import fails
         self.initialize_ui()
         self._initialize_workers()
         self.last_tray_click_time = 0
