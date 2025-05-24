@@ -16,6 +16,7 @@ def test_create_worker_returns_mock_in_test_mode(monkeypatch):
 
 def test_create_worker_real(monkeypatch):
     import sys
+    import types
     import importlib
 
     class DummyWorker:
@@ -40,14 +41,12 @@ def test_create_worker_real(monkeypatch):
         def quit(self):
             pass
 
-    import types
-
     fake_qtcore = types.SimpleNamespace(QThread=DummyThread)
     sys.modules["PySide6.QtCore"] = fake_qtcore
     monkeypatch.setenv("AIRUNNER_TEST_MODE", "0")
-    import airunner.utils.application.create_worker as create_worker_mod
-
-    importlib.reload(create_worker_mod)
+    create_worker_mod = importlib.import_module(
+        "airunner.utils.application.create_worker"
+    )
     worker = create_worker_mod.create_worker(DummyWorker, foo=1)
     assert isinstance(worker, DummyWorker)
     assert worker.kwargs["foo"] == 1
