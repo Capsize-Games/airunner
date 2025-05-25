@@ -1,6 +1,7 @@
 from typing import Optional
 import logging
 import datetime
+import uuid
 from sqlalchemy import (
     Column,
     Integer,
@@ -84,30 +85,58 @@ class Conversation(BaseModel):
             .first()
         )
 
+        # Ensure a valid chatbot exists
         if not chatbot:
             if previous_conversation:
                 chatbot = Chatbot.objects.get(previous_conversation.chatbot_id)
-            else:
+            if not chatbot:
                 chatbot = Chatbot.objects.first()
+            if not chatbot:
+                unique_name = f"DefaultChatbot_{uuid.uuid4()}"
+                chatbot = Chatbot.objects.create(
+                    name=unique_name, botname="Computer"
+                )
+                chatbot_id = chatbot.id
+                chatbot_botname = chatbot.botname
+            else:
+                chatbot_id = chatbot.id
+                chatbot_botname = chatbot.botname
+        else:
+            chatbot_id = chatbot.id
+            chatbot_botname = chatbot.botname
 
+        # Ensure a valid user exists
         if not user:
             if previous_conversation:
                 user = User.objects.get(previous_conversation.user_id)
-            else:
+            if not user:
                 user = User.objects.first()
             if not user:
-                user = User.objects.create(username="User")
-                user = User.objects.first()
+                user_dc = User.objects.create(username="User")
+                from airunner.data.session_manager import session_scope
+
+                with session_scope() as session:
+                    orm_user = (
+                        session.query(User).filter_by(id=user_dc.id).first()
+                    )
+                    user_id = orm_user.id
+                    user_username = orm_user.username
+            else:
+                user_id = user.id
+                user_username = user.username
+        else:
+            user_id = user.id
+            user_username = user.username
 
         conversation = cls(
             timestamp=datetime.datetime.now(datetime.timezone.utc),
             title="",
             key="",
             value=[],  # Always use empty list, not None
-            chatbot_id=chatbot.id,
-            user_id=user.id,
-            chatbot_name=chatbot.botname,
-            user_name=user.username,
+            chatbot_id=chatbot_id,
+            user_id=user_id,
+            chatbot_name=chatbot_botname,
+            user_name=user_username,
             bot_mood=(
                 previous_conversation.bot_mood
                 if previous_conversation
@@ -120,7 +149,8 @@ class Conversation(BaseModel):
             .order_by(cls.id.desc())
             .first()
         )
-        return conversation
+        # Always return a dataclass, not ORM object
+        return conversation.to_dataclass() if conversation else None
 
     @classmethod
     def most_recent(cls) -> Optional["Conversation"]:
