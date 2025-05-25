@@ -50,6 +50,27 @@ class CombinedMeta(QObjectMeta, ABCMeta):
     pass
 
 
+from abc import ABC, abstractmethod
+
+
+class ModelManagerInterface(ABC):
+    @abstractmethod
+    def load_model(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def unload_model(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def _load_model(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def _unload_model(self, *args, **kwargs):
+        pass
+
+
 class BaseModelManager(
     MediatorMixin,
     SettingsMixin,

@@ -15,6 +15,7 @@ from airunner.handlers.stablediffusion.base_diffusers_model_manager import (
 from airunner.handlers.stablediffusion.prompt_weight_bridge import (
     PromptWeightBridge,
 )
+from airunner.handlers.base_model_manager import ModelManagerInterface
 
 # Patch for test compatibility: expose clear_memory for patching in tests
 try:
@@ -36,7 +37,9 @@ class ControlNetModel:
     pass
 
 
-class StableDiffusionModelManager(BaseDiffusersModelManager):
+class StableDiffusionModelManager(
+    BaseDiffusersModelManager, ModelManagerInterface
+):
     @property
     def img2img_pipelines(self):
         return (
@@ -208,3 +211,17 @@ class StableDiffusionModelManager(BaseDiffusersModelManager):
                 self._pooled_prompt_embeds.half().to(self._device)
             if self._negative_pooled_prompt_embeds is not None:
                 self._negative_pooled_prompt_embeds.half().to(self._device)
+
+    def load_model(self, *args, **kwargs):
+        """Stub for test compatibility."""
+        return self._load_model(*args, **kwargs)
+
+    def unload_model(self, *args, **kwargs):
+        """Stub for test compatibility."""
+        return self._unload_model(*args, **kwargs)
+
+    def _load_model(self, *args, **kwargs):
+        raise NotImplementedError("Implement in subclass or concrete manager.")
+
+    def _unload_model(self, *args, **kwargs):
+        raise NotImplementedError("Implement in subclass or concrete manager.")
