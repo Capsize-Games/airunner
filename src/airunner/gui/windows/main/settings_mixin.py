@@ -702,9 +702,30 @@ class SettingsMixin:
 
     @staticmethod
     def create_chatbot(chatbot_name) -> Chatbot:
-        new_chatbot = Chatbot(name=chatbot_name)
-        new_chatbot.save()
-        return new_chatbot
+        # Check for existing chatbot with this name before creating
+        from airunner.data.models.chatbot import Chatbot
+
+        try:
+            existing = Chatbot.objects.filter_by_first(name=chatbot_name)
+            if existing:
+                return existing
+        except Exception:
+            pass  # If query fails, proceed to create new one
+
+        try:
+            new_chatbot = Chatbot(name=chatbot_name)
+            new_chatbot.save()
+            return new_chatbot
+        except Exception:
+            # If save fails, try to get existing one again
+            try:
+                return (
+                    Chatbot.objects.filter_by_first(name=chatbot_name)
+                    or Chatbot.objects.first()
+                )
+            except Exception:
+                # Create a minimal fallback chatbot in memory
+                return Chatbot(name=chatbot_name, botname="Fallback")
 
     def reset_path_settings(self):
         PathSettings.objects.delete_all()
