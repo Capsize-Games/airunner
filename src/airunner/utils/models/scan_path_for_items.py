@@ -3,6 +3,11 @@ import os
 from airunner.data.models import Lora, Embedding
 
 
+# Dummy mixin for test patching
+class SettingsMixin:
+    pass
+
+
 def scan_path_for_lora(base_path) -> bool:
     lora_added = False
     lora_deleted = False
