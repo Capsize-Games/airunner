@@ -1014,7 +1014,9 @@ class CustomScene(
             evt = SimpleEvent(event)
 
         # Call the API with the expected parameters
-        self.api.art.canvas.update_cursor(evt, apply_cursor)
+        # Defensive check: ensure API is available (may be None in test environments)
+        if self.api and hasattr(self.api, "art") and self.api.art:
+            self.api.art.canvas.update_cursor(evt, apply_cursor)
 
     @staticmethod
     def _load_image(image_path: str) -> Image:
