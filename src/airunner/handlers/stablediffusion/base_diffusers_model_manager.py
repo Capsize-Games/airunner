@@ -15,7 +15,6 @@ from compel import (
     Compel,
     DiffusersTextualInversionManager,
 )
-from controlnet_aux.processor import MODELS as controlnet_aux_models
 from diffusers import (
     StableDiffusionPipeline,
     StableDiffusionImg2ImgPipeline,
@@ -50,16 +49,12 @@ from airunner.enums import (
     GeneratorSection,
     ModelStatus,
     ModelType,
-    SignalCode,
     HandlerState,
     EngineResponseCode,
     ModelAction,
     ImagePreset,
 )
 from airunner.exceptions import PipeNotLoadedException, InterruptedException
-from airunner.handlers.stablediffusion.prompt_weight_bridge import (
-    PromptWeightBridge,
-)
 from airunner.settings import (
     AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG,
     AIRUNNER_LOCAL_FILES_ONLY,
@@ -86,6 +81,13 @@ from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.handlers.stablediffusion.rect import Rect
 from diffusers import SchedulerMixin
+from airunner.handlers.stablediffusion import (
+    model_loader,
+    prompt_utils,
+    image_generation,
+    memory_utils,
+    utils,
+)
 
 
 class BaseDiffusersModelManager(BaseModelManager):
@@ -555,45 +557,24 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def prompt(self) -> str:
-        prompt = self.image_request.prompt
-        prompt_preset = self.prompt_preset
-
-        prompt = PromptWeightBridge.convert(prompt)
-        prompt_preset = PromptWeightBridge.convert(prompt_preset)
-
-        # Format the prompt
-        formatted_prompt = None
-        if self.do_join_prompts:
-            prompts = [f'"{prompt}"']
-            for (
-                additional_prompt_settings
-            ) in self.image_request.additional_prompts:
-                addtional_prompt = additional_prompt_settings["prompt"]
-                prompts.append(f'"{addtional_prompt}"')
-            formatted_prompt = (
-                f'({", ".join(prompts)}, "{prompt_preset}").and()'
-            )
-
-        if prompt_preset != "":
-            prompt = f'("{prompt}", "{prompt_preset}").and(0.5, 0.75)'
-
-        formatted_prompt = formatted_prompt or prompt
-
-        return formatted_prompt
+        return prompt_utils.format_prompt(
+            self.image_request.prompt,
+            prompt_utils.get_prompt_preset(self.image_request.image_preset),
+            (
+                self.image_request.additional_prompts
+                if self.do_join_prompts
+                else None
+            ),
+        )
 
     @property
     def negative_prompt(self) -> str:
-        prompt = self.image_request.negative_prompt
-        prompt = PromptWeightBridge.convert(prompt)
-        negative_prompt_preset = self.negative_prompt_preset
-        negative_prompt_preset = PromptWeightBridge.convert(
-            negative_prompt_preset
+        return prompt_utils.format_negative_prompt(
+            self.image_request.negative_prompt,
+            prompt_utils.get_negative_prompt_preset(
+                self.image_request.image_preset
+            ),
         )
-
-        if negative_prompt_preset != "":
-            prompt = f'("{prompt}", "{negative_prompt_preset}").and()'
-
-        return prompt
 
     @property
     def config_path(self) -> str:
@@ -1096,8 +1077,136 @@ class BaseDiffusersModelManager(BaseModelManager):
             or self.safety_checker_is_loading
         ):
             return
-        self._load_safety_checker_model()
-        self._load_feature_extractor()
+        self._safety_checker = model_loader.load_safety_checker(
+            self.application_settings, self.path_settings, self.data_type
+        )
+        self._feature_extractor = model_loader.load_feature_extractor(
+            self.path_settings, self.data_type
+        )
+        if self._safety_checker:
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.LOADED
+            )
+        else:
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.FAILED
+            )
+
+    def _unload_safety_checker(self):
+        model_loader.unload_safety_checker(self._pipe, self.logger)
+        self._safety_checker = None
+
+    def _load_controlnet_model(self):
+        if not self.controlnet_enabled:
+            return
+        self._controlnet = model_loader.load_controlnet_model(
+            self.controlnet_enabled,
+            self.controlnet_path,
+            self.data_type,
+            self._device,
+            self.logger,
+        )
+        if self._controlnet:
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
+        else:
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
+
+    def _unload_controlnet(self):
+        self._controlnet = None
+        # Add further cleanup if needed
+
+    def _load_scheduler(self, scheduler_name: Optional[str] = None):
+        if not scheduler_name:
+            return
+        self.scheduler = model_loader.load_scheduler(
+            scheduler_name,
+            self.path_settings,
+            self.version,
+            self.logger,
+        )
+        if self.scheduler:
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
+        else:
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
+
+    def _load_lora(self):
+        self.logger.debug("Loading LORA weights")
+        enabled_lora = Lora.objects.filter_by(
+            version=self.version, enabled=True
+        )
+        for lora in enabled_lora:
+            if model_loader.load_lora_weights(
+                self._pipe, lora, self.lora_base_path, self.logger
+            ):
+                self._loaded_lora[lora.path] = lora
+            else:
+                self._disabled_lora.append(lora)
+
+    def _unload_loras(self):
+        model_loader.unload_lora(self._pipe, self.logger)
+        self._loaded_lora = {}
+        self._disabled_lora = []
+
+    def _load_embeddings(self):
+        if self._pipe is None:
+            self.logger.error("Pipe is None, unable to load embeddings")
+            return
+        model_loader.unload_embeddings(self._pipe, self.logger)
+        embeddings = Embedding.objects.filter_by(version=self.version)
+        for embedding in embeddings:
+            if model_loader.load_embedding(self._pipe, embedding, self.logger):
+                self._loaded_embeddings.append(embedding.path)
+        if self._loaded_embeddings:
+            self.logger.debug("Embeddings loaded")
+        else:
+            self.logger.debug("No embeddings enabled")
+
+    def _unload_emebeddings(self):
+        model_loader.unload_embeddings(self._pipe, self.logger)
+        self._loaded_embeddings = []
+
+    def _load_compel(self):
+        if self.use_compel:
+            self._compel_proc = model_loader.load_compel_proc(
+                self.compel_parameters, self.logger
+            )
+        else:
+            model_loader.unload_compel_proc(self._compel_proc, self.logger)
+            self._compel_proc = None
+
+    def _load_deep_cache(self):
+        self._deep_cache_helper = model_loader.load_deep_cache_helper(
+            self._pipe, self.logger
+        )
+
+    def _unload_deep_cache(self):
+        model_loader.unload_deep_cache_helper(
+            self._deep_cache_helper, self.logger
+        )
+        self._deep_cache_helper = None
+
+    def _check_and_mark_nsfw_images(self, images):
+        return image_generation.check_and_mark_nsfw_images(
+            images, self._feature_extractor, self._safety_checker, self._device
+        )
+
+    def _export_images(self, images, data):
+        if not self.application_settings.auto_export_images:
+            return
+        extension = self.application_settings.image_export_type
+        filename = "image"
+        file_path = os.path.expanduser(
+            os.path.join(
+                self.path_settings.image_path, f"{filename}.{extension}"
+            )
+        )
+        metadata = self._initialize_metadata(images, data)
+        image_generation.export_images_with_metadata(
+            images, file_path, metadata
+        )
+
+    def _resize_image(self, image, max_width, max_height):
+        return utils.resize_image(image, max_width, max_height)
 
     def _load_safety_checker_model(self):
         self.logger.debug("Loading safety checker")
@@ -1162,39 +1271,21 @@ class BaseDiffusersModelManager(BaseModelManager):
                 ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED
             )
 
-    def _load_controlnet_model(self):
-        if not self.controlnet_enabled:
-            return
-        self.logger.debug(f"Loading controlnet model")
-        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
-        self.controlnet = ControlNetModel.from_pretrained(
-            self.controlnet_path,
-            torch_dtype=self.data_type,
-            device=self._device,
-            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            use_safetensors=True,
-            use_fp16=True,
-            variant="fp16",
-        )
-        if self.controlnet_processor is not None:
-            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
-
     def _load_controlnet_processor(self):
         if not self.controlnet_enabled:
             return
-        self.logger.debug(
-            f"Loading controlnet processor {self.controlnet_model.name}"
+        self._controlnet_processor = model_loader.load_controlnet_processor(
+            self.controlnet_enabled,
+            self.controlnet_model,
+            self.controlnet_processor_path,
+            self.logger,
         )
-        controlnet_data = controlnet_aux_models[self.controlnet_model.name]
-        controlnet_class_: Any = controlnet_data["class"]
-        checkpoint: bool = controlnet_data["checkpoint"]
-        if checkpoint:
-            self.controlnet_processor = controlnet_class_.from_pretrained(
-                self.controlnet_processor_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            )
-        else:
-            self.controlnet_processor = controlnet_class_()
+
+    def _unload_controlnet_processor(self):
+        model_loader.unload_controlnet_processor(
+            self._controlnet_processor, self.logger
+        )
+        self._controlnet_processor = None
 
     def _load_scheduler(self, scheduler_name: Optional[str] = None):
         if not scheduler_name:
@@ -1316,14 +1407,6 @@ class BaseDiffusersModelManager(BaseModelManager):
                 self.logger.error(f"Failed to load model to device: {e}")
             except RuntimeError as e:
                 self.logger.error(f"Failed to load model to device: {e}")
-
-    def _load_lora(self):
-        self.logger.debug(f"Loading LORA weights")
-        enabled_lora = Lora.objects.filter_by(
-            version=self.version, enabled=True
-        )
-        for lora in enabled_lora:
-            self._load_lora_weights(lora)
 
     def _load_lora_weights(self, lora: Lora):
         if lora in self._disabled_lora or lora.path in self._loaded_lora:
@@ -1473,50 +1556,14 @@ class BaseDiffusersModelManager(BaseModelManager):
     # MEMORY SETTINGS
     def _make_memory_efficient(self):
         self._current_memory_settings = self.memory_settings.to_dict()
-
         if not self._pipe:
             self.logger.error("Pipe is None, unable to apply memory settings")
             return
-
-        memory_settings = [
-            (
-                "last_channels_applied",
-                "use_last_channels",
-                self._apply_last_channels,
-            ),
-            (
-                "vae_slicing_applied",
-                "use_enable_vae_slicing",
-                self._apply_vae_slicing,
-            ),
-            (
-                "attention_slicing_applied",
-                "use_attention_slicing",
-                self._apply_attention_slicing,
-            ),
-            ("tiled_vae_applied", "use_tiled_vae", self._apply_tiled_vae),
-            (
-                "accelerated_transformers_applied",
-                "use_accelerated_transformers",
-                self._apply_accelerated_transformers,
-            ),
-            (
-                "cpu_offload_applied",
-                "use_enable_sequential_cpu_offload",
-                self._apply_cpu_offload,
-            ),
-            (
-                "model_cpu_offload_applied",
-                "enable_model_cpu_offload",
-                self._apply_model_offload,
-            ),
-            ("tome_sd_applied", "use_tome_sd", self._apply_tome),
-        ]
-
-        for setting_name, attribute_name, apply_func in memory_settings:
-            self._apply_memory_setting(
-                setting_name, attribute_name, apply_func
-            )
+        # Example: apply channels_last, more can be added as needed
+        memory_utils.apply_last_channels(
+            self._pipe, self.memory_settings.use_last_channels
+        )
+        # TODO: Add calls to other memory_utils functions for vae slicing, attention slicing, etc.
 
     def _apply_memory_setting(self, setting_name, attribute_name, apply_func):
         attr_val = getattr(self.memory_settings, attribute_name)
@@ -1719,11 +1766,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.controlnet = None
 
     def _unload_controlnet_processor(self):
-        self.logger.debug("Clearing controlnet processor")
-        if self._pipe and hasattr(self._pipe, "processor"):
-            del self._pipe.processor
-            self._pipe.processor = None
-        del self._controlnet_processor
+        model_loader.unload_controlnet_processor(
+            self._controlnet_processor, self.logger
+        )
         self._controlnet_processor = None
 
     def _unload_loras(self):
