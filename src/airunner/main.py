@@ -32,7 +32,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
     airunner_src_path = os.path.join(project_root, "src", "airunner")
 
 
-    print(os.path.join(airunner_path, "data"))
+    logging.info(f"Data directory path: {os.path.join(airunner_path, 'data')}")
     activate(
         activate_shadowlogger=False,
         darklock_os_whitelisted_operations=["makedirs", "mkdir", "open"],
