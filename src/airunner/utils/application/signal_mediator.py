@@ -19,6 +19,14 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
+class _SignalEmitter(QObject):
+    """
+    Helper QObject to provide a per-instance signal for Signal.
+    """
+
+    signal = BaseSignal(dict)
+
+
 class Signal(QObject):
     """
     Represents a signal that can be emitted and received.
@@ -32,10 +40,6 @@ class Signal(QObject):
             self.param_count = len(inspect.signature(self.callback).parameters)
         except (ValueError, TypeError, RecursionError):
             self.param_count = 1
-
-        # Create a per-instance signal using a helper QObject
-        class _SignalEmitter(QObject):
-            signal = BaseSignal(dict)
 
         self._emitter = _SignalEmitter()
         self._emitter.signal.connect(self.on_signal_received)
