@@ -21,6 +21,17 @@ class DummyBackend:
         self.emitted.append((code, data))
 
 
+@pytest.fixture(autouse=True)
+def ensure_qapplication():
+    """Ensure a QApplication exists for all tests in this module."""
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    yield
+
+
 def test_signal_mediator_register_and_emit(monkeypatch):
     mediator = SignalMediator()
     called = {}

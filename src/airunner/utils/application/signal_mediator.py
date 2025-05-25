@@ -19,12 +19,18 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
+class _SignalEmitter(QObject):
+    """
+    Helper QObject to provide a per-instance signal for Signal.
+    """
+
+    signal = BaseSignal(dict)
+
+
 class Signal(QObject):
     """
     Represents a signal that can be emitted and received.
     """
-
-    signal: BaseSignal = BaseSignal(dict)
 
     def __init__(self, callback: Callable):
         super().__init__()
@@ -35,7 +41,8 @@ class Signal(QObject):
         except (ValueError, TypeError, RecursionError):
             self.param_count = 1
 
-        self.signal.connect(self.on_signal_received)
+        self._emitter = _SignalEmitter()
+        self._emitter.signal.connect(self.on_signal_received)
 
     @Slot(object)
     def on_signal_received(self, data: Dict):
@@ -46,6 +53,11 @@ class Signal(QObject):
                 self.callback(data)
         except Exception as e:
             print(f"Error in signal callback: {e}")
+
+    # Add a property for backward compatibility
+    @property
+    def signal(self):
+        return self._emitter.signal
 
 
 class SignalMediator(metaclass=SingletonMeta):

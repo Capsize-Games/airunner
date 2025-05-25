@@ -1,251 +1,523 @@
 from airunner.facehuggershield.darklock.singleton import Singleton
-from airunner.facehuggershield.darklock.log_disc_writer import LogDiscWriter
 import builtins
-import re
 import os
 import sys
-import traceback
 import logging
+import threading
+
+# Store the true built-in import function at module load time
+_TRUE_BUILTIN_IMPORT = builtins.__import__
+
+# Basic logging configuration for debugging this module.
+# Consider a more centralized logging setup for the application.
+# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(name)s - %(funcName)s - %(lineno)d - %(message)s')
+# Get a logger specific to this module.
+logger = logging.getLogger(__name__)
 
 
 class RestrictOSAccess(metaclass=Singleton):
+    """
+    Restricts OS-level operations for security. WARNING: Do NOT call activate() from module-level code or __init__.
+    Only call activate() from your main application entry point, after all imports are complete.
+    """
+
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            with cls._lock:
+                if not cls._instance:
+                    cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        self.original_open = builtins.open  # Store original at init
-        self.original_import = builtins.__import__  # Store original at init
-        self.original_os_write = os.write  # Store original at init
-        self.original_makedirs = os.makedirs  # Store original at init
-        self.logging_importer = None
+        if not hasattr(self, "_initialized"):
+            self.original_open = builtins.open
+            self.original_os_write = os.write
+            self.original_makedirs = os.makedirs
+            self.original_mkdir = os.mkdir
+            self.original_remove = os.remove  # Capture original os.remove
+            self.original_rmdir = os.rmdir  # Capture original os.rmdir
+            # self.original_import = _TRUE_BUILTIN_IMPORT # Use module-level for consistency
 
-        self.whitelisted_operations = []  # [('open', '/dev/null')]
-        self.whitelisted_filenames = []
-        self.whitelisted_imports = []
-        self.blacklisted_filenames = []
-        self.whitelisted_directories = []
+            self.whitelisted_directories = []
+            self.whitelisted_files = set()
+            self.whitelisted_modules = set()
+            self.allow_network = False
+            self._import_guard = threading.local()
+            self._initialized = True
+            logger.debug("RestrictOSAccess initialized.")
 
-        # Internal core modules that should always be allowed for the class to function
-        self.core_internal_imports = [
-            "traceback",
-            "linecache",
-            "io",
-            "re",
-            "logging",
-            "collections",
-            "collections.abc",
-            "os",
-            "sys",
-            "tokenize",
-            "ast",
-            "types",
-            "builtins",
-        ]
-
-        self.log_disc_writer = LogDiscWriter()
-
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(logging.StreamHandler())
-
-    def is_directory_whitelisted(self, directory: str) -> bool:
-        for d in self.whitelisted_directories:
-            if str(d) in str(directory):
-                return True
-        return False
-
-    def restrict_os_write(self, *args, **kwargs):
-        # Block unless whitelisted
-        if not self.whitelisted_directories:
-            raise PermissionError("OS write operations are not allowed")
-        return self.original_os_write(*args, **kwargs)
-
-    def restricted_open(self, *args, **kwargs):
-        file_path_arg = args[0] if args and isinstance(args[0], str) else ""
-        # Block unless whitelisted
-        if not any(
-            self.is_directory_whitelisted(os.path.dirname(file_path_arg))
-            for _ in [file_path_arg]
-        ):
-            raise PermissionError(
-                "File system open operations are not allowed"
-            )
-        return self.original_open(*args, **kwargs)
-
-    def restricted_os_makedirs(self, *args, **kwargs):
-        dir_path_arg = args[0] if args and isinstance(args[0], str) else ""
-        if not self.is_directory_whitelisted(dir_path_arg):
-            raise PermissionError(
-                "File system makedirs operations are not allowed"
-            )
-        return self.original_makedirs(*args, **kwargs)
-
-    def restricted_exec(self, *args, **kwargs):
-        # Check if args is not empty and args[0] is a string before using it
-        path_arg = args[0] if args and isinstance(args[0], str) else ""
-        if (
-            (path_arg and self.is_directory_whitelisted(path_arg))
-            or "exec" in self.whitelisted_operations
-            or self.check_stack_trace()
-        ):
-            # Ensure os.execv, os.execl, etc. are called correctly
-            # This part might need more specific handling depending on which os.exec* function is intended
-            if hasattr(os, args[0]) and callable(
-                getattr(os, args[0])
-            ):  # A basic check
-                return getattr(os, args[0])(
-                    *(args[1:]), **kwargs
-                )  # Call the original os.exec*
-            else:  # Fallback or error
-                self.logger.error(
-                    f"Attempted to call an unsupported exec function: {args[0]}"
-                )
-                raise PermissionError(
-                    "System calls via os.exec* are not allowed or misconfigured"
-                )
-
-        self.logger.error(
-            f"System calls via os.exec* are not allowed. Attempted: {args}"
-        )
-        raise PermissionError("System calls via os.exec* are not allowed")
-
-    def restricted_subprocess(self, *args, **kwargs):
-        # This method seems to intend to restrict os.system, not general subprocess module
-        # For os.system, the first argument is the command string.
-        cmd_arg = args[0] if args and isinstance(args[0], str) else ""
-
-        if (
-            # is_directory_whitelisted might not be relevant for os.system commands unless they specify paths
-            # Consider a more specific check if needed, e.g., based on command patterns
-            "subprocess" in self.whitelisted_operations  # or "os.system"
-            or self.check_stack_trace()
-        ):
-            return os.system(*args, **kwargs)  # Call original os.system
-        self.logger.error(
-            f"Subprocess invocations via os.system are not allowed. Attempted: {args}"
-        )
-        raise PermissionError(
-            "Subprocess invocations via os.system are not allowed"
-        )
-
-    def restricted_import(self, name, *args, **kwargs):
-        import sys
-
-        # If running under pytest, allow all imports
-        if "pytest" in sys.modules:
-            return self.original_import(name, *args, **kwargs)
-        # Otherwise, enforce restrictions
-        if (
-            name in self.core_internal_imports
-            or any(
-                re.fullmatch(pattern, name) or name == pattern
-                for pattern in self.whitelisted_imports
-            )
-            or name.startswith("_pytest.")
-            or name.startswith("pytest")
-            or name == "faulthandler"
-        ):
-            return self.original_import(name, *args, **kwargs)
-        raise PermissionError(f"Importing module '{name}' is not allowed")
-
-    def log_imports(self, name, *args, **kwargs):
-        # self.logging_importer = LoggingImporter()
-        # Ensure LoggingImporter is defined or imported if this is to be used
-        if self.logging_importer:
-            sys.meta_path.insert(0, self.logging_importer)
-        else:
-            self.logger.warning(
-                "LoggingImporter not set, cannot log imports via meta_path."
-            )
-
-    def restricted_module(
-        self, *args, **kwargs
-    ):  # This method is generic, what module ops does it restrict?
-        self.logger.error("Module operations are not allowed")
-        raise PermissionError("Module operations are not allowed")
+    def restricted_import(
+        self, name, globals=None, locals=None, fromlist=(), level=0
+    ):
+        # This method is currently not patched onto builtins.__import__
+        # logger.debug(f"restricted_import called: name={name}, fromlist={fromlist}, level={level} - (Currently not enforcing import restrictions)")
+        # Add import restriction logic here if re-enabled.
+        # For now, directly use the true import.
+        return _TRUE_BUILTIN_IMPORT(name, globals, locals, fromlist, level)
 
     def activate(
         self,
-        blacklisted_filenames=None,
-        *args,
-        **kwargs,
+        whitelisted_directories=None,
+        whitelisted_modules=None,
+        allow_network=False,
     ):
-        import sys
+        logger.debug(
+            f"RestrictOSAccess.activate called. Current sys._airunner_os_restriction_activated: {getattr(sys, '_airunner_os_restriction_activated', False)}"
+        )
+        logger.debug(
+            f"Provided whitelisted_directories: {whitelisted_directories}"
+        )
+        logger.debug(f"Provided whitelisted_modules: {whitelisted_modules}")
+        logger.debug(f"Provided allow_network: {allow_network}")
 
-        self.logger.info("Activating OS restrictions (blacklist mode)")
-        if blacklisted_filenames is not None:
-            self.blacklisted_filenames = blacklisted_filenames
-        # Patch builtins and os module, but skip __import__ if running under pytest
+        # Update whitelists regardless of prior activation state.
+        self.whitelisted_directories = (
+            [
+                os.path.abspath(os.path.normpath(d))
+                for d in whitelisted_directories
+            ]
+            if whitelisted_directories
+            else []
+        )
+        self.whitelisted_modules = (
+            set(whitelisted_modules) if whitelisted_modules else set()
+        )
+        self.allow_network = allow_network
+        logger.debug(
+            f"Set self.whitelisted_directories to: {self.whitelisted_directories}"
+        )
+        logger.debug(
+            f"Set self.whitelisted_modules to: {self.whitelisted_modules}"
+        )
+        logger.debug(f"Set self.allow_network to: {self.allow_network}")
+
+        if (
+            hasattr(sys, "_airunner_os_restriction_activated")
+            and sys._airunner_os_restriction_activated
+        ):
+            logger.warning(
+                "OS restriction was already activated. Whitelists and settings have been updated."
+            )
+            return
+
+        logger.info("Activating OS access restrictions.")
         builtins.open = self.restricted_open
-        if "pytest" not in sys.modules:
-            builtins.__import__ = self.restricted_import
-        os.write = self.restrict_os_write
-        os.makedirs = self.restricted_os_makedirs
+        os.write = self.restricted_os_write
+        os.makedirs = self.restricted_makedirs
+        os.mkdir = self.restricted_mkdir  # Patch os.mkdir
+        os.remove = self.restricted_remove  # Patch os.remove
+        os.rmdir = self.restricted_rmdir  # Patch os.rmdir
+
+        # builtins.__import__ = self.restricted_import # Patching import is DISABLED
+        # logger.info("Import restriction patching is currently DISABLED.")
+
+        # TODO: Implement network restriction hooks based on self.allow_network.
+
+        sys._airunner_os_restriction_activated = True
+        logger.info("OS access restrictions activated.")
 
     def deactivate(self):
-        self.logger.info("Deactivating OS restrictions")
+        if (
+            not hasattr(sys, "_airunner_os_restriction_activated")
+            or not sys._airunner_os_restriction_activated
+        ):
+            logger.debug("OS restriction not active, no need to deactivate.")
+            return
+
+        logger.info("Deactivating OS access restrictions.")
         builtins.open = self.original_open
-        builtins.__import__ = self.original_import
         os.write = self.original_os_write
         os.makedirs = self.original_makedirs
-        # Restore other patched os functions if any
-        # if hasattr(self, 'original_os_system'):
-        #     os.system = self.original_os_system
-        # if hasattr(self, 'original_os_execv'):
-        #     os.execv = self.original_os_execv
+        os.mkdir = self.original_mkdir  # Restore os.mkdir
+        os.remove = self.original_remove  # Restore os.remove
+        os.rmdir = self.original_rmdir  # Restore os.rmdir
 
-    def check_stack_trace(self, allowed_callers=None):
-        """
-        Checks the stack trace for allowed callers.
-        This is a placeholder and needs a robust implementation if used for security.
-        """
-        # Example: Allow if called from a specific module or function
-        # For demonstration, always returns False unless implemented
-        # stack = traceback.extract_stack()
-        # for frame in stack:
-        #     if allowed_callers and frame.name in allowed_callers:
-        #          return True
-        return False  # Default to not allowing by stack trace check
+        # if builtins.__import__ == self.restricted_import: # Only restore if we patched it
+        #    builtins.__import__ = _TRUE_BUILTIN_IMPORT # Restore true import
+        # logger.info("Import restrictions deactivated (if they were enabled).")
 
-    # Whitelisting methods
-    def add_whitelisted_operation(
-        self, operation_type: str, value: str = None
-    ):
-        if value:
-            self.whitelisted_operations.append((operation_type, value))
-        else:
-            self.whitelisted_operations.append(operation_type)
-        self.logger.info(
-            f"Added to whitelist: operation_type='{operation_type}', value='{value}'"
+        del sys._airunner_os_restriction_activated
+        logger.info("OS access restrictions deactivated.")
+
+    def is_path_whitelisted(self, file_path: str) -> bool:
+        logger.debug(f"is_path_whitelisted: Checking file path '{file_path}'")
+        if not file_path:
+            logger.warning(
+                "is_path_whitelisted called with empty or None file_path."
+            )
+            return False
+        abs_file_path = os.path.abspath(os.path.normpath(file_path))
+        directory = os.path.dirname(abs_file_path)
+        logger.debug(
+            f"is_path_whitelisted: Checking directory '{directory}' for file '{abs_file_path}'"
+        )
+        return self.is_directory_whitelisted(directory)
+
+    def is_directory_whitelisted(self, directory_path: str) -> bool:
+        if not directory_path:  # Check for None or empty string
+            logger.warning(
+                "is_directory_whitelisted called with empty or None directory_path."
+            )
+            return False
+
+        abs_path_to_check = os.path.abspath(os.path.normpath(directory_path))
+        logger.debug(
+            f"is_directory_whitelisted: Checking absolute path '{abs_path_to_check}'"
+        )
+        logger.debug(f"Current whitelist: {self.whitelisted_directories}")
+
+        for whitelisted_dir_processed in self.whitelisted_directories:
+            # whitelisted_dir_processed is already abspath'd and normpath'd during activate()
+            logger.debug(
+                f"Comparing '{abs_path_to_check}' with whitelisted_dir '{whitelisted_dir_processed}'"
+            )
+
+            if abs_path_to_check == whitelisted_dir_processed:
+                logger.debug(
+                    f"Exact match: '{abs_path_to_check}' is whitelisted."
+                )
+                return True
+
+            # Check if abs_path_to_check is a subdirectory of whitelisted_dir_processed
+            # Ensure whitelisted_dir_processed ends with a separator for correct prefix check,
+            # unless it's the root directory itself.
+            if (
+                whitelisted_dir_processed == os.sep
+            ):  # Whitelisted directory is the root '/'
+                # Any absolute path starts with root. This effectively whitelists everything if '/' is given.
+                if abs_path_to_check.startswith(
+                    whitelisted_dir_processed
+                ):  # Should always be true for absolute paths
+                    logger.debug(
+                        f"Path '{abs_path_to_check}' is whitelisted via root '{whitelisted_dir_processed}'."
+                    )
+                    return True
+            elif abs_path_to_check.startswith(
+                whitelisted_dir_processed + os.sep
+            ):
+                logger.debug(
+                    f"Path '{abs_path_to_check}' is whitelisted as subdirectory of '{whitelisted_dir_processed}'."
+                )
+                return True
+
+        logger.debug(
+            f"Path '{abs_path_to_check}' is NOT whitelisted after checking all rules."
+        )
+        return False
+
+    def is_file_operation_allowed(self, path: str, operation: str) -> bool:
+        logger.debug(
+            f"is_file_operation_allowed: Checking file operation '{operation}' for path '{path}'"
+        )
+        if not path:
+            logger.warning(
+                "is_file_operation_allowed called with empty or None path."
+            )
+            return False
+        abs_path = os.path.abspath(os.path.normpath(path))
+        logger.debug(
+            f"is_file_operation_allowed: Normalized absolute path '{abs_path}'"
         )
 
-    def add_whitelisted_filename(self, filename: str):
-        self.whitelisted_filenames.append(filename)
-        self.logger.info(f"Added filename to whitelist: {filename}")
+        # For now, allow all operations if the path is whitelisted.
+        # This should be refined based on specific operation requirements.
+        allowed = self.is_path_whitelisted(abs_path)
+        logger.debug(
+            f"is_file_operation_allowed: Path '{abs_path}' whitelisted: {allowed}"
+        )
+        return allowed
 
-    def add_whitelisted_import(
-        self, import_name: str
-    ):  # Can be a regex pattern
-        self.whitelisted_imports.append(import_name)
-        self.logger.info(f"Added import to whitelist: {import_name}")
+    def clear_whitelists(self) -> None:
+        """Clears all whitelists."""
+        logger.debug("Clearing whitelists.")
+        self.whitelisted_directories.clear()
+        self.whitelisted_files.clear()
+        self.whitelisted_modules.clear()
 
-    def add_whitelisted_directory(self, directory: str):
-        abs_dir = os.path.abspath(directory)
-        if abs_dir not in self.whitelisted_directories:
-            self.whitelisted_directories.append(abs_dir)
-            self.logger.info(f"Added directory to whitelist: {abs_dir}")
+    def restricted_open(
+        self,
+        file,
+        mode="r",
+        buffering=-1,
+        encoding=None,
+        errors=None,
+        newline=None,
+        closefd=True,
+        opener=None,
+    ):
+        logger.debug(
+            f"restricted_open called for file: '{file}', mode: '{mode}'"
+        )
 
-    def clear_whitelists(self):
-        self.whitelisted_operations = []
-        self.whitelisted_filenames = []
-        self.whitelisted_imports = []
-        self.whitelisted_directories = []
-        self.logger.info("Cleared all whitelists.")
+        file_path_str = None
+        if isinstance(file, int):  # File descriptor
+            logger.debug(
+                f"Allowing open for already opened file descriptor: {file}"
+            )
+            return self.original_open(
+                file,
+                mode,
+                buffering,
+                encoding,
+                errors,
+                newline,
+                closefd,
+                opener,
+            )
+        elif isinstance(file, bytes):
+            try:
+                file_path_str = os.fsdecode(file)
+                logger.debug(f"Decoded bytes path for open: '{file_path_str}'")
+            except Exception as e:
+                logger.error(
+                    f"Cannot decode bytes path for open: {file}. Error: {e}. Denying access."
+                )
+                raise PermissionError(
+                    f"File system open operation with non-decodable bytes path '{file!r}' is not allowed."
+                ) from e
+        else:
+            file_path_str = str(file)
 
-    def clear_blacklist(self):
-        self.blacklisted_filenames = []
-        self.logger.info("Cleared all blacklists.")
+        abs_file_path = os.path.abspath(os.path.normpath(file_path_str))
+        logger.debug(
+            f"Checking whitelist for absolute file path: '{abs_file_path}' (original: '{file_path_str}')"
+        )
+
+        if self.is_path_whitelisted(abs_file_path):
+            logger.info(
+                f"Path '{abs_file_path}' is whitelisted for open. Proceeding."
+            )
+            return self.original_open(
+                file,
+                mode,
+                buffering,
+                encoding,
+                errors,
+                newline,
+                closefd,
+                opener,
+            )
+        else:
+            logger.error(
+                f"File system open operation to '{abs_file_path}' (from original path '{file}') is not allowed."
+            )
+            raise PermissionError(
+                f"File system open operation to '{abs_file_path}' (from original path '{file}') is not allowed."
+            )
+
+    def restricted_os_write(self, fd, data):
+        # This operates on file descriptors. Mapping fd to path is non-trivial.
+        # Assumption: if fd was obtained via a whitelisted open, write is okay.
+        # This is a known simplification.
+        logger.debug(
+            f"restricted_os_write called for fd: {fd}. Allowing by default (relies on secure open)."
+        )
+        return self.original_os_write(fd, data)
+
+    def restricted_makedirs(self, name, mode=0o777, exist_ok=False):
+        logger.debug(
+            f"restricted_makedirs called for path: '{name}', mode: {oct(mode)}, exist_ok: {exist_ok}"
+        )
+        abs_target_path = os.path.abspath(os.path.normpath(name))
+        logger.debug(
+            f"Normalized absolute target path for makedirs: '{abs_target_path}'"
+        )
+
+        # Handle exist_ok=True: if path exists and is a dir
+        if exist_ok and os.path.exists(abs_target_path):
+            if os.path.isdir(abs_target_path):
+                logger.debug(
+                    f"Path '{abs_target_path}' exists and is a directory."
+                )
+                if self.is_directory_whitelisted(abs_target_path):
+                    logger.info(
+                        f"Makedirs: Path '{abs_target_path}' exists, is whitelisted, and exist_ok=True. No operation needed."
+                    )
+                    return None
+                else:
+                    logger.error(
+                        f"Makedirs: Path '{abs_target_path}' exists and exist_ok=True, but it's NOT whitelisted. Denying."
+                    )
+                    raise PermissionError(
+                        f"File system makedirs operation on existing but non-whitelisted path '{abs_target_path}' is not allowed (exist_ok=True)."
+                    )
+            else:  # Path exists but is not a directory
+                # This case would typically cause os.makedirs to raise FileExistsError.
+                # We check whitelist status first. If not whitelisted, deny.
+                # If whitelisted, let original_makedirs raise the FileExistsError.
+                logger.warning(
+                    f"Makedirs: Path '{abs_target_path}' exists but is not a directory. Original os.makedirs would likely error."
+                )
+                if not self.is_directory_whitelisted(
+                    abs_target_path
+                ):  # Check if the location is permissible for creation
+                    logger.error(
+                        f"Makedirs: Path '{abs_target_path}' (existing non-directory) is also not in a whitelisted location. Denying."
+                    )
+                    raise PermissionError(
+                        f"File system makedirs operation on '{abs_target_path}' (existing non-directory) is not allowed as its location is not whitelisted."
+                    )
+                logger.debug(
+                    f"Makedirs: Path '{abs_target_path}' (existing non-directory) is in a whitelisted location. Letting original_makedirs handle."
+                )
+                # Fall through to call original_makedirs, which will raise FileExistsError.
+
+        # If path doesn't exist, or exist_ok=False (original will handle error if it exists)
+        # we must check if the operation is permissible based on whitelist.
+        # is_directory_whitelisted checks if abs_target_path itself or any of its parents are whitelisted.
+        if self.is_directory_whitelisted(abs_target_path):
+            logger.info(
+                f"Makedirs: Path '{abs_target_path}' is whitelisted for creation. Calling original os.makedirs."
+            )
+            try:
+                return self.original_makedirs(name, mode, exist_ok=exist_ok)
+            except Exception as e:
+                logger.error(
+                    f"Original os.makedirs failed for '{name}': {type(e).__name__} - {e}"
+                )
+                raise  # Re-raise the original error
+        else:
+            logger.error(
+                f"Makedirs: Path '{abs_target_path}' is NOT whitelisted for creation. Denying operation."
+            )
+            raise PermissionError(
+                f"File system makedirs operation to '{abs_target_path}' is not allowed."
+            )
+
+    def restricted_mkdir(self, path, mode=0o777, *, dir_fd=None):
+        logger.debug(
+            f"restricted_mkdir called for path: '{path}', mode: {oct(mode)}, dir_fd: {dir_fd}"
+        )
+
+        # Handling dir_fd correctly for security is complex.
+        # If path is relative, its absolute resolution depends on dir_fd's actual directory.
+        # os.path.abspath(path) might not be correct if dir_fd is used and path is relative.
+        # For now, we log a warning and proceed with os.path.abspath, which assumes CWD for relative paths if dir_fd is not None.
+        # This is a limitation for dir_fd usage.
+        if dir_fd is not None:
+            logger.warning(
+                f"restricted_mkdir with dir_fd: Whitelist check for path '{path}' will use os.path.abspath, which may not correctly resolve relative paths against dir_fd. This scenario is not fully secured by the current whitelist logic if 'path' is relative."
+            )
+            # A truly robust solution would need to get the absolute path of dir_fd and join.
+            # This is OS-specific and non-trivial (e.g. os.readlink(f"/proc/self/fd/{dir_fd}") on Linux).
+
+        abs_target_path = os.path.abspath(os.path.normpath(path))
+        logger.debug(
+            f"Normalized absolute target path for mkdir: '{abs_target_path}'"
+        )
+
+        # is_directory_whitelisted checks if abs_target_path is itself whitelisted OR is a child of a whitelisted directory.
+        # This is sufficient for mkdir, as it creates the final directory component.
+        if self.is_directory_whitelisted(abs_target_path):
+            logger.info(
+                f"Mkdir: Path '{abs_target_path}' is whitelisted. Calling original os.mkdir."
+            )
+            try:
+                # Pass dir_fd explicitly as it's a keyword-only argument
+                return self.original_mkdir(path, mode, dir_fd=dir_fd)
+            except Exception as e:
+                logger.error(
+                    f"Original os.mkdir failed for '{path}': {type(e).__name__} - {e}"
+                )
+                raise  # Re-raise the original error
+        else:
+            logger.error(
+                f"Mkdir: Path '{abs_target_path}' is NOT whitelisted. Denying operation."
+            )
+            raise PermissionError(
+                f"File system mkdir operation to '{abs_target_path}' is not allowed."
+            )
+
+    def restricted_remove(self, path, *, dir_fd=None):
+        logger.debug(
+            f"restricted_remove called for path: '{path}', dir_fd: {dir_fd}"
+        )
+        # Similar to mkdir, dir_fd makes absolute path resolution complex if path is relative.
+        if dir_fd is not None:
+            logger.warning(
+                f"restricted_remove with dir_fd: Whitelist check for path '{path}' will use os.path.abspath. This scenario is not fully secured if 'path' is relative."
+            )
+
+        abs_target_path = os.path.abspath(os.path.normpath(path))
+        logger.debug(
+            f"Normalized absolute target path for remove: '{abs_target_path}'"
+        )
+
+        # is_path_whitelisted checks the directory of the file.
+        # For removing a file, the file itself (or its containing directory) must be in a whitelisted location.
+        if self.is_path_whitelisted(abs_target_path):
+            logger.info(
+                f"Remove: Path '{abs_target_path}' is whitelisted for removal. Calling original os.remove."
+            )
+            try:
+                return self.original_remove(path, dir_fd=dir_fd)
+            except Exception as e:
+                logger.error(
+                    f"Original os.remove failed for '{path}': {type(e).__name__} - {e}"
+                )
+                raise
+        else:
+            logger.error(
+                f"Remove: Path '{abs_target_path}' is NOT whitelisted for removal. Denying operation."
+            )
+            raise PermissionError(
+                f"File system remove operation on '{abs_target_path}' is not allowed."
+            )
+
+    def restricted_rmdir(self, path, *, dir_fd=None):
+        logger.debug(
+            f"restricted_rmdir called for path: '{path}', dir_fd: {dir_fd}"
+        )
+        if dir_fd is not None:
+            logger.warning(
+                f"restricted_rmdir with dir_fd: Whitelist check for path '{path}' will use os.path.abspath. This scenario is not fully secured if 'path' is relative."
+            )
+
+        abs_target_path = os.path.abspath(os.path.normpath(path))
+        logger.debug(
+            f"Normalized absolute target path for rmdir: '{abs_target_path}'"
+        )
+
+        # For rmdir, the directory being removed must be whitelisted (or be a subdir of a whitelisted one).
+        if self.is_directory_whitelisted(abs_target_path):
+            logger.info(
+                f"Rmdir: Path '{abs_target_path}' is whitelisted for removal. Calling original os.rmdir."
+            )
+            try:
+                return self.original_rmdir(path, dir_fd=dir_fd)
+            except Exception as e:
+                logger.error(
+                    f"Original os.rmdir failed for '{path}': {type(e).__name__} - {e}"
+                )
+                raise
+        else:
+            logger.error(
+                f"Rmdir: Path '{abs_target_path}' is NOT whitelisted for removal. Denying operation."
+            )
+            raise PermissionError(
+                f"File system rmdir operation on '{abs_target_path}' is not allowed."
+            )
 
 
-# Example of a LoggingImporter (conceptual)
-# class LoggingImporter:
-#     def find_module(self, fullname, path=None):
-#         logging.info(f"Import attempt: {fullname}")
-#         return None # Let the default mechanism handle the import
+# Ensure the logger for this module is configured if not done globally
+if not logger.hasHandlers():
+    handler = logging.StreamHandler(
+        sys.stderr
+    )  # Or your preferred stream/file
+    # Be cautious with log level in production for security modules
+    # For debugging, DEBUG is fine. For production, INFO or WARNING.
+    # level = logging.DEBUG if os.environ.get("AIRUNNER_DEBUG") else logging.INFO
+    level = logging.DEBUG  # Set to DEBUG for this troubleshooting phase
+    handler.setLevel(level)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(name)s - %(funcName)s - %(lineno)d - %(message)s"
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(level)  # Set level on logger itself too
+    logger.propagate = (
+        False  # Avoid duplicate logs if root logger is also configured
+    )
