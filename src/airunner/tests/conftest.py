@@ -16,14 +16,21 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 @pytest.fixture(scope="session", autouse=True)
 def test_db_engine_and_session():
     """
-    Robust session-scoped fixture for in-memory or test DB:
-    - Creates a single engine/connection for the test session.
+    Robust session-scoped fixture for temporary test DB:
+    - Creates a temporary database file for the test session.
     - Runs Alembic migrations on that connection.
     - Provides a sessionmaker bound to the same connection for all ORM access.
     - Monkeypatches SQLAlchemy's sessionmaker globally to ensure all code uses this session.
+    - Cleans up the temporary database file after tests.
     """
-    # Set up DB URL for in-memory or test DB
-    db_url = os.environ.get("AIRUNNER_DATABASE_URL", "sqlite:///:memory:")
+    # Create a temporary database file
+    temp_dir = tempfile.mkdtemp()
+    temp_db_path = os.path.join(temp_dir, "test_airunner.db")
+    db_url = f"sqlite:///{temp_db_path}"
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(temp_db_path), exist_ok=True)
+
     engine = create_engine(db_url)
     connection = engine.connect()
 
@@ -47,20 +54,33 @@ def test_db_engine_and_session():
 
     yield engine, connection, Session
 
+    # Cleanup
     Session.remove()
     connection.close()
     engine.dispose()
+
+    # Clean up the temporary database file and directory
+    try:
+        if os.path.exists(temp_db_path):
+            os.remove(temp_db_path)
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+    except Exception as e:
+        print(f"Warning: Could not clean up temp database: {e}")
 
 
 @pytest.fixture(scope="session", autouse=True)
 def set_test_db_env():
     """
-    Ensure all tests use an in-memory SQLite database.
-    Sets AIRUNNER_DB_NAME and AIRUNNER_DATABASE_URL before any DB/model import.
-    This avoids file system issues and cleanup, and works in CI environments.
+    Set environment variables for test database.
+    These will be overridden by the test_db_engine_and_session fixture.
     """
-    os.environ["AIRUNNER_DB_NAME"] = ":memory:"
-    os.environ["AIRUNNER_DATABASE_URL"] = "sqlite:///:memory:"
+    temp_dir = tempfile.mkdtemp()
+    temp_db_path = os.path.join(temp_dir, "test_airunner.db")
+    db_url = f"sqlite:///{temp_db_path}"
+
+    os.environ["AIRUNNER_DATABASE_URL"] = db_url
+    os.environ["AIRUNNER_DB_NAME"] = temp_db_path
     yield
 
 
