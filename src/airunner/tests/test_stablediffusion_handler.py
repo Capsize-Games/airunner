@@ -23,7 +23,19 @@ from airunner.enums import (
 
 import airunner.setup_database as setup_database
 
+import pytest
+
 # Set test environment variables
+
+
+@pytest.fixture(autouse=True, scope="module")
+def ensure_qapplication():
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    yield
 
 
 class TestStableDiffusionModelManager(unittest.TestCase):
