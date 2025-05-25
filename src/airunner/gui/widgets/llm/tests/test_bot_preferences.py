@@ -5,6 +5,19 @@ Test suite for bot_preferences.py in LLM widgets.
 import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
 from airunner.gui.widgets.llm import bot_preferences
+from airunner.data.models.chatbot import Chatbot
+from airunner.data.session_manager import session_scope
+
+
+@pytest.fixture(autouse=True)
+def clean_chatbots():
+    with session_scope() as session:
+        session.query(Chatbot).delete()
+        session.commit()
+    yield
+    with session_scope() as session:
+        session.query(Chatbot).delete()
+        session.commit()
 
 
 @pytest.fixture

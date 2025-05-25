@@ -76,3 +76,14 @@ class Chatbot(BaseModel):
     target_directories = relationship(
         "TargetDirectories", back_populates="chatbot"
     )
+
+    def to_dataclass(self) -> object:
+        """Convert the model instance to its corresponding dataclass, including relationships as lists."""
+        dataclass_cls = self.get_dataclass()
+        data = self.to_dict()
+        # Always include target_files and target_directories as lists
+        data["target_files"] = list(getattr(self, "target_files", []))
+        data["target_directories"] = list(
+            getattr(self, "target_directories", [])
+        )
+        return dataclass_cls(**data)
