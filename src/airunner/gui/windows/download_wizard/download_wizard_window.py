@@ -96,27 +96,10 @@ class DownloadWizardWindow(
             self.setPage(1, InstallFailedPage(self))
 
     def on_page_changed(self, id):
-        """Handle page changes to properly manage button states"""
-        # If we're now on the install page, disable the next button
-        if self.currentPage() == self.install_page:
-            self.disableNextButton()
-
-            # Start the installation process which will re-enable the button when done
-            if self.install_page:
-                QTimer.singleShot(100, self.install_page.start)
+        pass
 
     def disableNextIfInstallPage(self):
-        """Check if current page is install page and disable Next button if so"""
-        if (
-            hasattr(self, "install_page")
-            and self.currentPage() == self.install_page
-        ):
-            self.disableNextButton()
-
-    def disableNextButton(self):
-        """Disable the Next button"""
-        if self.button(QWizard.WizardButton.NextButton):
-            self.button(QWizard.WizardButton.NextButton).setEnabled(False)
+        pass
 
     def show_final_page(self):
         """
