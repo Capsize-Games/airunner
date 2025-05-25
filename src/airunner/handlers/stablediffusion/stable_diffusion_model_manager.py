@@ -149,6 +149,11 @@ class StableDiffusionModelManager(
     def compel_text_encoder(self) -> Any:
         return self._pipe.text_encoder
 
+    @property
+    def version(self) -> str:
+        """Return the default version string for StableDiffusionModelManager."""
+        return "SDXL 1.0"
+
     def _load_prompt_embeds(self):
         if not self.use_compel:
             if self._compel_proc is not None:
