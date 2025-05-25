@@ -120,7 +120,8 @@ class Conversation(BaseModel):
             .order_by(cls.id.desc())
             .first()
         )
-        return conversation
+        # Always return a dataclass, not ORM object
+        return conversation.to_dataclass() if conversation else None
 
     @classmethod
     def most_recent(cls) -> Optional["Conversation"]:
