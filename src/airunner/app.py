@@ -402,10 +402,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
     def retranslate_ui_signal(self):
         pass
 
-    def handle_upgrade(self, version):
-        # Stub for test
-        pass
-
 
 # Dummy classes for test patching
 class AppInstaller:
