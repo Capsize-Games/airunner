@@ -1,10 +1,8 @@
 import importlib
 
-from sqlalchemy.orm import joinedload
 
 from airunner.data.models import ImageFilter
 from airunner.data.models.image_filter_value import ImageFilterValue
-from airunner.enums import SignalCode
 from airunner.gui.widgets.slider.filter_slider_widget import FilterSliderWidget
 from airunner.gui.windows.base_window import BaseWindow
 from airunner.gui.windows.filter_window_ui import Ui_filter_window
