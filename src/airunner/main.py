@@ -19,10 +19,20 @@ on windows at this time so we disable it.
 """
 if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
     from airunner.facehuggershield.huggingface import activate
+    import sys # Import sys to access executable path
 
     airunner_path = os.path.join(
         os.path.expanduser("~"), ".local", "share", "airunner"
     )
+    # Determine site-packages path dynamically
+    venv_path = os.path.dirname(os.path.dirname(sys.executable))
+    site_packages_path = os.path.join(venv_path, 'lib', f'python{sys.version_info.major}.{sys.version_info.minor}', 'site-packages')
+    # Determine project root and src/airunner path
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    airunner_src_path = os.path.join(project_root, "src", "airunner")
+
+
+    print(os.path.join(airunner_path, "data"))
     activate(
         activate_shadowlogger=False,
         darklock_os_whitelisted_operations=["makedirs", "mkdir", "open"],
@@ -30,6 +40,12 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             airunner_path,
             os.path.join(airunner_path, "data"),
             os.path.join(os.path.expanduser("~"), ".triton/cache/"),
+            "/dev/",
+            "/proc/",
+            site_packages_path,  # Added site-packages path
+            "/usr/share/zoneinfo/", # Added /usr/share/zoneinfo/
+            airunner_src_path, # Added project src path
+            "/tmp/", # Added /tmp/ for temporary file operations
         ],
         nullscream_whitelist=[
             "huggingface_hub.file_download",

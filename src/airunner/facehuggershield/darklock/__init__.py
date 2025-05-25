@@ -7,25 +7,32 @@ from airunner.facehuggershield.darklock.restrict_network_access import (
 
 
 network = RestrictNetworkAccess()
-os = RestrictOSAccess()
+os = RestrictOSAccess()  # Do NOT call os.activate() here!
+
+# WARNING: Do NOT call os.activate() at import/module level. Only call it from your main application entry point after all imports are complete.
 
 
 def activate(
-    whitelisted_operations: list = None,
-    whitelisted_filenames: list = None,
-    whitelisted_imports: list = None,
-    blacklisted_filenames: list = None,
+    whitelisted_modules: list = None,
+    allow_network: bool = False,
+    whitelisted_operations: list = None,  # This parameter is not used by RestrictOSAccess.activate
+    whitelisted_files: list = None,        # This parameter is not used by RestrictOSAccess.activate
     whitelisted_directories: list = None,
 ):
-    # network.activate(
-    #     allowed_port=4222
-    # )
+    """
+    Activates the DarkLock OS access restrictions.
+
+    Args:
+        whitelisted_modules: A list of modules that are allowed to be imported.
+        allow_network: Whether to allow network access.
+        whitelisted_operations: (Not used by RestrictOSAccess) A list of OS operations that are allowed.
+        whitelisted_files: (Not used by RestrictOSAccess) A list of files that are allowed to be accessed.
+        whitelisted_directories: A list of directories that are allowed to be accessed.
+    """
     os.activate(
-        whitelisted_operations,
-        whitelisted_filenames,
-        whitelisted_imports,
-        blacklisted_filenames,
-        whitelisted_directories,
+        whitelisted_directories=whitelisted_directories,
+        whitelisted_modules=whitelisted_modules,
+        allow_network=allow_network,
     )
 
 
