@@ -1,30 +1,24 @@
-# Facehugger Shield
+# Facehugger Shield Suite
 
-Facehugger Shield automatically locks down operations
-for specific modules. It was designed to non-destructively restrict access
-to the Huggingface library, but can be used with any library.
+Facehugger Shield Suite is a collection of Python modules designed to provide robust security, privacy, and control over your application's operations. The suite is composed of several tools that can be used independently or together to restrict access, intercept unwanted behaviors, and lock down your environment.
 
 ---
 
-![img.png](img.png)
+## Overview
 
-[![Upload Python Package](https://github.com/Capsize-Games/facehuggershield/actions/workflows/python-publish.yml/badge.svg)](https://github.com/Capsize-Games/facehuggershield/actions/workflows/python-publish.yml)
+- **Facehugger Shield**: Automatically locks down operations for specific modules, originally designed to restrict access to the Huggingface library, but can be used with any library. It leverages the other tools in this suite to provide comprehensive protection.
+- **Nullscream**: Allows you to import noop (no-operation) functions and classes as drop-in replacements for blacklisted modules, making them importable but not executable.
+- **Darklock**: Completely disables internet and other services, only allowing whitelisted operations through.
+- **Shadowlogger**: Intercepts all logs and shadows them, preventing sensitive information from being leaked.
+- **Defendatron**: A simple coordinator for the above modules, allowing you to activate or deactivate them as needed.
 
 ---
 
 ## Usage
 
-Facehugger Shield was specifically designed to override Huggingface libraries, so the following examples show how to do that.
+### Facehugger Shield
 
-
-Install with Huggingface libraries (or any other library you want to restrict).
-
-```bash
-pip install facehuggershield
-```
-
-Import in your application's main entry file (e.g. `main.py`), import `facehuggershield` before importing
-any other libraries.
+Import in your application's main entry file (e.g. `main.py`), and activate before importing any other libraries:
 
 ```python
 import facehuggershield.huggingface
@@ -32,28 +26,114 @@ import facehuggershield.huggingface
 activate()
 ```
 
-Now you can use Huggingface libraries without worrying about telemetry, networking or file writes.
+Now you can use Huggingface libraries (or any other restricted library) without worrying about telemetry, networking, or file writes.
+
+See the `activate` function in `huggingface/__init__.py` for settings.
 
 ---
 
-## Settings
+### Nullscream
 
-See the `activate` function in the [huggingface/__init__.py](https://github.com/Capsize-Games/facehuggershield/blob/master/src/facehuggershield/huggingface/__init__.py) file.
+Import and activate Nullscream at the top of your main entry file:
+
+```python
+import nullscream
+
+nullscream_blacklist = ["requests"]
+
+nullscream.activate(
+    blacklist=nullscream_blacklist,
+)
+```
+
+Now when you import a blacklisted module (e.g. `requests`), you will get a noop version. To restore the original module:
+
+```python
+nullscream.uninstall(blacklist=["requests"])
+```
 
 ---
 
-## How it works
+### Darklock
 
-Facehugger Shield uses [nullscream](https://github.com/Capsize-Games/nullscream) to intercept blacklisted modules and return Noop modules in their place.
-The noop modules are empty classes with functions that return Magic noop classes.
-The magic class functions in turn respond with Magic classes.
+Import and install Darklock for the services you want to restrict:
 
-This allows anything on the blacklist to be importable, but not executable.
+```python
+import darklock
 
-By overriding certain functions in the [transformers](https://github.com/huggingface/transformers) library, Facehugger is able to prevent the use of Huggingface Hub.
+darklock.network.install()
+darklock.os.install()
+```
 
-Facehugger Shield also makes use of [darklock](https://github.com/Capsize-Games/darklock) to lock down network services, and [shadowlogger](https://github.com/Capsize-Games/shadowlogger) to intercept and reroute logs.
+To remove restrictions:
 
-These libraries are combined under [defendatron](https://github.com/Capsize-Games/defendatron), a simple coordinator library.
+```python
+darklock.network.uninstall()
+darklock.os.uninstall()
+```
 
-Facehugger Shield contains all of the required settings for defendatron, as well as the best Huggingface Library settings for privacy.
+---
+
+### Shadowlogger
+
+Activate Shadowlogger to intercept and shadow all logs:
+
+```python
+import shadowlogger
+
+shadowlogger.manager.install()
+```
+
+To deactivate:
+
+```python
+shadowlogger.manager.uninstall()
+```
+
+You can also subclass `ShadowLogger` to customize logging behavior.
+
+---
+
+### Defendatron
+
+Defendatron coordinates the above modules:
+
+```python
+import defendatron
+
+defendatron.activate()  # Activates all
+defendatron.deactivate()  # Deactivates all
+
+defendatron.nullscream.activate()
+defendatron.shadowlogger.activate()
+defendatron.darklock.activate()
+
+defendatron.nullscream.deactivate()
+defendatron.shadowlogger.deactivate()
+defendatron.darklock.deactivate()
+```
+
+---
+
+## How it Works
+
+Facehugger Shield Suite uses a combination of module interception, network lockdown, and log interception to provide a secure and privacy-focused environment. By overriding or shadowing certain functions and modules, it prevents unwanted behaviors such as telemetry, unauthorized networking, and sensitive data leaks.
+
+- **Nullscream** intercepts blacklisted modules and returns noop modules in their place, allowing them to be imported but not executed.
+- **Darklock** locks down network and OS services, only allowing whitelisted operations.
+- **Shadowlogger** intercepts and shadows all logs.
+- **Defendatron** provides a unified interface to manage all these protections.
+
+---
+
+## Testing
+
+Each module provides a test suite that can be run with:
+
+```bash
+python -m unittest discover -s tests
+```
+
+---
+
+Facehugger Shield Suite is designed to provide the best settings for privacy and security, especially when working with third-party libraries that may not respect your application's boundaries.

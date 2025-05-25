@@ -31,11 +31,20 @@ class ReActAgentTool(ChatEngineTool):
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
         tool_choice = kwargs.get("tool_choice", None)
-        streaming_response = self.chat_engine.stream_chat(
-            query_str,
-            chat_history=chat_history if chat_history else [],
-            tool_choice=tool_choice,
-        )
+        try:
+            streaming_response = self.chat_engine.stream_chat(
+                query_str,
+                chat_history=chat_history if chat_history else [],
+                tool_choice=tool_choice,
+            )
+        except Exception:
+            # Return empty ToolOutput on error
+            return ToolOutput(
+                content="",
+                tool_name=self.metadata.name,
+                raw_input={"input": query_str},
+                raw_output="",
+            )
         self.chat_engine.chat_history.append(
             ChatMessage(content=query_str, role=MessageRole.USER)
         )
@@ -44,10 +53,11 @@ class ReActAgentTool(ChatEngineTool):
         is_first_message = True
         for token in streaming_response.response_gen:
             response += token
-            self.agent.handle_response(
-                token,
-                is_first_message,
-            )
+            if self.agent is not None:
+                self.agent.handle_response(
+                    token,
+                    is_first_message,
+                )
             is_first_message = False
 
         self.chat_engine.chat_history.append(

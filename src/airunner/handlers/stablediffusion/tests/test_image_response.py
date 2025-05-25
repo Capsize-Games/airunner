@@ -2,6 +2,7 @@ import unittest
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.handlers.stablediffusion.rect import Rect
 
+
 class TestImageResponse(unittest.TestCase):
     def test_to_dict(self):
         rect = Rect(x=10, y=20, width=30, height=40)
@@ -10,8 +11,8 @@ class TestImageResponse(unittest.TestCase):
             data={"key": "value"},
             nsfw_content_detected=False,
             active_rect=rect,
-            is_outpaint=True
-            node_id="testnodeid"
+            is_outpaint=True,
+            node_id="testnodeid",
         )
         expected_dict = {
             "images": None,
@@ -26,6 +27,7 @@ class TestImageResponse(unittest.TestCase):
             "is_outpaint": True,
         }
         self.assertEqual(response.to_dict(), expected_dict)
+
 
 if __name__ == "__main__":
     unittest.main()
