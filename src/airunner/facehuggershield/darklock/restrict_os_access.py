@@ -1,10 +1,7 @@
 from airunner.facehuggershield.darklock.singleton import Singleton
-from airunner.facehuggershield.darklock.log_disc_writer import LogDiscWriter
 import builtins
-import re
 import os
 import sys
-import traceback
 import logging
 import threading
 
