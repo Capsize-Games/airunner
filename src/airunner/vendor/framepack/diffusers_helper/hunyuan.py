@@ -1,18 +1,31 @@
 import torch
 
-from diffusers.pipelines.hunyuan_video.pipeline_hunyuan_video import DEFAULT_PROMPT_TEMPLATE
-from airunner.FramePack.diffusers_helper.utils import crop_or_pad_yield_mask
+from diffusers.pipelines.hunyuan_video.pipeline_hunyuan_video import (
+    DEFAULT_PROMPT_TEMPLATE,
+)
+from airunner.vendor.framepack.diffusers_helper.utils import (
+    crop_or_pad_yield_mask,
+)
 
 
 @torch.no_grad()
-def encode_prompt_conds(prompt, text_encoder, text_encoder_2, tokenizer, tokenizer_2, max_length=256):
+def encode_prompt_conds(
+    prompt,
+    text_encoder,
+    text_encoder_2,
+    tokenizer,
+    tokenizer_2,
+    max_length=256,
+):
     assert isinstance(prompt, str)
 
     prompt = [prompt]
 
     # LLAMA
 
-    prompt_llama = [DEFAULT_PROMPT_TEMPLATE["template"].format(p) for p in prompt]
+    prompt_llama = [
+        DEFAULT_PROMPT_TEMPLATE["template"].format(p) for p in prompt
+    ]
     crop_start = DEFAULT_PROMPT_TEMPLATE["crop_start"]
 
     llama_inputs = tokenizer(
@@ -36,9 +49,13 @@ def encode_prompt_conds(prompt, text_encoder, text_encoder_2, tokenizer, tokeniz
         output_hidden_states=True,
     )
 
-    llama_vec = llama_outputs.hidden_states[-3][:, crop_start:llama_attention_length]
+    llama_vec = llama_outputs.hidden_states[-3][
+        :, crop_start:llama_attention_length
+    ]
     # llama_vec_remaining = llama_outputs.hidden_states[-3][:, llama_attention_length:]
-    llama_attention_mask = llama_attention_mask[:, crop_start:llama_attention_length]
+    llama_attention_mask = llama_attention_mask[
+        :, crop_start:llama_attention_length
+    ]
 
     assert torch.all(llama_attention_mask.bool())
 
@@ -53,7 +70,9 @@ def encode_prompt_conds(prompt, text_encoder, text_encoder_2, tokenizer, tokeniz
         return_length=False,
         return_tensors="pt",
     ).input_ids
-    clip_l_pooler = text_encoder_2(clip_l_input_ids.to(text_encoder_2.device), output_hidden_states=False).pooler_output
+    clip_l_pooler = text_encoder_2(
+        clip_l_input_ids.to(text_encoder_2.device), output_hidden_states=False
+    ).pooler_output
 
     return llama_vec, clip_l_pooler
 
@@ -76,15 +95,21 @@ def vae_decode_fake(latents):
         [-0.2315, -0.1920, -0.1355],
         [-0.0270, 0.0401, -0.0821],
         [-0.0616, -0.0997, -0.0727],
-        [0.0249, -0.0469, -0.1703]
+        [0.0249, -0.0469, -0.1703],
     ]  # From comfyui
 
     latent_rgb_factors_bias = [0.0259, -0.0192, -0.0761]
 
-    weight = torch.tensor(latent_rgb_factors, device=latents.device, dtype=latents.dtype).transpose(0, 1)[:, :, None, None, None]
-    bias = torch.tensor(latent_rgb_factors_bias, device=latents.device, dtype=latents.dtype)
+    weight = torch.tensor(
+        latent_rgb_factors, device=latents.device, dtype=latents.dtype
+    ).transpose(0, 1)[:, :, None, None, None]
+    bias = torch.tensor(
+        latent_rgb_factors_bias, device=latents.device, dtype=latents.dtype
+    )
 
-    images = torch.nn.functional.conv3d(latents, weight, bias=bias, stride=1, padding=0, dilation=1, groups=1)
+    images = torch.nn.functional.conv3d(
+        latents, weight, bias=bias, stride=1, padding=0, dilation=1, groups=1
+    )
     images = images.clamp(0.0, 1.0)
 
     return images
@@ -95,7 +120,9 @@ def vae_decode(latents, vae, image_mode=False):
     latents = latents / vae.config.scaling_factor
 
     if not image_mode:
-        image = vae.decode(latents.to(device=vae.device, dtype=vae.dtype)).sample
+        image = vae.decode(
+            latents.to(device=vae.device, dtype=vae.dtype)
+        ).sample
     else:
         latents = latents.to(device=vae.device, dtype=vae.dtype).unbind(2)
         image = [vae.decode(l.unsqueeze(2)).sample for l in latents]
@@ -106,6 +133,8 @@ def vae_decode(latents, vae, image_mode=False):
 
 @torch.no_grad()
 def vae_encode(image, vae):
-    latents = vae.encode(image.to(device=vae.device, dtype=vae.dtype)).latent_dist.sample()
+    latents = vae.encode(
+        image.to(device=vae.device, dtype=vae.dtype)
+    ).latent_dist.sample()
     latents = latents * vae.config.scaling_factor
     return latents

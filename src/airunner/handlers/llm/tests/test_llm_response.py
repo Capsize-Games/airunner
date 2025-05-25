@@ -9,7 +9,7 @@ class TestLLMResponse(unittest.TestCase):
     def test_default_initialization(self):
         """Test that LLMResponse initializes with default values."""
         response = LLMResponse()
-        
+
         # Verify correct default values
         self.assertEqual(response.message, "")
         self.assertFalse(response.is_first_message)
@@ -24,9 +24,9 @@ class TestLLMResponse(unittest.TestCase):
             is_first_message=True,
             is_end_of_message=True,
             name="Assistant",
-            action=LLMActionType.UPDATE_MOOD
+            action=LLMActionType.UPDATE_MOOD,
         )
-        
+
         # Verify custom values were set correctly
         self.assertEqual(response.message, "Hello, world!")
         self.assertTrue(response.is_first_message)
@@ -37,12 +37,17 @@ class TestLLMResponse(unittest.TestCase):
     def test_end_message_only(self):
         """Test creating an end-of-message signal."""
         response = LLMResponse(is_end_of_message=True)
-        
+
         # Verify end message flag is set but content is empty
         self.assertTrue(response.is_end_of_message)
         self.assertEqual(response.message, "")
         self.assertFalse(response.is_first_message)
 
+    def test_node_id_field(self):
+        """Test that node_id can be set and retrieved."""
+        response = LLMResponse(message="foo", node_id="node-123")
+        self.assertEqual(response.node_id, "node-123")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

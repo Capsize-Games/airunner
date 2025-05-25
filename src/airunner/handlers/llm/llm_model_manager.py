@@ -216,9 +216,9 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         ):
             return
 
-        # Start loading process
-        self.unload()
+        # Set status to LOADING before calling unload to avoid recursion/hang
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
+        self.unload()
         self._current_model_path = self.model_path
 
         # Load components based on settings
@@ -258,9 +258,17 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
 
         # Unload components
-        self._unload_model()
-        self._unload_tokenizer()
-        self._unload_agent()
+        for unload_func, name in [
+            (self._unload_model, "model"),
+            (self._unload_tokenizer, "tokenizer"),
+            (self._unload_agent, "agent"),
+        ]:
+            try:
+                unload_func()
+            except Exception as e:
+                self.logger.error(
+                    f"Exception during unloading {name}: {e}", exc_info=True
+                )
 
         # Clear GPU memory
         clear_memory(self.device)
@@ -585,11 +593,10 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         # Call the appropriate chat agent method
         if not self._chat_agent:
             self.logger.error("Chat agent not loaded")
-            return AgentChatResponse(
-                node_id=llm_request.node_id,
-                is_end_of_message=True,
-                error="Chat agent not loaded",
-            )
+            resp = AgentChatResponse(response="", metadata=None)
+            resp.error = "Chat agent not loaded"
+            resp.is_end_of_message = True
+            return resp
         response = self._chat_agent.chat(
             prompt,
             action=action,
