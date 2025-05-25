@@ -27,6 +27,6 @@ def detect_language(txt: str) -> str:
         return AvailableLanguage.KR
     try:
         return AvailableLanguage(name)
-    except KeyError:
+    except ValueError:
         print(f"Language {name} not found in AvailableLanguage enum.")
         return AvailableLanguage.EN
