@@ -1,4 +1,3 @@
-from PySide6.QtCore import Slot
 from airunner.gui.windows.setup_wizard.user_agreement.agreement_page import (
     AgreementPage,
 )
