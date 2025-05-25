@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 def format_prompt(
-    prompt: str, preset: str, additional_prompts: Optional[list] = None
+    prompt: str, preset: str = "", additional_prompts: Optional[list] = None
 ) -> str:
-    """Format the main prompt with preset and additional prompts."""
+    """Format the main prompt with preset and additional prompts. Default preset to empty string for test compatibility."""
     prompt = PromptWeightBridge.convert(prompt)
     preset = PromptWeightBridge.convert(preset)
     if additional_prompts:
@@ -65,6 +65,24 @@ def format_negative_prompt(prompt: str, preset: str) -> str:
     if preset:
         return f'("{prompt}", "{preset}").and()'
     return prompt
+
+
+def apply_preset_to_prompt(prompt: str, preset: str) -> str:
+    """Apply a preset to the prompt."""
+    if not prompt and not preset:
+        return ""
+    if not preset:
+        return prompt
+    return f"{prompt}, {preset}"
+
+
+def apply_negative_prompt(prompt: str, negative: str) -> str:
+    """Apply a negative prompt to the prompt."""
+    if not prompt and not negative:
+        return ""
+    if not negative:
+        return prompt
+    return f"{prompt}, {negative}"
 
 
 # Additional prompt embedding and compel integration utilities can be added here.
