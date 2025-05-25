@@ -372,16 +372,22 @@ class SDWorker(Worker):
         if self.model_manager:
             try:
                 self.model_manager.handle_generate_signal(message)
-            except PipeNotLoadedException as e:
-                self.handle_error(e.message)
+            except (PipeNotLoadedException, TypeError) as e:
+                error_message = getattr(e, "message", str(e))
+                self.handle_error(error_message)
                 image_request = message.get("image_request", None)
                 err = "Image model failed to load"
                 if (
                     image_request is not None
-                    and image_request.model_path == ""
+                    and getattr(image_request, "model_path", None) == ""
                 ):
                     err = "You must select a model before generating images."
                 self.send_missing_model_alert(err)
+            except Exception as e:
+                self.handle_error(f"Unexpected error: {str(e)}")
+                self.send_missing_model_alert(
+                    "An unexpected error occurred during image generation. Please check logs."
+                )
 
     def handle_error(self, error_message):
         self.logger.error(f"SDWorker Error: {error_message}")
