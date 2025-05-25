@@ -15,7 +15,6 @@ class AgreementPage(BaseWizard):
     @Slot(bool)
     def agreement_clicked(self, val):
         self.agreed = val
-        self.update_application_settings(self.setting_key, val)
 
         # Emit signal to update Next button state
         self.completeChanged.emit()

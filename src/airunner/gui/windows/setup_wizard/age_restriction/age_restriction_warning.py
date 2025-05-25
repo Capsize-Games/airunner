@@ -22,21 +22,9 @@ class AgeRestrictionWarning(AgreementPage):
         self.read_age_restriction_agreement = val
         self.agreed = val
         self.completeChanged.emit()
-        self.update_settings()
 
     @Slot(bool)
     def age_agreement_clicked(self, val: bool):
         self.age_restriction_agreed = val
-        self.update_application_settings(self.setting_key, val)
         self.agreed = val
         self.completeChanged.emit()
-        self.update_settings()
-
-    def update_settings(self):
-        ApplicationSettings.objects.update(
-            ApplicationSettings.objects.first().id,
-            age_agreement_checked=(
-                self.age_restriction_agreed
-                and self.read_age_restriction_agreement
-            ),
-        )

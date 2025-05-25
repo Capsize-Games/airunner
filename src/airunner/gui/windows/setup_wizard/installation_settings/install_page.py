@@ -970,19 +970,12 @@ class InstallWorker(
         self.set_page()
 
     def run(self):
-        if (
-            self.application_settings.user_agreement_checked
-            and self.application_settings.stable_diffusion_agreement_checked
-            and self.application_settings.airunner_agreement_checked
-        ):
-            self.current_step = -1
-            self.set_page()
+        # Start installation process - we're already in the install page so agreements should be checked
+        self.current_step = -1
+        self.set_page()
 
     def set_page(self):
-        if (
-            self.application_settings.stable_diffusion_agreement_checked
-            and self.current_step == -1
-        ):
+        if self.current_step == -1:
             print("STEP 1")
             """
             Create the airunner paths
@@ -994,20 +987,14 @@ class InstallWorker(
             )
             self.current_step = 1
             self.download_stable_diffusion()
-        elif (
-            self.application_settings.stable_diffusion_agreement_checked
-            and self.current_step == 1
-        ):
+        elif self.current_step == 1:
             print("STEP 2")
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Controlnet"}
             )
             self.current_step = 2
             self.download_controlnet()
-        elif (
-            self.application_settings.stable_diffusion_agreement_checked
-            and self.current_step == 2
-        ):
+        elif self.current_step == 2:
             print("STEP 3")
             self.current_step = 3
             self.download_controlnet_processors()
@@ -1154,6 +1141,7 @@ class InstallPage(BaseWizard):
         if hasattr(parent, "button") and parent.button(
             QWizard.WizardButton.NextButton
         ):
+            parent.button(QWizard.WizardButton.BackButton).setEnabled(False)
             parent.button(QWizard.WizardButton.NextButton).setEnabled(False)
 
         # These will increase
@@ -1222,11 +1210,23 @@ class InstallPage(BaseWizard):
             self.on_set_downloading_status_label,
         )
 
+        # Create and configure worker thread
         self.thread = QThread()
         self.worker = InstallWorker(
             self, models_enabled=self.models_enabled, initialize_gui=False
         )
         self.worker.moveToThread(self.thread)
+
+        # Connect worker signals
+        self.worker.file_download_finished.connect(self.file_download_finished)
+        self.worker.progress_updated.connect(self.file_progress_updated)
+
+        # Connect thread signals
+        self.thread.started.connect(self.worker.run)
+
+        # Calculate total files and start immediately
+        self.calculate_total_files()
+        self.thread.start()
 
     def calculate_total_files(self):
         if self.models_enabled["stable_diffusion"]:
@@ -1293,6 +1293,9 @@ class InstallPage(BaseWizard):
         if hasattr(self.parent, "button") and self.parent.button(
             QWizard.WizardButton.NextButton
         ):
+            self.parent.button(QWizard.WizardButton.BackButton).setEnabled(
+                False
+            )
             self.parent.button(QWizard.WizardButton.NextButton).setEnabled(
                 False
             )
@@ -1356,13 +1359,6 @@ class InstallPage(BaseWizard):
             if self.total_files > 0:
                 val = (self.total_files_downloaded / self.total_files) * 100
             self.ui.progress_bar.setValue(val)
-            # Make sure Next button stays disabled during downloads
-            if hasattr(self.parent, "button") and self.parent.button(
-                QWizard.WizardButton.NextButton
-            ):
-                self.parent.button(QWizard.WizardButton.NextButton).setEnabled(
-                    False
-                )
 
     def _enable_next_button(self):
         """Enable the Next button when installation is complete"""
