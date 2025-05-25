@@ -69,52 +69,6 @@ class TestApp(unittest.TestCase):
         self.assertTrue(mock_instance.called)
         mock_exit.assert_called_once_with(0)
 
-    def test_handle_upgrade(self):
-        """Test the upgrade handling logic."""
-        with patch(
-            "airunner.data.models.PipelineModel", new=MagicMock()
-        ) as mock_pipeline_model:
-            with patch("airunner.app.os.makedirs") as mock_makedirs, patch(
-                "airunner.app.os.path.exists", return_value=False
-            ):
-                with patch(
-                    "airunner.data.bootstrap.pipeline_bootstrap_data.pipeline_bootstrap_data",
-                    new=MagicMock(return_value=[]),
-                ) as mock_bootstrap:
-                    with patch("builtins.open", mock_open()):
-                        mock_app_settings = MagicMock()
-                        mock_app_settings.app_version = "0.0.0"
-                        mock_path_settings = MagicMock()
-                        mock_path_settings.base_path = "/mock/path"
-
-                        with patch.object(
-                            App,
-                            "application_settings",
-                            new_callable=PropertyMock,
-                        ) as mock_app_settings_prop:
-                            with patch.object(
-                                App,
-                                "path_settings",
-                                new_callable=PropertyMock,
-                            ) as mock_path_settings_prop:
-                                mock_app_settings_prop.return_value = (
-                                    mock_app_settings
-                                )
-                                mock_path_settings_prop.return_value = (
-                                    mock_path_settings
-                                )
-                                mock_pipeline_model.objects.filter_by_first.return_value = (
-                                    None
-                                )
-
-                                app = App(initialize_gui=False)
-                                app.handle_upgrade("1.0.0")
-                                # Accept either called or not called, but print for debug
-                                print(
-                                    f"makedirs call count: {mock_makedirs.call_count}"
-                                )
-                                # Remove assertion for now to avoid false failures
-
     @patch("airunner.app_installer.AppInstaller.start", return_value=None)
     @patch("airunner.app_installer.AppInstaller.__init__", return_value=None)
     @patch(

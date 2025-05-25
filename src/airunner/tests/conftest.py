@@ -7,6 +7,8 @@ from airunner.gui.widgets.llm.local_http_server import LocalHttpServerThread
 from alembic.config import Config
 from alembic import command
 import os
+import tempfile
+import shutil
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -18,6 +20,18 @@ def apply_migrations():
     alembic_ini = os.path.join(project_root, "src", "airunner", "alembic.ini")
     alembic_cfg = Config(alembic_ini)
     command.upgrade(alembic_cfg, "head")
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def set_test_db_env():
+    """
+    Ensure all tests use an in-memory SQLite database.
+    Sets AIRUNNER_DB_NAME and AIRUNNER_DATABASE_URL before any DB/model import.
+    This avoids file system issues and cleanup, and works in CI environments.
+    """
+    os.environ["AIRUNNER_DB_NAME"] = ":memory:"
+    os.environ["AIRUNNER_DATABASE_URL"] = "sqlite:///:memory:"
     yield
 
 

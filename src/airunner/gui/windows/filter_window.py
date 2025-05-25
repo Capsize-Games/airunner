@@ -3,6 +3,7 @@ import importlib
 from sqlalchemy.orm import joinedload
 
 from airunner.data.models import ImageFilter
+from airunner.data.models.image_filter_value import ImageFilterValue
 from airunner.enums import SignalCode
 from airunner.gui.widgets.slider.filter_slider_widget import FilterSliderWidget
 from airunner.gui.windows.base_window import BaseWindow
@@ -20,18 +21,42 @@ class FilterWindow(BaseWindow):
     window_title = ""
     _filter_values = {}
 
+    class FilterValueData:
+        def __init__(self, d):
+            self.__dict__.update(d)
+
+        def save(self):
+            ImageFilterValue.objects.update(self.id, value=self.value)
+
     def __init__(self, image_filter_id):
         """
         :param image_filter_id: The ID of the filter to load.
         """
         super().__init__(exec=False)
 
-        self.image_filter = ImageFilter.objects.options(
-            joinedload(ImageFilter.image_filter_values)
-        ).get(image_filter_id)
+        # Eagerly load all filter values as dicts to avoid DetachedInstanceError
+        self.image_filter = ImageFilter.objects.get(
+            image_filter_id, eager_load=["image_filter_values"]
+        )
         self.image_filter_model_name = self.image_filter.name
         self.window_title = self.image_filter.display_name
         self._filter = None
+
+        # Convert filter values to dicts to avoid ORM detachment issues
+        self._filter_values = []
+        for fv in self.image_filter.image_filter_values:
+            self._filter_values.append(
+                self.FilterValueData(
+                    {
+                        "id": fv.id,  # Store the ORM id for persistence
+                        "name": fv.name,
+                        "value": fv.value,
+                        "value_type": fv.value_type,
+                        "min_value": fv.min_value,
+                        "max_value": fv.max_value,
+                    }
+                )
+            )
 
         self._debounce_timer = QTimer(self)
         self._debounce_timer.setSingleShot(True)
@@ -41,16 +66,16 @@ class FilterWindow(BaseWindow):
         self.exec()
 
     def showEvent(self, event):
-        for filter_value in self.image_filter.image_filter_values:
+        for filter_value in self._filter_values:
             if filter_value.value_type in ("float", "int"):
                 min_value = (
                     int(filter_value.min_value)
-                    if filter_value.min_value
+                    if filter_value.min_value is not None
                     else 0
                 )
                 max_value = (
                     int(filter_value.max_value)
-                    if filter_value.max_value
+                    if filter_value.max_value is not None
                     else 100
                 )
 
@@ -87,7 +112,6 @@ class FilterWindow(BaseWindow):
                 self.ui.content.layout().addWidget(slider_spinbox_widget)
 
         self.setWindowTitle(self.window_title)
-
         self.preview_filter()
 
     def keyPressEvent(self, event):
