@@ -371,3 +371,20 @@ def test_icons_and_opacity_in_init(qtbot):
     assert hasattr(widget, "copy_anim")
     assert hasattr(widget, "delete_anim")
     assert hasattr(widget, "play_anim")
+
+
+def test_streamed_text_accumulation_no_duplication(dummy_message_widget):
+    # Simulate streaming: send chunks as would be received from LLM
+    chunks = ["Now ", "it's ", "already ", "done."]
+    for chunk in chunks:
+        dummy_message_widget.update_message(chunk)
+    # The message should be the concatenation of all chunks, no duplication
+    assert dummy_message_widget.message == "HelloNow it's already done."
+    # Simulate another streaming session (should append, not reset)
+    more_chunks = [" More", " text."]
+    for chunk in more_chunks:
+        dummy_message_widget.update_message(chunk)
+    assert (
+        dummy_message_widget.message
+        == "HelloNow it's already done. More text."
+    )
