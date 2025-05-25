@@ -379,11 +379,10 @@ class NodeViewer(QtWidgets.QGraphicsView):
     # --- reimplemented events ---
 
     def resizeEvent(self, event):
-        w, h = self.size().width(), self.size().height()
-        if 0 in [w, h]:
-            self.resize(self._last_size)
-        delta = max(w / self._last_size.width(), h / self._last_size.height())
-        self._set_viewer_zoom(delta)
+        """
+        Override resizeEvent to prevent zoom changes on panel/widget resize.
+        Only update internal size tracking and call the base implementation.
+        """
         self._last_size = self.size()
         super(NodeViewer, self).resizeEvent(event)
 
