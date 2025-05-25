@@ -6,6 +6,7 @@ import webbrowser
 from functools import partial
 from typing import Dict, Optional
 
+from airunner.gui.windows.main.worker_manager import WorkerManager
 from airunner.gui.windows.wayland_helper import (
     enable_wayland_window_decorations,
 )
@@ -264,8 +265,6 @@ class MainWindow(
         self._worker_manager = None
         # Add WorkerManager for test and app compatibility
         try:
-            from airunner.gui.windows.main.worker_manager import WorkerManager
-
             self.worker_manager = WorkerManager(
                 logger=getattr(self, "logger", None)
             )
@@ -273,7 +272,6 @@ class MainWindow(
         except Exception as e:
             self.worker_manager = None  # Fallback if import fails
         self.initialize_ui()
-        self._initialize_workers()
         self.last_tray_click_time = 0
         self.settings_window = None
 
@@ -1935,25 +1933,6 @@ class MainWindow(
             self.ui.actionToggle_Active_Grid_Area.setToolTip(
                 f"{move_tool_key.display_name} ({move_tool_key.text})"
             )
-
-    def _initialize_workers(self):
-        self.logger.debug("Initializing worker manager")
-        self.logger.info("imported workers, initializing")
-        self._mask_generator_worker = create_worker(MaskGeneratorWorker)
-        self._sd_worker = create_worker(SDWorker)
-        if AudioCaptureWorker is not None:
-            self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-        if AudioProcessorWorker is not None:
-            self._stt_audio_processor_worker = create_worker(
-                AudioProcessorWorker
-            )
-        if TTSGeneratorWorker is not None:
-            self._tts_generator_worker = create_worker(TTSGeneratorWorker)
-        if TTSVocalizerWorker is not None:
-            self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
-        self._llm_generate_worker = create_worker(LLMGenerateWorker)
-
-        self.logger.info("INITIALIZE WORKERS COMPLETE")
 
     def _initialize_filter_actions(self):
         image_filters = ImageFilter.objects.all()

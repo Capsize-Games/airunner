@@ -171,7 +171,6 @@ class RunLLMNode(BaseLLMNode):
         """
         try:
             llm_request.node_id = self.id
-            print("CALLING LLM TEXT GENERATE REQUEST SIGNAL WITH ", prompt)
             self.api.llm.send_request(
                 prompt=prompt,
                 llm_request=llm_request,
