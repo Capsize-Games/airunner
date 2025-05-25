@@ -47,9 +47,26 @@ class BaseManager:
                 result = query.filter(self.cls.id == pk).first()
                 session.expunge_all()
                 self.logger.debug(f"Query result for get({pk}): {result}")
-                return result
+                return result.to_dataclass() if result else None
             except Exception as e:
                 self.logger.error(f"Error in get({pk}): {e}")
+                return None
+
+    def get_orm(
+        self, pk, eager_load: Optional[List[str]] = None
+    ) -> Optional[Any]:
+        """
+        Return a live ORM instance (not a dataclass) for update/delete/session operations.
+        """
+        with session_scope() as session:
+            try:
+                query = session.query(self.cls)
+                query = self._apply_eager_load(query, eager_load)
+                result = query.filter(self.cls.id == pk).first()
+                self.logger.debug(f"Query result for get_orm({pk}): {result}")
+                return result
+            except Exception as e:
+                self.logger.error(f"Error in get_orm({pk}): {e}")
                 return None
 
     def first(self, eager_load: Optional[List[str]] = None) -> Optional[_T]:
@@ -72,7 +89,7 @@ class BaseManager:
                             pass
                 result = query.first()
                 session.expunge_all()
-                return result
+                return result.to_dataclass() if result else None
             except Exception as e:
                 self.logger.error(f"Error in first(): {e}")
                 return None
@@ -83,7 +100,7 @@ class BaseManager:
                 result = session.query(self.cls).all()
                 self.logger.debug(f"Query result for all(): {result}")
                 session.expunge_all()
-                return result
+                return [obj.to_dataclass() for obj in result]
             except Exception as e:
                 self.logger.error(f"Error in all(): {e}")
                 return []
@@ -96,7 +113,7 @@ class BaseManager:
                     f"Query result for filter_by({kwargs}): {result}"
                 )
                 session.expunge_all()
-                return result
+                return [obj.to_dataclass() for obj in result]
             except Exception as e:
                 self.logger.error(f"Error in filter_by({kwargs}): {e}")
                 return None
@@ -107,7 +124,7 @@ class BaseManager:
                 result = session.query(self.cls).filter(*args).first()
                 self.logger.debug(f"Query result for filter({args}): {result}")
                 session.expunge_all()
-                return result
+                return result.to_dataclass() if result else None
             except Exception as e:
                 self.logger.error(f"Error in filter({args}): {e}")
                 return None
@@ -118,7 +135,7 @@ class BaseManager:
                 result = session.query(self.cls).filter(*args).all()
                 self.logger.debug(f"Query result for filter({args}): {result}")
                 session.expunge_all()
-                return result
+                return [obj.to_dataclass() for obj in result]
             except Exception as e:
                 self.logger.error(f"Error in filter({args}): {e}")
                 return None
@@ -148,7 +165,7 @@ class BaseManager:
                     f"Query result for filter_by({kwargs}): {result}"
                 )
                 session.expunge_all()
-                return result
+                return result.to_dataclass() if result else None
             except Exception as e:
                 self.logger.error(f"Error in filter_by({kwargs}): {e}")
                 return None
