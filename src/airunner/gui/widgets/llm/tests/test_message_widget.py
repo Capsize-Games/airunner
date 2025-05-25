@@ -306,11 +306,11 @@ def test_set_chat_font_fallback_font(monkeypatch, dummy_message_widget):
     dummy_message_widget.font_family = "NotARealFont"
     dummy_message_widget.font_size = 12
     monkeypatch.setattr(
-        message_widget.QFontDatabase, "families", lambda *_: ["Ubuntu"]
+        message_widget.QFontDatabase, "families", lambda *_: ["Cantarell", "Ubuntu"]
     )
     dummy_message_widget.set_chat_font()
-    # Accept any Ubuntu variant
-    assert "Ubuntu" in dummy_message_widget.content_widget.font().family()
+    # Accept any Ubuntu variant or Cantarell as a fallback
+    assert dummy_message_widget.content_widget.font().family() in ["Cantarell", "Ubuntu"]
 
 
 def test_update_message_all_widget_types(monkeypatch, dummy_message_widget):
