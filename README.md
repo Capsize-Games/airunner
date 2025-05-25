@@ -242,3 +242,37 @@ Organize them under your local AI Runner data directory:
 We welcome pull requests for new features, bug fixes, or documentation improvements. You can also build and share **extensions** to expand AI Runner’s functionality. For details, see the [Extensions Wiki](https://github.com/Capsize-Games/airunner/wiki/Extensions).
 
 Take a look at the [Contributing document](https://github.com/Capsize-Games/airunner/CONTRIBUTING.md) and the [Development wiki page](https://github.com/Capsize-Games/airunner/wiki/Development) for detailed instructions.
+
+## 🧪 Testing & Test Organization
+
+AI Runner uses `pytest` for all automated testing. Test coverage is a priority, especially for utility modules.
+
+### Test Directory Structure
+- **Headless-safe tests:**
+  - Located in `src/airunner/utils/tests/`
+  - Can be run in any environment (including CI, headless servers, and developer machines)
+  - Run with:
+    ```bash
+    pytest src/airunner/utils/tests/
+    ```
+- **Display-required (Qt/Xvfb) tests:**
+  - Located in `src/airunner/utils/tests/xvfb_required/`
+  - Require a real Qt display environment (cannot be run headlessly or with `pytest-qt`)
+  - Typical for low-level Qt worker/signal/slot logic
+  - Run with:
+    ```bash
+    xvfb-run -a pytest src/airunner/utils/tests/xvfb_required/
+    # Or for a single file:
+    xvfb-run -a pytest src/airunner/utils/tests/xvfb_required/test_background_worker.py
+    ```
+  - See the [README in xvfb_required/](src/airunner/utils/tests/xvfb_required/README.md) for details.
+
+### CI/CD
+- By default, only headless-safe tests are run in CI.
+- Display-required tests are intended for manual or special-case runs (e.g., when working on Qt threading or background worker code).
+- (Optional) You may automate this split in CI by adding a separate job/step for xvfb tests.
+
+### General Testing Guidelines
+- All new utility code must be accompanied by tests.
+- Use `pytest`, `pytest-qt` (for GUI), and `unittest.mock` for mocking dependencies.
+- For more details on writing and organizing tests, see the [project coding guidelines](#copilot-instructions-for-ai-runner-project) and the `src/airunner/utils/tests/` folder.
