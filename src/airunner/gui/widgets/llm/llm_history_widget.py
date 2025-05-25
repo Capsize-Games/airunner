@@ -24,9 +24,17 @@ class LLMHistoryWidget(BaseWidget):
         self.load_conversations()
 
     def load_conversations(self):
-        conversations = Conversation.objects.order_by(
-            Conversation.id.desc()
-        ).all()
+        # Get all conversations and sort them by ID descending
+        # Use filter to avoid session issues with order_by().all() chain
+        all_conversations = Conversation.objects.filter(
+            Conversation.id >= 1  # Get all conversations
+        )
+        if all_conversations:
+            conversations = sorted(
+                all_conversations, key=lambda x: x.id, reverse=True
+            )
+        else:
+            conversations = []
 
         # Get the existing layout - keep using the original QGridLayout from the UI file
         layout = self.ui.gridLayout_2

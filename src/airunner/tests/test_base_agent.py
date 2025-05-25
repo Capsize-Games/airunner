@@ -23,6 +23,7 @@ class DummyChatbot:
     use_system_instructions = False
     use_guardrails = False
     use_backstory = False
+    use_weather_prompt = False  # Added for weather mixin
     system_instructions = ""
     guardrails_prompt = ""
     backstory = ""
@@ -30,16 +31,20 @@ class DummyChatbot:
     botname = "TestBot"
 
 
-class DummyUser:
-    username = "testuser"
-    zipcode = "12345"
-    location_display_name = "Testville"
-    data = {}
-    latitude = 0.0
-    longitude = 0.0
+@pytest.fixture
+def dummy_user():
+    class DummyUser:
+        username = "testuser"
+        zipcode = "12345"
+        location_display_name = "Testville"
+        data = {}
+        latitude = 0.0
+        longitude = 0.0
 
-    def save(self):
-        pass
+        def save(self):
+            pass
+
+    return DummyUser()
 
 
 class DummyConversation:
@@ -85,53 +90,40 @@ class DummyReActAgentTool:
 
 
 @pytest.fixture
-def agent(monkeypatch):
+def agent(monkeypatch, dummy_user):
+    # Patch User.objects.get and filter_first to always return DummyUser
+    monkeypatch.setattr(
+        "airunner.data.models.User.objects.get", lambda *a, **kw: dummy_user
+    )
+    monkeypatch.setattr(
+        "airunner.data.models.User.objects.filter_first",
+        lambda *a, **kw: dummy_user,
+    )
+    # Patch MainWindow and QApplication to prevent GUI from opening
+    monkeypatch.setattr(
+        "airunner.gui.windows.main.main_window.MainWindow", MagicMock()
+    )
+    monkeypatch.setattr("airunner.app.QApplication", MagicMock())
     # Only patch classes that are imported or used directly in BaseAgent
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.RefreshSimpleChatEngine",
-        DummyEngine,
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.ChatEngineTool",
-        DummyChatEngineTool,
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.FunctionTool", DummyTool
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.ReActAgentTool",
-        DummyReActAgentTool,
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.DatabaseChatStore", MagicMock
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.SimpleChatStore", MagicMock
-    )
     # Patch ChatMemoryBuffer with MagicMock and add from_defaults
     chat_memory_mock = MagicMock()
     chat_memory_mock.from_defaults = MagicMock(return_value=MagicMock())
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.ChatMemoryBuffer",
-        chat_memory_mock,
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.ExternalConditionStoppingCriteria",
-        MagicMock,
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.HuggingFaceLLM", MagicMock
-    )
-    monkeypatch.setattr(
-        "airunner.handlers.llm.agent.agents.base.Tab", MagicMock
-    )
     # Construct agent and set all other dependencies directly
     a = BaseAgent()
     a._chatbot = DummyChatbot()
-    a._user = DummyUser()
+    a._user = dummy_user  # Use dummy_user fixture
+    a._user_set_by_test = True  # Mark as set by test
     a._conversation = DummyConversation()
     a.llm_settings = DummySettings()
     a.api = MagicMock()
+    # Patch chat_engine property at the class level for all tests needing it
+    monkeypatch.setattr(
+        type(a), "chat_engine", PropertyMock(return_value=DummyEngine())
+    )
+    # Patch llm property at the class level for all tests needing it
+    mock_llm = MagicMock()
+    mock_llm.metadata.system_role = "system"
+    monkeypatch.setattr(type(a), "llm", PropertyMock(return_value=mock_llm))
     # Do NOT set weather_prompt, application_settings, logger, language_settings, rag_settings
     return a
 
@@ -429,15 +421,18 @@ def test_botname_property(agent):
     assert agent.botname == "TestBot"
 
 
-def test_username_property(agent):
+def test_username_property(agent, monkeypatch, dummy_user):
+    monkeypatch.setattr(type(agent), "user", property(lambda self: dummy_user))
     assert agent.username == "testuser"
 
 
-def test_zipcode_property(agent):
+def test_zipcode_property(agent, monkeypatch, dummy_user):
+    monkeypatch.setattr(type(agent), "user", property(lambda self: dummy_user))
     assert agent.zipcode == "12345"
 
 
-def test_location_display_name_property(agent):
+def test_location_display_name_property(agent, monkeypatch, dummy_user):
+    monkeypatch.setattr(type(agent), "user", property(lambda self: dummy_user))
     agent.location_display_name = "NewName"
     assert agent.user.location_display_name == "NewName"
 
@@ -467,7 +462,7 @@ def test_summarize_conversation_prompt(agent):
 
 
 def test_mood_update_prompt(agent):
-    assert "mood analyzier" in agent._mood_update_prompt
+    assert "mood analyzer" in agent._mood_update_prompt
 
 
 def test_system_prompt(agent):

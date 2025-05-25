@@ -25,6 +25,7 @@ class FormatterExtended:
         """
         Heuristically checks if the given text contains LaTeX mathematical expressions.
         Looks for common math delimiters like $...$, $$...$$, \\[...\\], etc.
+        Accepts both single and double backslashes for robustness.
         """
         # Common inline math delimiters
         if re.search(r"\$[^\$]+\$", text):
@@ -32,9 +33,10 @@ class FormatterExtended:
         # Common display math delimiters
         if re.search(r"\$\$[^$]+\$\$", text):
             return True
-        if re.search(r"\\\\[.*\\\\]", text):
+        # Accept both single and double backslash for \[...\] and \(...\)
+        if re.search(r"(\\\\|\\)\[.*(\\\\|\\)\]", text):
             return True
-        if re.search(r"\\\\(.*\\\\)", text):
+        if re.search(r"(\\\\|\\)\(.*(\\\\|\\)\)", text):
             return True
         # Check for common LaTeX math commands
         if re.search(
