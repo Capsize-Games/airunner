@@ -30,9 +30,10 @@ from transformers import (
     CLIPTokenizer,
     T5TokenizerFast,
 )
+from airunner.handlers.base_model_manager import ModelManagerInterface
 
 
-class FluxModelManager(BaseDiffusersModelManager):
+class FluxModelManager(BaseDiffusersModelManager, ModelManagerInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Use None for lazy loading via properties
@@ -199,3 +200,15 @@ class FluxModelManager(BaseDiffusersModelManager):
 
         # Call the base class placeholder (which needs implementation)
         return super()._load_nf4_flux_pipe(model_path, data)
+
+    def load_model(self, *args, **kwargs):
+        return self._load_model(*args, **kwargs)
+
+    def unload_model(self, *args, **kwargs):
+        return self._unload_model(*args, **kwargs)
+
+    def _load_model(self, *args, **kwargs):
+        raise NotImplementedError("Implement in subclass or concrete manager.")
+
+    def _unload_model(self, *args, **kwargs):
+        raise NotImplementedError("Implement in subclass or concrete manager.")

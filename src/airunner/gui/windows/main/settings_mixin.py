@@ -606,6 +606,9 @@ class SettingsMixin:
         return settings_instance
 
     def update_setting(self, model_class_, name, value):
+        if model_class_.objects.first() is None:
+            model_class_.objects.create()
+
         setting = model_class_.objects.order_by(model_class_.id.desc()).first()
         if setting:
             model_class_.objects.update(setting.id, **{name: value})

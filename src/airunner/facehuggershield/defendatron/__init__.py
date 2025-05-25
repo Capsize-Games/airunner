@@ -21,9 +21,10 @@ def activate(
     # darklock properites
     darklock_os_whitelisted_operations: list = None,
     darklock_os_whitelisted_filenames: list = None,
-    darklock_os_whitelisted_imports: list = None,
-    darklock_os_blacklisted_filenames: list = None,
+    darklock_os_whitelisted_modules: list = None,  # Corrected from darklock_os_whitelisted_imports
+    # darklock_os_blacklisted_filenames: list = None, # Removed as it's not used by darklock.activate
     darklock_os_whitelisted_directories: list = None,
+    darklock_os_allow_network: bool = False,  # Added darklock_os_allow_network parameter
     activate_shadowlogger: bool = False,
     activate_darklock: bool = False,
     activate_nullscream: bool = False,
@@ -41,10 +42,10 @@ def activate(
     if activate_darklock:
         logger.info("Activating darklock")
         airunner.facehuggershield.darklock.activate(
-            whitelisted_operations=darklock_os_whitelisted_operations,
-            whitelisted_filenames=darklock_os_whitelisted_filenames,
-            whitelisted_imports=darklock_os_whitelisted_imports,
-            blacklisted_filenames=darklock_os_blacklisted_filenames,
+            whitelisted_modules=darklock_os_whitelisted_modules,
+            allow_network=darklock_os_allow_network,  # Pass allow_network
+            # whitelisted_operations=darklock_os_whitelisted_operations, # Not used by darklock.activate
+            # whitelisted_files=darklock_os_whitelisted_filenames, # Not used by darklock.activate
             whitelisted_directories=darklock_os_whitelisted_directories,
         )
 
