@@ -1,5 +1,6 @@
 import builtins
 import os
+import re
 import unittest
 from unittest.mock import patch, Mock  # Added Mock import
 
@@ -23,9 +24,9 @@ class TestRestrictOSAccess(unittest.TestCase):
         self.original_builtins_import = builtins.__import__
         self.original_os_write = os.write
         self.original_os_makedirs = os.makedirs
-        self.original_os_mkdir = os.mkdir # Added for consistency
-        self.original_os_remove = os.remove # Added for cleanup
-        self.original_os_rmdir = os.rmdir   # Added for cleanup
+        self.original_os_mkdir = os.mkdir  # Added for consistency
+        self.original_os_remove = os.remove  # Added for cleanup
+        self.original_os_rmdir = os.rmdir  # Added for cleanup
 
     def tearDown(self):
         # Ensure all restrictions are deactivated and originals restored after each test
@@ -35,9 +36,9 @@ class TestRestrictOSAccess(unittest.TestCase):
         builtins.__import__ = self.original_builtins_import
         os.write = self.original_os_write
         os.makedirs = self.original_os_makedirs
-        os.mkdir = self.original_os_mkdir # Added for consistency
-        os.remove = self.original_os_remove # Added for consistency
-        os.rmdir = self.original_os_rmdir   # Added for consistency
+        os.mkdir = self.original_os_mkdir  # Added for consistency
+        os.remove = self.original_os_remove  # Added for consistency
+        os.rmdir = self.original_os_rmdir  # Added for consistency
         # Clear whitelists and any other state that might persist
         self.restrict_os_access.clear_whitelists()
 
@@ -103,22 +104,20 @@ class TestRestrictOSAccess(unittest.TestCase):
         )
 
     def test_restricted_open_raises_permission_error(self):
-        self.restrict_os_access.clear_whitelists() # Ensure no prior whitelists affect this
+        self.restrict_os_access.clear_whitelists()  # Ensure no prior whitelists affect this
         self.restrict_os_access.activate()
-        with self.assertRaisesRegex(
-            PermissionError,
-            r"File system open operation to '/home/krystal/Projects/airunner/test.txt' \(from original path 'test.txt'\) is not allowed.",
-        ):
+        test_path = os.path.abspath("test.txt")
+        expected_regex = rf"File system open operation to '{re.escape(test_path)}' \(from original path 'test.txt'\) is not allowed."
+        with self.assertRaisesRegex(PermissionError, expected_regex):
             with open("test.txt", "w") as f:
                 f.write("test content")
 
     def test_restricted_read_raises_permission_error(self):
-        self.restrict_os_access.clear_whitelists() # Ensure no prior whitelists affect this
+        self.restrict_os_access.clear_whitelists()  # Ensure no prior whitelists affect this
         self.restrict_os_access.activate()
-        with self.assertRaisesRegex(
-            PermissionError,
-            r"File system open operation to '/home/krystal/Projects/airunner/test.txt' \(from original path 'test.txt'\) is not allowed.",
-        ):
+        test_path = os.path.abspath("test.txt")
+        expected_regex = rf"File system open operation to '{re.escape(test_path)}' \(from original path 'test.txt'\) is not allowed."
+        with self.assertRaisesRegex(PermissionError, expected_regex):
             with open("test.txt", "r") as f:
                 f.read()
 
@@ -194,7 +193,8 @@ class TestRestrictOSAccess(unittest.TestCase):
         self.restrict_os_access.clear_whitelists()
         self.restrict_os_access.activate()
         with self.assertRaisesRegex(
-            PermissionError, r"File system makedirs operation to '.*/test_dir' is not allowed."
+            PermissionError,
+            r"File system makedirs operation to '.*/test_dir' is not allowed.",
         ):
             os.makedirs("test_dir")
 
@@ -205,42 +205,50 @@ class TestRestrictOSAccess(unittest.TestCase):
     def test_restricted_os_open_not_whitelisted(self) -> None:
         """Test that os.open is restricted for non-whitelisted files."""
         self.restrict_os_access.clear_whitelists()
-        self.restrict_os_access.activate() # activate patches builtins.open to restricted_open
-
-        # We are testing that the patched builtins.open (which is self.restrict_os_access.restricted_open)
-        # correctly raises an error and doesn't call the original_open.
-        with patch.object(self.restrict_os_access, 'original_open', wraps=self.restrict_os_access.original_open) as mock_original_open:
-            with self.assertRaisesRegex(
-                PermissionError,
-                r"File system open operation to '/home/krystal/Projects/airunner/test.txt' \(from original path 'test.txt'\) is not allowed.",
-            ):
-                open("test.txt", "w") # This calls the patched builtins.open
+        self.restrict_os_access.activate()  # activate patches builtins.open to restricted_open
+        test_path = os.path.abspath("test.txt")
+        expected_regex = rf"File system open operation to '{re.escape(test_path)}' \(from original path 'test.txt'\) is not allowed."
+        with patch.object(
+            self.restrict_os_access,
+            "original_open",
+            wraps=self.restrict_os_access.original_open,
+        ) as mock_original_open:
+            with self.assertRaisesRegex(PermissionError, expected_regex):
+                open("test.txt", "w")  # This calls the patched builtins.open
             mock_original_open.assert_not_called()
 
     def test_restricted_os_makedirs_not_whitelisted(self) -> None:
         """Test that os.makedirs is restricted for non-whitelisted directories."""
         self.restrict_os_access.clear_whitelists()
-        self.restrict_os_access.activate() # activate patches os.makedirs to restricted_makedirs
+        self.restrict_os_access.activate()  # activate patches os.makedirs to restricted_makedirs
 
-        with patch.object(self.restrict_os_access, 'original_makedirs', wraps=self.restrict_os_access.original_makedirs) as mock_original_makedirs:
+        with patch.object(
+            self.restrict_os_access,
+            "original_makedirs",
+            wraps=self.restrict_os_access.original_makedirs,
+        ) as mock_original_makedirs:
             with self.assertRaisesRegex(
                 PermissionError,
                 r"File system makedirs operation to '.*/test_dir' is not allowed.",
             ):
-                os.makedirs("test_dir") # This calls the patched os.makedirs
+                os.makedirs("test_dir")  # This calls the patched os.makedirs
             mock_original_makedirs.assert_not_called()
 
     def test_restricted_os_mkdir_not_whitelisted(self) -> None:
         """Test that os.mkdir is restricted for non-whitelisted directories."""
         self.restrict_os_access.clear_whitelists()
-        self.restrict_os_access.activate() # activate patches os.mkdir to restricted_mkdir
+        self.restrict_os_access.activate()  # activate patches os.mkdir to restricted_mkdir
 
-        with patch.object(self.restrict_os_access, 'original_mkdir', wraps=self.restrict_os_access.original_mkdir) as mock_original_mkdir:
+        with patch.object(
+            self.restrict_os_access,
+            "original_mkdir",
+            wraps=self.restrict_os_access.original_mkdir,
+        ) as mock_original_mkdir:
             with self.assertRaisesRegex(
                 PermissionError,
                 r"File system mkdir operation to '.*/test_dir_mkdir' is not allowed.",
             ):
-                os.mkdir("test_dir_mkdir") # This calls the patched os.mkdir
+                os.mkdir("test_dir_mkdir")  # This calls the patched os.mkdir
             mock_original_mkdir.assert_not_called()
 
     def test_restricted_os_remove_raises_permission_error(self):
@@ -260,14 +268,20 @@ class TestRestrictOSAccess(unittest.TestCase):
     def test_restricted_os_remove_not_whitelisted(self) -> None:
         """Test that os.remove is restricted for non-whitelisted files."""
         self.restrict_os_access.clear_whitelists()
-        self.restrict_os_access.activate() # activate patches os.remove to restricted_remove
+        self.restrict_os_access.activate()  # activate patches os.remove to restricted_remove
 
-        with patch.object(self.restrict_os_access, 'original_remove', wraps=self.restrict_os_access.original_remove) as mock_original_remove:
+        with patch.object(
+            self.restrict_os_access,
+            "original_remove",
+            wraps=self.restrict_os_access.original_remove,
+        ) as mock_original_remove:
             with self.assertRaisesRegex(
                 PermissionError,
                 r"File system remove operation on '.*/test_remove.txt' is not allowed.",
             ):
-                os.remove("test_remove.txt") # This calls the patched os.remove
+                os.remove(
+                    "test_remove.txt"
+                )  # This calls the patched os.remove
             mock_original_remove.assert_not_called()
 
     # The original test_restricted_methods tested the methods on the instance directly.
@@ -342,7 +356,9 @@ class TestRestrictOSAccess(unittest.TestCase):
             self.assertTrue(os.path.exists("/tmp/specific_file.txt"))
 
             # Cleanup
-            self.original_os_remove("/tmp/specific_file.txt") # Use original to cleanup
+            self.original_os_remove(
+                "/tmp/specific_file.txt"
+            )  # Use original to cleanup
         except PermissionError:
             self.fail(
                 "Opening a whitelisted file/directory raised PermissionError unexpectedly."
@@ -352,49 +368,44 @@ class TestRestrictOSAccess(unittest.TestCase):
                 self.original_os_remove("/tmp/specific_file.txt")
             self.fail(f"An unexpected error occurred: {e}")
 
-    def test_whitelisting_open_specific_file_in_non_whitelisted_dir_fails(self):
+    def test_whitelisting_open_specific_file_in_non_whitelisted_dir_fails(
+        self,
+    ):
         self.restrict_os_access.clear_whitelists()
-        # This test's premise is that a file can be whitelisted even if its directory is not.
-        # However, RestrictOSAccess.is_path_whitelisted checks the directory.
-        # So, if the directory isn't whitelisted, the file operation will fail.
-        # The original test used self.restrict_os_access.whitelisted_files.add(...)
-        # Let's assume this was meant to test a scenario where such a mechanism exists.
-        # If RestrictOSAccess doesn't support file-specific whitelisting independent of
-        # directory whitelisting, this test will behave according to directory rules.
-
-        # To make this test meaningful for current RestrictOSAccess:
-        # Do not whitelist any directory.
-        self.restrict_os_access.activate(whitelisted_directories=[]) # No directories whitelisted
-
-        with self.assertRaisesRegex(
-            PermissionError,
-            r"File system open operation to '/home/krystal/Projects/airunner/specific_file_no_dir.txt' \(from original path 'specific_file_no_dir.txt'\) is not allowed.",
-        ):
+        self.restrict_os_access.activate(
+            whitelisted_directories=[]
+        )  # No directories whitelisted
+        test_path = os.path.abspath("specific_file_no_dir.txt")
+        expected_regex = rf"File system open operation to '{re.escape(test_path)}' \(from original path 'specific_file_no_dir.txt'\) is not allowed."
+        with self.assertRaisesRegex(PermissionError, expected_regex):
             with open("specific_file_no_dir.txt", "w") as f:
                 f.write("test")
-
 
     def test_whitelisting_directory_allows_subdir_operations(self):
         self.restrict_os_access.clear_whitelists()
         tmp_dir_path = os.path.abspath("temp_test_dir_for_subdir")
-        
+
         # Use activate to set the whitelisted directory
-        self.restrict_os_access.activate(whitelisted_directories=[tmp_dir_path])
+        self.restrict_os_access.activate(
+            whitelisted_directories=[tmp_dir_path]
+        )
 
         # Create the base whitelisted directory first if it doesn't exist
         # This operation itself should be allowed by the whitelisting.
         # However, os.makedirs on tmp_dir_path itself might fail if its parent isn't whitelisted.
         # Let's use original_os_makedirs to set up the whitelisted base directory to avoid this complexity.
         if not os.path.exists(tmp_dir_path):
-            self.original_os_makedirs(tmp_dir_path) # Use original to set up test
+            self.original_os_makedirs(
+                tmp_dir_path
+            )  # Use original to set up test
 
         subdir_path = os.path.join(tmp_dir_path, "subdir")
         file_in_subdir_path = os.path.join(subdir_path, "file.txt")
 
         try:
             # These should be allowed because parent (tmp_dir_path) is whitelisted.
-            os.makedirs(subdir_path, exist_ok=True) # Should be allowed
-            with open(file_in_subdir_path, "w") as f: # Should be allowed
+            os.makedirs(subdir_path, exist_ok=True)  # Should be allowed
+            with open(file_in_subdir_path, "w") as f:  # Should be allowed
                 f.write("test")
             # Use original os functions for cleanup to avoid restriction issues during teardown
             self.original_os_remove(file_in_subdir_path)
