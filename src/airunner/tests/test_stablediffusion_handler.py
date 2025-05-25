@@ -16,8 +16,6 @@ from airunner.enums import (
     ModelStatus,
     ModelType,
     HandlerState,
-    SignalCode,
-    EngineResponseCode,
     GeneratorSection,
 )
 

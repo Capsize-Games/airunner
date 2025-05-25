@@ -17,9 +17,14 @@ from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
     StableDiffusionModelManager,
 )
 from airunner.utils.memory import clear_memory
+from airunner.handlers.base_model_manager import ModelManagerInterface
 
 
-class SDXLModelManager(StableDiffusionModelManager):
+class BaseDiffusersModelManager:
+    pass
+
+
+class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
     def __init__(self, *args, **kwargs):
         self._refiner = None
         super().__init__(*args, **kwargs)
@@ -314,6 +319,18 @@ class SDXLModelManager(StableDiffusionModelManager):
         negative_prompt = self.negative_prompt
         second_negative_prompt = self.second_negative_prompt
 
+        # Sanitize and validate prompt inputs
+        def _sanitize_prompt(p):
+            if not isinstance(p, str):
+                return ""
+            # Remove problematic characters (e.g., unescaped quotes)
+            return p.replace('"', "'").strip()
+
+        prompt = _sanitize_prompt(prompt)
+        second_prompt = _sanitize_prompt(second_prompt)
+        negative_prompt = _sanitize_prompt(negative_prompt)
+        second_negative_prompt = _sanitize_prompt(second_negative_prompt)
+
         if (
             self._current_prompt != prompt
             or self._current_prompt_2 != second_prompt
@@ -333,7 +350,6 @@ class SDXLModelManager(StableDiffusionModelManager):
             or self._negative_pooled_prompt_embeds is None
         ):
             self.logger.debug("Loading prompt embeds")
-
             if prompt != "" and second_prompt != "":
                 compel_prompt = f'("{prompt}", "{second_prompt}").and()'
             elif prompt != "" and second_prompt == "":
@@ -354,20 +370,29 @@ class SDXLModelManager(StableDiffusionModelManager):
             else:
                 compel_negative_prompt = ""
 
-            (
-                prompt_embeds,
-                pooled_prompt_embeds,
-                negative_prompt_embeds,
-                negative_pooled_prompt_embeds,
-            ) = self._build_conditioning_tensors(
-                compel_prompt, compel_negative_prompt
-            )
-
-            [prompt_embeds, negative_prompt_embeds] = (
-                self._compel_proc.pad_conditioning_tensors_to_same_length(
-                    [prompt_embeds, negative_prompt_embeds]
+            try:
+                (
+                    prompt_embeds,
+                    pooled_prompt_embeds,
+                    negative_prompt_embeds,
+                    negative_pooled_prompt_embeds,
+                ) = self._build_conditioning_tensors(
+                    compel_prompt, compel_negative_prompt
                 )
-            )
+                [prompt_embeds, negative_prompt_embeds] = (
+                    self._compel_proc.pad_conditioning_tensors_to_same_length(
+                        [prompt_embeds, negative_prompt_embeds]
+                    )
+                )
+            except RuntimeError as e:
+                self.logger.error(f"Prompt embedding failed: {e}")
+                self._prompt_embeds = None
+                self._negative_prompt_embeds = None
+                self._pooled_prompt_embeds = None
+                self._negative_pooled_prompt_embeds = None
+                raise ValueError(
+                    "Prompt could not be processed. Please check for invalid or excessively long prompt text."
+                ) from e
 
             self._prompt_embeds = prompt_embeds
             self._negative_prompt_embeds = negative_prompt_embeds
@@ -382,3 +407,15 @@ class SDXLModelManager(StableDiffusionModelManager):
                 self._pooled_prompt_embeds.half().to(self._device)
             if self._negative_pooled_prompt_embeds is not None:
                 self._negative_pooled_prompt_embeds.half().to(self._device)
+
+    def load_model(self, *args, **kwargs):
+        return self._load_model(*args, **kwargs)
+
+    def unload_model(self, *args, **kwargs):
+        return self._unload_model(*args, **kwargs)
+
+    def _load_model(self, *args, **kwargs):
+        raise NotImplementedError("Implement in subclass or concrete manager.")
+
+    def _unload_model(self, *args, **kwargs):
+        raise NotImplementedError("Implement in subclass or concrete manager.")

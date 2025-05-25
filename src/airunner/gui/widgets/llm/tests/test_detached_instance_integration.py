@@ -82,6 +82,10 @@ def test_history_widget_handles_detached_conversations(
         ids = [widget.conversation.id for widget in conversation_widgets]
         assert ids == [2, 1]  # Should be sorted in descending order
 
+        # Cleanup
+        widget.close()
+        widget.deleteLater()
+
 
 def test_history_item_widget_handles_detached_instance_gracefully(
     qtbot, mock_detached_conversation
@@ -118,6 +122,10 @@ def test_history_item_widget_handles_detached_instance_gracefully(
             "[unavailable]" in timestamp_label.text()
         )  # Should show fallback for detached timestamp
 
+        # Cleanup
+        widget.close()
+        widget.deleteLater()
+
 
 def test_history_widget_handles_empty_filter_result(qtbot):
     """Test that the widget handles empty conversation list gracefully."""
@@ -136,6 +144,10 @@ def test_history_widget_handles_empty_filter_result(qtbot):
         # Should have only the spacer item in the layout
         layout = widget.ui.gridLayout_2
         assert layout.count() <= 1  # Only spacer or empty
+
+        # Cleanup
+        widget.close()
+        widget.deleteLater()
 
 
 def test_history_widget_conversation_sorting():
@@ -173,6 +185,10 @@ def test_history_widget_conversation_sorting():
         ids = [widget.conversation.id for widget in conversation_widgets]
         assert ids == [5, 4, 3, 2, 1]
 
+        # Cleanup
+        widget.close()
+        widget.deleteLater()
+
 
 def test_filter_query_avoids_session_boundary_issues():
     """Test that using filter() instead of order_by().all() avoids session issues."""
@@ -191,3 +207,7 @@ def test_filter_query_avoids_session_boundary_issues():
         # The call should be with a simple filter condition that doesn't cross session boundaries
         args, kwargs = mock_filter.call_args
         assert len(args) == 1  # Should have one filter condition
+
+        # Cleanup
+        widget.close()
+        widget.deleteLater()

@@ -22,6 +22,7 @@ from airunner.workers.worker import Worker
 from airunner.handlers.stablediffusion.image_request import ImageRequest
 from airunner.data.models.ai_models import AIModels
 from airunner.enums import StableDiffusionVersion
+from airunner.exceptions import PipeNotLoadedException
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -369,7 +370,18 @@ class SDWorker(Worker):
 
     def _finalize_do_generate_signal(self, message: Dict):
         if self.model_manager:
-            self.model_manager.handle_generate_signal(message)
+            try:
+                self.model_manager.handle_generate_signal(message)
+            except PipeNotLoadedException as e:
+                self.handle_error(e.message)
+                image_request = message.get("image_request", None)
+                err = "Image model failed to load"
+                if (
+                    image_request is not None
+                    and image_request.model_path == ""
+                ):
+                    err = "You must select a model before generating images."
+                self.send_missing_model_alert(err)
 
     def handle_error(self, error_message):
         self.logger.error(f"SDWorker Error: {error_message}")
