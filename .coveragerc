@@ -11,10 +11,7 @@ omit =
     /*templates/*
     __init__.py
    *_ui.py
-   */windows/*
-   */widgets/*
    proces_qss.py
-
 
 [report]
 exclude_lines =
