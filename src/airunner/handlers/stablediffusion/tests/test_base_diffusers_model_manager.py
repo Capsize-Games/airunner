@@ -56,23 +56,26 @@ def test_get_results_interrupt(monkeypatch):
 
 def test_initialize_metadata_basic():
     mgr = MagicMock(spec=BaseDiffusersModelManager)
-    mgr.metadata_settings.export_metadata = True
-    mgr.metadata_settings.image_export_metadata_prompt = True
-    mgr.metadata_settings.image_export_metadata_negative_prompt = False
-    mgr.metadata_settings.image_export_metadata_scale = False
-    mgr.metadata_settings.image_export_metadata_seed = False
-    mgr.metadata_settings.image_export_metadata_steps = False
-    mgr.metadata_settings.image_export_metadata_ddim_eta = False
-    mgr.metadata_settings.image_export_metadata_iterations = False
-    mgr.metadata_settings.image_export_metadata_samples = False
-    mgr.metadata_settings.image_export_metadata_model = False
-    mgr.metadata_settings.image_export_metadata_version = False
-    mgr.metadata_settings.image_export_metadata_scheduler = False
-    mgr.metadata_settings.image_export_metadata_strength = False
-    mgr.metadata_settings.image_export_metadata_lora = False
-    mgr.metadata_settings.image_export_metadata_embeddings = False
-    mgr.metadata_settings.image_export_metadata_timestamp = False
-    mgr.metadata_settings.image_export_metadata_controlnet = False
+    # Patch metadata_settings as a MagicMock with all needed attributes
+    meta_settings = MagicMock()
+    meta_settings.export_metadata = True
+    meta_settings.image_export_metadata_prompt = True
+    meta_settings.image_export_metadata_negative_prompt = False
+    meta_settings.image_export_metadata_scale = False
+    meta_settings.image_export_metadata_seed = False
+    meta_settings.image_export_metadata_steps = False
+    meta_settings.image_export_metadata_ddim_eta = False
+    meta_settings.image_export_metadata_iterations = False
+    meta_settings.image_export_metadata_samples = False
+    meta_settings.image_export_metadata_model = False
+    meta_settings.image_export_metadata_version = False
+    meta_settings.image_export_metadata_scheduler = False
+    meta_settings.image_export_metadata_strength = False
+    meta_settings.image_export_metadata_lora = False
+    meta_settings.image_export_metadata_embeddings = False
+    meta_settings.image_export_metadata_timestamp = False
+    meta_settings.image_export_metadata_controlnet = False
+    mgr.metadata_settings = meta_settings
     mgr.is_txt2img = True
     mgr.is_img2img = False
     mgr.is_outpaint = False
@@ -91,8 +94,5 @@ def test_initialize_metadata_basic():
 
 def test_initialize_metadata_none():
     mgr = MagicMock(spec=BaseDiffusersModelManager)
-    mgr.metadata_settings.export_metadata = False
-    images = [1, 2]
-    data = {}
     meta = BaseDiffusersModelManager._initialize_metadata(mgr, images, data)
     assert meta is None
