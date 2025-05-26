@@ -380,8 +380,9 @@ class InputImage(BaseWidget):
                 if self.is_mask:
                     self.update_drawing_pad_settings("mask", base_64_image)
                     model = self.drawing_pad_settings.__class__.objects.first()
-                    model.mask = base_64_image
-                    model.save()
+                    if hasattr(model, "save"):
+                        model.mask = base_64_image
+                        model.save()
                 elif (
                     self.settings_key == "controlnet_settings"
                     and hasattr(self, "use_generated_image")
@@ -391,18 +392,18 @@ class InputImage(BaseWidget):
                         "generated_image", base_64_image
                     )
                     model = self.controlnet_settings.__class__.objects.first()
-                    model.generated_image = base_64_image
-                    model.save()
+                    if hasattr(model, "save"):
+                        model.generated_image = base_64_image
+                        model.save()
                 elif self.settings_key == "outpaint_settings":
                     self.update_outpaint_settings("image", base_64_image)
                     model = self.outpaint_settings.__class__.objects.first()
-                    model.image = base_64_image
-                    model.save()
+                    if hasattr(model, "save"):
+                        model.image = base_64_image
+                        model.save()
                 elif self.settings_key == "image_to_image_settings":
                     self.update_image_to_image_settings("image", base_64_image)
-                    model = self.image_to_image_settings.__class__.objects.first()
-                    model.image = base_64_image
-                    model.save()
+                    # Do not call .save() on dataclass objects (ImageToImageSettingsData)
                 else:
                     self.update_current_settings("image", base_64_image)
                 # After saving, reload to ensure UI is in sync
