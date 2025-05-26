@@ -8,15 +8,29 @@ ModelLoadBalancer: Orchestrates model loading/unloading for VRAM/resource manage
 
 TDD: See tests/model_load_balancer/test_model_load_balancer.py
 """
-from typing import Dict, List, Optional
-from airunner.enums import ModelType
-from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 
-class ModelLoadBalancer:
-    def __init__(self, worker_manager, logger=None):
+from typing import Dict, List, Optional
+from airunner.enums import ModelType, SignalCode, ModelStatus
+from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
+from airunner.utils.application.mediator_mixin import MediatorMixin
+
+
+class ModelLoadBalancer(MediatorMixin):
+    def __init__(self, worker_manager, logger=None, api=None):
         self.worker_manager = worker_manager
         self.logger = logger
+        self.api = api
         self._last_non_art_models: List[ModelType] = []
+        super().__init__()
+
+    def _emit_model_status(self, model_type, status):
+        if self.api and hasattr(self.api, "change_model_status"):
+            self.api.change_model_status(model_type, status)
+        else:
+            self.emit_signal(
+                SignalCode.MODEL_STATUS_CHANGED_SIGNAL,
+                {"model": model_type, "status": status},
+            )
 
     def switch_to_art_mode(self):
         """
@@ -29,13 +43,17 @@ class ModelLoadBalancer:
             (ModelType.TTS, self.worker_manager.tts_generator_worker),
             (ModelType.STT, self.worker_manager.stt_audio_processor_worker),
         ]:
-            if worker and getattr(worker, 'is_loaded', lambda: True)():
+            if worker and getattr(worker, "is_loaded", lambda: True)():
                 self._last_non_art_models.append(model_type)
                 worker.unload()
+                self._emit_model_status(model_type, ModelStatus.UNLOADED)
         if self.worker_manager.sd_worker:
             self.worker_manager.sd_worker.load_model_manager()
+            self._emit_model_status(ModelType.SD, ModelStatus.LOADED)
         if self.logger:
-            self.logger.info(f"Switched to art mode. Unloaded: {self._last_non_art_models}")
+            self.logger.info(
+                f"Switched to art mode. Unloaded: {self._last_non_art_models}"
+            )
 
     def switch_to_non_art_mode(self):
         """
@@ -51,8 +69,11 @@ class ModelLoadBalancer:
                 worker = self.worker_manager.stt_audio_processor_worker
             if worker:
                 worker.load()
+                self._emit_model_status(model_type, ModelStatus.LOADED)
         if self.logger:
-            self.logger.info(f"Restored non-art models: {self._last_non_art_models}")
+            self.logger.info(
+                f"Restored non-art models: {self._last_non_art_models}"
+            )
         self._last_non_art_models = []
 
     def get_loaded_models(self) -> List[ModelType]:
@@ -63,7 +84,7 @@ class ModelLoadBalancer:
             (ModelType.STT, self.worker_manager.stt_audio_processor_worker),
             (ModelType.SD, self.worker_manager.sd_worker),
         ]:
-            if worker and getattr(worker, 'is_loaded', lambda: True)():
+            if worker and getattr(worker, "is_loaded", lambda: True)():
                 loaded.append(model_type)
         return loaded
 
