@@ -1,0 +1,71 @@
+"""
+ModelLoadBalancer: Orchestrates model loading/unloading for VRAM/resource management.
+
+- Tracks which models are loaded/unloaded.
+- Delegates actual load/unload to worker manager(s).
+- Can be extended to use VRAM stats and model size for smarter balancing.
+- API: switch_to_art_mode(), switch_to_non_art_mode(), get_loaded_models(), etc.
+
+TDD: See tests/model_load_balancer/test_model_load_balancer.py
+"""
+from typing import Dict, List, Optional
+from airunner.enums import ModelType
+from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
+
+class ModelLoadBalancer:
+    def __init__(self, worker_manager, logger=None):
+        self.worker_manager = worker_manager
+        self.logger = logger
+        self._last_non_art_models: List[ModelType] = []
+
+    def switch_to_art_mode(self):
+        """
+        Unload all non-art models (LLM, TTS, STT), load SD model.
+        Tracks which models were previously loaded for restoration.
+        """
+        self._last_non_art_models = []
+        for model_type, worker in [
+            (ModelType.LLM, self.worker_manager.llm_generate_worker),
+            (ModelType.TTS, self.worker_manager.tts_generator_worker),
+            (ModelType.STT, self.worker_manager.stt_audio_processor_worker),
+        ]:
+            if worker and getattr(worker, 'is_loaded', lambda: True)():
+                self._last_non_art_models.append(model_type)
+                worker.unload()
+        if self.worker_manager.sd_worker:
+            self.worker_manager.sd_worker.load_model_manager()
+        if self.logger:
+            self.logger.info(f"Switched to art mode. Unloaded: {self._last_non_art_models}")
+
+    def switch_to_non_art_mode(self):
+        """
+        Reload previously unloaded non-art models (LLM, TTS, STT).
+        """
+        for model_type in self._last_non_art_models:
+            worker = None
+            if model_type == ModelType.LLM:
+                worker = self.worker_manager.llm_generate_worker
+            elif model_type == ModelType.TTS:
+                worker = self.worker_manager.tts_generator_worker
+            elif model_type == ModelType.STT:
+                worker = self.worker_manager.stt_audio_processor_worker
+            if worker:
+                worker.load()
+        if self.logger:
+            self.logger.info(f"Restored non-art models: {self._last_non_art_models}")
+        self._last_non_art_models = []
+
+    def get_loaded_models(self) -> List[ModelType]:
+        loaded = []
+        for model_type, worker in [
+            (ModelType.LLM, self.worker_manager.llm_generate_worker),
+            (ModelType.TTS, self.worker_manager.tts_generator_worker),
+            (ModelType.STT, self.worker_manager.stt_audio_processor_worker),
+            (ModelType.SD, self.worker_manager.sd_worker),
+        ]:
+            if worker and getattr(worker, 'is_loaded', lambda: True)():
+                loaded.append(model_type)
+        return loaded
+
+    def vram_stats(self, device):
+        return gpu_memory_stats(device)
