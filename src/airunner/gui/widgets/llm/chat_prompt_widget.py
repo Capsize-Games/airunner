@@ -324,6 +324,19 @@ class ChatPromptWidget(BaseWidget):
             self.logger.warning("Prompt is empty")
             return
 
+        # Unload art model if art model is loaded and LLM is not loaded
+        model_load_balancer = getattr(self.api, "model_load_balancer", None)
+        art_model_loaded = (
+            model_load_balancer
+            and ModelType.SD in model_load_balancer.get_loaded_models()
+        )
+        llm_loaded = (
+            model_load_balancer
+            and ModelType.LLM in model_load_balancer.get_loaded_models()
+        )
+        if art_model_loaded and not llm_loaded:
+            model_load_balancer.switch_to_non_art_mode()
+
         if self.generating:
             if self.held_message is None:
                 self.held_message = prompt
