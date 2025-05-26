@@ -74,25 +74,24 @@ class ChatPromptWidget(BaseWidget):
         self._conversation_id: Optional[int] = None
         self.conversation_history = []
 
+        # Initialize action menu cleanly
         self.ui.action.blockSignals(True)
-        self.ui.action.addItem("Auto")
-        self.ui.action.addItem("Chat")
-        self.ui.action.addItem("RAG")
-
+        self.ui.action.clear()
+        action_map = [
+            ("Auto", LLMActionType.APPLICATION_COMMAND),
+            ("Chat", LLMActionType.CHAT),
+            ("RAG", LLMActionType.PERFORM_RAG_SEARCH),
+        ]
         if AIRUNNER_ART_ENABLED:
-            self.ui.action.addItem("Image")
-
-        action = self.action
-        if action is LLMActionType.APPLICATION_COMMAND:
-            self.ui.action.setCurrentIndex(0)
-        elif action is LLMActionType.CHAT:
-            self.ui.action.setCurrentIndex(1)
-        elif action is LLMActionType.GENERATE_IMAGE:
-            self.ui.action.setCurrentIndex(2)
-        elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            self.ui.action.setCurrentIndex(3)
-        elif action is LLMActionType.STORE_DATA:
-            self.ui.action.setCurrentIndex(4)
+            action_map.append(("Image", LLMActionType.GENERATE_IMAGE))
+        for label, _ in action_map:
+            self.ui.action.addItem(label)
+        # Set current index based on self.action
+        current_action = self.action
+        for idx, (_, action_type) in enumerate(action_map):
+            if current_action is action_type:
+                self.ui.action.setCurrentIndex(idx)
+                break
         self.ui.action.blockSignals(False)
         self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
@@ -323,6 +322,19 @@ class ChatPromptWidget(BaseWidget):
         if prompt is None or prompt == "":
             self.logger.warning("Prompt is empty")
             return
+
+        # Unload art model if art model is loaded and LLM is not loaded
+        model_load_balancer = getattr(self.api, "model_load_balancer", None)
+        art_model_loaded = (
+            model_load_balancer
+            and ModelType.SD in model_load_balancer.get_loaded_models()
+        )
+        llm_loaded = (
+            model_load_balancer
+            and ModelType.LLM in model_load_balancer.get_loaded_models()
+        )
+        if art_model_loaded and not llm_loaded:
+            model_load_balancer.switch_to_non_art_mode()
 
         if self.generating:
             if self.held_message is None:

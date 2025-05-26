@@ -105,6 +105,8 @@ except OSError as e:
     TTSGeneratorWorker = None
     TTSVocalizerWorker = None
 
+from .model_load_balancer import ModelLoadBalancer
+
 
 class MainWindow(
     MediatorMixin,
@@ -271,6 +273,11 @@ class MainWindow(
             self.worker_manager.initialize_workers()
         except Exception as e:
             self.worker_manager = None  # Fallback if import fails
+        self.model_load_balancer = ModelLoadBalancer(
+            self.worker_manager,
+            logger=getattr(self, "logger", None),
+            api=self.api,
+        )
         self.initialize_ui()
         self.last_tray_click_time = 0
         self.settings_window = None
@@ -369,410 +376,6 @@ class MainWindow(
 
     @Slot()
     def export_drawingpad_image(self):
-        pass
-
-    @Slot()
-    def on_actionExport_image_button_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot export image."
-            )
-            return
-        self.api.art.canvas.export_image()
-
-    @Slot()
-    def on_actionImport_image_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot import image."
-            )
-            return
-        self.api.art.canvas.import_image()
-
-    @Slot()
-    def on_artActionNew_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot clear canvas."
-            )
-            return
-        self.api.art.canvas.clear()
-
-    @Slot()
-    def on_actionUndo_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot undo."
-            )
-            return
-        self.api.art.canvas.undo()
-
-    @Slot()
-    def on_actionRedo_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot redo."
-            )
-            return
-        self.api.art.canvas.redo()
-
-    @Slot()
-    def on_actionPaste_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot paste image."
-            )
-            return
-        self.api.art.canvas.paste_image()
-
-    @Slot()
-    def on_actionCopy_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot copy image."
-            )
-            return
-        self.api.art.canvas.copy_image()
-
-    @Slot()
-    def on_actionCut_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot cut image."
-            )
-            return
-        self.api.art.canvas.cut_image()
-
-    @Slot()
-    def on_actionRotate_90_clockwise_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 clockwise."
-            )
-            return
-        self.api.art.canvas.rotate_image_90_clockwise()
-
-    @Slot()
-    def on_actionRotate_90_counter_clockwise_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 counterclockwise."
-            )
-            return
-        self.api.art.canvas.rotate_image_90_counterclockwise()
-
-    @Slot()
-    def on_actionClear_all_prompts_triggered(self):
-        self.clear_all_prompts()
-
-    @Slot()
-    def on_actionBrowse_AI_Runner_Path_triggered(self):
-        path = self.path_settings.base_path
-        if path == "":
-            path = AIRUNNER_BASE_PATH
-        show_path(path)
-
-    @Slot()
-    def action_show_model_path_txt2img(self):
-        self.show_settings_path("txt2img_model_path")
-
-    @Slot()
-    def action_show_model_path_inpaint(self):
-        self.show_settings_path("inpaint_model_path")
-
-    @Slot()
-    def action_show_model_path_embeddings(self):
-        self.show_settings_path("embeddings_model_path")
-
-    @Slot()
-    def action_show_model_path_lora(self):
-        self.show_settings_path("lora_model_path")
-
-    @Slot()
-    def action_show_llm(self):
-        pass
-
-    @Slot()
-    def on_actionReport_vulnerability_triggered(self):
-        webbrowser.open(AIRUNNER_VULNERABILITY_REPORT_LINK)
-
-    @Slot()
-    def on_actionBug_report_triggered(self):
-        webbrowser.open(AIRUNNER_BUG_REPORT_LINK)
-
-    @Slot()
-    def on_actionDiscord_triggered(self):
-        if AIRUNNER_DISCORD_URL:
-            webbrowser.open(AIRUNNER_DISCORD_URL)
-
-    @Slot(bool)
-    def action_toggle_mask_layer(self, val: bool):
-        if val is True and self.drawing_pad_mask is None:
-            self._generate_drawingpad_mask()
-        self.update_drawing_pad_settings("mask_layer_enabled", val)
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot toggle mask layer."
-            )
-            return
-        self.api.art.canvas.mask_layer_toggled()
-
-    @Slot(bool)
-    def action_outpaint_toggled(self, val: bool):
-        self.update_outpaint_settings("enabled", val)
-
-    @Slot()
-    def action_outpaint_export(self):
-        pass
-
-    @Slot()
-    def action_outpaint_import(self):
-        pass
-
-    @Slot()
-    def on_actionExport_image_button_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot export image."
-            )
-            return
-        self.api.art.canvas.export_image()
-
-    @Slot()
-    def on_actionImport_image_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot import image."
-            )
-            return
-        self.api.art.canvas.import_image()
-
-    @Slot()
-    def on_artActionNew_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot clear canvas."
-            )
-            return
-        self.api.art.canvas.clear()
-
-    @Slot()
-    def on_actionUndo_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot undo."
-            )
-            return
-        self.api.art.canvas.undo()
-
-    @Slot()
-    def on_actionRedo_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot redo."
-            )
-            return
-        self.api.art.canvas.redo()
-
-    @Slot()
-    def on_actionPaste_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot paste image."
-            )
-            return
-        self.api.art.canvas.paste_image()
-
-    @Slot()
-    def on_actionCopy_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot copy image."
-            )
-            return
-        self.api.art.canvas.copy_image()
-
-    @Slot()
-    def on_actionCut_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot cut image."
-            )
-            return
-        self.api.art.canvas.cut_image()
-
-    @Slot()
-    def on_actionRotate_90_clockwise_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 clockwise."
-            )
-            return
-        self.api.art.canvas.rotate_image_90_clockwise()
-
-    @Slot()
-    def on_actionRotate_90_counter_clockwise_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 counterclockwise."
-            )
-            return
-        self.api.art.canvas.rotate_image_90_counterclockwise()
-
-    @Slot()
-    def on_actionClear_all_prompts_triggered(self):
-        self.clear_all_prompts()
-
-    @Slot()
-    def on_actionBrowse_AI_Runner_Path_triggered(self):
-        path = self.path_settings.base_path
-        if path == "":
-            path = AIRUNNER_BASE_PATH
-        show_path(path)
-
-    @Slot()
-    def action_show_model_path_txt2img(self):
-        self.show_settings_path("txt2img_model_path")
-
-    @Slot()
-    def action_show_model_path_inpaint(self):
-        self.show_settings_path("inpaint_model_path")
-
-    @Slot()
-    def action_show_model_path_embeddings(self):
-        self.show_settings_path("embeddings_model_path")
-
-    @Slot()
-    def action_show_model_path_lora(self):
-        self.show_settings_path("lora_model_path")
-
-    @Slot()
-    def action_show_llm(self):
-        pass
-
-    @Slot()
-    def on_actionReport_vulnerability_triggered(self):
-        webbrowser.open(AIRUNNER_VULNERABILITY_REPORT_LINK)
-
-    @Slot()
-    def on_actionBug_report_triggered(self):
-        webbrowser.open(AIRUNNER_BUG_REPORT_LINK)
-
-    @Slot()
-    def on_actionDiscord_triggered(self):
-        if AIRUNNER_DISCORD_URL:
-            webbrowser.open(AIRUNNER_DISCORD_URL)
-
-    @Slot(bool)
-    def action_toggle_mask_layer(self, val: bool):
-        if val is True and self.drawing_pad_mask is None:
-            self._generate_drawingpad_mask()
-        self.update_drawing_pad_settings("mask_layer_enabled", val)
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot toggle mask layer."
-            )
-            return
-        self.api.art.canvas.mask_layer_toggled()
-
-    @Slot(bool)
-    def action_outpaint_toggled(self, val: bool):
-        self.update_outpaint_settings("enabled", val)
-
-    @Slot()
-    def action_outpaint_export(self):
-        pass
-
-    @Slot()
-    def action_outpaint_import(self):
         pass
 
     @Slot()
@@ -1566,38 +1169,20 @@ class MainWindow(
             self.showFullScreen()
 
     def on_unload_non_sd_models(self, data: Dict = None):
-        if not self.memory_settings.prevent_unload_on_llm_image_generation:
-            sd_device = (
-                AIRUNNER_MEM_SD_DEVICE or self.memory_settings.default_gpu_sd
-            )
-            llm_device = (
-                AIRUNNER_MEM_LLM_DEVICE or self.memory_settings.default_gpu_llm
-            )
-            tts_device = (
-                AIRUNNER_MEM_TTS_DEVICE or self.memory_settings.default_gpu_tts
-            )
-            stt_device = (
-                AIRUNNER_MEM_STT_DEVICE or self.memory_settings.default_gpu_stt
-            )
-
-            if sd_device == tts_device:
-                self._tts_generator_worker.unload()
-
-            if sd_device == stt_device:
-                self._stt_audio_processor_worker.unload()
-
-        callback = data.get("callback", None)
+        """
+        Unload all non-SD models and load Stable Diffusion using the load balancer.
+        """
+        self.model_load_balancer.switch_to_art_mode()
+        callback = data.get("callback", None) if data else None
         if callback:
             callback()
 
     def on_load_non_sd_models(self, data: Dict = None):
-        if self.application_settings.llm_enabled:
-            self._llm_generate_worker.load()
-        if self.application_settings.tts_enabled:
-            self._tts_generator_worker.load()
-        if self.application_settings.stt_enabled:
-            self._stt_audio_processor_worker.load()
-        callback = data.get("callback", None)
+        """
+        Reload previously unloaded non-SD models using the load balancer.
+        """
+        self.model_load_balancer.switch_to_non_art_mode()
+        callback = data.get("callback", None) if data else None
         if callback:
             callback(data)
 

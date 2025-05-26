@@ -193,3 +193,9 @@ class LLMGenerateWorker(Worker):
         callback = data.get("callback", None)
         if callback:
             callback(data)
+
+    def unload(self, data: Optional[Dict] = None):
+        """
+        Unload the LLM model and free VRAM/resources. This method is required for model load balancing.
+        """
+        self.unload_llm(data)
