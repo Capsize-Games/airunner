@@ -93,6 +93,17 @@ def test_initialize_metadata_basic():
 
 
 def test_initialize_metadata_none():
+    images = None
+    data = None
     mgr = MagicMock(spec=BaseDiffusersModelManager)
+    mgr._current_prompt = None
+    mgr._current_prompt_2 = None
+    mgr.is_txt2img = False
+    mgr.is_img2img = False
+    mgr.is_outpaint = False
+    meta_settings = MagicMock()
+    meta_settings.export_metadata = False
+    mgr.metadata_settings = meta_settings
+    mgr._memory_settings_flags = None
     meta = BaseDiffusersModelManager._initialize_metadata(mgr, images, data)
     assert meta is None
