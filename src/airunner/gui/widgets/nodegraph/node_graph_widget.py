@@ -565,7 +565,10 @@ class NodeGraphWidget(BaseWidget):
     ):
         """Saves the current node graph state to the specified workflow using CRUD operations."""
         self.logger.info(f"Saving workflow '{name}' (ID: {workflow_id})...")
-        workflow = self._find_workflow_by_id(workflow_id)
+        # Use get_orm to get a session-bound ORM object for mutation
+        workflow = Workflow.objects.get(
+            workflow_id, eager_load=["nodes", "connections"]
+        )
         if not workflow:
             self.logger.error(f"Workflow with ID {workflow_id} not found.")
             QMessageBox.critical(
@@ -578,13 +581,11 @@ class NodeGraphWidget(BaseWidget):
             workflow.description if description is None else description
         )
 
-        # Update workflow metadata
-        workflow.name = name
-        workflow.description = description
+        # Update workflow metadata using the manager's update method
         try:
-            workflow.save()
-            # Re-fetch the workfow to ensure it is session-bound and attributes are accessible
-            workflow = self._find_workflow_by_id(workflow_id)
+            Workflow.objects.update(
+                workflow_id, name=name, description=description
+            )
         except Exception as e:
             self.logger.error(
                 f"Error updating workflow metadata: {e}", exc_info=True
@@ -597,7 +598,7 @@ class NodeGraphWidget(BaseWidget):
         # Save graph state using CRUD operations
         self._save_variables(workflow)
         nodes_map = self._save_nodes(workflow_id)
-        self._save_connections(workflow, nodes_map)
+        self._save_connections(workflow_id, nodes_map)
 
         self.logger.info(
             f"Workflow '{name}' (ID: {workflow_id}) saved successfully."
@@ -689,23 +690,27 @@ class NodeGraphWidget(BaseWidget):
         )
         self.logger.info(f"Deleted {deleted_node_count} existing nodes.")
 
-    def _save_variables(self, workflow: Workflow):
+    def _save_variables(self, workflow):
         """Saves the graph variables to the workflow's data."""
         try:
+            workflow_id = getattr(workflow, "id", None)
+            if workflow_id is None:
+                self.logger.error(
+                    "Workflow object missing 'id' attribute or is detached."
+                )
+                return
             variables_data = [
                 var.to_dict() for var in self.ui.variables.variables
             ]
             self.logger.info(
                 f"Data being saved to workflow.variables: {variables_data}"
             )
-            Workflow.objects.update(workflow.id, variables=variables_data)
+            Workflow.objects.update(workflow_id, variables=variables_data)
             self.logger.info(
-                f"Saved {len(variables_data)} variables to workflow ID {workflow.id}"
+                f"Saved {len(variables_data)} variables to workflow ID {workflow_id}"
             )
         except Exception as e:
-            self.logger.error(
-                f"Error saving variables for workflow ID {workflow.id}: {e}"
-            )
+            self.logger.error(f"Error saving variables for workflow: {e}")
 
     def _save_nodes(self, workflow_id: int) -> dict:
         """
@@ -888,7 +893,7 @@ class NodeGraphWidget(BaseWidget):
 
         return properties_to_save
 
-    def _save_connections(self, workflow, nodes_map):
+    def _save_connections(self, workflow_id, nodes_map):
         """
         Save connections in the graph to the database using CRUD operations.
         Updates existing connections, creates new ones, and removes obsolete ones.
@@ -912,10 +917,17 @@ class NodeGraphWidget(BaseWidget):
             f"Processing {len(current_connections)} connections for saving..."
         )
 
+        # Always extract workflow_id at the start to avoid DetachedInstanceError
+        if workflow_id is None:
+            self.logger.error(
+                "Workflow object missing 'id' attribute or is detached."
+            )
+            return
+
         # Get all existing connections for this workflow from the database
         try:
             existing_connections = WorkflowConnection.objects.filter_by(
-                workflow_id=workflow.id
+                workflow_id=workflow_id
             )
             self.logger.info(
                 f"Found {len(existing_connections)} existing connections in the database"
@@ -968,7 +980,7 @@ class NodeGraphWidget(BaseWidget):
                     # Create new connection
                     try:
                         db_conn = WorkflowConnection.objects.create(
-                            workflow_id=workflow.id,
+                            workflow_id=workflow_id,
                             output_node_id=output_node_db_id,
                             output_port_name=conn["out_port_name"],
                             input_node_id=input_node_db_id,
