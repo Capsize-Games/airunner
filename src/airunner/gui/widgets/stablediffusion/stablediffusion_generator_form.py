@@ -402,9 +402,12 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.update_application_settings("working_height", data["height"])
         self.update_generator_settings("image_preset", data.get("type", ""))
         prompt = data.get("prompt", None)
-        secondary_prompt = data.get("secondary_prompt", None)
+        secondary_prompt = data.get("second_prompt", None)
+        image_preset = data.get("image_type", ImagePreset.ILLUSTRATION.value)
+        self.ui.image_presets.setCurrentText(image_preset)
         self.ui.prompt.setPlainText(prompt)
         self.ui.secondary_prompt.setPlainText(secondary_prompt)
+        self.ui.generate_button.click()
 
     def unload_llm_callback(self, _data: dict = None):
         """
