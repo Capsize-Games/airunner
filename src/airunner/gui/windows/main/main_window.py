@@ -274,7 +274,9 @@ class MainWindow(
         except Exception as e:
             self.worker_manager = None  # Fallback if import fails
         self.model_load_balancer = ModelLoadBalancer(
-            self.worker_manager, logger=getattr(self, "logger", None)
+            self.worker_manager,
+            logger=getattr(self, "logger", None),
+            api=self.api,
         )
         self.initialize_ui()
         self.last_tray_click_time = 0
