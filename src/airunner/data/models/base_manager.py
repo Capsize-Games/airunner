@@ -46,10 +46,13 @@ class BaseManager:
                 query = self._apply_eager_load(query, eager_load)
                 result = query.filter(self.cls.id == pk).first()
                 session.expunge_all()
-                self.logger.debug(f"Query result for get({pk}): {result}")
+                if result is None:
+                    self.logger.debug(f"No result found for get({pk})")
+                else:
+                    self.logger.debug(f"Query result for get({pk}): {result}")
                 return result.to_dataclass() if result else None
             except Exception as e:
-                self.logger.error(f"Error in get({pk}): {e}")
+                self.logger.error(f"Exception in get({pk}): {e}")
                 return None
 
     def get_orm(
@@ -89,9 +92,11 @@ class BaseManager:
                             pass
                 result = query.first()
                 session.expunge_all()
+                if result is None:
+                    self.logger.debug(f"No result found for first()")
                 return result.to_dataclass() if result else None
             except Exception as e:
-                self.logger.error(f"Error in first(): {e}")
+                self.logger.error(f"Exception in first(): {e}")
                 return None
 
     def all(self) -> List[_T]:
