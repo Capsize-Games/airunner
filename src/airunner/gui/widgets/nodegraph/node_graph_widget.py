@@ -122,6 +122,20 @@ class NodeGraphWidget(BaseWidget):
         self.stop_progress_bar()
 
     @property
+    def logger(self):
+        if not hasattr(self, "_logger") or self._logger is None:
+            import logging
+
+            self._logger = logging.getLogger(
+                f"{self.__class__.__module__}.{self.__class__.__name__}"
+            )
+        return self._logger
+
+    @logger.setter
+    def logger(self, value):
+        self._logger = value
+
+    @property
     def current_workflow_id(self) -> Optional[int]:
         id = self.q_settings.value("current_workflow_id", None)
         return id
@@ -893,11 +907,21 @@ class NodeGraphWidget(BaseWidget):
 
         return properties_to_save
 
-    def _save_connections(self, workflow_id, nodes_map):
+    def _save_connections(self, workflow_or_id, nodes_map):
         """
         Save connections in the graph to the database using CRUD operations.
         Updates existing connections, creates new ones, and removes obsolete ones.
+        Accepts either a workflow object (with .id) or an int workflow_id.
         """
+        # Accept either workflow object or id, avoid isinstance to prevent DetachedInstanceError in tests
+        if type(workflow_or_id) is int:
+            workflow_id = workflow_or_id
+        else:
+            try:
+                workflow_id = getattr(workflow_or_id, "id", None)
+            except Exception:
+                workflow_id = None
+
         # Collect all current connections in the graph
         current_connections = []
         all_graph_nodes = self.graph.all_nodes()
