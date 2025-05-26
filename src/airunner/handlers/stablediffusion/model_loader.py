@@ -6,23 +6,15 @@ Follows project standards: docstrings, type hints, logging.
 
 import os
 import logging
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import CLIPFeatureExtractor
-from airunner.enums import ModelType, ModelStatus
-from airunner.handlers.stablediffusion.prompt_weight_bridge import (
-    PromptWeightBridge,
-)
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner.data.models import (
     Schedulers,
     Lora,
     Embedding,
-    ControlnetModel as ControlnetDataModel,
 )
-from airunner.utils.application import get_torch_device
-from airunner.handlers.stablediffusion.image_request import ImageRequest
-from airunner.handlers.stablediffusion.rect import Rect
 from diffusers import SchedulerMixin
 
 logger = logging.getLogger(__name__)
@@ -375,41 +367,41 @@ def unload_controlnet_processor(
         logger.warning(f"Failed to unload ControlNet processor: {e}")
 
 
-def load_model(path):
+def dummy_load_model(path=None):
     return SomeModelClass(path)
 
 
-def unload_model(model):
+def dummy_unload_model(model):
     return model.unload()
 
 
-def load_controlnet(path):
+def dummy_load_controlnet(path=None):
     return SomeControlNetClass()
 
 
-def load_lora(path=None):
+def dummy_load_lora(path=None):
     return SomeLoraClass(path)
 
 
-def load_embedding(path=None):
+def dummy_load_embedding(path=None):
     return SomeEmbeddingsClass(path)
 
 
-def load_compel(*args, **kwargs):
+def dummy_load_compel(*args, **kwargs):
     return SomeCompelClass(*args, **kwargs)
 
 
-def load_deep_cache(*args, **kwargs):
+def dummy_load_deep_cache(*args, **kwargs):
     return SomeDeepCacheClass(*args, **kwargs)
 
 
-def load_scheduler(*args, **kwargs):
+def dummy_load_scheduler(*args, **kwargs):
     return SomeSchedulerClass()
 
 
-def load_embeddings(path=None):
+def dummy_load_embeddings(path=None):
     return SomeEmbeddingsClass(path)
 
 
-def unload_deep_cache(instance):
+def dummy_unload_deep_cache(instance):
     return instance.unload()
