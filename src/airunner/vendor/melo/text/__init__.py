@@ -29,3 +29,8 @@ def cleaned_text_to_sequence(
     tones = [i + tone_start for i in tones]
     lang_ids = [lang_id for i in phones]
     return phones, tones, lang_ids
+
+
+def get_bert(*args, **kwargs):
+    """Stub for get_bert to satisfy imports in data_utils.py during testing."""
+    raise NotImplementedError("get_bert is not implemented in this stub.")
