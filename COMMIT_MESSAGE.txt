@@ -1,0 +1,5 @@
+feat(vendor/melo): Add get_bert stub for testing
+
+Add a stub implementation of get_bert in vendor/melo/text/__init__.py to satisfy
+imports in data_utils.py during testing. This prevents import errors when the
+actual get_bert implementation is unavailable.
