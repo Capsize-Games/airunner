@@ -87,20 +87,30 @@ class Conversation(BaseModel):
 
         # Ensure a valid chatbot exists
         if not chatbot:
-            if previous_conversation:
-                chatbot = Chatbot.objects.get(previous_conversation.chatbot_id)
+            chatbot = None
+            try:
+                if previous_conversation:
+                    chatbot = Chatbot.objects.get(
+                        previous_conversation.chatbot_id
+                    )
+            except Exception:
+                chatbot = None
             if not chatbot:
-                chatbot = Chatbot.objects.first()
+                try:
+                    chatbot = Chatbot.objects.first()
+                except Exception:
+                    chatbot = None
             if not chatbot:
-                unique_name = f"DefaultChatbot_{uuid.uuid4()}"
-                chatbot = Chatbot.objects.create(
-                    name=unique_name, botname="Computer"
-                )
-                chatbot_id = chatbot.id
-                chatbot_botname = chatbot.botname
-            else:
-                chatbot_id = chatbot.id
-                chatbot_botname = chatbot.botname
+                try:
+                    unique_name = f"DefaultChatbot_{uuid.uuid4()}"
+                    chatbot = Chatbot.objects.create(
+                        name=unique_name, botname="Computer"
+                    )
+                except Exception:
+                    # As a last resort, create a minimal in-memory Chatbot
+                    chatbot = Chatbot(name="Fallback", botname="Computer")
+            chatbot_id = chatbot.id
+            chatbot_botname = chatbot.botname
         else:
             chatbot_id = chatbot.id
             chatbot_botname = chatbot.botname
