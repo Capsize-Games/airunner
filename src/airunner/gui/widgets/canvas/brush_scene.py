@@ -13,6 +13,7 @@ from airunner.utils.image import (
     convert_image_to_binary,
 )
 from airunner.gui.widgets.canvas.custom_scene import CustomScene
+import logging
 
 
 class BrushScene(CustomScene):
@@ -268,7 +269,14 @@ class BrushScene(CustomScene):
                     self.api.art.canvas.generate_mask()
 
         # Ensure changes are saved to database
-        drawing_pad_settings.save()
+        if hasattr(drawing_pad_settings, "save") and callable(
+            drawing_pad_settings.save
+        ):
+            drawing_pad_settings.save()
+        else:
+            logging.warning(
+                f"drawing_pad_settings is not a model instance: {type(drawing_pad_settings)}. Skipping save()."
+            )
 
         # Emit signals to refresh related UI
         self.api.art.canvas.image_updated()
