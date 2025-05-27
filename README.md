@@ -276,3 +276,26 @@ AI Runner uses `pytest` for all automated testing. Test coverage is a priority, 
 - All new utility code must be accompanied by tests.
 - Use `pytest`, `pytest-qt` (for GUI), and `unittest.mock` for mocking dependencies.
 - For more details on writing and organizing tests, see the [project coding guidelines](#copilot-instructions-for-ai-runner-project) and the `src/airunner/utils/tests/` folder.
+
+## Development & Testing
+
+- Follow the [copilot-instructions.md](.github/copilot-instructions.md) for all development, testing, and contribution guidelines.
+- Always use the `airunner` command in the terminal to run the application.
+- Always run tests in the terminal (not in the workspace test runner).
+- Use `pytest` and `pytest-cov` for running tests and checking coverage.
+- UI changes must be made in `.ui` files and rebuilt with `airunner-build-ui`.
+
+## Documentation
+
+- See the [Wiki](https://github.com/Capsize-Games/airunner/wiki) for architecture, usage, and advanced topics.
+
+## Module Documentation
+
+- [API Service Layer](src/airunner/api/README.md)
+- [Main Window Model Load Balancer](src/airunner/gui/windows/main/README.md)
+- [Facehugger Shield Suite](src/airunner/facehuggershield/README.md)
+- [NodeGraphQt Vendor Module](src/airunner/vendor/nodegraphqt/README.md)
+- [Xvfb-Required Tests](src/airunner/utils/tests/xvfb_required/README.md)
+- [ORM Models](src/airunner/data/models/README.md)
+
+For additional details, see the [Wiki](https://github.com/Capsize-Games/airunner/wiki).
