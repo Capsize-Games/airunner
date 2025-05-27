@@ -7,6 +7,7 @@ from typing import (
 )
 import datetime
 import platform
+import json
 
 from llama_index.core.tools import BaseTool
 from llama_index.core.chat_engine.types import AgentChatResponse
@@ -739,26 +740,30 @@ class BaseAgent(
     @property
     def bot_mood(self) -> str:
         """
-        Get the bot's current mood.
+        Get the bot's current mood from the most recent assistant message in the conversation.
         Returns:
-            str: The bot's current mood.
+            str: The bot's current mood, or "neutral" if not available.
         """
-        mood = None
         conversation = self.conversation
-        if conversation:
-            mood = conversation.bot_mood
-        return "neutral" if mood is None or mood == "" else mood
+        if conversation and conversation.value:
+            for msg in reversed(conversation.value):
+                if msg.get("role") == "assistant" and "bot_mood" in msg:
+                    return msg["bot_mood"]
+        return "neutral"
 
     @bot_mood.setter
     def bot_mood(self, value: str) -> None:
         """
-        Set the bot's current mood.
+        Set the bot's mood on the most recent assistant message in the conversation.
         Args:
             value (str): The mood to set.
         """
-        if self.conversation:
-            self._update_conversation("bot_mood", value)
-            self.api.llm.chatbot.update_mood(value)
+        conversation = self.conversation
+        if conversation and conversation.value:
+            for msg in reversed(conversation.value):
+                if msg.get("role") == "assistant":
+                    msg["bot_mood"] = value
+                    break
 
     @property
     def bot_personality(self) -> str:
@@ -1112,6 +1117,7 @@ class BaseAgent(
     def _update_mood(self) -> None:
         """
         Update the bot's mood based on the conversation.
+        Now stores mood and emoji on the latest bot message in conversation.value.
         """
         self.logger.info("Attempting to update mood")
         conversation = self.conversation
@@ -1154,10 +1160,29 @@ class BaseAgent(
         }
         response = self.mood_engine_tool.call(do_not_display=True, **kwargs)
         self.logger.info(f"Saving conversation with mood: {response.content}")
+        # Parse response as JSON for mood and emoji
+        try:
+            mood_data = json.loads(response.content)
+            mood_str = mood_data.get("mood", "neutral")
+            mood_emoji = mood_data.get("emoji", "🙂")
+        except Exception as e:
+            self.logger.warning(f"Failed to parse mood JSON: {e}")
+            mood_str = (
+                response.content
+                if isinstance(response.content, str)
+                else "neutral"
+            )
+            mood_emoji = "🙂"
+        # Store mood and emoji on the latest bot message in conversation.value
+        for i in range(len(conversation.value) - 1, -1, -1):
+            msg = conversation.value[i]
+            if msg.get("role") == "assistant":
+                msg["bot_mood"] = mood_str
+                msg["bot_mood_emoji"] = mood_emoji
+                break
         Conversation.objects.update(
             self.conversation_id,
-            bot_mood=response.content,
-            value=conversation.value[:-2],
+            value=conversation.value,
             last_updated_message_id=latest_message_id,
         )
 

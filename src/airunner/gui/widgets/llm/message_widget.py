@@ -104,6 +104,9 @@ class MessageWidget(BaseWidget):
         self.message_id = kwargs.pop("message_id")
         self.conversation_id = kwargs.pop("conversation_id")
         self.is_bot = kwargs.pop("is_bot")
+        self.mood = kwargs.pop("mood", None)
+        self.mood_emoji = kwargs.pop("mood_emoji", None)
+        self.user_mood = kwargs.pop("user_mood", None)
         super().__init__(*args, **kwargs)
 
         # Initialize the class-level worker if not already done
@@ -111,6 +114,14 @@ class MessageWidget(BaseWidget):
 
         self._deleted = False
         self.ui.user_name.setText(f"{self.name}")
+        # Set mood emoji for bot messages
+        if self.is_bot:
+            emoji = self.mood_emoji if self.mood_emoji else "🙂"
+            self.ui.mood_emoji.setText(emoji)
+            self.ui.mood_emoji.setToolTip(self.mood or "")
+            self.ui.mood_emoji.setVisible(True)
+        else:
+            self.ui.mood_emoji.setVisible(False)
         self.font_family = None
         self.font_size = None
 
