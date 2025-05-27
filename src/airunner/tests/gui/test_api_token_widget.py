@@ -10,9 +10,7 @@ class DummyAppSettings:
 
 @pytest.fixture
 def api_token_widget(qtbot, monkeypatch):
-    monkeypatch.setattr(
-        APITokenWidget, "application_settings", DummyAppSettings()
-    )
+    monkeypatch.setattr(APITokenWidget, "application_settings", DummyAppSettings())
     widget = APITokenWidget()
     qtbot.addWidget(widget)
     widget.show()
@@ -24,9 +22,7 @@ def test_api_token_happy_path(api_token_widget):
     Happy path: Test initial state and password echo mode.
     """
     ui = api_token_widget.ui
-    assert (
-        ui.hf_api_key_text_generation.echoMode() == QLineEdit.EchoMode.Password
-    )
+    assert ui.hf_api_key_text_generation.echoMode() == QLineEdit.EchoMode.Password
     assert ui.hf_api_key_writetoken.echoMode() == QLineEdit.EchoMode.Password
     assert ui.hf_api_key_text_generation.text() == "test-token"
     assert ui.hf_api_key_writetoken.text() == "test-token"
@@ -41,9 +37,7 @@ def test_api_token_sad_path_edit_token(api_token_widget):
     def fake_update_application_settings(key, value):
         called["read"] = (key, value)
 
-    api_token_widget.update_application_settings = (
-        fake_update_application_settings
-    )
+    api_token_widget.update_application_settings = fake_update_application_settings
     api_token_widget.action_text_edited_api_key("new-token")
     assert called["read"] == ("hf_api_key_read_key", "new-token")
 

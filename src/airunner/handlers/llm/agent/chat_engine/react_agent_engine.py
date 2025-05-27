@@ -6,11 +6,7 @@ from llama_index.core.memory import BaseMemory
 ReActAgentMeta = type(ReActAgent)
 
 
-class ReactAgentEngine(
-    ReActAgent, 
-    ABC, 
-    metaclass=ReActAgentMeta
-):
+class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
     @property
     def memory(self) -> BaseMemory:
         return self._memory

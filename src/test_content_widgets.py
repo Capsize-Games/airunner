@@ -129,16 +129,12 @@ console.log(`Sum: ${calculateSum(numbers)}`);
         elif index == 2:  # Markdown
             self.current_widget = MarkdownWidget(self.content_container)
             # Use the formatter to convert markdown to HTML
-            result = FormatterExtended.format_content(
-                self.test_content["markdown"]
-            )
+            result = FormatterExtended.format_content(self.test_content["markdown"])
             self.current_widget.setContent(result["content"])
 
         elif index == 3:  # Mixed
             self.current_widget = MixedContentWidget(self.content_container)
-            result = FormatterExtended.format_content(
-                self.test_content["mixed"]
-            )
+            result = FormatterExtended.format_content(self.test_content["mixed"])
             self.current_widget.setContent(result["parts"])
 
         # Add the widget to layout

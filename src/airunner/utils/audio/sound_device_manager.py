@@ -47,9 +47,7 @@ class SoundDeviceManager:
         """Get the index of an output device by name."""
         return self._get_device_index(device_name, kind="output")
 
-    def _get_device_index(
-        self, device_name: str, kind: str = None
-    ) -> Optional[int]:
+    def _get_device_index(self, device_name: str, kind: str = None) -> Optional[int]:
         """Get the index of a device by name and kind."""
         try:
             devices = sd.query_devices()
@@ -117,9 +115,7 @@ class SoundDeviceManager:
             self._in_stream = None
             return False
         except Exception as e:
-            self.logger.error(
-                f"Unexpected error initializing input stream: {e}"
-            )
+            self.logger.error(f"Unexpected error initializing input stream: {e}")
             self._in_stream = None
             return False
 
@@ -151,9 +147,7 @@ class SoundDeviceManager:
             self._out_stream = None
             return False
         except Exception as e:
-            self.logger.error(
-                f"Unexpected error initializing output stream: {e}"
-            )
+            self.logger.error(f"Unexpected error initializing output stream: {e}")
             self._out_stream = None
             return False
 
@@ -178,14 +172,10 @@ class SoundDeviceManager:
                 if data.size > 0 and np.abs(data).max() < 0.1:
                     # Increase volume to a reasonable level
                     amp_factor = (
-                        0.5 / np.abs(data).max()
-                        if np.abs(data).max() > 0
-                        else 1.0
+                        0.5 / np.abs(data).max() if np.abs(data).max() > 0 else 1.0
                     )
                     data = data * amp_factor
-                    self.logger.debug(
-                        f"Amplified audio by factor {amp_factor}"
-                    )
+                    self.logger.debug(f"Amplified audio by factor {amp_factor}")
 
                 # Ensure audio is in the correct format for the output stream
                 # PortAudio typically expects float32 data in the range [-1.0, 1.0]
@@ -195,9 +185,7 @@ class SoundDeviceManager:
                 # Ensure we have the correct number of channels
                 if len(data.shape) == 1 and self._out_stream.channels > 1:
                     # Convert mono to stereo/multichannel if needed
-                    data = np.tile(
-                        data.reshape(-1, 1), (1, self._out_stream.channels)
-                    )
+                    data = np.tile(data.reshape(-1, 1), (1, self._out_stream.channels))
                     self.logger.debug(
                         f"Converted mono to {self._out_stream.channels} channels"
                     )
@@ -206,17 +194,11 @@ class SoundDeviceManager:
                 self.logger.debug("Successfully wrote data to output stream.")
                 return True
             except sd.PortAudioError as e:
-                self.logger.error(
-                    f"PortAudioError writing to output stream: {e}"
-                )
+                self.logger.error(f"PortAudioError writing to output stream: {e}")
             except Exception as e:  # Catch other potential errors during write
-                self.logger.error(
-                    f"Unexpected error writing to output stream: {e}"
-                )
+                self.logger.error(f"Unexpected error writing to output stream: {e}")
         else:
-            self.logger.warning(
-                "Attempted to write to inactive/closed output stream."
-            )
+            self.logger.warning("Attempted to write to inactive/closed output stream.")
         return False
 
     def read_from_input(self, frames: int) -> tuple:
@@ -227,9 +209,7 @@ class SoundDeviceManager:
             except sd.PortAudioError as e:
                 self.logger.error(f"Error reading from input stream: {e}")
             except Exception as e:
-                self.logger.error(
-                    f"Unexpected error reading from input stream: {e}"
-                )
+                self.logger.error(f"Unexpected error reading from input stream: {e}")
         return None, False
 
     def _stop_input_stream(self):
@@ -238,9 +218,7 @@ class SoundDeviceManager:
             try:
                 self._in_stream.stop()
                 self._in_stream.close()
-                self.logger.debug(
-                    "Input stream stopped and closed successfully"
-                )
+                self.logger.debug("Input stream stopped and closed successfully")
             except Exception as e:
                 self.logger.error(f"Error stopping input stream: {e}")
             self._in_stream = None
@@ -251,9 +229,7 @@ class SoundDeviceManager:
             try:
                 self._out_stream.stop()
                 self._out_stream.close()
-                self.logger.debug(
-                    "Output stream stopped and closed successfully"
-                )
+                self.logger.debug("Output stream stopped and closed successfully")
             except Exception as e:
                 self.logger.error(f"Error stopping output stream: {e}")
             self._out_stream = None

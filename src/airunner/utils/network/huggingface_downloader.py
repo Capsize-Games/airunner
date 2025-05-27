@@ -20,14 +20,10 @@ class HuggingfaceDownloader(
         self.worker = None
         self.downloading = False
 
-        self.worker = create_worker(
-            DownloadWorker, initialize_gui=initialize_gui
-        )
+        self.worker = create_worker(DownloadWorker, initialize_gui=initialize_gui)
 
         # Connect signals
-        self.worker.progress.connect(
-            lambda current, total: callback(current, total)
-        )
+        self.worker.progress.connect(lambda current, total: callback(current, total))
 
         self.logger.debug(f"Starting model download thread")
         self.worker.finished.connect(self.handle_completed)

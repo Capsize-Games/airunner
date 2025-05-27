@@ -5,14 +5,15 @@ WORKERS = []
 THREADS = []
 
 
-def create_worker(worker_class_, **kwargs):
+def create_worker(worker_class_, *, registry=None, **kwargs):
     # Patch for test isolation: if AIRUNNER_TEST_MODE is set, do not start real threads
     import os
 
     if os.environ.get("AIRUNNER_TEST_MODE") == "1":
         from unittest.mock import MagicMock
 
-        return MagicMock()
+        # Always return a tuple for test mode, matching production signature
+        return MagicMock(), MagicMock()
     worker = worker_class_(**kwargs)
     # get existing QApplication instance
     worker_thread = QThread()
@@ -24,6 +25,6 @@ def create_worker(worker_class_, **kwargs):
     worker_thread.started.connect(worker.run)
 
     worker_thread.start()
-    WORKERS.append(worker)
-    THREADS.append(worker_thread)
-    return worker
+    if registry is not None:
+        registry.append((worker, worker_thread))
+    return worker, worker_thread

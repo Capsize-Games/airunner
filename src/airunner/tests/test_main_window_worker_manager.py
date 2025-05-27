@@ -18,10 +18,10 @@ def test_worker_manager_initializes_attributes():
 
 def test_worker_manager_initialize_workers(monkeypatch):
     wm = WorkerManager(logger=None)
-    # Patch create_worker to return a MagicMock for all workers
+    # Patch create_worker to return a (MagicMock, None) tuple for all workers
     monkeypatch.setattr(
         "airunner.gui.windows.main.worker_manager.create_worker",
-        lambda *a, **kw: MagicMock(),
+        lambda *a, **kw: (MagicMock(), None),
     )
     wm.initialize_workers()
     # All worker attributes should now be MagicMock instances
@@ -52,7 +52,7 @@ def test_worker_manager_logger(monkeypatch):
     wm = WorkerManager(logger=logger)
     monkeypatch.setattr(
         "airunner.gui.windows.main.worker_manager.create_worker",
-        lambda *a, **kw: MagicMock(),
+        lambda *a, **kw: (MagicMock(), None),
     )
     wm.initialize_workers()
     # Logger should have received debug/info calls

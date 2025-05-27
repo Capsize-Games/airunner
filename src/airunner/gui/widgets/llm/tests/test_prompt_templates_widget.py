@@ -53,10 +53,7 @@ def test_template_changed_updates_ui(widget, mock_templates):
     assert widget.ui.system_prompt.toPlainText() == t.system
     assert widget.ui.guardrails_prompt.toPlainText() == t.guardrails
     assert widget.ui.use_guardrails.isChecked() == t.use_guardrails
-    assert (
-        widget.ui.use_datetime.isChecked()
-        == t.use_system_datetime_in_system_prompt
-    )
+    assert widget.ui.use_datetime.isChecked() == t.use_system_datetime_in_system_prompt
 
 
 def test_system_prompt_changed_saves(widget, mock_templates):
@@ -98,10 +95,7 @@ def test_reset_system_prompt_sets_default(widget, mock_templates):
     widget.reset_system_prompt()
     t = mock_templates[1]
     # Should set to AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT
-    assert (
-        t.system
-        == prompt_templates_widget.AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT
-    )
+    assert t.system == prompt_templates_widget.AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT
     assert t.save.called
     assert (
         widget.ui.system_prompt.toPlainText()
@@ -113,10 +107,7 @@ def test_reset_guardrails_prompt_sets_default(widget, mock_templates):
     widget.current_template_index = 1  # image template
     widget.reset_guardrails_prompt()
     t = mock_templates[1]
-    assert (
-        t.guardrails
-        == prompt_templates_widget.AIRUNNER_DEFAULT_IMAGE_LLM_GUARDRAILS
-    )
+    assert t.guardrails == prompt_templates_widget.AIRUNNER_DEFAULT_IMAGE_LLM_GUARDRAILS
     assert t.save.called
     assert (
         widget.ui.guardrails_prompt.toPlainText()

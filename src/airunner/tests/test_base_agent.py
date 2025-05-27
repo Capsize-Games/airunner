@@ -100,9 +100,7 @@ def agent(monkeypatch, dummy_user):
         lambda *a, **kw: dummy_user,
     )
     # Patch MainWindow and QApplication to prevent GUI from opening
-    monkeypatch.setattr(
-        "airunner.gui.windows.main.main_window.MainWindow", MagicMock()
-    )
+    monkeypatch.setattr("airunner.gui.windows.main.main_window.MainWindow", MagicMock())
     monkeypatch.setattr("airunner.app.QApplication", MagicMock())
     # Only patch classes that are imported or used directly in BaseAgent
     # Patch ChatMemoryBuffer with MagicMock and add from_defaults
@@ -156,9 +154,7 @@ def test_chat_mode_enabled(agent):
 
 def test_rag_mode_enabled(agent):
     agent.action = LLMActionType.PERFORM_RAG_SEARCH
-    with patch.object(
-        BaseAgent, "rag_settings", new_callable=PropertyMock
-    ) as mock_rag:
+    with patch.object(BaseAgent, "rag_settings", new_callable=PropertyMock) as mock_rag:
         mock_rag.return_value = MagicMock(enabled=True)
         assert agent.rag_mode_enabled is True
 

@@ -37,9 +37,7 @@ class SetupWizardWindow(
         self.canceled = False
 
         # Reset agreements
-        self.update_application_settings(
-            "stable_diffusion_agreement_checked", False
-        )
+        self.update_application_settings("stable_diffusion_agreement_checked", False)
         self.update_application_settings("airunner_agreement_checked", False)
         self.update_application_settings("user_agreement_checked", False)
 
@@ -71,7 +69,7 @@ class SetupWizardWindow(
 
         if self.application_settings.age_agreement_checked:
             del self.pages["age_restriction_warning"]
-        
+
         if self.application_settings.user_agreement_checked:
             del self.pages["user_agreement"]
 
@@ -85,9 +83,7 @@ class SetupWizardWindow(
         self.pages[last_page_key].setFinalPage(True)
 
         # attach to parent page id changed signal
-        self.button(QWizard.WizardButton.CancelButton).clicked.connect(
-            self.cancel
-        )
+        self.button(QWizard.WizardButton.CancelButton).clicked.connect(self.cancel)
 
         # Set window title
         self.setWindowTitle("AI Runner Setup Wizard")

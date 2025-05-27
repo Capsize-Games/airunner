@@ -10,9 +10,7 @@ import os
 import pytest
 
 if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
-    pytest.skip(
-        "Skipping Qt/Xvfb test: no display found", allow_module_level=True
-    )
+    pytest.skip("Skipping Qt/Xvfb test: no display found", allow_module_level=True)
 
 """
 Unit tests for ThreadedWorkerMixin in airunner.utils.application.threaded_worker_mixin.
@@ -40,9 +38,7 @@ class DummySignal:
         self._callbacks.append(cb)
 
     def emit(self, *args, **kwargs):
-        print(
-            f"DummySignal.emit: emitting to {len(self._callbacks)} callbacks"
-        )
+        print(f"DummySignal.emit: emitting to {len(self._callbacks)} callbacks")
         for cb in self._callbacks:
             print(f"DummySignal.emit: calling {cb}")
             cb(*args, **kwargs)
@@ -135,9 +131,7 @@ def test_execute_in_background_calls_task_and_callbacks(mixin):
         on_progress=progress_cb,
         on_status=status_cb,
     )
-    assert wait_for_worker_cleanup(
-        mixin, "foo"
-    ), "Worker was not cleaned up in time"
+    assert wait_for_worker_cleanup(mixin, "foo"), "Worker was not cleaned up in time"
     assert called["ran"]
     progress_cb.assert_not_called()
     status_cb.assert_not_called()
@@ -149,15 +143,9 @@ def test_execute_in_background_replaces_existing_worker(mixin):
         print("test: finished_cb called (replace)")
         MagicMock()(data)
 
-    mixin.execute_in_background(
-        lambda w: 1, task_id="bar", on_finished=finished_cb
-    )
-    mixin.execute_in_background(
-        lambda w: 2, task_id="bar", on_finished=finished_cb
-    )
-    assert wait_for_worker_cleanup(
-        mixin, "bar"
-    ), "Worker was not cleaned up in time"
+    mixin.execute_in_background(lambda w: 1, task_id="bar", on_finished=finished_cb)
+    mixin.execute_in_background(lambda w: 2, task_id="bar", on_finished=finished_cb)
+    assert wait_for_worker_cleanup(mixin, "bar"), "Worker was not cleaned up in time"
     assert "bar" not in mixin._background_workers
 
 

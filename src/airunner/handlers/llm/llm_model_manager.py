@@ -150,9 +150,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16
             )
         elif self.llm_dtype == "2bit":
-            config = GPTQConfig(
-                bits=2, dataset="c4", tokenizer=self._tokenizer
-            )
+            config = GPTQConfig(bits=2, dataset="c4", tokenizer=self._tokenizer)
         return config
 
     @property
@@ -371,9 +369,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         if self._chat_agent:
             self._chat_agent.on_load_conversation(message)
         else:
-            self.logger.warning(
-                "Cannot load conversation - chat agent not loaded"
-            )
+            self.logger.warning("Cannot load conversation - chat agent not loaded")
 
     def reload_rag_engine(self) -> None:
         """
@@ -384,9 +380,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         if self._chat_agent:
             self._chat_agent.reload_rag_engine()
         else:
-            self.logger.warning(
-                "Cannot reload RAG engine - chat agent not loaded"
-            )
+            self.logger.warning("Cannot reload RAG engine - chat agent not loaded")
 
     def on_section_changed(self) -> None:
         """
@@ -395,9 +389,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         if self._chat_agent:
             self._chat_agent.current_tab = None
         else:
-            self.logger.warning(
-                "Cannot update section - chat agent not loaded"
-            )
+            self.logger.warning("Cannot update section - chat agent not loaded")
 
     def on_web_browser_page_html(self, content: str) -> None:
         """
@@ -474,9 +466,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                         self._model = PeftModel.from_pretrained(
                             self._model, self.adapter_path
                         )
-                        self.logger.info(
-                            f"Loaded adapter from {self.adapter_path}"
-                        )
+                        self.logger.info(f"Loaded adapter from {self.adapter_path}")
                 except Exception as e:
                     self.logger.error(
                         f"Error loading adapter (continuing with base model): {e}"
@@ -612,9 +602,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
         return response
 
-    def _send_final_message(
-        self, llm_request: Optional[LLMRequest] = None
-    ) -> None:
+    def _send_final_message(self, llm_request: Optional[LLMRequest] = None) -> None:
         """
         Send a signal indicating the end of a message stream.
 

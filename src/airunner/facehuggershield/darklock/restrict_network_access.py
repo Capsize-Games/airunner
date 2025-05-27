@@ -19,9 +19,7 @@ class RestrictNetworkAccess(metaclass=Singleton):
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
         handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.INFO)

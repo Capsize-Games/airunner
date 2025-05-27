@@ -98,21 +98,15 @@ class ChatEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
         if not self._do_interrupt:
             do_not_display = kwargs.get("do_not_display", False)
             chat_history = kwargs.get("chat_history", [])
-            params = (
-                {"chat_history": chat_history} if len(chat_history) > 0 else {}
-            )
+            params = {"chat_history": chat_history} if len(chat_history) > 0 else {}
 
             try:
-                streaming_response = self.chat_engine.stream_chat(
-                    query_str, **params
-                )
+                streaming_response = self.chat_engine.stream_chat(query_str, **params)
             except jinja2.exceptions.TemplateError as e:
                 self.logger.error(
                     f"Error in template rendering. Please check your template. {e}"
                 )
-                response = (
-                    "Error in template rendering. Please check your template."
-                )
+                response = "Error in template rendering. Please check your template."
                 self._do_interrupt = False
                 return ToolOutput(
                     content=str(response),
@@ -127,10 +121,7 @@ class ChatEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
                     if self._do_interrupt:
                         break
                     response += token
-                    if (
-                        response != "Empty Response"
-                        and self.do_handle_response
-                    ):
+                    if response != "Empty Response" and self.do_handle_response:
                         self.agent.handle_response(
                             token,
                             is_first_message,

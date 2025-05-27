@@ -18,9 +18,7 @@ class PortItem(QtWidgets.QGraphicsItem):
         self.setAcceptHoverEvents(True)
         self.setCacheMode(ITEM_CACHE_MODE)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable, False)
-        self.setFlag(
-            QtWidgets.QGraphicsItem.ItemSendsScenePositionChanges, True
-        )
+        self.setFlag(QtWidgets.QGraphicsItem.ItemSendsScenePositionChanges, True)
         self.setZValue(Z_VAL_PORT)
         self._pipes = []
         self._width = PortEnum.SIZE.value

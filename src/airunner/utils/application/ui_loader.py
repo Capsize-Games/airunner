@@ -2,6 +2,7 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtCore import QFile, QBuffer, QIODevice, QObject
 from PySide6.QtWidgets import QWidget
 
+
 def load_ui_file(ui_file_path: str, parent: QWidget = None) -> QWidget:
     """
     Load a .ui file dynamically at runtime and return the corresponding QWidget.
@@ -23,7 +24,10 @@ def load_ui_file(ui_file_path: str, parent: QWidget = None) -> QWidget:
 
     return widget
 
-def load_ui_from_string(ui_content: str, parent: QWidget = None, signal_handler: QObject = None) -> QWidget:
+
+def load_ui_from_string(
+    ui_content: str, parent: QWidget = None, signal_handler: QObject = None
+) -> QWidget:
     """
     Load a .ui file dynamically from a string and return the corresponding QWidget.
 
@@ -34,7 +38,7 @@ def load_ui_from_string(ui_content: str, parent: QWidget = None, signal_handler:
     """
     loader = QUiLoader()
     buffer = QBuffer()
-    buffer.setData(ui_content.encode('utf-8'))
+    buffer.setData(ui_content.encode("utf-8"))
     if not buffer.open(QIODevice.ReadOnly):
         raise RuntimeError("Unable to open UI content from string.")
 

@@ -5,14 +5,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from airunner.handlers.llm.agent.agents.base import BaseAgent
 
 
-class LocalAgent(
-    BaseAgent
-):
+class LocalAgent(BaseAgent):
     def __init__(
-        self, 
+        self,
         model: Optional[AutoModelForCausalLM] = None,
         tokenizer: Optional[AutoTokenizer] = None,
-        *args, 
+        *args,
         **kwargs
     ):
         super().__init__(*args, **kwargs)

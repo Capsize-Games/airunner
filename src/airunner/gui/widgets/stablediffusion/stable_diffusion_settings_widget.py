@@ -26,7 +26,9 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.ui.custom_model.setText(self.generator_settings.custom_path)
         self.ui.custom_model.blockSignals(False)
         PipelineMixin.__init__(self)
-        self.model_scanner_worker = create_worker(ModelScannerWorker)
+        self.model_scanner_worker, self._model_scanner_thread = create_worker(
+            ModelScannerWorker
+        )
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -36,22 +38,14 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         steps = self.generator_settings.steps
         scale = self.generator_settings.scale
 
-        current_steps = self.get_form_element("steps_widget").property(
-            "current_value"
-        )
-        current_scale = self.get_form_element("scale_widget").property(
-            "current_value"
-        )
+        current_steps = self.get_form_element("steps_widget").property("current_value")
+        current_scale = self.get_form_element("scale_widget").property("current_value")
 
         if steps != current_steps:
-            self.get_form_element("steps_widget").setProperty(
-                "current_value", steps
-            )
+            self.get_form_element("steps_widget").setProperty("current_value", steps)
 
         if scale != current_scale:
-            self.get_form_element("scale_widget").setProperty(
-                "current_value", scale
-            )
+            self.get_form_element("scale_widget").setProperty("current_value", scale)
 
         try:
             self.ui.seed_widget.setProperty(
@@ -194,9 +188,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def load_versions(self):
         self.ui.version.blockSignals(True)
         self.ui.version.clear()
-        pipelines = self.get_pipelines(
-            category=ImageGenerator.STABLEDIFFUSION.value
-        )
+        pipelines = self.get_pipelines(category=ImageGenerator.STABLEDIFFUSION.value)
         version_names = set([pipeline["version"] for pipeline in pipelines])
         self.ui.version.addItems(version_names)
         current_version = self.generator_settings.version
@@ -265,7 +257,31 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             self.ui.scheduler.setCurrentText(current_scheduler)
         else:
             self.generator_settings.scheduler = self.ui.scheduler.currentText()
-        self.update_generator_settings(
-            "scheduler", self.generator_settings.scheduler
-        )
+        self.update_generator_settings("scheduler", self.generator_settings.scheduler)
         self.ui.scheduler.blockSignals(False)
+
+    def closeEvent(self, event):
+        # Ensure worker thread is stopped and joined on close
+        worker = getattr(self, "model_scanner_worker", None)
+        thread = getattr(self, "_model_scanner_thread", None)
+        if worker:
+            stop = getattr(worker, "stop", None)
+            cancel = getattr(worker, "cancel", None)
+            if callable(stop):
+                try:
+                    stop()
+                except Exception:
+                    pass
+            elif callable(cancel):
+                try:
+                    cancel()
+                except Exception:
+                    pass
+        if thread is not None:
+            try:
+                if thread.isRunning():
+                    thread.quit()
+                    thread.wait(3000)
+            except Exception:
+                pass
+        super().closeEvent(event)

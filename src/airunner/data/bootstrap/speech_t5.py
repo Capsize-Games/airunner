@@ -12,7 +12,5 @@ SPEECH_T5_FILES = {
         "config.json",
         "pytorch_model.bin",
     ],
-    "datasets/w4ffl35/speecht5_speaker_embeddings": [
-        "speaker_embeddings"
-    ]
+    "datasets/w4ffl35/speecht5_speaker_embeddings": ["speaker_embeddings"],
 }

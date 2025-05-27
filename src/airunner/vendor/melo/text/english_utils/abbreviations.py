@@ -25,6 +25,7 @@ abbreviations_en = [
     ]
 ]
 
+
 def expand_abbreviations(text, lang="en"):
     if lang == "en":
         _abbreviations = abbreviations_en

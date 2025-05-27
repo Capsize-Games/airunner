@@ -149,9 +149,7 @@ def test_render_markdown_to_html_handles_unknown_lexer(monkeypatch):
     def fake_guess_lexer(code, stripall=True):
         raise Exception("not found")
 
-    monkeypatch.setattr(
-        "pygments.lexers.get_lexer_by_name", fake_get_lexer_by_name
-    )
+    monkeypatch.setattr("pygments.lexers.get_lexer_by_name", fake_get_lexer_by_name)
     monkeypatch.setattr("pygments.lexers.guess_lexer", fake_guess_lexer)
     md = """```unknownlang\nprint('hi')\n```"""
     # Should not raise, should fallback to text lexer
@@ -172,9 +170,7 @@ def test_render_markdown_to_html_fallback_text_lexer(monkeypatch):
     def raise_class_not_found(*a, **k):
         raise pygments.util.ClassNotFound("fail")
 
-    monkeypatch.setattr(
-        "pygments.lexers.get_lexer_by_name", raise_class_not_found
-    )
+    monkeypatch.setattr("pygments.lexers.get_lexer_by_name", raise_class_not_found)
     monkeypatch.setattr("pygments.lexers.guess_lexer", raise_class_not_found)
     md = """```unknownlang\nprint('hi')\n```"""
     html = FormatterExtended._render_markdown_to_html(md)

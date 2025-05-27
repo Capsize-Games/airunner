@@ -18,9 +18,7 @@ class CombinedMeta(QObjectMeta, ABCMeta):
     pass
 
 
-class Worker(
-    MediatorMixin, SettingsMixin, QObject, ABC, metaclass=CombinedMeta
-):
+class Worker(MediatorMixin, SettingsMixin, QObject, ABC, metaclass=CombinedMeta):
     queue_type = QueueType.GET_NEXT_ITEM
     finished = Signal()
     prefix = "Worker"

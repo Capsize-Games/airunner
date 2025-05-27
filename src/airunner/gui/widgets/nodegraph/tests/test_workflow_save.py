@@ -2,13 +2,16 @@
 Unit tests for workflow save logic in NodeGraphWidget.
 Covers DetachedInstanceError prevention and correct workflow_id usage.
 """
+
 import pytest
 from unittest.mock import MagicMock, patch
 from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
 
+
 class DummyWorkflow:
     def __init__(self, id):
         self.id = id
+
 
 @pytest.fixture
 def widget():
@@ -21,12 +24,15 @@ def widget():
         w.graph = MagicMock()
         return w
 
+
 def test_save_variables_uses_id_and_never_accesses_orm(widget):
     """
     _save_variables should only use workflow.id and never access ORM attributes after session closure.
     """
     dummy_workflow = DummyWorkflow(id=42)
-    with patch("airunner.gui.widgets.nodegraph.node_graph_widget.Workflow") as MockWorkflow:
+    with patch(
+        "airunner.gui.widgets.nodegraph.node_graph_widget.Workflow"
+    ) as MockWorkflow:
         MockWorkflow.objects.update = MagicMock()
         widget._save_variables(dummy_workflow)
         MockWorkflow.objects.update.assert_called_once_with(42, variables=[])
@@ -34,11 +40,15 @@ def test_save_variables_uses_id_and_never_accesses_orm(widget):
     # Simulate detached instance (no id attribute)
     class DetachedWorkflow:
         pass
-    with patch("airunner.gui.widgets.nodegraph.node_graph_widget.Workflow") as MockWorkflow:
+
+    with patch(
+        "airunner.gui.widgets.nodegraph.node_graph_widget.Workflow"
+    ) as MockWorkflow:
         MockWorkflow.objects.update = MagicMock()
         widget._save_variables(DetachedWorkflow())
         # Should log an error, not raise
         assert widget.logger.error.called
+
 
 def test_save_connections_uses_id_and_never_accesses_orm(widget):
     """
@@ -46,7 +56,9 @@ def test_save_connections_uses_id_and_never_accesses_orm(widget):
     """
     dummy_workflow = DummyWorkflow(id=99)
     nodes_map = {}
-    with patch("airunner.gui.widgets.nodegraph.node_graph_widget.WorkflowConnection") as MockConn:
+    with patch(
+        "airunner.gui.widgets.nodegraph.node_graph_widget.WorkflowConnection"
+    ) as MockConn:
         MockConn.objects.filter_by = MagicMock(return_value=[])
         MockConn.objects.create = MagicMock()
         MockConn.objects.delete_by = MagicMock()
@@ -58,7 +70,10 @@ def test_save_connections_uses_id_and_never_accesses_orm(widget):
     # Simulate detached instance (no id attribute)
     class DetachedWorkflow:
         pass
-    with patch("airunner.gui.widgets.nodegraph.node_graph_widget.WorkflowConnection") as MockConn:
+
+    with patch(
+        "airunner.gui.widgets.nodegraph.node_graph_widget.WorkflowConnection"
+    ) as MockConn:
         MockConn.objects.filter_by = MagicMock(return_value=[])
         widget._save_connections(DetachedWorkflow(), nodes_map)
         # Should log an error, not raise

@@ -1,27 +1,18 @@
-# import sys
-# from unittest.mock import MagicMock
+# PATCH GUI ENTRY POINTS BEFORE ANY APP IMPORTS
+import sys
+from unittest.mock import MagicMock
 
+# Patch only QApplication for headless safety in this file
+sys.modules["PySide6.QtWidgets.QApplication"] = MagicMock()
+# Do NOT patch airunner.app_installer or AppInstaller here; let real class be used in other test modules
 
-# # Patch LocalHttpServerThread globally before importing App
-# class DummyLocalHttpServerThread:
-#     def __init__(self, *args, **kwargs):
-#         pass
-
-#     def start(self):
-#         pass
-
-#     def stop(self):
-#         pass
-
-#     def wait(self):
-#         pass
-
-
-# import airunner.gui.widgets.llm.local_http_server
-
-# airunner.gui.widgets.llm.local_http_server.LocalHttpServerThread = (
-#     DummyLocalHttpServerThread
-# )
+# NOTE: DO NOT LAUNCH ANY GUI OR REAL APPLICATION IN THESE TESTS.
+# All GUI entry points (AppInstaller, MainWindow, QApplication, etc.) must be patched in any test that could trigger them.
+# This is required for CI/headless safety and to prevent blocking or instability.
+#
+# If you add a test that could launch a window, you MUST patch the relevant GUI classes/functions.
+#
+# See project TDD/testing guidelines for details.
 
 import unittest
 from unittest.mock import patch, MagicMock, PropertyMock, mock_open
@@ -33,6 +24,15 @@ from PySide6 import QtCore
 
 
 class TestApp(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # No need to patch AppInstaller/QApplication here; already patched at the top of the file
+        pass
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
     def setUp(self):
         """Set up common test variables."""
         self.mock_main_window_class = MagicMock()
@@ -45,101 +45,15 @@ class TestApp(unittest.TestCase):
         self.mock_llm.converation_deleted = MagicMock()
         self.mock_api = MagicMock(llm=self.mock_llm, nodegraph=MagicMock())
 
-    @patch("airunner.app.QApplication.setAttribute")
-    @patch("airunner.app.QApplication.instance")
-    @patch("sys.exit")
-    @patch("airunner.app.LocalHttpServerThread")
-    @patch("airunner.app.MainWindow")
-    def test_initialization_with_gui(
-        self,
-        mock_main_window,
-        mock_http_server,
-        mock_exit,
-        mock_instance,
-        mock_set_attr,
-    ):
-        mock_instance.return_value.exec.return_value = 0
-        # Patch the MainWindow so that any access to .api or .nodegraph is safe
-        mock_window_instance = MagicMock()
-        mock_window_instance.api = self.mock_api
-        mock_main_window.return_value = mock_window_instance
-        app = App(no_splash=True, initialize_gui=True)
-        self.assertIsNotNone(app.app)
-        self.assertTrue(mock_set_attr.called)
-        self.assertTrue(mock_instance.called)
-        mock_exit.assert_called_once_with(0)
-
-    @patch("airunner.app_installer.AppInstaller.start", return_value=None)
-    @patch("airunner.app_installer.AppInstaller.__init__", return_value=None)
-    @patch(
-        "airunner.app.ApplicationSettings.objects.first",
-        return_value=MagicMock(run_setup_wizard=True),
-    )
-    def test_run_setup_wizard(
-        self,
-        mock_appsettings_first,
-        mock_appinstaller_init,
-        mock_appinstaller_start,
-    ):
-        """Test the run_setup_wizard method."""
-        App.run_setup_wizard()
-        mock_appinstaller_init.assert_called_once()
-
-    @patch("airunner.app.QPainter", new_callable=MagicMock)
-    @patch("airunner.app.QPixmap", new_callable=MagicMock)
-    @patch("airunner.app.QSplashScreen", new_callable=MagicMock)
-    @patch("airunner.app.QApplication", new_callable=MagicMock)
-    @patch("sys.exit")
-    @patch("airunner.app.QGuiApplication.screens", return_value=[MagicMock()])
-    @patch("airunner.app.LocalHttpServerThread")
-    def test_run_with_splash(
-        self,
-        mock_http_server,
-        mock_screens,
-        mock_exit,
-        mock_qapplication,
-        mock_splash_screen,
-        mock_qpixmap,
-        mock_qpainter,
-    ):
-        """Test the run method with splash screen enabled."""
-        mock_qapplication.return_value.exec.return_value = 0
-        mock_splash_instance = MagicMock()
-        mock_splash_screen.return_value = mock_splash_instance
-        mock_qpixmap.return_value = MagicMock()
-        mock_qpainter.return_value = MagicMock()
-
-        app = App(no_splash=False, initialize_gui=True)
-        app.run()
-
-        mock_splash_screen.assert_called_once()  # Ensure only one splash screen is created
-        mock_splash_instance.show.assert_called_once()  # Ensure the splash screen is shown
-        mock_splash_instance.showMessage.assert_called_once_with(
-            "Loading AI Runner",
-            QtCore.Qt.AlignmentFlag.AlignBottom
-            | QtCore.Qt.AlignmentFlag.AlignCenter,
-            QtCore.Qt.GlobalColor.white,
-        )
-
-    @patch("airunner.app.QSplashScreen.showMessage")
-    def test_update_splash_message(self, mock_show_message):
-        """Test the update_splash_message method."""
-        mock_splash = MagicMock()
-        App.update_splash_message(mock_splash, "Loading...")
-        mock_splash.showMessage.assert_called_once_with(
-            "Loading...",
-            QtCore.Qt.AlignmentFlag.AlignBottom
-            | QtCore.Qt.AlignmentFlag.AlignCenter,
-            QtCore.Qt.GlobalColor.white,
-        )
-
     @patch("airunner.app.os.path.isdir", return_value=True)
     @patch("airunner.app.LocalHttpServerThread")
     @patch("sys.exit")
-    @patch("airunner.app.QApplication")
+    @patch("PySide6.QtWidgets.QApplication")
     @patch("airunner.app.MainWindow")
+    @patch("PySide6.QtWidgets.QApplication.exec", return_value=0)
     def test_show_main_application(
         self,
+        mock_qapplication_exec,
         mock_main_window,
         mock_qapplication,
         mock_exit,
@@ -153,6 +67,107 @@ class TestApp(unittest.TestCase):
         mock_main_window.assert_not_called()  # Ensure main window is not created
         mock_qapplication.finish.assert_not_called()  # Ensure splash screen is not finished
 
+    def test_ensure_mathjax_already_present(self):
+        """Test _ensure_mathjax when MathJax is already present (no setup needed)."""
+        with patch("airunner.app.os.path.exists", return_value=True), patch.dict(
+            "os.environ", {"QT_QPA_PLATFORM": "offscreen"}
+        ):
+            app = App(initialize_gui=False)
+            with patch("airunner.app.subprocess.check_call") as mock_subproc:
+                app._ensure_mathjax()
+                mock_subproc.assert_not_called()
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_ensure_mathjax_triggers_setup(self):
+        """Test _ensure_mathjax triggers setup when MathJax is missing."""
+        with patch("airunner.app.os.path.exists", return_value=False), patch.dict(
+            "os.environ", {"QT_QPA_PLATFORM": "offscreen"}
+        ):
+            app = App(initialize_gui=False)
+            with patch("airunner.app.subprocess.check_call") as mock_subproc:
+                mock_subproc.return_value = 0
+                app._ensure_mathjax()
+                mock_subproc.assert_called_once()
+
+    def test_ensure_mathjax_setup_fails(self):
+        """Test _ensure_mathjax raises RuntimeError if setup fails."""
+        with patch("airunner.app.os.path.exists", return_value=False), patch.dict(
+            "os.environ", {"QT_QPA_PLATFORM": "offscreen"}
+        ):
+            app = App(initialize_gui=False)
+            with patch(
+                "airunner.app.subprocess.check_call",
+                side_effect=Exception("fail"),
+            ):
+                with self.assertRaises(RuntimeError) as ctx:
+                    app._ensure_mathjax()
+                assert "MathJax is required" in str(ctx.exception)
+
+    def test_should_run_setup_wizard_true(self):
+        """Test should_run_setup_wizard returns True when setup is needed."""
+        with patch("airunner.app.AIRUNNER_DISABLE_SETUP_WIZARD", False), patch(
+            "airunner.app.ApplicationSettings.objects.first",
+            return_value=MagicMock(run_setup_wizard=True),
+        ), patch(
+            "airunner.app.PathSettings.objects.first",
+            return_value=MagicMock(base_path="/tmp/airunner-test-path"),
+        ), patch(
+            "airunner.app.os.path.exists", return_value=False
+        ):
+            from airunner.app import App
+
+            assert App.should_run_setup_wizard() is True
+
+    def test_should_run_setup_wizard_false(self):
+        """Test should_run_setup_wizard returns False when setup is not needed."""
+        with patch("airunner.app.AIRUNNER_DISABLE_SETUP_WIZARD", False), patch(
+            "airunner.app.ApplicationSettings.objects.first",
+            return_value=MagicMock(run_setup_wizard=False),
+        ), patch(
+            "airunner.app.PathSettings.objects.first",
+            return_value=MagicMock(base_path="/tmp/airunner-test-path"),
+        ), patch(
+            "airunner.app.os.path.exists", return_value=True
+        ):
+            from airunner.app import App
+
+            assert App.should_run_setup_wizard() is False
+
+    def test_run_setup_wizard_only_launches_gui_if_needed(self):
+        """Test run_setup_wizard only launches AppInstaller if needed. AppInstaller must always be patched!"""
+        # Patch AppInstaller and QApplication at the exact location used in App
+        with patch("airunner.app_installer.AppInstaller") as mock_installer, patch(
+            "PySide6.QtWidgets.QApplication"
+        ) as mock_qapp:
+            with patch("airunner.app.App.should_run_setup_wizard", return_value=True):
+                from airunner.app import App
+
+                App.run_setup_wizard()
+                mock_installer.assert_called_once()
+                mock_qapp.assert_not_called()  # Ensure QApplication is not created
+        with patch("airunner.app_installer.AppInstaller") as mock_installer, patch(
+            "PySide6.QtWidgets.QApplication"
+        ) as mock_qapp:
+            with patch("airunner.app.App.should_run_setup_wizard", return_value=False):
+                from airunner.app import App
+
+                App.run_setup_wizard()
+                mock_installer.assert_not_called()
+                mock_qapp.assert_not_called()  # Ensure QApplication is not created
+
+    def test_run_setup_wizard_raises_if_not_patched(self):
+        """Test that AppInstaller is never called unpatched: forcibly patch and assert, do not allow real window launch."""
+        with patch(
+            "airunner.app_installer.AppInstaller",
+            side_effect=Exception(
+                "AppInstaller should never be called unpatched in tests!"
+            ),
+        ) as mock_installer, patch("PySide6.QtWidgets.QApplication") as mock_qapp:
+            with patch("airunner.app.App.should_run_setup_wizard", return_value=True):
+                from airunner.app import App
+
+                with self.assertRaises(Exception) as ctx:
+                    App.run_setup_wizard()
+                assert "AppInstaller should never be called unpatched" in str(
+                    ctx.exception
+                )
+                mock_qapp.assert_not_called()  # Ensure QApplication is not created

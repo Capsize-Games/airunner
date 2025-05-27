@@ -8,9 +8,7 @@ class TestBlacklist(unittest.TestCase):
         import sys
 
         if any("pytest" in mod for mod in sys.modules):
-            self.skipTest(
-                "NoopLoader import hook is not compatible with pytest."
-            )
+            self.skipTest("NoopLoader import hook is not compatible with pytest.")
 
     def test_blacklist_noop(self):
         self._skip_if_pytest()

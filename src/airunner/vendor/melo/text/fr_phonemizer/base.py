@@ -31,10 +31,14 @@ class BasePhonemizer(abc.ABC):
             Whether to preserve punctuation marks or not.
     """
 
-    def __init__(self, language, punctuations=Punctuation.default_puncs(), keep_puncs=False):
+    def __init__(
+        self, language, punctuations=Punctuation.default_puncs(), keep_puncs=False
+    ):
         # ensure the backend is installed on the system
         if not self.is_available():
-            raise RuntimeError("{} not installed on your system".format(self.name()))  # pragma: nocover
+            raise RuntimeError(
+                "{} not installed on your system".format(self.name())
+            )  # pragma: nocover
 
         # ensure the backend support the requested language
         self._language = self._init_language(language)
@@ -50,7 +54,10 @@ class BasePhonemizer(abc.ABC):
 
         """
         if not self.is_supported_language(language):
-            raise RuntimeError(f'language "{language}" is not supported by the ' f"{self.name()} backend")
+            raise RuntimeError(
+                f'language "{language}" is not supported by the '
+                f"{self.name()} backend"
+            )
         return language
 
     @property
@@ -113,7 +120,9 @@ class BasePhonemizer(abc.ABC):
             return self._punctuator.restore(phonemized, punctuations)[0]
         return phonemized[0]
 
-    def phonemize(self, text: str, separator="|", language: str = None) -> str:  # pylint: disable=unused-argument
+    def phonemize(
+        self, text: str, separator="|", language: str = None
+    ) -> str:  # pylint: disable=unused-argument
         """Returns the `text` phonemized for the given language
 
         Args:

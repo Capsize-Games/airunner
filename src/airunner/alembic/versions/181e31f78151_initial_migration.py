@@ -5,6 +5,7 @@ Revises: None
 Create Date: 2025-03-06 19:37:44.523586
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -22,7 +23,7 @@ from airunner.utils.db.bootstrap import (
 
 
 # revision identifiers, used by Alembic.
-revision: str = '181e31f78151'
+revision: str = "181e31f78151"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

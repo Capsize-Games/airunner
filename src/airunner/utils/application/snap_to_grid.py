@@ -1,12 +1,8 @@
 import math
 
 
-def snap_to_grid(
-    settings, x: float, y: float, use_floor: bool = True
-):  # Accept floats
-    cell_size = float(
-        settings.cell_size
-    )  # Ensure cell_size is float for division
+def snap_to_grid(settings, x: float, y: float, use_floor: bool = True):  # Accept floats
+    cell_size = float(settings.cell_size)  # Ensure cell_size is float for division
     if settings.snap_to_grid and cell_size > 0:  # Add check for cell_size > 0
         if use_floor:
             x = math.floor(x / cell_size) * cell_size

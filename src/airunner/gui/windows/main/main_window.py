@@ -267,9 +267,7 @@ class MainWindow(
         self._worker_manager = None
         # Add WorkerManager for test and app compatibility
         try:
-            self.worker_manager = WorkerManager(
-                logger=getattr(self, "logger", None)
-            )
+            self.worker_manager = WorkerManager(logger=getattr(self, "logger", None))
             self.worker_manager.initialize_workers()
         except Exception as e:
             self.worker_manager = None  # Fallback if import fails
@@ -797,9 +795,7 @@ class MainWindow(
                     filename = self.download_pdf(url, filepath)
                 else:
                     # Handle URL
-                    filepath = os.path.expanduser(
-                        self.path_settings.webpages_path
-                    )
+                    filepath = os.path.expanduser(self.path_settings.webpages_path)
                     filename = self.download_url(url, filepath)
             elif os.path.isfile(url):
                 filepath = os.path.dirname(url)
@@ -810,9 +806,7 @@ class MainWindow(
 
             # Update target files to use only the file that was downloaded or navigated to
             # and update the index.
-            self.update_chatbot(
-                "target_files", [os.path.join(filepath, filename)]
-            )
+            self.update_chatbot("target_files", [os.path.join(filepath, filename)])
             if not self.api or not hasattr(self.api, "llm"):
                 self.logger.warning(
                     "MainWindow: self.api.llm is missing. Cannot reload RAG."
@@ -930,9 +924,7 @@ class MainWindow(
         self.update_icons()
 
     def update_icons(self):
-        theme = (
-            "dark" if self.application_settings.dark_mode_enabled else "light"
-        )
+        theme = "dark" if self.application_settings.dark_mode_enabled else "light"
         self.icon_manager.update_icons(theme)
 
     def initialize_ui(self):
@@ -996,9 +988,7 @@ class MainWindow(
 
     def update_tab_index(self, section: str, index: int):
         Tab.objects.update_by(filter=dict(section=section), active=False)
-        Tab.objects.update_by(
-            filter=dict(section=section, index=index), active=True
-        )
+        Tab.objects.update_by(filter=dict(section=section, index=index), active=True)
 
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
@@ -1125,6 +1115,11 @@ class MainWindow(
     def quit(self):
         self.logger.debug("Quitting")
         self.save_state()
+        if hasattr(self, "worker_manager") and self.worker_manager:
+            try:
+                self.worker_manager.shutdown_workers()
+            except Exception as e:
+                self.logger.warning(f"Error shutting down workers: {e}")
         if not self.api:
             self.logger.warning(
                 "MainWindow: self.api is missing. Cannot quit application."
@@ -1213,9 +1208,7 @@ class MainWindow(
 
     def on_toggle_tts(self, data: Dict = None, val=None):
         if val is None:
-            val = data.get(
-                "enabled", not self.application_settings.tts_enabled
-            )
+            val = data.get("enabled", not self.application_settings.tts_enabled)
         self._update_action_button(
             ModelType.TTS,
             self.ui.actionToggle_Text_to_Speech,
@@ -1428,9 +1421,7 @@ class MainWindow(
         self.update_application_settings("nsfw_filter", False)
         # Update the show_nsfw_warning setting based on the checkbox state
         if show_nsfw_warning is not None:
-            self.update_application_settings(
-                "show_nsfw_warning", show_nsfw_warning
-            )
+            self.update_application_settings("show_nsfw_warning", show_nsfw_warning)
         self.toggle_nsfw_filter()
         if not self.api or not hasattr(self.api, "art"):
             self.logger.warning(
@@ -1447,9 +1438,7 @@ class MainWindow(
                 "MainWindow: self.api is missing. Cannot display update message."
             )
             return
-        self.api.application_status(
-            f"New version available: {self.latest_version}"
-        )
+        self.api.application_status(f"New version available: {self.latest_version}")
 
     def show_update_popup(self):
         self.update_popup = UpdateWindow()
@@ -1482,19 +1471,13 @@ class MainWindow(
     def _set_keyboard_shortcuts(self):
         quit_key = ShortcutKeys.objects.filter_by_first(display_name="Quit")
         brush_key = ShortcutKeys.objects.filter_by_first(display_name="Brush")
-        eraser_key = ShortcutKeys.objects.filter_by_first(
-            display_name="Eraser"
-        )
-        move_tool_key = ShortcutKeys.objects.filter_by_first(
-            display_name="Move Tool"
-        )
+        eraser_key = ShortcutKeys.objects.filter_by_first(display_name="Eraser")
+        move_tool_key = ShortcutKeys.objects.filter_by_first(display_name="Move Tool")
 
         if quit_key is not None:
             key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)
             self.ui.actionQuit.setShortcut(key_sequence)
-            self.ui.actionQuit.setToolTip(
-                f"{quit_key.display_name} ({quit_key.text})"
-            )
+            self.ui.actionQuit.setToolTip(f"{quit_key.display_name} ({quit_key.text})")
 
         if brush_key is not None:
             key_sequence = QKeySequence(brush_key.key | brush_key.modifiers)
@@ -1511,9 +1494,7 @@ class MainWindow(
             )
 
         if move_tool_key is not None:
-            key_sequence = QKeySequence(
-                move_tool_key.key | move_tool_key.modifiers
-            )
+            key_sequence = QKeySequence(move_tool_key.key | move_tool_key.modifiers)
             self.ui.actionToggle_Active_Grid_Area.setShortcut(key_sequence)
             self.ui.actionToggle_Active_Grid_Area.setToolTip(
                 f"{move_tool_key.display_name} ({move_tool_key.text})"
@@ -1523,9 +1504,7 @@ class MainWindow(
         image_filters = ImageFilter.objects.all()
         try:
             for image_filter in image_filters:
-                action = self.ui.menuFilters.addAction(
-                    image_filter.display_name
-                )
+                action = self.ui.menuFilters.addAction(image_filter.display_name)
                 action.triggered.connect(
                     partial(self.display_filter_window, image_filter)
                 )
@@ -1539,9 +1518,7 @@ class MainWindow(
 
     def _initialize_default_buttons(self):
         self.ui.actionSafety_Checker.blockSignals(True)
-        self.ui.actionSafety_Checker.setChecked(
-            self.application_settings.nsfw_filter
-        )
+        self.ui.actionSafety_Checker.setChecked(self.application_settings.nsfw_filter)
         self.ui.actionSafety_Checker.blockSignals(False)
 
     def _initialize_window(self):
@@ -1579,16 +1556,12 @@ class MainWindow(
             self.setMaximumSize(max_width, max_height)
 
         self.setWindowIcon(
-            QIcon(
-                os.path.join(self.path_settings.base_path, "images/icon.png")
-            )
+            QIcon(os.path.join(self.path_settings.base_path, "images/icon.png"))
         )
         self.set_window_title()
 
     def center(self):
-        available_geometry = (
-            QGuiApplication.primaryScreen().availableGeometry()
-        )
+        available_geometry = QGuiApplication.primaryScreen().availableGeometry()
         frame_geometry = self.frameGeometry()
         frame_geometry.moveCenter(available_geometry.center())
         self.move(frame_geometry.topLeft())
@@ -1629,9 +1602,7 @@ class MainWindow(
             if status is ModelStatus.FAILED:
                 self.ui.actionToggle_Stable_Diffusion.setChecked(False)
         elif model is ModelType.CONTROLNET:
-            self.ui.actionToggle_Controlnet.setDisabled(
-                status is ModelStatus.LOADING
-            )
+            self.ui.actionToggle_Controlnet.setDisabled(status is ModelStatus.LOADING)
             if status is ModelStatus.FAILED:
                 self.ui.actionToggle_Controlnet.setChecked(False)
         elif model is ModelType.LLM:

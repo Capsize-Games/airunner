@@ -110,9 +110,7 @@ class BaseAgent(
         """
         Initialize the BaseAgent.
         """
-        self.default_tool_choice: Optional[Union[str, dict]] = (
-            default_tool_choice
-        )
+        self.default_tool_choice: Optional[Union[str, dict]] = default_tool_choice
         self._prompt = None
         self._language = None
         self._llm_request: Optional[LLMRequest] = None
@@ -137,12 +135,8 @@ class BaseAgent(
         self._update_user_data_engine = update_user_data_engine
         self._update_user_data_tool = update_user_data_tool
         self._summary_engine_tool: Optional[Any] = summary_engine_tool
-        self._information_scraper_tool: Optional[Any] = (
-            information_scraper_tool
-        )
-        self._information_scraper_engine: Optional[Any] = (
-            information_scraper_engine
-        )
+        self._information_scraper_tool: Optional[Any] = information_scraper_tool
+        self._information_scraper_engine: Optional[Any] = information_scraper_engine
         self._memory: Optional[BaseMemory] = None
         self._react_tool_agent: Optional[Any] = react_tool_agent
         self._complete_response: str = ""
@@ -155,9 +149,7 @@ class BaseAgent(
         self._llm_strategy = llm_strategy
 
         self.signal_handlers.update(
-            {
-                SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id
-            }
+            {SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id}
         )
         super().__init__(*args, **kwargs)
 
@@ -212,9 +204,7 @@ class BaseAgent(
         """
         use_memory = self._use_memory
         if (
-            self.llm
-            and self.llm_request
-            and self.llm_request.use_memory is False
+            self.llm and self.llm_request and self.llm_request.use_memory is False
         ):  # override with llm_request
             use_memory = False
         return use_memory
@@ -262,10 +252,7 @@ class BaseAgent(
         Returns:
             bool: True if RAG mode is enabled.
         """
-        return (
-            self.rag_enabled
-            and self.action is LLMActionType.PERFORM_RAG_SEARCH
-        )
+        return self.rag_enabled and self.action is LLMActionType.PERFORM_RAG_SEARCH
 
     @property
     def date_time_prompt(self) -> str:
@@ -510,8 +497,8 @@ class BaseAgent(
             ExternalConditionStoppingCriteria: The stopping criteria.
         """
         if not self._streaming_stopping_criteria:
-            self._streaming_stopping_criteria = (
-                ExternalConditionStoppingCriteria(self.do_interrupt_process)
+            self._streaming_stopping_criteria = ExternalConditionStoppingCriteria(
+                self.do_interrupt_process
             )
         return self._streaming_stopping_criteria
 
@@ -553,9 +540,7 @@ class BaseAgent(
                 llm=self.llm,
             )
 
-        return self._get_or_create_singleton(
-            "_update_user_data_engine", factory
-        )
+        return self._get_or_create_singleton("_update_user_data_engine", factory)
 
     @property
     def mood_engine(self) -> RefreshSimpleChatEngine:
@@ -609,9 +594,7 @@ class BaseAgent(
                 llm=self.llm,
             )
 
-        return self._get_or_create_singleton(
-            "_information_scraper_engine", factory
-        )
+        return self._get_or_create_singleton("_information_scraper_engine", factory)
 
     @property
     def mood_engine_tool(self) -> ChatEngineTool:
@@ -944,9 +927,7 @@ class BaseAgent(
             system_prompt (Optional[str]): The system prompt to set.
             rag_system_prompt (Optional[str]): The RAG system prompt to set.
         """
-        self.chat_engine_tool.update_system_prompt(
-            system_prompt or self.system_prompt
-        )
+        self.chat_engine_tool.update_system_prompt(system_prompt or self.system_prompt)
 
         if self.rag_mode_enabled:
             self.update_rag_system_prompt(rag_system_prompt)
@@ -965,11 +946,7 @@ class BaseAgent(
             return
 
         conversation = self.conversation
-        if (
-            not conversation
-            or not conversation.value
-            or len(conversation.value) == 0
-        ):
+        if not conversation or not conversation.value or len(conversation.value) == 0:
             return
 
         total_messages = len(conversation.value)
@@ -997,9 +974,7 @@ class BaseAgent(
         self._update_system_prompt()
 
         self._update_conversation("last_analysis_time", current_time)
-        self._update_conversation(
-            "last_analyzed_message_id", total_messages - 1
-        )
+        self._update_conversation("last_analyzed_message_id", total_messages - 1)
 
         if self.llm_settings.use_chatbot_mood and self.chatbot.use_mood:
             self._update_mood()
@@ -1021,18 +996,16 @@ class BaseAgent(
         """
         Update the memory settings for the chat engine.
         """
-        if (
-            type(self.chat_store) is DatabaseChatStore and not self.use_memory
-        ) or (type(self.chat_store) is SimpleChatStore and self.use_memory):
+        if (type(self.chat_store) is DatabaseChatStore and not self.use_memory) or (
+            type(self.chat_store) is SimpleChatStore and self.use_memory
+        ):
             self.chat_memory = None
             self.chat_store = None
         self.chat_engine._memory = self.chat_memory
         self.chat_engine_tool.chat_engine = self.chat_engine
 
     @log_method_entry_exit
-    def _perform_tool_call(
-        self, action: LLMActionType, **kwargs: Any
-    ) -> Optional[Any]:
+    def _perform_tool_call(self, action: LLMActionType, **kwargs: Any) -> Optional[Any]:
         """
         Perform a tool call based on the LLMActionType using a strategy pattern.
         Args:
@@ -1115,11 +1088,7 @@ class BaseAgent(
         """
         self.logger.info("Attempting to update mood")
         conversation = self.conversation
-        if (
-            not conversation
-            or not conversation.value
-            or len(conversation.value) == 0
-        ):
+        if not conversation or not conversation.value or len(conversation.value) == 0:
             self.logger.info("No conversation found")
             return
         total_messages = len(conversation.value)
@@ -1182,16 +1151,13 @@ class BaseAgent(
         kwargs = {
             "input": f"Extract concise, one-sentence summaries of relevant information about {self.username} from this conversation.",
         }
-        response = self.update_user_data_tool.call(
-            do_not_display=True, **kwargs
-        )
+        response = self.update_user_data_tool.call(do_not_display=True, **kwargs)
         if response.content.strip():
             self.logger.info("Updating user with new information")
             concise_summary = response.content.strip().split("\n")[:5]
             Conversation.objects.update(
                 self.conversation_id,
-                user_data=concise_summary
-                + (self.conversation.user_data or []),
+                user_data=concise_summary + (self.conversation.user_data or []),
             )
         else:
             self.logger.info("No meaningful information to update.")
@@ -1208,11 +1174,7 @@ class BaseAgent(
             return
 
         conversation = self.conversation
-        if (
-            not conversation
-            or not conversation.value
-            or len(conversation.value) == 0
-        ):
+        if not conversation or not conversation.value or len(conversation.value) == 0:
             return
 
         self.logger.info("Summarizing conversation")
@@ -1230,9 +1192,7 @@ class BaseAgent(
             do_not_display=True,
             input="Provide a brief summary of this conversation",
         )
-        self.logger.info(
-            f"Saving conversation with summary: {response.content}"
-        )
+        self.logger.info(f"Saving conversation with summary: {response.content}")
         Conversation.objects.update(
             self.conversation_id,
             summary=response.content,
@@ -1257,9 +1217,7 @@ class BaseAgent(
         """
         if self.llm_settings.print_llm_system_prompt:
             if action is LLMActionType.PERFORM_RAG_SEARCH:
-                self.logger.info(
-                    "RAG SYSTEM PROMPT:\n" + (rag_system_prompt or "")
-                )
+                self.logger.info("RAG SYSTEM PROMPT:\n" + (rag_system_prompt or ""))
             else:
                 self.logger.info("SYSTEM PROMPT:\n" + (system_prompt or ""))
             self.logger.info(llm_request.to_dict())
@@ -1335,10 +1293,7 @@ class BaseAgent(
         """
         data = data or {}
         conversation_id = data.get("conversation_id", None)
-        if (
-            conversation_id == self.conversation_id
-            or self.conversation_id is None
-        ):
+        if conversation_id == self.conversation_id or self.conversation_id is None:
             self.conversation = None
             self.conversation_id = None
 
@@ -1482,20 +1437,20 @@ class PromptBuilder:
             and chatbot.system_instructions
             and chatbot.system_instructions != ""
         ):
-            system_instructions = f"Always follow these instructions:\n{chatbot.system_instructions}\n"
+            system_instructions = (
+                f"Always follow these instructions:\n{chatbot.system_instructions}\n"
+            )
         guardrails = ""
         if (
             chatbot.use_guardrails
             and chatbot.guardrails_prompt
             and chatbot.guardrails_prompt != ""
         ):
-            guardrails = f"Always follow these guardrails:\n{chatbot.guardrails_prompt}\n"
+            guardrails = (
+                f"Always follow these guardrails:\n{chatbot.guardrails_prompt}\n"
+            )
         backstory_prompt = ""
-        if (
-            chatbot.use_backstory
-            and chatbot.backstory
-            and chatbot.backstory != ""
-        ):
+        if chatbot.use_backstory and chatbot.backstory and chatbot.backstory != "":
             backstory_prompt = (
                 "------\n"
                 f"**Here is {botname}'s backstory:**\n"
@@ -1504,7 +1459,9 @@ class PromptBuilder:
             )
         conversation_timestamp_prompt = ""
         if self.agent.conversation is not None:
-            conversation_timestamp_prompt = f"The conversation started on {self.agent.conversation.timestamp}.\n"
+            conversation_timestamp_prompt = (
+                f"The conversation started on {self.agent.conversation.timestamp}.\n"
+            )
         prompt = (
             f"Your name is {botname}.\n"
             f"- The user ({username}) is having a conversation with the assistant ({botname}).\n"

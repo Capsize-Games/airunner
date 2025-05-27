@@ -19,9 +19,7 @@ def widget():
     w.ui = MagicMock()
     w.ui.variables.variables = [DummyVar()]
     # Patch the logger property for this instance only
-    patcher = patch.object(
-        NodeGraphWidget, "logger", new_callable=PropertyMock
-    )
+    patcher = patch.object(NodeGraphWidget, "logger", new_callable=PropertyMock)
     mock_logger = patcher.start()
     w._logger_patcher = patcher  # Store to stop later
     mock_logger.return_value = MagicMock()

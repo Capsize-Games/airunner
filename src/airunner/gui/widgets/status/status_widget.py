@@ -210,13 +210,9 @@ class StatusWidget(BaseWidget):
 
         # Color by has_cuda red for disabled, green for enabled
         color = (
-            StatusColors.LOADED
-            if torch.cuda.is_available()
-            else StatusColors.FAILED
+            StatusColors.LOADED if torch.cuda.is_available() else StatusColors.FAILED
         )
-        self.ui.cuda_status.setStyleSheet(
-            "QLabel { color: " + color.value + "; }"
-        )
+        self.ui.cuda_status.setStyleSheet("QLabel { color: " + color.value + "; }")
 
         self.ui.cuda_status.setText(cuda_status)
 

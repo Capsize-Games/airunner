@@ -1,4 +1,3 @@
-
 from PySide6.QtCore import Slot
 
 from airunner.data.models import User

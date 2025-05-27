@@ -1,4 +1,3 @@
-
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.image.templates.folder_widget_ui import Ui_folder_widget
 

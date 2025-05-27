@@ -28,12 +28,8 @@ class AgentActionNode(BaseLLMNode):
         in_message = input_data.get(
             "in_message", None
         )  # Get data from the connected input port
-        print(
-            f"Executing Agent Action: {action_name} with input: {in_message}"
-        )
+        print(f"Executing Agent Action: {action_name} with input: {in_message}")
         # Dummy logic: Find the corresponding AgentAction class based on action_name
         # and call its run method. For now, just pass data through.
         output_data = f"Action '{action_name}' processed: {in_message}"
-        return {
-            "out_message": output_data
-        }  # Return data for the 'out_message' port
+        return {"out_message": output_data}  # Return data for the 'out_message' port

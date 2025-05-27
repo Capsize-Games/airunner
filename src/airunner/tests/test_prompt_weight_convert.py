@@ -25,11 +25,15 @@ class TestPromptWeightConvert(unittest.TestCase):
         self.assertEqual(PromptWeightBridge.convert(prompt), expected_prompt)
 
     def test_use_case_d(self):
-        prompt = "(worst quality:0.8), fantasy, cartoon, halftone print, (cinematic:1.2), verybadimagenegative_v1.3, " \
-                 "easynegative, (surreal:0.8), (modernism:0.8), (art deco:0.8), (art nouveau:0.8)"
-        expected_prompt = "(worst quality)0.8, fantasy, cartoon, halftone print, (cinematic)1.2, " \
-                          "verybadimagenegative_v1.3, easynegative, (surreal)0.8, (modernism)0.8, (art deco)0.8, " \
-                          "(art nouveau)0.8"
+        prompt = (
+            "(worst quality:0.8), fantasy, cartoon, halftone print, (cinematic:1.2), verybadimagenegative_v1.3, "
+            "easynegative, (surreal:0.8), (modernism:0.8), (art deco:0.8), (art nouveau:0.8)"
+        )
+        expected_prompt = (
+            "(worst quality)0.8, fantasy, cartoon, halftone print, (cinematic)1.2, "
+            "verybadimagenegative_v1.3, easynegative, (surreal)0.8, (modernism)0.8, (art deco)0.8, "
+            "(art nouveau)0.8"
+        )
         self.assertEqual(PromptWeightBridge.convert(prompt), expected_prompt)
 
     def test_convert_basic_parentheses(self):
@@ -64,7 +68,9 @@ class TestPromptWeightConvert(unittest.TestCase):
     def test_convert_basic_brackets(self):
         prompt = "[a hammer] and a cat in a car"
         expected_prompt = "(a hammer)0.9 and a cat in a car"
-        self.assertEqual(PromptWeightBridge.convert_basic_brackets(prompt), expected_prompt)
+        self.assertEqual(
+            PromptWeightBridge.convert_basic_brackets(prompt), expected_prompt
+        )
 
         prompt = "a foo and [a cat] in a car"
         expected_prompt = "a foo and (a cat)0.9 in a car"

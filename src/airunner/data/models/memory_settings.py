@@ -4,7 +4,7 @@ from airunner.data.models.base import BaseModel
 
 
 class MemorySettings(BaseModel):
-    __tablename__ = 'memory_settings'
+    __tablename__ = "memory_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
     use_last_channels = Column(Boolean, default=True)
     use_attention_slicing = Column(Boolean, default=False)

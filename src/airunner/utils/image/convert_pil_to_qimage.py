@@ -9,5 +9,7 @@ def pil_to_qimage(pil_image):
     elif pil_image.mode == "L":
         pil_image = pil_image.convert("RGBA")
     data = pil_image.tobytes("raw", "RGBA")
-    qimage = QImage(data, pil_image.size[0], pil_image.size[1], QImage.Format.Format_RGBA8888)
+    qimage = QImage(
+        data, pil_image.size[0], pil_image.size[1], QImage.Format.Format_RGBA8888
+    )
     return qimage

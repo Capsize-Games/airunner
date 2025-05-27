@@ -39,9 +39,7 @@ def test_detect_language_none(mock_Language, mock_Builder, mock_Formatter):
 @patch("airunner.utils.llm.language.FormatterExtended")
 @patch("airunner.utils.llm.language.LanguageDetectorBuilder")
 @patch("airunner.utils.llm.language.Language")
-def test_detect_language_japanese_korean(
-    mock_Language, mock_Builder, mock_Formatter
-):
+def test_detect_language_japanese_korean(mock_Language, mock_Builder, mock_Formatter):
     mock_Formatter.strip_nonlinguistic.return_value = "こんにちは"
     detector = MagicMock()
     mock_Builder.from_languages.return_value.build.return_value = detector
@@ -60,9 +58,7 @@ def test_detect_language_japanese_korean(
 @patch("airunner.utils.llm.language.FormatterExtended")
 @patch("airunner.utils.llm.language.LanguageDetectorBuilder")
 @patch("airunner.utils.llm.language.Language")
-def test_detect_language_enum_fallback(
-    mock_Language, mock_Builder, mock_Formatter
-):
+def test_detect_language_enum_fallback(mock_Language, mock_Builder, mock_Formatter):
     mock_Formatter.strip_nonlinguistic.return_value = "foo"
     detector = MagicMock()
     mock_Builder.from_languages.return_value.build.return_value = detector

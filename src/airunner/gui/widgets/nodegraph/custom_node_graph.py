@@ -92,17 +92,11 @@ class CustomNodeGraph(MediatorMixin, SettingsMixin, NodeGraph):
         if event.mimeData().hasFormat(VARIABLE_MIME_TYPE):
             event.acceptProposedAction()
 
-            variable_name = (
-                event.mimeData().data(VARIABLE_MIME_TYPE).data().decode()
-            )
+            variable_name = event.mimeData().data(VARIABLE_MIME_TYPE).data().decode()
 
             # Get the variable details (type) from the NodeGraphWidget
-            if self.widget_ref and hasattr(
-                self.widget_ref, "_find_variable_by_name"
-            ):
-                variable = self.widget_ref._find_variable_by_name(
-                    variable_name
-                )
+            if self.widget_ref and hasattr(self.widget_ref, "_find_variable_by_name"):
+                variable = self.widget_ref._find_variable_by_name(variable_name)
                 if variable:
                     # Create the VariableGetterNode at the drop position
                     # Convert scene position to graph position if necessary (might not be needed)
@@ -118,9 +112,7 @@ class CustomNodeGraph(MediatorMixin, SettingsMixin, NodeGraph):
                             pos=[pos.x(), pos.y()],
                         )
                         if getter_node:
-                            getter_node.set_variable(
-                                variable.name, variable.var_type
-                            )
+                            getter_node.set_variable(variable.name, variable.var_type)
                             self.logger.info(
                                 f"Created Getter node for variable: {variable.name} at {pos.x()},{pos.y()}"
                             )

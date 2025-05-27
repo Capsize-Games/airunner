@@ -365,9 +365,7 @@ def test_constants_and_enums():
 def test_enum_str_and_comparison():
     from airunner.vendor.nodegraphqt.constants import LayoutDirectionEnum
 
-    assert (
-        str(LayoutDirectionEnum.HORIZONTAL) == "LayoutDirectionEnum.HORIZONTAL"
-    )
+    assert str(LayoutDirectionEnum.HORIZONTAL) == "LayoutDirectionEnum.HORIZONTAL"
     assert LayoutDirectionEnum.HORIZONTAL == LayoutDirectionEnum(0)
 
 
@@ -516,9 +514,7 @@ def test_commands_undo_redo():
                 nodes_deleted=DummySignal(),
                 port_connected=DummySignal(),
                 port_disconnected=DummySignal(),
-                viewer=lambda: types.SimpleNamespace(
-                    add_node=lambda v, p: None
-                ),
+                viewer=lambda: types.SimpleNamespace(add_node=lambda v, p: None),
                 model=types.SimpleNamespace(nodes={}),
                 scene=lambda: types.SimpleNamespace(addItem=lambda v: None),
             )

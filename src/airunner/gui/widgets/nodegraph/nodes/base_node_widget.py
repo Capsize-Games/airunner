@@ -1,6 +1,8 @@
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.vendor.nodegraphqt import NodeBaseWidget as NodeBaseWidgetCore
 
-class NodeBaseWidget(
-    NodeBaseWidgetCore
-):
+
+class NodeBaseWidget(NodeBaseWidgetCore):
+    """Base widget class for node graph widgets."""
+
+    pass

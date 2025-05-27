@@ -9,9 +9,7 @@ class TestLLMSettings(unittest.TestCase):
 
     def test_default_initialization(self):
         """Test that LLMSettings initializes with default values from settings."""
-        with patch(
-            "airunner.handlers.llm.llm_settings.AIRUNNER_LLM_USE_OPENAI", False
-        ):
+        with patch("airunner.handlers.llm.llm_settings.AIRUNNER_LLM_USE_OPENAI", False):
 
             settings = LLMSettings()
 

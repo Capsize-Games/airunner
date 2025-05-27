@@ -19,9 +19,7 @@ def test_sdxl_model_manager_init():
 
 
 def test_sdxl_model_manager_load_model():
-    with patch.object(
-        sdxl_model_manager.SDXLModelManager, "_load_model"
-    ) as mock_load:
+    with patch.object(sdxl_model_manager.SDXLModelManager, "_load_model") as mock_load:
         manager = sdxl_model_manager.SDXLModelManager()
         mock_load.return_value = "model_obj"
         result = manager.load_model("/fake/path/model.safetensors")
@@ -54,9 +52,7 @@ def test_sdxl_model_manager_handles_token_sequence_mismatch(monkeypatch):
     def raise_runtime_error(*args, **kwargs):
         raise RuntimeError("token sequence mismatch for fragment at index 0")
 
-    manager._compel_proc.build_conditioning_tensor.side_effect = (
-        raise_runtime_error
-    )
+    manager._compel_proc.build_conditioning_tensor.side_effect = raise_runtime_error
     # Patch prompt/negative_prompt/second_prompt/second_negative_prompt properties to return test values
     type(manager).prompt = PropertyMock(return_value="test prompt")
     type(manager).second_prompt = PropertyMock(return_value="")

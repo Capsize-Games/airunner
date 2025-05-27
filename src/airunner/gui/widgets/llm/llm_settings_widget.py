@@ -16,8 +16,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         super().__init__(*args, **kwargs)
         self.initialize_form()
         self._toggle_model_path_visibility(
-            self.llm_generator_settings.model_service
-            != ModelService.LOCAL.value
+            self.llm_generator_settings.model_service != ModelService.LOCAL.value
         )
         self.register(
             SignalCode.LLM_MODEL_DOWNLOAD_PROGRESS,
@@ -32,9 +31,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
     @Slot(str)
     def on_model_service_currentTextChanged(self, model_service: str):
         self.api.llm.model_changed(model_service)
-        self._toggle_model_path_visibility(
-            model_service != ModelService.LOCAL.value
-        )
+        self._toggle_model_path_visibility(model_service != ModelService.LOCAL.value)
 
     @Slot(bool)
     def toggle_use_cache(self, val: bool):
@@ -77,9 +74,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         self.ui.model_service.clear()
         self.ui.model_service.addItems([item.value for item in ModelService])
 
-        self.ui.model_service.setCurrentText(
-            self.llm_generator_settings.model_service
-        )
+        self.ui.model_service.setCurrentText(self.llm_generator_settings.model_service)
         # QLineEdit requires setText, not setCurrentText
         self.ui.model_path.setText(self.llm_generator_settings.model_path)
 
@@ -172,9 +167,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             chatbot.repetition_penalty
         )
         self.ui.min_length.set_slider_and_spinbox_values(chatbot.min_length)
-        self.ui.length_penalty.set_slider_and_spinbox_values(
-            chatbot.length_penalty
-        )
+        self.ui.length_penalty.set_slider_and_spinbox_values(chatbot.length_penalty)
         self.ui.num_beams.set_slider_and_spinbox_values(chatbot.num_beams)
         self.ui.ngram_size.set_slider_and_spinbox_values(chatbot.ngram_size)
         self.ui.temperature.set_slider_and_spinbox_values(chatbot.temperature)

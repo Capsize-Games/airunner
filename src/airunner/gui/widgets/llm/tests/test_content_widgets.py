@@ -52,22 +52,16 @@ def test_size_hints_are_qsize(base_content_widget):
 
 def test_plaintextwidget_set_content_emits_signal(plain_text_widget, qtbot):
     signal_triggered = []
-    plain_text_widget.sizeChanged.connect(
-        lambda: signal_triggered.append(True)
-    )
+    plain_text_widget.sizeChanged.connect(lambda: signal_triggered.append(True))
     plain_text_widget.setContent("Hello world")
     assert plain_text_widget.textEdit.toPlainText() == "Hello world"
     assert signal_triggered
 
 
-def test_plaintextwidget_append_text_appends_and_emits(
-    plain_text_widget, qtbot
-):
+def test_plaintextwidget_append_text_appends_and_emits(plain_text_widget, qtbot):
     plain_text_widget.setContent("Hello")
     signal_triggered = []
-    plain_text_widget.sizeChanged.connect(
-        lambda: signal_triggered.append(True)
-    )
+    plain_text_widget.sizeChanged.connect(lambda: signal_triggered.append(True))
     plain_text_widget.appendText(", world!")
     assert plain_text_widget.textEdit.toPlainText() == "Hello, world!"
     assert plain_text_widget.content() == "Hello, world!"

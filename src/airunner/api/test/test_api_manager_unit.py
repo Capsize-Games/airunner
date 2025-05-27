@@ -18,9 +18,7 @@ class TestAPIManager:
 
     def test_init_with_valid_emit_signal(self, mock_emit_signal):
         """Test APIManager initialization with valid emit_signal"""
-        with patch(
-            "airunner.api.api_manager.LLMAPIService"
-        ) as mock_llm, patch(
+        with patch("airunner.api.api_manager.LLMAPIService") as mock_llm, patch(
             "airunner.api.api_manager.ARTAPIService"
         ) as mock_art, patch(
             "airunner.api.api_manager.TTSAPIService"
@@ -56,15 +54,9 @@ class TestAPIManager:
             mock_tts.assert_called_once_with(emit_signal=mock_emit_signal)
             mock_stt.assert_called_once_with(emit_signal=mock_emit_signal)
             mock_video.assert_called_once_with(emit_signal=mock_emit_signal)
-            mock_nodegraph.assert_called_once_with(
-                emit_signal=mock_emit_signal
-            )
-            mock_image_filter.assert_called_once_with(
-                emit_signal=mock_emit_signal
-            )
-            mock_embedding.assert_called_once_with(
-                emit_signal=mock_emit_signal
-            )
+            mock_nodegraph.assert_called_once_with(emit_signal=mock_emit_signal)
+            mock_image_filter.assert_called_once_with(emit_signal=mock_emit_signal)
+            mock_embedding.assert_called_once_with(emit_signal=mock_emit_signal)
             mock_lora.assert_called_once_with(emit_signal=mock_emit_signal)
             mock_canvas.assert_called_once_with(emit_signal=mock_emit_signal)
             mock_chatbot.assert_called_once_with(emit_signal=mock_emit_signal)
@@ -82,16 +74,11 @@ class TestAPIManager:
             assert api_manager.lora == mock_lora.return_value
             assert api_manager.canvas == mock_canvas.return_value
             assert api_manager.chatbot == mock_chatbot.return_value
-            assert (
-                api_manager.sounddevice_manager
-                == mock_sound_manager.return_value
-            )
+            assert api_manager.sounddevice_manager == mock_sound_manager.return_value
 
     def test_init_with_none_emit_signal(self):
         """Test APIManager initialization with None emit_signal (fallback behavior)"""
-        with patch(
-            "airunner.api.api_manager.LLMAPIService"
-        ) as mock_llm, patch(
+        with patch("airunner.api.api_manager.LLMAPIService") as mock_llm, patch(
             "airunner.api.api_manager.ARTAPIService"
         ) as mock_art, patch(
             "airunner.api.api_manager.TTSAPIService"
@@ -126,39 +113,19 @@ class TestAPIManager:
             api_manager._emit_signal("test", data={"test": "value"})
 
             # Verify all services are created with the fallback emit_signal
-            mock_llm.assert_called_once_with(
-                emit_signal=api_manager._emit_signal
-            )
-            mock_art.assert_called_once_with(
-                emit_signal=api_manager._emit_signal
-            )
-            mock_tts.assert_called_once_with(
-                emit_signal=api_manager._emit_signal
-            )
-            mock_stt.assert_called_once_with(
-                emit_signal=api_manager._emit_signal
-            )
-            mock_video.assert_called_once_with(
-                emit_signal=api_manager._emit_signal
-            )
-            mock_nodegraph.assert_called_once_with(
-                emit_signal=api_manager._emit_signal
-            )
+            mock_llm.assert_called_once_with(emit_signal=api_manager._emit_signal)
+            mock_art.assert_called_once_with(emit_signal=api_manager._emit_signal)
+            mock_tts.assert_called_once_with(emit_signal=api_manager._emit_signal)
+            mock_stt.assert_called_once_with(emit_signal=api_manager._emit_signal)
+            mock_video.assert_called_once_with(emit_signal=api_manager._emit_signal)
+            mock_nodegraph.assert_called_once_with(emit_signal=api_manager._emit_signal)
             mock_image_filter.assert_called_once_with(
                 emit_signal=api_manager._emit_signal
             )
-            mock_embedding.assert_called_once_with(
-                emit_signal=api_manager._emit_signal
-            )
-            mock_lora.assert_called_once_with(
-                emit_signal=api_manager._emit_signal
-            )
-            mock_canvas.assert_called_once_with(
-                emit_signal=api_manager._emit_signal
-            )
-            mock_chatbot.assert_called_once_with(
-                emit_signal=api_manager._emit_signal
-            )
+            mock_embedding.assert_called_once_with(emit_signal=api_manager._emit_signal)
+            mock_lora.assert_called_once_with(emit_signal=api_manager._emit_signal)
+            mock_canvas.assert_called_once_with(emit_signal=api_manager._emit_signal)
+            mock_chatbot.assert_called_once_with(emit_signal=api_manager._emit_signal)
             mock_sound_manager.assert_called_once_with()
 
     def test_emit_signal_property(self, mock_emit_signal):
@@ -295,9 +262,7 @@ class TestAPIManager:
 
     def test_service_attribute_access(self, mock_emit_signal):
         """Test that all service attributes are accessible after initialization"""
-        with patch(
-            "airunner.api.api_manager.LLMAPIService"
-        ) as mock_llm, patch(
+        with patch("airunner.api.api_manager.LLMAPIService") as mock_llm, patch(
             "airunner.api.api_manager.ARTAPIService"
         ) as mock_art, patch(
             "airunner.api.api_manager.TTSAPIService"
@@ -341,18 +306,13 @@ class TestAPIManager:
 
             for attr_name, mock_service in services:
                 assert hasattr(api_manager, attr_name)
-                assert (
-                    getattr(api_manager, attr_name)
-                    == mock_service.return_value
-                )
+                assert getattr(api_manager, attr_name) == mock_service.return_value
 
     def test_multiple_api_manager_instances(self, mock_emit_signal):
         """Test that multiple APIManager instances can be created independently"""
         mock_emit_signal_2 = MagicMock()
 
-        with patch(
-            "airunner.api.api_manager.LLMAPIService"
-        ) as mock_llm, patch(
+        with patch("airunner.api.api_manager.LLMAPIService") as mock_llm, patch(
             "airunner.api.api_manager.ARTAPIService"
         ) as mock_art, patch(
             "airunner.api.api_manager.TTSAPIService"
@@ -402,14 +362,10 @@ class TestAPIManager:
             assert llm_calls[1][1]["emit_signal"] is mock_emit_signal_2
             assert art_calls[1][1]["emit_signal"] is mock_emit_signal_2
 
-    def test_service_initialization_with_service_failure(
-        self, mock_emit_signal
-    ):
+    def test_service_initialization_with_service_failure(self, mock_emit_signal):
         """Test APIManager behavior when a service fails to initialize"""
         # Mock all services except one that will fail
-        with patch(
-            "airunner.api.api_manager.LLMAPIService"
-        ) as mock_llm, patch(
+        with patch("airunner.api.api_manager.LLMAPIService") as mock_llm, patch(
             "airunner.api.api_manager.ARTAPIService"
         ) as mock_art, patch(
             "airunner.api.api_manager.TTSAPIService"
@@ -437,14 +393,10 @@ class TestAPIManager:
             mock_art.side_effect = Exception("Service initialization failed")
 
             # This should raise the exception from the failing service
-            with pytest.raises(
-                Exception, match="Service initialization failed"
-            ):
+            with pytest.raises(Exception, match="Service initialization failed"):
                 APIManager(emit_signal=mock_emit_signal)
 
-    def test_emit_signal_passed_correctly_to_all_services(
-        self, mock_emit_signal
-    ):
+    def test_emit_signal_passed_correctly_to_all_services(self, mock_emit_signal):
         """Test that the same emit_signal instance is passed to all services"""
         captured_emit_signals = {}
 

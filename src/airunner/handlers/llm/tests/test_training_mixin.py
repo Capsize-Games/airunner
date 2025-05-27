@@ -30,9 +30,7 @@ class DummyTrainingMixin(TrainingMixin):
     def __init__(self, model_version="test-version"):
         self.model_version = model_version
         self.path_settings = DummyPathSettings()
-        self.model_path = (
-            "/tmp/dummy_model_path"  # Add this for _save_finetuned_model
-        )
+        self.model_path = "/tmp/dummy_model_path"  # Add this for _save_finetuned_model
 
 
 @pytest.fixture

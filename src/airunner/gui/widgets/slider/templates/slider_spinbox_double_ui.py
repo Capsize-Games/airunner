@@ -8,25 +8,58 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QDoubleSpinBox, QGridLayout, QLabel,
-    QSizePolicy, QSlider, QWidget)
+from PySide6.QtCore import (
+    QCoreApplication,
+    QDate,
+    QDateTime,
+    QLocale,
+    QMetaObject,
+    QObject,
+    QPoint,
+    QRect,
+    QSize,
+    QTime,
+    QUrl,
+    Qt,
+)
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QConicalGradient,
+    QCursor,
+    QFont,
+    QFontDatabase,
+    QGradient,
+    QIcon,
+    QImage,
+    QKeySequence,
+    QLinearGradient,
+    QPainter,
+    QPalette,
+    QPixmap,
+    QRadialGradient,
+    QTransform,
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QDoubleSpinBox,
+    QGridLayout,
+    QLabel,
+    QSizePolicy,
+    QSlider,
+    QWidget,
+)
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
-            Form.setObjectName(u"Form")
+            Form.setObjectName("Form")
         Form.resize(173, 65)
         self.gridLayout = QGridLayout(Form)
-        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setObjectName("gridLayout")
         self.label = QLabel(Form)
-        self.label.setObjectName(u"label")
+        self.label.setObjectName("label")
         font = QFont()
         font.setPointSize(8)
         font.setBold(True)
@@ -35,7 +68,7 @@ class Ui_Form(object):
         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
 
         self.slider = QSlider(Form)
-        self.slider.setObjectName(u"slider")
+        self.slider.setObjectName("slider")
         font1 = QFont()
         font1.setPointSize(8)
         self.slider.setFont(font1)
@@ -45,21 +78,21 @@ class Ui_Form(object):
         self.gridLayout.addWidget(self.slider, 1, 0, 1, 1)
 
         self.spinbox = QDoubleSpinBox(Form)
-        self.spinbox.setObjectName(u"spinbox")
+        self.spinbox.setObjectName("spinbox")
         self.spinbox.setFont(font1)
         self.spinbox.setMaximum(1.000000000000000)
         self.spinbox.setSingleStep(0.010000000000000)
 
         self.gridLayout.addWidget(self.spinbox, 1, 1, 1, 1)
 
-
         self.retranslateUi(Form)
 
         QMetaObject.connectSlotsByName(Form)
+
     # setupUi
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
-        self.label.setText(QCoreApplication.translate("Form", u"Label", None))
-    # retranslateUi
+        Form.setWindowTitle(QCoreApplication.translate("Form", "Form", None))
+        self.label.setText(QCoreApplication.translate("Form", "Label", None))
 
+    # retranslateUi

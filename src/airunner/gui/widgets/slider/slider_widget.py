@@ -32,9 +32,7 @@ class SliderWidget(BaseWidget):
         # Ensure signal connections
         self.ui.slider.valueChanged.connect(self.handle_slider_valueChanged)
         self.ui.slider.sliderReleased.connect(self.on_slider_sliderReleased)
-        self.ui.slider_spinbox.valueChanged.connect(
-            self.handle_spinbox_valueChanged
-        )
+        self.ui.slider_spinbox.valueChanged.connect(self.handle_spinbox_valueChanged)
 
     @property
     def slider_single_step(self):
@@ -203,9 +201,7 @@ class SliderWidget(BaseWidget):
         self.table_id = self.property("table_id") or None
         if self.table_id is not None:
             self.table_name, self.table_column = settings_property.split(".")
-        label_text = kwargs.get(
-            "label_text", self.property("label_text") or ""
-        )
+        label_text = kwargs.get("label_text", self.property("label_text") or "")
         display_as_float = kwargs.get(
             "display_as_float", self.property("display_as_float") or False
         )
@@ -228,9 +224,7 @@ class SliderWidget(BaseWidget):
             and self.table_column is not None
         ):
             if self.table_name == "lora":
-                self.table_item = Lora.objects.filter_by_first(
-                    id=self.table_id
-                )
+                self.table_item = Lora.objects.filter_by_first(id=self.table_id)
                 current_value = getattr(self.table_item, self.table_column)
 
         elif current_value is None:

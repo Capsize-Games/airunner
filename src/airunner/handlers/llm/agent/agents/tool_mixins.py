@@ -191,10 +191,7 @@ class SystemToolsMixin(ToolSingletonMixin):
         def toggle_text_to_speech(
             enabled: Annotated[
                 bool,
-                (
-                    "Enable or disable text to speech. "
-                    "Must be 'True' or 'False'."
-                ),
+                ("Enable or disable text to speech. " "Must be 'True' or 'False'."),
             ],
         ) -> str:
             self.api.tts.toggle(enabled)
@@ -212,10 +209,7 @@ class SystemToolsMixin(ToolSingletonMixin):
         def list_files_in_directory(
             directory: Annotated[
                 str,
-                (
-                    "The directory to search in. "
-                    "Must be a valid directory path."
-                ),
+                ("The directory to search in. " "Must be a valid directory path."),
             ],
         ) -> str:
             os_path = os.path.abspath(directory)
@@ -245,9 +239,7 @@ class UserToolsMixin(ToolSingletonMixin):
             self.logger.info(f"Information: {information}")
             self._update_user(tag, information)
             data = self.user.data or {}
-            data[tag] = (
-                [information] if tag not in data else data[tag] + [information]
-            )
+            data[tag] = [information] if tag not in data else data[tag] + [information]
             self._update_user("data", data)
             return "Information scraped."
 
@@ -331,9 +323,7 @@ class MemoryManagerMixin:
         self.chat_store = None
         # Defensive: check for None before using
         if self.chat_store is not None:
-            messages = self.chat_store.get_messages(
-                key=str(self.conversation_id)
-            )
+            messages = self.chat_store.get_messages(key=str(self.conversation_id))
         else:
             messages = []
         if self.chat_memory is not None:
@@ -342,13 +332,8 @@ class MemoryManagerMixin:
         if self.chat_engine is not None:
             self.chat_engine.memory = self.chat_memory
         else:
-            self.logger.warning(
-                "reset_memory: chat_engine is None, cannot set memory."
-            )
-        if (
-            hasattr(self, "react_tool_agent")
-            and self.react_tool_agent is not None
-        ):
+            self.logger.warning("reset_memory: chat_engine is None, cannot set memory.")
+        if hasattr(self, "react_tool_agent") and self.react_tool_agent is not None:
             self.react_tool_agent.memory = self.chat_memory
         self.reload_rag_engine()
 
@@ -392,18 +377,13 @@ class ConversationManagerMixin:
     def conversation_id(self, value: int):
         if value != getattr(self, "_conversation_id", None):
             self._conversation_id = value
-            if (
-                self.conversation
-                and self.conversation.id != self._conversation_id
-            ):
+            if self.conversation and self.conversation.id != self._conversation_id:
                 self.conversation = None
 
     def _create_conversation(self) -> Conversation:
         conversation = None
         if self.conversation_id:
-            self.logger.info(
-                f"Loading conversation with ID: {self.conversation_id}"
-            )
+            self.logger.info(f"Loading conversation with ID: {self.conversation_id}")
             conversation = Conversation.objects.get(self.conversation_id)
         if not conversation:
             self.logger.info("No conversation found, looking for most recent")
@@ -425,21 +405,16 @@ class ConversationManagerMixin:
         messages = self.conversation.value or []
         total_messages = len(messages)
         if (
-            (
-                total_messages > self.llm_settings.summarize_after_n_turns
-                and self.conversation.summary is None
-            )
-            or total_messages % self.llm_settings.summarize_after_n_turns == 0
-        ):
+            total_messages > self.llm_settings.summarize_after_n_turns
+            and self.conversation.summary is None
+        ) or total_messages % self.llm_settings.summarize_after_n_turns == 0:
             return True
         return False
 
     @property
     def conversation_summaries(self) -> str:
         summaries = ""
-        conversations = Conversation.objects.order_by(Conversation.id.desc())[
-            :5
-        ]
+        conversations = Conversation.objects.order_by(Conversation.id.desc())[:5]
         conversations = list(conversations)
         conversations = sorted(conversations, key=lambda x: x.id, reverse=True)
         for conversation in conversations:

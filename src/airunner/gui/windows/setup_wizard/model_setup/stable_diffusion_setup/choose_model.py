@@ -1,6 +1,8 @@
 from PySide6.QtCore import Slot
 from airunner.gui.windows.setup_wizard.base_wizard import BaseWizard
-from airunner.gui.windows.setup_wizard.model_setup.stable_diffusion_setup.templates.choose_model_ui import Ui_choose_model
+from airunner.gui.windows.setup_wizard.model_setup.stable_diffusion_setup.templates.choose_model_ui import (
+    Ui_choose_model,
+)
 from airunner.enums import StableDiffusionVersion, ImageGenerator
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 
@@ -20,10 +22,7 @@ class ChooseModel(BaseWizard):
 
         # Iterate over StableDiffusionVersion enum
         for index, version in enumerate(StableDiffusionVersion):
-            self.ui.versions.addItem(
-                version.value,
-                version
-            )
+            self.ui.versions.addItem(version.value, version)
 
         self.initialize_models()
 
@@ -31,14 +30,11 @@ class ChooseModel(BaseWizard):
         self.ui.models.clear()
         for model in model_bootstrap_data:
             if (
-                model["category"] == ImageGenerator.STABLEDIFFUSION.value and
-                model["version"] == self.model_version and
-                model["pipeline_action"] == "txt2img"
+                model["category"] == ImageGenerator.STABLEDIFFUSION.value
+                and model["version"] == self.model_version
+                and model["pipeline_action"] == "txt2img"
             ):
-                self.ui.models.addItem(
-                    model["name"],
-                    model
-                )
+                self.ui.models.addItem(model["name"], model)
 
     @Slot(str)
     def model_version_changed(self, txt: str):

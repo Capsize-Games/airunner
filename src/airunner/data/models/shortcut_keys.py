@@ -4,7 +4,7 @@ from airunner.data.models.base import BaseModel
 
 
 class ShortcutKeys(BaseModel):
-    __tablename__ = 'shortcut_keys'
+    __tablename__ = "shortcut_keys"
     id = Column(Integer, primary_key=True, autoincrement=True)
     display_name = Column(String, nullable=False, default="")
     text = Column(String, nullable=False, default="")

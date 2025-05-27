@@ -29,9 +29,7 @@ class VariableGetterNode(BaseCoreNode):
         self.variable_name = ""  # Name of the variable this node represents
         self.variable_type = None  # VariableType enum member
         self.output_port = None  # Reference to the output port
-        self.value_property_name = (
-            "variable_value"  # Name for the value property
-        )
+        self.value_property_name = "variable_value"  # Name for the value property
 
         # Create a variable value property that will be displayed in the properties panel
         self.create_property(
@@ -88,9 +86,7 @@ class VariableGetterNode(BaseCoreNode):
             variable = self.graph.widget_ref._find_variable_by_name(name)
             if variable:
                 self._setup_property_widget(variable)
-                self.set_property(
-                    self.value_property_name, variable.get_value()
-                )
+                self.set_property(self.value_property_name, variable.get_value())
 
         # Update the view
         self.update()
@@ -147,14 +143,8 @@ class VariableGetterNode(BaseCoreNode):
 
     def update_variable_value(self):
         """Update the variable's value from the property widget."""
-        if (
-            self.graph
-            and hasattr(self.graph, "widget_ref")
-            and self.variable_name
-        ):
-            variable = self.graph.widget_ref._find_variable_by_name(
-                self.variable_name
-            )
+        if self.graph and hasattr(self.graph, "widget_ref") and self.variable_name:
+            variable = self.graph.widget_ref._find_variable_by_name(self.variable_name)
             if variable:
                 value = self.get_property(self.value_property_name)
                 variable.set_value(value)
@@ -266,9 +256,7 @@ class VariableGetterNode(BaseCoreNode):
         data = super().serialize()
         data["custom"] = {
             "variable_name": self.variable_name,
-            "variable_type": (
-                self.variable_type.value if self.variable_type else None
-            ),
+            "variable_type": (self.variable_type.value if self.variable_type else None),
             "value": self.get_property(self.value_property_name),
         }
         return data
@@ -297,9 +285,7 @@ class VariableGetterNode(BaseCoreNode):
 
                 # Set the value if it was serialized
                 if "value" in custom_data:
-                    self.set_property(
-                        self.value_property_name, custom_data["value"]
-                    )
+                    self.set_property(self.value_property_name, custom_data["value"])
                     self.update_variable_value()
 
 

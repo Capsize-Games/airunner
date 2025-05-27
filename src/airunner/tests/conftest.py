@@ -35,9 +35,7 @@ def test_db_engine_and_session():
     connection = engine.connect()
 
     # Run Alembic migrations on this connection
-    project_root = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "../../..")
-    )
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
     alembic_ini = os.path.join(project_root, "src", "airunner", "alembic.ini")
     alembic_cfg = Config(alembic_ini)
     alembic_cfg.attributes["connection"] = connection

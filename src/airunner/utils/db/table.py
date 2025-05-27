@@ -18,7 +18,9 @@ def table_exists(table_name):
 def add_table(cls):
     if not table_exists(cls.__tablename__):
         columns = [column.copy() for column in cls.__table__.columns]
-        op.create_table(cls.__tablename__, *columns, *getattr(cls, '__table_args__', ()))
+        op.create_table(
+            cls.__tablename__, *columns, *getattr(cls, "__table_args__", ())
+        )
     else:
         print(f"Table '{cls.__tablename__}' already exists, skipping add.")
     return
@@ -56,9 +58,7 @@ def create_table_with_defaults(model):
                     column_copy.server_default = column.default
                 columns.append(column_copy)
             op.create_table(
-                model.__tablename__,
-                *columns,
-                *getattr(model, '__table_args__', ())
+                model.__tablename__, *columns, *getattr(model, "__table_args__", ())
             )
             set_default_values(model)
         except Exception as e:
@@ -72,7 +72,4 @@ def set_default_values(model):
     for column in model.__table__.columns:
         if column.default is not None:
             default_values[column.name] = column.default.arg
-    op.bulk_insert(
-        model.__table__,
-        [default_values]
-    )
+    op.bulk_insert(model.__table__, [default_values])

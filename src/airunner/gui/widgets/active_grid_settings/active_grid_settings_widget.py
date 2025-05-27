@@ -1,7 +1,8 @@
-
 from PySide6.QtWidgets import QColorDialog
 from airunner.enums import SignalCode
-from airunner.gui.widgets.active_grid_settings.templates.active_grid_settings_ui import Ui_active_grid_settings_widget
+from airunner.gui.widgets.active_grid_settings.templates.active_grid_settings_ui import (
+    Ui_active_grid_settings_widget,
+)
 from airunner.gui.widgets.base_widget import BaseWidget
 from PySide6.QtCore import Slot
 
@@ -12,20 +13,22 @@ class ActiveGridSettingsWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.update_size,
-            SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: self.update_size
+            SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED: self.update_size,
         }
         super().__init__(*args, **kwargs)
-        self.ui.width_slider_widget.setProperty("current_value", self.application_settings.is_maximized)
-        self.ui.height_slider_widget.setProperty("current_value", self.application_settings.working_height)
+        self.ui.width_slider_widget.setProperty(
+            "current_value", self.application_settings.is_maximized
+        )
+        self.ui.height_slider_widget.setProperty(
+            "current_value", self.application_settings.working_height
+        )
         self.ui.width_slider_widget.initialize()
         self.ui.height_slider_widget.initialize()
         self.ui.border_opacity_slider_widget.setProperty(
-            "current_value",
-            self.active_grid_settings.border_opacity
+            "current_value", self.active_grid_settings.border_opacity
         )
         self.ui.fill_opacity_slider_widget.setProperty(
-            "current_value",
-            self.active_grid_settings.fill_opacity
+            "current_value", self.active_grid_settings.fill_opacity
         )
 
         self.ui.border_opacity_slider_widget.initialize()
@@ -34,10 +37,16 @@ class ActiveGridSettingsWidget(BaseWidget):
         self.ui.active_grid_fill_groupbox.blockSignals(True)
         self.ui.active_grid_area_checkbox.blockSignals(True)
         self.ui.size_lock_button.blockSignals(True)
-        self.ui.active_grid_border_groupbox.setChecked(self.active_grid_settings.render_border)
-        self.ui.active_grid_fill_groupbox.setChecked(self.active_grid_settings.render_fill)
+        self.ui.active_grid_border_groupbox.setChecked(
+            self.active_grid_settings.render_border
+        )
+        self.ui.active_grid_fill_groupbox.setChecked(
+            self.active_grid_settings.render_fill
+        )
         self.ui.active_grid_area_checkbox.setChecked(self.active_grid_settings.enabled)
-        self.ui.size_lock_button.setChecked(self.application_settings.active_grid_size_lock)
+        self.ui.size_lock_button.setChecked(
+            self.application_settings.active_grid_size_lock
+        )
         self.ui.active_grid_area_checkbox.blockSignals(False)
         self.ui.active_grid_border_groupbox.blockSignals(False)
         self.ui.active_grid_fill_groupbox.blockSignals(False)
@@ -65,7 +74,10 @@ class ActiveGridSettingsWidget(BaseWidget):
                 height = width
             elif height != self.current_active_grid_height:
                 width = height
-        if self.current_active_grid_height != height or self.current_active_grid_width != width:
+        if (
+            self.current_active_grid_height != height
+            or self.current_active_grid_width != width
+        ):
             self.current_active_grid_width = width
             self.current_active_grid_height = height
             self.ui.width_slider_widget.blockSignals(True)

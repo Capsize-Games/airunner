@@ -15,9 +15,7 @@ class DownloadThread(QThread):
 
     def run(self):
         self.hf_downloader = HuggingfaceDownloader()
-        self.hf_downloader.completed.connect(
-            lambda: self.file_download_finished.emit()
-        )
+        self.hf_downloader.completed.connect(lambda: self.file_download_finished.emit())
         for index, data in enumerate(self.models_to_download):
             if self._stop_event:
                 break
@@ -37,10 +35,14 @@ class DownloadThread(QThread):
                             requested_path=model["path"],
                             requested_file_name=filename,
                             requested_file_path=model["path"],
-                            requested_callback=self.progress_updated.emit
+                            requested_callback=self.progress_updated.emit,
                         )
                 else:
-                    print("Skipping download for model with no files {}".format(model["name"]))
+                    print(
+                        "Skipping download for model with no files {}".format(
+                            model["name"]
+                        )
+                    )
             except Exception as e:
                 print(e)
                 continue
@@ -48,4 +50,3 @@ class DownloadThread(QThread):
 
     def stop(self):
         self._stop_event = True
-

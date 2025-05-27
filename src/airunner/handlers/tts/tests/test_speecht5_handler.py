@@ -17,9 +17,7 @@ class TestSpeechT5ModelManager(unittest.TestCase):
         # Patch in a dummy api attribute to avoid AttributeError
         self.handler.api = MagicMock()
 
-    @patch(
-        "airunner.handlers.tts.speecht5_model_manager.SpeechT5ForTextToSpeech"
-    )
+    @patch("airunner.handlers.tts.speecht5_model_manager.SpeechT5ForTextToSpeech")
     @patch("airunner.handlers.tts.speecht5_model_manager.SpeechT5Processor")
     def test_load_model(self, mock_processor, mock_model):
         mock_model.from_pretrained.return_value = MagicMock()
@@ -30,9 +28,7 @@ class TestSpeechT5ModelManager(unittest.TestCase):
         self.assertIsNotNone(self.handler.model)
         self.assertIsNotNone(self.handler.processor)
 
-    @patch(
-        "airunner.handlers.tts.speecht5_model_manager.SpeechT5ForTextToSpeech"
-    )
+    @patch("airunner.handlers.tts.speecht5_model_manager.SpeechT5ForTextToSpeech")
     def test_unload_model(self, mock_model):
         self.handler.model = mock_model
         self.handler.unload()

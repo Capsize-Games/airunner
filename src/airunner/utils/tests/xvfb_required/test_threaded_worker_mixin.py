@@ -10,9 +10,7 @@ import os
 import pytest
 
 if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
-    pytest.skip(
-        "Skipping Qt/Xvfb test: no display found", allow_module_level=True
-    )
+    pytest.skip("Skipping Qt/Xvfb test: no display found", allow_module_level=True)
 
 """
 Unit tests for ThreadedWorkerMixin in airunner.utils.application.threaded_worker_mixin.

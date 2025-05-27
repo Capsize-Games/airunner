@@ -12,7 +12,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
             "tekken.json",
             "tokenizer.json",
             "tokenizer_config.json",
-        ]
+        ],
     },
     "sentence-transformers/sentence-t5-large": {
         "path_settings": "sentence_transformers_path",
@@ -28,7 +28,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
             "special_tokens_map.json",
             "tokenizer.json",
             "tokenizer_config.json",
-        ]
+        ],
     },
     "meta-llama/Meta-Llama-3-8B-Instruct": {
         "path_settings": "llm_causallm_model_path",
@@ -43,7 +43,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
             "special_tokens_map.json",
             "tokenizer.json",
             "tokenizer_config.json",
-        ]
+        ],
     },
     "intfloat/e5-large": {
         "path_settings": "text_embedding",
@@ -56,7 +56,7 @@ LLM_FILE_BOOTSTRAP_DATA = {
             "special_tokens_map.json",
             "tokenizer.json",
             "tokenizer_config.json",
-            "vocab.txt"
-        ]
+            "vocab.txt",
+        ],
     },
 }

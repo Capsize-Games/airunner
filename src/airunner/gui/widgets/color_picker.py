@@ -7,8 +7,8 @@ class ColorPicker(QColorDialog):
         super().__init__(*args, **kwargs)
         self.setWindowFlags(Qt.WindowType.Widget)
         self.setOptions(
-            QColorDialog.ColorDialogOption.DontUseNativeDialog |
-            QColorDialog.ColorDialogOption.NoButtons
+            QColorDialog.ColorDialogOption.DontUseNativeDialog
+            | QColorDialog.ColorDialogOption.NoButtons
         )
         self.delete_elements(self)
         try:
@@ -33,8 +33,12 @@ class ColorPicker(QColorDialog):
             for child in widget.children():
                 class_name = child.metaObject().className()
                 if class_name in [
-                    "QGridLayout", "QVBoxLayout",
-                    "QWellArray", "QPushButton", "QDialogButtonBox", "QLabel",
+                    "QGridLayout",
+                    "QVBoxLayout",
+                    "QWellArray",
+                    "QPushButton",
+                    "QDialogButtonBox",
+                    "QLabel",
                 ]:
                     child.deleteLater()
                 elif class_name == "QColorPicker":

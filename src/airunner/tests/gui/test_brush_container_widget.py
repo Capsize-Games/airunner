@@ -36,9 +36,7 @@ def dummy_update_drawing_pad_settings(key, value):
 
 
 class TestBrushContainerWidget(BrushContainerWidget):
-    def __init__(
-        self, brush_settings, drawing_pad_settings, api, *args, **kwargs
-    ):
+    def __init__(self, brush_settings, drawing_pad_settings, api, *args, **kwargs):
         self._test_brush_settings = brush_settings
         self._test_drawing_pad_settings = drawing_pad_settings
         self._test_api = api
@@ -102,9 +100,7 @@ def test_brush_container_sad_path_toggle_auto_generate(brush_container_widget):
     )
 
 
-def test_brush_container_bad_path_invalid_color(
-    brush_container_widget, monkeypatch
-):
+def test_brush_container_bad_path_invalid_color(brush_container_widget, monkeypatch):
     """
     Bad path: Simulate color dialog returning invalid color.
     """

@@ -18,10 +18,10 @@ def test_worker_manager_happy_path(monkeypatch):
     # Patch create_worker to return a unique object for each worker type
     created = {}
 
-    def fake_create_worker(cls):
+    def fake_create_worker(cls, *, registry=None, **kwargs):
         obj = object()
         created[cls.__name__] = obj
-        return obj
+        return obj, None
 
     monkeypatch.setattr(
         "airunner.gui.windows.main.worker_manager.create_worker",
@@ -37,19 +37,15 @@ def test_worker_manager_happy_path(monkeypatch):
     # Audio workers may be None if not available, but if present, should be set
     # (We can't guarantee their presence in all environments)
     # Logger should have been called
-    assert any(
-        "Initializing worker manager" in msg for msg in logger.debug_calls
-    )
-    assert any(
-        "INITIALIZE WORKERS COMPLETE" in msg for msg in logger.info_calls
-    )
+    assert any("Initializing worker manager" in msg for msg in logger.debug_calls)
+    assert any("INITIALIZE WORKERS COMPLETE" in msg for msg in logger.info_calls)
 
 
 def test_worker_manager_double_init(monkeypatch):
     # Should be idempotent (re-initializing just overwrites)
     monkeypatch.setattr(
         "airunner.gui.windows.main.worker_manager.create_worker",
-        lambda cls: object(),
+        lambda cls, *, registry=None, **kwargs: (object(), None),
     )
     wm = WorkerManager()
     wm.initialize_workers()
@@ -62,7 +58,7 @@ def test_worker_manager_double_init(monkeypatch):
 def test_worker_manager_bad_logger(monkeypatch):
     monkeypatch.setattr(
         "airunner.gui.windows.main.worker_manager.create_worker",
-        lambda cls: object(),
+        lambda cls, *, registry=None, **kwargs: (object(), None),
     )
     wm = WorkerManager(logger=None)
     wm.initialize_workers()  # Should not raise

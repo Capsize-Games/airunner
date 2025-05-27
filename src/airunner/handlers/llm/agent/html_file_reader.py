@@ -14,17 +14,19 @@ class CombinedMeta(BasePydanticReaderMeta, ABCMeta):
 class HtmlFileReader(BasePydanticReader, ABC, metaclass=CombinedMeta):
     @staticmethod
     def read(file_path):
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             content = file.read()
-        soup = BeautifulSoup(content, 'html.parser')
+        soup = BeautifulSoup(content, "html.parser")
         return soup.get_text()
 
     def load_data(self, *args, **load_kwargs):
         documents = []
         file_path = load_kwargs["extra_info"]["file_path"]
-        documents.append(Document(
-            text=self.read(file_path),
-            id_=load_kwargs["extra_info"]["file_name"],
-            metadata=load_kwargs["extra_info"])
+        documents.append(
+            Document(
+                text=self.read(file_path),
+                id_=load_kwargs["extra_info"]["file_name"],
+                metadata=load_kwargs["extra_info"],
+            )
         )
         return documents

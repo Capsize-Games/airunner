@@ -1,14 +1,21 @@
 import torch
 import accelerate.accelerator
 
-from diffusers.models.normalization import RMSNorm, LayerNorm, FP32LayerNorm, AdaLayerNormContinuous
+from diffusers.models.normalization import (
+    RMSNorm,
+    LayerNorm,
+    FP32LayerNorm,
+    AdaLayerNormContinuous,
+)
 
 
 accelerate.accelerator.convert_outputs_to_fp32 = lambda x: x
 
 
 def LayerNorm_forward(self, x):
-    return torch.nn.functional.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps).to(x)
+    return torch.nn.functional.layer_norm(
+        x, self.normalized_shape, self.weight, self.bias, self.eps
+    ).to(x)
 
 
 LayerNorm.forward = LayerNorm_forward

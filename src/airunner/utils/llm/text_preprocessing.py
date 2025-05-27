@@ -1,6 +1,7 @@
 """
 Utility functions for preprocessing text before speech synthesis.
 """
+
 import re
 import inflect
 
@@ -9,10 +10,10 @@ def prepare_text_for_tts(text: str) -> str:
     """
     Prepare text for text-to-speech processing by replacing characters,
     removing emojis, and converting numbers to words.
-    
+
     Args:
         text: The input text to preprocess
-        
+
     Returns:
         Preprocessed text suitable for TTS
     """
@@ -60,20 +61,21 @@ def strip_emoji_characters(text: str) -> str:
     # strip emojis
     emoji_pattern = re.compile(
         "["
-        "\U0001F600-\U0001F64F"  # emoticons
-        "\U0001F300-\U0001F5FF"  # symbols & pictographs
-        "\U0001F680-\U0001F6FF"  # transport & map symbols
-        "\U0001F700-\U0001F77F"  # alchemical symbols
-        "\U0001F780-\U0001F7FF"  # Geometric Shapes Extended
-        "\U0001F800-\U0001F8FF"  # Supplemental Arrows-C
-        "\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
-        "\U0001FA00-\U0001FA6F"  # Chess Symbols
-        "\U0001FA70-\U0001FAFF"  # Symbols and Pictographs Extended-A
-        "\U00002702-\U000027B0"  # Dingbats
-        "\U000024C2-\U0001F251"
-        "]+", flags=re.UNICODE
+        "\U0001f600-\U0001f64f"  # emoticons
+        "\U0001f300-\U0001f5ff"  # symbols & pictographs
+        "\U0001f680-\U0001f6ff"  # transport & map symbols
+        "\U0001f700-\U0001f77f"  # alchemical symbols
+        "\U0001f780-\U0001f7ff"  # Geometric Shapes Extended
+        "\U0001f800-\U0001f8ff"  # Supplemental Arrows-C
+        "\U0001f900-\U0001f9ff"  # Supplemental Symbols and Pictographs
+        "\U0001fa00-\U0001fa6f"  # Chess Symbols
+        "\U0001fa70-\U0001faff"  # Symbols and Pictographs Extended-A
+        "\U00002702-\U000027b0"  # Dingbats
+        "\U000024c2-\U0001f251"
+        "]+",
+        flags=re.UNICODE,
     )
-    text = emoji_pattern.sub(r'', text)
+    text = emoji_pattern.sub(r"", text)
     return text
 
 
@@ -82,25 +84,29 @@ def replace_numbers_with_words(text: str) -> str:
     p = inflect.engine()
 
     # Handle time formats separately
-    text = re.sub(r'(\d+):(\d+)([APap][Mm])', 
-                lambda m: f"{p.number_to_words(m.group(1))} {p.number_to_words(m.group(2)).replace('zero', '').replace('-', ' ')} {m.group(3)[0].upper()} {m.group(3)[1].upper()}", 
-                text)
-    text = re.sub(r'(\d+):(\d+)', 
-                lambda m: f"{p.number_to_words(m.group(1))} {p.number_to_words(m.group(2)).replace('-', ' ')}", 
-                text)
+    text = re.sub(
+        r"(\d+):(\d+)([APap][Mm])",
+        lambda m: f"{p.number_to_words(m.group(1))} {p.number_to_words(m.group(2)).replace('zero', '').replace('-', ' ')} {m.group(3)[0].upper()} {m.group(3)[1].upper()}",
+        text,
+    )
+    text = re.sub(
+        r"(\d+):(\d+)",
+        lambda m: f"{p.number_to_words(m.group(1))} {p.number_to_words(m.group(2)).replace('-', ' ')}",
+        text,
+    )
 
     # Split text into words and non-word characters
-    words = re.findall(r'\d+|\D+', text)
+    words = re.findall(r"\d+|\D+", text)
 
     for i in range(len(words)):
         if words[i].isdigit():  # check if the word is a digit
-            words[i] = p.number_to_words(words[i]).replace('-', ' ')
+            words[i] = p.number_to_words(words[i]).replace("-", " ")
 
     # Join words with a space to ensure proper spacing
-    result = ' '.join(words).replace('  ', ' ')
+    result = " ".join(words).replace("  ", " ")
 
     # Ensure "PM" and "AM" are correctly spaced
-    result = re.sub(r'\b([AP])M\b', r'\1 M', result)
+    result = re.sub(r"\b([AP])M\b", r"\1 M", result)
 
     return result
 
@@ -115,9 +121,7 @@ def replace_misc_with_words(text: str) -> str:
 
 def roman_to_int(text: str) -> str:
     """Convert Roman numerals to integers."""
-    roman_numerals = {
-        'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000
-    }
+    roman_numerals = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
 
     def convert_roman_to_int(roman):
         total = 0
@@ -132,5 +136,7 @@ def roman_to_int(text: str) -> str:
         return str(total)
 
     # Replace Roman numerals with their integer values
-    result = re.sub(r'\b[IVXLCDM]+\b', lambda match: convert_roman_to_int(match.group(0)), text)
+    result = re.sub(
+        r"\b[IVXLCDM]+\b", lambda match: convert_roman_to_int(match.group(0)), text
+    )
     return result

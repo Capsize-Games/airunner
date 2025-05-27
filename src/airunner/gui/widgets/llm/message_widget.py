@@ -143,12 +143,8 @@ class MessageWidget(BaseWidget):
         self.ui.play_audio_button.setVisible(True)
 
         # Set opacity to make them invisible but keep their layout space
-        self.ui.copy_button.setStyleSheet(
-            "background: transparent; border: none;"
-        )
-        self.ui.delete_button.setStyleSheet(
-            "background: transparent; border: none;"
-        )
+        self.ui.copy_button.setStyleSheet("background: transparent; border: none;")
+        self.ui.delete_button.setStyleSheet("background: transparent; border: none;")
         self.ui.play_audio_button.setStyleSheet(
             "background: transparent; border: none;"
         )
@@ -274,13 +270,9 @@ class MessageWidget(BaseWidget):
     def on_delete_messages_after_id(self, data):
         message_id = data.get("message_id", None)
         if self.message_id > message_id:
-            if (
-                not self._deleted
-            ):  # Check if the widget has already been deleted
+            if not self._deleted:  # Check if the widget has already been deleted
                 try:
-                    if (
-                        self.parentWidget()
-                    ):  # Check if the widget still has a parent
+                    if self.parentWidget():  # Check if the widget still has a parent
                         self.deleteLater()
                 except RuntimeError:
                     pass
@@ -441,9 +433,7 @@ class MessageWidget(BaseWidget):
         else:
             if isinstance(self.content_widget, PlainTextWidget):
                 self.content_widget.appendText(text_chunk)
-            elif isinstance(
-                self.content_widget, (LatexWidget, MarkdownWidget)
-            ):
+            elif isinstance(self.content_widget, (LatexWidget, MarkdownWidget)):
                 # For Latex or Markdown, update with the full accumulated message
                 # as they typically re-render their entire content.
                 self.content_widget.setContent(self.message)
@@ -492,3 +482,15 @@ class MessageWidget(BaseWidget):
     def copy(self):
         clipboard = QApplication.clipboard()
         clipboard.setText(self.message)
+
+    def closeEvent(self, event):
+        # Ensure the class-level resize_thread is stopped and joined on close
+        cls = self.__class__
+        if getattr(cls, "resize_thread", None) is not None:
+            if getattr(cls, "resize_worker", None) is not None:
+                cls.resize_worker.stop()
+            cls.resize_thread.quit()
+            cls.resize_thread.wait()
+            cls.resize_thread = None
+            cls.resize_worker = None
+        super().closeEvent(event)

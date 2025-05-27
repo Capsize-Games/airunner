@@ -26,11 +26,11 @@ def brush_scene(monkeypatch, mock_drawing_pad_settings):
     # Patch all PySide6/Qt parent initializers to prevent C++ code execution
     monkeypatch.setattr(
         "airunner.gui.widgets.canvas.custom_scene.CustomScene.__init__",
-        lambda self, canvas_type: None,
+        lambda self, canvas_type, **kwargs: None,
     )
     monkeypatch.setattr(
         "airunner.gui.widgets.canvas.custom_scene.SettingsMixin.__init__",
-        lambda self: None,
+        lambda self, **kwargs: None,
     )
     monkeypatch.setattr(
         "airunner.utils.application.mediator_mixin.MediatorMixin.__init__",
@@ -42,7 +42,11 @@ def brush_scene(monkeypatch, mock_drawing_pad_settings):
         lambda self, code, slot_function: None,
     )
     # Create BrushScene instance without running real parent initializers
-    scene = BrushScene(canvas_type="test")
+    scene = BrushScene(
+        canvas_type="test",
+        application_settings=MagicMock(current_tool="BRUSH", dark_mode_enabled=False),
+    )
+    scene._application_settings = MagicMock()  # Ensure property works for tests
     # Mock all required attributes
     scene.api = MagicMock()
     scene.api.art.canvas.generate_mask = MagicMock()
@@ -69,3 +73,41 @@ def test_handle_left_mouse_release_calls_save(
     brush_scene._handle_left_mouse_release(event)
     # Should call save on the model
     assert mock_drawing_pad_settings.save.called
+
+
+def test_create_line_handles_deleted_item(brush_scene):
+    """Test _create_line does not crash if active_item's C++ object is deleted."""
+
+    # Simulate active_item raising RuntimeError when pos() is called
+    class DummyItem:
+        def pos(self):
+            raise RuntimeError("Internal C++ object already deleted.")
+
+        def setPixmap(self, pixmap):
+            raise RuntimeError("Internal C++ object already deleted.")
+
+        def updateImage(self, image):
+            raise RuntimeError("Internal C++ object already deleted.")
+
+    # Patch the underlying item (not the property)
+    if getattr(brush_scene, "drawing_pad_settings", None) and getattr(
+        brush_scene.drawing_pad_settings, "mask_layer_enabled", False
+    ):
+        brush_scene.mask_item = DummyItem()
+    else:
+        brush_scene.item = DummyItem()
+
+    brush_scene.start_pos = brush_scene.last_pos = type(
+        "Pt",
+        (),
+        {
+            "__sub__": lambda self, other: 0,
+            "x": lambda self: 0,
+            "y": lambda self: 0,
+        },
+    )()
+    # Should not raise
+    try:
+        brush_scene._create_line(drawing=True, painter=MagicMock(), color=None)
+    except RuntimeError:
+        pytest.fail("_create_line should not raise if active_item is deleted.")

@@ -21,9 +21,7 @@ class BackdropSizer(QtWidgets.QGraphicsItem):
         super(BackdropSizer, self).__init__(parent)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QtWidgets.QGraphicsItem.ItemIsMovable, True)
-        self.setFlag(
-            QtWidgets.QGraphicsItem.ItemSendsScenePositionChanges, True
-        )
+        self.setFlag(QtWidgets.QGraphicsItem.ItemSendsScenePositionChanges, True)
         self.setCursor(QtGui.QCursor(QtCore.Qt.SizeFDiagCursor))
         self.setToolTip("double-click auto resize")
         self._size = size
@@ -171,15 +169,11 @@ class BackdropNodeItem(AbstractNodeItem):
             "width": self._width,
             "height": self._height,
         }
-        self.viewer().node_backdrop_updated.emit(
-            self.id, "sizer_mouse_release", size
-        )
+        self.viewer().node_backdrop_updated.emit(self.id, "sizer_mouse_release", size)
 
     def on_sizer_double_clicked(self):
         size = self.calc_backdrop_size()
-        self.viewer().node_backdrop_updated.emit(
-            self.id, "sizer_double_clicked", size
-        )
+        self.viewer().node_backdrop_updated.emit(self.id, "sizer_double_clicked", size)
 
     def paint(self, painter, option, widget):
         """
@@ -215,9 +209,7 @@ class BackdropNodeItem(AbstractNodeItem):
         painter.setPen(QtCore.Qt.NoPen)
         painter.drawRoundedRect(top_rect, radius, radius)
         for pos in [top_rect.left(), top_rect.right() - 5.0]:
-            painter.drawRect(
-                QtCore.QRectF(pos, top_rect.bottom() - 5.0, 5.0, 5.0)
-            )
+            painter.drawRect(QtCore.QRectF(pos, top_rect.bottom() - 5.0, 5.0, 5.0))
 
         if self.backdrop_text:
             painter.setPen(QtGui.QColor(*self.text_color))

@@ -17,9 +17,7 @@ def test_resize_image():
     fake_image.resize.return_value = "resized_image"
     result = utils.resize_image(fake_image, max_width, max_height)
     assert result == "resized_image"
-    fake_image.resize.assert_called_with(
-        (512, 512), utils.PIL.Image.Resampling.LANCZOS
-    )
+    fake_image.resize.assert_called_with((512, 512), utils.PIL.Image.Resampling.LANCZOS)
 
 
 def test_helper_function():

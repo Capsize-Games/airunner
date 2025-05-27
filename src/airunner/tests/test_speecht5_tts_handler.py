@@ -5,7 +5,7 @@ from airunner.utils import (
     roman_to_int,
     replace_unspeakable_characters,
     strip_emoji_characters,
-    prepare_text_for_tts
+    prepare_text_for_tts,
 )
 
 
@@ -22,12 +22,14 @@ class TestTextPreprocessing(unittest.TestCase):
             "The time is 12:30": "The time is twelve thirty",
             "He is 25 years old": "He is twenty five years old",
             "Room number 404": "Room number four hundred and four",
-            "No numbers here": "No numbers here"
+            "No numbers here": "No numbers here",
         }
 
         for input_text, expected_output in test_cases.items():
             with self.subTest(input_text=input_text, expected_output=expected_output):
-                self.assertEqual(replace_numbers_with_words(input_text), expected_output)
+                self.assertEqual(
+                    replace_numbers_with_words(input_text), expected_output
+                )
 
     def test_roman_to_int(self):
         # Test cases for Roman numerals
@@ -59,14 +61,16 @@ class TestTextPreprocessing(unittest.TestCase):
         test_cases = {
             "Hello... world!": "Hello  world!",
             "This is an ellipsis…": "This is an ellipsis ",
-            'Smart quotes \'single\' and "double"': "Smart quotes single and double",
+            "Smart quotes 'single' and \"double\"": "Smart quotes single and double",
             "Em dash — and en dash –": "Em dash  and en dash ",
             "Tabs\tand\nnewlines\r\n": "Tabs and newlines ",
         }
 
         for input_text, expected_output in test_cases.items():
             with self.subTest(input_text=input_text, expected_output=expected_output):
-                self.assertEqual(replace_unspeakable_characters(input_text), expected_output)
+                self.assertEqual(
+                    replace_unspeakable_characters(input_text), expected_output
+                )
 
     def test_strip_emoji_characters(self):
         # Test cases
@@ -80,7 +84,7 @@ class TestTextPreprocessing(unittest.TestCase):
             "😂👍🏆😊": "",
             "🏆👍😂😊": "",
             "👍🏆😊😂": "",
-            "No emojis here": "No emojis here"
+            "No emojis here": "No emojis here",
         }
 
         for input_text, expected_output in test_cases.items():
@@ -100,7 +104,7 @@ class TestTextPreprocessing(unittest.TestCase):
             "Text with various emojis 😊😂👍🏆": "Text with various emojis",
             "Emojis at the end 😊😂👍🏆": "Emojis at the end",
             "No emojis here": "No emojis here",
-            "It's 25°C outside": "Its twenty five degrees Celsius outside"  # Updated to match actual behavior
+            "It's 25°C outside": "Its twenty five degrees Celsius outside",  # Updated to match actual behavior
         }
 
         for input_text, expected_output in test_cases.items():
@@ -114,12 +118,12 @@ class TestTextPreprocessing(unittest.TestCase):
 
 class TestSpeechT5ModelManager(unittest.TestCase):
     """Tests specific to the SpeechT5ModelManager that aren't covered by text preprocessing tests"""
-    
+
     def test_handler_initialization(self):
         handler = SpeechT5ModelManager()
         self.assertIsNotNone(handler)
         # Add more handler-specific tests if needed
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

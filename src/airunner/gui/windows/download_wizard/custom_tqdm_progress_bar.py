@@ -19,7 +19,7 @@ class CustomTqdmProgressBar:
         miniters=None,
         ascii=None,
         disable=False,
-        unit='it',
+        unit="it",
         unit_scale=False,
         dynamic_ncols=False,
         smoothing=0.3,
@@ -92,9 +92,5 @@ class CustomTqdmProgressBar:
         return self._lock
 
     def clear(self):
-        if hasattr(self, '_lock'):
+        if hasattr(self, "_lock"):
             del self._lock
-
-
-
-

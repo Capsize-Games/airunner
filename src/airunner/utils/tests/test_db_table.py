@@ -20,9 +20,9 @@ def test_get_tables():
     conn = MagicMock()
     inspector = MagicMock()
     inspector.get_table_names.return_value = ["foo", "bar"]
-    with patch(
-        "airunner.utils.db.table.op.get_bind", return_value=conn
-    ), patch("airunner.utils.db.table.sa.inspect", return_value=inspector):
+    with patch("airunner.utils.db.table.op.get_bind", return_value=conn), patch(
+        "airunner.utils.db.table.sa.inspect", return_value=inspector
+    ):
         tables = dbtable.get_tables()
         assert tables == ["foo", "bar"]
 
@@ -31,28 +31,26 @@ def test_table_exists_true_false():
     conn = MagicMock()
     inspector = MagicMock()
     inspector.get_table_names.return_value = ["foo", "bar"]
-    with patch(
-        "airunner.utils.db.table.op.get_bind", return_value=conn
-    ), patch("airunner.utils.db.table.sa.inspect", return_value=inspector):
+    with patch("airunner.utils.db.table.op.get_bind", return_value=conn), patch(
+        "airunner.utils.db.table.sa.inspect", return_value=inspector
+    ):
         assert dbtable.table_exists("foo")
         assert not dbtable.table_exists("baz")
 
 
 def test_add_table_adds_and_skips(capfd):
-    DummyModel.__table__.columns = [
-        MagicMock(copy=MagicMock(return_value=MagicMock()))
-    ]
+    DummyModel.__table__.columns = [MagicMock(copy=MagicMock(return_value=MagicMock()))]
     DummyModel.__table_args__ = ()
     # Table does not exist: should create
-    with patch(
-        "airunner.utils.db.table.table_exists", return_value=False
-    ), patch("airunner.utils.db.table.op.create_table") as create_table:
+    with patch("airunner.utils.db.table.table_exists", return_value=False), patch(
+        "airunner.utils.db.table.op.create_table"
+    ) as create_table:
         dbtable.add_table(DummyModel)
         create_table.assert_called_once()
     # Table exists: should print and skip
-    with patch(
-        "airunner.utils.db.table.table_exists", return_value=True
-    ), patch("airunner.utils.db.table.op.create_table") as create_table:
+    with patch("airunner.utils.db.table.table_exists", return_value=True), patch(
+        "airunner.utils.db.table.op.create_table"
+    ) as create_table:
         dbtable.add_table(DummyModel)
         out, _ = capfd.readouterr()
         assert "already exists" in out
@@ -66,15 +64,15 @@ def test_add_tables_calls_create_table_with_defaults():
 
 def test_drop_table_drops_and_skips(capfd):
     # Table exists: should drop
-    with patch(
-        "airunner.utils.db.table.table_exists", return_value=True
-    ), patch("airunner.utils.db.table.op.drop_table") as drop_table:
+    with patch("airunner.utils.db.table.table_exists", return_value=True), patch(
+        "airunner.utils.db.table.op.drop_table"
+    ) as drop_table:
         dbtable.drop_table(DummyModel)
         drop_table.assert_called_once_with(DummyModel.__tablename__)
     # Table does not exist: should print and skip
-    with patch(
-        "airunner.utils.db.table.table_exists", return_value=False
-    ), patch("airunner.utils.db.table.op.drop_table") as drop_table:
+    with patch("airunner.utils.db.table.table_exists", return_value=False), patch(
+        "airunner.utils.db.table.op.drop_table"
+    ) as drop_table:
         dbtable.drop_table(DummyModel)
         out, _ = capfd.readouterr()
         assert "does not exist" in out
@@ -88,24 +86,22 @@ def test_drop_tables_calls_drop_table():
 
 def test_create_table_with_defaults_success_and_exists(capfd):
     DummyModel.__table__.columns = [
-        MagicMock(
-            copy=MagicMock(return_value=MagicMock(default=None, name="col1"))
-        )
+        MagicMock(copy=MagicMock(return_value=MagicMock(default=None, name="col1")))
     ]
     DummyModel.__table_args__ = ()
     # Table does not exist: should create and set defaults
-    with patch(
-        "airunner.utils.db.table.table_exists", return_value=False
-    ), patch("airunner.utils.db.table.op.create_table") as create_table, patch(
+    with patch("airunner.utils.db.table.table_exists", return_value=False), patch(
+        "airunner.utils.db.table.op.create_table"
+    ) as create_table, patch(
         "airunner.utils.db.table.set_default_values"
     ) as set_defaults:
         dbtable.create_table_with_defaults(DummyModel)
         create_table.assert_called_once()
         set_defaults.assert_called_once_with(DummyModel)
     # Table exists: should print and skip
-    with patch(
-        "airunner.utils.db.table.table_exists", return_value=True
-    ), patch("airunner.utils.db.table.op.create_table") as create_table, patch(
+    with patch("airunner.utils.db.table.table_exists", return_value=True), patch(
+        "airunner.utils.db.table.op.create_table"
+    ) as create_table, patch(
         "airunner.utils.db.table.set_default_values"
     ) as set_defaults:
         dbtable.create_table_with_defaults(DummyModel)
@@ -115,14 +111,10 @@ def test_create_table_with_defaults_success_and_exists(capfd):
 
 def test_create_table_with_defaults_exception(capfd):
     DummyModel.__table__.columns = [
-        MagicMock(
-            copy=MagicMock(return_value=MagicMock(default=None, name="col1"))
-        )
+        MagicMock(copy=MagicMock(return_value=MagicMock(default=None, name="col1")))
     ]
     DummyModel.__table_args__ = ()
-    with patch(
-        "airunner.utils.db.table.table_exists", return_value=False
-    ), patch(
+    with patch("airunner.utils.db.table.table_exists", return_value=False), patch(
         "airunner.utils.db.table.op.create_table",
         side_effect=Exception("fail"),
     ):

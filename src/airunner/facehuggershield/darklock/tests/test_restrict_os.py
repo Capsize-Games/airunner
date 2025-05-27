@@ -15,9 +15,7 @@ class TestRestrictOSAccess(unittest.TestCase):
         # This requires making the Singleton aspect testable or resettable,
         # or carefully managing state if true singleton behavior is critical across tests.
         # For now, let's assume we can get a clean state or reset is handled.
-        RestrictOSAccess._instances = (
-            {}
-        )  # Basic way to reset Singleton for tests
+        RestrictOSAccess._instances = {}  # Basic way to reset Singleton for tests
         self.restrict_os_access = RestrictOSAccess()
         # Store original functions before any test modifies them
         self.original_builtins_open = builtins.open
@@ -279,9 +277,7 @@ class TestRestrictOSAccess(unittest.TestCase):
                 PermissionError,
                 r"File system remove operation on '.*/test_remove.txt' is not allowed.",
             ):
-                os.remove(
-                    "test_remove.txt"
-                )  # This calls the patched os.remove
+                os.remove("test_remove.txt")  # This calls the patched os.remove
             mock_original_remove.assert_not_called()
 
     # The original test_restricted_methods tested the methods on the instance directly.
@@ -356,9 +352,7 @@ class TestRestrictOSAccess(unittest.TestCase):
             self.assertTrue(os.path.exists("/tmp/specific_file.txt"))
 
             # Cleanup
-            self.original_os_remove(
-                "/tmp/specific_file.txt"
-            )  # Use original to cleanup
+            self.original_os_remove("/tmp/specific_file.txt")  # Use original to cleanup
         except PermissionError:
             self.fail(
                 "Opening a whitelisted file/directory raised PermissionError unexpectedly."
@@ -386,18 +380,14 @@ class TestRestrictOSAccess(unittest.TestCase):
         tmp_dir_path = os.path.abspath("temp_test_dir_for_subdir")
 
         # Use activate to set the whitelisted directory
-        self.restrict_os_access.activate(
-            whitelisted_directories=[tmp_dir_path]
-        )
+        self.restrict_os_access.activate(whitelisted_directories=[tmp_dir_path])
 
         # Create the base whitelisted directory first if it doesn't exist
         # This operation itself should be allowed by the whitelisting.
         # However, os.makedirs on tmp_dir_path itself might fail if its parent isn't whitelisted.
         # Let's use original_os_makedirs to set up the whitelisted base directory to avoid this complexity.
         if not os.path.exists(tmp_dir_path):
-            self.original_os_makedirs(
-                tmp_dir_path
-            )  # Use original to set up test
+            self.original_os_makedirs(tmp_dir_path)  # Use original to set up test
 
         subdir_path = os.path.join(tmp_dir_path, "subdir")
         file_in_subdir_path = os.path.join(subdir_path, "file.txt")

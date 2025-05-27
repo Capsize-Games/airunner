@@ -27,6 +27,9 @@ class BaseABCMeta(type(QWidget), ABCMeta):
 class AbstractBaseWidget(
     MediatorMixin, SettingsMixin, QWidget, ABC, metaclass=BaseABCMeta
 ):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @abstractmethod
     def save_state(self):
         """
@@ -98,6 +101,18 @@ class BaseWidget(AbstractBaseWidget):
     def is_dark(self) -> bool:
         return self.application_settings.dark_mode_enabled
 
+    @property
+    def logger(self):
+        if not hasattr(self, "_logger") or self._logger is None:
+            import logging
+
+            self._logger = logging.getLogger(f"airunner.{self.__class__.__name__}")
+        return self._logger
+
+    @logger.setter
+    def logger(self, value):
+        self._logger = value
+
     def initialize_ui(self):
         """
         Initialize the UI for the widget.
@@ -125,7 +140,7 @@ class BaseWidget(AbstractBaseWidget):
         :return:
         """
         for property_name, worker_class_name_ in self.worker_class_map.items():
-            worker = create_worker(worker_class_name_)
+            worker, _ = create_worker(worker_class_name_)
             setattr(self, property_name, worker)
 
     def initialize_form(self):
@@ -179,9 +194,7 @@ class BaseWidget(AbstractBaseWidget):
         try:
             getattr(self, button_name).setIcon(
                 QtGui.QIcon(
-                    os.path.join(
-                        f"src/icons/{icon}{'-light' if is_dark else ''}.png"
-                    )
+                    os.path.join(f"src/icons/{icon}{'-light' if is_dark else ''}.png")
                 )
             )
         except AttributeError as _e:
@@ -248,9 +261,7 @@ class BaseWidget(AbstractBaseWidget):
         # Initialize the debounce timer for splitter movements
         self._splitter_debounce_timer = QTimer(self)
         self._splitter_debounce_timer.setSingleShot(True)
-        self._splitter_debounce_timer.timeout.connect(
-            self._save_splitter_state
-        )
+        self._splitter_debounce_timer.timeout.connect(self._save_splitter_state)
 
         # Connect splitter moved signals with debouncing
         for splitter_name in self.splitters:
@@ -258,9 +269,7 @@ class BaseWidget(AbstractBaseWidget):
                 splitter = getattr(self.ui, splitter_name)
                 if splitter:
                     # When splitter moves, reset the timer
-                    splitter.splitterMoved.connect(
-                        self._debounce_splitter_moved
-                    )
+                    splitter.splitterMoved.connect(self._debounce_splitter_moved)
             except AttributeError:
                 pass
 
@@ -271,3 +280,22 @@ class BaseWidget(AbstractBaseWidget):
     def _save_splitter_state(self):
         # This is called only after the debounce delay with no more movements
         save_splitter_settings(self.ui, self.splitters)
+
+    def closeEvent(self, event):
+        # Clean up any dynamically created workers in worker_class_map
+        for property_name in getattr(self, "worker_class_map", {}).keys():
+            worker = getattr(self, property_name, None)
+            if worker:
+                stop = getattr(worker, "stop", None)
+                cancel = getattr(worker, "cancel", None)
+                if callable(stop):
+                    try:
+                        stop()
+                    except Exception:
+                        pass
+                elif callable(cancel):
+                    try:
+                        cancel()
+                    except Exception:
+                        pass
+        super().closeEvent(event)

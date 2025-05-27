@@ -6,9 +6,7 @@ Covers all public and private methods of Formatter.
 import sys
 import os
 
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
-)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 from airunner.utils.text.formatter import Formatter
 
 import tempfile

@@ -9,6 +9,7 @@ This is a stand alone function which:
 
 The function will run using the venv python interpreter
 """
+
 import os
 import re
 import subprocess
@@ -19,17 +20,17 @@ from airunner.bin.process_qss import generate_resources
 
 def adjust_resource_imports(input_file, output_file):
     # Define the pattern to find the original import lines
-    pattern = re.compile(r'^import (.+_rc)$', re.MULTILINE)
+    pattern = re.compile(r"^import (.+_rc)$", re.MULTILINE)
     # Define the replacement string, incorporating your namespace
-    replacement = r'import airunner.\1'
+    replacement = r"import airunner.\1"
 
-    with open(input_file, 'r') as file:
+    with open(input_file, "r") as file:
         content = file.read()
 
     # Replace the import statements with the ones including your namespace
     adjusted_content = re.sub(pattern, replacement, content)
 
-    with open(output_file, 'w') as file:
+    with open(output_file, "w") as file:
         file.write(adjusted_content)
 
 

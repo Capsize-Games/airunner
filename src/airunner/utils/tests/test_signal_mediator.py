@@ -117,9 +117,7 @@ def test_signal_callback_exception(capfd):
     s.signal.emit({"bad": 1})
     out, err = capfd.readouterr()
     # Accept error output in either stdout or stderr, but also allow for PySide6 signal errors to go to sys.__stderr__
-    assert (
-        "Error in signal callback" in out or "Error in signal callback" in err
-    )
+    assert "Error in signal callback" in out or "Error in signal callback" in err
 
 
 def test_signal_param_count_exception():

@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 from airunner.handlers.tts.tts_model_manager import TTSModelManager
 
+
 class MockTTSModelManager(TTSModelManager):
     def reload_speaker_embeddings(self):
         pass
@@ -18,16 +19,16 @@ class MockTTSModelManager(TTSModelManager):
     def generate(self, message):
         return f"Generated: {message}"
 
+
 class TestTTSModelManager(unittest.TestCase):
     def setUp(self):
         self.mock_settings = MagicMock()
-        self.handler = MockTTSModelManager(
-            path_settings=MagicMock()
-        )
+        self.handler = MockTTSModelManager(path_settings=MagicMock())
 
     def test_generate(self):
         result = self.handler.generate("Test message")
         self.assertEqual(result, "Generated: Test message")
+
 
 if __name__ == "__main__":
     unittest.main()

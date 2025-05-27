@@ -46,9 +46,7 @@ class DummyReActAgentTool(ReActAgentTool):
 def test_from_tools_creates_instance(monkeypatch):
     # Patch ReactAgentEngine.from_tools to return a mock
     mock_engine = MagicMock()
-    monkeypatch.setattr(
-        ReactAgentEngine, "from_tools", lambda *a, **k: mock_engine
-    )
+    monkeypatch.setattr(ReactAgentEngine, "from_tools", lambda *a, **k: mock_engine)
     tool = ReActAgentTool.from_tools(agent="agentX", return_direct=True)
     assert isinstance(tool, ReActAgentTool)
     assert tool.agent == "agentX"
@@ -77,9 +75,7 @@ def test_call_streams_and_handles_response(mock_agent, mock_chat_engine):
 
 
 def test_call_with_empty_stream(mock_agent, mock_chat_engine):
-    mock_chat_engine.stream_chat.return_value = MagicMock(
-        response_gen=iter([])
-    )
+    mock_chat_engine.stream_chat.return_value = MagicMock(response_gen=iter([]))
     tool = DummyReActAgentTool(chat_engine=mock_chat_engine, agent=mock_agent)
     result = tool.call(query="", chat_history=None)
     assert result.content == ""

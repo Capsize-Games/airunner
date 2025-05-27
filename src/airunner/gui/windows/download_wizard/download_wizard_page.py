@@ -52,7 +52,9 @@ class DownloadWizardPage(BaseWizard):
                 data["tqdm_class"].clear()
 
     def closeEvent(self, event):
-        if self.download_thread.isRunning():
-            self.download_thread.stop()
-            self.download_thread.wait()
+        if hasattr(self, "download_thread") and self.download_thread is not None:
+            if self.download_thread.isRunning():
+                self.download_thread.stop()
+                self.download_thread.quit()
+                self.download_thread.wait()
         event.accept()

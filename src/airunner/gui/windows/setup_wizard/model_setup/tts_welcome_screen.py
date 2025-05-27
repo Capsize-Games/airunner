@@ -1,6 +1,8 @@
 from PySide6.QtCore import Slot
 from airunner.gui.windows.setup_wizard.base_wizard import BaseWizard
-from airunner.gui.windows.setup_wizard.model_setup.tts.templates.tts_welcome_screen_ui import Ui_tts_welcome_screen
+from airunner.gui.windows.setup_wizard.model_setup.tts.templates.tts_welcome_screen_ui import (
+    Ui_tts_welcome_screen,
+)
 
 
 class TTSWelcomeScreen(BaseWizard):

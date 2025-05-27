@@ -101,9 +101,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             )
             return
 
-        self.logger.debug(
-            f"Initializing espeak (current status: {self.status})"
-        )
+        self.logger.debug(f"Initializing espeak (current status: {self.status})")
         # Don't call unload() here as it triggers the cycle
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         try:
@@ -147,9 +145,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
         Initialize the Espeak engine with settings.
         """
         if not self._engine:
-            self.logger.error(
-                "Engine not initialized before calling _initialize"
-            )
+            self.logger.error("Engine not initialized before calling _initialize")
             return
 
         try:
@@ -165,9 +161,7 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             # Get all available voices
             available_voices = self._engine.getProperty("voices")
             if not available_voices:
-                self.logger.warning(
-                    "No voices available in the pyttsx3 engine"
-                )
+                self.logger.warning("No voices available in the pyttsx3 engine")
                 return
 
             # Log available voices for debugging
@@ -205,7 +199,5 @@ class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):
             self.change_model_status(ModelType.TTS, ModelStatus.LOADED)
 
         except Exception as e:
-            self.logger.error(
-                f"Error initializing espeak engine properties: {e}"
-            )
+            self.logger.error(f"Error initializing espeak engine properties: {e}")
             self.change_model_status(ModelType.TTS, ModelStatus.FAILED)

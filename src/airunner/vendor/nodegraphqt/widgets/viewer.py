@@ -70,13 +70,9 @@ class NodeViewer(QtWidgets.QGraphicsView):
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.setViewportUpdateMode(
-            QtWidgets.QGraphicsView.BoundingRectViewportUpdate
-        )
+        self.setViewportUpdateMode(QtWidgets.QGraphicsView.BoundingRectViewportUpdate)
         self.setCacheMode(QtWidgets.QGraphicsView.CacheBackground)
-        self.setOptimizationFlag(
-            QtWidgets.QGraphicsView.DontAdjustForAntialiasing
-        )
+        self.setOptimizationFlag(QtWidgets.QGraphicsView.DontAdjustForAntialiasing)
 
         self.setAcceptDrops(True)
         self.resize(850, 800)
@@ -100,9 +96,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         self._prev_selection_pipes = []
         self._node_positions = {}
 
-        self._rubber_band = QtWidgets.QRubberBand(
-            QtWidgets.QRubberBand.Rectangle, self
-        )
+        self._rubber_band = QtWidgets.QRubberBand(QtWidgets.QRubberBand.Rectangle, self)
         self._rubber_band.isActive = False
 
         text_color = QtGui.QColor(
@@ -116,9 +110,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         )
         text_color.setAlpha(50)
         self._cursor_text = QtWidgets.QGraphicsTextItem()
-        self._cursor_text.setFlag(
-            QtWidgets.QGraphicsTextItem.ItemIsSelectable, False
-        )
+        self._cursor_text.setFlag(QtWidgets.QGraphicsTextItem.ItemIsSelectable, False)
         self._cursor_text.setDefaultTextColor(text_color)
         self._cursor_text.setZValue(Z_VAL_PIPE - 1)
         font = self._cursor_text.font()
@@ -175,9 +167,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         self.reject_connection_types = {}
 
     def __repr__(self):
-        return "<{}() object at {}>".format(
-            self.__class__.__name__, hex(id(self))
-        )
+        return "<{}() object at {}>".format(self.__class__.__name__, hex(id(self)))
 
     def focusInEvent(self, event):
         """
@@ -417,9 +407,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
 
         if len(ctx_menu.actions()) > 0:
             if ctx_menu.isEnabled():
-                self.context_menu_prompt.emit(
-                    prompted_data[0], prompted_data[1]
-                )
+                self.context_menu_prompt.emit(prompted_data[0], prompted_data[1])
                 ctx_menu.exec_(event.globalPos())
             else:
                 return super(NodeViewer, self).contextMenuEvent(event)
@@ -436,9 +424,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
 
         self._origin_pos = event.pos()
         self._previous_pos = event.pos()
-        (self._prev_selection_nodes, self._prev_selection_pipes) = (
-            self.selected_items()
-        )
+        (self._prev_selection_nodes, self._prev_selection_pipes) = self.selected_items()
 
         # close tab search
         if self._search_widget.isVisible():
@@ -449,9 +435,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
 
         # pipe slicer enabled.
         if self.pipe_slicing:
-            slicer_mode = all(
-                [self.ALT_state, self.SHIFT_state, self.LMB_state]
-            )
+            slicer_mode = all([self.ALT_state, self.SHIFT_state, self.LMB_state])
             if slicer_mode:
                 self._SLICER_PIPE.draw_path(map_pos, map_pos)
                 self._SLICER_PIPE.setVisible(True)
@@ -575,9 +559,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
                 self._rubber_band.hide()
 
                 rect = QtCore.QRect(self._origin_pos, event.pos()).normalized()
-                rect_items = self.scene().items(
-                    self.mapToScene(rect).boundingRect()
-                )
+                rect_items = self.scene().items(self.mapToScene(rect).boundingRect())
                 node_ids = []
                 for item in rect_items:
                     if isinstance(item, AbstractNodeItem):
@@ -586,9 +568,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
                 # emit the node selection signals.
                 if node_ids:
                     prev_ids = [
-                        n.id
-                        for n in self._prev_selection_nodes
-                        if not n.selected
+                        n.id for n in self._prev_selection_nodes if not n.selected
                     ]
                     self.node_selected.emit(node_ids[0])
                     self.node_selection_changed.emit(node_ids, prev_ids)
@@ -725,9 +705,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
     def dropEvent(self, event):
         pos = self.mapToScene(event.pos())
         event.setDropAction(QtCore.Qt.CopyAction)
-        self.data_dropped.emit(
-            event.mimeData(), QtCore.QPoint(pos.x(), pos.y())
-        )
+        self.data_dropped.emit(event.mimeData(), QtCore.QPoint(pos.x(), pos.y()))
 
     def dragEnterEvent(self, event):
         is_acceptable = any(
@@ -785,15 +763,11 @@ class NodeViewer(QtWidgets.QGraphicsView):
                 # Emit signal with selected node IDs to inform the graph to delete these nodes
                 # Use ["__DELETE_NODES__"] as a special marker in the deselected list to indicate delete operation
                 node_ids = [n.id for n in nodes]
-                self.node_selection_changed.emit(
-                    node_ids, ["__DELETE_NODES__"]
-                )
+                self.node_selection_changed.emit(node_ids, ["__DELETE_NODES__"])
                 return
 
         # Todo: find a better solution to catch modifier keys.
-        if event.modifiers() == (
-            QtCore.Qt.AltModifier | QtCore.Qt.ShiftModifier
-        ):
+        if event.modifiers() == (QtCore.Qt.AltModifier | QtCore.Qt.ShiftModifier):
             self.ALT_state = True
             self.SHIFT_state = True
 
@@ -884,9 +858,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
                     pointer_color = PipeEnum.DISABLED_COLOR.value
             break
 
-        self._LIVE_PIPE.draw_path(
-            self._start_port, cursor_pos=pos, color=pointer_color
-        )
+        self._LIVE_PIPE.draw_path(self._start_port, cursor_pos=pos, color=pointer_color)
 
     def sceneMousePressEvent(self, event):
         """
@@ -1007,9 +979,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         from_ptype = from_port.port_type
 
         # validate the start.
-        from_data = (
-            self.accept_connection_types.get(from_port.node.type_) or {}
-        )
+        from_data = self.accept_connection_types.get(from_port.node.type_) or {}
         constraints = from_data.get(from_ptype, {}).get(from_port.name, {})
         accept_data = constraints.get(to_port.node.type_, {})
         accepted_pnames = accept_data.get(to_ptype, {})
@@ -1059,9 +1029,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
                 return True
             return False
 
-        from_data = (
-            self.reject_connection_types.get(from_port.node.type_) or {}
-        )
+        from_data = self.reject_connection_types.get(from_port.node.type_) or {}
         constraints = from_data.get(from_ptype, {}).get(from_port.name, {})
         reject_data = constraints.get(to_port.node.type_, {})
 
@@ -1106,14 +1074,10 @@ class NodeViewer(QtWidgets.QGraphicsView):
                     self._previous_pos.y() - self._origin_pos.y(),
                 )
                 if dist <= 2.0:  # cursor pos threshold.
-                    self.establish_connection(
-                        self._start_port, self._detached_port
-                    )
+                    self.establish_connection(self._start_port, self._detached_port)
                     self._detached_port = None
                 else:
-                    disconnected.append(
-                        (self._start_port, self._detached_port)
-                    )
+                    disconnected.append((self._start_port, self._detached_port))
                     self.connection_changed.emit(disconnected, connected)
 
             self._detached_port = None
@@ -1131,12 +1095,8 @@ class NodeViewer(QtWidgets.QGraphicsView):
             same_node_connection = False
 
         # constrain check
-        accept_connection = self._validate_accept_connection(
-            self._start_port, end_port
-        )
-        reject_connection = self._validate_reject_connection(
-            self._start_port, end_port
-        )
+        accept_connection = self._validate_accept_connection(self._start_port, end_port)
+        reject_connection = self._validate_reject_connection(self._start_port, end_port)
 
         # restore connection check.
         restore_connection = any(
@@ -1261,9 +1221,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         }
         while check_nodes:
             check_node = check_nodes.pop(0)
-            for check_port in getattr(
-                check_node, io_types[end_port.port_type]
-            ):
+            for check_port in getattr(check_node, io_types[end_port.port_type]):
                 if check_port.connected_ports:
                     for port in check_port.connected_ports:
                         if port.node != start_node:
@@ -1351,9 +1309,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         parent = parent or self
 
         self.clear_key_state()
-        return BaseDialog.question_dialog(
-            parent, text, title, dialog_icon, custom_icon
-        )
+        return BaseDialog.question_dialog(parent, text, title, dialog_icon, custom_icon)
 
     def message_dialog(
         self,
@@ -1376,9 +1332,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         parent = parent or self
 
         self.clear_key_state()
-        BaseDialog.message_dialog(
-            parent, text, title, dialog_icon, custom_icon
-        )
+        BaseDialog.message_dialog(parent, text, title, dialog_icon, custom_icon)
 
     def load_dialog(self, current_dir=None, ext=None, parent=None):
         """
@@ -1396,9 +1350,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
 
         self.clear_key_state()
         ext = "*{} ".format(ext) if ext else ""
-        ext_filter = ";;".join(
-            ["Node Graph ({}*json)".format(ext), "All Files (*)"]
-        )
+        ext_filter = ";;".join(["Node Graph ({}*json)".format(ext), "All Files (*)"])
         file_dlg = FileDialog.getOpenFileName(
             parent, "Open File", current_dir, ext_filter
         )
@@ -1447,9 +1399,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         """
         excl = [self._LIVE_PIPE, self._SLICER_PIPE]
         return [
-            i
-            for i in self.scene().items()
-            if isinstance(i, PipeItem) and i not in excl
+            i for i in self.scene().items() if isinstance(i, PipeItem) and i not in excl
         ]
 
     def all_nodes(self):
@@ -1459,9 +1409,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         Returns:
             list[AbstractNodeItem]: instances of node items.
         """
-        return [
-            i for i in self.scene().items() if isinstance(i, AbstractNodeItem)
-        ]
+        return [i for i in self.scene().items() if isinstance(i, AbstractNodeItem)]
 
     def selected_nodes(self):
         """
@@ -1471,9 +1419,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
             list[AbstractNodeItem]: instances of node items.
         """
         return [
-            i
-            for i in self.scene().selectedItems()
-            if isinstance(i, AbstractNodeItem)
+            i for i in self.scene().selectedItems() if isinstance(i, AbstractNodeItem)
         ]
 
     def selected_pipes(self):
@@ -1483,9 +1429,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         Returns:
             list[Pipe]: pipe items.
         """
-        pipes = [
-            i for i in self.scene().selectedItems() if isinstance(i, PipeItem)
-        ]
+        pipes = [i for i in self.scene().selectedItems() if isinstance(i, PipeItem)]
         return pipes
 
     def selected_items(self):
@@ -1671,20 +1615,14 @@ class NodeViewer(QtWidgets.QGraphicsView):
         zoom = self.get_zoom()
         if zoom < 0.0:
             if not (ZOOM_MIN <= zoom <= ZOOM_MAX):
-                self.logger.debug(
-                    f"[NodeViewer.set_zoom] Out of bounds: zoom={zoom}"
-                )
+                self.logger.debug(f"[NodeViewer.set_zoom] Out of bounds: zoom={zoom}")
                 return
         else:
             if not (ZOOM_MIN <= value <= ZOOM_MAX):
-                self.logger.debug(
-                    f"[NodeViewer.set_zoom] Out of bounds: value={value}"
-                )
+                self.logger.debug(f"[NodeViewer.set_zoom] Out of bounds: value={value}")
                 return
         value = value - zoom
-        self.logger.debug(
-            f"[NodeViewer.set_zoom] Applying delta value={value}"
-        )
+        self.logger.debug(f"[NodeViewer.set_zoom] Applying delta value={value}")
         self._set_viewer_zoom(value, 0.0)
 
     def set_zoom_absolute(self, value: float):

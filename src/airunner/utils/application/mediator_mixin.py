@@ -42,7 +42,7 @@ class MediatorMixin:
                 available_backends = {"rabbitmq": RabbitMQBackend}
 
                 if backend_name in available_backends:
-                    available_backends[backend_name](**message_backend)
+                    backend = available_backends[backend_name](**message_backend)
 
             mediator = SignalMediator(backend=backend)
 

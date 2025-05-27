@@ -9,9 +9,7 @@ from airunner.utils.memory.is_ampere_or_newer import is_ampere_or_newer
 
 
 def test_is_ampere_or_newer_true():
-    with patch(
-        "airunner.utils.memory.is_ampere_or_newer.torch"
-    ) as torch_mock, patch(
+    with patch("airunner.utils.memory.is_ampere_or_newer.torch") as torch_mock, patch(
         "airunner.utils.memory.is_ampere_or_newer.AIRUNNER_DISABLE_FLASH_ATTENTION",
         False,
     ):
@@ -20,9 +18,7 @@ def test_is_ampere_or_newer_true():
 
 
 def test_is_ampere_or_newer_false():
-    with patch(
-        "airunner.utils.memory.is_ampere_or_newer.torch"
-    ) as torch_mock, patch(
+    with patch("airunner.utils.memory.is_ampere_or_newer.torch") as torch_mock, patch(
         "airunner.utils.memory.is_ampere_or_newer.AIRUNNER_DISABLE_FLASH_ATTENTION",
         False,
     ):

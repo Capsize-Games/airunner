@@ -28,9 +28,7 @@ class TestImageFilterAPIServices:
         """Test cancel operation"""
         filter_service.cancel()
 
-        mock_emit_signal.assert_called_once_with(
-            SignalCode.CANVAS_CANCEL_FILTER_SIGNAL
-        )
+        mock_emit_signal.assert_called_once_with(SignalCode.CANVAS_CANCEL_FILTER_SIGNAL)
 
     def test_apply_with_filter_object(self, filter_service, mock_emit_signal):
         """Test apply with filter object"""
@@ -69,9 +67,7 @@ class TestImageFilterAPIServices:
             {"filter_object": filter_object},
         )
 
-    def test_preview_with_filter_object(
-        self, filter_service, mock_emit_signal
-    ):
+    def test_preview_with_filter_object(self, filter_service, mock_emit_signal):
         """Test preview with filter object"""
         filter_object = {"type": "sharpen", "amount": 0.5}
 
@@ -90,9 +86,7 @@ class TestImageFilterAPIServices:
             SignalCode.CANVAS_PREVIEW_FILTER_SIGNAL, {"filter_object": None}
         )
 
-    def test_preview_with_string_filter(
-        self, filter_service, mock_emit_signal
-    ):
+    def test_preview_with_string_filter(self, filter_service, mock_emit_signal):
         """Test preview with string filter object"""
         filter_object = "grayscale"
 
@@ -103,9 +97,7 @@ class TestImageFilterAPIServices:
             {"filter_object": filter_object},
         )
 
-    def test_all_methods_called_sequentially(
-        self, filter_service, mock_emit_signal
-    ):
+    def test_all_methods_called_sequentially(self, filter_service, mock_emit_signal):
         """Test calling all methods in sequence"""
         filter_object = {"type": "sepia"}
 

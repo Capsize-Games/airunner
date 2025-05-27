@@ -77,9 +77,7 @@ class AudioCaptureWorker(Worker):
         is_receiving_input = False
 
         while (
-            self.listening
-            and self.running
-            and self.api.sounddevice_manager.in_stream
+            self.listening and self.running and self.api.sounddevice_manager.in_stream
         ):
             try:
                 # Use the actual sample rate from the stream if available
@@ -92,9 +90,7 @@ class AudioCaptureWorker(Worker):
                     else self.stt_settings.fs
                 )
                 frames = int(chunk_duration * actual_fs)
-                chunk_data = self.api.sounddevice_manager.read_from_input(
-                    frames
-                )
+                chunk_data = self.api.sounddevice_manager.read_from_input(frames)
 
                 if chunk_data is None or chunk_data[0] is None:
                     QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
@@ -108,10 +104,7 @@ class AudioCaptureWorker(Worker):
                 QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
                 continue
 
-            if (
-                self._use_playback_stream
-                and self.api.sounddevice_manager.out_stream
-            ):
+            if self._use_playback_stream and self.api.sounddevice_manager.out_stream:
                 try:
                     self.api.sounddevice_manager.write_to_output(chunk)
                 except Exception as e:
@@ -130,9 +123,7 @@ class AudioCaptureWorker(Worker):
                 end_time = voice_input_start_time + silence_buffer_seconds
                 if time.time() >= end_time:
                     if len(recording) > 0:
-                        self.logger.debug(
-                            "Sending audio to audio_processor_worker"
-                        )
+                        self.logger.debug("Sending audio to audio_processor_worker")
                         self.emit_signal(
                             SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL,
                             {
@@ -145,9 +136,7 @@ class AudioCaptureWorker(Worker):
                         recording = []
                         is_receiving_input = False
             if is_receiving_input:
-                chunk_bytes = np.int16(
-                    chunk * 32767
-                ).tobytes()  # convert to bytes
+                chunk_bytes = np.int16(chunk * 32767).tobytes()  # convert to bytes
                 recording.append(chunk_bytes)
 
         while not self.listening and self.running:
@@ -185,15 +174,11 @@ class AudioCaptureWorker(Worker):
             import sounddevice as sd
 
             devices = sd.query_devices()
-            input_devices = [
-                d for d in devices if d.get("max_input_channels", 0) > 0
-            ]
+            input_devices = [d for d in devices if d.get("max_input_channels", 0) > 0]
             self.logger.debug(
                 f"Available input devices: {[d['name'] for d in input_devices]}"
             )
-            self.logger.debug(
-                f"Selected recording device: {self.recording_device}"
-            )
+            self.logger.debug(f"Selected recording device: {self.recording_device}")
         except Exception as e:
             self.logger.error(f"Error querying audio devices: {e}")
 
@@ -234,12 +219,10 @@ class AudioCaptureWorker(Worker):
             self.logger.debug(
                 f"Initializing monitoring playback stream with device: {device_name}"
             )
-            playback_success = (
-                self.api.sounddevice_manager.initialize_output_stream(
-                    samplerate=samplerate,
-                    channels=channels,
-                    device_name=device_name,
-                )
+            playback_success = self.api.sounddevice_manager.initialize_output_stream(
+                samplerate=samplerate,
+                channels=channels,
+                device_name=device_name,
             )
             if not playback_success:
                 self.logger.error(

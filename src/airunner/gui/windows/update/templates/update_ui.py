@@ -8,29 +8,63 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog, QDialogButtonBox,
-    QFormLayout, QLabel, QSizePolicy, QWidget)
+from PySide6.QtCore import (
+    QCoreApplication,
+    QDate,
+    QDateTime,
+    QLocale,
+    QMetaObject,
+    QObject,
+    QPoint,
+    QRect,
+    QSize,
+    QTime,
+    QUrl,
+    Qt,
+)
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QConicalGradient,
+    QCursor,
+    QFont,
+    QFontDatabase,
+    QGradient,
+    QIcon,
+    QImage,
+    QKeySequence,
+    QLinearGradient,
+    QPainter,
+    QPalette,
+    QPixmap,
+    QRadialGradient,
+    QTransform,
+)
+from PySide6.QtWidgets import (
+    QAbstractButton,
+    QApplication,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QLabel,
+    QSizePolicy,
+    QWidget,
+)
+
 
 class Ui_update_available(object):
     def setupUi(self, update_available):
         if not update_available.objectName():
-            update_available.setObjectName(u"update_available")
+            update_available.setObjectName("update_available")
         update_available.resize(327, 151)
         self.layoutWidget = QWidget(update_available)
-        self.layoutWidget.setObjectName(u"layoutWidget")
+        self.layoutWidget.setObjectName("layoutWidget")
         self.layoutWidget.setGeometry(QRect(10, 10, 309, 124))
         self.formLayout = QFormLayout(self.layoutWidget)
-        self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setObjectName("formLayout")
         self.formLayout.setContentsMargins(0, 0, 0, 0)
         self.label = QLabel(self.layoutWidget)
-        self.label.setObjectName(u"label")
+        self.label.setObjectName("label")
         font = QFont()
         font.setPointSize(14)
         font.setBold(False)
@@ -39,40 +73,62 @@ class Ui_update_available(object):
         self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label)
 
         self.current_version_label = QLabel(self.layoutWidget)
-        self.current_version_label.setObjectName(u"current_version_label")
+        self.current_version_label.setObjectName("current_version_label")
 
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.current_version_label)
+        self.formLayout.setWidget(
+            1, QFormLayout.ItemRole.LabelRole, self.current_version_label
+        )
 
         self.latest_version_label = QLabel(self.layoutWidget)
-        self.latest_version_label.setObjectName(u"latest_version_label")
+        self.latest_version_label.setObjectName("latest_version_label")
 
-        self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.latest_version_label)
+        self.formLayout.setWidget(
+            2, QFormLayout.ItemRole.LabelRole, self.latest_version_label
+        )
 
         self.label_2 = QLabel(self.layoutWidget)
-        self.label_2.setObjectName(u"label_2")
+        self.label_2.setObjectName("label_2")
 
         self.formLayout.setWidget(3, QFormLayout.ItemRole.LabelRole, self.label_2)
 
         self.buttonBox = QDialogButtonBox(self.layoutWidget)
-        self.buttonBox.setObjectName(u"buttonBox")
+        self.buttonBox.setObjectName("buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
 
         self.formLayout.setWidget(4, QFormLayout.ItemRole.LabelRole, self.buttonBox)
-
 
         self.retranslateUi(update_available)
         self.buttonBox.accepted.connect(update_available.accept)
         self.buttonBox.rejected.connect(update_available.reject)
 
         QMetaObject.connectSlotsByName(update_available)
+
     # setupUi
 
     def retranslateUi(self, update_available):
-        update_available.setWindowTitle(QCoreApplication.translate("update_available", u"Update Available", None))
-        self.label.setText(QCoreApplication.translate("update_available", u"New Version of AI Runner available", None))
-        self.current_version_label.setText(QCoreApplication.translate("update_available", u"You are currently running version", None))
-        self.latest_version_label.setText(QCoreApplication.translate("update_available", u"The latest version is", None))
-        self.label_2.setText(QCoreApplication.translate("update_available", u"Click OK to update to the latest version.", None))
-    # retranslateUi
+        update_available.setWindowTitle(
+            QCoreApplication.translate("update_available", "Update Available", None)
+        )
+        self.label.setText(
+            QCoreApplication.translate(
+                "update_available", "New Version of AI Runner available", None
+            )
+        )
+        self.current_version_label.setText(
+            QCoreApplication.translate(
+                "update_available", "You are currently running version", None
+            )
+        )
+        self.latest_version_label.setText(
+            QCoreApplication.translate(
+                "update_available", "The latest version is", None
+            )
+        )
+        self.label_2.setText(
+            QCoreApplication.translate(
+                "update_available", "Click OK to update to the latest version.", None
+            )
+        )
 
+    # retranslateUi

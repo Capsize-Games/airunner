@@ -64,9 +64,7 @@ def test_cancel_closes(monkeypatch):
     ai.wizard = MagicMock()
     ai.download_wizard = MagicMock()
     ai.close_on_cancel = True
-    monkeypatch.setattr(
-        AppInstaller, "quit", staticmethod(lambda *a, **k: None)
-    )
+    monkeypatch.setattr(AppInstaller, "quit", staticmethod(lambda *a, **k: None))
     monkeypatch.setattr(
         sys, "exit", lambda code=0: (_ for _ in ()).throw(SystemExit(code))
     )
@@ -88,8 +86,6 @@ def test_quit_calls_app(monkeypatch):
             pass
 
     dummy_app = DummyApp()
-    monkeypatch.setattr(
-        "PySide6.QtWidgets.QApplication.instance", lambda: dummy_app
-    )
+    monkeypatch.setattr("PySide6.QtWidgets.QApplication.instance", lambda: dummy_app)
     AppInstaller.quit()
     assert dummy_app.called
