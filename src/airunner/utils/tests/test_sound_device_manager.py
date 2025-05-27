@@ -113,9 +113,7 @@ def test_initialize_input_stream_device_none(mock_idx, mock_stream, sdm):
 
 @patch("sounddevice.InputStream", side_effect=Exception("fail"))
 @patch.object(SoundDeviceManager, "get_input_device_index", return_value=None)
-def test_initialize_input_stream_device_none_error_branch(
-    mock_idx, mock_stream, sdm
-):
+def test_initialize_input_stream_device_none_error_branch(mock_idx, mock_stream, sdm):
     # Covers the branch where device_index is None and error is logged
     with patch.object(sdm.logger, "error") as mock_log:
         assert not sdm.initialize_input_stream(device_name="pulse")
@@ -156,9 +154,7 @@ def test_initialize_output_stream_device_none(mock_idx, mock_stream, sdm):
 
 @patch("sounddevice.OutputStream", side_effect=Exception("fail"))
 @patch.object(SoundDeviceManager, "get_output_device_index", return_value=None)
-def test_initialize_output_stream_device_none_error_branch(
-    mock_idx, mock_stream, sdm
-):
+def test_initialize_output_stream_device_none_error_branch(mock_idx, mock_stream, sdm):
     # Covers the branch where device_index is None and error is logged
     with patch.object(sdm.logger, "error") as mock_log:
         assert not sdm.initialize_output_stream(device_name="pulse")

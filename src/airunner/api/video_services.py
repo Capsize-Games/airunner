@@ -1,6 +1,7 @@
 from .api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 
+
 class VideoAPIService(APIServiceBase):
     def generate(self, data):
         self.emit_signal(SignalCode.VIDEO_GENERATE_SIGNAL, data)

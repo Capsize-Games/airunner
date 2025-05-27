@@ -49,9 +49,7 @@ def test_history_widget_handles_detached_conversations(
 ):
     """Test that the history widget gracefully handles DetachedInstanceError scenarios."""
 
-    with patch(
-        "airunner.data.models.Conversation.objects.filter"
-    ) as mock_filter:
+    with patch("airunner.data.models.Conversation.objects.filter") as mock_filter:
         # Mix detached and attached conversations to test robustness
         mock_filter.return_value = [
             mock_detached_conversation,
@@ -70,9 +68,7 @@ def test_history_widget_handles_detached_conversations(
         conversation_widgets = []
         for i in range(layout.count()):
             item = layout.itemAt(i)
-            if item.widget() and isinstance(
-                item.widget(), LLMHistoryItemWidget
-            ):
+            if item.widget() and isinstance(item.widget(), LLMHistoryItemWidget):
                 conversation_widgets.append(item.widget())
 
         # Should have 2 conversation widgets (both detached and attached)
@@ -106,16 +102,11 @@ def test_history_item_widget_handles_detached_instance_gracefully(
 
         # The widget should display fallback text instead of crashing
         conversation_description = widget.ui.conversation_description
-        assert (
-            "[Conversation unavailable]"
-            in conversation_description.toPlainText()
-        )
+        assert "[Conversation unavailable]" in conversation_description.toPlainText()
 
         # Also check that botname and timestamp show fallback values
         botname_label = widget.ui.botname
-        assert (
-            "Test Bot" in botname_label.text()
-        )  # Should show the mocked chatbot name
+        assert "Test Bot" in botname_label.text()  # Should show the mocked chatbot name
 
         timestamp_label = widget.ui.timestamp
         assert (
@@ -130,9 +121,7 @@ def test_history_item_widget_handles_detached_instance_gracefully(
 def test_history_widget_handles_empty_filter_result(qtbot):
     """Test that the widget handles empty conversation list gracefully."""
 
-    with patch(
-        "airunner.data.models.Conversation.objects.filter"
-    ) as mock_filter:
+    with patch("airunner.data.models.Conversation.objects.filter") as mock_filter:
         mock_filter.return_value = []
 
         widget = LLMHistoryWidget()
@@ -163,9 +152,7 @@ def test_history_widget_conversation_sorting():
         mock_convo.timestamp = f"2025-05-24 12:0{i}:00"
         convos.append(mock_convo)
 
-    with patch(
-        "airunner.data.models.Conversation.objects.filter"
-    ) as mock_filter:
+    with patch("airunner.data.models.Conversation.objects.filter") as mock_filter:
         mock_filter.return_value = convos
 
         widget = LLMHistoryWidget()
@@ -176,9 +163,7 @@ def test_history_widget_conversation_sorting():
         conversation_widgets = []
         for i in range(layout.count()):
             item = layout.itemAt(i)
-            if item.widget() and isinstance(
-                item.widget(), LLMHistoryItemWidget
-            ):
+            if item.widget() and isinstance(item.widget(), LLMHistoryItemWidget):
                 conversation_widgets.append(item.widget())
 
         # Should be sorted [5, 4, 3, 2, 1]
@@ -194,9 +179,7 @@ def test_filter_query_avoids_session_boundary_issues():
     """Test that using filter() instead of order_by().all() avoids session issues."""
 
     # This test verifies that we're not chaining methods across session boundaries
-    with patch(
-        "airunner.data.models.Conversation.objects.filter"
-    ) as mock_filter:
+    with patch("airunner.data.models.Conversation.objects.filter") as mock_filter:
         mock_filter.return_value = []
 
         widget = LLMHistoryWidget()

@@ -6,9 +6,7 @@ from airunner.vendor.nodegraphqt.constants import ViewerEnum
 class TextEditNode(NodeBaseWidget):
     NODE_NAME = "TextEdit Node"
 
-    def __init__(
-        self, parent=None, name="", label="", text="", placeholder_text=""
-    ):
+    def __init__(self, parent=None, name="", label="", text="", placeholder_text=""):
         super(TextEditNode, self).__init__(parent, name, label)
         bg_color = ViewerEnum.BACKGROUND_COLOR.value
         text_color = tuple(map(lambda i, j: i - j, (255, 255, 255), bg_color))

@@ -37,9 +37,7 @@ class AbstractNodeItem(QtWidgets.QGraphicsItem):
         self._height = NodeEnum.HEIGHT.value
 
     def __repr__(self):
-        return "{}.{}('{}')".format(
-            self.__module__, self.__class__.__name__, self.name
-        )
+        return "{}.{}('{}')".format(self.__module__, self.__class__.__name__, self.name)
 
     def boundingRect(self):
         return QtCore.QRectF(0.0, 0.0, self._width, self._height)

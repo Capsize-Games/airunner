@@ -66,7 +66,7 @@ class AppInstaller(QObject, SettingsMixin, MediatorMixin):
         self.app = QApplication.instance()
         if self.app is None:
             self.app = QApplication([])
-        
+
         self.wizard = SetupWizardWindow()
         self.wizard.exec()
 

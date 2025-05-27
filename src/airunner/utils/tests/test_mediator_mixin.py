@@ -69,9 +69,7 @@ def test_signal_handlers_property():
 def test_mediator_mixin_init_with_message_backend(monkeypatch):
     import airunner.utils.application.mediator_mixin as mm_mod
 
-    mm_mod.AIRUNNER_MESSAGE_BACKEND = (
-        '{"type": "rabbitmq", "host": "localhost"}'
-    )
+    mm_mod.AIRUNNER_MESSAGE_BACKEND = '{"type": "rabbitmq", "host": "localhost"}'
     called = {}
 
     class DummyRabbitMQBackend:

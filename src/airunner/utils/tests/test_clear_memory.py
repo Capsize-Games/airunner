@@ -14,12 +14,8 @@ def test_clear_memory_with_torch():
         clear_memory(device=0)
         torch_mock.cuda.set_device.assert_called_once_with(0)
         torch_mock.cuda.empty_cache.assert_called_once()
-        torch_mock.cuda.reset_max_memory_allocated.assert_called_once_with(
-            device=0
-        )
-        torch_mock.cuda.reset_max_memory_cached.assert_called_once_with(
-            device=0
-        )
+        torch_mock.cuda.reset_max_memory_allocated.assert_called_once_with(device=0)
+        torch_mock.cuda.reset_max_memory_cached.assert_called_once_with(device=0)
         torch_mock.cuda.synchronize.assert_called_once_with(device=0)
 
 
@@ -33,9 +29,7 @@ def test_clear_memory_no_torch(monkeypatch):
 def test_clear_memory_runtimeerror(capfd):
     import importlib
 
-    clear_memory_mod = importlib.import_module(
-        "airunner.utils.memory.clear_memory"
-    )
+    clear_memory_mod = importlib.import_module("airunner.utils.memory.clear_memory")
 
     class DummyCuda:
         def is_available(self):
@@ -61,9 +55,7 @@ def test_clear_memory_runtimeerror(capfd):
     try:
         clear_memory_mod.clear_memory()
         out, err = capfd.readouterr()
-        assert (
-            "Failed to clear memory" in out or "Failed to clear memory" in err
-        )
+        assert "Failed to clear memory" in out or "Failed to clear memory" in err
     finally:
         if old_torch is not None:
             clear_memory_mod.torch = old_torch

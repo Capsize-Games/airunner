@@ -108,9 +108,7 @@ def test_set_default_prompt_templates():
 def test_set_default_controlnet_models():
     with patch("airunner.utils.db.bootstrap.op") as op_mock, patch(
         "airunner.utils.db.bootstrap.ControlnetModel", __table__=MagicMock()
-    ), patch(
-        "airunner.utils.db.bootstrap.controlnet_bootstrap_data", [{"foo": 1}]
-    ):
+    ), patch("airunner.utils.db.bootstrap.controlnet_bootstrap_data", [{"foo": 1}]):
         dbboot.set_default_controlnet_models()
         op_mock.bulk_insert.assert_called_once()
 
@@ -129,9 +127,7 @@ def test_set_default_font_settings():
 def test_set_default_pipeline_values():
     with patch("airunner.utils.db.bootstrap.op") as op_mock, patch(
         "airunner.utils.db.bootstrap.PipelineModel", __table__=MagicMock()
-    ), patch(
-        "airunner.utils.db.bootstrap.pipeline_bootstrap_data", [{"pipe": 4}]
-    ):
+    ), patch("airunner.utils.db.bootstrap.pipeline_bootstrap_data", [{"pipe": 4}]):
         dbboot.set_default_pipeline_values()
         assert op_mock.bulk_insert.call_count == 1
 

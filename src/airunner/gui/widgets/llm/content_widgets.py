@@ -72,9 +72,7 @@ class PlainTextWidget(BaseContentWidget):
         super().__init__(parent)
         self.textEdit = QTextEdit(self)
         self.textEdit.setReadOnly(True)
-        self.textEdit.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
+        self.textEdit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.textEdit.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
@@ -86,9 +84,7 @@ class PlainTextWidget(BaseContentWidget):
         self.textEdit.setPalette(palette)
 
         # Set word wrap mode to make text fit within the widget
-        self.textEdit.setWordWrapMode(
-            QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere
-        )
+        self.textEdit.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
         self.textEdit.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
 
         # Set frame style

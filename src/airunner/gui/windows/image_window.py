@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 class ImageWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Video Feed')
+        self.setWindowTitle("Video Feed")
         self.layout = QVBoxLayout()
         self.label = QLabel()
         self.layout.addWidget(self.label)
@@ -27,7 +27,7 @@ class ImageWindow(QWidget):
             image.width,
             image.height,
             image.width * 3,
-            QImage.Format.Format_RGB888
+            QImage.Format.Format_RGB888,
         )
         pixmap = QPixmap.fromImage(qim)
         self.label.setPixmap(pixmap)

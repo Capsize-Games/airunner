@@ -14,9 +14,7 @@ def history_widget(qtbot):
     mock_convo.chatbot_id = 1
     mock_convo.timestamp = "now"
     mock_convo.id = 1
-    with patch(
-        "airunner.data.models.Conversation.objects.filter"
-    ) as mock_filter:
+    with patch("airunner.data.models.Conversation.objects.filter") as mock_filter:
         mock_filter.return_value = [mock_convo]
         widget = llm_history_widget.LLMHistoryWidget()
         qtbot.addWidget(widget)
@@ -37,9 +35,7 @@ def test_history_widget_constructs_and_loads(history_widget):
 
 def test_history_widget_handles_empty_conversations():
     """Test that the widget handles empty conversation list gracefully."""
-    with patch(
-        "airunner.data.models.Conversation.objects.filter"
-    ) as mock_filter:
+    with patch("airunner.data.models.Conversation.objects.filter") as mock_filter:
         mock_filter.return_value = []
         widget = llm_history_widget.LLMHistoryWidget()
         widget.load_conversations()
@@ -63,9 +59,7 @@ def test_history_widget_sorts_conversations_by_id_desc():
     mock_convo2.timestamp = "time2"
 
     # Return conversations in ascending order to test sorting
-    with patch(
-        "airunner.data.models.Conversation.objects.filter"
-    ) as mock_filter:
+    with patch("airunner.data.models.Conversation.objects.filter") as mock_filter:
         mock_filter.return_value = [mock_convo1, mock_convo2]
         widget = llm_history_widget.LLMHistoryWidget()
         widget.load_conversations()

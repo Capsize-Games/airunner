@@ -76,9 +76,7 @@ class FramePackHandler(BaseModelManager):
     # Signal for frame updates
     frame_ready = Signal(object)  # Emits either a QPixmap or np.ndarray
     video_completed = Signal(str)  # Emits the path to the completed video file
-    progress_update = Signal(
-        int, str
-    )  # Emits progress percentage and status message
+    progress_update = Signal(int, str)  # Emits progress percentage and status message
 
     def __init__(self):
         self._model_status = {
@@ -206,11 +204,9 @@ class FramePackHandler(BaseModelManager):
             self.logger.info("Loading Transformer...")
 
             # Load Transformer (HunyuanDiT)
-            self.transformer = (
-                HunyuanVideoTransformer3DModelPacked.from_pretrained(
-                    transformer_model_id, torch_dtype=torch.bfloat16
-                ).cpu()
-            )
+            self.transformer = HunyuanVideoTransformer3DModelPacked.from_pretrained(
+                transformer_model_id, torch_dtype=torch.bfloat16
+            ).cpu()
             self.logger.info("Transformer loaded.")
 
             # Set models to eval mode
@@ -266,12 +262,8 @@ class FramePackHandler(BaseModelManager):
             else:
                 # Use DynamicSwap for better memory efficiency
                 self.logger.info("Installing DynamicSwap for low VRAM mode...")
-                DynamicSwapInstaller.install_model(
-                    self.transformer, device=gpu
-                )
-                DynamicSwapInstaller.install_model(
-                    self.text_encoder, device=gpu
-                )
+                DynamicSwapInstaller.install_model(self.transformer, device=gpu)
+                DynamicSwapInstaller.install_model(self.text_encoder, device=gpu)
                 self.logger.info("DynamicSwap installed.")
 
             self.change_model_status(ModelType.VIDEO, ModelStatus.READY)
@@ -331,12 +323,8 @@ class FramePackHandler(BaseModelManager):
             return True
 
         except Exception as e:
-            self.logger.error(
-                f"Failed to unload FramePack models: {e}", exc_info=True
-            )
-            self.api.application_error(
-                f"Failed to unload FramePack models: {str(e)}"
-            )
+            self.logger.error(f"Failed to unload FramePack models: {e}", exc_info=True)
+            self.api.application_error(f"Failed to unload FramePack models: {str(e)}")
             return False
 
     def generate_video(
@@ -402,7 +390,9 @@ class FramePackHandler(BaseModelManager):
             )
 
             self.logger.info("Starting video generation thread")
-            self.generation_thread.daemon = True  # Make thread daemonic so it doesn't block application exit
+            self.generation_thread.daemon = (
+                True  # Make thread daemonic so it doesn't block application exit
+            )
             self.generation_thread.start()
             self.logger.info(
                 f"Generation thread started: {self.generation_thread.ident}"
@@ -426,9 +416,7 @@ class FramePackHandler(BaseModelManager):
     ):
         """Thread function for video generation."""
         job_id = generate_timestamp()
-        self.stream.push(
-            ("progress", (None, "", f"Starting video generation..."))
-        )
+        self.stream.push(("progress", (None, "", f"Starting video generation...")))
 
         try:
             # --- Ensure all models are loaded ---
@@ -469,9 +457,7 @@ class FramePackHandler(BaseModelManager):
                 input_image_np = input_image
 
             # Find nearest dimension bucket for optimal processing
-            height, width = bucket_tools.find_nearest_bucket(
-                H, W, resolution=640
-            )
+            height, width = bucket_tools.find_nearest_bucket(H, W, resolution=640)
             input_image_np = resize_and_center_crop(
                 input_image_np, target_width=width, target_height=height
             )
@@ -482,18 +468,14 @@ class FramePackHandler(BaseModelManager):
             )
 
             # Convert to tensor format
-            input_image_pt = (
-                torch.from_numpy(input_image_np).float() / 127.5 - 1
-            )
+            input_image_pt = torch.from_numpy(input_image_np).float() / 127.5 - 1
             input_image_pt = input_image_pt.permute(2, 0, 1)[None, :, None]
 
             # --- Text encoding ---
             self.stream.push(("progress", (None, "", f"Text encoding...")))
 
             if not self.config.get("high_vram", False):
-                memory_utils.fake_diffusers_current_device(
-                    self.text_encoder, gpu
-                )
+                memory_utils.fake_diffusers_current_device(self.text_encoder, gpu)
                 memory_utils.load_model_as_complete(
                     self.text_encoder_2, target_device=gpu
                 )
@@ -534,9 +516,7 @@ class FramePackHandler(BaseModelManager):
             self.stream.push(("progress", (None, "", f"VAE encoding...")))
 
             if not self.config.get("high_vram", False):
-                memory_utils.load_model_as_complete(
-                    self.vae, target_device=gpu
-                )
+                memory_utils.load_model_as_complete(self.vae, target_device=gpu)
 
             start_latent = hunyuan.vae_encode(input_image_pt.to(gpu), self.vae)
 
@@ -551,9 +531,7 @@ class FramePackHandler(BaseModelManager):
             image_encoder_output = clip_vision.hf_clip_vision_encode(
                 input_image_np, self.feature_extractor, self.image_encoder
             )
-            image_encoder_hidden_states = (
-                image_encoder_output.last_hidden_state
-            )
+            image_encoder_hidden_states = image_encoder_output.last_hidden_state
 
             # --- Convert all tensors to the same dtype ---
             dtype = self.transformer.dtype
@@ -564,9 +542,7 @@ class FramePackHandler(BaseModelManager):
             image_encoder_hidden_states = image_encoder_hidden_states.to(dtype)
 
             # --- Video generation settings ---
-            self.stream.push(
-                ("progress", (None, "", f"Starting video generation..."))
-            )
+            self.stream.push(("progress", (None, "", f"Starting video generation...")))
 
             seed = int(config.get("seed", 42))
             rnd = torch.Generator("cpu").manual_seed(seed)
@@ -576,9 +552,7 @@ class FramePackHandler(BaseModelManager):
             # Calculate sections based on video length
             total_latent_sections = int(
                 max(
-                    round(
-                        (total_second_length * 30) / (latent_window_size * 4)
-                    ),
+                    round((total_second_length * 30) / (latent_window_size * 4)),
                     1,
                 )
             )
@@ -594,9 +568,7 @@ class FramePackHandler(BaseModelManager):
             # Determine latent padding sequence
             if total_latent_sections > 4:
                 # Use padding trick from the original code
-                latent_paddings = (
-                    [3] + [2] * (total_latent_sections - 3) + [1, 0]
-                )
+                latent_paddings = [3] + [2] * (total_latent_sections - 3) + [1, 0]
             else:
                 latent_paddings = list(reversed(range(total_latent_sections)))
 
@@ -612,9 +584,7 @@ class FramePackHandler(BaseModelManager):
                 # Calculate indices for frame processing
                 indices = torch.arange(
                     0,
-                    sum(
-                        [1, latent_padding_size, latent_window_size, 1, 2, 16]
-                    ),
+                    sum([1, latent_padding_size, latent_window_size, 1, 2, 16]),
                 ).unsqueeze(0)
 
                 (
@@ -637,9 +607,7 @@ class FramePackHandler(BaseModelManager):
                 # Prepare clean latents
                 clean_latents_pre = start_latent.to(history_latents)
                 clean_latents_post, clean_latents_2x, clean_latents_4x = (
-                    history_latents[:, :, : 1 + 2 + 16, :, :].split(
-                        [1, 2, 16], dim=2
-                    )
+                    history_latents[:, :, : 1 + 2 + 16, :, :].split([1, 2, 16], dim=2)
                 )
                 clean_latents = torch.cat(
                     [clean_latents_pre, clean_latents_post], dim=2
@@ -679,9 +647,7 @@ class FramePackHandler(BaseModelManager):
                         .astype(np.uint8)
                     )
                     # Corrected einsum string: bcthu -> bhtuc
-                    preview_sequence = np.einsum(
-                        "bcthu->bhtuc", preview
-                    ).squeeze(0)
+                    preview_sequence = np.einsum("bcthu->bhtuc", preview).squeeze(0)
 
                     # Select the last frame for preview (shape: h, u, c)
                     # Assuming time is the second dimension (index 1) after squeeze
@@ -717,9 +683,7 @@ class FramePackHandler(BaseModelManager):
                     height=height,
                     frames=num_frames,
                     real_guidance_scale=config.get("cfg", 1.0),
-                    distilled_guidance_scale=config.get(
-                        "guidance_scale", 10.0
-                    ),
+                    distilled_guidance_scale=config.get("guidance_scale", 10.0),
                     guidance_rescale=config.get("random_seed", 0.0),
                     num_inference_steps=config.get("steps", 25),
                     generator=rnd,
@@ -753,9 +717,7 @@ class FramePackHandler(BaseModelManager):
                     )
 
                 # Update counters and history
-                total_generated_latent_frames += int(
-                    generated_latents.shape[2]
-                )
+                total_generated_latent_frames += int(generated_latents.shape[2])
                 history_latents = torch.cat(
                     [generated_latents.to(history_latents), history_latents],
                     dim=2,
@@ -768,9 +730,7 @@ class FramePackHandler(BaseModelManager):
                         target_device=gpu,
                         preserved_memory_gb=8,
                     )
-                    memory_utils.load_model_as_complete(
-                        self.vae, target_device=gpu
-                    )
+                    memory_utils.load_model_as_complete(self.vae, target_device=gpu)
 
                 # Get latents for this section and decode
                 real_history_latents = history_latents[
@@ -842,9 +802,7 @@ class FramePackHandler(BaseModelManager):
             return final_output_filename
 
         except Exception as e:
-            self.logger.error(
-                f"Error during video generation: {str(e)}", exc_info=True
-            )
+            self.logger.error(f"Error during video generation: {str(e)}", exc_info=True)
             self.stream.push(("error", str(e)))
             self.api.application_error(f"FramePack error: {str(e)}")
             return None
@@ -886,9 +844,7 @@ class FramePackHandler(BaseModelManager):
             from PySide6.QtGui import QImage, QPixmap
 
             height, width, channel = preview.shape
-            q_img = QImage(
-                preview.data, width, height, width * 3, QImage.Format_RGB888
-            )
+            q_img = QImage(preview.data, width, height, width * 3, QImage.Format_RGB888)
             pixmap = QPixmap.fromImage(q_img)
             self.frame_ready.emit(pixmap)
 

@@ -9,9 +9,10 @@ from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 
 class RAGEngineTool(ChatEngineTool):
     """RAG tool.
-    
+
     A tool for querying data with RAG.
     """
+
     @classmethod
     def from_defaults(
         cls,
@@ -20,7 +21,7 @@ class RAGEngineTool(ChatEngineTool):
         description: Optional[str] = None,
         return_direct: bool = False,
         resolve_input_errors: bool = True,
-        agent=None
+        agent=None,
     ) -> "RAGEngineTool":
         name = name or "rag_engine_tool"
         description = description or """Useful for querying data with RAG."""
@@ -32,5 +33,5 @@ class RAGEngineTool(ChatEngineTool):
             chat_engine=chat_engine,
             metadata=metadata,
             resolve_input_errors=resolve_input_errors,
-            agent=agent
+            agent=agent,
         )

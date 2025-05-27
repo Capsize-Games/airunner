@@ -41,15 +41,11 @@ class TestEmbeddingAPIServices:
 
     def test_status_changed(self, embedding_service, mock_emit_signal):
         embedding_service.status_changed()
-        mock_emit_signal.assert_called_once_with(
-            SignalCode.EMBEDDING_STATUS_CHANGED
-        )
+        mock_emit_signal.assert_called_once_with(SignalCode.EMBEDDING_STATUS_CHANGED)
 
     def test_update(self, embedding_service, mock_emit_signal):
         embedding_service.update()
-        mock_emit_signal.assert_called_once_with(
-            SignalCode.EMBEDDING_UPDATE_SIGNAL
-        )
+        mock_emit_signal.assert_called_once_with(SignalCode.EMBEDDING_UPDATE_SIGNAL)
 
     def test_get_all_results_happy(self, embedding_service, mock_emit_signal):
         embeddings = [1, 2, 3]
@@ -71,9 +67,7 @@ class TestEmbeddingAPIServices:
             SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL, {"embeddings": None}
         )
 
-    def test_get_all_results_invalid_type(
-        self, embedding_service, mock_emit_signal
-    ):
+    def test_get_all_results_invalid_type(self, embedding_service, mock_emit_signal):
         embedding_service.get_all_results(42)
         mock_emit_signal.assert_called_once_with(
             SignalCode.EMBEDDING_GET_ALL_RESULTS_SIGNAL, {"embeddings": 42}

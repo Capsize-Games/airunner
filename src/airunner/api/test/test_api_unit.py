@@ -98,9 +98,7 @@ def test_set_download_progress(api):
 
 def test_clear_download_status(api):
     api.clear_download_status()
-    api.emit_signal.assert_called_once_with(
-        SignalCode.CLEAR_DOWNLOAD_STATUS_BAR
-    )
+    api.emit_signal.assert_called_once_with(SignalCode.CLEAR_DOWNLOAD_STATUS_BAR)
 
 
 def test_set_download_status(api):
@@ -139,16 +137,12 @@ def test_clear_prompts(api):
 
 def test_keyboard_shortcuts_updated(api):
     api.keyboard_shortcuts_updated()
-    api.emit_signal.assert_called_once_with(
-        SignalCode.KEYBOARD_SHORTCUTS_UPDATED
-    )
+    api.emit_signal.assert_called_once_with(SignalCode.KEYBOARD_SHORTCUTS_UPDATED)
 
 
 def test_reset_paths(api):
     api.reset_paths()
-    api.emit_signal.assert_called_once_with(
-        SignalCode.APPLICATION_RESET_PATHS_SIGNAL
-    )
+    api.emit_signal.assert_called_once_with(SignalCode.APPLICATION_RESET_PATHS_SIGNAL)
 
 
 def test_application_settings_changed(api):
@@ -189,9 +183,7 @@ def test_retranslate_ui_signal(api):
 
 def test_update_locale(api):
     api.update_locale({"lang": "en"})
-    api.emit_signal.assert_called_once_with(
-        SignalCode.UPATE_LOCALE, {"lang": "en"}
-    )
+    api.emit_signal.assert_called_once_with(SignalCode.UPATE_LOCALE, {"lang": "en"})
 
 
 def test_llm_model_download_progress(api):

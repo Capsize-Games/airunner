@@ -1,8 +1,7 @@
-
 from airunner.enums import ImageGenerator, GeneratorSection
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.image_generator_preferences.templates.image_generator_preferences_ui import (
-    Ui_image_generator_preferences
+    Ui_image_generator_preferences,
 )
 
 
@@ -21,7 +20,9 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
         self.ui.category.clear()
         for item in ImageGenerator:
             self.ui.category.addItem(item.value)
-        self.ui.category.setCurrentText(self.application_settings.current_image_generator)
+        self.ui.category.setCurrentText(
+            self.application_settings.current_image_generator
+        )
         self.ui.category.blockSignals(False)
 
     def initialize_pipeline(self):
@@ -29,7 +30,9 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
         self.ui.pipeline.clear()
         for item in ImageGenerator:
             self.ui.pipeline.addItem(item.value)
-        self.ui.pipeline.setCurrentText(self.application_settings.current_image_generator)
+        self.ui.pipeline.setCurrentText(
+            self.application_settings.current_image_generator
+        )
         self.ui.pipeline.blockSignals(False)
 
     def initialize_action(self):
@@ -42,8 +45,12 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
 
     def stablediffusion_toggled(self, val):
         if val:
-            self.update_application_settings("current_image_generator", ImageGenerator.STABLEDIFFUSION.value)
-            self.update_application_settings("generator_section", GeneratorSection.TXT2IMG.value)
+            self.update_application_settings(
+                "current_image_generator", ImageGenerator.STABLEDIFFUSION.value
+            )
+            self.update_application_settings(
+                "generator_section", GeneratorSection.TXT2IMG.value
+            )
 
     def category_changed(self, val):
         self.update_application_settings("generator_section", val)
@@ -59,4 +66,3 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
 
     def model_changed(self, val):
         self.update_application_settings("current_image_generator", val)
-

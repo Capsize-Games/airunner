@@ -1,6 +1,7 @@
 import unittest
 from airunner.handlers.stablediffusion.rect import Rect
 
+
 class TestRect(unittest.TestCase):
     def test_left(self):
         rect = Rect(x=10, y=20, width=30, height=40)
@@ -15,6 +16,7 @@ class TestRect(unittest.TestCase):
         rect.translate(5, -5)
         self.assertEqual(rect.x, 15)
         self.assertEqual(rect.y, 15)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -284,7 +284,5 @@ def test_repr_subgraph(dummy_qgraphics_item):
             return "Group"
 
     parent = DummyParent()
-    sg = SubGraph(
-        parent=parent, node=DummyGroupNode(), node_factory=NodeFactory()
-    )
+    sg = SubGraph(parent=parent, node=DummyGroupNode(), node_factory=NodeFactory())
     assert "SubGraph" in repr(sg)

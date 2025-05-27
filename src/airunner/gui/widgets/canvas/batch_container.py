@@ -14,6 +14,9 @@ from airunner.gui.widgets.canvas.templates.image_layer_item_ui import (
 )
 from airunner.enums import SignalCode
 from airunner.utils.image.export_image import get_today_folder
+from airunner.gui.widgets.canvas.logic.batch_container_logic import (
+    BatchContainerLogic,
+)
 
 
 class BatchContainer(BaseWidget):
@@ -24,15 +27,9 @@ class BatchContainer(BaseWidget):
         self.signal_handlers = {
             SignalCode.SD_UPDATE_BATCH_IMAGES_SIGNAL: self.update_batch_images,
         }
-        self.current_date_folder = (
-            None  # Tracks the currently selected date folder
-        )
-        self.current_batch_folder = (
-            None  # Tracks the currently selected batch folder
-        )
-        self.back_button = (
-            None  # Reference to the back button when in a batch folder
-        )
+        self.current_date_folder = None  # Tracks the currently selected date folder
+        self.current_batch_folder = None  # Tracks the currently selected batch folder
+        self.back_button = None  # Reference to the back button when in a batch folder
         super().__init__(*args, **kwargs)
         self.setup_ui_connections()
 
@@ -141,9 +138,7 @@ class BatchContainer(BaseWidget):
             )
         else:
             # If no folders exist, use today's folder
-            self.current_date_folder = get_today_folder(
-                self.path_settings.image_path
-            )
+            self.current_date_folder = get_today_folder(self.path_settings.image_path)
 
     def _get_date_folder_path(self, display_date: str) -> str:
         """Convert display date (YYYY-MM-DD) to folder path."""
@@ -271,9 +266,7 @@ class BatchContainer(BaseWidget):
         else:
             # We're viewing a date folder - display batches and loose images
             batches = self.find_date_batches(self.current_date_folder)
-            loose_images = self.find_date_loose_images(
-                self.current_date_folder
-            )
+            loose_images = self.find_date_loose_images(self.current_date_folder)
 
             # Add batch images
             for batch in batches:
@@ -287,9 +280,7 @@ class BatchContainer(BaseWidget):
                 self._add_image_layer_item(image_path, None, layout)
 
         # Add spacer at the bottom
-        spacer = QSpacerItem(
-            20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
-        )
+        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
         layout.addItem(spacer)
 
     def update_batch_images(self, data: Dict):
@@ -311,9 +302,7 @@ class ImageLayerItemWidget(QWidget):
 
         # Set the cursor for better UX
         self.setCursor(Qt.PointingHandCursor)
-        self.setAcceptDrops(
-            False
-        )  # This widget is a drag source, not a target
+        self.setAcceptDrops(False)  # This widget is a drag source, not a target
         self._drag_start_pos = None
 
     def mousePressEvent(self, event):
@@ -363,6 +352,5 @@ class ImageLayerItemWidget(QWidget):
 def natural_sort_key(s):
     """Helper for natural sorting (e.g., batch_2 before batch_10)."""
     return [
-        int(text) if text.isdigit() else text.lower()
-        for text in re.split(r"(\d+)", s)
+        int(text) if text.isdigit() else text.lower() for text in re.split(r"(\d+)", s)
     ]

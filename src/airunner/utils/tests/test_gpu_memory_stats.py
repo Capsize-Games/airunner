@@ -13,9 +13,7 @@ def test_gpu_memory_stats_cuda():
     mock_device = MagicMock()
     mock_device.type = "cuda"
     with patch("airunner.utils.memory.gpu_memory_stats.torch") as torch_mock:
-        torch_mock.cuda.get_device_properties.return_value.total_memory = (
-            8 * 1024**3
-        )
+        torch_mock.cuda.get_device_properties.return_value.total_memory = 8 * 1024**3
         torch_mock.cuda.memory_allocated.return_value = 2 * 1024**3
         torch_mock.cuda.get_device_name.return_value = "Mock GPU"
         stats = gpu_memory_stats(mock_device)

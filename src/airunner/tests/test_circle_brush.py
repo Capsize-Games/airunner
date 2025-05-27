@@ -86,9 +86,7 @@ def test_circle_cursor_drawing_operations_with_factories():
         cursor_factory=cursor_factory,
     )
     mock_pixmap.fill.assert_called_once_with(Qt.GlobalColor.transparent)
-    mock_painter.setRenderHint.assert_called_once_with(
-        QPainter.RenderHint.Antialiasing
-    )
+    mock_painter.setRenderHint.assert_called_once_with(QPainter.RenderHint.Antialiasing)
     assert mock_painter.setPen.call_count == 2
     assert mock_painter.setBrush.call_count == 2
     assert mock_painter.drawEllipse.call_count == 2

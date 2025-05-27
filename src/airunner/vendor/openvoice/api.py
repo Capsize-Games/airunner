@@ -32,12 +32,8 @@ class OpenVoiceBaseClass(object):
         self.device = device
 
     def load_ckpt(self, ckpt_path):
-        checkpoint_dict = torch.load(
-            ckpt_path, map_location=torch.device(self.device)
-        )
-        a, b = self.model.load_state_dict(
-            checkpoint_dict["model"], strict=False
-        )
+        checkpoint_dict = torch.load(ckpt_path, map_location=torch.device(self.device))
+        a, b = self.model.load_state_dict(checkpoint_dict["model"], strict=False)
         print("Loaded checkpoint '{}'".format(ckpt_path))
         print("missing/unexpected keys:", a, b)
 
@@ -166,9 +162,7 @@ class ToneColorConverter(OpenVoiceBaseClass):
     ):
         hps = self.hps
         # load audio
-        audio, sample_rate = librosa.load(
-            audio_src_path, sr=hps.data.sampling_rate
-        )
+        audio, sample_rate = librosa.load(audio_src_path, sr=hps.data.sampling_rate)
         audio = torch.tensor(audio).float()
 
         with torch.no_grad():
@@ -215,12 +209,8 @@ class ToneColorConverter(OpenVoiceBaseClass):
 
             with torch.no_grad():
                 signal = torch.FloatTensor(trunck).to(device)[None]
-                message_tensor = torch.FloatTensor(message_npy).to(device)[
-                    None
-                ]
-                signal_wmd_tensor = self.watermark_model.encode(
-                    signal, message_tensor
-                )
+                message_tensor = torch.FloatTensor(message_npy).to(device)[None]
+                signal_wmd_tensor = self.watermark_model.encode(signal, message_tensor)
                 signal_wmd_npy = signal_wmd_tensor.detach().cpu().squeeze()
             audio[(coeff * n) * K : (coeff * n + 1) * K] = signal_wmd_npy
         return audio

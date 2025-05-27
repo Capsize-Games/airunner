@@ -19,9 +19,7 @@ def service():
 
 def test_recenter_grid(service):
     service.recenter_grid()
-    service.emit_signal.assert_called_once_with(
-        SignalCode.RECENTER_GRID_SIGNAL
-    )
+    service.emit_signal.assert_called_once_with(SignalCode.RECENTER_GRID_SIGNAL)
 
 
 def test_toggle_grid(service):
@@ -130,23 +128,17 @@ def test_update_image_positions(service):
 
 def test_paste_image(service):
     service.paste_image()
-    service.emit_signal.assert_called_once_with(
-        SignalCode.CANVAS_PASTE_IMAGE_SIGNAL
-    )
+    service.emit_signal.assert_called_once_with(SignalCode.CANVAS_PASTE_IMAGE_SIGNAL)
 
 
 def test_copy_image(service):
     service.copy_image()
-    service.emit_signal.assert_called_once_with(
-        SignalCode.CANVAS_COPY_IMAGE_SIGNAL
-    )
+    service.emit_signal.assert_called_once_with(SignalCode.CANVAS_COPY_IMAGE_SIGNAL)
 
 
 def test_cut_image(service):
     service.cut_image()
-    service.emit_signal.assert_called_once_with(
-        SignalCode.CANVAS_CUT_IMAGE_SIGNAL
-    )
+    service.emit_signal.assert_called_once_with(SignalCode.CANVAS_CUT_IMAGE_SIGNAL)
 
 
 def test_rotate_image_90_clockwise(service):
@@ -175,9 +167,7 @@ def test_show_layers(service):
 
 def test_zoom_level_changed(service):
     service.zoom_level_changed()
-    service.emit_signal.assert_called_once_with(
-        SignalCode.CANVAS_ZOOM_LEVEL_CHANGED
-    )
+    service.emit_signal.assert_called_once_with(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
 
 
 def test_interrupt_image_generation(service):

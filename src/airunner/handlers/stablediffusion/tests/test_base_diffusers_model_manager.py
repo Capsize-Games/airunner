@@ -33,9 +33,7 @@ def test_get_results_yields_expected(monkeypatch):
     data = {"foo": "bar"}
     # Patch torch.no_grad and torch.amp.autocast to be no-ops
     monkeypatch.setattr(torch, "no_grad", lambda: patch("builtins.open"))
-    monkeypatch.setattr(
-        torch.amp, "autocast", lambda *a, **k: patch("builtins.open")
-    )
+    monkeypatch.setattr(torch.amp, "autocast", lambda *a, **k: patch("builtins.open"))
     results = list(BaseDiffusersModelManager._get_results(mgr, data))
     assert len(results) == mgr.image_request.n_samples
     for r in results:
@@ -46,9 +44,7 @@ def test_get_results_interrupt(monkeypatch):
     mgr = make_manager(n_samples=2)
     data = {"foo": "bar"}
     monkeypatch.setattr(torch, "no_grad", lambda: patch("builtins.open"))
-    monkeypatch.setattr(
-        torch.amp, "autocast", lambda *a, **k: patch("builtins.open")
-    )
+    monkeypatch.setattr(torch.amp, "autocast", lambda *a, **k: patch("builtins.open"))
     mgr.do_interrupt_image_generation = True
     with pytest.raises(InterruptedException):
         next(BaseDiffusersModelManager._get_results(mgr, data))

@@ -34,9 +34,7 @@ class TestChatbotAPIService:
             SignalCode.BOT_MOOD_UPDATED, {"mood": mood}
         )
 
-    def test_update_mood_different_moods(
-        self, chatbot_service, mock_emit_signal
-    ):
+    def test_update_mood_different_moods(self, chatbot_service, mock_emit_signal):
         """Test update_mood with various mood values"""
         test_moods = ["sad", "excited", "confused", "angry", "neutral"]
 
@@ -63,9 +61,7 @@ class TestChatbotAPIService:
             SignalCode.BOT_MOOD_UPDATED, {"mood": ""}
         )
 
-    def test_update_mood_numeric_value(
-        self, chatbot_service, mock_emit_signal
-    ):
+    def test_update_mood_numeric_value(self, chatbot_service, mock_emit_signal):
         """Test update_mood with numeric value"""
         chatbot_service.update_mood(42)
 
@@ -73,9 +69,7 @@ class TestChatbotAPIService:
             SignalCode.BOT_MOOD_UPDATED, {"mood": 42}
         )
 
-    def test_update_mood_complex_object(
-        self, chatbot_service, mock_emit_signal
-    ):
+    def test_update_mood_complex_object(self, chatbot_service, mock_emit_signal):
         """Test update_mood with complex object"""
         mood_data = {"emotion": "happy", "intensity": 0.8}
 

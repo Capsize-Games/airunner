@@ -34,9 +34,7 @@ class TestLoraAPIServices:
         """Test status_changed operation"""
         lora_service.status_changed()
 
-        mock_emit_signal.assert_called_once_with(
-            SignalCode.LORA_STATUS_CHANGED
-        )
+        mock_emit_signal.assert_called_once_with(SignalCode.LORA_STATUS_CHANGED)
 
     def test_delete_with_widget(self, lora_service, mock_emit_signal):
         """Test delete with lora widget object"""
@@ -81,9 +79,7 @@ class TestLoraAPIServices:
             SignalCode.LORA_DELETE_SIGNAL, {"lora_widget": lora_widget}
         )
 
-    def test_all_methods_called_sequentially(
-        self, lora_service, mock_emit_signal
-    ):
+    def test_all_methods_called_sequentially(self, lora_service, mock_emit_signal):
         """Test calling all methods in sequence"""
         lora_widget = {"id": "test_lora"}
 

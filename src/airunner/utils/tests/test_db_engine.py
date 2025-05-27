@@ -13,7 +13,7 @@ def test_get_connection():
 
 
 def test_get_inspector():
-    with patch(
-        "airunner.utils.db.engine.get_connection", return_value="conn"
-    ), patch("airunner.utils.db.engine.sa.inspect", return_value="inspector"):
+    with patch("airunner.utils.db.engine.get_connection", return_value="conn"), patch(
+        "airunner.utils.db.engine.sa.inspect", return_value="inspector"
+    ):
         assert dbengine.get_inspector() == "inspector"

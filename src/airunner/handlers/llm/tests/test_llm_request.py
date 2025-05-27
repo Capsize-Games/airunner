@@ -54,9 +54,7 @@ class TestLLMRequest(unittest.TestCase):
     def test_to_dict_single_beam(self):
         """Test that beam-specific parameters are removed when num_beams=1."""
         # Create a request with a single beam
-        request = LLMRequest(
-            num_beams=1, length_penalty=1.2, early_stopping=True
-        )
+        request = LLMRequest(num_beams=1, length_penalty=1.2, early_stopping=True)
 
         # Convert to dict
         result = request.to_dict()
@@ -166,9 +164,7 @@ class TestLLMRequest(unittest.TestCase):
 
     @patch("airunner.handlers.llm.llm_request.LLMGeneratorSettings")
     @patch("airunner.handlers.llm.llm_request.Chatbot")
-    def test_from_llm_settings_override(
-        self, mock_chatbot_class, mock_settings_class
-    ):
+    def test_from_llm_settings_override(self, mock_chatbot_class, mock_settings_class):
         """Test from_llm_settings with override_parameters True and False."""
         # Setup for override_parameters True
         mock_settings = MagicMock()

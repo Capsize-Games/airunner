@@ -362,9 +362,7 @@ echo "Script completed"''',
 }""",
         }
 
-        return samples.get(
-            language, "// No sample code available for this language"
-        )
+        return samples.get(language, "// No sample code available for this language")
 
 
 if __name__ == "__main__":

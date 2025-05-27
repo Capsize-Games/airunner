@@ -102,9 +102,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         locale_language = None
 
         # Get the locale language from the data dictionary
-        locale_language_string = (
-            data.get("gui_language", None) if data else None
-        )
+        locale_language_string = data.get("gui_language", None) if data else None
         if locale_language_string:
             locale_language = LANGUAGE_TO_LOCALE_MAP[
                 AvailableLanguage(locale_language_string)
@@ -122,9 +120,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 try:
                     locale_language = LANGUAGE_TO_LOCALE_MAP[lang]
                 except KeyError:
-                    locale_language = LANGUAGE_TO_LOCALE_MAP.get(
-                        AvailableLanguage.EN
-                    )
+                    locale_language = LANGUAGE_TO_LOCALE_MAP.get(AvailableLanguage.EN)
 
         # If still no locale language, use the system locale
         if not locale_language:
@@ -148,9 +144,10 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self._load_translations(locale=QLocale(locale_language))
 
     @staticmethod
-    def run_setup_wizard():
+    def should_run_setup_wizard() -> bool:
+        """Business logic: Should the setup wizard run?"""
         if AIRUNNER_DISABLE_SETUP_WIZARD:
-            return
+            return False
         application_settings = ApplicationSettings.objects.first()
         path_settings = PathSettings.objects.first()
         if path_settings is None:
@@ -160,10 +157,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
             ApplicationSettings.objects.create()
             application_settings = ApplicationSettings.objects.first()
         base_path = path_settings.base_path
-        if (
-            not os.path.exists(base_path)
-            or application_settings.run_setup_wizard
-        ):
+        return not os.path.exists(base_path) or application_settings.run_setup_wizard
+
+    @staticmethod
+    def run_setup_wizard():
+        """Display logic: Actually launch the setup wizard if needed."""
+        if App.should_run_setup_wizard():
             from airunner.app_installer import AppInstaller
 
             AppInstaller()
@@ -175,9 +174,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         """
         if not locale:
             locale = QLocale.system()
-        translations_dir = os.path.join(
-            os.path.dirname(__file__), "translations"
-        )
+        translations_dir = os.path.join(os.path.dirname(__file__), "translations")
         translator = QTranslator()
         language_map = {
             QLocale.English: "english",
@@ -194,9 +191,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
             if base_name != "english":
                 english_qm_path = os.path.join(translations_dir, "english.qm")
                 fallback_translator = QTranslator()
-                if os.path.exists(
+                if os.path.exists(english_qm_path) and fallback_translator.load(
                     english_qm_path
-                ) and fallback_translator.load(english_qm_path):
+                ):
                     self.app.installTranslator(fallback_translator)
                     self.app.translator = fallback_translator
                     self.retranslate_ui_signal()
@@ -216,9 +213,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             return  # Skip GUI initialization if the flag is False
         signal.signal(signal.SIGINT, self.signal_handler)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
-        QApplication.setAttribute(
-            Qt.ApplicationAttribute.AA_EnableHighDpiScaling
-        )
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling)
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
         self.app = QApplication.instance()
         if self.app is None:
@@ -327,8 +322,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
     def update_splash_message(splash, message: str):
         splash.showMessage(
             message,
-            QtCore.Qt.AlignmentFlag.AlignBottom
-            | QtCore.Qt.AlignmentFlag.AlignCenter,
+            QtCore.Qt.AlignmentFlag.AlignBottom | QtCore.Qt.AlignmentFlag.AlignCenter,
             QtCore.Qt.GlobalColor.white,
         )
 

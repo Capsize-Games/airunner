@@ -1,7 +1,9 @@
+from airunner.utils.image import convert_binary_to_image
 from .api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 from PySide6.QtCore import QPoint
 from airunner.handlers.stablediffusion.image_response import ImageResponse
+
 
 class CanvasAPIService(APIServiceBase):
     def recenter_grid(self):
@@ -14,7 +16,9 @@ class CanvasAPIService(APIServiceBase):
         self.emit_signal(SignalCode.GENERATE_MASK)
 
     def mask_response(self, mask):
-        self.emit_signal(SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, {"mask": mask})
+        self.emit_signal(
+            SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL, {"mask": mask}
+        )
 
     def image_updated(self):
         self.emit_signal(SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL)
@@ -32,7 +36,9 @@ class CanvasAPIService(APIServiceBase):
         self.emit_signal(SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, {"color": color})
 
     def image_from_path(self, path):
-        self.emit_signal(SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, {"image_path": path})
+        self.emit_signal(
+            SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, {"image_path": path}
+        )
 
     def clear(self):
         self.emit_signal(SignalCode.CANVAS_CLEAR, {})
@@ -77,7 +83,10 @@ class CanvasAPIService(APIServiceBase):
         self.emit_signal(SignalCode.TOGGLE_TOOL, {"tool": tool, "active": active})
 
     def tool_changed(self, tool, active):
-        self.emit_signal(SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, {"tool": tool, "active": active})
+        self.emit_signal(
+            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL,
+            {"tool": tool, "active": active},
+        )
 
     def do_draw(self, force=False):
         self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL, {"force_draw": force})
@@ -89,7 +98,10 @@ class CanvasAPIService(APIServiceBase):
         self.emit_signal(SignalCode.HISTORY_UPDATED, {"undo": undo, "redo": redo})
 
     def update_cursor(self, event, apply_cursor):
-        self.emit_signal(SignalCode.CANVAS_UPDATE_CURSOR, {"event": event, "apply_cursor": apply_cursor})
+        self.emit_signal(
+            SignalCode.CANVAS_UPDATE_CURSOR,
+            {"event": event, "apply_cursor": apply_cursor},
+        )
 
     def zoom_level_changed(self):
         self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
@@ -98,10 +110,24 @@ class CanvasAPIService(APIServiceBase):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
     def send_image_to_canvas(self, image_response: ImageResponse):
-        self.emit_signal(SignalCode.SEND_IMAGE_TO_CANVAS_SIGNAL, {"image_response": image_response})
+        self.emit_signal(
+            SignalCode.SEND_IMAGE_TO_CANVAS_SIGNAL,
+            {"image_response": image_response},
+        )
 
     def input_image_changed(self, section, setting, value):
-        self.emit_signal(SignalCode.INPUT_IMAGE_SETTINGS_CHANGED, {"section": section, "setting": setting, "value": value})
+        self.emit_signal(
+            SignalCode.INPUT_IMAGE_SETTINGS_CHANGED,
+            {"section": section, "setting": setting, "value": value},
+        )
 
     def update_image_positions(self):
         self.emit_signal(SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS)
+
+    def drawing_pad_image_changed(self):
+        base_64_image = self.drawing_pad_settings.image
+        if base_64_image is None:
+            return
+        image = convert_binary_to_image(base_64_image)
+        image = image.convert("RGBA")
+        self.emit_signal(SignalCode.DRAWING_PAD_IMAGE_CHANGED_SIGNAL, {"image": image})

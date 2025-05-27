@@ -41,3 +41,45 @@ balancer.switch_to_non_art_mode()
 
 ## Tests
 See `tests/model_load_balancer/test_model_load_balancer.py` for TDD and usage examples.
+
+---
+
+# WorkerManager (Thread & Worker Management)
+
+## Purpose
+
+`WorkerManager` is responsible for robust, testable, and leak-free management of all background workers and their threads in the AI Runner application.
+
+## Key Features
+- Manages all worker/thread pairs via an internal registry (no global state).
+- Uses `create_worker(..., registry=...)` to track all created workers and their QThreads.
+- Provides `shutdown_workers()` to stop all workers and join all threads, ensuring a clean shutdown.
+- No monkey patching or global state required for tests or production.
+
+## Usage
+
+```python
+from airunner.gui.windows.main.worker_manager import WorkerManager
+wm = WorkerManager(logger=logger)
+wm.initialize_workers()
+# ... use workers ...
+wm.shutdown_workers()  # Ensures all threads are stopped and joined
+```
+
+## Testing
+- In tests, use `WorkerManager` and call `shutdown_workers()` in teardown to guarantee no thread leaks.
+- Example test:
+
+```python
+def test_shutdown_workers_stops_and_joins_all():
+    workers = [DummyWorker(), DummyWorker()]
+    threads = [DummyThread(), DummyThread()]
+    wm = WorkerManager(logger=None)
+    wm._worker_threads = list(zip(workers, threads))
+    wm.shutdown_workers()
+    assert not wm._worker_threads
+```
+
+## Migration Notes
+- The old global `WORKERS`/`THREADS` lists in `create_worker.py` are no longer used for management.
+- All thread and worker lifecycle is now managed by `WorkerManager` for reliability and testability.

@@ -43,6 +43,9 @@ from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.handlers.stablediffusion.rect import Rect
 from airunner.handlers.stablediffusion.image_response import ImageResponse
 from airunner.utils.settings.get_qsettings import get_qsettings
+from airunner.gui.widgets.canvas.logic.custom_scene_logic import (
+    CustomSceneLogic,
+)
 
 
 class CustomScene(
@@ -50,7 +53,12 @@ class CustomScene(
     SettingsMixin,
     QGraphicsScene,
 ):
-    def __init__(self, canvas_type: str):
+    def __init__(
+        self,
+        canvas_type: str,
+        logic: Optional[CustomSceneLogic] = None,
+        application_settings=None,
+    ):
         self._is_erasing = None
         self._is_drawing = None
         self.canvas_type = canvas_type
@@ -147,14 +155,33 @@ class CustomScene(
             ),
         ]:
             self.register(signal, handler)
+        if application_settings is not None:
+            self._application_settings = application_settings
+        else:
+            self._application_settings = getattr(self, "_application_settings", None)
+        self._logic = logic
+
+    @property
+    def logic(self):
+        if self._logic is None:
+            self._logic = CustomSceneLogic(
+                self.application_settings, self._update_current_settings
+            )
+        return self._logic
+
+    @property
+    def application_settings(self):
+        return self._application_settings
 
     @property
     def current_tool(self):
-        return (
-            None
-            if self.application_settings.current_tool is None
-            else CanvasToolName(self.application_settings.current_tool)
-        )
+        val = self.application_settings.current_tool
+        if val is None:
+            return None
+        try:
+            return CanvasToolName(val)
+        except Exception:
+            return None
 
     @property
     def settings_key(self):
@@ -182,9 +209,7 @@ class CustomScene(
         if hasattr(self.current_settings, "x_pos") and hasattr(
             self.current_settings, "y_pos"
         ):
-            return QPointF(
-                self.current_settings.x_pos, self.current_settings.y_pos
-            )
+            return QPointF(self.current_settings.x_pos, self.current_settings.y_pos)
         return QPointF(0, 0)
 
     @property
@@ -215,7 +240,7 @@ class CustomScene(
         self.api.art.canvas.update_current_layer(value)
 
     def on_clear_history_signal(self):
-        self._clear_history()
+        self.logic.clear_history()
 
     def on_export_image_signal(self):
         image = self.current_active_image
@@ -224,9 +249,7 @@ class CustomScene(
             parent_window = self.views()[0].window()
 
             # Use the last export path if available
-            initial_dir = (
-                self.last_export_path if self.last_export_path else ""
-            )
+            initial_dir = self.last_export_path if self.last_export_path else ""
 
             file_dialog = QFileDialog(
                 parent_window,
@@ -295,18 +318,21 @@ class CustomScene(
         self.initialize_image(image)
 
     def on_apply_filter_signal(self, message):
-        self._apply_filter(message)
+        filter_object = message.get("filter_object")
+        filtered_image = self.logic.apply_filter(
+            self.current_active_image, filter_object
+        )
+        if filtered_image is not None:
+            self._load_image_from_object(filtered_image)
 
     def on_cancel_filter_signal(self):
-        image = self._cancel_filter()
+        image = self.logic.cancel_filter()
         if image:
             self._load_image_from_object(image=image)
 
     def on_preview_filter_signal(self, message):
         filter_object: ImageFilter.Filter = message["filter_object"]
-        filtered_image = self._preview_filter(
-            self.current_active_image, filter_object
-        )
+        filtered_image = self._preview_filter(self.current_active_image, filter_object)
         self._load_image_from_object(image=filtered_image)
 
     def on_image_generated_signal(self, data: Dict):
@@ -378,7 +404,7 @@ class CustomScene(
     def on_canvas_clear_signal(self):
         self.current_active_image = None
         self.delete_image()
-        self._clear_history()
+        self.logic.clear_history()
         self.api.art.canvas.recenter_grid()
 
     def on_mask_layer_toggled(self):
@@ -390,32 +416,47 @@ class CustomScene(
         value = data["value"]
         # if table == "controlnet_settings" and column_name == "generated_image":
 
-    def on_canvas_copy_image_signal(self):
-        self._copy_image(self.current_active_image)
-
     def on_canvas_cut_image_signal(self):
-        self._cut_image(self.current_active_image)
+        self.logic.cut_image(
+            self.current_active_image,
+            lambda img: self.logic.copy_image(img, self._move_pixmap_to_clipboard),
+            lambda img: self.logic.add_image_to_undo(img),
+            self.delete_image,
+        )
+
+    def on_canvas_copy_image_signal(self):
+        self.logic.copy_image(self.current_active_image, self._move_pixmap_to_clipboard)
 
     def on_canvas_rotate_90_clockwise_signal(self):
-        self._rotate_90_clockwise()
+        rotated = self.logic.rotate_image_and_record(
+            self.current_active_image, -90, self.logic.add_image_to_undo
+        )
+        if rotated is not None:
+            self.current_active_image = rotated
+            self.initialize_image(rotated)
 
     def on_canvas_rotate_90_counterclockwise_signal(self):
-        self._rotate_90_counterclockwise()
+        rotated = self.logic.rotate_image_and_record(
+            self.current_active_image, 90, self.logic.add_image_to_undo
+        )
+        if rotated is not None:
+            self.current_active_image = rotated
+            self.initialize_image(rotated)
 
     def on_action_undo_signal(self):
-        if len(self.undo_history) == 0:
+        if not self.logic.undo_history:
             return
-        data = self.undo_history.pop()
-        self._add_image_to_redo()
+        data = self.logic.undo_history.pop()
+        self.logic.add_image_to_redo(self.current_active_image)
         self._history_set_image(data)
         view = self.views()[0]
         view.updateImagePositions()
 
     def on_action_redo_signal(self):
-        if len(self.redo_history) == 0:
+        if not self.logic.redo_history:
             return
-        data = self.redo_history.pop()
-        self._add_image_to_undo()
+        data = self.logic.redo_history.pop()
+        self.logic.add_image_to_undo(self.current_active_image)
         self._history_set_image(data)
         view = self.views()[0]
         view.updateImagePositions()
@@ -524,9 +565,7 @@ class CustomScene(
             view.setTransformationAnchor(view.ViewportAnchor.NoAnchor)
             view.setResizeAnchor(view.ViewportAnchor.NoAnchor)
             delta = event.scenePos() - self.last_pos
-            scale_factor = (
-                view.transform().m11()
-            )  # Get the current scale factor
+            scale_factor = view.transform().m11()  # Get the current scale factor
             view.translate(delta.x() / scale_factor, delta.y() / scale_factor)
             self.last_pos = event.scenePos()
         else:
@@ -544,9 +583,7 @@ class CustomScene(
     def refresh_image(self, image: Image = None):
         # Save the current viewport position
         view = self.views()[0]
-        current_viewport_rect = view.mapToScene(
-            view.viewport().rect()
-        ).boundingRect()
+        current_viewport_rect = view.mapToScene(view.viewport().rect()).boundingRect()
 
         # End the painter if it is active
         if self.painter and self.painter.isActive():
@@ -584,9 +621,7 @@ class CustomScene(
 
         if base64image is not None:
             try:
-                pil_image = convert_binary_to_image(base64image).convert(
-                    "RGBA"
-                )
+                pil_image = convert_binary_to_image(base64image).convert("RGBA")
             except AttributeError:
                 self.logger.warning("Failed to convert base64 to image")
             except PIL.UnidentifiedImageError:
@@ -650,12 +685,8 @@ class CustomScene(
         self.set_image(image)
 
         if generated:
-            self.update_drawing_pad_settings(
-                "x_pos", self.active_grid_settings.pos_x
-            )
-            self.update_drawing_pad_settings(
-                "y_pos", self.active_grid_settings.pos_y
-            )
+            self.update_drawing_pad_settings("x_pos", self.active_grid_settings.pos_x)
+            self.update_drawing_pad_settings("y_pos", self.active_grid_settings.pos_y)
             x = self.active_grid_settings.pos_x
             y = self.active_grid_settings.pos_y
         else:
@@ -675,9 +706,7 @@ class CustomScene(
         try:
             self.painter = QPainter(image)
         except TypeError as _e:
-            self.logger.error(
-                "Failed to initialize painter in initialize_image"
-            )
+            self.logger.error("Failed to initialize painter in initialize_image")
 
     def _update_current_settings(self, key, value):
         if self.settings_key == "controlnet_settings":
@@ -758,16 +787,8 @@ class CustomScene(
         # Emit signal to notify the view to update image positions
         self.api.art.canvas.image_updated()
 
-    def _resize_image(self, image: Image) -> Image:
-        if image is None:
-            return
-
-        max_size = (
-            self.application_settings.working_width,
-            self.application_settings.working_height,
-        )
-        image.thumbnail(max_size, PIL.Image.Resampling.BICUBIC)
-        return image
+    def _resize_image(self, image):
+        return self.logic.resize_image(image)
 
     def _add_image_to_scene(
         self,
@@ -809,11 +830,21 @@ class CustomScene(
         q_image = ImageQt.ImageQt(image)
 
         # Use updateImage method instead of setPixmap
-        if self.item:
+        # Always create a new item if self.item is None or deleted
+        item_valid = True
+        try:
+            if self.item is not None:
+                # Accessing a property will raise if deleted
+                _ = self.item.isVisible()
+        except RuntimeError:
+            item_valid = False
+            self.item = None
+
+        if self.item and item_valid:
             self.item.updateImage(q_image)
             self.item.setZValue(0)
         else:
-            # If there's no item yet, create one first
+            # If there's no item yet, or it was deleted, create one first
             self.set_item(q_image, z_index=5)
 
         # Always update the stored absolute position in the scene
@@ -1078,10 +1109,7 @@ class CustomScene(
 
         # Only update position if it has significantly changed to avoid constant redraws
         current_pos = self.item.pos()
-        if (
-            abs(current_pos.x() - new_x) > 1
-            or abs(current_pos.y() - new_y) > 1
-        ):
+        if abs(current_pos.x() - new_x) > 1 or abs(current_pos.y() - new_y) > 1:
             # Before changing position, prepare the item for geometry change
             self.item.prepareGeometryChange()
             self.item.setPos(new_x, new_y)

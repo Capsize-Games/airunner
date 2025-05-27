@@ -50,7 +50,9 @@ class ChatPromptWidget(BaseWidget):
         self._splitters = ["chat_prompt_splitter"]
         self._default_splitter_settings_applied = False
         super().__init__()
-        self.llm_chat_prompt_worker = create_worker(LLMChatPromptWorker)
+        self.llm_chat_prompt_worker, self._llm_chat_prompt_thread = create_worker(
+            LLMChatPromptWorker
+        )
         self.token_buffer = []
         self.ui_update_timer = QTimer(self)
         self.ui_update_timer.setInterval(50)
@@ -98,7 +100,7 @@ class ChatPromptWidget(BaseWidget):
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
-        self._llm_response_worker = create_worker(
+        self._llm_response_worker, self._llm_response_thread = create_worker(
             LLMResponseWorker, sleep_time_in_ms=1
         )
         self.loading = True
@@ -228,9 +230,7 @@ class ChatPromptWidget(BaseWidget):
         self.do_generate()
 
     def on_add_to_conversation_signal(self, name, text, is_bot):
-        self.add_message_to_conversation(
-            name=name, message=text, is_bot=is_bot
-        )
+        self.add_message_to_conversation(name=name, message=text, is_bot=is_bot)
 
     def on_add_bot_message_to_conversation(self, data: Dict):
         llm_response = data.get("response", None)
@@ -495,9 +495,7 @@ class ChatPromptWidget(BaseWidget):
         self.remove_spacer()
         widget = None
         if message != "":
-            total_widgets = (
-                self.ui.scrollAreaWidgetContents.layout().count() - 1
-            )
+            total_widgets = self.ui.scrollAreaWidgetContents.layout().count() - 1
             if total_widgets < 0:
                 total_widgets = 0
             widget_start = time.perf_counter() if _profile_widget else None
@@ -545,19 +543,14 @@ class ChatPromptWidget(BaseWidget):
             self.scroll_bar = self.ui.chat_container.verticalScrollBar()
 
         if self.scroll_animation is None:
-            self.scroll_animation = QPropertyAnimation(
-                self.scroll_bar, b"value"
-            )
+            self.scroll_animation = QPropertyAnimation(self.scroll_bar, b"value")
             self.scroll_animation.setDuration(500)
-            self.scroll_animation.finished.connect(
-                self._force_scroll_to_bottom
-            )
+            self.scroll_animation.finished.connect(self._force_scroll_to_bottom)
 
         # Stop any ongoing animation
         if (
             self.scroll_animation
-            and self.scroll_animation.state()
-            == QPropertyAnimation.State.Running
+            and self.scroll_animation.state() == QPropertyAnimation.State.Running
         ):
             self.scroll_animation.stop()
 
@@ -584,7 +577,39 @@ class ChatPromptWidget(BaseWidget):
                 for i in range(layout.count()):
                     item = layout.itemAt(i)
                     widget = item.widget()
-                    if widget is not None and hasattr(
-                        widget, "setMaximumWidth"
-                    ):
+                    if widget is not None and hasattr(widget, "setMaximumWidth"):
                         widget.setMaximumWidth(max_msg_width)
+
+    def closeEvent(self, event):
+        # Ensure worker threads are stopped and joined on close
+        for worker, thread in [
+            (
+                getattr(self, "llm_chat_prompt_worker", None),
+                getattr(self, "_llm_chat_prompt_thread", None),
+            ),
+            (
+                getattr(self, "_llm_response_worker", None),
+                getattr(self, "_llm_response_thread", None),
+            ),
+        ]:
+            if worker:
+                stop = getattr(worker, "stop", None)
+                cancel = getattr(worker, "cancel", None)
+                if callable(stop):
+                    try:
+                        stop()
+                    except Exception:
+                        pass
+                elif callable(cancel):
+                    try:
+                        cancel()
+                    except Exception:
+                        pass
+            if thread is not None:
+                try:
+                    if thread.isRunning():
+                        thread.quit()
+                        thread.wait(3000)
+                except Exception:
+                    pass
+        super().closeEvent(event)

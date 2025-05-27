@@ -16,9 +16,7 @@ def llm_manager():
     # Patch all model/tokenizer/agent loading/unloading and property dependencies
     with patch("airunner.handlers.llm.llm_model_manager.AutoTokenizer"), patch(
         "airunner.handlers.llm.llm_model_manager.AutoModelForCausalLM"
-    ), patch(
-        "airunner.handlers.llm.llm_model_manager.LocalAgent"
-    ), patch.object(
+    ), patch("airunner.handlers.llm.llm_model_manager.LocalAgent"), patch.object(
         LLMModelManager, "logger", new_callable=PropertyMock
     ) as mock_logger, patch.object(
         LLMModelManager, "path_settings", new_callable=PropertyMock
@@ -62,9 +60,7 @@ def llm_manager():
         mock_chatbot_instance.seed = 42
         mock_chatbot_instance.random_seed = False
         mock_agent = MagicMock()
-        type(mock_agent).chatbot = PropertyMock(
-            return_value=mock_chatbot_instance
-        )
+        type(mock_agent).chatbot = PropertyMock(return_value=mock_chatbot_instance)
 
         mock_path_settings_instance = MagicMock()
         mock_path_settings_instance.base_path = "/tmp"
@@ -76,9 +72,7 @@ def llm_manager():
         manager = LLMModelManager()
         manager.api = MagicMock()
         manager._test_settings = settings
-        manager._chat_agent = (
-            mock_agent  # Ensure chatbot property is always mocked
-        )
+        manager._chat_agent = mock_agent  # Ensure chatbot property is always mocked
         return manager
 
 
@@ -192,9 +186,7 @@ def test_do_generate_calls_chat_and_final_message(llm_manager):
 def test_unload_handles_exceptions(llm_manager):
     llm_manager.model_status[ModelType.LLM] = ModelStatus.LOADED
     llm_manager._unload_model = MagicMock(side_effect=AttributeError("fail"))
-    llm_manager._unload_tokenizer = MagicMock(
-        side_effect=AttributeError("fail")
-    )
+    llm_manager._unload_tokenizer = MagicMock(side_effect=AttributeError("fail"))
     llm_manager._unload_agent = MagicMock(side_effect=AttributeError("fail"))
     llm_manager.change_model_status = MagicMock()
     try:
@@ -225,9 +217,7 @@ def test_do_set_seed_sets_seed(llm_manager):
         "llm_generator_settings",
         new_callable=PropertyMock,
         return_value=test_specific_settings,
-    ), patch(
-        "airunner.handlers.llm.llm_model_manager.torch.manual_seed"
-    ) as tms, patch(
+    ), patch("airunner.handlers.llm.llm_model_manager.torch.manual_seed") as tms, patch(
         "airunner.handlers.llm.llm_model_manager.torch.cuda.manual_seed"
     ) as tcms, patch(
         "airunner.handlers.llm.llm_model_manager.torch.cuda.manual_seed_all"

@@ -59,12 +59,8 @@ def test_converation_deleted_emits_signal(llm_service, mock_emit_signal):
     )
 
 
-def test_model_changed_emits_signal(
-    llm_service, mock_emit_signal, monkeypatch
-):
-    monkeypatch.setattr(
-        llm_service, "update_llm_generator_settings", MagicMock()
-    )
+def test_model_changed_emits_signal(llm_service, mock_emit_signal, monkeypatch):
+    monkeypatch.setattr(llm_service, "update_llm_generator_settings", MagicMock())
     llm_service.model_changed("openai")
     llm_service.update_llm_generator_settings.assert_called_once_with(
         "model_service", "openai"
@@ -81,9 +77,7 @@ def test_reload_rag_emits_signal(llm_service, mock_emit_signal):
     )
     mock_emit_signal.reset_mock()
     llm_service.reload_rag()
-    mock_emit_signal.assert_called_once_with(
-        SignalCode.RAG_RELOAD_INDEX_SIGNAL, None
-    )
+    mock_emit_signal.assert_called_once_with(SignalCode.RAG_RELOAD_INDEX_SIGNAL, None)
 
 
 def test_load_conversation_emits_signal(llm_service, mock_emit_signal):
@@ -96,9 +90,7 @@ def test_load_conversation_emits_signal(llm_service, mock_emit_signal):
 
 def test_interrupt_emits_signal(llm_service, mock_emit_signal):
     llm_service.interrupt()
-    mock_emit_signal.assert_called_once_with(
-        SignalCode.INTERRUPT_PROCESS_SIGNAL
-    )
+    mock_emit_signal.assert_called_once_with(SignalCode.INTERRUPT_PROCESS_SIGNAL)
 
 
 def test_delete_messages_after_id_emits_signal(llm_service, mock_emit_signal):
@@ -108,9 +100,7 @@ def test_delete_messages_after_id_emits_signal(llm_service, mock_emit_signal):
     )
 
 
-def test_send_llm_text_streamed_signal_emits_signal(
-    llm_service, mock_emit_signal
-):
+def test_send_llm_text_streamed_signal_emits_signal(llm_service, mock_emit_signal):
     response = LLMResponse(message="foo")
     llm_service.send_llm_text_streamed_signal(response)
     mock_emit_signal.assert_called_once_with(

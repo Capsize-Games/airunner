@@ -102,6 +102,4 @@ def test_signal_callback_exception(capfd):
     # Should not raise, just print error
     s.signal.emit({"bad": 1})
     out, err = capfd.readouterr()
-    assert (
-        "Error in signal callback" in out or "Error in signal callback" in err
-    )
+    assert "Error in signal callback" in out or "Error in signal callback" in err

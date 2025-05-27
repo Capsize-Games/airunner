@@ -22,12 +22,8 @@ def mock_image_filter():
 
 
 @patch("airunner.gui.windows.filter_window.ImageFilter")
-@patch(
-    "airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None
-)
-def test_filter_window_init(
-    mock_base_init, mock_ImageFilter, mock_image_filter
-):
+@patch("airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None)
+def test_filter_window_init(mock_base_init, mock_ImageFilter, mock_image_filter):
     # Patch the objects.get method to return our mock filter
     mock_ImageFilter.objects.get.return_value = mock_image_filter
     # Patch QTimer to avoid side effects
@@ -54,12 +50,8 @@ def test_filter_window_init(
 
 
 @patch("airunner.gui.windows.filter_window.ImageFilter")
-@patch(
-    "airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None
-)
-def test_show_event_and_preview(
-    mock_base_init, mock_ImageFilter, mock_image_filter
-):
+@patch("airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None)
+def test_show_event_and_preview(mock_base_init, mock_ImageFilter, mock_image_filter):
     mock_ImageFilter.objects.get.return_value = mock_image_filter
     with patch("airunner.gui.windows.filter_window.QTimer") as mock_timer:
         with patch.object(FilterWindow, "exec", return_value=None):
@@ -82,9 +74,7 @@ def test_show_event_and_preview(
 
 
 @patch("airunner.gui.windows.filter_window.ImageFilter")
-@patch(
-    "airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None
-)
+@patch("airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None)
 def test_key_press_event(mock_base_init, mock_ImageFilter, mock_image_filter):
     mock_ImageFilter.objects.get.return_value = mock_image_filter
     with patch("airunner.gui.windows.filter_window.QTimer"):
@@ -98,9 +88,7 @@ def test_key_press_event(mock_base_init, mock_ImageFilter, mock_image_filter):
 
 
 @patch("airunner.gui.windows.filter_window.ImageFilter")
-@patch(
-    "airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None
-)
+@patch("airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None)
 def test_filter_object(mock_base_init, mock_ImageFilter, mock_image_filter):
     mock_ImageFilter.objects.get.return_value = mock_image_filter
     with patch("airunner.gui.windows.filter_window.QTimer"):
@@ -108,18 +96,14 @@ def test_filter_object(mock_base_init, mock_ImageFilter, mock_image_filter):
             fw = FilterWindow(image_filter_id=123)
             fw.image_filter.filter_class = "PixelFilter"
             fw.image_filter.name = "pixel_art"
-            fw.image_filter.image_filter_values = (
-                mock_image_filter.image_filter_values
-            )
+            fw.image_filter.image_filter_values = mock_image_filter.image_filter_values
             with patch(
                 "airunner.gui.windows.filter_window.session_scope"
             ) as mock_scope:
                 mock_scope.return_value.__enter__.return_value = MagicMock()
                 with patch("importlib.import_module") as mock_import:
                     mock_class = MagicMock()
-                    mock_import.return_value = MagicMock(
-                        PixelFilter=mock_class
-                    )
+                    mock_import.return_value = MagicMock(PixelFilter=mock_class)
                     fw.image_filter.filter_class = "PixelFilter"
                     fw.image_filter.name = "pixel_art"
                     fw._filter = None
@@ -128,9 +112,7 @@ def test_filter_object(mock_base_init, mock_ImageFilter, mock_image_filter):
 
 
 @patch("airunner.gui.windows.filter_window.ImageFilter")
-@patch(
-    "airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None
-)
+@patch("airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None)
 def test_accept_and_reject_and_preview_filter(
     mock_base_init, mock_ImageFilter, mock_image_filter
 ):
@@ -170,12 +152,8 @@ def test_accept_and_reject_and_preview_filter(
 
 
 @patch("airunner.gui.windows.filter_window.ImageFilter")
-@patch(
-    "airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None
-)
-def test_show_event_else_branches(
-    mock_base_init, mock_ImageFilter, mock_image_filter
-):
+@patch("airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None)
+def test_show_event_else_branches(mock_base_init, mock_ImageFilter, mock_image_filter):
     # Test showEvent with value_type not in ("float", "int") and value != "float"
     mock_ImageFilter.objects.get.return_value = mock_image_filter
     # Add a value_type that is not float or int
@@ -208,12 +186,8 @@ def test_show_event_else_branches(
 
 
 @patch("airunner.gui.windows.filter_window.ImageFilter")
-@patch(
-    "airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None
-)
-def test_filter_object_bool_branch(
-    mock_base_init, mock_ImageFilter, mock_image_filter
-):
+@patch("airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None)
+def test_filter_object_bool_branch(mock_base_init, mock_ImageFilter, mock_image_filter):
     mock_ImageFilter.objects.get.return_value = mock_image_filter
     # Add a bool value_type
     mock_value = MagicMock()
@@ -229,18 +203,14 @@ def test_filter_object_bool_branch(
             fw = FilterWindow(image_filter_id=123)
             fw.image_filter.filter_class = "PixelFilter"
             fw.image_filter.name = "pixel_art"
-            fw.image_filter.image_filter_values = (
-                mock_image_filter.image_filter_values
-            )
+            fw.image_filter.image_filter_values = mock_image_filter.image_filter_values
             with patch(
                 "airunner.gui.windows.filter_window.session_scope"
             ) as mock_scope:
                 mock_scope.return_value.__enter__.return_value = MagicMock()
                 with patch("importlib.import_module") as mock_import:
                     mock_class = MagicMock()
-                    mock_import.return_value = MagicMock(
-                        PixelFilter=mock_class
-                    )
+                    mock_import.return_value = MagicMock(PixelFilter=mock_class)
                     fw.image_filter.filter_class = "PixelFilter"
                     fw.image_filter.name = "pixel_art"
                     fw._filter = None
@@ -249,9 +219,7 @@ def test_filter_object_bool_branch(
 
 
 @patch("airunner.gui.windows.filter_window.ImageFilter")
-@patch(
-    "airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None
-)
+@patch("airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None)
 def test_accept_and_reject_super_calls(
     mock_base_init, mock_ImageFilter, mock_image_filter
 ):
@@ -278,9 +246,7 @@ def test_accept_and_reject_super_calls(
 
 
 @patch("airunner.gui.windows.filter_window.ImageFilter")
-@patch(
-    "airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None
-)
+@patch("airunner.gui.windows.filter_window.BaseWindow.__init__", return_value=None)
 def test_show_event_invalid_float_value_raises(
     mock_base_init, mock_ImageFilter, mock_image_filter
 ):
@@ -299,9 +265,7 @@ def test_show_event_invalid_float_value_raises(
             fw = FilterWindow(image_filter_id=123)
             fw.ui = MagicMock()
             fw.ui.content.layout.return_value = MagicMock()
-            with patch(
-                "airunner.gui.windows.filter_window.FilterSliderWidget"
-            ):
+            with patch("airunner.gui.windows.filter_window.FilterSliderWidget"):
                 fw.preview_filter = MagicMock()
                 fw.setWindowTitle = MagicMock()
                 with pytest.raises(ValueError):

@@ -46,9 +46,7 @@ def test_message_widget_constructs(dummy_message_widget):
 
 def test_update_message_appends_and_emits(dummy_message_widget, qtbot):
     signal_triggered = []
-    dummy_message_widget.messageResized.connect(
-        lambda: signal_triggered.append(True)
-    )
+    dummy_message_widget.messageResized.connect(lambda: signal_triggered.append(True))
     dummy_message_widget.update_message("New message")
     # update_message appends to the message
     assert dummy_message_widget.message == "HelloNew message"
@@ -277,9 +275,7 @@ def test_set_global_tooltip_style(monkeypatch):
     # QApplication.instance() returns a mock
     mock_app = MagicMock()
     mock_app.styleSheet.return_value = ""
-    monkeypatch.setattr(
-        message_widget.QApplication, "instance", lambda: mock_app
-    )
+    monkeypatch.setattr(message_widget.QApplication, "instance", lambda: mock_app)
     message_widget.set_global_tooltip_style()
     assert mock_app.setStyleSheet.called
 
@@ -390,7 +386,4 @@ def test_streamed_text_accumulation_no_duplication(dummy_message_widget):
     more_chunks = [" More", " text."]
     for chunk in more_chunks:
         dummy_message_widget.update_message(chunk)
-    assert (
-        dummy_message_widget.message
-        == "HelloNow it's already done. More text."
-    )
+    assert dummy_message_widget.message == "HelloNow it's already done. More text."

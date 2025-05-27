@@ -19,9 +19,7 @@ def art_service():
 
 def test_update_batch_images(art_service):
     art_service.update_batch_images(["img1", "img2"])
-    assert (
-        art_service._emitted[-1][0] == SignalCode.SD_UPDATE_BATCH_IMAGES_SIGNAL
-    )
+    assert art_service._emitted[-1][0] == SignalCode.SD_UPDATE_BATCH_IMAGES_SIGNAL
     assert art_service._emitted[-1][1]["images"] == ["img1", "img2"]
 
 
@@ -126,9 +124,7 @@ def test_generate_image_signal(art_service):
 
 
 def test_llm_image_generated(art_service):
-    art_service.llm_image_generated(
-        "p", "sp", GeneratorSection.TXT2IMG, 512, 512
-    )
+    art_service.llm_image_generated("p", "sp", GeneratorSection.TXT2IMG, 512, 512)
     code, data = art_service._emitted[-1]
     assert code == SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL
     msg = data["message"]

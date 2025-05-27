@@ -8,43 +8,70 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QSizePolicy,
-    QWidget)
+from PySide6.QtCore import (
+    QCoreApplication,
+    QDate,
+    QDateTime,
+    QLocale,
+    QMetaObject,
+    QObject,
+    QPoint,
+    QRect,
+    QSize,
+    QTime,
+    QUrl,
+    Qt,
+)
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QConicalGradient,
+    QCursor,
+    QFont,
+    QFontDatabase,
+    QGradient,
+    QIcon,
+    QImage,
+    QKeySequence,
+    QLinearGradient,
+    QPainter,
+    QPalette,
+    QPixmap,
+    QRadialGradient,
+    QTransform,
+)
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QWidget
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
-            Form.setObjectName(u"Form")
+            Form.setObjectName("Form")
         Form.resize(400, 35)
         self.horizontalLayout = QHBoxLayout(Form)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setObjectName("horizontalLayout")
         self.action = QLabel(Form)
-        self.action.setObjectName(u"action")
+        self.action.setObjectName("action")
 
         self.horizontalLayout.addWidget(self.action)
 
         self.description = QLabel(Form)
-        self.description.setObjectName(u"description")
-        self.description.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.description.setObjectName("description")
+        self.description.setAlignment(
+            Qt.AlignRight | Qt.AlignTrailing | Qt.AlignVCenter
+        )
 
         self.horizontalLayout.addWidget(self.description)
-
 
         self.retranslateUi(Form)
 
         QMetaObject.connectSlotsByName(Form)
+
     # setupUi
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
-        self.action.setText(QCoreApplication.translate("Form", u"TextLabel", None))
-        self.description.setText(QCoreApplication.translate("Form", u"TextLabel", None))
-    # retranslateUi
+        Form.setWindowTitle(QCoreApplication.translate("Form", "Form", None))
+        self.action.setText(QCoreApplication.translate("Form", "TextLabel", None))
+        self.description.setText(QCoreApplication.translate("Form", "TextLabel", None))
 
+    # retranslateUi

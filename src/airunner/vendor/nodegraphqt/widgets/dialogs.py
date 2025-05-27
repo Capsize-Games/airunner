@@ -2,7 +2,7 @@ import os
 
 from PySide6 import QtCore, QtWidgets, QtGui
 
-_current_user_directory = os.path.expanduser('~')
+_current_user_directory = os.path.expanduser("~")
 
 
 def _set_dir(file):
@@ -16,24 +16,24 @@ def _set_dir(file):
 class FileDialog(object):
 
     @staticmethod
-    def getSaveFileName(parent=None, title='Save File', file_dir=None,
-                        ext_filter='*'):
+    def getSaveFileName(parent=None, title="Save File", file_dir=None, ext_filter="*"):
         if not file_dir:
             file_dir = _current_user_directory
         file_dlg = QtWidgets.QFileDialog.getSaveFileName(
-            parent, title, file_dir, ext_filter)
+            parent, title, file_dir, ext_filter
+        )
         file = file_dlg[0] or None
         if file:
             _set_dir(file)
         return file_dlg
 
     @staticmethod
-    def getOpenFileName(parent=None, title='Open File', file_dir=None,
-                        ext_filter='*'):
+    def getOpenFileName(parent=None, title="Open File", file_dir=None, ext_filter="*"):
         if not file_dir:
             file_dir = _current_user_directory
         file_dlg = QtWidgets.QFileDialog.getOpenFileName(
-            parent, title, file_dir, ext_filter)
+            parent, title, file_dir, ext_filter
+        )
         file = file_dlg[0] or None
         if file:
             _set_dir(file)
@@ -43,8 +43,9 @@ class FileDialog(object):
 class BaseDialog(object):
 
     @staticmethod
-    def message_dialog(parent=None, text='', title='Message', dialog_icon=None,
-                       custom_icon=None):
+    def message_dialog(
+        parent=None, text="", title="Message", dialog_icon=None, custom_icon=None
+    ):
         dlg = QtWidgets.QMessageBox(parent=parent)
         dlg.setWindowTitle(title)
         dlg.setInformativeText(text)
@@ -56,24 +57,23 @@ class BaseDialog(object):
             )
             dlg.setIconPixmap(pixmap)
         else:
-            if dialog_icon == 'information':
+            if dialog_icon == "information":
                 dlg.setIcon(dlg.Information)
-            elif dialog_icon == 'warning':
+            elif dialog_icon == "warning":
                 dlg.setIcon(dlg.Warning)
-            elif dialog_icon == 'critical':
+            elif dialog_icon == "critical":
                 dlg.setIcon(dlg.Critical)
 
         dlg.exec_()
 
     @staticmethod
-    def question_dialog(parent=None, text='', title='Are you sure?',
-                        dialog_icon=None, custom_icon=None):
+    def question_dialog(
+        parent=None, text="", title="Are you sure?", dialog_icon=None, custom_icon=None
+    ):
         dlg = QtWidgets.QMessageBox(parent=parent)
         dlg.setWindowTitle(title)
         dlg.setInformativeText(text)
-        dlg.setStandardButtons(
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
-        )
+        dlg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
         if custom_icon:
             pixmap = QtGui.QPixmap(custom_icon).scaledToHeight(
@@ -81,11 +81,11 @@ class BaseDialog(object):
             )
             dlg.setIconPixmap(pixmap)
         else:
-            if dialog_icon == 'information':
+            if dialog_icon == "information":
                 dlg.setIcon(dlg.Information)
-            elif dialog_icon == 'warning':
+            elif dialog_icon == "warning":
                 dlg.setIcon(dlg.Warning)
-            elif dialog_icon == 'critical':
+            elif dialog_icon == "critical":
                 dlg.setIcon(dlg.Critical)
 
         result = dlg.exec_()

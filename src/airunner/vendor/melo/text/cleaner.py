@@ -50,9 +50,7 @@ class Cleaner:
             self._language_module = None
         self._language_module = value
 
-    def clean_text(
-        self, text, language: AvailableLanguage = AvailableLanguage.EN
-    ):
+    def clean_text(self, text, language: AvailableLanguage = AvailableLanguage.EN):
         self.language = language
         norm_text = self.language_module.text_normalize(text)
         phones, tones, word2ph = self.language_module.call(norm_text)
@@ -67,9 +65,7 @@ class Cleaner:
         for i in range(len(word2ph)):
             word2ph[i] = word2ph[i] * 2
         word2ph[0] += 1
-        bert = self.language_module.get_bert_feature(
-            norm_text, word2ph, device=device
-        )
+        bert = self.language_module.get_bert_feature(norm_text, word2ph, device=device)
 
         return norm_text, phones, tones, word2ph_bak, bert
 

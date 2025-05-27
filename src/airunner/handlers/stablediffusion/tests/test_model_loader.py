@@ -153,9 +153,7 @@ def test_load_feature_extractor_success(monkeypatch):
         "transformers.CLIPFeatureExtractor.from_pretrained",
         fake_from_pretrained,
     )
-    result = model_loader.load_feature_extractor(
-        DummyPathSettings(), "float32"
-    )
+    result = model_loader.load_feature_extractor(DummyPathSettings(), "float32")
     assert result is dummy_extractor
 
 
@@ -170,9 +168,7 @@ def test_load_feature_extractor_error(monkeypatch):
         "transformers.CLIPFeatureExtractor.from_pretrained",
         fake_from_pretrained,
     )
-    result = model_loader.load_feature_extractor(
-        DummyPathSettings(), "float32"
-    )
+    result = model_loader.load_feature_extractor(DummyPathSettings(), "float32")
     assert result is None
 
 
@@ -258,9 +254,7 @@ def test_unload_safety_checker_failure():
     def fail_del():
         raise Exception("fail")
 
-    type(pipe).safety_checker = property(
-        lambda self: None, lambda self, v: fail_del()
-    )
+    type(pipe).safety_checker = property(lambda self: None, lambda self, v: fail_del())
     model_loader.unload_safety_checker(pipe, logger)
     logger.warning.assert_called()
 
@@ -432,14 +426,10 @@ def test_load_controlnet_processor_success(monkeypatch):
     import types
 
     controlnet_aux_processor = types.ModuleType("controlnet_aux.processor")
-    controlnet_aux_processor.MODELS = {
-        "foo": {"class": DummyClass, "checkpoint": True}
-    }
+    controlnet_aux_processor.MODELS = {"foo": {"class": DummyClass, "checkpoint": True}}
     sys.modules["controlnet_aux.processor"] = controlnet_aux_processor
     logger = MagicMock()
-    result = model_loader.load_controlnet_processor(
-        True, DummyModel(), "/tmp", logger
-    )
+    result = model_loader.load_controlnet_processor(True, DummyModel(), "/tmp", logger)
     assert result == "processor"
     logger.info.assert_called()
 
@@ -461,18 +451,14 @@ def test_load_controlnet_processor_no_checkpoint():
     }
     sys.modules["controlnet_aux.processor"] = controlnet_aux_processor
     logger = MagicMock()
-    result = model_loader.load_controlnet_processor(
-        True, DummyModel(), "/tmp", logger
-    )
+    result = model_loader.load_controlnet_processor(True, DummyModel(), "/tmp", logger)
     assert isinstance(result, DummyClass)
     logger.info.assert_called()
 
 
 def test_load_controlnet_processor_disabled():
     logger = MagicMock()
-    result = model_loader.load_controlnet_processor(
-        False, None, "/tmp", logger
-    )
+    result = model_loader.load_controlnet_processor(False, None, "/tmp", logger)
     assert result is None
 
 
@@ -489,14 +475,10 @@ def test_load_controlnet_processor_failure():
     import types
 
     controlnet_aux_processor = types.ModuleType("controlnet_aux.processor")
-    controlnet_aux_processor.MODELS = {
-        "foo": {"class": DummyClass, "checkpoint": True}
-    }
+    controlnet_aux_processor.MODELS = {"foo": {"class": DummyClass, "checkpoint": True}}
     sys.modules["controlnet_aux.processor"] = controlnet_aux_processor
     logger = MagicMock()
-    result = model_loader.load_controlnet_processor(
-        True, DummyModel(), "/tmp", logger
-    )
+    result = model_loader.load_controlnet_processor(True, DummyModel(), "/tmp", logger)
     assert result is None
     logger.error.assert_called()
 

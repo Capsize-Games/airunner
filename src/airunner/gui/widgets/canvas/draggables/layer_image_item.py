@@ -128,8 +128,7 @@ class LayerImageItem(DraggablePixmap):
             if has_moved:
                 # Save the snapped absolute position
                 if (
-                    int(self._current_snapped_pos[0])
-                    != self.drawing_pad_settings.x_pos
+                    int(self._current_snapped_pos[0]) != self.drawing_pad_settings.x_pos
                     or int(self._current_snapped_pos[1])
                     != self.drawing_pad_settings.y_pos
                 ):
@@ -142,19 +141,13 @@ class LayerImageItem(DraggablePixmap):
                     )
 
                     # Update layer image data
-                    self.layer_image_data["pos_x"] = int(
-                        self._current_snapped_pos[0]
-                    )
-                    self.layer_image_data["pos_y"] = int(
-                        self._current_snapped_pos[1]
-                    )
+                    self.layer_image_data["pos_x"] = int(self._current_snapped_pos[0])
+                    self.layer_image_data["pos_y"] = int(self._current_snapped_pos[1])
 
                     # Critical fix: Update scene's position tracking
                     try:
                         scene = self.scene()
-                        if scene and hasattr(
-                            scene, "_original_item_positions"
-                        ):
+                        if scene and hasattr(scene, "_original_item_positions"):
                             # Update the scene's tracked position for this item
                             scene._original_item_positions[self] = QPointF(
                                 int(self._current_snapped_pos[0]),

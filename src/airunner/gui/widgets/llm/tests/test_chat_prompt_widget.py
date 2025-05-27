@@ -15,6 +15,19 @@ from unittest.mock import patch, MagicMock, PropertyMock
 from airunner.gui.widgets.llm import chat_prompt_widget
 
 
+@pytest.fixture(autouse=True)
+def patch_llm_chat_prompt_worker(monkeypatch):
+    # Patch create_worker to return a tuple (mock_worker, mock_thread) for all tests in this module
+    mock_worker = MagicMock()
+    mock_worker.add_to_queue = MagicMock()
+    mock_thread = MagicMock()
+    monkeypatch.setattr(
+        "airunner.gui.widgets.llm.chat_prompt_widget.create_worker",
+        lambda *a, **kw: (mock_worker, mock_thread),
+    )
+    yield
+
+
 @pytest.fixture
 def chat_prompt(qtbot):
     # Patch sys.exit and QApplication.exec to prevent app launch

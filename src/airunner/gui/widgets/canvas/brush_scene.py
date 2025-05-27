@@ -13,20 +13,53 @@ from airunner.utils.image import (
     convert_image_to_binary,
 )
 from airunner.gui.widgets.canvas.custom_scene import CustomScene
+from airunner.gui.widgets.canvas.logic.brush_scene_logic import BrushSceneLogic
 import logging
 
 
 class BrushScene(CustomScene):
     settings_key = "drawing_pad_settings"
 
-    def __init__(self, canvas_type: str):
-        super().__init__(canvas_type)
-        brush_color = self.brush_settings.primary_color
+    def __init__(
+        self,
+        canvas_type: str,
+        *,
+        application_settings=None,
+        _test_brush_settings=None,
+        _test_drawing_pad_settings=None,
+    ):
+        super().__init__(canvas_type, application_settings=application_settings)
+        self._test_brush_settings = _test_brush_settings
+        self._test_drawing_pad_settings = _test_drawing_pad_settings
+        # Only access these after parent __init__ has set up attributes
+        if (
+            hasattr(self, "application_settings")
+            and self.application_settings is not None
+        ):
+            logic_args = (
+                self.application_settings,
+                getattr(self, "brush_settings", None),
+                getattr(self, "drawing_pad_settings", None),
+            )
+        else:
+            # For test cases where parent __init__ is patched out
+            logic_args = (None, None, None)
+        self._logic = BrushSceneLogic(*logic_args)
+        brush_color = getattr(self, "brush_settings", None)
+        if brush_color is not None:
+            brush_color = self.brush_settings.primary_color
+        else:
+            brush_color = Qt.GlobalColor.black
         self._brush_color = QColor(brush_color)
         self.draw_button_down: bool = False
+        pen_size = getattr(self, "brush_settings", None)
+        if pen_size is not None:
+            pen_size = self.brush_settings.size
+        else:
+            pen_size = 1
         self.pen = QPen(
             self._brush_color,
-            self.brush_settings.size,
+            pen_size,
             Qt.PenStyle.SolidLine,
             Qt.PenCapStyle.RoundCap,
         )
@@ -42,6 +75,22 @@ class BrushScene(CustomScene):
         )
 
     @property
+    def brush_settings(self):
+        if self._test_brush_settings is not None:
+            return self._test_brush_settings
+        return super().brush_settings
+
+    @property
+    def drawing_pad_settings(self):
+        if self._test_drawing_pad_settings is not None:
+            return self._test_drawing_pad_settings
+        return super().drawing_pad_settings
+
+    @property
+    def logic(self):
+        return self._logic
+
+    @property
     def active_image(self):
         if self.drawing_pad_settings.mask_layer_enabled:
             return self.mask_image
@@ -55,15 +104,19 @@ class BrushScene(CustomScene):
 
     @property
     def active_color(self):
-        if self.drawing_pad_settings.mask_layer_enabled:
-            return QColor(Qt.GlobalColor.white)
-        return self._brush_color
+        return (
+            QColor(Qt.GlobalColor.white)
+            if self.drawing_pad_settings.mask_layer_enabled
+            else self._brush_color
+        )
 
     @property
     def active_eraser_color(self):
-        if self.drawing_pad_settings.mask_layer_enabled:
-            return QColor(Qt.GlobalColor.black)
-        return QColor(Qt.GlobalColor.transparent)
+        return (
+            QColor(Qt.GlobalColor.black)
+            if self.drawing_pad_settings.mask_layer_enabled
+            else QColor(Qt.GlobalColor.transparent)
+        )
 
     def on_brush_color_changed(self, data):
         self._brush_color = QColor(data["color"])
@@ -99,6 +152,12 @@ class BrushScene(CustomScene):
             self.refresh_image(self.current_active_image)
         if self.painter is not None and self.painter.isActive():
             if self.last_pos and self.draw_button_down:
+                try:
+                    item = self.active_item
+                    if item is None:
+                        return
+                except RuntimeError:
+                    return
                 if self.current_tool is CanvasToolName.BRUSH:
                     self._draw_at(self.painter)
                 elif self.current_tool is CanvasToolName.ERASER:
@@ -111,23 +170,17 @@ class BrushScene(CustomScene):
         if mask is not None:
             mask = convert_binary_to_image(mask)
             mask = mask.rotate(angle, expand=True)
-            self.update_drawing_pad_settings(
-                "mask", convert_image_to_binary(mask)
-            )
+            self.update_drawing_pad_settings("mask", convert_image_to_binary(mask))
             mask_updated = True
         super().rotate_image(angle)
         if mask_updated:
             self.api.art.canvas.mask_updated()
 
     def _draw_at(self, painter=None):
-        self._create_line(
-            drawing=True, painter=painter, color=self.active_color
-        )
+        self._create_line(drawing=True, painter=painter, color=self.active_color)
 
     def _erase_at(self, painter=None):
-        self._create_line(
-            erasing=True, painter=painter, color=self.active_eraser_color
-        )
+        self._create_line(erasing=True, painter=painter, color=self.active_eraser_color)
 
     def _create_line(
         self,
@@ -136,9 +189,7 @@ class BrushScene(CustomScene):
         painter: QPainter = None,
         color: QColor = None,
     ):
-        if (drawing and not self._is_drawing) or (
-            erasing and not self._is_erasing
-        ):
+        if (drawing and not self._is_drawing) or (erasing and not self._is_erasing):
             self._is_drawing = drawing
             self._is_erasing = erasing
 
@@ -166,9 +217,14 @@ class BrushScene(CustomScene):
             return
 
         # Use scene coordinates minus image item position for image coordinates
-        item_pos = (
-            self.active_item.pos() if self.active_item else QPointF(0, 0)
-        )
+        try:
+            item = self.active_item
+            if item is None:
+                return
+            item_pos = item.pos()
+        except RuntimeError:
+            # The C++ object has been deleted; abort drawing
+            return
         image_start_pos = self.start_pos - item_pos
         image_last_pos = self.last_pos - item_pos
 
@@ -196,10 +252,14 @@ class BrushScene(CustomScene):
         pixmap = QPixmap.fromImage(active_image)
 
         # save the image - use updateImage if setPixmap is not available
-        if hasattr(self.active_item, "setPixmap"):
-            self.active_item.setPixmap(pixmap)
-        elif hasattr(self.active_item, "updateImage"):
-            self.active_item.updateImage(active_image)
+        try:
+            if hasattr(item, "setPixmap"):
+                item.setPixmap(pixmap)
+            elif hasattr(item, "updateImage"):
+                item.updateImage(active_image)
+        except RuntimeError:
+            # Item was deleted during drawing, ignore
+            return
 
     def create_line(self, event):
         scene_pt = event.scenePos()
@@ -207,9 +267,7 @@ class BrushScene(CustomScene):
         # Get canvas offset from parent view
         view = self.views()[0]
         canvas_offset = (
-            view.canvas_offset
-            if hasattr(view, "canvas_offset")
-            else QPointF(0, 0)
+            view.canvas_offset if hasattr(view, "canvas_offset") else QPointF(0, 0)
         )
 
         # Apply canvas offset to convert scene coordinates to image coordinates
@@ -223,10 +281,7 @@ class BrushScene(CustomScene):
         # Use scenePos() so this matches the scene's offset
         self.draw_button_down = True
         self.start_pos = event.scenePos()
-        if (
-            self.drawing_pad_settings.mask_layer_enabled
-            and self.mask_image is None
-        ):
+        if self.drawing_pad_settings.mask_layer_enabled and self.mask_image is None:
             self._create_mask_image()
         elif self.is_brush_or_eraser:
             self._add_image_to_undo()
@@ -246,9 +301,7 @@ class BrushScene(CustomScene):
             # For mask layer
             mask_image: Image = ImageQt.fromqimage(self.mask_image)
             # Ensure mask is fully opaque
-            mask_image = mask_image.convert("L").point(
-                lambda p: 255 if p > 128 else 0
-            )
+            mask_image = mask_image.convert("L").point(lambda p: 255 if p > 128 else 0)
             base_64_image = convert_image_to_binary(mask_image)
             # Update both database object and in-memory settings with the same base64 image
             drawing_pad_settings.mask = base_64_image
@@ -268,15 +321,14 @@ class BrushScene(CustomScene):
                 ):
                     self.api.art.canvas.generate_mask()
 
-        # Ensure changes are saved to database
-        if hasattr(drawing_pad_settings, "save") and callable(
-            drawing_pad_settings.save
+        # Ensure changes are saved to database only for real model instances
+        if (
+            hasattr(drawing_pad_settings, "save")
+            and callable(drawing_pad_settings.save)
+            and not type(drawing_pad_settings).__name__.endswith("Data")
         ):
             drawing_pad_settings.save()
-        else:
-            logging.warning(
-                f"drawing_pad_settings is not a model instance: {type(drawing_pad_settings)}. Skipping save()."
-            )
+        # else: do not log anything for dataclasses
 
         # Emit signals to refresh related UI
         self.api.art.canvas.image_updated()
@@ -291,40 +343,12 @@ class BrushScene(CustomScene):
             if mask is not None:
                 mask = convert_binary_to_image(mask)
         if mask is not None:
-            # Convert the mask to RGBA
-            mask = mask.convert("RGBA")
-            r, g, b, alpha = mask.split()
-
-            # Make black areas fully transparent and white areas 50% transparent
-            def adjust_alpha(red, green, blue, alpha):
-                if red == 0 and green == 0 and blue == 0:
-                    return 0
-                elif red == 255 and green == 255 and blue == 255:
-                    return 128
-                else:
-                    return alpha
-
-            # Apply the adjust_alpha function to each pixel
-            new_alpha = [
-                adjust_alpha(
-                    r.getpixel((x, y)),
-                    g.getpixel((x, y)),
-                    b.getpixel((x, y)),
-                    alpha.getpixel((x, y)),
-                )
-                for y in range(mask.height)
-                for x in range(mask.width)
-            ]
-            alpha.putdata(new_alpha)
-            mask.putalpha(alpha)
-
+            mask = self.logic.adjust_mask_alpha(mask)
             q_mask = ImageQt.ImageQt(mask)
             self.mask_image = q_mask
             if self.mask_item is None:
                 self.mask_item = QGraphicsPixmapItem(QPixmap.fromImage(q_mask))
-                self.mask_item.setZValue(
-                    2
-                )  # Ensure the mask is above the image
+                self.mask_item.setZValue(2)
                 self.addItem(self.mask_item)
             else:
                 self.mask_item.setPixmap(QPixmap.fromImage(q_mask))
@@ -336,17 +360,8 @@ class BrushScene(CustomScene):
                 self.mask_item = None
 
     def _create_mask_image(self):
-        mask_image = PIL.Image.new(
-            "RGBA",
-            (
-                self.application_settings.working_width,
-                self.application_settings.working_height,
-            ),
-            (0, 0, 0, 255),
-        )
-        self.update_drawing_pad_settings(
-            "mask", convert_image_to_binary(mask_image)
-        )
+        mask_image = self.logic.create_mask_image()
+        self.update_drawing_pad_settings("mask", convert_image_to_binary(mask_image))
         self.mask_image = ImageQt.ImageQt(mask_image)
         self.initialize_image()
         self.api.art.canvas.mask_updated()

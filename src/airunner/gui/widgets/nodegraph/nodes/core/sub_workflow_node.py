@@ -50,8 +50,7 @@ class SubWorkflowNode(BaseCoreNode):
             with Session() as session:
                 workflows = session.query(Workflow).all()
                 return [
-                    {"workflow.name": w.name, "workflow.id": w.id}
-                    for w in workflows
+                    {"workflow.name": w.name, "workflow.id": w.id} for w in workflows
                 ]
         except Exception as e:
             print(f"Error loading workflows: {e}")
@@ -66,9 +65,7 @@ class SubWorkflowNode(BaseCoreNode):
             from airunner.data.session import Session
 
             with Session() as session:
-                workflow = (
-                    session.query(Workflow).filter_by(id=workflow_id).first()
-                )
+                workflow = session.query(Workflow).filter_by(id=workflow_id).first()
                 if workflow:
                     self._workflow_name = workflow.name
                     self.set_property(

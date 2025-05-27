@@ -39,9 +39,7 @@ class FormatterExtended:
         if re.search(r"(\\\\|\\)\(.*(\\\\|\\)\)", text):
             return True
         # Check for common LaTeX math commands
-        if re.search(
-            r"\\frac|\\sqrt|\\sum|\\int|\\alpha|\\beta|\\cos|\\sin", text
-        ):
+        if re.search(r"\\frac|\\sqrt|\\sum|\\int|\\alpha|\\beta|\\cos|\\sin", text):
             return True
         return False
 
@@ -154,14 +152,10 @@ class FormatterExtended:
         ]
 
         # Get pygments CSS - use the monokai style for better dark theme compatibility
-        pygments_css = HtmlFormatter(style="monokai").get_style_defs(
-            ".codehilite"
-        )
+        pygments_css = HtmlFormatter(style="monokai").get_style_defs(".codehilite")
 
         # Process the markdown content
-        html_content = markdown.markdown(
-            processed_markdown, extensions=extensions
-        )
+        html_content = markdown.markdown(processed_markdown, extensions=extensions)
 
         # Add the CSS to the HTML
         html_with_css = f"""
@@ -218,9 +212,7 @@ class FormatterExtended:
         ) and not FormatterExtended._is_pure_latex(content_string):
             parts = []
             # Split by LaTeX delimiters
-            segments = re.split(
-                r"(\$\$.*?\$\$)", content_string, flags=re.DOTALL
-            )
+            segments = re.split(r"(\$\$.*?\$\$)", content_string, flags=re.DOTALL)
             for segment in segments:
                 if segment.startswith("$$") and segment.endswith("$$"):
                     parts.append({"type": "latex", "content": segment})
@@ -243,9 +235,7 @@ class FormatterExtended:
             }
         # Markdown content
         elif FormatterExtended._is_markdown(content_string):
-            html_content = FormatterExtended._render_markdown_to_html(
-                content_string
-            )
+            html_content = FormatterExtended._render_markdown_to_html(content_string)
             return {
                 "type": FormatterExtended.FORMAT_MARKDOWN,
                 "content": html_content,
@@ -331,19 +321,13 @@ class FormatterExtended:
             return f"[formula: {latex.strip()}]"
 
         # Replace $$...$$
-        text = re.sub(
-            r"\$\$.*?\$\$", latex_to_speakable, text, flags=re.DOTALL
-        )
+        text = re.sub(r"\$\$.*?\$\$", latex_to_speakable, text, flags=re.DOTALL)
         # Replace $...$
         text = re.sub(r"\$[^$]+\$", latex_to_speakable, text)
         # Replace \[...\]
-        text = re.sub(
-            r"\\\[.*?\\\]", latex_to_speakable, text, flags=re.DOTALL
-        )
+        text = re.sub(r"\\\[.*?\\\]", latex_to_speakable, text, flags=re.DOTALL)
         # Replace \(...\)
-        text = re.sub(
-            r"\\\(.*?\\\)", latex_to_speakable, text, flags=re.DOTALL
-        )
+        text = re.sub(r"\\\(.*?\\\)", latex_to_speakable, text, flags=re.DOTALL)
 
         # Remove extra whitespace
         text = re.sub(r"\s+", " ", text)

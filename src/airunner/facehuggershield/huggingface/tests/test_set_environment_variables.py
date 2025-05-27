@@ -45,20 +45,14 @@ def test_set_huggingface_environment_variables_sets_all(monkeypatch):
     monkeypatch.setattr(set_env_mod, "HF_HUB_OFFLINE", "1")
     monkeypatch.setattr(set_env_mod, "HF_HOME", "/tmp/hf")
     monkeypatch.setattr(set_env_mod, "HF_ENDPOINT", "https://hf.co")
-    monkeypatch.setattr(
-        set_env_mod, "HF_INFERENCE_ENDPOINT", "https://hf-infer.co"
-    )
+    monkeypatch.setattr(set_env_mod, "HF_INFERENCE_ENDPOINT", "https://hf-infer.co")
     monkeypatch.setattr(set_env_mod, "HF_HUB_DISABLE_PROGRESS_BARS", "1")
     monkeypatch.setattr(set_env_mod, "HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
-    monkeypatch.setattr(
-        set_env_mod, "HF_HUB_DISABLE_EXPERIMENTAL_WARNING", "1"
-    )
+    monkeypatch.setattr(set_env_mod, "HF_HUB_DISABLE_EXPERIMENTAL_WARNING", "1")
     monkeypatch.setattr(set_env_mod, "HF_ASSETS_CACHE", "/tmp/hf-cache")
     monkeypatch.setattr(set_env_mod, "HF_TOKEN", "token")
     monkeypatch.setattr(set_env_mod, "HF_HUB_VERBOSITY", "info")
-    monkeypatch.setattr(
-        set_env_mod, "HF_HUB_LOCAL_DIR_AUTO_SYMLINK_THRESHOLD", "10"
-    )
+    monkeypatch.setattr(set_env_mod, "HF_HUB_LOCAL_DIR_AUTO_SYMLINK_THRESHOLD", "10")
     monkeypatch.setattr(set_env_mod, "HF_HUB_DOWNLOAD_TIMEOUT", "100")
     monkeypatch.setattr(set_env_mod, "HF_HUB_ETAG_TIMEOUT", "100")
     monkeypatch.setattr(set_env_mod, "HF_HUB_DISABLE_IMPLICIT_TOKEN", "1")
@@ -91,6 +85,4 @@ def test_set_huggingface_environment_variables_print(monkeypatch):
     with patch("builtins.print") as mock_print:
         monkeypatch.setattr(set_env_mod, "HF_ALLOW_DOWNLOADS", True)
         set_env_mod.set_huggingface_environment_variables()
-        mock_print.assert_any_call(
-            "Setting Hugging Face environment variables"
-        )
+        mock_print.assert_any_call("Setting Hugging Face environment variables")

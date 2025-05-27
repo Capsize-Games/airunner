@@ -6,9 +6,7 @@ Covers all public and private methods of Formatter.
 import sys
 import os
 
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
-)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 from airunner.utils.text.formatter import Formatter
 
 import tempfile
@@ -100,9 +98,7 @@ def test_render_plaintext_to_image_error(monkeypatch, tmp_path):
         raise Exception("fail")
 
     monkeypatch.setattr("PIL.Image.new", raise_exc)
-    out = Formatter._render_plaintext_to_image(
-        "text", str(tmp_path / "out.png")
-    )
+    out = Formatter._render_plaintext_to_image("text", str(tmp_path / "out.png"))
     assert out == ""
 
 

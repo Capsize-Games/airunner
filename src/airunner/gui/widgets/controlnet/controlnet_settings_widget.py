@@ -1,8 +1,9 @@
-
 from airunner.data.models import ControlnetModel
 from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.controlnet.templates.controlnet_settings_widget_ui import Ui_controlnet_settings_widget
+from airunner.gui.widgets.controlnet.templates.controlnet_settings_widget_ui import (
+    Ui_controlnet_settings_widget,
+)
 
 
 class ControlnetSettingsWidget(BaseWidget):
@@ -26,7 +27,7 @@ class ControlnetSettingsWidget(BaseWidget):
         if self._version is None or self._version != self.generator_settings.version:
             self._version = self.generator_settings.version
             current_index = 0
-            
+
             controlnet_models = ControlnetModel.objects.filter_by(
                 version=self.generator_settings.version
             )

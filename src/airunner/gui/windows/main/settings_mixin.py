@@ -158,9 +158,7 @@ class SettingsMixin:
 
     @property
     def generator_settings(self) -> GeneratorSettings:
-        return self.load_settings_from_db(
-            GeneratorSettings, eager_load=["aimodel"]
-        )
+        return self.load_settings_from_db(GeneratorSettings, eager_load=["aimodel"])
 
     @property
     def controlnet_settings(self) -> ControlnetSettings:
@@ -219,9 +217,7 @@ class SettingsMixin:
         if self.chatbot.voice_id is None:
             voice_settings = VoiceSettings.objects.first()
             if voice_settings is None:
-                settings = self._get_settings_for_voice_settings(
-                    TTSModel.ESPEAK
-                )
+                settings = self._get_settings_for_voice_settings(TTSModel.ESPEAK)
                 voice_settings = VoiceSettings.objects.create(
                     name="Default Voice",
                     model_type=TTSModel.ESPEAK.value,
@@ -524,13 +520,9 @@ class SettingsMixin:
                 if eager_load:
                     for relation in eager_load:
                         try:
-                            relation_attr = getattr(
-                                model_class_, relation, None
-                            )
+                            relation_attr = getattr(model_class_, relation, None)
                             if relation_attr is not None:
-                                query = query.options(
-                                    joinedload(relation_attr)
-                                )
+                                query = query.options(joinedload(relation_attr))
                         except Exception as e:
                             # Use a local logger instance to avoid issues with shared state during initialization
                             local_logger = get_logger(
@@ -561,10 +553,8 @@ class SettingsMixin:
                                         model_class_, relation, None
                                     )
                                     if relation_attr is not None:
-                                        query_after_create = (
-                                            query_after_create.options(
-                                                joinedload(relation_attr)
-                                            )
+                                        query_after_create = query_after_create.options(
+                                            joinedload(relation_attr)
                                         )
                                 except Exception:
                                     pass
@@ -583,9 +573,7 @@ class SettingsMixin:
                 return settings_instance
 
         except Exception as e:
-            local_logger = get_logger(
-                "AI Runner SettingsMixin", AIRUNNER_LOG_LEVEL
-            )
+            local_logger = get_logger("AI Runner SettingsMixin", AIRUNNER_LOG_LEVEL)
             local_logger.error(
                 f"Error loading settings for {model_class_.__name__}: {e}. Attempting to return a new transient default instance.",
                 exc_info=True,
@@ -649,9 +637,7 @@ class SettingsMixin:
         return SavedPrompt.objects.filter_by_first(id=prompt_id)
 
     def update_saved_prompt(self, saved_prompt: SavedPrompt):
-        new_saved_prompt = SavedPrompt.objects.filter_by_first(
-            id=saved_prompt.id
-        )
+        new_saved_prompt = SavedPrompt.objects.filter_by_first(id=saved_prompt.id)
         if new_saved_prompt:
             for key in saved_prompt.__dict__.keys():
                 if key != "_sa_instance_state":
@@ -679,9 +665,7 @@ class SettingsMixin:
         return FontSetting.objects.filter_by_first(name=name)
 
     def update_font_setting(self, font_setting: FontSetting):
-        new_font_setting = FontSetting.objects.filter_by_first(
-            name=font_setting.name
-        )
+        new_font_setting = FontSetting.objects.filter_by_first(name=font_setting.name)
         if new_font_setting:
             for key in font_setting.__dict__.keys():
                 if key != "_sa_instance_state":
@@ -886,9 +870,7 @@ class SettingsMixin:
                 self.settings_mixin_shared_instance.chatbot = chatbot
         return self.settings_mixin_shared_instance.chatbot
 
-    def __settings_updated(
-        self, setting_name=None, column_name=None, val=None
-    ):
+    def __settings_updated(self, setting_name=None, column_name=None, val=None):
         if hasattr(self, "api") and self.api:
             self.api.application_settings_changed(
                 setting_name=setting_name,

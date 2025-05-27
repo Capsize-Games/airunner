@@ -79,12 +79,7 @@ def test_create_airunner_paths_handles_other_exceptions(dummy_paths, capfd):
     with patch("os.makedirs", side_effect=Exception("fail")):
         create_airunner_paths(dummy_paths)
     out, err = capfd.readouterr()
-    assert (
-        "fail" in out
-        or "fail" in err
-        or "Exception" in out
-        or "Exception" in err
-    )
+    assert "fail" in out or "fail" in err or "Exception" in out or "Exception" in err
 
 
 def test_create_airunner_paths_sanitizes_path(dummy_paths):

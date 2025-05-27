@@ -27,10 +27,7 @@ def history_item_widget(qtbot):
 
 def test_history_item_widget_constructs(history_item_widget):
     assert history_item_widget is not None
-    assert (
-        history_item_widget.ui.conversation_description.toPlainText()
-        == "summary"
-    )
+    assert history_item_widget.ui.conversation_description.toPlainText() == "summary"
 
 
 def test_history_item_widget_handles_detached_instance(qtbot):
@@ -48,7 +45,4 @@ def test_history_item_widget_handles_detached_instance(qtbot):
     )
     qtbot.addWidget(widget)
     widget.show()
-    assert (
-        "unavailable"
-        in widget.ui.conversation_description.toPlainText().lower()
-    )
+    assert "unavailable" in widget.ui.conversation_description.toPlainText().lower()

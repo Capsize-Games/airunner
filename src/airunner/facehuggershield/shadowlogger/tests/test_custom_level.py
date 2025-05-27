@@ -7,7 +7,9 @@ from airunner.facehuggershield.shadowlogger.shadowlogger import ShadowLogger
 class CustomLevelShadowLogger(ShadowLogger):
     log_level = logging.WARNING
 
-    def handle_message(self, formatted_message: str, level_name: str, data: dict = None) -> None:
+    def handle_message(
+        self, formatted_message: str, level_name: str, data: dict = None
+    ) -> None:
         self.last_formatted_message = formatted_message
         self.last_level_name = level_name
 

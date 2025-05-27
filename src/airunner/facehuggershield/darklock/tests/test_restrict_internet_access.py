@@ -16,9 +16,7 @@ class TestRestrictInternetAccess(unittest.TestCase):
         )  # Keep a reference to the original socket.socket
 
     def test_install(self):
-        self.restrictor.activate(
-            allowed_port=8080
-        )  # Provide a port for testing
+        self.restrictor.activate(allowed_port=8080)  # Provide a port for testing
         self.assertEqual(socket.socket, NoInternetSocket)
         # self.assertEqual(socket.SocketType, NoInternetSocket) # SocketType is not consistently replaced, focusing on socket.socket
         # It's more robust to check if creating a socket results in NoInternetSocket instance

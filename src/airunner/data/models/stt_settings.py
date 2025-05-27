@@ -4,7 +4,7 @@ from airunner.data.models.base import BaseModel
 
 
 class STTSettings(BaseModel):
-    __tablename__ = 'stt_settings'
+    __tablename__ = "stt_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
     duration = Column(Integer, default=10)
     fs = Column(Integer, default=16000)

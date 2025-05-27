@@ -71,9 +71,7 @@ class TestAPI(unittest.TestCase):
         if mock_setup_database.call_count != 1:
             import traceback
 
-            print(
-                f"setup_database call count: {mock_setup_database.call_count}"
-            )
+            print(f"setup_database call count: {mock_setup_database.call_count}")
             for i, call in enumerate(mock_setup_database.call_args_list):
                 print(f"Call {i+1} stack:")
                 traceback.print_stack()
@@ -87,9 +85,7 @@ class TestAPI(unittest.TestCase):
         action = LLMActionType.CHAT
         self.api = API(initialize_app=False, initialize_gui=False)
 
-        self.api.llm.send_request(
-            prompt, llm_request, action, do_tts_reply=True
-        )
+        self.api.llm.send_request(prompt, llm_request, action, do_tts_reply=True)
 
         mock_emit_signal.assert_called_once_with(
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL,

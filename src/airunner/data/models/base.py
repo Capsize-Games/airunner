@@ -34,6 +34,7 @@ class BaseModel(Base):
                 session.refresh(self)
             except Exception as e:
                 logger.error(f"Error in save(): {e}")
+
     def delete(self):
         success = False
         with session_scope() as session:
@@ -52,7 +53,4 @@ class BaseModel(Base):
         return dataclass_cls(**self.to_dict())
 
     def to_dict(self):
-        return {
-            c.key: getattr(self, c.key)
-            for c in inspect(self).mapper.column_attrs
-        }
+        return {c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs}

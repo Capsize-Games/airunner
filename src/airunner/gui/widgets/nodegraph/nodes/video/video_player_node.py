@@ -148,9 +148,7 @@ class VideoPlayerWidget(NodeBaseWidget):
         # Video widget with video sink for better performance
         self._video_widget = QVideoWidget()
         self._video_widget.setMinimumSize(400, 300)
-        self._video_widget.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Expanding
-        )
+        self._video_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         # Video sink for hardware acceleration
         self._video_sink = QVideoSink()
@@ -179,9 +177,7 @@ class VideoPlayerWidget(NodeBaseWidget):
 
         # Timeline slider
         self.timeline_slider = QSlider(Qt.Orientation.Horizontal)
-        self.timeline_slider.setRange(
-            0, 1000
-        )  # Use 0-1000 for percentage precision
+        self.timeline_slider.setRange(0, 1000)  # Use 0-1000 for percentage precision
         self.timeline_slider.valueChanged.connect(self._seek_video)
         self.timeline_slider.sliderReleased.connect(self._slider_released)
 
@@ -212,9 +208,7 @@ class VideoPlayerWidget(NodeBaseWidget):
         self._update_timer.timeout.connect(self._update_timeline)
 
         # Connect media player signals
-        self._media_player.playbackStateChanged.connect(
-            self._handle_playback_state
-        )
+        self._media_player.playbackStateChanged.connect(self._handle_playback_state)
         self._media_player.errorOccurred.connect(self._handle_error)
 
     def _toggle_play(self):
@@ -250,9 +244,7 @@ class VideoPlayerWidget(NodeBaseWidget):
     def _update_timeline(self):
         """Update the slider position based on video progress"""
         if self._media_player.duration() > 0:
-            percentage = (
-                self._media_player.position() / self._media_player.duration()
-            )
+            percentage = self._media_player.position() / self._media_player.duration()
             self.timeline_slider.setValue(int(percentage * 1000))
 
     def _update_frame(self, pil_img):
@@ -334,6 +326,8 @@ class VideoPlayerWidget(NodeBaseWidget):
         """Clean up resources when widget is no longer needed"""
         if hasattr(self, "_frame_extractor") and self._frame_extractor:
             self._frame_extractor.stop()
+            if self._frame_extractor.isRunning():
+                self._frame_extractor.wait()
 
         if self._media_player:
             self._media_player.stop()
@@ -380,9 +374,7 @@ class VideoNode(BaseWorkflowNode):
         self.add_custom_widget(self.video_widget)
 
         # Connect to path changes from widget
-        self.video_widget.path_changed_signal.connect(
-            self._on_widget_path_changed
-        )
+        self.video_widget.path_changed_signal.connect(self._on_widget_path_changed)
 
     def on_property_changed(self, prop_name):
         """Handle property changes in the node - called by airunner.vendor.nodegraphqt."""
@@ -420,9 +412,7 @@ class VideoNode(BaseWorkflowNode):
         self.logger.info(f"Executing {self.title} node (ID: {self.id})")
 
         # Get the input video path
-        video_path = input_data.get("video_path") or self.get_property(
-            "video_path"
-        )
+        video_path = input_data.get("video_path") or self.get_property("video_path")
 
         if not video_path or not isinstance(video_path, str):
             self.logger.error("No valid video path provided")

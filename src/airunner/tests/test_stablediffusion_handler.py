@@ -104,9 +104,7 @@ class TestStableDiffusionModelManager(unittest.TestCase):
         # Use the correct property for version
         self.assertEqual(self.handler.version, "SDXL 1.0")
         self.assertEqual(self.handler.use_compel, True)
-        self.assertEqual(
-            self.handler._current_state, HandlerState.UNINITIALIZED
-        )
+        self.assertEqual(self.handler._current_state, HandlerState.UNINITIALIZED)
         self.assertEqual(self.handler.model_type, ModelType.SD)
 
     def test_properties(self):
@@ -119,9 +117,7 @@ class TestStableDiffusionModelManager(unittest.TestCase):
         self.assertEqual(self.handler.model_status, self.mock_model_status)
 
         # Test scheduler_name property
-        self.assertEqual(
-            self.handler.scheduler_name, "DPMSolverMultistepScheduler"
-        )
+        self.assertEqual(self.handler.scheduler_name, "DPMSolverMultistepScheduler")
 
         # Test use_compel property
         self.assertEqual(self.handler.use_compel, True)
@@ -327,9 +323,7 @@ class TestStableDiffusionModelManager(unittest.TestCase):
 
             # Patch _load_pipe to simulate change_model_status call
             def _load_pipe_side_effect(*args, **kwargs):
-                self.handler.change_model_status(
-                    ModelType.SD, ModelStatus.LOADING
-                )
+                self.handler.change_model_status(ModelType.SD, ModelStatus.LOADING)
                 return True
 
             mock_load_pipe.side_effect = _load_pipe_side_effect
@@ -498,9 +492,7 @@ class TestStableDiffusionModelManager(unittest.TestCase):
         # Setup the handler to simulate different model status conditions
         self.handler.api = MagicMock()
         self.handler.api.art.lora_updated = MagicMock()
-        with patch.object(
-            self.handler, "_unload_loras"
-        ) as mock_unload, patch.object(
+        with patch.object(self.handler, "_unload_loras") as mock_unload, patch.object(
             self.handler, "_load_lora"
         ) as mock_load:
 
@@ -583,21 +575,13 @@ class TestStableDiffusionModelManager(unittest.TestCase):
         test_image = Image.new("RGB", (200, 100), color="red")
 
         # Test case: Image already fits within max dimensions
-        result = StableDiffusionModelManager._resize_image(
-            test_image, 300, 200
-        )
+        result = StableDiffusionModelManager._resize_image(test_image, 300, 200)
         self.assertEqual(result.size, (200, 100))
 
         # Test case: Image needs to be resized (landscape orientation)
-        result = StableDiffusionModelManager._resize_image(
-            test_image, 100, 200
-        )
-        self.assertEqual(
-            result.size[0], 100
-        )  # Width should be exactly max_width
-        self.assertLess(
-            result.size[1], 100
-        )  # Height should be proportionally smaller
+        result = StableDiffusionModelManager._resize_image(test_image, 100, 200)
+        self.assertEqual(result.size[0], 100)  # Width should be exactly max_width
+        self.assertLess(result.size[1], 100)  # Height should be proportionally smaller
 
         # Test case: Image is None
         result = StableDiffusionModelManager._resize_image(None, 100, 100)

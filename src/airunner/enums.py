@@ -34,6 +34,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    DRAWING_PAD_IMAGE_CHANGED_SIGNAL = "drawing_pad_image_changed_signal"
     UPATE_LOCALE = "update_locale_signal"
     RETRANSLATE_UI_SIGNAL = "retranslate_ui_signal"
     SD_UPDATE_BATCH_IMAGES_SIGNAL = "sd_update_batch_images_signal"
@@ -52,33 +53,25 @@ class SignalCode(Enum):
     AI_MODEL_DELETE_SIGNAL = "ai_model_delete_signal"  # No listeners
     AI_MODELS_CREATE_SIGNAL = "ai_models_create_signal"
     APPLICATION_MAIN_WINDOW_LOADED_SIGNAL = "main_window_loaded_signal"
-    APPLICATION_SETTINGS_LOADED_SIGNAL = (
-        "settings_loaded_signal"  # No listeners
-    )
+    APPLICATION_SETTINGS_LOADED_SIGNAL = "settings_loaded_signal"  # No listeners
     STATUS_MESSAGE_SIGNAL = "status_message_signal"
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"
     APPLICATION_RESET_SETTINGS_SIGNAL = "reset_settings_signal"
     APPLICATION_RESET_PATHS_SIGNAL = "reset_paths_signal"
-    APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL = (
-        "stop_image_generator_progress_bar_signal"
-    )
+    APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL = "stop_image_generator_progress_bar_signal"
     APPLICATION_SETTINGS_CHANGED_SIGNAL = "application_settings_changed_signal"
     APPLICATION_STATUS_INFO_SIGNAL = "status_info_signal"
     APPLICATION_STATUS_ERROR_SIGNAL = "status_error_signal"
     APPLICATION_TOOL_CHANGED_SIGNAL = "tool_changed_signal"
     APPLICATION_ACTIVE_GRID_AREA_UPDATED = "active_grid_area_updated"
     GENERATE_MASK = "generate_mask"
-    MASK_GENERATOR_WORKER_RESPONSE_SIGNAL = (
-        "mask_generator_worker_response_signal"
-    )
+    MASK_GENERATOR_WORKER_RESPONSE_SIGNAL = "mask_generator_worker_response_signal"
     AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL = "AudioCaptureWorker_response_signal"
     AUDIO_PROCESSOR_RESPONSE_SIGNAL = "audio_processor_response_signal"
     PRESET_IMAGE_GENERATOR_DISPLAY_ITEM_MENU_SIGNAL = (
         "preset_image_generator_display_menu_signal"  # No listeners
     )
-    PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL = (
-        "activate_brush"  # No listeners
-    )
+    PRESET_IMAGE_GENERATOR_ACTIVATE_BRUSH_SIGNAL = "activate_brush"  # No listeners
     CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL = "load_image_from_path_signal"
     SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"  # No listeners
@@ -100,9 +93,7 @@ class SignalCode(Enum):
     EMBEDDING_UPDATE_SIGNAL = "update_embedding_signal"
     EMBEDDING_DELETE_MISSING_SIGNAL = "delete_missing_embeddings_signal"
     EMBEDDING_GET_ALL_RESULTS_SIGNAL = "get_all_embeddings_results"
-    ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL = (
-        "EngineResponseWorker_response_signal"
-    )
+    ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL = "EngineResponseWorker_response_signal"
     GENERATOR_FORM_UPDATE_VALUES_SIGNAL = "generator_form_update_values"
     GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "generate_image_from_image"
     DO_GENERATE_IMAGE_FROM_IMAGE_SIGNAL = "do_generate_image_from_image"

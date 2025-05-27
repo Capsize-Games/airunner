@@ -19,9 +19,7 @@ class ShadowLoggerManager(metaclass=Singleton):
     def shadowlogger(self):
         return self.__shadowlogger
 
-    def activate(
-        self, show_stdout: bool = None, trackers: List[BaseTracker] = None
-    ):
+    def activate(self, show_stdout: bool = None, trackers: List[BaseTracker] = None):
         self.__show_stdout = (
             show_stdout if show_stdout is not None else self.__show_stdout
         )
@@ -29,9 +27,7 @@ class ShadowLoggerManager(metaclass=Singleton):
         if self.__active:
             self.deactivate()
 
-        self.__shadowlogger = ShadowLogger(
-            self.__show_stdout, trackers=trackers
-        )
+        self.__shadowlogger = ShadowLogger(self.__show_stdout, trackers=trackers)
 
         self.__active = True
         with self.lock:

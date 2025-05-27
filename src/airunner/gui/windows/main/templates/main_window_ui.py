@@ -8,17 +8,53 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
-    QCursor, QFont, QFontDatabase, QGradient,
-    QIcon, QImage, QKeySequence, QLinearGradient,
-    QPainter, QPalette, QPixmap, QRadialGradient,
-    QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
-    QMenuBar, QSizePolicy, QSplitter, QStatusBar,
-    QTabWidget, QToolBar, QVBoxLayout, QWidget)
+from PySide6.QtCore import (
+    QCoreApplication,
+    QDate,
+    QDateTime,
+    QLocale,
+    QMetaObject,
+    QObject,
+    QPoint,
+    QRect,
+    QSize,
+    QTime,
+    QUrl,
+    Qt,
+)
+from PySide6.QtGui import (
+    QAction,
+    QBrush,
+    QColor,
+    QConicalGradient,
+    QCursor,
+    QFont,
+    QFontDatabase,
+    QGradient,
+    QIcon,
+    QImage,
+    QKeySequence,
+    QLinearGradient,
+    QPainter,
+    QPalette,
+    QPixmap,
+    QRadialGradient,
+    QTransform,
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QGridLayout,
+    QMainWindow,
+    QMenu,
+    QMenuBar,
+    QSizePolicy,
+    QSplitter,
+    QStatusBar,
+    QTabWidget,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
+)
 
 from airunner.gui.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.gui.widgets.generator_form.generator_form_widget import GeneratorForm
@@ -26,12 +62,15 @@ from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
 from airunner.gui.widgets.tool_tab.tool_tab_widget import ToolTabWidget
 import airunner.feather_rc
 
+
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
-            MainWindow.setObjectName(u"MainWindow")
+            MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1074, 760)
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy = QSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
@@ -41,286 +80,488 @@ class Ui_MainWindow(object):
         font.setPointSize(8)
         MainWindow.setFont(font)
         icon = QIcon()
-        icon.addFile(u":/icons/icon_256.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(
+            ":/icons/icon_256.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off
+        )
         MainWindow.setWindowIcon(icon)
-        MainWindow.setStyleSheet(u"")
+        MainWindow.setStyleSheet("")
         self.actionCopy = QAction(MainWindow)
-        self.actionCopy.setObjectName(u"actionCopy")
+        self.actionCopy.setObjectName("actionCopy")
         icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/copy.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1.addFile(
+            ":/light/icons/feather/light/copy.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionCopy.setIcon(icon1)
         self.actionPaste = QAction(MainWindow)
-        self.actionPaste.setObjectName(u"actionPaste")
+        self.actionPaste.setObjectName("actionPaste")
         icon2 = QIcon()
-        icon2.addFile(u":/light/icons/feather/light/clipboard.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon2.addFile(
+            ":/light/icons/feather/light/clipboard.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionPaste.setIcon(icon2)
         self.actionAbout = QAction(MainWindow)
-        self.actionAbout.setObjectName(u"actionAbout")
+        self.actionAbout.setObjectName("actionAbout")
         self.actionQuit = QAction(MainWindow)
-        self.actionQuit.setObjectName(u"actionQuit")
+        self.actionQuit.setObjectName("actionQuit")
         icon3 = QIcon()
-        icon3.addFile(u":/light/icons/feather/light/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon3.addFile(
+            ":/light/icons/feather/light/x-circle.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionQuit.setIcon(icon3)
         self.actionBug_report = QAction(MainWindow)
-        self.actionBug_report.setObjectName(u"actionBug_report")
+        self.actionBug_report.setObjectName("actionBug_report")
         icon4 = QIcon()
-        icon4.addFile(u":/light/icons/feather/light/external-link.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon4.addFile(
+            ":/light/icons/feather/light/external-link.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionBug_report.setIcon(icon4)
         self.actionReport_vulnerability = QAction(MainWindow)
-        self.actionReport_vulnerability.setObjectName(u"actionReport_vulnerability")
+        self.actionReport_vulnerability.setObjectName("actionReport_vulnerability")
         self.actionReport_vulnerability.setIcon(icon4)
         self.actionRotate_90_clockwise = QAction(MainWindow)
-        self.actionRotate_90_clockwise.setObjectName(u"actionRotate_90_clockwise")
+        self.actionRotate_90_clockwise.setObjectName("actionRotate_90_clockwise")
         icon5 = QIcon()
-        icon5.addFile(u":/light/icons/feather/light/corner-up-left.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon5.addFile(
+            ":/light/icons/feather/light/corner-up-left.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionRotate_90_clockwise.setIcon(icon5)
         self.actionRotate_90_counter_clockwise = QAction(MainWindow)
-        self.actionRotate_90_counter_clockwise.setObjectName(u"actionRotate_90_counter_clockwise")
+        self.actionRotate_90_counter_clockwise.setObjectName(
+            "actionRotate_90_counter_clockwise"
+        )
         icon6 = QIcon()
-        icon6.addFile(u":/light/icons/feather/light/corner-up-right.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon6.addFile(
+            ":/light/icons/feather/light/corner-up-right.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionRotate_90_counter_clockwise.setIcon(icon6)
         self.actionPrompt_Browser = QAction(MainWindow)
-        self.actionPrompt_Browser.setObjectName(u"actionPrompt_Browser")
+        self.actionPrompt_Browser.setObjectName("actionPrompt_Browser")
         icon7 = QIcon()
-        icon7.addFile(u":/light/icons/feather/light/book-open.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon7.addFile(
+            ":/light/icons/feather/light/book-open.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionPrompt_Browser.setIcon(icon7)
         self.actionClear_all_prompts = QAction(MainWindow)
-        self.actionClear_all_prompts.setObjectName(u"actionClear_all_prompts")
+        self.actionClear_all_prompts.setObjectName("actionClear_all_prompts")
         icon8 = QIcon()
-        icon8.addFile(u":/light/icons/feather/light/delete.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon8.addFile(
+            ":/light/icons/feather/light/delete.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionClear_all_prompts.setIcon(icon8)
         self.actionCut = QAction(MainWindow)
-        self.actionCut.setObjectName(u"actionCut")
+        self.actionCut.setObjectName("actionCut")
         icon9 = QIcon()
-        icon9.addFile(u":/light/icons/feather/light/scissors.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon9.addFile(
+            ":/light/icons/feather/light/scissors.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionCut.setIcon(icon9)
         self.actionBrowse_AI_Runner_Path = QAction(MainWindow)
-        self.actionBrowse_AI_Runner_Path.setObjectName(u"actionBrowse_AI_Runner_Path")
+        self.actionBrowse_AI_Runner_Path.setObjectName("actionBrowse_AI_Runner_Path")
         icon10 = QIcon()
-        icon10.addFile(u":/light/icons/feather/light/folder.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon10.addFile(
+            ":/light/icons/feather/light/folder.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionBrowse_AI_Runner_Path.setIcon(icon10)
         self.actionBrowse_Images_Path_2 = QAction(MainWindow)
-        self.actionBrowse_Images_Path_2.setObjectName(u"actionBrowse_Images_Path_2")
+        self.actionBrowse_Images_Path_2.setObjectName("actionBrowse_Images_Path_2")
         self.actionBrowse_Images_Path_2.setIcon(icon10)
         self.actionReset_Settings_2 = QAction(MainWindow)
-        self.actionReset_Settings_2.setObjectName(u"actionReset_Settings_2")
+        self.actionReset_Settings_2.setObjectName("actionReset_Settings_2")
         icon11 = QIcon()
-        icon11.addFile(u":/light/icons/feather/light/refresh-cw.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon11.addFile(
+            ":/light/icons/feather/light/refresh-cw.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionReset_Settings_2.setIcon(icon11)
         self.actionSafety_Checker = QAction(MainWindow)
-        self.actionSafety_Checker.setObjectName(u"actionSafety_Checker")
+        self.actionSafety_Checker.setObjectName("actionSafety_Checker")
         self.actionSafety_Checker.setCheckable(True)
         self.actionSafety_Checker.setChecked(False)
         icon12 = QIcon()
-        icon12.addFile(u":/light/icons/feather/light/slash.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon12.addFile(
+            ":/light/icons/feather/light/slash.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionSafety_Checker.setIcon(icon12)
         self.actionRun_setup_wizard_2 = QAction(MainWindow)
-        self.actionRun_setup_wizard_2.setObjectName(u"actionRun_setup_wizard_2")
+        self.actionRun_setup_wizard_2.setObjectName("actionRun_setup_wizard_2")
         icon13 = QIcon()
-        icon13.addFile(u":/light/icons/feather/light/zap.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon13.addFile(
+            ":/light/icons/feather/light/zap.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionRun_setup_wizard_2.setIcon(icon13)
         self.actionStats = QAction(MainWindow)
-        self.actionStats.setObjectName(u"actionStats")
+        self.actionStats.setObjectName("actionStats")
         icon14 = QIcon()
-        icon14.addFile(u":/light/icons/feather/light/activity.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon14.addFile(
+            ":/light/icons/feather/light/activity.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionStats.setIcon(icon14)
         self.actionSettings = QAction(MainWindow)
-        self.actionSettings.setObjectName(u"actionSettings")
+        self.actionSettings.setObjectName("actionSettings")
         icon15 = QIcon()
-        icon15.addFile(u":/light/icons/feather/light/settings.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon15.addFile(
+            ":/light/icons/feather/light/settings.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionSettings.setIcon(icon15)
         self.actionToggle_LLM = QAction(MainWindow)
-        self.actionToggle_LLM.setObjectName(u"actionToggle_LLM")
+        self.actionToggle_LLM.setObjectName("actionToggle_LLM")
         self.actionToggle_LLM.setCheckable(True)
         self.actionToggle_LLM.setChecked(False)
         icon16 = QIcon()
-        icon16.addFile(u":/light/icons/feather/light/cpu.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon16.addFile(
+            ":/light/icons/feather/light/cpu.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionToggle_LLM.setIcon(icon16)
         self.actionToggle_Text_to_Speech = QAction(MainWindow)
-        self.actionToggle_Text_to_Speech.setObjectName(u"actionToggle_Text_to_Speech")
+        self.actionToggle_Text_to_Speech.setObjectName("actionToggle_Text_to_Speech")
         self.actionToggle_Text_to_Speech.setCheckable(True)
         icon17 = QIcon()
-        icon17.addFile(u":/light/icons/feather/light/speaker.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon17.addFile(
+            ":/light/icons/feather/light/speaker.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionToggle_Text_to_Speech.setIcon(icon17)
         self.actionToggle_Speech_to_Text = QAction(MainWindow)
-        self.actionToggle_Speech_to_Text.setObjectName(u"actionToggle_Speech_to_Text")
+        self.actionToggle_Speech_to_Text.setObjectName("actionToggle_Speech_to_Text")
         self.actionToggle_Speech_to_Text.setCheckable(True)
         icon18 = QIcon()
-        icon18.addFile(u":/light/icons/feather/light/mic.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon18.addFile(
+            ":/light/icons/feather/light/mic.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionToggle_Speech_to_Text.setIcon(icon18)
         self.actionToggle_Stable_Diffusion = QAction(MainWindow)
-        self.actionToggle_Stable_Diffusion.setObjectName(u"actionToggle_Stable_Diffusion")
+        self.actionToggle_Stable_Diffusion.setObjectName(
+            "actionToggle_Stable_Diffusion"
+        )
         self.actionToggle_Stable_Diffusion.setCheckable(True)
         icon19 = QIcon()
-        icon19.addFile(u":/light/icons/feather/light/image.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon19.addFile(
+            ":/light/icons/feather/light/image.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionToggle_Stable_Diffusion.setIcon(icon19)
         self.actionToggle_Controlnet = QAction(MainWindow)
-        self.actionToggle_Controlnet.setObjectName(u"actionToggle_Controlnet")
+        self.actionToggle_Controlnet.setObjectName("actionToggle_Controlnet")
         self.actionToggle_Controlnet.setCheckable(True)
         self.actionToggle_Controlnet.setChecked(False)
         icon20 = QIcon()
-        icon20.addFile(u":/light/icons/feather/light/crosshair.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon20.addFile(
+            ":/light/icons/feather/light/crosshair.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionToggle_Controlnet.setIcon(icon20)
         self.actionToggle_Active_Grid_Area = QAction(MainWindow)
-        self.actionToggle_Active_Grid_Area.setObjectName(u"actionToggle_Active_Grid_Area")
+        self.actionToggle_Active_Grid_Area.setObjectName(
+            "actionToggle_Active_Grid_Area"
+        )
         self.actionToggle_Active_Grid_Area.setCheckable(True)
         icon21 = QIcon()
-        icon21.addFile(u":/light/icons/feather/light/object-selected-icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon21.addFile(
+            ":/light/icons/feather/light/object-selected-icon.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionToggle_Active_Grid_Area.setIcon(icon21)
         self.actionToggle_Brush = QAction(MainWindow)
-        self.actionToggle_Brush.setObjectName(u"actionToggle_Brush")
+        self.actionToggle_Brush.setObjectName("actionToggle_Brush")
         self.actionToggle_Brush.setCheckable(True)
         icon22 = QIcon()
-        icon22.addFile(u":/light/icons/feather/light/pencil-icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon22.addFile(
+            ":/light/icons/feather/light/pencil-icon.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionToggle_Brush.setIcon(icon22)
         self.actionToggle_Grid = QAction(MainWindow)
-        self.actionToggle_Grid.setObjectName(u"actionToggle_Grid")
+        self.actionToggle_Grid.setObjectName("actionToggle_Grid")
         self.actionToggle_Grid.setCheckable(True)
         icon23 = QIcon()
-        icon23.addFile(u":/light/icons/feather/light/grid.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon23.addFile(
+            ":/light/icons/feather/light/grid.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionToggle_Grid.setIcon(icon23)
         self.actionToggle_Eraser = QAction(MainWindow)
-        self.actionToggle_Eraser.setObjectName(u"actionToggle_Eraser")
+        self.actionToggle_Eraser.setObjectName("actionToggle_Eraser")
         self.actionToggle_Eraser.setCheckable(True)
         icon24 = QIcon()
-        icon24.addFile(u":/light/icons/feather/light/eraser-icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon24.addFile(
+            ":/light/icons/feather/light/eraser-icon.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionToggle_Eraser.setIcon(icon24)
         self.artActionNew = QAction(MainWindow)
-        self.artActionNew.setObjectName(u"artActionNew")
+        self.artActionNew.setObjectName("artActionNew")
         icon25 = QIcon()
-        icon25.addFile(u":/light/icons/feather/light/plus-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon25.addFile(
+            ":/light/icons/feather/light/plus-circle.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.artActionNew.setIcon(icon25)
         self.actionImport_image = QAction(MainWindow)
-        self.actionImport_image.setObjectName(u"actionImport_image")
+        self.actionImport_image.setObjectName("actionImport_image")
         icon26 = QIcon()
-        icon26.addFile(u":/light/icons/feather/light/download.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon26.addFile(
+            ":/light/icons/feather/light/download.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionImport_image.setIcon(icon26)
         self.actionExport_image_button = QAction(MainWindow)
-        self.actionExport_image_button.setObjectName(u"actionExport_image_button")
+        self.actionExport_image_button.setObjectName("actionExport_image_button")
         icon27 = QIcon()
-        icon27.addFile(u":/light/icons/feather/light/upload.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon27.addFile(
+            ":/light/icons/feather/light/upload.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionExport_image_button.setIcon(icon27)
         self.actionNew_Conversation = QAction(MainWindow)
-        self.actionNew_Conversation.setObjectName(u"actionNew_Conversation")
+        self.actionNew_Conversation.setObjectName("actionNew_Conversation")
         icon28 = QIcon()
-        icon28.addFile(u":/light/icons/feather/light/message-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon28.addFile(
+            ":/light/icons/feather/light/message-circle.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionNew_Conversation.setIcon(icon28)
         self.actionDelete_conversation = QAction(MainWindow)
-        self.actionDelete_conversation.setObjectName(u"actionDelete_conversation")
+        self.actionDelete_conversation.setObjectName("actionDelete_conversation")
         icon29 = QIcon()
-        icon29.addFile(u":/light/icons/feather/light/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon29.addFile(
+            ":/light/icons/feather/light/trash-2.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionDelete_conversation.setIcon(icon29)
         self.actionDiscord = QAction(MainWindow)
-        self.actionDiscord.setObjectName(u"actionDiscord")
+        self.actionDiscord.setObjectName("actionDiscord")
         icon30 = QIcon()
-        icon30.addFile(u":/light/icons/feather/light/message-square.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon30.addFile(
+            ":/light/icons/feather/light/message-square.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionDiscord.setIcon(icon30)
         self.workflow_actionRun = QAction(MainWindow)
-        self.workflow_actionRun.setObjectName(u"workflow_actionRun")
+        self.workflow_actionRun.setObjectName("workflow_actionRun")
         icon31 = QIcon()
-        icon31.addFile(u":/light/icons/feather/light/play.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon31.addFile(
+            ":/light/icons/feather/light/play.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.workflow_actionRun.setIcon(icon31)
         self.workflow_actionPause = QAction(MainWindow)
-        self.workflow_actionPause.setObjectName(u"workflow_actionPause")
+        self.workflow_actionPause.setObjectName("workflow_actionPause")
         icon32 = QIcon()
-        icon32.addFile(u":/light/icons/feather/light/pause-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon32.addFile(
+            ":/light/icons/feather/light/pause-circle.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.workflow_actionPause.setIcon(icon32)
         self.workflow_actionStop = QAction(MainWindow)
-        self.workflow_actionStop.setObjectName(u"workflow_actionStop")
+        self.workflow_actionStop.setObjectName("workflow_actionStop")
         icon33 = QIcon()
-        icon33.addFile(u":/light/icons/feather/light/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon33.addFile(
+            ":/light/icons/feather/light/stop-circle.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.workflow_actionStop.setIcon(icon33)
         self.workflow_actionSave = QAction(MainWindow)
-        self.workflow_actionSave.setObjectName(u"workflow_actionSave")
+        self.workflow_actionSave.setObjectName("workflow_actionSave")
         icon34 = QIcon()
-        icon34.addFile(u":/light/icons/feather/light/save.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon34.addFile(
+            ":/light/icons/feather/light/save.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.workflow_actionSave.setIcon(icon34)
         self.workflow_actionClear = QAction(MainWindow)
-        self.workflow_actionClear.setObjectName(u"workflow_actionClear")
+        self.workflow_actionClear.setObjectName("workflow_actionClear")
         self.workflow_actionClear.setIcon(icon29)
         self.workflow_actionEdit = QAction(MainWindow)
-        self.workflow_actionEdit.setObjectName(u"workflow_actionEdit")
+        self.workflow_actionEdit.setObjectName("workflow_actionEdit")
         icon35 = QIcon()
-        icon35.addFile(u":/light/icons/feather/light/edit.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon35.addFile(
+            ":/light/icons/feather/light/edit.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.workflow_actionEdit.setIcon(icon35)
         self.workflow_actionOpen = QAction(MainWindow)
-        self.workflow_actionOpen.setObjectName(u"workflow_actionOpen")
+        self.workflow_actionOpen.setObjectName("workflow_actionOpen")
         self.workflow_actionOpen.setIcon(icon10)
         self.actionSave_As = QAction(MainWindow)
-        self.actionSave_As.setObjectName(u"actionSave_As")
+        self.actionSave_As.setObjectName("actionSave_As")
         self.actionSave_As.setIcon(icon34)
         self.actionUndo = QAction(MainWindow)
-        self.actionUndo.setObjectName(u"actionUndo")
+        self.actionUndo.setObjectName("actionUndo")
         self.actionUndo.setIcon(icon5)
         self.actionRedo = QAction(MainWindow)
-        self.actionRedo.setObjectName(u"actionRedo")
+        self.actionRedo.setObjectName("actionRedo")
         self.actionRedo.setIcon(icon6)
         self.actionRecenter = QAction(MainWindow)
-        self.actionRecenter.setObjectName(u"actionRecenter")
+        self.actionRecenter.setObjectName("actionRecenter")
         icon36 = QIcon()
-        icon36.addFile(u":/light/icons/feather/light/target.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon36.addFile(
+            ":/light/icons/feather/light/target.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.actionRecenter.setIcon(icon36)
         self.centralwidget = QWidget(MainWindow)
-        self.centralwidget.setObjectName(u"centralwidget")
+        self.centralwidget.setObjectName("centralwidget")
         self.centralwidget.setEnabled(True)
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        sizePolicy1 = QSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+        )
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
+        sizePolicy1.setHeightForWidth(
+            self.centralwidget.sizePolicy().hasHeightForWidth()
+        )
         self.centralwidget.setSizePolicy(sizePolicy1)
         self.centralwidget.setMinimumSize(QSize(0, 0))
         self.centralwidget.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.gridLayout_3 = QGridLayout(self.centralwidget)
         self.gridLayout_3.setSpacing(0)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_3.setObjectName("gridLayout_3")
         self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
         self.mode_tab_widget = QWidget(self.centralwidget)
-        self.mode_tab_widget.setObjectName(u"mode_tab_widget")
+        self.mode_tab_widget.setObjectName("mode_tab_widget")
         self.mode_tab_widget.setAutoFillBackground(False)
-        self.mode_tab_widget.setStyleSheet(u"QTabWidget#mode_tab_widget::pane { border: 0; background: transparent; }")
+        self.mode_tab_widget.setStyleSheet(
+            "QTabWidget#mode_tab_widget::pane { border: 0; background: transparent; }"
+        )
         self.gridLayout = QGridLayout(self.mode_tab_widget)
         self.gridLayout.setSpacing(0)
-        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setObjectName("gridLayout")
         self.gridLayout.setContentsMargins(0, 1, 0, 0)
         self.main_window_splitter = QSplitter(self.mode_tab_widget)
-        self.main_window_splitter.setObjectName(u"main_window_splitter")
+        self.main_window_splitter.setObjectName("main_window_splitter")
         self.main_window_splitter.setOrientation(Qt.Orientation.Horizontal)
         self.generator_widget = GeneratorForm(self.main_window_splitter)
-        self.generator_widget.setObjectName(u"generator_widget")
+        self.generator_widget.setObjectName("generator_widget")
         self.generator_widget.setEnabled(True)
-        sizePolicy1.setHeightForWidth(self.generator_widget.sizePolicy().hasHeightForWidth())
+        sizePolicy1.setHeightForWidth(
+            self.generator_widget.sizePolicy().hasHeightForWidth()
+        )
         self.generator_widget.setSizePolicy(sizePolicy1)
         self.generator_widget.setMinimumSize(QSize(250, 0))
         self.generator_widget.setMaximumSize(QSize(16777215, 16777215))
         self.generator_widget.setBaseSize(QSize(250, 0))
         self.gridLayout_6 = QGridLayout(self.generator_widget)
-        self.gridLayout_6.setObjectName(u"gridLayout_6")
+        self.gridLayout_6.setObjectName("gridLayout_6")
         self.main_window_splitter.addWidget(self.generator_widget)
         self.center_widget = QWidget(self.main_window_splitter)
-        self.center_widget.setObjectName(u"center_widget")
-        sizePolicy1.setHeightForWidth(self.center_widget.sizePolicy().hasHeightForWidth())
+        self.center_widget.setObjectName("center_widget")
+        sizePolicy1.setHeightForWidth(
+            self.center_widget.sizePolicy().hasHeightForWidth()
+        )
         self.center_widget.setSizePolicy(sizePolicy1)
         self.center_widget.setMinimumSize(QSize(64, 0))
         self.gridLayout_4 = QGridLayout(self.center_widget)
-        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.gridLayout_4.setObjectName("gridLayout_4")
         self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
         self.center_tab_container = QTabWidget(self.center_widget)
-        self.center_tab_container.setObjectName(u"center_tab_container")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.center_tab_container.setObjectName("center_tab_container")
+        sizePolicy2 = QSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.center_tab_container.sizePolicy().hasHeightForWidth())
+        sizePolicy2.setHeightForWidth(
+            self.center_tab_container.sizePolicy().hasHeightForWidth()
+        )
         self.center_tab_container.setSizePolicy(sizePolicy2)
         self.center_tab_container.setBaseSize(QSize(0, 0))
         self.center_tab_container.setTabsClosable(False)
         self.center_tab_container.setMovable(False)
         self.art_tab = QWidget()
-        self.art_tab.setObjectName(u"art_tab")
+        self.art_tab.setObjectName("art_tab")
         self.gridLayout_2 = QGridLayout(self.art_tab)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setObjectName("gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.canvas = CanvasWidget(self.art_tab)
-        self.canvas.setObjectName(u"canvas")
+        self.canvas.setObjectName("canvas")
         sizePolicy2.setHeightForWidth(self.canvas.sizePolicy().hasHeightForWidth())
         self.canvas.setSizePolicy(sizePolicy2)
         self.canvas.setMinimumSize(QSize(0, 0))
@@ -332,12 +573,12 @@ class Ui_MainWindow(object):
 
         self.center_tab_container.addTab(self.art_tab, "")
         self.agent_workflow_tab = QWidget()
-        self.agent_workflow_tab.setObjectName(u"agent_workflow_tab")
+        self.agent_workflow_tab.setObjectName("agent_workflow_tab")
         self.gridLayout_5 = QGridLayout(self.agent_workflow_tab)
-        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.gridLayout_5.setObjectName("gridLayout_5")
         self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
         self.graph = NodeGraphWidget(self.agent_workflow_tab)
-        self.graph.setObjectName(u"graph")
+        self.graph.setObjectName("graph")
 
         self.gridLayout_5.addWidget(self.graph, 0, 0, 1, 1)
 
@@ -347,22 +588,28 @@ class Ui_MainWindow(object):
 
         self.main_window_splitter.addWidget(self.center_widget)
         self.panel_container = QWidget(self.main_window_splitter)
-        self.panel_container.setObjectName(u"panel_container")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
+        self.panel_container.setObjectName("panel_container")
+        sizePolicy3 = QSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
+        )
         sizePolicy3.setHorizontalStretch(0)
         sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.panel_container.sizePolicy().hasHeightForWidth())
+        sizePolicy3.setHeightForWidth(
+            self.panel_container.sizePolicy().hasHeightForWidth()
+        )
         self.panel_container.setSizePolicy(sizePolicy3)
         self.panel_container.setMinimumSize(QSize(350, 0))
         self.panel_container.setMaximumSize(QSize(350, 16777215))
         self.panel_container.setBaseSize(QSize(350, 0))
         self.verticalLayout_2 = QVBoxLayout(self.panel_container)
         self.verticalLayout_2.setSpacing(0)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.tool_tab_widget = ToolTabWidget(self.panel_container)
-        self.tool_tab_widget.setObjectName(u"tool_tab_widget")
-        sizePolicy1.setHeightForWidth(self.tool_tab_widget.sizePolicy().hasHeightForWidth())
+        self.tool_tab_widget.setObjectName("tool_tab_widget")
+        sizePolicy1.setHeightForWidth(
+            self.tool_tab_widget.sizePolicy().hasHeightForWidth()
+        )
         self.tool_tab_widget.setSizePolicy(sizePolicy1)
         self.tool_tab_widget.setMinimumSize(QSize(0, 0))
 
@@ -372,53 +619,57 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.main_window_splitter, 0, 0, 1, 1)
 
-
         self.gridLayout_3.addWidget(self.mode_tab_widget, 0, 0, 1, 1)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
-        self.menubar.setObjectName(u"menubar")
+        self.menubar.setObjectName("menubar")
         self.menubar.setGeometry(QRect(0, 0, 1074, 23))
         font1 = QFont()
         font1.setPointSize(11)
         self.menubar.setFont(font1)
         self.menuFile = QMenu(self.menubar)
-        self.menuFile.setObjectName(u"menuFile")
+        self.menuFile.setObjectName("menuFile")
         self.menuFile.setTearOffEnabled(False)
         self.menuFile.setSeparatorsCollapsible(False)
         self.menuArt = QMenu(self.menuFile)
-        self.menuArt.setObjectName(u"menuArt")
+        self.menuArt.setObjectName("menuArt")
         self.menuArt.setIcon(icon19)
         self.menuChat = QMenu(self.menuFile)
-        self.menuChat.setObjectName(u"menuChat")
+        self.menuChat.setObjectName("menuChat")
         self.menuChat.setIcon(icon28)
         self.menuWorkflow = QMenu(self.menuFile)
-        self.menuWorkflow.setObjectName(u"menuWorkflow")
+        self.menuWorkflow.setObjectName("menuWorkflow")
         icon37 = QIcon()
-        icon37.addFile(u":/light/icons/feather/light/codesandbox.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon37.addFile(
+            ":/light/icons/feather/light/codesandbox.svg",
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off,
+        )
         self.menuWorkflow.setIcon(icon37)
         self.menuEdit = QMenu(self.menubar)
-        self.menuEdit.setObjectName(u"menuEdit")
+        self.menuEdit.setObjectName("menuEdit")
         self.menuFilters = QMenu(self.menubar)
-        self.menuFilters.setObjectName(u"menuFilters")
+        self.menuFilters.setObjectName("menuFilters")
         self.menuAbout = QMenu(self.menubar)
-        self.menuAbout.setObjectName(u"menuAbout")
+        self.menuAbout.setObjectName("menuAbout")
         self.menuAbout.setTearOffEnabled(False)
         self.menuImage = QMenu(self.menubar)
-        self.menuImage.setObjectName(u"menuImage")
+        self.menuImage.setObjectName("menuImage")
         self.menuView = QMenu(self.menubar)
-        self.menuView.setObjectName(u"menuView")
+        self.menuView.setObjectName("menuView")
         self.menuTools = QMenu(self.menubar)
-        self.menuTools.setObjectName(u"menuTools")
+        self.menuTools.setObjectName("menuTools")
         self.menuStable_Diffusion = QMenu(self.menuTools)
-        self.menuStable_Diffusion.setObjectName(u"menuStable_Diffusion")
+        self.menuStable_Diffusion.setObjectName("menuStable_Diffusion")
         self.menuStable_Diffusion.setIcon(icon19)
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
-        self.statusbar.setObjectName(u"statusbar")
+        self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.model_toolbar = QToolBar(MainWindow)
-        self.model_toolbar.setObjectName(u"model_toolbar")
+        self.model_toolbar.setObjectName("model_toolbar")
         self.model_toolbar.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.model_toolbar.setMovable(True)
         self.model_toolbar.setOrientation(Qt.Orientation.Horizontal)
@@ -514,99 +765,217 @@ class Ui_MainWindow(object):
 
         self.center_tab_container.setCurrentIndex(0)
 
-
         QMetaObject.connectSlotsByName(MainWindow)
+
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"AI Runner", None))
-        self.actionCopy.setText(QCoreApplication.translate("MainWindow", u"Copy", None))
-#if QT_CONFIG(shortcut)
-        self.actionCopy.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+C", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionPaste.setText(QCoreApplication.translate("MainWindow", u"Paste", None))
-#if QT_CONFIG(shortcut)
-        self.actionPaste.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+V", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionAbout.setText(QCoreApplication.translate("MainWindow", u"About", None))
-        self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
-#if QT_CONFIG(shortcut)
-        self.actionQuit.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Q", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionBug_report.setText(QCoreApplication.translate("MainWindow", u"Bug report", None))
-        self.actionReport_vulnerability.setText(QCoreApplication.translate("MainWindow", u"Report vulnerability", None))
-        self.actionRotate_90_clockwise.setText(QCoreApplication.translate("MainWindow", u"Rotate 90\u00b0 clockwise", None))
-#if QT_CONFIG(shortcut)
-        self.actionRotate_90_clockwise.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+R", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionRotate_90_counter_clockwise.setText(QCoreApplication.translate("MainWindow", u"Rotate 90\u00b0 counter clockwise", None))
-#if QT_CONFIG(shortcut)
-        self.actionRotate_90_counter_clockwise.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Shift+R", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionPrompt_Browser.setText(QCoreApplication.translate("MainWindow", u"Prompt browser", None))
-        self.actionClear_all_prompts.setText(QCoreApplication.translate("MainWindow", u"Clear all prompts", None))
-#if QT_CONFIG(tooltip)
-        self.actionClear_all_prompts.setToolTip(QCoreApplication.translate("MainWindow", u"Remove text from all prompts and negative prompts", None))
-#endif // QT_CONFIG(tooltip)
-        self.actionCut.setText(QCoreApplication.translate("MainWindow", u"Cut", None))
-#if QT_CONFIG(shortcut)
-        self.actionCut.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+X", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionBrowse_AI_Runner_Path.setText(QCoreApplication.translate("MainWindow", u"Browse AI Runner Path", None))
-        self.actionBrowse_Images_Path_2.setText(QCoreApplication.translate("MainWindow", u"Browse Images", None))
-        self.actionReset_Settings_2.setText(QCoreApplication.translate("MainWindow", u"Reset Settings", None))
-        self.actionSafety_Checker.setText(QCoreApplication.translate("MainWindow", u"Safety Checker", None))
-        self.actionRun_setup_wizard_2.setText(QCoreApplication.translate("MainWindow", u"Run Setup Wizard", None))
-        self.actionStats.setText(QCoreApplication.translate("MainWindow", u"Stats", None))
-        self.actionSettings.setText(QCoreApplication.translate("MainWindow", u"Preferences", None))
-        self.actionToggle_LLM.setText(QCoreApplication.translate("MainWindow", u"Toggle LLM", None))
-        self.actionToggle_Text_to_Speech.setText(QCoreApplication.translate("MainWindow", u"Toggle Text to Speech", None))
-        self.actionToggle_Speech_to_Text.setText(QCoreApplication.translate("MainWindow", u"Toggle Speech to Text", None))
-        self.actionToggle_Stable_Diffusion.setText(QCoreApplication.translate("MainWindow", u"Toggle Stable Diffusion", None))
-        self.actionToggle_Controlnet.setText(QCoreApplication.translate("MainWindow", u"Toggle Controlnet", None))
-        self.actionToggle_Active_Grid_Area.setText(QCoreApplication.translate("MainWindow", u"Toggle Active Grid Area", None))
-        self.actionToggle_Brush.setText(QCoreApplication.translate("MainWindow", u"Toggle Brush", None))
-        self.actionToggle_Grid.setText(QCoreApplication.translate("MainWindow", u"Toggle Grid", None))
-        self.actionToggle_Eraser.setText(QCoreApplication.translate("MainWindow", u"Toggle Eraser", None))
-        self.artActionNew.setText(QCoreApplication.translate("MainWindow", u"New", None))
-#if QT_CONFIG(shortcut)
-        self.artActionNew.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+N", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionImport_image.setText(QCoreApplication.translate("MainWindow", u"Import image", None))
-#if QT_CONFIG(shortcut)
-        self.actionImport_image.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+I", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionExport_image_button.setText(QCoreApplication.translate("MainWindow", u"Export image", None))
-#if QT_CONFIG(shortcut)
-        self.actionExport_image_button.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+E", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionNew_Conversation.setText(QCoreApplication.translate("MainWindow", u"New Conversation", None))
-        self.actionDelete_conversation.setText(QCoreApplication.translate("MainWindow", u"Delete conversation", None))
-        self.actionDiscord.setText(QCoreApplication.translate("MainWindow", u"Discord", None))
-        self.workflow_actionRun.setText(QCoreApplication.translate("MainWindow", u"Run", None))
-        self.workflow_actionPause.setText(QCoreApplication.translate("MainWindow", u"Pause", None))
-        self.workflow_actionStop.setText(QCoreApplication.translate("MainWindow", u"Stop", None))
-        self.workflow_actionSave.setText(QCoreApplication.translate("MainWindow", u"Save", None))
-        self.workflow_actionClear.setText(QCoreApplication.translate("MainWindow", u"Clear", None))
-        self.workflow_actionEdit.setText(QCoreApplication.translate("MainWindow", u"Edit", None))
-        self.workflow_actionOpen.setText(QCoreApplication.translate("MainWindow", u"Load", None))
-        self.actionSave_As.setText(QCoreApplication.translate("MainWindow", u"Save As", None))
-        self.actionUndo.setText(QCoreApplication.translate("MainWindow", u"Undo", None))
-        self.actionRedo.setText(QCoreApplication.translate("MainWindow", u"Redo", None))
-        self.actionRecenter.setText(QCoreApplication.translate("MainWindow", u"Recenter", None))
-        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.art_tab), QCoreApplication.translate("MainWindow", u"Art", None))
-        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.agent_workflow_tab), QCoreApplication.translate("MainWindow", u"Agent Workflow", None))
-        self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
-        self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
-        self.menuChat.setTitle(QCoreApplication.translate("MainWindow", u"Chat", None))
-        self.menuWorkflow.setTitle(QCoreApplication.translate("MainWindow", u"Workflow", None))
-        self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"Edit", None))
-        self.menuFilters.setTitle(QCoreApplication.translate("MainWindow", u"Filters", None))
-        self.menuAbout.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
-        self.menuImage.setTitle(QCoreApplication.translate("MainWindow", u"Canvas", None))
-        self.menuView.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
-        self.menuTools.setTitle(QCoreApplication.translate("MainWindow", u"Tools", None))
-        self.menuStable_Diffusion.setTitle(QCoreApplication.translate("MainWindow", u"Stable Diffusion", None))
-        self.model_toolbar.setWindowTitle(QCoreApplication.translate("MainWindow", u"toolBar_2", None))
-    # retranslateUi
+        MainWindow.setWindowTitle(
+            QCoreApplication.translate("MainWindow", "AI Runner", None)
+        )
+        self.actionCopy.setText(QCoreApplication.translate("MainWindow", "Copy", None))
+        # if QT_CONFIG(shortcut)
+        self.actionCopy.setShortcut(
+            QCoreApplication.translate("MainWindow", "Ctrl+C", None)
+        )
+        # endif // QT_CONFIG(shortcut)
+        self.actionPaste.setText(
+            QCoreApplication.translate("MainWindow", "Paste", None)
+        )
+        # if QT_CONFIG(shortcut)
+        self.actionPaste.setShortcut(
+            QCoreApplication.translate("MainWindow", "Ctrl+V", None)
+        )
+        # endif // QT_CONFIG(shortcut)
+        self.actionAbout.setText(
+            QCoreApplication.translate("MainWindow", "About", None)
+        )
+        self.actionQuit.setText(QCoreApplication.translate("MainWindow", "Quit", None))
+        # if QT_CONFIG(shortcut)
+        self.actionQuit.setShortcut(
+            QCoreApplication.translate("MainWindow", "Ctrl+Q", None)
+        )
+        # endif // QT_CONFIG(shortcut)
+        self.actionBug_report.setText(
+            QCoreApplication.translate("MainWindow", "Bug report", None)
+        )
+        self.actionReport_vulnerability.setText(
+            QCoreApplication.translate("MainWindow", "Report vulnerability", None)
+        )
+        self.actionRotate_90_clockwise.setText(
+            QCoreApplication.translate("MainWindow", "Rotate 90\u00b0 clockwise", None)
+        )
+        # if QT_CONFIG(shortcut)
+        self.actionRotate_90_clockwise.setShortcut(
+            QCoreApplication.translate("MainWindow", "Ctrl+R", None)
+        )
+        # endif // QT_CONFIG(shortcut)
+        self.actionRotate_90_counter_clockwise.setText(
+            QCoreApplication.translate(
+                "MainWindow", "Rotate 90\u00b0 counter clockwise", None
+            )
+        )
+        # if QT_CONFIG(shortcut)
+        self.actionRotate_90_counter_clockwise.setShortcut(
+            QCoreApplication.translate("MainWindow", "Ctrl+Shift+R", None)
+        )
+        # endif // QT_CONFIG(shortcut)
+        self.actionPrompt_Browser.setText(
+            QCoreApplication.translate("MainWindow", "Prompt browser", None)
+        )
+        self.actionClear_all_prompts.setText(
+            QCoreApplication.translate("MainWindow", "Clear all prompts", None)
+        )
+        # if QT_CONFIG(tooltip)
+        self.actionClear_all_prompts.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", "Remove text from all prompts and negative prompts", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        self.actionCut.setText(QCoreApplication.translate("MainWindow", "Cut", None))
+        # if QT_CONFIG(shortcut)
+        self.actionCut.setShortcut(
+            QCoreApplication.translate("MainWindow", "Ctrl+X", None)
+        )
+        # endif // QT_CONFIG(shortcut)
+        self.actionBrowse_AI_Runner_Path.setText(
+            QCoreApplication.translate("MainWindow", "Browse AI Runner Path", None)
+        )
+        self.actionBrowse_Images_Path_2.setText(
+            QCoreApplication.translate("MainWindow", "Browse Images", None)
+        )
+        self.actionReset_Settings_2.setText(
+            QCoreApplication.translate("MainWindow", "Reset Settings", None)
+        )
+        self.actionSafety_Checker.setText(
+            QCoreApplication.translate("MainWindow", "Safety Checker", None)
+        )
+        self.actionRun_setup_wizard_2.setText(
+            QCoreApplication.translate("MainWindow", "Run Setup Wizard", None)
+        )
+        self.actionStats.setText(
+            QCoreApplication.translate("MainWindow", "Stats", None)
+        )
+        self.actionSettings.setText(
+            QCoreApplication.translate("MainWindow", "Preferences", None)
+        )
+        self.actionToggle_LLM.setText(
+            QCoreApplication.translate("MainWindow", "Toggle LLM", None)
+        )
+        self.actionToggle_Text_to_Speech.setText(
+            QCoreApplication.translate("MainWindow", "Toggle Text to Speech", None)
+        )
+        self.actionToggle_Speech_to_Text.setText(
+            QCoreApplication.translate("MainWindow", "Toggle Speech to Text", None)
+        )
+        self.actionToggle_Stable_Diffusion.setText(
+            QCoreApplication.translate("MainWindow", "Toggle Stable Diffusion", None)
+        )
+        self.actionToggle_Controlnet.setText(
+            QCoreApplication.translate("MainWindow", "Toggle Controlnet", None)
+        )
+        self.actionToggle_Active_Grid_Area.setText(
+            QCoreApplication.translate("MainWindow", "Toggle Active Grid Area", None)
+        )
+        self.actionToggle_Brush.setText(
+            QCoreApplication.translate("MainWindow", "Toggle Brush", None)
+        )
+        self.actionToggle_Grid.setText(
+            QCoreApplication.translate("MainWindow", "Toggle Grid", None)
+        )
+        self.actionToggle_Eraser.setText(
+            QCoreApplication.translate("MainWindow", "Toggle Eraser", None)
+        )
+        self.artActionNew.setText(QCoreApplication.translate("MainWindow", "New", None))
+        # if QT_CONFIG(shortcut)
+        self.artActionNew.setShortcut(
+            QCoreApplication.translate("MainWindow", "Ctrl+N", None)
+        )
+        # endif // QT_CONFIG(shortcut)
+        self.actionImport_image.setText(
+            QCoreApplication.translate("MainWindow", "Import image", None)
+        )
+        # if QT_CONFIG(shortcut)
+        self.actionImport_image.setShortcut(
+            QCoreApplication.translate("MainWindow", "Ctrl+I", None)
+        )
+        # endif // QT_CONFIG(shortcut)
+        self.actionExport_image_button.setText(
+            QCoreApplication.translate("MainWindow", "Export image", None)
+        )
+        # if QT_CONFIG(shortcut)
+        self.actionExport_image_button.setShortcut(
+            QCoreApplication.translate("MainWindow", "Ctrl+E", None)
+        )
+        # endif // QT_CONFIG(shortcut)
+        self.actionNew_Conversation.setText(
+            QCoreApplication.translate("MainWindow", "New Conversation", None)
+        )
+        self.actionDelete_conversation.setText(
+            QCoreApplication.translate("MainWindow", "Delete conversation", None)
+        )
+        self.actionDiscord.setText(
+            QCoreApplication.translate("MainWindow", "Discord", None)
+        )
+        self.workflow_actionRun.setText(
+            QCoreApplication.translate("MainWindow", "Run", None)
+        )
+        self.workflow_actionPause.setText(
+            QCoreApplication.translate("MainWindow", "Pause", None)
+        )
+        self.workflow_actionStop.setText(
+            QCoreApplication.translate("MainWindow", "Stop", None)
+        )
+        self.workflow_actionSave.setText(
+            QCoreApplication.translate("MainWindow", "Save", None)
+        )
+        self.workflow_actionClear.setText(
+            QCoreApplication.translate("MainWindow", "Clear", None)
+        )
+        self.workflow_actionEdit.setText(
+            QCoreApplication.translate("MainWindow", "Edit", None)
+        )
+        self.workflow_actionOpen.setText(
+            QCoreApplication.translate("MainWindow", "Load", None)
+        )
+        self.actionSave_As.setText(
+            QCoreApplication.translate("MainWindow", "Save As", None)
+        )
+        self.actionUndo.setText(QCoreApplication.translate("MainWindow", "Undo", None))
+        self.actionRedo.setText(QCoreApplication.translate("MainWindow", "Redo", None))
+        self.actionRecenter.setText(
+            QCoreApplication.translate("MainWindow", "Recenter", None)
+        )
+        self.center_tab_container.setTabText(
+            self.center_tab_container.indexOf(self.art_tab),
+            QCoreApplication.translate("MainWindow", "Art", None),
+        )
+        self.center_tab_container.setTabText(
+            self.center_tab_container.indexOf(self.agent_workflow_tab),
+            QCoreApplication.translate("MainWindow", "Agent Workflow", None),
+        )
+        self.menuFile.setTitle(QCoreApplication.translate("MainWindow", "File", None))
+        self.menuArt.setTitle(QCoreApplication.translate("MainWindow", "Art", None))
+        self.menuChat.setTitle(QCoreApplication.translate("MainWindow", "Chat", None))
+        self.menuWorkflow.setTitle(
+            QCoreApplication.translate("MainWindow", "Workflow", None)
+        )
+        self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", "Edit", None))
+        self.menuFilters.setTitle(
+            QCoreApplication.translate("MainWindow", "Filters", None)
+        )
+        self.menuAbout.setTitle(QCoreApplication.translate("MainWindow", "Help", None))
+        self.menuImage.setTitle(
+            QCoreApplication.translate("MainWindow", "Canvas", None)
+        )
+        self.menuView.setTitle(QCoreApplication.translate("MainWindow", "View", None))
+        self.menuTools.setTitle(QCoreApplication.translate("MainWindow", "Tools", None))
+        self.menuStable_Diffusion.setTitle(
+            QCoreApplication.translate("MainWindow", "Stable Diffusion", None)
+        )
+        self.model_toolbar.setWindowTitle(
+            QCoreApplication.translate("MainWindow", "toolBar_2", None)
+        )
 
+    # retranslateUi

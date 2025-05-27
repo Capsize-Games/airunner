@@ -144,9 +144,7 @@ class VariablesPanelWidget(BaseWidget):
         menu = QMenu(self)
         rename_action = menu.addAction("Rename")
         change_type_action = menu.addAction("Change Type")
-        set_value_action = menu.addAction(
-            "Set Value"
-        )  # Add Set Value menu item
+        set_value_action = menu.addAction("Set Value")  # Add Set Value menu item
         delete_action = menu.addAction("Delete")
 
         action = menu.exec(self.ui.variables_list_widget.mapToGlobal(pos))
@@ -191,9 +189,7 @@ class VariablesPanelWidget(BaseWidget):
         self.ui.variables_list_widget.clear()
         for var in self.variables:
             item = QListWidgetItem(f"{var.name} ({var.var_type.value})")
-            item.setData(
-                Qt.UserRole, var.name
-            )  # Store variable name in item data
+            item.setData(Qt.UserRole, var.name)  # Store variable name in item data
             color = get_variable_color(var.var_type)
             item.setForeground(color)
             self.ui.variables_list_widget.addItem(item)
@@ -222,9 +218,7 @@ class VariablesPanelWidget(BaseWidget):
         )
         if ok and new_name.strip() and new_name.strip() != old_name:
             new_name = new_name.strip()
-            if not self._is_variable_name_unique(
-                new_name, ignore_variable=variable
-            ):
+            if not self._is_variable_name_unique(new_name, ignore_variable=variable):
                 QMessageBox.warning(
                     self,
                     "Rename Variable",
@@ -261,9 +255,7 @@ class VariablesPanelWidget(BaseWidget):
         old_type = variable.var_type
         type_names = [vtype.value for vtype in VariableType]
         current_index = (
-            type_names.index(old_type.value)
-            if old_type.value in type_names
-            else 0
+            type_names.index(old_type.value) if old_type.value in type_names else 0
         )
 
         new_type_str, ok = QInputDialog.getItem(
@@ -388,9 +380,7 @@ class VariablesPanelWidget(BaseWidget):
                 f"Variable node for '{variable.name}' already in tracking dict. Updating."
             )
             # We still need to update our tracking dict
-            self._registered_variable_node_classes[variable.name] = (
-                var_node_class
-            )
+            self._registered_variable_node_classes[variable.name] = var_node_class
 
         # Register the node class with the graph
         self.graph.register_node(var_node_class)
@@ -401,9 +391,7 @@ class VariablesPanelWidget(BaseWidget):
         # Update the node palette to include the new variable node
         self.nodes_palette.update()
 
-        self.logger.info(
-            f"Registered variable node class for '{variable.name}'"
-        )
+        self.logger.info(f"Registered variable node class for '{variable.name}'")
 
     def _unregister_variable_node(self, variable_name: str):
         """
@@ -413,9 +401,7 @@ class VariablesPanelWidget(BaseWidget):
             variable_name: The name of the variable whose node class should be unregistered
         """
         if variable_name not in self._registered_variable_node_classes:
-            self.logger.info(
-                f"No registered variable node found for '{variable_name}'"
-            )
+            self.logger.info(f"No registered variable node found for '{variable_name}'")
             return
 
         # Get the node class
@@ -452,9 +438,7 @@ class VariablesPanelWidget(BaseWidget):
         # Update the palette to remove the node
         self.nodes_palette.update()
 
-        self.logger.info(
-            f"Unregistered variable node class for '{variable_name}'"
-        )
+        self.logger.info(f"Unregistered variable node class for '{variable_name}'")
 
     def _set_variable_value(self, variable: Variable):
         """Handles setting a variable's value via a dialog."""
@@ -485,25 +469,19 @@ class VariablesPanelWidget(BaseWidget):
             value_input = QSpinBox(dialog)
             value_input.setRange(-1000000, 1000000)  # Set a reasonable range
             current_val = variable.get_value()
-            value_input.setValue(
-                int(current_val) if current_val is not None else 0
-            )
+            value_input.setValue(int(current_val) if current_val is not None else 0)
             get_value = lambda: value_input.value()
         elif variable.var_type in [VariableType.FLOAT, VariableType.DOUBLE]:
             value_input = QDoubleSpinBox(dialog)
             value_input.setRange(-1000000, 1000000)  # Set a reasonable range
             value_input.setDecimals(6)  # Allow for precision
             current_val = variable.get_value()
-            value_input.setValue(
-                float(current_val) if current_val is not None else 0.0
-            )
+            value_input.setValue(float(current_val) if current_val is not None else 0.0)
             get_value = lambda: value_input.value()
         else:  # Default to string input for other types
             value_input = QLineEdit(dialog)
             current_val = variable.get_value()
-            value_input.setText(
-                str(current_val) if current_val is not None else ""
-            )
+            value_input.setText(str(current_val) if current_val is not None else "")
             get_value = lambda: value_input.text()
 
         layout.addRow(f"Value ({variable.var_type.value}):", value_input)
@@ -536,9 +514,7 @@ class VariablesPanelWidget(BaseWidget):
                 if v.name == variable.name:
                     v.set_value(new_value)
 
-            self.logger.info(
-                f"Set value of variable '{variable.name}' to: {new_value}"
-            )
+            self.logger.info(f"Set value of variable '{variable.name}' to: {new_value}")
             return True
 
         return False
@@ -610,7 +586,5 @@ class VariablesPanelWidget(BaseWidget):
         Unregister all variable node classes.
         Call this before clearing the variables list.
         """
-        for variable_name in list(
-            self._registered_variable_node_classes.keys()
-        ):
+        for variable_name in list(self._registered_variable_node_classes.keys()):
             self._unregister_variable_node(variable_name)

@@ -26,9 +26,7 @@ class LocalHttpServerThread(QThread):
     def run(self):
         os.chdir(self.directory)
         handler = CORSRequestHandler
-        self._server = ReusableTCPServer(
-            (LOCAL_SERVER_HOST, self.port), handler
-        )
+        self._server = ReusableTCPServer((LOCAL_SERVER_HOST, self.port), handler)
         self._server.serve_forever()
 
     def stop(self):

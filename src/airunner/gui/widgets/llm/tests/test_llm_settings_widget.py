@@ -23,9 +23,7 @@ def test_initialize_form_runs(settings_widget):
     settings_widget.initialize_form()
 
 
-def test_on_model_path_textChanged_updates_settings(
-    settings_widget, monkeypatch
-):
+def test_on_model_path_textChanged_updates_settings(settings_widget, monkeypatch):
     called = {}
     monkeypatch.setattr(
         settings_widget,
@@ -64,9 +62,7 @@ def test_toggle_model_path_visibility_shows_and_hides(settings_widget):
     settings_widget.ui.remote_model_path.hide.assert_called()
 
 
-def test_early_stopping_toggled_and_do_sample_toggled(
-    settings_widget, monkeypatch
-):
+def test_early_stopping_toggled_and_do_sample_toggled(settings_widget, monkeypatch):
     called = {}
     monkeypatch.setattr(
         settings_widget, "update_chatbot", lambda k, v: called.update({k: v})
@@ -76,9 +72,7 @@ def test_early_stopping_toggled_and_do_sample_toggled(
     assert called == {"early_stopping": True, "do_sample": False}
 
 
-def test_toggle_leave_model_in_vram_updates_memory(
-    settings_widget, monkeypatch
-):
+def test_toggle_leave_model_in_vram_updates_memory(settings_widget, monkeypatch):
     called = {}
     monkeypatch.setattr(
         settings_widget,

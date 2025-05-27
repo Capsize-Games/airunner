@@ -112,9 +112,7 @@ class TestScanPathForItems(unittest.TestCase):
     def test_scan_path_for_embeddings_new_file(self, mock_embedding_objects):
         """Test scanning for embeddings when a new file is found."""
         # Create a test file
-        embedding_file_path = os.path.join(
-            self.embeddings_path, "test_embedding.pt"
-        )
+        embedding_file_path = os.path.join(self.embeddings_path, "test_embedding.pt")
         with open(embedding_file_path, "w") as f:
             f.write("test content")
 
@@ -130,9 +128,7 @@ class TestScanPathForItems(unittest.TestCase):
         mock_embedding_objects.create.assert_called_once()
 
     @patch("airunner.data.models.Embedding.objects")
-    def test_scan_path_for_embeddings_delete_missing(
-        self, mock_embedding_objects
-    ):
+    def test_scan_path_for_embeddings_delete_missing(self, mock_embedding_objects):
         """Test scanning for embeddings when a file is missing."""
         # Setup mock for database operations
         missing_embedding = MagicMock()
@@ -154,9 +150,7 @@ class TestScanPathForItems(unittest.TestCase):
         lora_file1 = os.path.join(self.lora_path, "test_lora1.safetensors")
         lora_file2 = os.path.join(self.lora_path, "test_lora2.ckpt")
         lora_file3 = os.path.join(self.lora_path, "test_lora3.pt")
-        lora_file4 = os.path.join(
-            self.lora_path, "test_lora4.txt"
-        )  # Should be ignored
+        lora_file4 = os.path.join(self.lora_path, "test_lora4.txt")  # Should be ignored
 
         for file_path in [lora_file1, lora_file2, lora_file3, lora_file4]:
             with open(file_path, "w") as f:

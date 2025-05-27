@@ -56,9 +56,7 @@ class StreamingToneColorConverter(ToneColorConverter):
         """
         hps = self.hps
         try:
-            audio, sample_rate = librosa.load(
-                audio_src_path, sr=hps.data.sampling_rate
-            )
+            audio, sample_rate = librosa.load(audio_src_path, sr=hps.data.sampling_rate)
         except ValueError as e:
             print(f"Error: {e}")
             return None
@@ -83,9 +81,7 @@ class StreamingToneColorConverter(ToneColorConverter):
                     center=False,
                 ).to(self.device)
             except RuntimeError as e:
-                self.logger.error(
-                    f"Runtime error during spectrogram computation: {e}"
-                )
+                self.logger.error(f"Runtime error during spectrogram computation: {e}")
                 return None
             spec_lengths = torch.LongTensor([spec.size(-1)]).to(self.device)
             audio = (
@@ -114,9 +110,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
                 os.path.join(self.openvoice_settings.reference_speaker_path)
             )
         else:
-            self.logger.error(
-                "Reference speaker path is None, unable to initialize"
-            )
+            self.logger.error("Reference speaker path is None, unable to initialize")
         self._checkpoint_converter_path: str = os.path.join(
             self.path_settings.tts_model_path,
             "openvoice/checkpoints_v2/converter",
@@ -303,9 +297,7 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             pass
 
         if self._reference_speaker is None:
-            self.logger.error(
-                "Reference speaker is None, unable to initialize"
-            )
+            self.logger.error("Reference speaker is None, unable to initialize")
             return
 
         try:

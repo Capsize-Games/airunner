@@ -17,9 +17,7 @@ class TestFramepackHandler(unittest.TestCase):
             framepack_handler.ModelStatus.UNLOADED
         )
         with self.assertRaises(RuntimeError):
-            handler.generate_video(
-                np.zeros((64, 64, 3), dtype=np.uint8), "prompt"
-            )
+            handler.generate_video(np.zeros((64, 64, 3), dtype=np.uint8), "prompt")
 
     @patch(
         "airunner.handlers.framepack_handler.FramePackHandler.load",
@@ -33,9 +31,7 @@ class TestFramepackHandler(unittest.TestCase):
         )
         handler.is_generating = True
         with self.assertRaises(RuntimeError):
-            handler.generate_video(
-                np.zeros((64, 64, 3), dtype=np.uint8), "prompt"
-            )
+            handler.generate_video(np.zeros((64, 64, 3), dtype=np.uint8), "prompt")
 
     def test_unload_sets_models_to_none(self):
         handler = framepack_handler.FramePackHandler()

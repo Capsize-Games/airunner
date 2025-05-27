@@ -26,9 +26,7 @@ from sumy.summarizers.lex_rank import LexRankSummarizer
 class Conversation(BaseModel):
     __tablename__ = "conversations"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(
-        DateTime, default=datetime.datetime.now(datetime.timezone.utc)
-    )
+    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     title = Column(String, nullable=True)
     bot_mood = Column(Text, default="")
     key = Column(String, nullable=True)
@@ -50,18 +48,14 @@ class Conversation(BaseModel):
         if messages:
             context = ""
             for message in messages:
-                context += (
-                    f"{message['role']}: {message['blocks'][0]['text']}\n"
-                )
+                context += f"{message['role']}: {message['blocks'][0]['text']}\n"
             return context
         return ""
 
     def summarize(self) -> str:
         messages = self.formatted_messages
         if messages != "":
-            parser = PlaintextParser.from_string(
-                messages, Tokenizer("english")
-            )
+            parser = PlaintextParser.from_string(messages, Tokenizer("english"))
             summarizer = LexRankSummarizer()
             sentence_count = 1
             summary = summarizer(parser.document, sentence_count)
@@ -76,9 +70,7 @@ class Conversation(BaseModel):
         cls.objects.delete(pk, **kwargs)
 
     @classmethod
-    def create(
-        cls, chatbot: Optional[Chatbot] = None, user: Optional[User] = None
-    ):
+    def create(cls, chatbot: Optional[Chatbot] = None, user: Optional[User] = None):
         previous_conversation = (
             cls.objects.options(joinedload(cls.summaries))
             .order_by(cls.id.desc())
@@ -90,9 +82,7 @@ class Conversation(BaseModel):
             chatbot = None
             try:
                 if previous_conversation:
-                    chatbot = Chatbot.objects.get(
-                        previous_conversation.chatbot_id
-                    )
+                    chatbot = Chatbot.objects.get(previous_conversation.chatbot_id)
             except Exception:
                 chatbot = None
             if not chatbot:
@@ -126,9 +116,7 @@ class Conversation(BaseModel):
                 from airunner.data.session_manager import session_scope
 
                 with session_scope() as session:
-                    orm_user = (
-                        session.query(User).filter_by(id=user_dc.id).first()
-                    )
+                    orm_user = session.query(User).filter_by(id=user_dc.id).first()
                     user_id = orm_user.id
                     user_username = orm_user.username
             else:
@@ -148,9 +136,7 @@ class Conversation(BaseModel):
             chatbot_name=chatbot_botname,
             user_name=user_username,
             bot_mood=(
-                previous_conversation.bot_mood
-                if previous_conversation
-                else None
+                previous_conversation.bot_mood if previous_conversation else None
             ),
         )
         conversation.save()

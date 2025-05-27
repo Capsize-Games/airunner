@@ -74,7 +74,4 @@ def test_active_grid_settings_bad_path_invalid_property(
     """
     ui = active_grid_settings_widget.ui
     ui.border_opacity_slider_widget.setProperty("current_value", "not_a_float")
-    assert (
-        ui.border_opacity_slider_widget.property("current_value")
-        == "not_a_float"
-    )
+    assert ui.border_opacity_slider_widget.property("current_value") == "not_a_float"

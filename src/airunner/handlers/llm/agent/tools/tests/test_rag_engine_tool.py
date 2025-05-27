@@ -35,9 +35,7 @@ def mock_agent():
 @pytest.fixture
 def mock_chat_engine():
     engine = MagicMock()
-    engine.stream_chat.return_value = MagicMock(
-        response_gen=iter(["RAG ", "result!"])
-    )
+    engine.stream_chat.return_value = MagicMock(response_gen=iter(["RAG ", "result!"]))
     engine.chat_history = []
     return engine
 
@@ -69,9 +67,7 @@ def test_call_streams_and_handles_response(mock_agent, mock_chat_engine):
 
 
 def test_call_with_empty_stream(mock_agent, mock_chat_engine):
-    mock_chat_engine.stream_chat.return_value = MagicMock(
-        response_gen=iter([])
-    )
+    mock_chat_engine.stream_chat.return_value = MagicMock(response_gen=iter([]))
     mock_chat_engine.llm = MagicMock()
     tool = DummyRAGEngineTool(chat_engine=mock_chat_engine, agent=mock_agent)
     result = tool.call(query="", chat_history=[])

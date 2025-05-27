@@ -44,23 +44,17 @@ def bot_prefs_widget(qtbot):
     chatbot.voice_id = None
 
     # Patch the 'chatbot' property on the instance's type
-    patcher_chatbot = patch.object(
-        type(widget), "chatbot", new_callable=PropertyMock
-    )
+    patcher_chatbot = patch.object(type(widget), "chatbot", new_callable=PropertyMock)
     mock_chatbot_prop = patcher_chatbot.start()
     mock_chatbot_prop.return_value = chatbot
 
     # Patch the 'chatbots' property on the instance's type
-    patcher_chatbots = patch.object(
-        type(widget), "chatbots", new_callable=PropertyMock
-    )
+    patcher_chatbots = patch.object(type(widget), "chatbots", new_callable=PropertyMock)
     mock_chatbots_prop = patcher_chatbots.start()
     mock_chatbots_prop.return_value = [chatbot]
 
     # Patch the 'logger' property on the instance's type
-    patcher_logger = patch.object(
-        type(widget), "logger", new_callable=PropertyMock
-    )
+    patcher_logger = patch.object(type(widget), "logger", new_callable=PropertyMock)
     mock_logger_prop = patcher_logger.start()
     mock_logger_prop.return_value = MagicMock()
 

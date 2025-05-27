@@ -21,9 +21,7 @@ def timeout(seconds=10):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             def handler(signum, frame):
-                raise TimeoutException(
-                    f"Test timed out after {seconds} seconds"
-                )
+                raise TimeoutException(f"Test timed out after {seconds} seconds")
 
             # Set the timeout handler
             original_handler = signal.signal(signal.SIGALRM, handler)
