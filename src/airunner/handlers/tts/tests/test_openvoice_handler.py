@@ -17,8 +17,14 @@ class TestOpenVoiceModelManager(unittest.TestCase):
         # Patch in a dummy api attribute to avoid AttributeError
         self.handler.api = MagicMock()
 
+    @patch("os.makedirs")
+    @patch("os.path.isfile", return_value=True)
+    @patch(
+        "airunner.handlers.tts.openvoice_model_manager.se_extractor.get_se",
+        return_value=(MagicMock(), "mock_audio_name"),
+    )
     @patch("airunner.handlers.tts.openvoice_model_manager.TTS")
-    def test_load(self, mock_tts):
+    def test_load(self, mock_tts, mock_get_se, mock_isfile, mock_makedirs):
         mock_tts.return_value = MagicMock()
         self.handler.load()
         self.assertIsNotNone(self.handler.model)
