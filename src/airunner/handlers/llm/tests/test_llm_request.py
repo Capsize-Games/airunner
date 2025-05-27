@@ -210,7 +210,7 @@ class TestLLMRequest(unittest.TestCase):
 
         # Setup for override_parameters False (should fallback to from_chatbot)
         mock_settings.override_parameters = False
-        mock_settings.current_chatbot = 42
+        # mock_settings.current_chatbot = 42  # Removed: no longer used
         mock_cb = MagicMock()
         mock_chatbot_class.objects.get.return_value = mock_cb
         mock_cb.do_sample = False
