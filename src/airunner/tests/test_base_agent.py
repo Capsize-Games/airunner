@@ -498,3 +498,28 @@ def test_unload(agent):
     assert agent._chat_engine is None
     assert agent._chat_engine_tool is None
     assert agent._react_tool_agent is None
+
+
+def test_mood_update_prompt_formatting():
+    """Test that PromptConfig.MOOD_UPDATE formats correctly with required keys."""
+    from airunner.handlers.llm.agent.agents.prompt_config import PromptConfig
+    import re
+
+    template = PromptConfig.MOOD_UPDATE
+    found_keys = set(re.findall(r"{(.*?)}", template))
+    print(f"MOOD_UPDATE template: {template}")
+    print(f"Found keys: {found_keys}")
+    # Should succeed with only username and botname
+    try:
+        prompt = template.format(username="user", botname="bot")
+    except KeyError as e:
+        pytest.fail(
+            f"Unexpected KeyError: {e}\nTemplate: {template}\nFound keys: {found_keys}"
+        )
+    # Extra keys should be ignored by str.format, so no error should be raised
+    try:
+        prompt = template.format(username="user", botname="bot", mood="happy")
+    except KeyError as e:
+        pytest.fail(
+            f"Unexpected KeyError with extra key: {e}\nTemplate: {template}\nFound keys: {found_keys}"
+        )

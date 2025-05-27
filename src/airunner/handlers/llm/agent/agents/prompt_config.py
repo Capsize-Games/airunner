@@ -23,7 +23,7 @@ class PromptConfig:
         "{username} is a human and {botname} is a chatbot.\n"
         "Based on the given conversation, you must determine what {botname}'s mood is.\n"
         "You must return a JSON object with two fields: 'mood' (a one-word emotion, e.g. happy, sad, angry, etc.) and 'emoji' (a single emoji that best represents the mood).\n"
-        'For example: {"mood": "happy", "emoji": "😊"}\n'
+        'For example: {{"mood": "happy", "emoji": "😊"}}\n'
         "You must take into account {botname}'s personality and the context of the conversation.\n"
         "You must try to determine the sentiment behind {username}'s words. You should also take into account {botname}'s current mood before determining what {botname}'s new mood is.\n"
         "You must also consider the subject matter of the conversation and the tone of the conversation.\n"
