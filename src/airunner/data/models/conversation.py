@@ -30,7 +30,6 @@ class Conversation(BaseModel):
         DateTime, default=datetime.datetime.now(datetime.timezone.utc)
     )
     title = Column(String, nullable=True)
-    bot_mood = Column(Text, default="")
     key = Column(String, nullable=True)
     value = Column(JSON, nullable=False, default={})
     chatbot_id = Column(Integer, ForeignKey("chatbots.id"))
@@ -50,8 +49,18 @@ class Conversation(BaseModel):
         if messages:
             context = ""
             for message in messages:
+                # Prefer bot_mood for bot, user_mood for user if present
+                mood_info = ""
+                if message.get("is_bot"):
+                    mood = message.get("bot_mood")
+                    if mood:
+                        mood_info = f" [mood: {mood}]"
+                else:
+                    user_mood = message.get("user_mood")
+                    if user_mood:
+                        mood_info = f" [user mood: {user_mood}]"
                 context += (
-                    f"{message['role']}: {message['blocks'][0]['text']}\n"
+                    f"{message['name']}: {message['content']}{mood_info}\n"
                 )
             return context
         return ""
@@ -147,11 +156,6 @@ class Conversation(BaseModel):
             user_id=user_id,
             chatbot_name=chatbot_botname,
             user_name=user_username,
-            bot_mood=(
-                previous_conversation.bot_mood
-                if previous_conversation
-                else None
-            ),
         )
         conversation.save()
         conversation = (

@@ -322,16 +322,6 @@ def test_chat_engine(agent, monkeypatch):
     assert engine is not None
 
 
-def test_mood_engine_tool(agent, monkeypatch):
-    from unittest.mock import PropertyMock
-
-    monkeypatch.setattr(
-        type(agent), "chat_engine", PropertyMock(return_value=DummyEngine())
-    )
-    tool = agent.mood_engine_tool
-    assert tool is not None
-
-
 def test_streaming_stopping_criteria(agent):
     crit = agent.streaming_stopping_criteria
     assert crit is not None
@@ -347,11 +337,6 @@ def test_update_user_data_engine(agent):
     assert engine is not None
 
 
-def test_mood_engine(agent):
-    engine = agent.mood_engine
-    assert engine is not None
-
-
 def test_summary_engine(agent):
     engine = agent.summary_engine
     assert engine is not None
@@ -360,11 +345,6 @@ def test_summary_engine(agent):
 def test_information_scraper_engine(agent):
     engine = agent.information_scraper_engine
     assert engine is not None
-
-
-def test_mood_engine_tool(agent):
-    tool = agent.mood_engine_tool
-    assert tool is not None
 
 
 def test_update_user_data_tool(agent):
@@ -392,11 +372,32 @@ def test_do_interrupt_property(agent):
     assert agent.do_interrupt is True
 
 
-def test_bot_mood_property(agent):
-    agent._conversation.bot_mood = ""
+def test_bot_mood_per_message_property(agent):
+    # Simulate conversation with multiple messages, only last assistant has mood
+    agent._conversation.value = [
+        {"role": "user", "content": "Hi"},
+        {"role": "assistant", "content": "Hello!", "bot_mood": "curious"},
+        {
+            "role": "assistant",
+            "content": "How can I help?",
+            "bot_mood": "helpful",
+        },
+    ]
+    assert agent.bot_mood == "helpful"
+    # Remove mood from last assistant, should fallback to previous
+    agent._conversation.value[-1].pop("bot_mood")
+    assert agent.bot_mood == "curious"
+    # Remove all moods, should fallback to neutral
+    agent._conversation.value[1].pop("bot_mood")
     assert agent.bot_mood == "neutral"
-    agent._conversation.bot_mood = "happy"
-    assert agent.bot_mood == "happy"
+    # Test setter: set mood on most recent assistant
+    agent._conversation.value = [
+        {"role": "user", "content": "Hi"},
+        {"role": "assistant", "content": "Hello!"},
+        {"role": "assistant", "content": "How can I help?"},
+    ]
+    agent.bot_mood = "excited"
+    assert agent._conversation.value[-1]["bot_mood"] == "excited"
 
 
 def test_conversation_property(agent):
@@ -459,10 +460,6 @@ def test_information_scraper_prompt(agent):
 
 def test_summarize_conversation_prompt(agent):
     assert "summary writer" in agent._summarize_conversation_prompt
-
-
-def test_mood_update_prompt(agent):
-    assert "mood analyzer" in agent._mood_update_prompt
 
 
 def test_system_prompt(agent):
