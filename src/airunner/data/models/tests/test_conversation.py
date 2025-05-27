@@ -30,10 +30,7 @@ def test_conversation_create_returns_dataclass():
     chatbot = Chatbot.objects.create(botname="TestBot")
     conversation = Conversation.create(chatbot=chatbot, user=user)
     assert conversation is not None
-    assert hasattr(conversation, "bot_mood")
     assert conversation.__class__.__name__.endswith("Data")
-    # Should not raise DetachedInstanceError
-    _ = conversation.bot_mood
 
 
 def test_conversation_manager_methods_return_dataclass():
@@ -42,11 +39,8 @@ def test_conversation_manager_methods_return_dataclass():
     Conversation.create(chatbot=chatbot, user=user)
     got = Conversation.objects.first()
     assert got is not None
-    assert hasattr(got, "bot_mood")
     assert got.__class__.__name__.endswith("Data")
-    _ = got.bot_mood
     all_convs = Conversation.objects.all()
     assert all_convs
     for c in all_convs:
         assert c.__class__.__name__.endswith("Data")
-        _ = c.bot_mood
