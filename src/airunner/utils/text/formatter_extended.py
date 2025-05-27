@@ -263,9 +263,9 @@ class FormatterExtended:
 
     @staticmethod
     def strip_nonlinguistic(text: str) -> str:
-        """
+        r"""
         Remove LaTeX, code blocks, and inline code from the text to improve language detection.
-        - Removes LaTeX ($...$, $$...$$, \[...\], \(...\))
+        - Removes LaTeX ($...$, $$...$$, \\[...\\], \\(...\\))
         - Removes fenced code blocks (```...```)
         - Removes inline code (`...`)
         """

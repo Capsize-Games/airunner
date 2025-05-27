@@ -164,6 +164,7 @@ class BackdropNodeItem(AbstractNodeItem):
     def on_sizer_pos_changed(self, pos):
         self._width = pos.x() + self._sizer.size
         self._height = pos.y() + self._sizer.size
+        self.update(self.boundingRect())  # Ensure visual update during resize
 
     def on_sizer_pos_mouse_release(self):
         size = {
