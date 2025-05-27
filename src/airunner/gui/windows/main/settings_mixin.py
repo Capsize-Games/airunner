@@ -46,6 +46,7 @@ from airunner.data.models.rag_settings import RAGSettings
 from airunner.enums import ModelService, TTSModel
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
+from airunner.utils.llm import get_chatbot
 from airunner.utils.settings import get_qsettings
 from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
@@ -146,15 +147,10 @@ class SettingsMixin:
 
     @property
     def llm_generator_settings(self) -> LLMGeneratorSettings:
-        settings = self.load_settings_from_db(LLMGeneratorSettings)
-        if settings.current_chatbot == 0:
-            chatbots = self.chatbots
-            if len(chatbots) > 0:
-                settings.current_chatbot = self.chatbots[0].id
-                self.update_llm_generator_settings(
-                    "current_chatbot", settings.current_chatbot
-                )
-        return settings
+        """Return the LLMGeneratorSettings instance from the database, creating it if necessary.
+        No longer manages current_chatbot; current chatbot is determined via Chatbot.objects.filter_by(current=True).
+        """
+        return self.load_settings_from_db(LLMGeneratorSettings)
 
     @property
     def generator_settings(self) -> GeneratorSettings:
@@ -353,36 +349,7 @@ class SettingsMixin:
 
     @property
     def chatbot(self) -> Optional[Chatbot]:
-        current_chatbot_id = self.llm_generator_settings.current_chatbot
-
-        # Use string-based relationship names for eager loading
-        # This is more compatible with SQLAlchemy's joinedload especially for nested relationships
-        eager_load = [
-            "target_files",
-            "target_directories",
-            "voice_settings",
-            "voice_settings.settings",
-        ]
-
-        try:
-            chatbot = Chatbot.objects.get(
-                pk=current_chatbot_id,
-                eager_load=eager_load,
-            )
-
-            if chatbot is None:
-                chatbot = Chatbot.objects.first(eager_load=eager_load)
-
-            if chatbot is None:
-                chatbot = Chatbot.objects.create(name="Foobar")
-                chatbot = Chatbot.objects.first(eager_load=eager_load)
-
-            return chatbot
-        except Exception as e:
-            self.logger.error(f"Error getting chatbot: {e}")
-            # Create a default chatbot as fallback
-            chatbot = Chatbot.objects.create(name="Default")
-            return chatbot
+        return get_chatbot()
 
     def _get_settings_for_voice_settings(self, model_type: TTSModel):
         if model_type is TTSModel.SPEECHT5:

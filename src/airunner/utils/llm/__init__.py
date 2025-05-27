@@ -9,6 +9,7 @@ from airunner.utils.llm.text_preprocessing import (
     replace_numbers_with_words,
     replace_misc_with_words,
 )
+from airunner.utils.llm.get_chatbot import get_chatbot
 
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "strip_emoji_characters",
     "replace_numbers_with_words",
     "replace_misc_with_words",
+    "get_chatbot",
 ]
