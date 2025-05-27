@@ -880,9 +880,17 @@ class BaseAgent(
         Returns:
             str: The mood update prompt.
         """
-        return PromptConfig.MOOD_UPDATE.format(
-            username=self.username, botname=self.botname
-        )
+        # Defensive check: ensure template is as expected
+        template = PromptConfig.MOOD_UPDATE
+        expected_keys = {"username", "botname"}
+        import re
+
+        found_keys = set(re.findall(r"{(.*?)}", template))
+        if found_keys != expected_keys:
+            raise RuntimeError(
+                f"PromptConfig.MOOD_UPDATE template keys mismatch: found {found_keys}, expected {expected_keys}. Template: {template}"
+            )
+        return template.format(username=self.username, botname=self.botname)
 
     @property
     def system_prompt(self) -> str:
