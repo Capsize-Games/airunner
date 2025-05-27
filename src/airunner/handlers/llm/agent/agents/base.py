@@ -967,6 +967,7 @@ class BaseAgent(
             return
 
         if not self.llm_settings.llm_perform_analysis:
+            self.logger.debug("Skipping analysis: LLM analysis is disabled")
             return
 
         conversation = self.conversation
@@ -975,10 +976,14 @@ class BaseAgent(
             or not conversation.value
             or len(conversation.value) == 0
         ):
+            self.logger.debug(
+                "Skipping analysis: no conversation or no messages"
+            )
             return
 
         total_messages = len(conversation.value)
         if total_messages < 3:
+            self.logger.info("Skipping analysis: not enough messages")
             return
 
         last_analysis_time = conversation.last_analysis_time
@@ -1033,6 +1038,37 @@ class BaseAgent(
             self.chat_store = None
         self.chat_engine._memory = self.chat_memory
         self.chat_engine_tool.chat_engine = self.chat_engine
+
+    def _update_memory(self, action: LLMActionType) -> None:
+        """
+        Update the memory for the given action and ensure all chat engines share the same memory instance.
+        Args:
+            action (LLMActionType): The action type to update memory for.
+        """
+        # Use a custom memory strategy if provided
+        if self._memory_strategy:
+            self._memory = self._memory_strategy(action, self)
+        elif action in (LLMActionType.CHAT, LLMActionType.APPLICATION_COMMAND):
+            self.chat_memory.chat_store_key = str(self.conversation_id)
+            self._memory = self.chat_memory
+        elif action is LLMActionType.PERFORM_RAG_SEARCH:
+            if hasattr(self, "rag_engine") and self.rag_engine is not None:
+                self._memory = self.rag_engine.memory
+            else:
+                self._memory = None
+        else:
+            self._memory = None
+
+        # Ensure all chat engines share the same memory instance for consistency
+        for engine_attr in [
+            "_chat_engine",
+            "_mood_engine",
+            "_summary_engine",
+            "_information_scraper_engine",
+        ]:
+            engine = getattr(self, engine_attr, None)
+            if engine is not None:
+                engine.memory = self._memory
 
     @log_method_entry_exit
     def _perform_tool_call(
@@ -1093,32 +1129,15 @@ class BaseAgent(
                 self.conversation_id, value=conversation.value[:-2]
             )
 
-    def _update_memory(self, action: LLMActionType) -> None:
-        """
-        Update the memory for the given action.
-        Args:
-            action (LLMActionType): The action type to update memory for.
-        """
-        memory = None
-        if self._memory_strategy:
-            memory = self._memory_strategy(action, self)
-        elif action is LLMActionType.CHAT:
-            # ...existing code for chat memory...
-            pass
-        elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            # ...existing code for RAG memory...
-            pass
-        elif action is LLMActionType.APPLICATION_COMMAND:
-            # ...existing code for application command memory...
-            pass
-        self._memory = memory
-
     @log_method_entry_exit
     def _update_mood(self) -> None:
         """
         Update the bot's mood based on the conversation.
         Now stores mood and emoji on the latest bot message in conversation.value.
         """
+        # Notify UI before mood update
+        if hasattr(self, "api") and hasattr(self.api, "show_loading_message"):
+            self.api.show_loading_message("Updating bot mood...")
         self.logger.info("Attempting to update mood")
         conversation = self.conversation
         if (
@@ -1226,6 +1245,11 @@ class BaseAgent(
         """
         Summarize the conversation.
         """
+        # Notify UI before summary update
+        if hasattr(self, "api") and hasattr(self.api, "chatbot"):
+            self.api.chatbot.show_loading_message(
+                "Summarizing conversation..."
+            )
         if (
             not self.llm_settings.perform_conversation_summary
             or not self.do_summarize_conversation
@@ -1340,6 +1364,37 @@ class BaseAgent(
         self._update_llm_request(llm_request)
         self._update_memory_settings()
         self._perform_tool_call(action, **kwargs)
+
+        # Explicitly update conversation with new user and bot messages before analysis
+        conversation = self.conversation
+        if conversation is not None:
+            # Append user message
+            conversation.value.append(
+                {
+                    "role": "user",
+                    "name": self.username,
+                    "content": message,
+                    "timestamp": datetime.datetime.now(
+                        datetime.timezone.utc
+                    ).isoformat(),
+                }
+            )
+            # Append bot response
+            conversation.value.append(
+                {
+                    "role": "assistant",
+                    "name": self.botname,
+                    "content": self._complete_response,
+                    "timestamp": datetime.datetime.now(
+                        datetime.timezone.utc
+                    ).isoformat(),
+                }
+            )
+            Conversation.objects.update(
+                self.conversation_id, value=conversation.value
+            )
+
+        self._perform_analysis(action)
         return AgentChatResponse(response=self._complete_response)
 
     def on_load_conversation(self, data: Optional[Dict] = None) -> None:
@@ -1477,6 +1532,19 @@ class BaseAgent(
             value (Any): The chatbot instance to set.
         """
         self._chatbot = value
+
+    @property
+    def api(self):
+        """Return the API manager instance (must provide externally if not set)."""
+        if hasattr(self, "_api") and self._api is not None:
+            return self._api
+        raise AttributeError(
+            "API manager not set on agent. Set agent._api = api_manager instance."
+        )
+
+    @api.setter
+    def api(self, value):
+        self._api = value
 
 
 class PromptBuilder:
