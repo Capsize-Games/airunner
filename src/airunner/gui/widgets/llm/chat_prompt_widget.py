@@ -258,15 +258,7 @@ class ChatPromptWidget(BaseWidget):
         self._clear_conversation()
 
     def _set_conversation_widgets(self, messages, skip_scroll: bool = False):
-        self.logger.debug(
-            f"ChatPromptWidget._set_conversation_widgets called with {len(messages)} messages"
-        )
-        start = time.perf_counter()
         for i, message in enumerate(messages):
-            self.logger.debug(f"Full message dict at index {i}: {message}")
-            self.logger.debug(
-                f"Adding message {i}: name='{message.get('name')}', content='{message.get('content', '')[:50]}...', is_bot={message.get('is_bot')}"
-            )
             self.add_message_to_conversation(
                 name=message["name"],
                 message=message["content"],
@@ -276,10 +268,6 @@ class ChatPromptWidget(BaseWidget):
             )
         if not skip_scroll:
             QTimer.singleShot(100, self.scroll_to_bottom)
-        end = time.perf_counter()
-        self.logger.debug(
-            f"ChatPromptWidget._set_conversation_widgets completed in {end-start:.3f}s"
-        )
 
     def on_hear_signal(self, data: Dict):
         transcription = data["transcription"]
@@ -539,23 +527,11 @@ class ChatPromptWidget(BaseWidget):
         mood_emoji: str = None,
         user_mood: str = None,
     ):
-        self.logger.debug(
-            f"ChatPromptWidget.add_message_to_conversation: name='{name}', message_len={len(message)}, is_bot={is_bot}, first_message={first_message}"
-        )
-        start = time.perf_counter() if _profile_widget else None
-        self.logger.debug(
-            f"ChatPromptWidget.add_message_to_conversation: RAW message before strip: '{message}' (len={len(message)})"
-        )
         message = strip_names_from_message(
             message.lstrip() if first_message else message,
             self.user.username,
             self.chatbot.botname,
         )
-
-        self.logger.debug(
-            f"ChatPromptWidget.add_message_to_conversation: After strip_names, message_len={len(message)}"
-        )
-
         if not first_message:
             for i in range(
                 self.ui.scrollAreaWidgetContents.layout().count() - 1, -1, -1
@@ -591,9 +567,6 @@ class ChatPromptWidget(BaseWidget):
                 mood = getattr(self.chatbot, "bot_mood", None)
                 mood_emoji = getattr(self.chatbot, "bot_mood_emoji", None)
 
-            self.logger.debug(
-                f"ChatPromptWidget.add_message_to_conversation: Creating MessageWidget with name='{name}', message_len={len(message)}"
-            )
             widget = MessageWidget(
                 name=name,
                 message=message,
@@ -607,14 +580,8 @@ class ChatPromptWidget(BaseWidget):
 
             widget.messageResized.connect(self.scroll_to_bottom)
 
-            self.logger.debug(
-                f"ChatPromptWidget.add_message_to_conversation: Adding widget to layout"
-            )
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
             QTimer.singleShot(0, self.scroll_to_bottom)
-            self.logger.debug(
-                f"ChatPromptWidget.add_message_to_conversation: Widget added successfully"
-            )
         else:
             self.logger.warning(
                 f"ChatPromptWidget.add_message_to_conversation: Message is empty, not creating widget"
