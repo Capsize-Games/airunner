@@ -2,6 +2,7 @@ from typing import Type, Optional
 from abc import ABCMeta
 import os
 import torch
+from airunner.handlers.tts.exceptions import FileMissing, OpenVoiceError
 from airunner.settings import AIRUNNER_BASE_PATH
 from airunner.utils.llm.language import detect_language
 
@@ -303,21 +304,20 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             pass
 
         if self._reference_speaker is None:
-            self.logger.error(
+            raise OpenVoiceError(
                 "Reference speaker is None, unable to initialize"
             )
-            return
 
         try:
             self.logger.info(f"Loading {self._reference_speaker}")
             target_dir = os.path.join(AIRUNNER_BASE_PATH, "processed")
             if not os.path.exists(target_dir):
                 os.makedirs(target_dir, exist_ok=True)
+
             # check if audio_path is valid
             if not os.path.isfile(self._reference_speaker):
-                raise FileNotFoundError(
-                    f"Reference speaker file {self._reference_speaker} does not exist."
-                )
+                raise FileMissing(self._reference_speaker)
+
             self._target_se, self._audio_name = se_extractor.get_se(
                 audio_path=self._reference_speaker,
                 vc_model=self.tone_color_converter,
@@ -325,10 +325,10 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
             )
         except Exception as e:
             torch_hub_cache_home = torch.hub.get_dir()
-            self.logger.error(
+            self.api.tts.disable()
+            raise OpenVoiceError(
                 f"Failed to load from se_extractor {e} - torch_hub_cache_home={torch_hub_cache_home}"
             )
-            self.api.tts.disable()
 
         if self._target_se is None:
-            self.logger.error("Target speaker extraction returned None.")
+            raise OpenVoiceError("Target speaker extraction returned None.")
