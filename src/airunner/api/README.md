@@ -41,18 +41,3 @@ Each service module provides a class for interacting with a specific domain via 
 ## Testing
 
 Unit tests for all services are provided in the `test/` subdirectory. These use `pytest` and `unittest.mock` to verify signal emission and service logic.
-
-## Extending
-
-To add a new service:
-1. Create a new `*_services.py` file, subclassing `APIServiceBase`.
-2. Implement methods that emit signals for your domain.
-3. Add your service to `api.py` and `api_manager.py` as needed.
-4. Write unit tests in `test/`.
-
-## Notes
-- All services use Qt signals for communication, enabling loose coupling between UI, backend, and worker processes.
-- The `emit_signal` function is injected for flexibility and testability.
-
----
-For more details, see the main project README and the documentation in `docs/`.
