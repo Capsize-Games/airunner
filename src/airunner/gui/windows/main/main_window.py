@@ -240,6 +240,7 @@ class MainWindow(
             SignalCode.MISSING_REQUIRED_MODELS: self.display_missing_models_error,
             SignalCode.ENABLE_WORKFLOWS_TOGGLED: self.on_enable_workflows_toggled,
             SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
+            SignalCode.APPLICATION_STATUS_ERROR_SIGNAL: self.on_status_error_signal,
         }
         self.logger.debug("Starting AI Runnner")
         super().__init__()
@@ -1668,5 +1669,12 @@ class MainWindow(
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Critical)
         msg_box.setWindowTitle(data.get("title", "Error: Missing models"))
+        msg_box.setText(data.get("message", "Something went wrong"))
+        msg_box.exec()
+
+    def on_status_error_signal(self, data):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle(data.get("title", "Error"))
         msg_box.setText(data.get("message", "Something went wrong"))
         msg_box.exec()
