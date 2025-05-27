@@ -3,6 +3,7 @@ import re
 from typing import Optional, Type, Dict
 
 from airunner.handlers.tts.espeak_model_manager import EspeakModelManager
+from airunner.handlers.tts.exceptions import FileMissing, OpenVoiceError
 from airunner.handlers.tts.openvoice_model_manager import OpenVoiceModelManager
 from airunner.handlers.tts.speecht5_model_manager import SpeechT5ModelManager
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
@@ -249,7 +250,12 @@ class TTSGeneratorWorker(Worker):
             self._initialize_tts_model_manager()
 
         if self.tts:
-            self.tts.load()
+            try:
+                self.tts.load()
+            except FileNotFoundError as e:
+                self.api.application_error(e)
+            except OpenVoiceError as e:
+                self.api.application_error(e)
 
     def load(self):
         self._load_tts()
