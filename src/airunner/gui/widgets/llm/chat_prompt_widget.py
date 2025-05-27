@@ -216,7 +216,7 @@ class ChatPromptWidget(BaseWidget):
                 message=message["content"],
                 is_bot=message["is_bot"],
                 first_message=True,
-                _profile_widget=True,  # Pass profiling flag
+                _profile_widget=True,
             )
         if not skip_scroll:
             QTimer.singleShot(100, self.scroll_to_bottom)
@@ -226,11 +226,6 @@ class ChatPromptWidget(BaseWidget):
         transcription = data["transcription"]
         self.prompt = transcription
         self.do_generate()
-
-    def on_add_to_conversation_signal(self, name, text, is_bot):
-        self.add_message_to_conversation(
-            name=name, message=text, is_bot=is_bot
-        )
 
     def on_add_bot_message_to_conversation(self, data: Dict):
         llm_response = data.get("response", None)
@@ -252,17 +247,22 @@ class ChatPromptWidget(BaseWidget):
         """
         Flush the token buffer and update the UI.
         """
-
         combined_message = "".join(self.token_buffer)
         self.token_buffer.clear()
 
         if combined_message != "":
-            self.add_message_to_conversation(
-                name=self.chatbot.botname,
-                message=combined_message,
-                is_bot=True,
-                first_message=False,
-            )
+            # Prevent duplicate bot messages: only add if not already last bot message
+            if (
+                len(self.conversation_history) == 0
+                or not self.conversation_history[-1]["is_bot"]
+                or self.conversation_history[-1]["content"] != combined_message
+            ):
+                self.add_message_to_conversation(
+                    name=self.chatbot.botname,
+                    message=combined_message,
+                    is_bot=True,
+                    first_message=False,
+                )
 
     def enable_generate(self):
         self.generating = False
@@ -470,6 +470,9 @@ class ChatPromptWidget(BaseWidget):
         first_message: bool = True,
         _message_id: Optional[int] = None,
         _profile_widget: bool = False,
+        mood: str = None,
+        mood_emoji: str = None,
+        user_mood: str = None,
     ):
         start = time.perf_counter() if _profile_widget else None
         message = strip_names_from_message(
@@ -501,12 +504,24 @@ class ChatPromptWidget(BaseWidget):
             if total_widgets < 0:
                 total_widgets = 0
             widget_start = time.perf_counter() if _profile_widget else None
+            # Pass mood and emoji for bot messages
+            mood = None
+            mood_emoji = None
+            if (
+                is_bot
+                and hasattr(self, "chatbot")
+                and self.chatbot is not None
+            ):
+                mood = getattr(self.chatbot, "bot_mood", None)
+                mood_emoji = getattr(self.chatbot, "bot_mood_emoji", None)
             widget = MessageWidget(
                 name=name,
                 message=message,
                 is_bot=is_bot,
                 message_id=total_widgets,
                 conversation_id=self.conversation_id,
+                mood=mood if is_bot else None,
+                mood_emoji=mood_emoji if is_bot else None,
             )
             widget_end = time.perf_counter() if _profile_widget else None
 

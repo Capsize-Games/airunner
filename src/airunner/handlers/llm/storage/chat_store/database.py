@@ -122,7 +122,8 @@ class DatabaseChatStore(BaseChatStore):
         return formatted_messages
 
     def add_message(self, key: str, message: SafeChatMessage) -> None:
-        """Add a message to a conversation."""
+        """Add a message to a conversation. Throws if duplicate."""
+        import traceback
         index = int(key)
         from airunner.data.session_manager import session_scope
 
@@ -138,13 +139,22 @@ class DatabaseChatStore(BaseChatStore):
                 messages = []
             # Remove whitespace from front of message
             message.blocks[0].text = message.blocks[0].text.lstrip()
-            # Append the new message
+            # Prepare new message dict
             message.blocks[0].text = strip_names_from_message(
                 message.blocks[0].text,
                 conversation.user_name if conversation else None,
                 conversation.chatbot_name if conversation else None,
             )
-            messages.append(message.model_dump())
+            new_msg = message.model_dump()
+            # Check for duplicate (role and content match)
+            for m in messages:
+                if (
+                    m.get("role") == new_msg["role"]
+                    and m.get("blocks", [{}])[0].get("text", "") == new_msg["blocks"][0]["text"]
+                ):
+                    tb = traceback.format_stack()
+                    raise RuntimeError(f"Duplicate message detected: {new_msg}\nTraceback:\n{''.join(tb)}")
+            messages.append(new_msg)
             if conversation:
                 conversation.value = messages
                 flag_modified(conversation, "value")
