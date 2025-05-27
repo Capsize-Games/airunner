@@ -52,6 +52,14 @@ class Ui_message(object):
 
         self.horizontalLayout.addWidget(self.user_name)
 
+        self.mood_emoji = QLabel(self.message_container)
+        self.mood_emoji.setObjectName(u"mood_emoji")
+        self.mood_emoji.setMinimumSize(QSize(25, 25))
+        self.mood_emoji.setMaximumSize(QSize(25, 25))
+        self.mood_emoji.setVisible(True)
+
+        self.horizontalLayout.addWidget(self.mood_emoji)
+
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
@@ -119,6 +127,7 @@ class Ui_message(object):
         message.setToolTip(QCoreApplication.translate("message", u"Copy message text", None))
 #endif // QT_CONFIG(tooltip)
         self.user_name.setText(QCoreApplication.translate("message", u"TextLabel", None))
+        self.mood_emoji.setText("")
 #if QT_CONFIG(tooltip)
         self.play_audio_button.setToolTip(QCoreApplication.translate("message", u"Play message audio", None))
 #endif // QT_CONFIG(tooltip)
