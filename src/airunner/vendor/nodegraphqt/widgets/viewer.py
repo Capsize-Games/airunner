@@ -229,7 +229,11 @@ class NodeViewer(QtWidgets.QGraphicsView):
 
         # Add delete selected nodes action to the graph context menu
         delete_action = QtGui.QAction("Delete Selected Nodes", self)
-        delete_action.setShortcut(QtGui.QKeySequence.Delete)
+        # Use a compatible way to set the Delete shortcut for PySide6/Qt6
+        try:
+            delete_action.setShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Delete))
+        except Exception:
+            delete_action.setShortcut(QtGui.QKeySequence("Delete"))
         delete_action.triggered.connect(self._on_delete_selected_nodes)
         self._ctx_graph_menu.addAction(delete_action)
         self._ctx_graph_menu.addSeparator()
@@ -1783,14 +1787,8 @@ class NodeViewer(QtWidgets.QGraphicsView):
         """
         Use QOpenGLWidget as the viewer.
         """
-        # use QOpenGLWidget instead of the deprecated QGLWidget to avoid
-        # problems with Wayland.
-        import Qt
+        from PySide6.QtWidgets import QOpenGLWidget
 
-        if Qt.IsPySide2:
-            from PySide2.QtWidgets import QOpenGLWidget
-        elif Qt.IsPyQt5:
-            from PyQt5.QtWidgets import QOpenGLWidget
         self.setViewport(QOpenGLWidget())
 
     def set_scene_center(self, x, y):

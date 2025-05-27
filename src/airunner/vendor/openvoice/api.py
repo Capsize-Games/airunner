@@ -79,7 +79,7 @@ class BaseSpeakerTTS(OpenVoiceBaseClass):
         audio_list = []
         for t in texts:
             t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
-            t = f"[{language.value()}]{t}[{language.value()}]"
+            t = f"[{language.value}]{t}[{language.value}]"
             stn_tst = self.get_text(t, self.hps, False)
             device = self.device
             speaker_id = self.hps.speakers[speaker]
@@ -113,9 +113,10 @@ class BaseSpeakerTTS(OpenVoiceBaseClass):
 
 class ToneColorConverter(OpenVoiceBaseClass):
     def __init__(self, *args, **kwargs):
+        enable_watermark = kwargs.pop("enable_watermark", True)
         super().__init__(*args, **kwargs)
 
-        if kwargs.get("enable_watermark", True):
+        if enable_watermark:
             import wavmark
 
             self.watermark_model = wavmark.load_model().to(self.device)

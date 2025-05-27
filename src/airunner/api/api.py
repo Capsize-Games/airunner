@@ -276,11 +276,18 @@ class API(App):
         """
         self.emit_signal(SignalCode.QUIT_APPLICATION, {})
 
-    def application_error(self, message: str):
+    def application_error(
+        self,
+        exception: Optional[Exception] = None,
+        message: Optional[str] = None,
+    ):
         """
         Emit a signal indicating an application error.
         :param message: The error message.
         """
+        if exception is not None:
+            message = str(exception)
+        self.logger.error({"message": message})
         self.emit_signal(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
             {"message": message},
