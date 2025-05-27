@@ -18,5 +18,10 @@ class LogDiscWriter:
         filename = kwargs.get("filename", None)
         if not filename:
             stack = traceback.extract_stack()
-            filename = stack[-2].filename
+            if len(stack) >= 2:
+                filename = stack[-2].filename
+            elif stack:
+                filename = stack[-1].filename
+            else:
+                filename = None
         print(f"Write attempt from: {filename}")
