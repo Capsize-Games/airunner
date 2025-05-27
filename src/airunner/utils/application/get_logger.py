@@ -1,6 +1,6 @@
 import logging
-import traceback
 import inspect
+import traceback
 
 
 class Logger:
@@ -53,8 +53,8 @@ class Logger:
 
     def error(self, message: str, *args, **kwargs):
         extra = self._get_caller_info()
-        self.logger.error(message, extra=extra, *args, **kwargs)
         traceback.print_stack()
+        self.logger.error(message, extra=extra, *args, **kwargs)
 
     def info(self, message: str, *args, **kwargs):
         extra = self._get_caller_info()

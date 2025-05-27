@@ -8,7 +8,7 @@ extras_require = {
     ],
     "huggingface": [
         "diffusers==0.33.1",
-        "controlnet_aux==0.0.9",
+        "controlnet_aux==0.0.10",
         "safetensors==0.5.2",
         "compel==2.1.0",
         "transformers==4.51.3",
@@ -34,7 +34,6 @@ extras_require = {
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",
         "tomesd==0.1.3",
-        "timm<=0.6.7",  # Timm is marked at a lower version for compel, we upgrade after installing
     ],
     "llm": [  # LLM dependencies (also text-to-speech and speech-to-text)
         "bitsandbytes==0.45.5",
