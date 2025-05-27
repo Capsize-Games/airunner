@@ -1,6 +1,8 @@
 """
 Unit tests for melo.text.spanish
-Covers importability and basic function presence.
+
+Note: No test in this file should launch a GUI. Remove or skip any test that launches a GUI application.
+This file should not launch QApplication, QMainWindow, or any GUI.
 """
 
 import pytest
