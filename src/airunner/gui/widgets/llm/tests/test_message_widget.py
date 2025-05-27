@@ -394,3 +394,55 @@ def test_streamed_text_accumulation_no_duplication(dummy_message_widget):
         dummy_message_widget.message
         == "HelloNow it's already done. More text."
     )
+
+
+def test_bot_message_shows_mood_emoji_and_tooltip(qtbot):
+    widget = message_widget.MessageWidget(
+        name="Bot",
+        message="Hello!",
+        message_id=1,
+        conversation_id=1,
+        is_bot=True,
+        mood="happy",
+        mood_emoji="😃",
+    )
+    qtbot.addWidget(widget)
+    widget.show()
+    emoji_label = widget.ui.mood_emoji
+    assert emoji_label.text() == "😃"
+    assert emoji_label.toolTip() == "happy"
+    assert emoji_label.isVisible()
+
+
+def test_user_message_hides_mood_emoji(qtbot):
+    widget = message_widget.MessageWidget(
+        name="User",
+        message="Hi!",
+        message_id=2,
+        conversation_id=1,
+        is_bot=False,
+        user_mood="curious",
+    )
+    qtbot.addWidget(widget)
+    widget.show()
+    emoji_label = widget.ui.mood_emoji
+    assert not emoji_label.isVisible()
+
+
+def test_bot_message_shows_mood_emoji_and_tooltip_with_explicit_emoji(qtbot):
+    emoji = "🤖"
+    widget = message_widget.MessageWidget(
+        name="Bot",
+        message="I'm a bot!",
+        message_id=3,
+        conversation_id=1,
+        is_bot=True,
+        mood="robotic",
+        mood_emoji=emoji,
+    )
+    qtbot.addWidget(widget)
+    widget.show()
+    emoji_label = widget.ui.mood_emoji
+    assert emoji_label.text() == emoji
+    assert emoji_label.toolTip() == "robotic"
+    assert emoji_label.isVisible()

@@ -22,11 +22,12 @@ class PromptConfig:
         "You are a mood analyzer. You are examining a conversation between {username} and {botname}.\n"
         "{username} is a human and {botname} is a chatbot.\n"
         "Based on the given conversation, you must determine what {botname}'s mood is.\n"
-        "You must describe {botname}'s mood in one or two sentences.\n"
+        "You must return a JSON object with two fields: 'mood' (a one-word emotion, e.g. happy, sad, angry, etc.) and 'emoji' (a single emoji that best represents the mood).\n"
+        'For example: {"mood": "happy", "emoji": "😊"}\n'
         "You must take into account {botname}'s personality and the context of the conversation.\n"
         "You must try to determine the sentiment behind {username}'s words. You should also take into account {botname}'s current mood before determining what {botname}'s new mood is.\n"
         "You must also consider the subject matter of the conversation and the tone of the conversation.\n"
-        "Determine what {botname}'s mood is and why then provide a brief explanation.\n"
+        "Return ONLY the JSON object."
     )
     UPDATE_USER_DATA = (
         "You are to examine the conversation between the user ({username}) and the chatbot assistant ({botname}).\n"
