@@ -19,20 +19,21 @@ on windows at this time so we disable it.
 """
 if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
     from airunner.facehuggershield.huggingface import activate
-    import sys # Import sys to access executable path
+    import sys  # Import sys to access executable path
 
-    airunner_path = os.path.join(
-        os.path.expanduser("~"), ".local", "share", "airunner"
-    )
+    airunner_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
     # Determine site-packages path dynamically
     venv_path = os.path.dirname(os.path.dirname(sys.executable))
-    site_packages_path = os.path.join(venv_path, 'lib', f'python{sys.version_info.major}.{sys.version_info.minor}', 'site-packages')
+    site_packages_path = os.path.join(
+        venv_path,
+        "lib",
+        f"python{sys.version_info.major}.{sys.version_info.minor}",
+        "site-packages",
+    )
     # Determine project root and src/airunner path
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     airunner_src_path = os.path.join(project_root, "src", "airunner")
 
-
-    logging.info(f"Data directory path: {os.path.join(airunner_path, 'data')}")
     activate(
         activate_shadowlogger=False,
         darklock_os_whitelisted_operations=["makedirs", "mkdir", "open"],
@@ -43,9 +44,9 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             "/dev/",
             "/proc/",
             site_packages_path,  # Added site-packages path
-            "/usr/share/zoneinfo/", # Added /usr/share/zoneinfo/
-            airunner_src_path, # Added project src path
-            "/tmp/", # Added /tmp/ for temporary file operations
+            "/usr/share/zoneinfo/",  # Added /usr/share/zoneinfo/
+            airunner_src_path,  # Added project src path
+            "/tmp/",  # Added /tmp/ for temporary file operations
         ],
         nullscream_whitelist=[
             "huggingface_hub.file_download",
@@ -76,9 +77,7 @@ from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE
 import argparse
 from airunner.utils.settings.get_qsettings import get_qsettings
 
-base_path = os.path.join(
-    os.path.expanduser("~"), ".local", "share", "airunner"
-)
+base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
 
 ################################################################
 # Ensure that the base directory exists.
@@ -100,9 +99,7 @@ if AIRUNNER_SAVE_LOG_TO_FILE and not DEV_ENV:
 import torch
 
 torch.hub.set_dir(
-    os.environ.get(
-        "TORCH_HOME", "/home/appuser/.local/share/airunner/torch/hub"
-    )
+    os.environ.get("TORCH_HOME", "/home/appuser/.local/share/airunner/torch/hub")
 )
 
 ################################################################
@@ -133,9 +130,7 @@ def main():
         action="store_true",
         help="Perform LLM analysis",
     )
-    parser.add_argument(
-        "--chatbot-only", action="store_true", help="Run LLM only"
-    )
+    parser.add_argument("--chatbot-only", action="store_true", help="Run LLM only")
     args = parser.parse_args()
 
     if args.clear_window_settings:
