@@ -24,7 +24,49 @@ class TestOpenVoiceModelManager(unittest.TestCase):
         return_value=(MagicMock(), "mock_audio_name"),
     )
     @patch("airunner.handlers.tts.openvoice_model_manager.TTS")
-    def test_load(self, mock_tts, mock_get_se, mock_isfile, mock_makedirs):
+    @patch(
+        "builtins.open",
+        new_callable=unittest.mock.mock_open,
+        read_data="""{
+            "symbols": ["a", "b", "c"],
+            "data": {
+                "filter_length": 400,
+                "n_speakers": 1,
+                "sampling_rate": 16000,
+                "hop_length": 160,
+                "win_length": 400,
+                "text_cleaners": [],
+                "add_blank": false,
+                "spk2id": {"test_speaker": 1, "EN-Newest": 2}
+            },
+            "speakers": {"spk": 0},
+            "model": {
+                "inter_channels": 4,
+                "hidden_channels": 4,
+                "filter_channels": 4,
+                "n_heads": 2,
+                "n_layers": 2,
+                "kernel_size": 3,
+                "p_dropout": 0.1,
+                "resblock": "1",
+                "resblock_kernel_sizes": [3],
+                "resblock_dilation_sizes": [[1, 2, 3]],
+                "upsample_rates": [2],
+                "upsample_initial_channel": 4,
+                "upsample_kernel_sizes": [4]
+            }
+        }""",
+    )
+    @patch("torch.load", return_value={"model": {}})
+    def test_load(
+        self,
+        mock_torch_load,
+        mock_open,
+        mock_tts,
+        mock_get_se,
+        mock_isfile,
+        mock_makedirs,
+    ):
         mock_tts.return_value = MagicMock()
         self.handler.load()
         self.assertIsNotNone(self.handler.model)
