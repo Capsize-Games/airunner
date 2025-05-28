@@ -40,9 +40,6 @@
 </tr>
 
 </table>
-<table>
-  <tr>
-    <td valign="top">
 
 | ✨ Key Features |
 |:--------------------------------|
@@ -74,10 +71,6 @@
 
 [🫰 Request language support](https://github.com/Capsize-Games/airunner/issues/new?template=language_support.md)
 ---
-
-</td>
-</tr>
-</table>
 
 ## 💾 Installation Quick Start
 
