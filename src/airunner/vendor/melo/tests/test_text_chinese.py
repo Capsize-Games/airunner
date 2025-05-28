@@ -40,13 +40,17 @@ def patch_languagebase_api(monkeypatch):
                 RuntimeError("QApplication should not be instantiated in tests!")
             ),
         )
-        monkeypatch.setattr(
-            PySide6.QtCore.QCoreApplication,
-            "__init__",
-            lambda self, *a, **kw: (_ for _ in ()).throw(
-                RuntimeError("QCoreApplication should not be instantiated in tests!")
-            ),
-        )
+        # Only patch QCoreApplication if it exists
+        if hasattr(PySide6.QtCore, "QCoreApplication"):
+            monkeypatch.setattr(
+                PySide6.QtCore.QCoreApplication,
+                "__init__",
+                lambda self, *a, **kw: (_ for _ in ()).throw(
+                    RuntimeError(
+                        "QCoreApplication should not be instantiated in tests!"
+                    )
+                ),
+            )
     except ImportError:
         pass
 
