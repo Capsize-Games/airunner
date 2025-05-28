@@ -20,9 +20,16 @@ extras_require = {
         "PySide6_Addons==6.9.0",
         "PySide6_Essentials==6.9.0",
     ],
+    "tensorrt": [  # NVIDIA TensorRT for inference optimization.
+        # Requires compatible NVIDIA drivers and CUDA Toolkit (e.g., CUDA 12.x) to be pre-installed.
+        # On Windows and Linux, the Python package from PyPI bundles the TensorRT runtime libraries.
+        # For detailed Windows setup, see TENSORRT_WINDOWS_SETUP.md.
+        # For Linux, ensure prerequisites are met.
+        "tensorrt==10.9.0.34",
+    ],
     "linux": [  # Linux-specific dependencies
         # "faiss-gpu==1.7.2", # If faiss-gpu is from NVIDIA or a custom index, it needs similar handling
-        "tensorrt==10.9.0.34",
+        # "tensorrt==10.9.0.34", # Moved to its own "tensorrt" extra as pip package is cross-platform
     ],
     "dev": [  # Development dependencies
         "pytest",
@@ -99,13 +106,16 @@ extras_require = {
         "cn2an==0.5.23",
     ],
     "openvoice_jp": [
-        "unidic_lite==1.0.8",
-        "unidic==1.1.0",
-        "mecab-python3==1.0.10",
-        # Note: fugashi requires MeCab to be installed on the system
-        # Install with: apt-get install mecab libmecab-dev mecab-ipadic-utf8
-        "fugashi==1.4.0",
-        "pykakasi==2.3.0",
+        "unidic_lite==1.0.8",  # Pip-installable dictionary for MeCab
+        "unidic==1.1.0",      # Pip-installable dictionary for MeCab
+        "mecab-python3==1.0.10", # Python binding for MeCab
+        # fugashi and mecab-python3 require a MeCab installation.
+        # On Linux, install MeCab system-wide (e.g., sudo apt-get install mecab libmecab-dev mecab-ipadic-utf8).
+        # On Windows, MeCab needs to be installed manually.
+        # Please refer to MECAB_WINDOWS_SETUP.md for detailed Windows instructions.
+        # fugashi is generally better at finding pip-installed dictionaries like unidic.
+        "fugashi==1.4.0",     # Python binding for MeCab, often better for finding dictionaries
+        "pykakasi==2.3.0",    # For Japanese romaji/kana conversion, does not depend on MeCab
     ],
     "openvoice_kr": [
         "jamo==0.4.1",

@@ -107,15 +107,47 @@ docker images | grep "airunner" | awk '{print $1":"$2}' | xargs -r docker rmi -f
 rm -rf ./dist/* ./build/*
 ```
 
+## Building on Windows
+
+This section describes the process for creating a distributable package of AiRunner on Windows using PyInstaller. This is separate from the Docker-based build process used for Linux.
+
+### Prerequisites for Building on Windows:
+1.  **Python:** Ensure Python (version specified in `setup.py`, e.g., 3.13+) is installed.
+2.  **Virtual Environment:** It is highly recommended to create and activate a Python virtual environment for the build to isolate dependencies.
+3.  **Project Cloned/Downloaded:** You need the full AiRunner source code.
+4.  **Dependencies Installed:** Install project dependencies, including `pyinstaller`:
+    ```batch
+    REM Activate your virtual environment first
+    python -m pip install --upgrade pip setuptools wheel
+    python -m pip install -r requirements.txt  # Or install via setup.py extras if preferred
+    python -m pip install pyinstaller==6.12.0
+    ```
+    (Note: You might install dependencies using `pip install .[all_dev]` or similar from the project root, which should include PyInstaller if it's in `dev` extras).
+
+### Build Steps:
+1.  **Navigate to Project Root:** Open a command prompt or PowerShell window and navigate to the root directory of the AiRunner project (where `airunner.spec` and `build_windows.bat` are located).
+2.  **Activate Virtual Environment:** If you haven't already, activate your Python virtual environment.
+3.  **Run the Build Script:** Execute the Windows build batch script:
+    ```batch
+    build_windows.bat
+    ```
+    This script will:
+    *   Install the correct version of PyInstaller.
+    *   Run PyInstaller using the `airunner.spec` file.
+    *   Place the output in the `./dist_windows` directory.
+    *   Store intermediate build files in `./build_windows`.
+
+The `airunner.spec` file contains all the configurations for PyInstaller, including hidden imports, data files (like `.ui` files, icons, `mathjax`, and documentation), and executable settings.
+
 ## Next Steps
 
 Potential improvements to the build system:
 
-1. **Caching Optimization** - Implement Docker layer caching for faster builds
-2. **Multi-platform Support** - Extend the build system for Windows/macOS
-3. **Dependency Updates** - Create automated dependency update system
-4. **Build Metrics** - Add build time and size monitoring
-5. **Quality Gates** - Add quality checks before deployment
+1. **Caching Optimization (Docker)** - Implement Docker layer caching for faster Linux builds.
+2. **Multi-platform CI** - Further integrate Windows builds into CI/CD pipelines (e.g., using GitHub Actions with Windows runners). The current `build_windows.bat` is a step towards this.
+3. **Dependency Updates** - Create an automated dependency update system for both Linux and Windows setups.
+4. **Build Metrics** - Add build time and size monitoring for both platforms.
+5. **Quality Gates** - Add quality checks before deployment for both platforms.
 
 ## Troubleshooting
 

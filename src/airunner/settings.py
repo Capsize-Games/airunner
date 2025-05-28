@@ -19,21 +19,56 @@ from dotenv import load_dotenv
 import os
 import sys
 import logging
+from pathlib import Path
+import site
 
 from airunner.enums import Scheduler
 
 if os.environ.get("DEV_ENV", "1") == "1":
     load_dotenv(override=True)
 
-python_venv_dir = os.path.dirname(sys.executable)
+python_venv_dir = Path(sys.executable).parent
 
 DEV_ENV = os.environ.get("DEV_ENV", "1") == "1"
 
-NLTK_DOWNLOAD_DIR = os.path.join(
-    python_venv_dir,
-    "..",
-    "lib/python3.10/site-packages/llama_index/legacy/_static/nltk_cache/",
-)
+# NLTK_DOWNLOAD_DIR: This path is fragile. Ideally, NLTK/LlamaIndex should manage
+# its data via standard mechanisms like the NLTK_DATA environment variable,
+# potentially pointing to a subdirectory within AIRUNNER_BASE_PATH.
+site_packages_paths = site.getsitepackages()
+site_packages_path_str = ""
+# Prefer site-packages path that is inside the venv if possible
+for p_str in site_packages_paths:
+    p = Path(p_str)
+    # Check if path p is relative to venv_dir.parent (common for venvs)
+    # or directly under python_venv_dir (less common but possible)
+    try:
+        if p.is_relative_to(python_venv_dir.parent) or p.is_relative_to(python_venv_dir):
+            site_packages_path_str = str(p)
+            break
+    except ValueError: # Handles cases where paths are on different drives (Windows)
+        if str(p).startswith(str(python_venv_dir.parent)) or str(p).startswith(str(python_venv_dir)):
+            site_packages_path_str = str(p)
+            break
+
+if not site_packages_path_str and site_packages_paths: # Fallback to the first entry
+    site_packages_path_str = site_packages_paths[0]
+elif not site_packages_path_str: # Further fallback for non-standard setups
+    # Try common venv layout for Linux/macOS
+    potential_path = python_venv_dir.parent / f"lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+    if potential_path.exists():
+        site_packages_path_str = str(potential_path)
+    else: # Last resort for Windows system Python or other structures
+        potential_path_win = python_venv_dir / "Lib" / "site-packages"
+        if potential_path_win.exists():
+            site_packages_path_str = str(potential_path_win)
+        else: # If still not found, log a warning or set to a default that might fail
+            # This fallback is a best guess and might not be correct.
+            site_packages_path_str = str(python_venv_dir.parent / "site-packages")
+            # Consider logging a warning here if logging is already configured:
+            # logging.warning(f"Could not reliably determine site-packages path. Falling back to: {site_packages_path_str}")
+
+NLTK_DOWNLOAD_DIR = Path(site_packages_path_str) / "llama_index/legacy/_static/nltk_cache/"
+
 AIRUNNER_DEFAULT_LLM_HF_PATH = os.environ.get(
     "AIRUNNER_AIRUNNER_DEFAULT_LLM_HF_PATH",
     "w4ffl35/Ministral-8B-Instruct-2410-doublequant",
@@ -150,9 +185,27 @@ AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT = os.environ.get(
         "Ensure replies promote fairness and positivity."
     ),
 )
-AIRUNNER_BASE_PATH = os.environ.get(
-    "AIRUNNER_BASE_PATH", os.path.expanduser("~/.local/share/airunner")
-)
+
+def get_windows_app_data_path(app_name: str) -> Path:
+    """Gets the application data path for Windows."""
+    path_str = os.getenv("LOCALAPPDATA")
+    if path_str:
+        return Path(path_str) / app_name
+    path_str = os.getenv("APPDATA")
+    if path_str:
+        return Path(path_str) / app_name # Roaming app data
+    # Fallback to home directory if APPDATA vars are not set
+    return Path.home() / f".{app_name}"
+
+
+if os.name == "nt": # Windows
+    _default_base_path = str(get_windows_app_data_path("airunner"))
+    AIRUNNER_BASE_PATH = Path(os.environ.get("AIRUNNER_BASE_PATH", _default_base_path))
+else: # Linux/other POSIX
+    _default_base_path = os.path.expanduser("~/.local/share/airunner")
+    AIRUNNER_BASE_PATH = Path(os.environ.get("AIRUNNER_BASE_PATH", _default_base_path))
+
+
 AIRUNNER_PHOTO_REALISTIC_PROMPT = os.environ.get(
     "AIRUNNER_PHOTO_REALISTIC_PROMPT",
     (
@@ -248,11 +301,12 @@ if DEV_ENV:
     default_name = "airunner.dev.db"
 AIRUNNER_DB_NAME = os.environ.get("AIRUNNER_DB_NAME", default_name)
 
-# Set the database URL
-DB_PATH = os.path.expanduser(
-    os.path.join("~", ".local", "share", "airunner", "data", AIRUNNER_DB_NAME)
-)
-default_url = "sqlite:///" + DB_PATH
+# Set the database URL and ensure data directory exists
+AIRUNNER_DATA_PATH = AIRUNNER_BASE_PATH / "data"
+AIRUNNER_DATA_PATH.mkdir(parents=True, exist_ok=True)
+DB_PATH = AIRUNNER_DATA_PATH / AIRUNNER_DB_NAME
+
+default_url = "sqlite:///" + str(DB_PATH)
 AIRUNNER_DB_URL = os.environ.get("AIRUNNER_DATABASE_URL", default_url)
 if AIRUNNER_DB_URL == "" or not AIRUNNER_DB_URL:
     AIRUNNER_DB_URL = default_url
@@ -372,9 +426,8 @@ AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE = "Insufficient GPU memory."
 AIRUNNER_MOOD_PROMPT_OVERRIDE = os.environ.get(
     "AIRUNNER_MOOD_PROMPT_OVERRIDE", None
 )
-AIRUNNER_LOG_FILE = os.environ.get(
-    "AIRUNNER_LOG_FILE", os.path.join(AIRUNNER_BASE_PATH, "airunner.log")
-)
+_default_log_file = AIRUNNER_BASE_PATH / "airunner.log"
+AIRUNNER_LOG_FILE = Path(os.environ.get("AIRUNNER_LOG_FILE", str(_default_log_file)))
 AIRUNNER_SAVE_LOG_TO_FILE = (
     os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "1") == "1"
 )
@@ -391,3 +444,15 @@ LANGUAGES = {
 }
 LOCAL_SERVER_HOST = os.environ.get("LOCAL_SERVER_HOST", "127.0.0.1")
 LOCAL_SERVER_PORT = os.environ.get("LOCAL_SERVER_PORT", 8765)
+
+# Ensure AIRUNNER_BASE_PATH and NLTK_DOWNLOAD_DIR are strings if used by external libraries
+# that expect string paths, though internally Path objects are preferred.
+# Most settings are fine as Path objects if only used internally or with pathlib-aware libraries.
+# Convert to string when passing to os.path functions or older APIs.
+if isinstance(NLTK_DOWNLOAD_DIR, Path):
+    NLTK_DOWNLOAD_DIR = str(NLTK_DOWNLOAD_DIR) # For os.path.join or similar if used elsewhere
+
+# Convert AIRUNNER_BASE_PATH to string for environment variables or older APIs if needed
+# However, it's already converted for os.environ.get default, so this is more for consistency if used elsewhere.
+# For example, if another module imports and uses AIRUNNER_BASE_PATH with os.path.join:
+# AIRUNNER_BASE_PATH_STR = str(AIRUNNER_BASE_PATH)

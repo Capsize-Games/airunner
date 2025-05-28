@@ -78,7 +78,7 @@
 
 | Specification       | Minimum                              | Recommended                          |
 |---------------------|--------------------------------------------|--------------------------------------------|
-| **OS** | Ubuntu 22.04, Windows 10                   | Ubuntu 22.04 (Wayland)                     |
+| **OS** | Ubuntu 22.04, Windows 11                   | Ubuntu 22.04 (Wayland), Windows 11         |
 | **CPU** | Ryzen 2700K or Intel Core i7-8700K         | Ryzen 5800X or Intel Core i7-11700K        |
 | **Memory** | 16 GB RAM                                  | 32 GB RAM                                  |
 | **GPU** | NVIDIA RTX 3060 or better                  | NVIDIA RTX 4090 or better                  |
@@ -88,31 +88,57 @@
 
 ### 🔧 Installation Steps
 
-1. **Install system requirements**
-   ```bash
-   sudo apt update && sudo apt upgrade -y
-   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme mecab libmecab-dev mecab-ipadic-utf8 libxslt-dev
-   sudo apt install espeak
-   sudo apt install espeak-ng-espeak
-   ```
-2. **Create `airunner` directory**
-   ```bash
-   sudo mkdir ~/.local/share/airunner
-   sudo chown $USER:$USER ~/.local/share/airunner
-   ```
-3. **Install AI Runner** - **Python 3.13+ required** `pyenv` and `venv` are recommended ([see wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions) for more info)
-   ```bash
-   pip install "typing-extensions==4.13.2"
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   pip install airunner[all_dev]
-   pip install -U timm
-   ```
-4. **Run AI Runner**
-   ```bash
-   airunner
-   ```
+**For Linux (Ubuntu 22.04):**
+1.  **Install system prerequisites:**
+    ```bash
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme mecab libmecab-dev mecab-ipadic-utf8 libxslt-dev
+    sudo apt install espeak # Ensure espeak is installed
+    # sudo apt install espeak-ng-espeak # This might be redundant if 'espeak' package provides espeak-ng
+    ```
+2.  **Create `airunner` data directory:** (This step is often handled automatically by the application on first run, but manual creation might be needed in some setups.)
+    ```bash
+    mkdir -p ~/.local/share/airunner
+    # No sudo needed if creating in user's home directory
+    ```
 
-For more options, including Docker, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+**For Windows 11:**
+1.  **Setup & Prerequisites:** Please refer to the detailed [WINDOWS_SETUP_GUIDE.md](WINDOWS_SETUP_GUIDE.md) for setting up Python, Git, and other necessary components like CUDA.
+    *   For optional NVIDIA TensorRT support, see [TENSORRT_WINDOWS_SETUP.md](TENSORRT_WINDOWS_SETUP.md).
+    *   For optional Japanese voice support (MeCab), see [MECAB_WINDOWS_SETUP.md](MECAB_WINDOWS_SETUP.md).
+
+**Common Python Installation Steps (after system prerequisites):**
+1.  **Python 3.13+ required.** Using `pyenv` (Linux/macOS) or the official Python installer (Windows) along with a virtual environment (`venv`) is strongly recommended. See the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions) for detailed Python setup.
+2.  **Install Python packages:**
+    ```bash
+    # Ensure pip, setuptools, and wheel are up-to-date
+    python -m pip install --upgrade pip setuptools wheel
+    
+    # Install PyTorch (example for CUDA 12.1, adjust if needed for other CUDA versions like 12.8 or CPU)
+    # Refer to https://pytorch.org/get-started/locally/ for the correct command for your system.
+    python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+    
+    # Install airunner with all development dependencies (includes all features)
+    python -m pip install airunner[all_dev]
+    
+    # Ensure 'timm' is at the latest compatible version (if specific version issues arise)
+    # python -m pip install -U timm # This was in the original, might be needed if compel has an old cap
+    ```
+3.  **Run AI Runner:**
+    ```bash
+    airunner
+    ```
+
+For more comprehensive installation options, including Docker (primarily for Linux), see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+
+### Windows Support
+
+AI Runner is compatible with Windows 11. For detailed instructions on setting up the development environment and running AI Runner from source on Windows, please refer to our comprehensive guide:
+- **[WINDOWS_SETUP_GUIDE.md](WINDOWS_SETUP_GUIDE.md)**
+
+For specific optional features on Windows, consult these guides:
+- NVIDIA TensorRT: **[TENSORRT_WINDOWS_SETUP.md](TENSORRT_WINDOWS_SETUP.md)**
+- Japanese Voice Support (MeCab): **[MECAB_WINDOWS_SETUP.md](MECAB_WINDOWS_SETUP.md)**
 
 ---
 
@@ -186,13 +212,33 @@ AI Runner uses the following stack
 
 By default, AI Runner installs essential TTS/STT and minimal LLM components, but AI art models must be supplied by the user.
 
-Organize them under your local AI Runner data directory:
+Organize them under your local AI Runner data directory. The path varies by OS:
 
+**Linux:**
 ```plaintext
-~/.local/share/airunner
-├── art
-│   └── models
-│       ├── SD 1.5
+~/.local/share/airunner/
+├── art/
+│   └── models/
+│       ├── SD 1.5/
+│       │   ├── controlnet/
+│       │   ├── embeddings/
+│       │   ├── inpaint/
+│       │   ├── lora/
+│       │   └── txt2img/
+│       ├── SDXL 1.0/
+│       │   └── ... (similar structure)
+│       └── SDXL Turbo/
+│           └── ... (similar structure)
+```
+
+**Windows:**
+The typical path is `%LOCALAPPDATA%\airunner`. You can paste this into Explorer's address bar.
+It usually resolves to `C:\Users\<YourUsername>\AppData\Local\airunner`.
+```plaintext
+%LOCALAPPDATA%\airunner\
+├── art\
+│   └── models\
+│       ├── SD 1.5\
 │       │   ├── controlnet
 │       │   ├── embeddings
 │       │   ├── inpaint
@@ -247,20 +293,21 @@ AI Runner uses `pytest` for all automated testing. Test coverage is a priority, 
     ```
 - **Display-required (Qt/Xvfb) tests:**
   - Located in `src/airunner/utils/tests/xvfb_required/`
-  - Require a real Qt display environment (cannot be run headlessly or with `pytest-qt`)
-  - Typical for low-level Qt worker/signal/slot logic
-  - Run with:
+  - Require a real Qt display environment (cannot be run headlessly or with `pytest-qt`).
+  - Typical for low-level Qt worker/signal/slot logic.
+  - Run with (Linux-specific):
     ```bash
+    # xvfb-run is a Linux utility to run graphical applications without a visible display server.
     xvfb-run -a pytest src/airunner/utils/tests/xvfb_required/
     # Or for a single file:
     xvfb-run -a pytest src/airunner/utils/tests/xvfb_required/test_background_worker.py
     ```
+  - **Note for Windows/macOS:** These tests require a desktop session to run, as `xvfb-run` is not available. They should execute like other `pytest` tests if a display is active.
   - See the [README in xvfb_required/](src/airunner/utils/tests/xvfb_required/README.md) for details.
 
 ### CI/CD
-- By default, only headless-safe tests are run in CI.
-- Display-required tests are intended for manual or special-case runs (e.g., when working on Qt threading or background worker code).
-- (Optional) You may automate this split in CI by adding a separate job/step for xvfb tests.
+- By default, only headless-safe tests are run in CI (Continuous Integration).
+- Display-required tests are typically intended for manual developer runs or specialized CI setups that can provide a graphical environment.
 
 ### General Testing Guidelines
 - All new utility code must be accompanied by tests.
