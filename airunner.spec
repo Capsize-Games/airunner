@@ -6,9 +6,12 @@
 
 import os
 import glob
+from PyInstaller.compat import SPECPATH
 
 # Determine the project root directory, assuming the spec file is in the root
-project_root = os.path.dirname(os.path.abspath(__file__))
+# __file__ is not available when PyInstaller executes the spec file. SPECPATH is PyInstaller's global
+# variable that contains the absolute path to the directory containing the spec file.
+project_root = SPECPATH
 src_dir = os.path.join(project_root, 'src')
 airunner_pkg_dir = os.path.join(src_dir, 'airunner') # src/airunner
 airunner_gui_dir = os.path.join(airunner_pkg_dir, 'gui') # src/airunner/gui
