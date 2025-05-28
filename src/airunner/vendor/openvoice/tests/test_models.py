@@ -53,6 +53,8 @@ def test_StochasticDurationPredictor_forward_and_reverse():
     x = torch.randn(2, 4, 5)
     x_mask = torch.ones(2, 1, 5)
     w = torch.randn(2, 1, 5)
+    # Ensure w is not empty and has valid shape
+    assert w.numel() > 0
     nll = sdp(x, x_mask, w=w)
     assert nll.shape[0] == 2
     # reverse
