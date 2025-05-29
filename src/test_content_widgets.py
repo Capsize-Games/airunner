@@ -14,10 +14,14 @@ from PySide6.QtCore import Qt
 
 # Import our content widgets
 sys.path.append("/home/joe/Projects/airunner/src")
-from airunner.gui.widgets.llm.contentwidgets.base_content_widget import (
+from airunner.gui.widgets.llm.contentwidgets.plain_text_widget import (
     PlainTextWidget,
-    LatexWidget,
+)
+from airunner.gui.widgets.llm.contentwidgets.latex_widget import LatexWidget
+from airunner.gui.widgets.llm.contentwidgets.markdown_widget import (
     MarkdownWidget,
+)
+from airunner.gui.widgets.llm.contentwidgets.mixed_content_widget import (
     MixedContentWidget,
 )
 from airunner.utils.text.formatter_extended import FormatterExtended

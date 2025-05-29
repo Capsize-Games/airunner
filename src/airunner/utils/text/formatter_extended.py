@@ -73,9 +73,6 @@ class FormatterExtended:
 
     @staticmethod
     def _is_markdown(text: str) -> bool:
-        """
-        Heuristically checks if the given text contains Markdown formatting.
-        """
         # Headers (# Title, ## Subtitle, etc.)
         if re.search(r"^#+\s+.+$", text, re.MULTILINE):
             return True

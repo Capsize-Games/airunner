@@ -24,9 +24,14 @@ from airunner.handlers.llm.agent.chat_engine import (
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.handlers.llm.agent.engines.base_conversation_engine import (
+    BaseConversationEngine,
+)
 
 
-class ChatEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
+class ChatEngineTool(
+    BaseConversationEngine, AsyncBaseTool, SettingsMixin, MediatorMixin
+):
     """Chat tool.
 
     A tool for chatting with the LLM.
@@ -44,17 +49,30 @@ class ChatEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
         *args: Any,
         **kwargs: Any,
     ):
-        self.do_handle_response: bool = do_handle_response
-        self.chat_engine: Union[
-            RefreshSimpleChatEngine, RefreshContextChatEngine, ReactAgentEngine
-        ] = chat_engine
-        if not chat_engine:
-            raise ValueError("Chat engine must be provided.")
+        self.chat_engine = chat_engine
         self._metadata = metadata
         self._resolve_input_errors = resolve_input_errors
         self.agent = agent
+        self.do_handle_response: bool = do_handle_response
         self._do_interrupt: bool = False
-        super().__init__(*args, **kwargs)
+        self._logger = kwargs.pop("logger", None)
+        if self._logger is None:
+            from airunner.utils.application.get_logger import get_logger
+            from airunner.settings import AIRUNNER_LOG_LEVEL
+
+            self._logger = get_logger(
+                self.__class__.__name__, AIRUNNER_LOG_LEVEL
+            )
+        super().__init__(agent)
+
+    @property
+    def logger(self):
+        """
+        Get the logger instance for this tool.
+        Returns:
+            Logger: The logger instance.
+        """
+        return self._logger
 
     @classmethod
     def from_defaults(
