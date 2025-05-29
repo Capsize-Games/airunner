@@ -13,6 +13,9 @@ Do not change the order of the imports.
 from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 import os
 
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --disable-software-rasterizer"
+os.environ["QTWEBENGINE_DISABLE_SANDBOX"] = "1"
+os.environ["QT_QUICK_BACKEND"] = "software"
 """
 Temporary fix for windows - Facehuggershield is not working correctly
 on windows at this time so we disable it.
