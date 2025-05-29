@@ -634,22 +634,16 @@ class MoodToolsMixin(ToolSingletonMixin):
                 Conversation.objects.update(
                     self.conversation_id, value=conversation.value
                 )
-                # Emit signal and log
-                if hasattr(self, "emit_signal"):
-                    self.emit_signal(
-                        SignalCode.BOT_MOOD_UPDATED,
-                        {"mood": mood_description, "emoji": emoji},
-                    )
-                if hasattr(self, "logger"):
-                    self.logger.info(
-                        f"Mood updated: {mood_description} {emoji}"
-                    )
-                return f"Mood set to '{mood_description}' {emoji}."
-            if hasattr(self, "logger"):
-                self.logger.warning(
-                    "No assistant message found to update mood."
+                self.emit_signal(
+                    SignalCode.BOT_MOOD_UPDATED,
+                    {"mood": mood_description, "emoji": emoji},
                 )
-            return "No assistant message found to update mood."
+                message = f"Mood set to '{mood_description}' {emoji}."
+                self.logger.info(message)
+                return message
+            message = "No assistant message found to update mood."
+            self.logger.warning(message)
+            return message
 
         return self._get_or_create_singleton(
             "_mood_tool",
@@ -678,19 +672,18 @@ class AnalysisToolsMixin(ToolSingletonMixin):
                     self.conversation_id, summary=analysis
                 )
                 # Emit signal and log
-                if hasattr(self, "emit_signal"):
-                    self.emit_signal(
-                        SignalCode.MOOD_SUMMARY_UPDATE_STARTED,
-                        {"message": "Updating bot mood / summarizing..."},
-                    )
-                if hasattr(self, "logger"):
-                    self.logger.info(f"Analysis/summary updated: {analysis}")
-                return "Analysis/summary updated."
-            if hasattr(self, "logger"):
-                self.logger.warning(
-                    "No conversation found to update analysis."
+                self.emit_signal(
+                    SignalCode.MOOD_SUMMARY_UPDATE_STARTED,
+                    {"message": "Updating bot mood / summarizing..."},
                 )
-            return "No conversation found to update analysis."
+                message = "Analysis/summary updated."
+                self.logger.info(message)
+                return message
+            message = "No conversation found to update analysis."
+            self.logger.warning(
+                message
+            )
+            return message
 
         return self._get_or_create_singleton(
             "_analysis_tool",

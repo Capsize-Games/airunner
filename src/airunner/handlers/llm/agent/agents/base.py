@@ -1110,6 +1110,25 @@ class BaseAgent(
             # Use the mood_tool to update the conversation state
             self.mood_tool(mood_description, emoji)
 
+            # Emit signal to update the UI for the latest assistant message
+            if self.conversation and self.conversation.value:
+                # Find the latest assistant message index
+                for idx in range(len(self.conversation.value) - 1, -1, -1):
+                    msg = self.conversation.value[idx]
+                    if msg.get("role") == "assistant":
+                        # Emit signal with message_id (idx), mood, and emoji
+                        if hasattr(self, "emit_signal"):
+                            self.emit_signal(
+                                SignalCode.BOT_MOOD_UPDATED,
+                                {
+                                    "message_id": idx,
+                                    "mood": mood_description,
+                                    "emoji": emoji,
+                                    "conversation_id": self.conversation.id,
+                                },
+                            )
+                        break
+
         except Exception as e:
             self.logger.error(f"Error updating mood: {e}")
             # Fallback to neutral mood
