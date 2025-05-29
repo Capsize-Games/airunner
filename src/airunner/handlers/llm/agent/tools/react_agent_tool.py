@@ -51,6 +51,17 @@ class ReActAgentTool(ChatEngineTool):
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
+        # Use agent's chat_memory if chat_history not provided
+        if (
+            chat_history is None
+            and self.agent is not None
+            and hasattr(self.agent, "chat_memory")
+        ):
+            chat_history = (
+                self.agent.chat_memory.get() if self.agent.chat_memory else []
+            )
+        if chat_history is None:
+            chat_history = []
         tool_choice = kwargs.get("tool_choice", None)
         logging.getLogger(__name__).info(
             f"[ReActAgentTool.call] tool_choice: {tool_choice}, query_str: {query_str}"

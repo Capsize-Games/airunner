@@ -28,9 +28,10 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
     """Search tool.
 
     A tool for performing internet searches and synthesizing natural language responses.
+    This tool is context-aware: it uses and updates the ongoing chat history/memory, enabling follow-up queries to be answered in a conversational, contextually relevant way (like ChatEngineTool).
     This tool internally handles the two-step process:
     1. Perform search using AggregatedSearchTool
-    2. Synthesize response using an LLM
+    2. Synthesize response using an LLM, with full conversational context
     """
 
     def __init__(
@@ -152,6 +153,20 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
         if hasattr(self.llm, "llm_request"):
             self.llm.llm_request = llm_request
 
+        # --- Chat history/memory integration ---
+        chat_history = kwargs.get("chat_history", None)
+        # If not provided, try to get from agent's memory (if available)
+        if (
+            chat_history is None
+            and self.agent is not None
+            and hasattr(self.agent, "chat_memory")
+        ):
+            chat_history = (
+                self.agent.chat_memory.get() if self.agent.chat_memory else []
+            )
+        if chat_history is None:
+            chat_history = []
+
         import time
 
         # --- Combine all results for all queries into a single result set, deduplicating items ---
@@ -210,7 +225,10 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
                 "SearchEngineTool: Synthesizing response from combined search results"
             )
             synthesis_engine = self._get_synthesis_engine()
-            streaming_response = synthesis_engine.stream_chat(synthesis_prompt)
+            # Pass chat_history to the synthesis engine for context
+            streaming_response = synthesis_engine.stream_chat(
+                synthesis_prompt, chat_history=chat_history
+            )
             response = ""
             is_first_message = True
             try:
@@ -224,6 +242,7 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
                         response != "Empty Response"
                         and self.do_handle_response
                         and self.agent
+                        and hasattr(self.agent, "handle_response")
                     ):
                         self.agent.handle_response(
                             token,
@@ -235,6 +254,27 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
             except Exception as e:
                 logger.error(f"Error during response streaming: {e}")
                 response = "I encountered an error while processing the search results."
+
+        # --- Update memory/chat history with the new turn ---
+        if (
+            self.agent is not None
+            and hasattr(self.agent, "chat_memory")
+            and self.agent.chat_memory
+        ):
+            # Add user queries as a single message, and the assistant's response
+            from llama_index.core.base.llms.types import (
+                ChatMessage,
+                MessageRole,
+            )
+
+            user_message = ChatMessage(
+                content=str(queries), role=MessageRole.USER
+            )
+            assistant_message = ChatMessage(
+                content=str(response), role=MessageRole.ASSISTANT
+            )
+            self.agent.chat_memory.put(user_message)
+            self.agent.chat_memory.put(assistant_message)
 
         self._do_interrupt = False
         return ToolOutput(
