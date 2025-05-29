@@ -1,0 +1,115 @@
+/* General Styles for a Windows 11-like Look */
+
+/* Common Font for Windows - Uncomment to apply globally or per widget */
+/*
+* {
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+*/
+
+QPushButton {
+    border: 1px solid #cccccc; /* Light grey border, common in Win11 style */
+    border-radius: 6px;        /* Rounded corners */
+    padding: 5px 15px;         /* Padding for content within the button */
+    background-color: #f0f0f0; /* Light background color */
+    color: #333333;            /* Dark text color */
+    /* font-family: "Segoe UI", Arial, sans-serif; */ /* Optional: specific font for buttons */
+}
+
+QPushButton:hover {
+    background-color: #e0e0e0; /* Slightly darker on hover */
+    border-color: #bbbbbb;
+}
+
+QPushButton:pressed {
+    background-color: #d0d0d0; /* Even darker when pressed */
+    border-color: #aaaaaa;
+}
+
+QPushButton:disabled {
+    background-color: #e0e0e0;
+    color: #a0a0a0;
+    border-color: #d0d0d0;
+}
+
+QLineEdit, QTextEdit {
+    border: 1px solid #cccccc;
+    border-radius: 4px;        /* Slightly less rounded than buttons */
+    padding: 4px 8px;          /* Padding for text input */
+    background-color: #ffffff; /* White background for input fields */
+    color: #333333;
+    /* font-family: "Segoe UI", Arial, sans-serif; */ /* Optional: specific font */
+}
+
+QLineEdit:focus, QTextEdit:focus {
+    border-color: #0078d4;     /* Accent color on focus (e.g., Windows blue) */
+    /* Maybe a slight box-shadow or outline can be added for more pronounced focus */
+}
+
+QTextEdit {
+    /* QTextEdit might need specific padding or scrollbar styling later */
+}
+
+QComboBox {
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 3px 8px 3px 8px; /* Left padding for text, right for dropdown arrow space */
+    background-color: #f0f0f0;
+    color: #333333;
+    /* font-family: "Segoe UI", Arial, sans-serif; */ /* Optional: specific font */
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px; /* Width for the dropdown arrow area */
+    border-left-width: 1px;
+    border-left-color: #cccccc;
+    border-left-style: solid;
+    border-top-right-radius: 4px; /* Match QComboBox radius */
+    border-bottom-right-radius: 4px; /* Match QComboBox radius */
+}
+
+QComboBox::down-arrow {
+    image: url(placeholder_down_arrow.png); /* Replace with actual path or use a character */
+    /* A common approach is to use a character like ▼ or a small SVG icon */
+    /* For a pure QSS approach without images, one might need to get creative or accept system default arrow */
+    width: 10px; /* Size of the arrow image */
+    height: 10px;
+}
+
+QComboBox QAbstractItemView { /* Styling for the dropdown list itself */
+    border: 1px solid #cccccc;
+    background-color: #ffffff;
+    selection-background-color: #0078d4; /* Accent color for selected item */
+    selection-color: #ffffff;
+    color: #333333;
+    padding: 2px;
+    border-radius: 4px; /* Rounded corners for the dropdown popup */
+}
+
+QGroupBox {
+    border: 1px solid #cccccc;
+    border-radius: 8px;        /* More pronounced rounding for group boxes */
+    margin-top: 10px;          /* Space for the title */
+    padding: 10px;
+    background-color: #f9f9f9; /* Slightly off-white background for the groupbox content area */
+    /* font-family: "Segoe UI", Arial, sans-serif; */ /* Optional: specific font */
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px 0 5px;
+    left: 10px; /* Offset the title from the left edge */
+    color: #333333;
+    background-color: #f9f9f9; /* Match groupbox background to "cut out" the border */
+}
+
+/* Example for a disabled state (can be applied to other widgets too) */
+/*
+QWidget:disabled {
+    color: #a0a0a0;
+    background-color: #f0f0f0;
+}
+*/
