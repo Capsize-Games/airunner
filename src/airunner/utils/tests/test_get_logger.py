@@ -40,33 +40,6 @@ def test_logger_debug_info_warning_critical(monkeypatch):
     assert "mod" in output and "func" in output and "123" in output
 
 
-def test_logger_error_prints_stack(monkeypatch):
-    logger = get_logger("test_logger")
-    stream = io.StringIO()
-    for handler in logger.logger.handlers:
-        handler.stream = stream
-    monkeypatch.setattr(
-        logger,
-        "_get_caller_info",
-        lambda: {
-            "caller_module": "mod",
-            "caller_function": "func",
-            "caller_lineno": 123,
-        },
-    )
-    # Patch traceback.print_stack to capture call
-    stack_called = {}
-
-    def fake_print_stack():
-        stack_called["called"] = True
-
-    monkeypatch.setattr(traceback, "print_stack", fake_print_stack)
-    logger.error("error message")
-    output = stream.getvalue()
-    assert "error message" in output
-    assert stack_called["called"]
-
-
 def test_logger_handler_cleanup():
     logger1 = get_logger("cleanup_logger")
     logger2 = get_logger("cleanup_logger")

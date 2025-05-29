@@ -9,6 +9,7 @@ from llama_index.core.base.llms.types import TextBlock
 
 from airunner.data.models import Conversation
 from airunner.utils.llm import strip_names_from_message
+from airunner.data.session_manager import session_scope
 
 
 class SafeChatMessage(ChatMessage):
@@ -25,42 +26,28 @@ class DatabaseChatStore(BaseChatStore):
     def set_messages(self, key: str, messages: list[SafeChatMessage]) -> None:
         """Set messages for a key."""
         index = int(key)
-        from airunner.data.session_manager import session_scope
+        conversation = Conversation.objects.get(index)
+        if messages and len(messages) > 0:
+            formatted_messages = []
+            for message in messages:
+                message.blocks[0].text = strip_names_from_message(
+                    message.blocks[0].text,
+                    conversation.user_name if conversation else None,
+                    conversation.chatbot_name if conversation else None,
+                )
+                formatted_messages.append(message.model_dump())
+            messages = formatted_messages
 
-        with session_scope() as session:
-            conversation = (
-                session.query(Conversation)
-                .filter(Conversation.id == index)
-                .first()
-            )
             if conversation:
-                if messages and len(messages) > 0:
-                    formatted_messages = []
-                    for message in messages:
-                        message.blocks[0].text = strip_names_from_message(
-                            message.blocks[0].text,
-                            conversation.user_name,
-                            conversation.chatbot_name,
-                        )
-                        formatted_messages.append(message.model_dump())
-                    messages = formatted_messages
-
-                    conversation.value = messages
-                    flag_modified(conversation, "value")
-                    session.commit()
-                else:
-                    conversation.value = []
-                    flag_modified(conversation, "value")
-                    session.commit()
+                Conversation.objects.update(index, value=messages)
             else:
-                conversation = Conversation(
+                conversation = Conversation.objects.create(
                     timestamp=datetime.datetime.now(datetime.timezone.utc),
                     title="",
                     key=key,
                     value=messages,
                 )
-                session.add(conversation)
-                session.commit()
+                Conversation.make_current(conversation.id)
 
     @staticmethod
     def get_latest_chatstore() -> dict:
@@ -123,50 +110,28 @@ class DatabaseChatStore(BaseChatStore):
 
     def add_message(self, key: str, message: SafeChatMessage) -> None:
         """Add a message to a conversation. Throws if duplicate."""
-        import traceback
         index = int(key)
-        from airunner.data.session_manager import session_scope
-
-        with session_scope() as session:
-            conversation = (
-                session.query(Conversation)
-                .filter(Conversation.id == index)
-                .first()
-            )
-            if conversation:
-                messages = conversation.value or []
-            else:
-                messages = []
-            # Remove whitespace from front of message
+        conversation = Conversation.objects.get(index)
+        messages = (conversation.value or []) if conversation else []
+        if message.blocks and len(message.blocks) > 0:
             message.blocks[0].text = message.blocks[0].text.lstrip()
-            # Prepare new message dict
-            message.blocks[0].text = strip_names_from_message(
-                message.blocks[0].text,
-                conversation.user_name if conversation else None,
-                conversation.chatbot_name if conversation else None,
+        message.blocks[0].text = strip_names_from_message(
+            message.blocks[0].text,
+            conversation.user_name if conversation else None,
+            conversation.chatbot_name if conversation else None,
+        )
+        new_msg = message.model_dump()
+        messages.append(new_msg)
+        if conversation:
+            Conversation.objects.update(conversation.id, value=messages)
+        else:
+            conversation = Conversation.objects.create(
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+                title="",
+                key=key,
+                value=messages,
             )
-            new_msg = message.model_dump()
-            # Check for duplicate (role and content match)
-            for m in messages:
-                if (
-                    m.get("role") == new_msg["role"]
-                    and m.get("blocks", [{}])[0].get("text", "") == new_msg["blocks"][0]["text"]
-                ):
-                    tb = traceback.format_stack()
-                    raise RuntimeError(f"Duplicate message detected: {new_msg}\nTraceback:\n{''.join(tb)}")
-            messages.append(new_msg)
-            if conversation:
-                conversation.value = messages
-                flag_modified(conversation, "value")
-                session.commit()
-            else:
-                conversation = Conversation(
-                    key=key,
-                    value=messages,
-                    timestamp=datetime.datetime.now(datetime.timezone.utc),
-                )
-                session.add(conversation)
-                session.commit()
+            Conversation.make_current(conversation.id)
 
     def delete_messages(self, key: str) -> Optional[List[SafeChatMessage]]:
         """Delete messages for a key."""
@@ -177,21 +142,12 @@ class DatabaseChatStore(BaseChatStore):
     def delete_message(self, key: str, message_index: int) -> None:
         """Delete a message from a conversation."""
         index = int(key)
-        from airunner.data.session_manager import session_scope
-
-        with session_scope() as session:
-            conversation = (
-                session.query(Conversation)
-                .filter(Conversation.id == index)
-                .first()
-            )
-            if conversation:
-                messages = conversation.value or []
-                if 0 <= message_index < len(messages):
-                    del messages[message_index]
-                    conversation.value = messages
-                    flag_modified(conversation, "value")
-                    session.commit()
+        conversation = Conversation.objects.get(index)
+        if conversation:
+            messages = conversation.value or []
+            if 0 <= message_index < len(messages):
+                del messages[message_index]
+                Conversation.objects.update(index, value=messages)
 
     def delete_last_message(self, key: str) -> Optional[SafeChatMessage]:
         """Delete last message for a key."""
