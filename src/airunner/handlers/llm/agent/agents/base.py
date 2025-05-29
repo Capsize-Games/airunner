@@ -1380,14 +1380,8 @@ class BaseAgent(
             do_not_display (bool): If True, do not emit the signal to display the message.
             do_tts_reply (bool): If True, perform TTS reply.
         """
-        # Log the actual response for debugging
-        self.logger.debug(
-            f"handle_response called with response: '{response}' (do_not_display={do_not_display})"
-        )
-
         # Defensive: Only process non-empty responses
         if not response and not do_not_display:
-            self.logger.debug("handle_response: Skipping empty response.")
             return
 
         # The 'full_message' variable as defined in the diff caused duplication when sent.
