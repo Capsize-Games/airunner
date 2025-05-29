@@ -6,6 +6,11 @@ import pygments
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name, guess_lexer
 from pygments.formatters import HtmlFormatter
+import logging
+
+# Suppress noisy markdown extension debug logs
+logging.getLogger("MARKDOWN").setLevel(logging.WARNING)
+logging.getLogger("markdown").setLevel(logging.WARNING)
 
 
 class FormatterExtended:

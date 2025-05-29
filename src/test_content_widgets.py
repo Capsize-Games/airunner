@@ -14,7 +14,7 @@ from PySide6.QtCore import Qt
 
 # Import our content widgets
 sys.path.append("/home/joe/Projects/airunner/src")
-from airunner.gui.widgets.llm.content_widgets import (
+from airunner.gui.widgets.llm.contentwidgets.base_content_widget import (
     PlainTextWidget,
     LatexWidget,
     MarkdownWidget,
