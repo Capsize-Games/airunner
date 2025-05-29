@@ -3,7 +3,6 @@
 import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
 from airunner.handlers.llm.agent.agents.base import BaseAgent
-from airunner.enums import LLMActionType
 
 
 class TestBaseAgentAttributeErrorFix(unittest.TestCase):
@@ -169,10 +168,13 @@ class TestBaseAgentAttributeErrorFix(unittest.TestCase):
             "formatted conversation"
         )
 
-        # Verify analysis tool was called with the response
-        self.agent.analysis_tool.assert_called_once_with(
-            "User enjoys programming and technology"
+        # Verify that user_data was updated correctly
+        self.assertEqual(
+            mock_conversation.user_data,
+            ["User enjoys programming and technology"],
         )
+        # No call to analysis_tool should be made
+        self.agent.analysis_tool.assert_not_called()
 
 
 if __name__ == "__main__":
