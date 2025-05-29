@@ -19,18 +19,24 @@ on windows at this time so we disable it.
 """
 if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
     from airunner.facehuggershield.huggingface import activate
-    import sys # Import sys to access executable path
+    import sys  # Import sys to access executable path
 
     airunner_path = os.path.join(
         os.path.expanduser("~"), ".local", "share", "airunner"
     )
     # Determine site-packages path dynamically
     venv_path = os.path.dirname(os.path.dirname(sys.executable))
-    site_packages_path = os.path.join(venv_path, 'lib', f'python{sys.version_info.major}.{sys.version_info.minor}', 'site-packages')
+    site_packages_path = os.path.join(
+        venv_path,
+        "lib",
+        f"python{sys.version_info.major}.{sys.version_info.minor}",
+        "site-packages",
+    )
     # Determine project root and src/airunner path
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    project_root = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..")
+    )
     airunner_src_path = os.path.join(project_root, "src", "airunner")
-
 
     logging.info(f"Data directory path: {os.path.join(airunner_path, 'data')}")
     activate(
@@ -43,15 +49,19 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             "/dev/",
             "/proc/",
             site_packages_path,  # Added site-packages path
-            "/usr/share/zoneinfo/", # Added /usr/share/zoneinfo/
-            airunner_src_path, # Added project src path
-            "/tmp/", # Added /tmp/ for temporary file operations
+            "/usr/share/zoneinfo/",  # Added /usr/share/zoneinfo/
+            airunner_src_path,  # Added project src path
+            "/tmp/",  # Added /tmp/ for temporary file operations
         ],
         nullscream_whitelist=[
             "huggingface_hub.file_download",
             "huggingface_hub.repocard_data",
             "transformers.utils.hub.PushToHubMixin",
             "transformers",
+        ],
+        nullscream_blacklist=[
+            "httpx",
+            "httpx-sse",
         ],
     )
 #################################################################

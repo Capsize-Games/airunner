@@ -5,7 +5,7 @@ Covers memory sharing, update, and engine synchronization logic.
 
 import pytest
 from unittest.mock import MagicMock
-from airunner.handlers.llm.agent.agents.tool_mixins import MemoryManagerMixin
+from airunner.handlers.llm.agent.agents.tool_mixins_old import MemoryManagerMixin
 from airunner.handlers.llm.agent.memory.chat_memory_buffer import (
     ChatMemoryBuffer,
 )
