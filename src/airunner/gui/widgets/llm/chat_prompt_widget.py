@@ -58,7 +58,9 @@ class ChatPromptWidget(BaseWidget):
         self._conversation_history_manager = ConversationHistoryManager()
         self.token_buffer = []
         self.ui_update_timer = QTimer(self)
-        self.ui_update_timer.setInterval(50)
+        self.ui_update_timer.setInterval(
+            1
+        )  # Changed from 50ms to 1ms for real-time streaming
         self.ui_update_timer.timeout.connect(self.flush_token_buffer)
         self.ui_update_timer.start()
         self.registered: bool = False
