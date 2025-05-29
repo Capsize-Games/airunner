@@ -371,7 +371,6 @@ class BaseAgent(
             f"- Chatbot personality: {self.bot_personality}\n"
         )
 
-    @log_method_entry_exit
     def unload(self) -> None:
         """
         Unload the chat agent and its resources.
@@ -1001,7 +1000,6 @@ class BaseAgent(
         if self.rag_mode_enabled:
             self.update_rag_system_prompt(rag_system_prompt)
 
-    @log_method_entry_exit
     def _perform_analysis(self, action: LLMActionType) -> None:
         """
         Perform analysis on the conversation using ReAct tools (function tools only).
@@ -1105,7 +1103,6 @@ class BaseAgent(
             if engine is not None:
                 engine.memory = self._memory
 
-    @log_method_entry_exit
     def _perform_tool_call(
         self, action: LLMActionType, **kwargs: Any
     ) -> Optional[Any]:
@@ -1222,7 +1219,6 @@ class BaseAgent(
         ):
             self.react_tool_agent.memory = self.chat_memory
 
-    @log_method_entry_exit
     def chat(
         self,
         message: str,
@@ -1362,7 +1358,6 @@ class BaseAgent(
             )
         return self.do_interrupt
 
-    @log_method_entry_exit
     def handle_response(
         self,
         response: str,

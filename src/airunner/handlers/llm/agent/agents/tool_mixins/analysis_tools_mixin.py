@@ -102,7 +102,6 @@ class AnalysisToolsMixin(ToolSingletonMixin):
                 self.logger.error(f"update_user_data_tool.call failed: {e2}")
         return None
 
-    @log_method_entry_exit
     def _update_user_data(self) -> None:
         """
         Update the user data using the update_user_data_engine and only update user_data if there is meaningful content.
