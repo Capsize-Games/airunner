@@ -356,19 +356,24 @@ class ChatPromptWidget(BaseWidget):
                 or not self.conversation_history[-1]["is_bot"]
                 or self.conversation_history[-1]["content"] != combined_message
             ):
-                widget = self.add_message_to_conversation(
-                    name=self.chatbot.botname,
-                    message=combined_message,
-                    is_bot=True,
-                    first_message=False,
-                )
+                new_id = 0
                 if (
                     self.conversation
                     and hasattr(self.conversation, "value")
                     and isinstance(self.conversation.value, list)
                 ):
-                    new_id = len(self.conversation.value) - 1
-                    self.assign_message_id_to_last_widget(new_id)
+                    new_id = len(self.conversation.value)
+                widget = self.add_message_to_conversation(
+                    name=self.chatbot.botname,
+                    message=combined_message,
+                    is_bot=True,
+                    first_message=False,
+                    _message_id=new_id,
+                )
+                if widget is not None:
+                    widget.message_id = new_id
+                else:
+                    self.logger.warning("Failed to create bot message widget")
 
     def enable_generate(self):
         self.generating = False
@@ -385,6 +390,7 @@ class ChatPromptWidget(BaseWidget):
         self._clear_conversation()
 
     def _clear_conversation(self, skip_update: bool = False):
+        self.conversation = None
         self.conversation_history = []
         self._clear_conversation_widgets(skip_update=skip_update)
 
@@ -569,19 +575,6 @@ class ChatPromptWidget(BaseWidget):
     def insert_newline(self):
         self.ui.prompt.insertPlainText("\n")
 
-    def remove_in_progress_bot_widgets(self):
-        """Remove any in-progress bot message widgets (message_id is None)."""
-        layout = self.ui.scrollAreaWidgetContents.layout()
-        for i in range(layout.count() - 1, -1, -1):
-            widget = layout.itemAt(i).widget()
-            if (
-                hasattr(widget, "message_id")
-                and widget.message_id is None
-                and getattr(widget, "is_bot", False)
-            ):
-                widget.setParent(None)
-                widget.deleteLater()
-
     def add_message_to_conversation(
         self,
         name: str,
@@ -599,9 +592,7 @@ class ChatPromptWidget(BaseWidget):
             self.user.username,
             self.chatbot.botname,
         )
-        # Remove any in-progress bot widgets before adding a new one
-        if is_bot and not first_message:
-            self.remove_in_progress_bot_widgets()
+
         if not first_message:
             for i in range(
                 self.ui.scrollAreaWidgetContents.layout().count() - 1, -1, -1
@@ -631,8 +622,7 @@ class ChatPromptWidget(BaseWidget):
             ):
                 message_id = len(self.conversation.value)
             elif message_id is None:
-                # Fallback: use current widget count
-                message_id = self.ui.scrollAreaWidgetContents.layout().count()
+                message_id = 0
             kwargs = dict(
                 name=name,
                 message=message,
@@ -647,8 +637,8 @@ class ChatPromptWidget(BaseWidget):
             else:
                 kwargs["user_mood"] = user_mood
 
-            print("CREATING WIDGET", kwargs)
             widget = MessageWidget(**kwargs)
+            widget.message_id = message_id
             widget.messageResized.connect(self.scroll_to_bottom)
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
             QTimer.singleShot(0, self.scroll_to_bottom)
@@ -756,6 +746,8 @@ class ChatPromptWidget(BaseWidget):
 
     def on_bot_mood_updated_signal(self, data):
         """Handle live mood/emoji update for a message widget."""
+        import sys
+
         message_id = data.get("message_id")
         mood = data.get("mood")
         emoji = data.get("emoji")
@@ -763,8 +755,17 @@ class ChatPromptWidget(BaseWidget):
         # Only update if this is the current conversation
         if conversation_id != self.conversation_id:
             return
-        # Find the correct MessageWidget by message_id
         layout = self.ui.scrollAreaWidgetContents.layout()
+        if message_id is None:
+            for i in range(layout.count() - 1, -1, -1):
+                widget = layout.itemAt(i).widget()
+                if type(widget) is MessageWidget:
+                    if widget and getattr(widget, "is_bot", False):
+                        widget.update_mood_emoji(mood, emoji)
+                        widget.repaint()
+                        widget.ui.mood_emoji.repaint()
+                        break
+            return
         for i in range(layout.count()):
             widget = layout.itemAt(i).widget()
             if widget is None:
