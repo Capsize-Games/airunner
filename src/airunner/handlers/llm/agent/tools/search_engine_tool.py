@@ -67,9 +67,9 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
     ) -> "SearchEngineTool":
         name = name or "search_engine_tool"
         description = description or (
-            "Performs an internet search for a given query and returns a comprehensive, "
-            "natural language answer based on the search results. Use this tool when you need "
-            "to find current information from the internet."
+            "Performs up to 3 unique internet searches for a given query or list of queries and returns a comprehensive, "
+            "natural language answer based on the combined search results. Input may be a string or a list of up to 3 unique strings. "
+            "Duplicate queries will be ignored. Use this tool when you need to find current information from the internet."
         )
 
         metadata = ToolMetadata(
@@ -129,90 +129,118 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
         return formatted_results_str
 
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
-        query_str = self._get_query_str(*args, **kwargs)
-        llm_request = kwargs.get("llm_request", LLMRequest.from_default())
+        # Accept either a single query string or a list of up to 3 queries
+        queries = kwargs.get("input", None)
+        if args and not queries:
+            queries = args[0]
+        if isinstance(queries, str):
+            queries = [queries]
+        if not isinstance(queries, list):
+            raise ValueError(
+                "Input to SearchEngineTool must be a string or a list of strings."
+            )
+        # Filter to unique queries, preserving order
+        seen = set()
+        unique_queries = []
+        for q in queries:
+            if q not in seen:
+                seen.add(q)
+                unique_queries.append(q)
+        queries = unique_queries[:3]
 
-        # Set up LLM request if needed
+        llm_request = kwargs.get("llm_request", LLMRequest.from_default())
         if hasattr(self.llm, "llm_request"):
             self.llm.llm_request = llm_request
 
-        response = ""
+        import time
 
-        if not self._do_interrupt:
-            do_not_display = kwargs.get("do_not_display", False)
-            category = kwargs.get("category", "all")
-
-            try:
-                # Step 1: Perform the search
-                logger.info(
-                    f"SearchEngineTool: Performing search for query: '{query_str}'"
-                )
-                search_results = AggregatedSearchTool.aggregated_search_sync(
-                    query_str, category
-                )
-
-                if not search_results or not isinstance(search_results, dict):
-                    logger.warning("Search returned no valid results")
-                    response = (
-                        "I couldn't find relevant information for your query."
-                    )
-                else:
-                    # Step 2: Format search results
-                    formatted_results = self._format_search_results(
-                        search_results
-                    )
-
-                    # Step 3: Synthesize response using LLM
-                    synthesis_prompt = (
-                        f"User's original query: '{query_str}'\n\n"
-                        f"Relevant information found:\n{formatted_results}\n\n"
-                        "Please provide a comprehensive answer to the user's original query based on this information:"
-                    )
-
+        # --- Combine all results for all queries into a single result set, deduplicating items ---
+        all_results = {}
+        seen_items = set()  # (title, link) tuples
+        for idx, query_str in enumerate(queries):
+            if idx > 0:
+                time.sleep(0.5)  # Rate limit between requests
+            if not self._do_interrupt:
+                category = kwargs.get("category", "all")
+                try:
                     logger.info(
-                        "SearchEngineTool: Synthesizing response from search results"
+                        f"SearchEngineTool: Performing search for query: '{query_str}'"
                     )
-                    synthesis_engine = self._get_synthesis_engine()
-                    streaming_response = synthesis_engine.stream_chat(
-                        synthesis_prompt
+                    search_results = (
+                        AggregatedSearchTool.aggregated_search_sync(
+                            query_str, category
+                        )
                     )
-
-                    # Step 4: Handle streaming response like ChatEngineTool
-                    is_first_message = True
-                    try:
-                        for token in streaming_response.response_gen:
-                            if self._do_interrupt:
-                                break
-                            if not token:
-                                continue  # Skip empty tokens
-                            response += token
-                            if (
-                                response != "Empty Response"
-                                and self.do_handle_response
-                                and self.agent
-                            ):
-                                # Pass the individual token, not the accumulated response
-                                self.agent.handle_response(
-                                    token,
-                                    is_first_message,
-                                    do_not_display=do_not_display,
-                                    do_tts_reply=llm_request.do_tts_reply,
+                    if search_results and isinstance(search_results, dict):
+                        for service, items in search_results.items():
+                            if service not in all_results:
+                                all_results[service] = []
+                            for item in items:
+                                # Deduplicate by (title, link)
+                                key = (
+                                    item.get("title", ""),
+                                    item.get("link", ""),
                                 )
-                            is_first_message = False
-                    except Exception as e:
-                        logger.error(f"Error during response streaming: {e}")
-                        response = "I encountered an error while processing the search results."
+                                if key not in seen_items:
+                                    seen_items.add(key)
+                                    all_results[service].append(item)
+                    else:
+                        logger.warning(
+                            f"Search returned no valid results for query: {query_str}"
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"Error in SearchEngineTool for query '{query_str}': {e}",
+                        exc_info=True,
+                    )
 
+        # --- Only ONE summary should be generated for all combined results ---
+        if not all_results:
+            response = "I couldn't find relevant information for your query."
+        else:
+            # Step 2: Format combined search results
+            formatted_results = self._format_search_results(all_results)
+            # Step 3: Synthesize response using LLM (single prompt for all queries)
+            synthesis_prompt = (
+                f"User's original queries: {queries}\n\n"
+                f"Relevant information found (deduplicated, do not repeat information):\n{formatted_results}\n\n"
+                "Please provide a comprehensive answer to the user's original queries based on this information. Avoid repeating the same facts or stories."
+            )
+            logger.info(
+                "SearchEngineTool: Synthesizing response from combined search results"
+            )
+            synthesis_engine = self._get_synthesis_engine()
+            streaming_response = synthesis_engine.stream_chat(synthesis_prompt)
+            response = ""
+            is_first_message = True
+            try:
+                for token in streaming_response.response_gen:
+                    if self._do_interrupt:
+                        break
+                    if not token:
+                        continue
+                    response += token
+                    if (
+                        response != "Empty Response"
+                        and self.do_handle_response
+                        and self.agent
+                    ):
+                        self.agent.handle_response(
+                            token,
+                            is_first_message,
+                            do_not_display=kwargs.get("do_not_display", False),
+                            do_tts_reply=llm_request.do_tts_reply,
+                        )
+                    is_first_message = False
             except Exception as e:
-                logger.error(f"Error in SearchEngineTool: {e}", exc_info=True)
-                response = "I encountered an error while trying to search for information."
+                logger.error(f"Error during response streaming: {e}")
+                response = "I encountered an error while processing the search results."
 
         self._do_interrupt = False
-
         return ToolOutput(
             content=str(response),
             tool_name=self.metadata.name,
-            raw_input={"input": query_str},
+            raw_input={"input": queries},
             raw_output=response,
         )
 
