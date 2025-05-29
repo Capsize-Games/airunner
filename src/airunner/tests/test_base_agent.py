@@ -523,3 +523,20 @@ def test_mood_update_prompt_formatting():
         pytest.fail(
             f"Unexpected KeyError with extra key: {e}\nTemplate: {template}\nFound keys: {found_keys}"
         )
+
+
+def test_mood_tool(agent):
+    tool = agent.mood_tool
+    assert tool is not None
+    # Simulate updating mood
+    result = tool("happy", "😃")
+    assert "happy" in result.content
+    assert "😃" in result.content
+
+
+def test_analysis_tool(agent):
+    tool = agent.analysis_tool
+    assert tool is not None
+    # Simulate updating analysis/summary
+    result = tool("A summary of the conversation.")
+    assert "updated" in result.content

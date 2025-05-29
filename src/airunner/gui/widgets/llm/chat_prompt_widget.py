@@ -257,14 +257,45 @@ class ChatPromptWidget(BaseWidget):
         self.api.llm.clear_history()
         self._clear_conversation()
 
+    def _normalize_message(self, message, idx):
+        # If already normalized, just return
+        if "name" in message and "content" in message:
+            return {
+                "name": message["name"],
+                "message": message["content"],
+                "is_bot": message.get("role", "") == "assistant"
+                or message.get("is_bot", False),
+                "bot_mood": message.get("bot_mood"),
+                "bot_mood_emoji": message.get("bot_mood_emoji"),
+                "user_mood": message.get("user_mood"),
+            }
+        # Otherwise, extract from blocks/role
+        role = message.get("role", "user")
+        name = "Computer" if role == "assistant" else "User"
+        content = ""
+        if "blocks" in message and message["blocks"]:
+            content = message["blocks"][0].get("text", "")
+        return {
+            "name": name,
+            "message": content,
+            "is_bot": role == "assistant",
+            "bot_mood": message.get("bot_mood"),
+            "bot_mood_emoji": message.get("bot_mood_emoji"),
+            "user_mood": message.get("user_mood"),
+        }
+
     def _set_conversation_widgets(self, messages, skip_scroll: bool = False):
         for i, message in enumerate(messages):
+            norm = self._normalize_message(message, i)
             self.add_message_to_conversation(
-                name=message["name"],
-                message=message["content"],
-                is_bot=message["is_bot"],
+                name=norm["name"],
+                message=norm["message"],
+                is_bot=norm["is_bot"],
                 first_message=True,
                 _profile_widget=True,
+                mood=norm.get("bot_mood"),
+                mood_emoji=norm.get("bot_mood_emoji"),
+                user_mood=norm.get("user_mood"),
             )
         if not skip_scroll:
             QTimer.singleShot(100, self.scroll_to_bottom)
@@ -555,31 +586,23 @@ class ChatPromptWidget(BaseWidget):
             )
             if total_widgets < 0:
                 total_widgets = 0
-            widget_start = time.perf_counter() if _profile_widget else None
-            # Pass mood and emoji for bot messages
-            mood = None
-            mood_emoji = None
-            if (
-                is_bot
-                and hasattr(self, "chatbot")
-                and self.chatbot is not None
-            ):
-                mood = getattr(self.chatbot, "bot_mood", None)
-                mood_emoji = getattr(self.chatbot, "bot_mood_emoji", None)
-
-            widget = MessageWidget(
+            kwargs = dict(
                 name=name,
                 message=message,
                 is_bot=is_bot,
                 message_id=total_widgets,
                 conversation_id=self.conversation_id,
-                mood=mood if is_bot else None,
-                mood_emoji=mood_emoji if is_bot else None,
             )
-            widget_end = time.perf_counter() if _profile_widget else None
+            # Always pass mood/emoji for bot messages, even if None (let MessageWidget handle default)
+            if is_bot:
+                kwargs["bot_mood"] = mood
+                kwargs["bot_mood_emoji"] = mood_emoji
+                kwargs["user_mood"] = user_mood
+            else:
+                kwargs["user_mood"] = user_mood
 
+            widget = MessageWidget(**kwargs)
             widget.messageResized.connect(self.scroll_to_bottom)
-
             self.ui.scrollAreaWidgetContents.layout().addWidget(widget)
             QTimer.singleShot(0, self.scroll_to_bottom)
         else:

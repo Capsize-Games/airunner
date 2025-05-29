@@ -126,11 +126,14 @@ class ChatEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
                 for token in streaming_response.response_gen:
                     if self._do_interrupt:
                         break
+                    if not token:
+                        continue  # Skip empty tokens
                     response += token
                     if (
                         response != "Empty Response"
                         and self.do_handle_response
                     ):
+                        # Pass the individual token, not the accumulated response
                         self.agent.handle_response(
                             token,
                             is_first_message,
