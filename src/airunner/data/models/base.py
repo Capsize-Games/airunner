@@ -1,6 +1,6 @@
 from functools import lru_cache
 import logging
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.inspection import inspect
 
 from airunner.data.session_manager import session_scope
@@ -34,6 +34,7 @@ class BaseModel(Base):
                 session.refresh(self)
             except Exception as e:
                 logger.error(f"Error in save(): {e}")
+
     def delete(self):
         success = False
         with session_scope() as session:

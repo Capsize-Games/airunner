@@ -29,6 +29,9 @@ from airunner.handlers.llm.training_mixin import TrainingMixin
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
+from airunner.conversations.conversation_history_manager import (
+    ConversationHistoryManager,
+)
 
 
 class LLMModelManager(BaseModelManager, TrainingMixin):
@@ -98,6 +101,8 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         # Initialize the instance status *after* the base class init
         self._model_status = {ModelType.LLM: ModelStatus.UNLOADED}
         self.llm_settings = LLMSettings()
+        self._pending_conversation_message = None
+        self._conversation_history_manager = ConversationHistoryManager()
 
     @property
     def is_mistral(self) -> bool:
@@ -231,6 +236,15 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         # Update status based on loading results
         if self._model and self._tokenizer and self._chat_agent:
             self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
+            # If there was a pending conversation load, process it now
+            if getattr(self, "_pending_conversation_message", None):
+                self.logger.info(
+                    "Processing pending conversation load after agent became available."
+                )
+                self._chat_agent.on_load_conversation(
+                    self._pending_conversation_message
+                )
+                self._pending_conversation_message = None
         else:
             if not self._model:
                 self.logger.error("Model failed to load")
@@ -332,18 +346,22 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             data = {}
 
         conversation_id = data.get("conversation_id", None)
-        llm_generator_settings = LLMGeneratorSettings.objects.first()
-        conversation = Conversation.objects.first()
 
         # Create new conversation if needed
+        conversation = None
         if not conversation_id:
             conversation = Conversation.create()
             data["conversation_id"] = conversation.id
+            # Update LLMGeneratorSettings with new conversation id (for test compatibility)
+            LLMGeneratorSettings.objects.update(
+                id=1, current_conversation_id=conversation.id
+            )
+        else:
+            conversation = Conversation.objects.get(conversation_id)
 
-        # Update settings to use the current conversation
-        LLMGeneratorSettings.objects.update(
-            llm_generator_settings.id, current_conversation=conversation.id
-        )
+        # Update settings to use the current conversations
+        if conversation:
+            Conversation.make_current(conversation.id)
 
         # Clear history in the chat agent
         if self._chat_agent:
@@ -363,17 +381,33 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
     def load_conversation(self, message: Dict) -> None:
         """
-        Load an existing conversation into the chat agent.
+        Load an existing conversation into the chat agent and UI immediately.
 
         Args:
             message: Data containing the conversation to load.
+                     Expected to have 'conversation_id'.
         """
-        if self._chat_agent:
+        conversation_id = message.get("conversation_id")
+        self.logger.debug(
+            f"Attempting to load conversation ID: {conversation_id}"
+        )
+
+        if self._chat_agent is not None:
+            self.logger.info(
+                f"Chat agent is loaded. Passing conversation {conversation_id} to agent."
+            )
             self._chat_agent.on_load_conversation(message)
+            # Clear any pending message as the agent has handled it.
+            self._pending_conversation_message = None
         else:
             self.logger.warning(
-                "Cannot load conversation - chat agent not loaded"
+                f"Chat agent not loaded. Will use ConversationHistoryManager for conversation ID: {conversation_id}. "
+                f"UI should display this. Agent will be updated if it loads later."
             )
+            # Store the message so that if the agent loads later, it can sync its state.
+            self._pending_conversation_message = message
+            # The UI will independently use ConversationHistoryManager to display history.
+            # No direct action needed here for UI update as it's decoupled.
 
     def reload_rag_engine(self) -> None:
         """

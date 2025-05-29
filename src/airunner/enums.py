@@ -242,6 +242,7 @@ class SignalCode(Enum):
     NODEGRAPH_ZOOM = "nodegraph_zoom"
     NODEGRAPH_PAN = "nodegraph_pan"
     LLM_MODEL_DOWNLOAD_PROGRESS = "llm_model_download_progress"
+    MOOD_SUMMARY_UPDATE_STARTED = "mood_summary_update_started_signal"
 
 
 class EngineResponseCode(Enum):
