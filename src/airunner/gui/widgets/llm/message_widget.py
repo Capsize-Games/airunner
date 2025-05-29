@@ -117,11 +117,10 @@ class MessageWidget(BaseWidget):
 
         self._deleted = False
         self.ui.user_name.setText(f"{self.name}")
-        # Set mood emoji for bot messages
-        if self.is_bot:
-            emoji = self.mood_emoji if self.mood_emoji else "🙂"
-            self.ui.mood_emoji.setText(emoji)
-            self.ui.mood_emoji.setToolTip(self.mood or "")
+        # Set mood emoji for bot messages only if both mood and emoji are present
+        if self.is_bot and self.mood_emoji and self.mood:
+            self.ui.mood_emoji.setText(self.mood_emoji)
+            self.ui.mood_emoji.setToolTip(self.mood)
             self.ui.mood_emoji.setVisible(True)
         else:
             self.ui.mood_emoji.setVisible(False)
@@ -231,6 +230,22 @@ class MessageWidget(BaseWidget):
 
         # Set message content
         self.set_message_content(self.message)
+
+    def update_mood_emoji(self, mood: str, emoji: str):
+        """Update the mood/emoji display for this message widget."""
+        self.mood = mood
+        self.mood_emoji = emoji
+        if self.mood:
+            self.ui.mood_emoji.setText(self.mood_emoji)
+            self.ui.mood_emoji.setToolTip(self.mood)
+            self.ui.mood_emoji.setVisible(True)
+            font = self.ui.mood_emoji.font()
+            font.setFamilies([font.family(), "Noto Color Emoji"])
+            font.setPointSize(24)
+            self.ui.mood_emoji.setFont(font)
+            self.ui.mood_emoji.setStyleSheet("")  # Remove debug styling
+        else:
+            self.ui.mood_emoji.setVisible(False)
 
     def set_message_content(self, message):
         """
