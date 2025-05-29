@@ -1,6 +1,6 @@
 from typing import Optional, List, TypeVar, Any
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Query, joinedload, subqueryload
+from sqlalchemy.orm import Query, joinedload, subqueryload, declarative_base
+from sqlalchemy.inspection import inspect
 
 from airunner.data.session_manager import session_scope
 from airunner.utils.application.get_logger import get_logger
@@ -22,13 +22,19 @@ class BaseManager:
         if eager_load:
             for relationship in eager_load:
                 try:
-                    # Use subqueryload instead of joinedload
-                    query = query.options(
-                        subqueryload(getattr(self.cls, relationship))
-                    )
-                    self.logger.debug(
-                        f"Applied eager load for relationship: {relationship}"
-                    )
+                    # Only apply subqueryload to actual relationships
+                    rel_attr = getattr(self.cls, relationship)
+                    if hasattr(rel_attr, "property") and hasattr(
+                        rel_attr.property, "direction"
+                    ):
+                        query = query.options(subqueryload(rel_attr))
+                        self.logger.debug(
+                            f"Applied eager load for relationship: {relationship}"
+                        )
+                    else:
+                        self.logger.debug(
+                            f"Skipped eager load for non-relationship: {relationship}"
+                        )
                 except AttributeError:
                     self.logger.warning(
                         f"Class {self.cls.__name__} does not have relationship {relationship}"
@@ -41,19 +47,19 @@ class BaseManager:
 
     def get(self, pk, eager_load: Optional[List[str]] = None) -> Optional[_T]:
         with session_scope() as session:
-            try:
-                query = session.query(self.cls)
-                query = self._apply_eager_load(query, eager_load)
-                result = query.filter(self.cls.id == pk).first()
-                session.expunge_all()
-                if result is None:
-                    self.logger.debug(f"No result found for get({pk})")
-                else:
-                    self.logger.debug(f"Query result for get({pk}): {result}")
-                return result.to_dataclass() if result else None
-            except Exception as e:
-                self.logger.error(f"Exception in get({pk}): {e}")
-                return None
+            # Only eager load relationships for Chatbot
+            if self.cls.__name__ == "Chatbot" and eager_load is None:
+                mapper = inspect(self.cls)
+                eager_load = [rel.key for rel in mapper.relationships]
+            query = session.query(self.cls)
+            query = self._apply_eager_load(query, eager_load)
+            result = query.filter(self.cls.id == pk).first()
+            session.expunge_all()
+            if result is None:
+                self.logger.debug(f"No result found for get({pk})")
+            else:
+                self.logger.debug(f"Query result for get({pk}): {result}")
+            return result.to_dataclass() if result else None
 
     def get_orm(
         self, pk, eager_load: Optional[List[str]] = None
@@ -74,30 +80,16 @@ class BaseManager:
 
     def first(self, eager_load: Optional[List[str]] = None) -> Optional[_T]:
         with session_scope() as session:
-            try:
-                query = session.query(self.cls)
-                if eager_load:
-                    for relationship in eager_load:
-                        try:
-                            query = query.options(
-                                joinedload(getattr(self.cls, relationship))
-                            )
-                        except AttributeError:
-                            self.logger.warning(
-                                (
-                                    f"Class {self.cls.__name__} does "
-                                    "not have relationship {relationship}"
-                                )
-                            )
-                            pass
-                result = query.first()
-                session.expunge_all()
-                if result is None:
-                    self.logger.debug(f"No result found for first()")
-                return result.to_dataclass() if result else None
-            except Exception as e:
-                self.logger.error(f"Exception in first(): {e}")
-                return None
+            if self.cls.__name__ == "Chatbot" and eager_load is None:
+                mapper = inspect(self.cls)
+                eager_load = [rel.key for rel in mapper.relationships]
+            query = session.query(self.cls)
+            query = self._apply_eager_load(query, eager_load)
+            result = query.first()
+            session.expunge_all()
+            if result is None:
+                self.logger.debug(f"No result found for first()")
+            return result.to_dataclass() if result else None
 
     def all(self) -> List[_T]:
         with session_scope() as session:
@@ -329,6 +321,15 @@ class BaseManager:
                 return None
 
     def create(self, *args, **kwargs) -> Optional[_T]:
+        """Create a new instance of the managed class and return its dataclass representation.
+
+        Args:
+            *args: Positional arguments for the class constructor.
+            **kwargs: Keyword arguments for the class constructor.
+
+        Returns:
+            Optional[_T]: The created object as a dataclass, or None if creation failed.
+        """
         obj = None
         with session_scope() as session:
             try:
@@ -339,5 +340,4 @@ class BaseManager:
                 return obj.to_dataclass()
             except Exception as e:
                 self.logger.error(f"Error in create({args}, {kwargs}): {e}")
-                return
-        self.self.logger.error("Something went wrong")
+                return None
