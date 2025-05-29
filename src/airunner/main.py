@@ -48,10 +48,10 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             os.path.join(os.path.expanduser("~"), ".triton/cache/"),
             "/dev/",
             "/proc/",
-            site_packages_path,  # Added site-packages path
-            "/usr/share/zoneinfo/",  # Added /usr/share/zoneinfo/
-            airunner_src_path,  # Added project src path
-            "/tmp/",  # Added /tmp/ for temporary file operations
+            site_packages_path,
+            "/usr/share/zoneinfo/",
+            airunner_src_path,
+            "/tmp/",
         ],
         nullscream_whitelist=[
             "huggingface_hub.file_download",

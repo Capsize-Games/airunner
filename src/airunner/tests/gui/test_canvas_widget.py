@@ -45,7 +45,7 @@ class DummySplitter:
     def setChildrenCollapsible(self, collapsible):
         pass
 
-    def height(self) -> int:  # Added height method
+    def height(self) -> int:
         return 100  # Return a dummy height
 
 

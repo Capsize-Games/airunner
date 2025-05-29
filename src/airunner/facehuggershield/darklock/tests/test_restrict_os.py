@@ -2,7 +2,7 @@ import builtins
 import os
 import re
 import unittest
-from unittest.mock import patch, Mock  # Added Mock import
+from unittest.mock import patch
 
 from airunner.facehuggershield.darklock.restrict_os_access import (
     RestrictOSAccess,
@@ -24,9 +24,9 @@ class TestRestrictOSAccess(unittest.TestCase):
         self.original_builtins_import = builtins.__import__
         self.original_os_write = os.write
         self.original_os_makedirs = os.makedirs
-        self.original_os_mkdir = os.mkdir  # Added for consistency
-        self.original_os_remove = os.remove  # Added for cleanup
-        self.original_os_rmdir = os.rmdir  # Added for cleanup
+        self.original_os_mkdir = os.mkdir
+        self.original_os_remove = os.remove
+        self.original_os_rmdir = os.rmdir
 
     def tearDown(self):
         # Ensure all restrictions are deactivated and originals restored after each test
@@ -36,9 +36,9 @@ class TestRestrictOSAccess(unittest.TestCase):
         builtins.__import__ = self.original_builtins_import
         os.write = self.original_os_write
         os.makedirs = self.original_os_makedirs
-        os.mkdir = self.original_os_mkdir  # Added for consistency
-        os.remove = self.original_os_remove  # Added for consistency
-        os.rmdir = self.original_os_rmdir  # Added for consistency
+        os.mkdir = self.original_os_mkdir
+        os.remove = self.original_os_remove
+        os.rmdir = self.original_os_rmdir
         # Clear whitelists and any other state that might persist
         self.restrict_os_access.clear_whitelists()
 

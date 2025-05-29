@@ -2,7 +2,7 @@ from typing import Optional, Dict
 
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QApplication  # ADDED QApplication
+from PySide6.QtWidgets import QApplication
 
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
