@@ -6,15 +6,13 @@ import queue
 
 from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.gui.widgets.llm.contentwidgets.latex_widget import LatexWidget
+from airunner.gui.widgets.llm.contentwidgets.markdown_widget import MarkdownWidget
+from airunner.gui.widgets.llm.contentwidgets.mixed_content_widget import MixedContentWidget
+from airunner.gui.widgets.llm.contentwidgets.plain_text_widget import PlainTextWidget
 from airunner.gui.widgets.llm.templates.message_ui import Ui_message
 from airunner.data.models import Conversation
 from airunner.data.session_manager import session_scope
-from airunner.gui.widgets.llm.content_widgets import (
-    PlainTextWidget,
-    LatexWidget,
-    MarkdownWidget,
-    MixedContentWidget,
-)
 from airunner.utils.text.formatter_extended import FormatterExtended
 
 
@@ -482,11 +480,10 @@ class MessageWidget(BaseWidget):
             elif isinstance(
                 self.content_widget, (LatexWidget, MarkdownWidget)
             ):
-                # For Latex or Markdown, update with the full accumulated message
-                # as they typically re-render their entire content.
-                self.content_widget.setContent(self.message)
+                # Only update if content has changed to avoid repeated extension reloads
+                if self.content_widget.content() != self.message:
+                    self.content_widget.setContent(self.message)
             elif isinstance(self.content_widget, MixedContentWidget):
-                # MixedContentWidget expects 'parts'. We already have new_format_result.
                 self.content_widget.setContent(new_format_result["parts"])
 
     def append_streamed_text(self, text):
@@ -497,9 +494,13 @@ class MessageWidget(BaseWidget):
         if isinstance(self.content_widget, PlainTextWidget):
             self.content_widget.appendText(text)
             self.message += text
+        elif isinstance(self.content_widget, (LatexWidget, MarkdownWidget)):
+            self.message += text
+            # Only update if content has changed
+            if self.content_widget.content() != self.message:
+                self.content_widget.setContent(self.message)
         else:
             self.message += text
-            self.set_message_content(self.message)
 
     @Slot()
     def on_play_audio_button_clicked(self):

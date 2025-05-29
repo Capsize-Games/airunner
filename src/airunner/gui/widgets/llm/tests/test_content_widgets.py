@@ -3,15 +3,14 @@ Test suite for content_widgets.py in LLM widgets.
 """
 
 import pytest
-from airunner.gui.widgets.llm import content_widgets
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
-from unittest.mock import MagicMock
+
+from airunner.gui.widgets.llm.contentwidgets.markdown_widget import MarkdownWidget
+from airunner.gui.widgets.llm.contentwidgets.plain_text_widget import PlainTextWidget
 
 
 @pytest.fixture
 def base_content_widget(qtbot):
-    widget = content_widgets.BaseContentWidget()
+    widget = base_content_widget.BaseContentWidget()
     qtbot.addWidget(widget)
     widget.show()
     return widget
@@ -19,7 +18,7 @@ def base_content_widget(qtbot):
 
 @pytest.fixture
 def plain_text_widget(qtbot):
-    widget = content_widgets.PlainTextWidget()
+    widget = PlainTextWidget()
     qtbot.addWidget(widget)
     widget.show()
     return widget
@@ -27,7 +26,7 @@ def plain_text_widget(qtbot):
 
 @pytest.fixture
 def markdown_widget(qtbot):
-    widget = content_widgets.MarkdownWidget()
+    widget = MarkdownWidget()
     qtbot.addWidget(widget)
     widget.show()
     return widget

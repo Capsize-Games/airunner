@@ -14,7 +14,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from airunner.gui.widgets.llm.content_widgets import MarkdownWidget
+
+from airunner.gui.widgets.llm.contentwidgets.markdown_widget import MarkdownWidget
 from airunner.utils.text.formatter_extended import FormatterExtended
 
 
