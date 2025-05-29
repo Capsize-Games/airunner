@@ -194,13 +194,17 @@ class MarkdownWidget(BaseContentWidget):
 
     def _adjust_height(self, success):
         if success:
-            # Run JavaScript to measure content height
+            # Run JavaScript to measure content height, but check for nulls
             self.webView.page().runJavaScript(
                 """
                 (function() {
-                    document.body.style.overflow = 'hidden';
-                    document.documentElement.style.overflow = 'hidden';
-                    var height = document.body.scrollHeight;
+                    if (document.body && document.body.style) {
+                        document.body.style.overflow = 'hidden';
+                    }
+                    if (document.documentElement && document.documentElement.style) {
+                        document.documentElement.style.overflow = 'hidden';
+                    }
+                    var height = (document.body && document.body.scrollHeight) ? document.body.scrollHeight : 100;
                     window.scrollTo(0,0);
                     return height;
                 })()
