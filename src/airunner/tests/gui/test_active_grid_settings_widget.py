@@ -8,9 +8,9 @@ from airunner.gui.widgets.active_grid_settings.active_grid_settings_widget impor
 class DummyAppSettings:
     is_maximized = False
     working_height = 100
-    working_width = 100  # Added to satisfy widget usage
+    working_width = 100
     active_grid_size_lock = False
-    dark_mode_enabled = False  # Added to satisfy is_dark property
+    dark_mode_enabled = False
 
 
 class DummyGridSettings:

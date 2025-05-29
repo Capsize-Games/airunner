@@ -372,8 +372,6 @@ class ChatPromptWidget(BaseWidget):
                 )
                 if widget is not None:
                     widget.message_id = new_id
-                else:
-                    self.logger.warning("Failed to create bot message widget")
 
     def enable_generate(self):
         self.generating = False

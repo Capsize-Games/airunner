@@ -407,7 +407,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             # Check if the expanded path exists
             if os.path.exists(
                 expanded_path
-            ):  # Added missing colon and check existence
+            ):
                 return expanded_path
         return None  # Return None if path is None, empty, or doesn't exist
 
