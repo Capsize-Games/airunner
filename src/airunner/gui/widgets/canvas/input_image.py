@@ -149,8 +149,6 @@ class InputImage(BaseWidget):
             settings_property_name = "drawing_pad_settings"
             settings_updated = True
 
-        # REMOVED: Cache clearing logic moved to load_image_from_grid
-
         self.api.art.canvas.input_image_changed(self.settings_key, key, value)
 
     def showEvent(self, event):

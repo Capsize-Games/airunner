@@ -33,6 +33,9 @@ from airunner.handlers.llm.agent import (
     ExternalConditionStoppingCriteria,
 )
 from airunner.handlers.llm.agent.tools import ChatEngineTool, ReActAgentTool
+from airunner.handlers.llm.agent.tools.search_engine_tool import (
+    SearchEngineTool,
+)
 from airunner.handlers.llm.agent.chat_engine import RefreshSimpleChatEngine
 from airunner.handlers.llm.agent import WeatherMixin
 from airunner.handlers.llm.storage.chat_store import DatabaseChatStore
@@ -60,7 +63,6 @@ from airunner.handlers.llm.agent.agents.tool_mixins import (
     LLMManagerMixin,
     MoodToolsMixin,
     AnalysisToolsMixin,
-    SearchToolsMixin,
 )
 from .prompt_config import PromptConfig
 from airunner.utils.application.logging_utils import log_method_entry_exit
@@ -81,7 +83,6 @@ class BaseAgent(
     UserManagerMixin,
     MoodToolsMixin,
     AnalysisToolsMixin,
-    SearchToolsMixin,
 ):
     """
     Base class for all agents.
@@ -464,7 +465,7 @@ class BaseAgent(
             self.toggle_text_to_speech_tool,
             self.list_files_in_directory_tool,
             self.open_image_from_path_tool,
-            self.search_tool,
+            self.search_engine_tool,  # Use new SearchEngineTool instead of search_tool
         ]
         if AIRUNNER_ART_ENABLED:
             tools.extend(
@@ -729,6 +730,29 @@ class BaseAgent(
             )
 
         return self._get_or_create_singleton("_chat_engine_tool", factory)
+
+    @property
+    def search_engine_tool(self) -> SearchEngineTool:
+        """
+        Get the search engine tool instance.
+        Returns:
+            SearchEngineTool: The search engine tool instance.
+        """
+
+        def factory():
+            self.logger.info("Loading SearchEngineTool")
+            if not self.llm:
+                raise ValueError(
+                    "Unable to load SearchEngineTool: LLM must be provided."
+                )
+            return SearchEngineTool.from_defaults(
+                llm=self.llm,
+                agent=self,
+                return_direct=True,
+                do_handle_response=True,  # Enable streaming through agent.handle_response
+            )
+
+        return self._get_or_create_singleton("_search_engine_tool", factory)
 
     @property
     def do_interrupt(self) -> bool:
@@ -1113,8 +1137,8 @@ class BaseAgent(
             return self.react_tool_agent.call(**kwargs)
 
         def search_tool_handler(**kwargs: Any) -> Any:
-            kwargs["tool_choice"] = "search_tool"
-            return self.react_tool_agent.call(**kwargs)
+            # Use SearchEngineTool directly - it handles the entire search and synthesis flow
+            return self.search_engine_tool.call(**kwargs)
 
         tool_handlers = {
             LLMActionType.CHAT: chat_tool_handler,
