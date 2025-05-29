@@ -5,7 +5,7 @@ Mixins for tool definitions for BaseAgent and related agents.
 from typing import Annotated, Optional, Any
 import os
 from llama_index.core.tools import FunctionTool
-from airunner.enums import GeneratorSection, ImagePreset
+from airunner.enums import GeneratorSection, ImagePreset, SignalCode
 from airunner.settings import AIRUNNER_LLM_CHAT_STORE
 from airunner.handlers.llm.storage.chat_store import DatabaseChatStore
 from llama_index.core.storage.chat_store import SimpleChatStore
@@ -352,6 +352,37 @@ class MemoryManagerMixin:
             self.react_tool_agent.memory = self.chat_memory
         self.reload_rag_engine()
 
+    def _update_memory(self, action: str) -> None:
+        """
+        Update the memory for the given action and ensure all chat engines share the same memory instance.
+        Args:
+            action (str): The action type to update memory for.
+        """
+        # Use a custom memory strategy if provided
+        if hasattr(self, "_memory_strategy") and self._memory_strategy:
+            self._memory = self._memory_strategy(action, self)
+        elif action in ("CHAT", "APPLICATION_COMMAND"):
+            self.chat_memory.chat_store_key = str(self.conversation_id)
+            self._memory = self.chat_memory
+        elif action == "PERFORM_RAG_SEARCH":
+            if hasattr(self, "rag_engine") and self.rag_engine is not None:
+                self._memory = self.rag_engine.memory
+            else:
+                self._memory = None
+        else:
+            self._memory = None
+
+        # Ensure all chat engines share the same memory instance for consistency
+        for engine_attr in [
+            "_chat_engine",
+            "_mood_engine",
+            "_summary_engine",
+            "_information_scraper_engine",
+        ]:
+            engine = getattr(self, engine_attr, None)
+            if engine is not None:
+                engine.memory = self._memory
+
 
 class ConversationManagerMixin:
     """
@@ -571,3 +602,92 @@ class LLMManagerMixin:
         self._llm = None
         self._model = None
         self._tokenizer = None
+
+
+class MoodToolsMixin(ToolSingletonMixin):
+    """Mixin for mood-related tools."""
+
+    @property
+    def mood_tool(self):
+        def set_mood(
+            mood_description: Annotated[
+                str,
+                (
+                    "A description of the bot's mood. This should be a short phrase or sentence."
+                ),
+            ],
+            emoji: Annotated[
+                str,
+                (
+                    "An emoji representing the bot's mood. Example: 😊, 😢, 😡, etc."
+                ),
+            ],
+        ) -> str:
+            conversation = self.conversation
+            if conversation and conversation.value:
+                # Update the latest assistant message with mood and emoji
+                for msg in reversed(conversation.value):
+                    if msg.get("role") == "assistant":
+                        msg["bot_mood"] = mood_description
+                        msg["bot_mood_emoji"] = emoji
+                        break
+                Conversation.objects.update(
+                    self.conversation_id, value=conversation.value
+                )
+                self.emit_signal(
+                    SignalCode.BOT_MOOD_UPDATED,
+                    {"mood": mood_description, "emoji": emoji},
+                )
+                message = f"Mood set to '{mood_description}' {emoji}."
+                self.logger.info(message)
+                return message
+            message = "No assistant message found to update mood."
+            self.logger.warning(message)
+            return message
+
+        return self._get_or_create_singleton(
+            "_mood_tool",
+            FunctionTool.from_defaults,
+            set_mood,
+            return_direct=True,
+        )
+
+
+class AnalysisToolsMixin(ToolSingletonMixin):
+    """Mixin for analysis-related tools."""
+
+    @property
+    def analysis_tool(self):
+        def set_analysis(
+            analysis: Annotated[
+                str,
+                (
+                    "A summary or analysis of the conversation. Should be concise and relevant."
+                ),
+            ],
+        ) -> str:
+            conversation = self.conversation
+            if conversation:
+                Conversation.objects.update(
+                    self.conversation_id, summary=analysis
+                )
+                # Emit signal and log
+                self.emit_signal(
+                    SignalCode.MOOD_SUMMARY_UPDATE_STARTED,
+                    {"message": "Updating bot mood / summarizing..."},
+                )
+                message = "Analysis/summary updated."
+                self.logger.info(message)
+                return message
+            message = "No conversation found to update analysis."
+            self.logger.warning(
+                message
+            )
+            return message
+
+        return self._get_or_create_singleton(
+            "_analysis_tool",
+            FunctionTool.from_defaults,
+            set_analysis,
+            return_direct=True,
+        )

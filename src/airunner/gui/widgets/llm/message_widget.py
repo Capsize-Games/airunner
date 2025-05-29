@@ -104,9 +104,12 @@ class MessageWidget(BaseWidget):
         self.message_id = kwargs.pop("message_id")
         self.conversation_id = kwargs.pop("conversation_id")
         self.is_bot = kwargs.pop("is_bot")
-        self.mood = kwargs.pop("mood", None)
-        self.mood_emoji = kwargs.pop("mood_emoji", None)
+        self.mood = kwargs.pop("bot_mood", None)
+        self.mood_emoji = kwargs.pop("bot_mood_emoji", None)
         self.user_mood = kwargs.pop("user_mood", None)
+        self.font_family = None
+        self.font_size = None
+        self.content_widget = None
         super().__init__(*args, **kwargs)
 
         # Initialize the class-level worker if not already done
@@ -114,16 +117,13 @@ class MessageWidget(BaseWidget):
 
         self._deleted = False
         self.ui.user_name.setText(f"{self.name}")
-        # Set mood emoji for bot messages
-        if self.is_bot:
-            emoji = self.mood_emoji if self.mood_emoji else "🙂"
-            self.ui.mood_emoji.setText(emoji)
-            self.ui.mood_emoji.setToolTip(self.mood or "")
+        # Set mood emoji for bot messages only if both mood and emoji are present
+        if self.is_bot and self.mood_emoji and self.mood:
+            self.ui.mood_emoji.setText(self.mood_emoji)
+            self.ui.mood_emoji.setToolTip(self.mood)
             self.ui.mood_emoji.setVisible(True)
         else:
             self.ui.mood_emoji.setVisible(False)
-        self.font_family = None
-        self.font_size = None
 
         # Set up content container layout
         self.content_layout = QVBoxLayout(self.ui.content_container)
@@ -230,6 +230,22 @@ class MessageWidget(BaseWidget):
 
         # Set message content
         self.set_message_content(self.message)
+
+    def update_mood_emoji(self, mood: str, emoji: str):
+        """Update the mood/emoji display for this message widget."""
+        self.mood = mood
+        self.mood_emoji = emoji
+        if self.mood:
+            self.ui.mood_emoji.setText(self.mood_emoji)
+            self.ui.mood_emoji.setToolTip(self.mood)
+            self.ui.mood_emoji.setVisible(True)
+            font = self.ui.mood_emoji.font()
+            font.setFamilies([font.family(), "Noto Color Emoji"])
+            font.setPointSize(24)
+            self.ui.mood_emoji.setFont(font)
+            self.ui.mood_emoji.setStyleSheet("")  # Remove debug styling
+        else:
+            self.ui.mood_emoji.setVisible(False)
 
     def set_message_content(self, message):
         """
