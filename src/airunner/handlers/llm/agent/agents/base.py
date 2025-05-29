@@ -1,3 +1,4 @@
+import re
 from typing import (
     Any,
     Optional,
@@ -8,6 +9,7 @@ from typing import (
 import datetime
 import platform
 import json
+from unittest.mock import MagicMock
 
 from llama_index.core.tools import BaseTool
 from llama_index.core.chat_engine.types import AgentChatResponse
@@ -15,6 +17,8 @@ from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.memory import BaseMemory
 from llama_index.core.llms.llm import LLM
 from llama_index.core.storage.chat_store import SimpleChatStore
+from llama_index.core.base.llms.types import ChatMessage
+from llama_index.core.base.llms.types import TextBlock
 
 from airunner.enums import (
     LANGUAGE_DISPLAY_MAP,
@@ -52,11 +56,11 @@ from .tool_mixins import (
     SystemToolsMixin,
     UserToolsMixin,
     MemoryManagerMixin,
-    ConversationManagerMixin,  # <-- Add the new mixin
-    UserManagerMixin,  # <-- Add the new mixin
-    LLMManagerMixin,  # <-- Add the new mixin
-    MoodToolsMixin,  # NEW
-    AnalysisToolsMixin,  # NEW
+    ConversationManagerMixin,
+    UserManagerMixin,
+    LLMManagerMixin,
+    MoodToolsMixin,
+    AnalysisToolsMixin,
 )
 from .prompt_config import PromptConfig
 from airunner.utils.application.logging_utils import log_method_entry_exit
@@ -73,10 +77,10 @@ class BaseAgent(
     UserToolsMixin,
     LLMManagerMixin,
     MemoryManagerMixin,
-    ConversationManagerMixin,  # <-- Inherit from the new mixin
-    UserManagerMixin,  # <-- Inherit from the new mixin
-    MoodToolsMixin,  # NEW
-    AnalysisToolsMixin,  # NEW
+    ConversationManagerMixin,
+    UserManagerMixin,
+    MoodToolsMixin,
+    AnalysisToolsMixin,
 ):
     """
     Base class for all agents.
@@ -887,7 +891,6 @@ class BaseAgent(
         # Defensive check: ensure template is as expected
         template = PromptConfig.MOOD_UPDATE
         expected_keys = {"username", "botname"}
-        import re
 
         # Only match single curly braces, not double (escaped) ones
         found_keys = set(
@@ -1022,317 +1025,6 @@ class BaseAgent(
         if self.llm_settings.update_user_data_enabled:
             self._update_user_data()
 
-    def _update_mood(self) -> None:
-        """
-        Update the bot's mood using the mood_tool (ReAct tool).
-        """
-        self.logger.info("Updating mood using mood_tool")
-        try:
-            # Get the formatted conversation messages to send to the mood engine
-            if not self.conversation or not self.conversation.value:
-                self.logger.debug("No conversation available for mood update")
-                return
-
-            conversation_context = getattr(
-                self.conversation, "formatted_messages", None
-            )
-            if not conversation_context or not conversation_context.strip():
-                self.logger.debug(
-                    "Empty or missing conversation context for mood update"
-                )
-                return
-
-            # Call the mood engine to analyze the conversation and determine mood
-            self.logger.debug("Calling mood engine to analyze conversation")
-            mood_data = self.mood_engine.chat(conversation_context)
-
-            mood_description = "neutral"
-            emoji = "🙂"
-
-            if mood_data is None:
-                self.logger.warning(
-                    "Mood engine response missing or None. Using defaults."
-                )
-            else:
-                try:
-                    # If it's a dict-like object
-                    if isinstance(mood_data, dict):
-                        mood_description = mood_data.get("mood", "neutral")
-                        emoji = mood_data.get("emoji", "🙂")
-                    # If it's AgentChatResponse (llama_index)
-                    elif (
-                        hasattr(mood_data, "__class__")
-                        and mood_data.__class__.__name__ == "AgentChatResponse"
-                    ):
-                        # Try metadata first
-                        meta = getattr(mood_data, "metadata", None)
-                        if isinstance(meta, dict):
-                            mood_description = meta.get("mood", "neutral")
-                            emoji = meta.get("emoji", "🙂")
-                        # If not found, try to parse JSON from .response
-                        if (
-                            not mood_description
-                            or mood_description == "neutral"
-                        ) and hasattr(mood_data, "response"):
-                            resp = getattr(mood_data, "response", None)
-                            if resp and isinstance(resp, str):
-                                try:
-                                    parsed = json.loads(resp)
-                                    if isinstance(parsed, dict):
-                                        mood_description = parsed.get(
-                                            "mood", mood_description
-                                        )
-                                        emoji = parsed.get("emoji", emoji)
-                                except Exception:
-                                    pass
-                    # If it's a string, try to parse as JSON
-                    elif isinstance(mood_data, str):
-                        try:
-                            parsed = json.loads(mood_data)
-                            if isinstance(parsed, dict):
-                                mood_description = parsed.get(
-                                    "mood", mood_description
-                                )
-                                emoji = parsed.get("emoji", emoji)
-                        except Exception:
-                            pass
-                    else:
-                        self.logger.warning(
-                            f"Unknown mood_data type: {type(mood_data)}. Using defaults."
-                        )
-                except Exception as e:
-                    self.logger.warning(
-                        f"Failed to parse mood response: {e}. Using defaults."
-                    )
-                    mood_description = "neutral"
-                    emoji = "🙂"
-
-            # Use the mood_tool to update the conversation state
-            self.mood_tool(mood_description, emoji)
-
-            # Emit signal to update the UI for the latest assistant message
-            if self.conversation and self.conversation.value:
-                # Find the latest assistant message index
-                for idx in range(len(self.conversation.value) - 1, -1, -1):
-                    msg = self.conversation.value[idx]
-                    if msg.get("role") == "assistant":
-                        # Emit signal with message_id (idx), mood, and emoji
-                        if hasattr(self, "emit_signal"):
-                            self.emit_signal(
-                                SignalCode.BOT_MOOD_UPDATED,
-                                {
-                                    "message_id": idx,
-                                    "mood": mood_description,
-                                    "emoji": emoji,
-                                    "conversation_id": self.conversation.id,
-                                },
-                            )
-                        break
-
-        except Exception as e:
-            self.logger.error(f"Error updating mood: {e}")
-            # Fallback to neutral mood
-            self.mood_tool("neutral", "🙂")
-
-    @log_method_entry_exit
-    def _update_user_data(self) -> None:
-        """
-        Update the user data using the analysis_tool (ReAct tool).
-        """
-        try:
-            # Get the formatted conversation messages to send to the analysis engine
-            if not self.conversation or not self.conversation.value:
-                self.logger.debug(
-                    "No conversation available for user data analysis"
-                )
-                return
-
-            conversation_context = getattr(
-                self.conversation, "formatted_messages", None
-            )
-            if not conversation_context or not conversation_context.strip():
-                self.logger.debug(
-                    "Empty or missing conversation context for user data analysis"
-                )
-                return
-
-            try:
-                response = self.update_user_data_engine.chat(
-                    conversation_context
-                )
-                analysis = getattr(response, "message", None)
-                if analysis is None:
-                    # Enhanced debug logging for diagnosis
-                    self.logger.debug(
-                        f"update_user_data_engine.chat returned type: {type(response)}; dir: {dir(response)}; repr: {repr(response)}"
-                    )
-                    if hasattr(response, "__dict__"):
-                        self.logger.debug(
-                            f"response.__dict__: {response.__dict__}"
-                        )
-                    # Try .content
-                    analysis = getattr(response, "content", None)
-                    if analysis is not None:
-                        self.logger.debug(
-                            "Extracted analysis from .content attribute."
-                        )
-                    # Try .response (for AgentChatResponse and similar)
-                    if analysis is None:
-                        analysis = getattr(response, "response", None)
-                        if analysis is not None:
-                            self.logger.debug(
-                                "Extracted analysis from .response attribute."
-                            )
-                    # If still None, check if response is a string, dict, or list
-                    if analysis is None:
-                        if isinstance(response, str):
-                            analysis = response
-                            self.logger.debug(
-                                "Extracted analysis from string response."
-                            )
-                        elif isinstance(response, dict):
-                            # Try common keys
-                            for key in (
-                                "message",
-                                "content",
-                                "analysis",
-                                "data",
-                                "response",
-                            ):
-                                if key in response:
-                                    analysis = response[key]
-                                    self.logger.debug(
-                                        f"Extracted analysis from dict key '{key}'."
-                                    )
-                                    break
-                        elif isinstance(response, list):
-                            # Try first element if it's a string or dict
-                            if response:
-                                first = response[0]
-                                if isinstance(first, str):
-                                    analysis = first
-                                    self.logger.debug(
-                                        "Extracted analysis from first element of list (string)."
-                                    )
-                                elif isinstance(first, dict):
-                                    for key in (
-                                        "message",
-                                        "content",
-                                        "analysis",
-                                        "data",
-                                        "response",
-                                    ):
-                                        if key in first:
-                                            analysis = first[key]
-                                            self.logger.debug(
-                                                f"Extracted analysis from first element of list dict key '{key}'."
-                                            )
-                                            break
-                        else:
-                            self.logger.debug(
-                                f"Unhandled response type for user data analysis: {type(response)}"
-                            )
-            except Exception as e:
-                self.logger.error(
-                    f"update_user_data_engine.chat failed: {e}. Trying update_user_data_tool.call as fallback."
-                )
-                # Fallback for test mocks: use update_user_data_tool.call if available
-                tool = getattr(self, "update_user_data_tool", None)
-                if tool is not None:
-                    tool_response = tool.call(conversation_context)
-                    # Try .content or .message for compatibility
-                    analysis = getattr(
-                        tool_response, "content", None
-                    ) or getattr(tool_response, "message", None)
-                    if analysis is None:
-                        self.logger.debug(
-                            f"update_user_data_tool.call returned type: {type(tool_response)}; dir: {dir(tool_response)}; repr: {repr(tool_response)}"
-                        )
-                        if hasattr(tool_response, "__dict__"):
-                            self.logger.debug(
-                                f"tool_response.__dict__: {tool_response.__dict__}"
-                            )
-                        # Try string, dict, list as above
-                        if isinstance(tool_response, str):
-                            analysis = tool_response
-                            self.logger.debug(
-                                "Extracted analysis from string tool_response."
-                            )
-                        elif isinstance(tool_response, dict):
-                            for key in (
-                                "message",
-                                "content",
-                                "analysis",
-                                "data",
-                            ):
-                                if key in tool_response:
-                                    analysis = tool_response[key]
-                                    self.logger.debug(
-                                        f"Extracted analysis from dict key '{key}' in tool_response."
-                                    )
-                                    break
-                        elif isinstance(tool_response, list):
-                            if tool_response:
-                                first = tool_response[0]
-                                if isinstance(first, str):
-                                    analysis = first
-                                    self.logger.debug(
-                                        "Extracted analysis from first element of list (string) in tool_response."
-                                    )
-                                elif isinstance(first, dict):
-                                    for key in (
-                                        "message",
-                                        "content",
-                                        "analysis",
-                                        "data",
-                                    ):
-                                        if key in first:
-                                            analysis = first[key]
-                                            self.logger.debug(
-                                                f"Extracted analysis from first element of list dict key '{key}' in tool_response."
-                                            )
-                                            break
-                        else:
-                            self.logger.debug(
-                                f"Unhandled tool_response type for user data analysis: {type(tool_response)}"
-                            )
-                else:
-                    analysis = None
-
-            if analysis is None:
-                self.logger.warning(
-                    "User data engine response missing usable analysis attribute or value. Skipping analysis."
-                )
-                return
-            analysis = (
-                analysis.strip()
-                if isinstance(analysis, str)
-                else str(analysis)
-            )
-            if (
-                analysis and len(analysis) > 10
-            ):  # Basic check for meaningful content
-                user_data_list = [
-                    line.strip()
-                    for line in analysis.split("\n")
-                    if line.strip()
-                ]
-                if self.conversation:
-                    self.conversation.user_data = user_data_list
-                    Conversation.objects.update(
-                        self.conversation.id, user_data=user_data_list
-                    )
-                # Update the analysis/summary using the analysis_tool
-                self.analysis_tool(analysis)
-            else:
-                self.logger.debug(
-                    f"No meaningful user data found in conversation. analysis='{analysis}'"
-                )
-
-        except Exception as e:
-            self.logger.error(f"Error updating user data: {e}")
-            # Don't fall back to a default analysis - just log and continue
-
     def _update_llm_request(self, llm_request: Optional[LLMRequest]) -> None:
         """
         Update the LLM request.
@@ -1445,52 +1137,58 @@ class BaseAgent(
                 self.conversation_id, value=conversation.value[:-2]
             )
 
-    @log_method_entry_exit
-    def _summarize_conversation(self) -> None:
+    def _append_conversation_messages(self, conversation, message):
         """
-        Summarize the conversation using the analysis_tool.
+        Append user and assistant messages to the conversation value.
         """
-        # Example: You would call the LLM elsewhere to get the summary, then call this tool
-        # For demonstration, we'll use a placeholder (in real use, pass actual LLM output)
-        summary = "This is a summary of the conversation."
-        self.update_analysis(summary)
-
-    @log_method_entry_exit
-    def _log_system_prompt(
-        self,
-        action: LLMActionType,
-        system_prompt: Optional[str],
-        rag_system_prompt: Optional[str],
-        llm_request: LLMRequest,
-    ) -> None:
-        """
-        Log the system prompt for debugging purposes.
-        Args:
-            action (LLMActionType): The action type.
-            system_prompt (Optional[str]): The system prompt.
-            rag_system_prompt (Optional[str]): The RAG system prompt.
-            llm_request (LLMRequest): The LLM request.
-        """
-        if self.llm_settings.print_llm_system_prompt:
-            if action is LLMActionType.PERFORM_RAG_SEARCH:
-                self.logger.info(
-                    "RAG SYSTEM PROMPT:\n" + (rag_system_prompt or "")
-                )
-            else:
-                self.logger.info("SYSTEM PROMPT:\n" + (system_prompt or ""))
-            self.logger.info(llm_request.to_dict())
-
-    def _scrape_information(self, message: str) -> None:
-        """
-        Scrape information from the given message.
-        Args:
-            message (str): The message to scrape information from.
-        """
-        self.logger.info("Attempting to scrape information")
-        self.react_tool_agent.call(
-            tool_choice="information_scraper_tool",
-            input=message,
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        conversation.value.append(
+            {
+                "role": "user",
+                "name": self.username,
+                "content": message,
+                "timestamp": now,
+            }
         )
+        conversation.value.append(
+            {
+                "role": "assistant",
+                "name": self.botname,
+                "content": self._complete_response,
+                "timestamp": now,
+            }
+        )
+
+    def _update_conversation_state(self, conversation):
+        """
+        Update conversation state and chat memory after a turn.
+        """
+        Conversation.objects.update(
+            self.conversation_id,
+            value=conversation.value,
+            last_analyzed_message_id=len(conversation.value) - 1,
+            last_analysis_time=datetime.datetime.now(),
+        )
+        if self.chat_memory is not None:
+            chat_messages = [
+                (
+                    msg
+                    if hasattr(msg, "blocks")
+                    else ChatMessage(
+                        role=msg.get("role", "user"),
+                        blocks=[TextBlock(text=msg.get("content", ""))],
+                    )
+                )
+                for msg in conversation.value
+            ]
+            self.chat_memory.set(chat_messages)
+        if self.chat_engine is not None:
+            self.chat_engine.memory = self.chat_memory
+        if (
+            hasattr(self, "react_tool_agent")
+            and self.react_tool_agent is not None
+        ):
+            self.react_tool_agent.memory = self.chat_memory
 
     @log_method_entry_exit
     def chat(
@@ -1505,7 +1203,6 @@ class BaseAgent(
         """
         Handle a chat message and generate a response.
         """
-        # --- Re-entrancy guard to prevent chat loops ---
         if getattr(self, "_in_chat", False):
             self.logger.warning(
                 "Re-entrant call to chat() detected, aborting to prevent loop."
@@ -1521,76 +1218,22 @@ class BaseAgent(
             self.do_interrupt = False
             self._update_memory(action)
             kwargs = kwargs or {}
-            kwargs.update(
-                {
-                    "input": f"{self.username}: {message}",
-                }
-            )
+            kwargs["input"] = f"{self.username}: {message}"
             self._update_system_prompt(system_prompt, rag_system_prompt)
             self._update_llm_request(llm_request)
             self._update_memory_settings()
             self._perform_tool_call(action, **kwargs)
-
-            # Explicitly update conversation with new user and bot messages before analysis
             conversation = self.conversation
             if conversation is not None:
-                # Append user message
-                conversation.value.append(
-                    {
-                        "role": "user",
-                        "name": self.username,
-                        "content": message,
-                        "timestamp": datetime.datetime.now(
-                            datetime.timezone.utc
-                        ).isoformat(),
-                    }
-                )
-                # Append assistant (bot) message (fix: use 'assistant' not 'bot')
-                conversation.value.append(
-                    {
-                        "role": "assistant",
-                        "name": self.botname,
-                        "content": self._complete_response,
-                        "timestamp": datetime.datetime.now(
-                            datetime.timezone.utc
-                        ).isoformat(),
-                    }
-                )
-                # --- Update conversation state to mark turn as complete ---
-                Conversation.objects.update(
-                    self.conversation_id,
-                    value=conversation.value,
-                    last_analyzed_message_id=len(conversation.value) - 1,
-                    last_analysis_time=datetime.datetime.now(),
-                )
-                # --- FIX: Update chat memory and engine memory after each exchange ---
-                if self.chat_memory is not None:
-                    from llama_index.core.base.llms.types import ChatMessage
-                    from llama_index.core.base.llms.types import TextBlock
-
-                    # Convert dicts to ChatMessage objects with blocks
-                    chat_messages = []
-                    for msg in conversation.value:
-                        # If already a ChatMessage, keep as is
-                        if hasattr(msg, "blocks"):
-                            chat_messages.append(msg)
-                        else:
-                            content = msg.get("content", "")
-                            blocks = [TextBlock(text=content)]
-                            chat_messages.append(
-                                ChatMessage(
-                                    role=msg.get("role", "user"), blocks=blocks
-                                )
-                            )
-                    self.chat_memory.set(chat_messages)
-                if self.chat_engine is not None:
-                    self.chat_engine.memory = self.chat_memory
+                self._append_conversation_messages(conversation, message)
+                self._update_conversation_state(conversation)
+                # --- Restore: update mood after assistant message is appended ---
                 if (
-                    hasattr(self, "react_tool_agent")
-                    and self.react_tool_agent is not None
+                    self.llm_settings.use_chatbot_mood
+                    and getattr(self, "chatbot", None)
+                    and getattr(self.chatbot, "use_mood", False)
                 ):
-                    self.react_tool_agent.memory = self.chat_memory
-
+                    self._update_mood()
             self._perform_analysis(action)
             return AgentChatResponse(response=self._complete_response)
         finally:
