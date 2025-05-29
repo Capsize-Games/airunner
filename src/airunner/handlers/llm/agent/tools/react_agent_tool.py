@@ -5,6 +5,8 @@ from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from airunner.handlers.llm.agent.chat_engine import ReactAgentEngine
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 
+import logging
+
 
 class ReActAgentTool(ChatEngineTool):
     """ReActAgentTool.
@@ -19,6 +21,25 @@ class ReActAgentTool(ChatEngineTool):
         chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
+        logging.getLogger(__name__).info(
+            f"[ReActAgentTool.from_tools] args: {args}, kwargs keys: {list(kwargs.keys())}"
+        )
+        if hasattr(chat_engine, "tools"):
+            tool_names = [
+                getattr(
+                    t,
+                    "name",
+                    getattr(
+                        getattr(t, "metadata", None),
+                        "name",
+                        t.__class__.__name__,
+                    ),
+                )
+                for t in getattr(chat_engine, "tools", [])
+            ]
+            logging.getLogger(__name__).info(
+                f"[ReActAgentTool.from_tools] Registered tool names: {tool_names}"
+            )
         return cls.from_defaults(
             chat_engine=chat_engine,
             name=name,
@@ -31,13 +52,35 @@ class ReActAgentTool(ChatEngineTool):
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
         tool_choice = kwargs.get("tool_choice", None)
+        logging.getLogger(__name__).info(
+            f"[ReActAgentTool.call] tool_choice: {tool_choice}, query_str: {query_str}"
+        )
+        if hasattr(self.chat_engine, "tools"):
+            tool_names = [
+                getattr(
+                    t,
+                    "name",
+                    getattr(
+                        getattr(t, "metadata", None),
+                        "name",
+                        t.__class__.__name__,
+                    ),
+                )
+                for t in getattr(self.chat_engine, "tools", [])
+            ]
+            logging.getLogger(__name__).info(
+                f"[ReActAgentTool.call] Available tool names: {tool_names}"
+            )
         try:
             streaming_response = self.chat_engine.stream_chat(
                 query_str,
                 chat_history=chat_history if chat_history else [],
                 tool_choice=tool_choice,
             )
-        except Exception:
+        except Exception as e:
+            logging.getLogger(__name__).error(
+                f"[ReActAgentTool.call] Exception: {e}"
+            )
             # Return empty ToolOutput on error
             return ToolOutput(
                 content="",

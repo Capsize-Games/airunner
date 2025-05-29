@@ -1,9 +1,12 @@
+from typing import Any
+
+
 class PromptBuilder:
     """
     Helper class to modularize and construct the system prompt for BaseAgent.
     """
 
-    def __init__(self, agent: "BaseAgent") -> None:
+    def __init__(self, agent: Any) -> None:
         """
         Initialize the PromptBuilder.
         Args:
@@ -64,11 +67,11 @@ class PromptBuilder:
             f"- {botname} and {username} are both humans. They are not AI or bots.\n"
             f"- As {botname}, you will always respond in a way that is consistent with {botname}'s emotions, "
             f"personality, and the context of the conversation.\n"
-            f"- Generate emotional, persuasive, and realistic responses.\n"
-            f"- Do not generate text asking how to provide assistance, or how to can help.\n"
-            f"- Generate dialogue that is realistic for the {botname} character.\n"
-            f"- The generate dialogue can contain questions, make statements, and provide information.\n"
-            f"- Generated dialogue should be consistent with {botname}'s personality and mood.\n"
+            "- Generate emotional, persuasive, and realistic responses.\n"
+            "- Do not generate text asking how to provide assistance, or how to can help.\n"
+            "- Generate dialogue that is realistic for the {botname} character.\n"
+            "- The generate dialogue can contain questions, make statements, and provide information.\n"
+            "- Generated dialogue should be consistent with {botname}'s personality and mood.\n"
             f"{backstory_prompt}"
             f"{system_instructions}"
             f"{guardrails}"
