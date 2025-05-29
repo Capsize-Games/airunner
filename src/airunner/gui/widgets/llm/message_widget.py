@@ -104,12 +104,23 @@ class MessageWidget(BaseWidget):
         self.message_id = kwargs.pop("message_id")
         self.conversation_id = kwargs.pop("conversation_id")
         self.is_bot = kwargs.pop("is_bot")
+        # Accept both 'bot_mood' and 'mood' for compatibility
         self.mood = kwargs.pop("bot_mood", None)
         self.mood_emoji = kwargs.pop("bot_mood_emoji", None)
         self.user_mood = kwargs.pop("user_mood", None)
+        # If 'mood' or 'mood_emoji' are provided, use them (test compatibility)
+        mood_override = kwargs.pop("mood", None)
+        mood_emoji_override = kwargs.pop("mood_emoji", None)
+        if mood_override is not None:
+            self.mood = mood_override
+        if mood_emoji_override is not None:
+            self.mood_emoji = mood_emoji_override
         self.font_family = None
         self.font_size = None
         self.content_widget = None
+        # Remove any stray custom keys that might be passed
+        for k in ["mood", "mood_emoji"]:
+            kwargs.pop(k, None)
         super().__init__(*args, **kwargs)
 
         # Initialize the class-level worker if not already done
