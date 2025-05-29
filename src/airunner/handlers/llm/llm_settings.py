@@ -38,7 +38,7 @@ class LLMSettings:
     """
 
     use_weather_prompt: bool = (
-        AIRUNNER_LLM_USE_WEATHER_PROMPT  # Fixed trailing comma
+        AIRUNNER_LLM_USE_WEATHER_PROMPT
     )
     update_mood_after_n_turns: int = (
         AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS
