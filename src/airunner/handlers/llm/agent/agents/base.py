@@ -66,6 +66,9 @@ from airunner.handlers.llm.agent.agents.tool_mixins import (
 )
 from .prompt_config import PromptConfig
 from airunner.utils.application.logging_utils import log_method_entry_exit
+from airunner.handlers.llm.agent.engines.base_conversation_engine import (
+    BaseConversationEngine,
+)
 
 
 class BaseAgent(
@@ -77,10 +80,10 @@ class BaseAgent(
     ConversationToolsMixin,
     SystemToolsMixin,
     UserToolsMixin,
-    LLMManagerMixin,
     MemoryManagerMixin,
     ConversationManagerMixin,
     UserManagerMixin,
+    LLMManagerMixin,
     MoodToolsMixin,
     AnalysisToolsMixin,
 ):
@@ -164,13 +167,31 @@ class BaseAgent(
         self._conversation_strategy = conversation_strategy
         self._memory_strategy = memory_strategy
         self._llm_strategy = llm_strategy
+        self._chatbot = None
+        self._api = None
+        self._logger = kwargs.pop("logger", None)
+        if self._logger is None:
+            from airunner.utils.application.get_logger import get_logger
+            from airunner.settings import AIRUNNER_LOG_LEVEL
 
+            self._logger = get_logger(
+                self.__class__.__name__, AIRUNNER_LOG_LEVEL
+            )
         self.signal_handlers.update(
             {
                 SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id
             }
         )
         super().__init__(*args, **kwargs)
+
+    @property
+    def logger(self):
+        """
+        Get the logger instance for this agent.
+        Returns:
+            Logger: The logger instance.
+        """
+        return self._logger
 
     @property
     def prompt(self) -> Optional[str]:
@@ -538,10 +559,19 @@ class BaseAgent(
         def factory():
             self.logger.info("Loading RefreshSimpleChatEngine")
             try:
-                return RefreshSimpleChatEngine.from_defaults(
-                    system_prompt=self.system_prompt,
-                    memory=self.chat_memory,
+                return RefreshSimpleChatEngine(
                     llm=self.llm,
+                    memory=self.chat_memory,
+                    prefix_messages=(
+                        [
+                            ChatMessage(
+                                content=self.system_prompt,
+                                role=self.llm.metadata.system_role,
+                            )
+                        ]
+                        if self.system_prompt
+                        else None
+                    ),
                 )
             except Exception as e:
                 self.logger.error(f"Error loading chat engine: {str(e)}")
@@ -559,10 +589,20 @@ class BaseAgent(
 
         def factory():
             self.logger.info("Loading UpdateUserDataEngine")
-            return RefreshSimpleChatEngine.from_defaults(
-                system_prompt=self._update_user_data_prompt,
-                memory=None,
+            return RefreshSimpleChatEngine(
                 llm=self.llm,
+                memory=None,
+                prefix_messages=(
+                    [
+                        ChatMessage(
+                            content=self._update_user_data_prompt,
+                            role=self.llm.metadata.system_role,
+                        )
+                    ]
+                    if hasattr(self, "_update_user_data_prompt")
+                    and self._update_user_data_prompt
+                    else None
+                ),
             )
 
         return self._get_or_create_singleton(
@@ -579,10 +619,20 @@ class BaseAgent(
 
         def factory():
             self.logger.info("Loading MoodEngine")
-            return RefreshSimpleChatEngine.from_defaults(
-                system_prompt=self._mood_update_prompt,
-                memory=None,
+            return RefreshSimpleChatEngine(
                 llm=self.llm,
+                memory=None,
+                prefix_messages=(
+                    [
+                        ChatMessage(
+                            content=self._mood_update_prompt,
+                            role=self.llm.metadata.system_role,
+                        )
+                    ]
+                    if hasattr(self, "_mood_update_prompt")
+                    and self._mood_update_prompt
+                    else None
+                ),
             )
 
         return self._get_or_create_singleton("_mood_engine", factory)
@@ -597,10 +647,20 @@ class BaseAgent(
 
         def factory():
             self.logger.info("Loading Summary Engine")
-            return RefreshSimpleChatEngine.from_defaults(
-                system_prompt=self._summarize_conversation_prompt,
-                memory=None,
+            return RefreshSimpleChatEngine(
                 llm=self.llm,
+                memory=None,
+                prefix_messages=(
+                    [
+                        ChatMessage(
+                            content=self._summarize_conversation_prompt,
+                            role=self.llm.metadata.system_role,
+                        )
+                    ]
+                    if hasattr(self, "_summarize_conversation_prompt")
+                    and self._summarize_conversation_prompt
+                    else None
+                ),
             )
 
         return self._get_or_create_singleton("_summary_engine", factory)
@@ -615,10 +675,20 @@ class BaseAgent(
 
         def factory():
             self.logger.info("Loading information scraper engine")
-            return RefreshSimpleChatEngine.from_defaults(
-                system_prompt=self._information_scraper_prompt,
-                memory=None,
+            return RefreshSimpleChatEngine(
                 llm=self.llm,
+                memory=None,
+                prefix_messages=(
+                    [
+                        ChatMessage(
+                            content=self._information_scraper_prompt,
+                            role=self.llm.metadata.system_role,
+                        )
+                    ]
+                    if hasattr(self, "_information_scraper_prompt")
+                    and self._information_scraper_prompt
+                    else None
+                ),
             )
 
         return self._get_or_create_singleton(
@@ -1072,6 +1142,20 @@ class BaseAgent(
         self.chat_engine._memory = self.chat_memory
         self.chat_engine_tool.chat_engine = self.chat_engine
 
+    def _sync_memory_to_all_engines(self) -> None:
+        """
+        Ensure all engine instances share the same memory instance for full context.
+        """
+        for engine_attr in [
+            "_chat_engine",
+            "_mood_engine",
+            "_summary_engine",
+            "_information_scraper_engine",
+        ]:
+            engine = getattr(self, engine_attr, None)
+            if engine is not None:
+                engine.memory = self._memory
+
     def _update_memory(self, action: LLMActionType) -> None:
         """
         Update the memory for the given action and ensure all chat engines share the same memory instance.
@@ -1093,15 +1177,7 @@ class BaseAgent(
             self._memory = None
 
         # Ensure all chat engines share the same memory instance for consistency
-        for engine_attr in [
-            "_chat_engine",
-            "_mood_engine",
-            "_summary_engine",
-            "_information_scraper_engine",
-        ]:
-            engine = getattr(self, engine_attr, None)
-            if engine is not None:
-                engine.memory = self._memory
+        self._sync_memory_to_all_engines()
 
     def _perform_tool_call(
         self, action: LLMActionType, **kwargs: Any
@@ -1116,25 +1192,58 @@ class BaseAgent(
         """
 
         def chat_tool_handler(**kwargs: Any) -> Any:
+            # Always pass chat_history for context
+            if "chat_history" not in kwargs:
+                kwargs["chat_history"] = (
+                    self.chat_memory.get() if self.chat_memory else []
+                )
             return self.chat_engine_tool.call(**kwargs)
 
         def rag_tool_handler(**kwargs: Any) -> Any:
+            if "chat_history" not in kwargs:
+                kwargs["chat_history"] = (
+                    self.chat_memory.get() if self.chat_memory else []
+                )
             return self.rag_engine_tool.call(**kwargs)
 
         def store_data_handler(**kwargs: Any) -> Any:
             kwargs["tool_choice"] = "store_user_tool"
+            if "chat_history" not in kwargs:
+                kwargs["chat_history"] = (
+                    self.chat_memory.get() if self.chat_memory else []
+                )
             return self.react_tool_agent.call(**kwargs)
 
         def application_command_handler(**kwargs: Any) -> Any:
             kwargs["tool_choice"] = "application_command_tool"
+            if "chat_history" not in kwargs:
+                kwargs["chat_history"] = (
+                    self.chat_memory.get() if self.chat_memory else []
+                )
+                # Debug: Print the conversation history for inspection
+            chat_history = kwargs.get("chat_history", [])
+            print("*" * 100)
+            print(chat_history)
+            for i, msg in enumerate(chat_history):
+                self.logger.info(
+                    f"  [{i}] {msg.role}: {getattr(msg, 'content', str(msg))}"
+                )
             return self.react_tool_agent.call(**kwargs)
 
         def generate_image_handler(**kwargs: Any) -> Any:
             kwargs["tool_choice"] = "generate_image_tool"
+            if "chat_history" not in kwargs:
+                kwargs["chat_history"] = (
+                    self.chat_memory.get() if self.chat_memory else []
+                )
             return self.react_tool_agent.call(**kwargs)
 
         def search_tool_handler(**kwargs: Any) -> Any:
             # Use SearchEngineTool directly - it handles the entire search and synthesis flow
+            if "chat_history" not in kwargs:
+                kwargs["chat_history"] = (
+                    self.chat_memory.get() if self.chat_memory else []
+                )
             return self.search_engine_tool.call(**kwargs)
 
         tool_handlers = {
@@ -1168,56 +1277,67 @@ class BaseAgent(
 
     def _append_conversation_messages(self, conversation, message):
         """
-        Append user and assistant messages to the conversation value.
+        Append user and assistant messages to the conversation value using the unified engine logic.
         """
-        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        conversation.value.append(
-            {
-                "role": "user",
-                "name": self.username,
-                "content": message,
-                "timestamp": now,
-            }
-        )
-        conversation.value.append(
-            {
-                "role": "assistant",
-                "name": self.botname,
-                "content": self._complete_response,
-                "timestamp": now,
-            }
-        )
+        # Use the unified method from BaseConversationEngine
+        if hasattr(self.chat_engine, "append_conversation_messages"):
+            self.chat_engine.append_conversation_messages(
+                conversation, message, self._complete_response
+            )
+        else:
+            # Fallback to legacy logic if needed
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            conversation.value.append(
+                {
+                    "role": "user",
+                    "name": self.username,
+                    "content": message,
+                    "timestamp": now,
+                }
+            )
+            conversation.value.append(
+                {
+                    "role": "assistant",
+                    "name": self.botname,
+                    "content": self._complete_response,
+                    "timestamp": now,
+                }
+            )
 
     def _update_conversation_state(self, conversation):
         """
-        Update conversation state and chat memory after a turn.
+        Update conversation state and chat memory after a turn using the unified engine logic.
         """
-        Conversation.objects.update(
-            self.conversation_id,
-            value=conversation.value,
-            last_analyzed_message_id=len(conversation.value) - 1,
-            last_analysis_time=datetime.datetime.now(),
-        )
-        if self.chat_memory is not None:
-            chat_messages = [
-                (
-                    msg
-                    if hasattr(msg, "blocks")
-                    else ChatMessage(
-                        role=msg.get("role", "user"),
-                        blocks=[TextBlock(text=msg.get("content", ""))],
-                    )
-                )
-                for msg in conversation.value
-            ]
-            self.chat_memory.set(chat_messages)
-        if self.chat_engine is not None:
-            self.chat_engine.memory = self.chat_memory
-        if (
-            hasattr(self, "react_tool_agent")
-            and self.react_tool_agent is not None
-        ):
-            self.react_tool_agent.memory = self.chat_memory
+        if hasattr(self.chat_engine, "update_conversation_state"):
+            self.chat_engine.update_conversation_state(conversation)
+        else:
+            Conversation.objects.update(
+                self.conversation_id,
+                value=conversation.value,
+                last_analyzed_message_id=len(conversation.value) - 1,
+                last_analysis_time=datetime.datetime.now(),
+            )
+            if self.chat_memory is not None:
+                chat_messages = []
+                for msg in conversation.value:
+                    if hasattr(msg, "blocks"):
+                        chat_messages.append(msg)
+                    else:
+                        content = msg.get("content", "")
+                        chat_messages.append(
+                            ChatMessage(
+                                role=msg.get("role", "user"),
+                                blocks=[TextBlock(text=content)],
+                            )
+                        )
+                self.chat_memory.set(chat_messages)
+            self._sync_memory_to_all_engines()
+
+    def _make_chat_message(self, role: str, content: str) -> ChatMessage:
+        """
+        Helper to create a ChatMessage for unified engine logic.
+        """
+        return ChatMessage(role=role, blocks=[TextBlock(text=content)])
 
     def chat(
         self,
@@ -1285,13 +1405,7 @@ class BaseAgent(
                 self.chat_memory
             )  # property will re-initialize with correct key
             self.chat_memory.set(messages)
-            if self.chat_engine is not None:
-                self.chat_engine.memory = self.chat_memory
-            if (
-                hasattr(self, "react_tool_agent")
-                and self.react_tool_agent is not None
-            ):
-                self.react_tool_agent.memory = self.chat_memory
+            self._sync_memory_to_all_engines()
 
     def on_conversation_deleted(self, data: Optional[Dict] = None) -> None:
         """
@@ -1331,6 +1445,7 @@ class BaseAgent(
                 "clear_history: chat_engine is None after property, skipping reset_memory and continuing UI."
             )
             return
+        self._sync_memory_to_all_engines()
 
     def save_chat_history(self) -> None:
         """
