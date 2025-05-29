@@ -104,9 +104,12 @@ class MessageWidget(BaseWidget):
         self.message_id = kwargs.pop("message_id")
         self.conversation_id = kwargs.pop("conversation_id")
         self.is_bot = kwargs.pop("is_bot")
-        self.mood = kwargs.pop("mood", None)
-        self.mood_emoji = kwargs.pop("mood_emoji", None)
+        self.mood = kwargs.pop("bot_mood", None)
+        self.mood_emoji = kwargs.pop("bot_mood_emoji", None)
         self.user_mood = kwargs.pop("user_mood", None)
+        self.font_family = None
+        self.font_size = None
+        self.content_widget = None
         super().__init__(*args, **kwargs)
 
         # Initialize the class-level worker if not already done
@@ -122,8 +125,6 @@ class MessageWidget(BaseWidget):
             self.ui.mood_emoji.setVisible(True)
         else:
             self.ui.mood_emoji.setVisible(False)
-        self.font_family = None
-        self.font_size = None
 
         # Set up content container layout
         self.content_layout = QVBoxLayout(self.ui.content_container)

@@ -5,7 +5,7 @@ Mixins for tool definitions for BaseAgent and related agents.
 from typing import Annotated, Optional, Any
 import os
 from llama_index.core.tools import FunctionTool
-from airunner.enums import GeneratorSection, ImagePreset
+from airunner.enums import GeneratorSection, ImagePreset, SignalCode
 from airunner.settings import AIRUNNER_LLM_CHAT_STORE
 from airunner.handlers.llm.storage.chat_store import DatabaseChatStore
 from llama_index.core.storage.chat_store import SimpleChatStore
@@ -602,3 +602,99 @@ class LLMManagerMixin:
         self._llm = None
         self._model = None
         self._tokenizer = None
+
+
+class MoodToolsMixin(ToolSingletonMixin):
+    """Mixin for mood-related tools."""
+
+    @property
+    def mood_tool(self):
+        def set_mood(
+            mood_description: Annotated[
+                str,
+                (
+                    "A description of the bot's mood. This should be a short phrase or sentence."
+                ),
+            ],
+            emoji: Annotated[
+                str,
+                (
+                    "An emoji representing the bot's mood. Example: 😊, 😢, 😡, etc."
+                ),
+            ],
+        ) -> str:
+            conversation = self.conversation
+            if conversation and conversation.value:
+                # Update the latest assistant message with mood and emoji
+                for msg in reversed(conversation.value):
+                    if msg.get("role") == "assistant":
+                        msg["bot_mood"] = mood_description
+                        msg["bot_mood_emoji"] = emoji
+                        break
+                Conversation.objects.update(
+                    self.conversation_id, value=conversation.value
+                )
+                # Emit signal and log
+                if hasattr(self, "emit_signal"):
+                    self.emit_signal(
+                        SignalCode.BOT_MOOD_UPDATED,
+                        {"mood": mood_description, "emoji": emoji},
+                    )
+                if hasattr(self, "logger"):
+                    self.logger.info(
+                        f"Mood updated: {mood_description} {emoji}"
+                    )
+                return f"Mood set to '{mood_description}' {emoji}."
+            if hasattr(self, "logger"):
+                self.logger.warning(
+                    "No assistant message found to update mood."
+                )
+            return "No assistant message found to update mood."
+
+        return self._get_or_create_singleton(
+            "_mood_tool",
+            FunctionTool.from_defaults,
+            set_mood,
+            return_direct=True,
+        )
+
+
+class AnalysisToolsMixin(ToolSingletonMixin):
+    """Mixin for analysis-related tools."""
+
+    @property
+    def analysis_tool(self):
+        def set_analysis(
+            analysis: Annotated[
+                str,
+                (
+                    "A summary or analysis of the conversation. Should be concise and relevant."
+                ),
+            ],
+        ) -> str:
+            conversation = self.conversation
+            if conversation:
+                Conversation.objects.update(
+                    self.conversation_id, summary=analysis
+                )
+                # Emit signal and log
+                if hasattr(self, "emit_signal"):
+                    self.emit_signal(
+                        SignalCode.MOOD_SUMMARY_UPDATE_STARTED,
+                        {"message": "Updating bot mood / summarizing..."},
+                    )
+                if hasattr(self, "logger"):
+                    self.logger.info(f"Analysis/summary updated: {analysis}")
+                return "Analysis/summary updated."
+            if hasattr(self, "logger"):
+                self.logger.warning(
+                    "No conversation found to update analysis."
+                )
+            return "No conversation found to update analysis."
+
+        return self._get_or_create_singleton(
+            "_analysis_tool",
+            FunctionTool.from_defaults,
+            set_analysis,
+            return_direct=True,
+        )
