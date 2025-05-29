@@ -52,8 +52,11 @@ class ReActAgentTool(ChatEngineTool):
         response = ""
         is_first_message = True
         for token in streaming_response.response_gen:
+            if not token:
+                continue  # Skip empty tokens
             response += token
             if self.agent is not None:
+                # Pass the individual token, not the accumulated response
                 self.agent.handle_response(
                     token,
                     is_first_message,

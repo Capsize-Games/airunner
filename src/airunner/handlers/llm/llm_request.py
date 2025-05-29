@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict
 from typing import Optional, Dict
 
 from airunner.data.models import Chatbot, LLMGeneratorSettings
+from airunner.utils.llm import get_chatbot
 
 
 @dataclass
@@ -216,7 +217,7 @@ class LLMRequest:
                 use_cache=llm_settings.use_cache,
             )
         else:
-            return cls.from_chatbot(llm_settings.current_chatbot)
+            return cls.from_chatbot(get_chatbot().id)
 
     @classmethod
     def from_default(cls) -> "LLMRequest":
