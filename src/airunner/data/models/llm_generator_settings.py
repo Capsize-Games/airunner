@@ -17,7 +17,6 @@ class LLMGeneratorSettings(BaseModel):
     use_gpu = Column(Boolean, default=True)
     message_type = Column(String, default="chat")
     override_parameters = Column(Boolean, default=True)
-    current_chatbot = Column(Integer, default=1)
     prompt_template = Column(
         String, default="Ministral 8B Instruct: Default Chatbot"
     )
@@ -40,8 +39,5 @@ class LLMGeneratorSettings(BaseModel):
     decoder_start_token_id = Column(Integer, nullable=True)
     use_cache = Column(Boolean, default=True)
     length_penalty = Column(Integer, default=900)
-    current_conversation = Column(
-        Integer, ForeignKey("conversations.id"), nullable=True
-    )
     model_service = Column(String, default=ModelService.LOCAL.value)
     model_path = Column(String, default="")
