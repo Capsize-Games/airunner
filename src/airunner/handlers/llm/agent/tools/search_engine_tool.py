@@ -20,11 +20,12 @@ from airunner.tools.search_tool import AggregatedSearchTool
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.utils.application.mediator_mixin import MediatorMixin
+from airunner.handlers.llm.agent.engines.base_conversation_engine import (
+    BaseConversationEngine,
+)
 
-logger = logging.getLogger(__name__)
 
-
-class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
+class SearchEngineTool(BaseConversationEngine):
     """Search tool.
 
     A tool for performing internet searches and synthesizing natural language responses.
@@ -36,24 +37,41 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
 
     def __init__(
         self,
+        agent: Any,
         llm: Any,
         metadata: ToolMetadata,
         resolve_input_errors: bool = True,
-        agent: Any = None,
         do_handle_response: bool = True,
         *args: Any,
         **kwargs: Any,
     ):
+        super().__init__(agent)
         self.do_handle_response: bool = do_handle_response
         self.llm = llm
         if not llm:
-            raise ValueError("LLM must be provided for search synthesis.")
+            raise ValueError("LLM must be provided.")
         self._metadata = metadata
         self._resolve_input_errors = resolve_input_errors
         self.agent = agent
         self._do_interrupt: bool = False
         self._synthesis_engine: Optional[RefreshSimpleChatEngine] = None
-        super().__init__(*args, **kwargs)
+        self._logger = kwargs.pop("logger", None)
+        if self._logger is None:
+            from airunner.utils.application.get_logger import get_logger
+            from airunner.settings import AIRUNNER_LOG_LEVEL
+
+            self._logger = get_logger(
+                self.__class__.__name__, AIRUNNER_LOG_LEVEL
+            )
+
+    @property
+    def logger(self):
+        """
+        Get the logger instance for this tool.
+        Returns:
+            Logger: The logger instance.
+        """
+        return self._logger
 
     @classmethod
     def from_defaults(
@@ -124,7 +142,7 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
                     formatted_results_str += "\n"
         else:
             formatted_results_str = "No usable search results provided."
-            logger.warning(
+            self.logger.warning(
                 "Search results were not a dict. Cannot format for LLM."
             )
         return formatted_results_str
@@ -172,13 +190,16 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
         # --- Combine all results for all queries into a single result set, deduplicating items ---
         all_results = {}
         seen_items = set()  # (title, link) tuples
+        consolidated_results = (
+            []
+        )  # List of unique results across all services/queries
         for idx, query_str in enumerate(queries):
             if idx > 0:
                 time.sleep(0.5)  # Rate limit between requests
             if not self._do_interrupt:
                 category = kwargs.get("category", "all")
                 try:
-                    logger.info(
+                    self.logger.info(
                         f"SearchEngineTool: Performing search for query: '{query_str}'"
                     )
                     search_results = (
@@ -199,29 +220,32 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
                                 if key not in seen_items:
                                     seen_items.add(key)
                                     all_results[service].append(item)
+                                    consolidated_results.append(item)
                     else:
-                        logger.warning(
+                        self.logger.warning(
                             f"Search returned no valid results for query: {query_str}"
                         )
                 except Exception as e:
-                    logger.error(
+                    self.logger.error(
                         f"Error in SearchEngineTool for query '{query_str}': {e}",
                         exc_info=True,
                     )
 
         # --- Only ONE summary should be generated for all combined results ---
-        if not all_results:
+        if not consolidated_results:
             response = "I couldn't find relevant information for your query."
         else:
-            # Step 2: Format combined search results
-            formatted_results = self._format_search_results(all_results)
+            # Step 2: Format combined search results (use consolidated_results)
+            formatted_results = self._format_search_results(
+                {"Consolidated": consolidated_results}
+            )
             # Step 3: Synthesize response using LLM (single prompt for all queries)
             synthesis_prompt = (
                 f"User's original queries: {queries}\n\n"
                 f"Relevant information found (deduplicated, do not repeat information):\n{formatted_results}\n\n"
                 "Please provide a comprehensive answer to the user's original queries based on this information. Avoid repeating the same facts or stories."
             )
-            logger.info(
+            self.logger.info(
                 "SearchEngineTool: Synthesizing response from combined search results"
             )
             synthesis_engine = self._get_synthesis_engine()
@@ -252,7 +276,7 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
                         )
                     is_first_message = False
             except Exception as e:
-                logger.error(f"Error during response streaming: {e}")
+                self.logger.error(f"Error during response streaming: {e}")
                 response = "I encountered an error while processing the search results."
 
         # --- Update memory/chat history with the new turn ---
@@ -302,3 +326,6 @@ class SearchEngineTool(AsyncBaseTool, SettingsMixin, MediatorMixin):
                 "Cannot call search engine without specifying `input` parameter."
             )
         return query_str
+
+    def __call__(self, *args, **kwargs):
+        return self.call(*args, **kwargs)
