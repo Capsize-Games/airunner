@@ -61,11 +61,11 @@ class Conversation(BaseModel):
                         mood_info = f" [mood: {mood}]"
                 else:
                     user_mood = message.get("user_mood")
-                    if mood:
+                    if user_mood:
                         mood_info = f" [user mood: {user_mood}]"
-                context += (
-                    f"{message['name']}: {message['content']}{mood_info}\n"
-                )
+                name = message.get("name", "Unknown")
+                content = message.get("content", "")
+                context += f"{name}: {content}{mood_info}\n"
             return context
         return ""
 

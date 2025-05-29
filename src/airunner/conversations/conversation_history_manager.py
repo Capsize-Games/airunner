@@ -171,14 +171,17 @@ class ConversationHistoryManager:
                     else:
                         content = ""
 
-                formatted_messages.append(
-                    {
-                        "name": name,
-                        "content": content,
-                        "is_bot": is_bot,
-                        "id": msg_idx,  # Simple index within this loaded history
-                    }
-                )
+                formatted_msg = {
+                    "name": name,
+                    "content": content,
+                    "is_bot": is_bot,
+                    "id": msg_idx,  # Simple index within this loaded history
+                }
+                # Pass through mood/emoji fields if present
+                for key in ("bot_mood", "bot_mood_emoji", "user_mood"):
+                    if key in msg_obj:
+                        formatted_msg[key] = msg_obj[key]
+                formatted_messages.append(formatted_msg)
             self.logger.info(
                 f"Successfully loaded {len(formatted_messages)} messages for conversation ID: {conversation_id}"
             )
