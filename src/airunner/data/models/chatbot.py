@@ -71,6 +71,7 @@ class Chatbot(BaseModel):
     use_weather_prompt = Column(Boolean, default=False)
     gender = Column(String, default=Gender.MALE.value)
     voice_id = Column(Integer, ForeignKey("voice_settings.id"), nullable=True)
+    current = Column(Boolean, default=False)
 
     target_files = relationship("TargetFiles", back_populates="chatbot")
     target_directories = relationship(
@@ -87,3 +88,8 @@ class Chatbot(BaseModel):
             getattr(self, "target_directories", [])
         )
         return dataclass_cls(**data)
+
+    @classmethod
+    def make_current(cls, chatbot_id: int):
+        Chatbot.objects.update_by({"current": True}, current=False)
+        Chatbot.objects.update(chatbot_id, current=True)
