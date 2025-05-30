@@ -52,3 +52,46 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
 
     async def astream_chat(self, *args, **kwargs):
         pass
+
+    def append_conversation_messages(
+        self,
+        conversation,
+        user_message: str,
+        assistant_message: Optional[str] = None,
+    ) -> None:
+        """
+        Append user and assistant messages to the conversation value.
+        Always store with both 'content' and 'blocks' fields for compatibility and persistence.
+        """
+        import datetime
+
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        # Use fallback values if self.agent is not set
+        username = getattr(getattr(self, "agent", None), "username", "User")
+        botname = getattr(getattr(self, "agent", None), "botname", "Computer")
+        conversation.value.append(
+            {
+                "role": "user",
+                "name": username,
+                "content": user_message,
+                "timestamp": now,
+                "blocks": [{"block_type": "text", "text": user_message}],
+            }
+        )
+        if assistant_message is not None:
+            conversation.value.append(
+                {
+                    "role": "assistant",
+                    "name": botname,
+                    "content": assistant_message,
+                    "timestamp": now,
+                    "blocks": [
+                        {"block_type": "text", "text": assistant_message}
+                    ],
+                }
+            )
+        # Optionally, trigger persistence if needed (depends on agent/manager logic)
+        if hasattr(self, "agent") and hasattr(
+            self.agent, "_update_conversation_state"
+        ):
+            self.agent._update_conversation_state(conversation)
