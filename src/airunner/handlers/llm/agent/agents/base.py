@@ -1278,14 +1278,13 @@ class BaseAgent(
     def _append_conversation_messages(self, conversation, message):
         """
         Append user and assistant messages to the conversation value using the unified engine logic.
+        Always store with both 'content' and 'blocks' fields for compatibility.
         """
-        # Use the unified method from BaseConversationEngine
         if hasattr(self.chat_engine, "append_conversation_messages"):
             self.chat_engine.append_conversation_messages(
                 conversation, message, self._complete_response
             )
         else:
-            # Fallback to legacy logic if needed
             now = datetime.datetime.now(datetime.timezone.utc).isoformat()
             conversation.value.append(
                 {
@@ -1293,6 +1292,7 @@ class BaseAgent(
                     "name": self.username,
                     "content": message,
                     "timestamp": now,
+                    "blocks": [{"block_type": "text", "text": message}],
                 }
             )
             conversation.value.append(
@@ -1301,12 +1301,16 @@ class BaseAgent(
                     "name": self.botname,
                     "content": self._complete_response,
                     "timestamp": now,
+                    "blocks": [
+                        {"block_type": "text", "text": self._complete_response}
+                    ],
                 }
             )
 
     def _update_conversation_state(self, conversation):
         """
         Update conversation state and chat memory after a turn using the unified engine logic.
+        Ensures all messages are converted to ChatMessage objects with blocks for memory buffer compatibility.
         """
         if hasattr(self.chat_engine, "update_conversation_state"):
             self.chat_engine.update_conversation_state(conversation)
@@ -1320,14 +1324,22 @@ class BaseAgent(
             if self.chat_memory is not None:
                 chat_messages = []
                 for msg in conversation.value:
-                    if hasattr(msg, "blocks"):
+                    # Convert to ChatMessage with blocks if not already
+                    if hasattr(msg, "blocks") and isinstance(msg.blocks, list):
                         chat_messages.append(msg)
-                    else:
+                    elif isinstance(msg, dict):
                         content = msg.get("content", "")
                         chat_messages.append(
                             ChatMessage(
                                 role=msg.get("role", "user"),
                                 blocks=[TextBlock(text=content)],
+                            )
+                        )
+                    else:
+                        # Fallback: treat as plain text
+                        chat_messages.append(
+                            ChatMessage(
+                                role="user", blocks=[TextBlock(text=str(msg))]
                             )
                         )
                 self.chat_memory.set(chat_messages)
