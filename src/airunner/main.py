@@ -13,6 +13,10 @@ Do not change the order of the imports.
 from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 import os
 
+# Prevent Qt WebEngine from crashing
+os.environ["QT_QUICK_BACKEND"] = "software"
+os.environ["QT_XCB_GL_INTEGRATION"] = "none"
+
 """
 Temporary fix for windows - Facehuggershield is not working correctly
 on windows at this time so we disable it.
