@@ -105,47 +105,57 @@ class FormatterExtended:
     def _render_markdown_to_html(markdown_string: str) -> str:
         """
         Converts a Markdown string to HTML with syntax highlighting for code blocks.
+        For code blocks with language 'markdown', always use the TextLexer to preserve newlines and formatting.
         """
+        num_triple_backticks = markdown_string.count("```")
+        if num_triple_backticks % 2 == 1:
+            markdown_string += "\n```"
 
-        # Process custom code blocks with language specification
         def process_code_blocks(text):
-            # Process fenced code blocks with language specification (```python, etc.)
-            # Improved pattern to handle language specifiers more accurately and support optional spaces
             pattern = r"```\s*(\w+)?\s*\n(.*?)\n\s*```"
 
             def replace_code_block(match):
                 language = match.group(1) or "text"
                 code = match.group(2)
+                if language.lower() == "markdown":
+                    from pygments.lexers.special import TextLexer
 
-                # Try to get lexer for the specified language
-                try:
-                    lexer = get_lexer_by_name(language, stripall=True)
-                except pygments.util.ClassNotFound:
-                    # If language is not recognized, try guessing based on content
+                    lexer = TextLexer(stripall=True)
+                else:
                     try:
-                        lexer = guess_lexer(code, stripall=True)
+                        lexer = get_lexer_by_name(language, stripall=True)
                     except pygments.util.ClassNotFound:
-                        # Fallback to text if language can't be recognized or guessed
-                        lexer = get_lexer_by_name("text", stripall=True)
+                        try:
+                            lexer = guess_lexer(code, stripall=True)
+                        except pygments.util.ClassNotFound:
+                            from pygments.lexers.special import TextLexer
 
-                # Create formatter with line numbers and style class
+                            lexer = TextLexer(stripall=True)
                 formatter = HtmlFormatter(
                     cssclass=f"codehilite lang-{language}",
                     linenos=True,
                     linenostart=1,
-                    linenospecial=0,  # Disable special line styling
-                    lineseparator="",  # No extra separator between lines
-                    hl_lines=[],  # No highlighted lines by default
+                    linenospecial=0,
+                    lineseparator="\n",  # Force newline between lines
+                    hl_lines=[],
                 )
                 highlighted_code = highlight(code, lexer, formatter)
+                # Patch: If language is 'markdown', forcibly replace <span> line separators with <br> to preserve newlines
+                if language.lower() == "markdown":
+                    import re
+
+                    # Replace any span-based line separators with <br> if present
+                    highlighted_code = re.sub(
+                        r'(</span>)(<span class="[^\"]+">)',
+                        r"\1<br>\2",
+                        highlighted_code,
+                    )
                 return highlighted_code
 
             return re.sub(pattern, replace_code_block, text, flags=re.DOTALL)
 
-        # First pass: handle code blocks with explicit language
         processed_markdown = process_code_blocks(markdown_string)
 
-        # Second pass: use markdown's built-in processor for everything else
         extensions = [
             FencedCodeExtension(),
             CodeHiliteExtension(
@@ -154,21 +164,18 @@ class FormatterExtended:
             "markdown.extensions.tables",
             "markdown.extensions.nl2br",
         ]
-
-        # Get pygments CSS - use the monokai style for better dark theme compatibility
         pygments_css = HtmlFormatter(style="monokai").get_style_defs(
             ".codehilite"
         )
-
-        # Process the markdown content
+        # Ensure pre/code blocks preserve newlines
+        extra_css = ".codehilite pre { white-space: pre-wrap !important; }"
         html_content = markdown.markdown(
             processed_markdown, extensions=extensions
         )
-
-        # Add the CSS to the HTML
         html_with_css = f"""
         <style>
         {pygments_css}
+        {extra_css}
         .codehilite {{
             background: #272822;
             padding: 0;
@@ -177,26 +184,24 @@ class FormatterExtended:
             overflow-x: auto;
             border: 1px solid #3c3c3c;
         }}
-        /* Custom line number styles to make gutter more compact */
         .linenodiv {{
             background-color: #262626;
             border-right: 1px solid #444;
-            padding: 3px 5px 3px 3px; /* Reduced left and top/bottom padding */
+            padding: 3px 5px 3px 3px;
             color: #777;
             text-align: right;
             user-select: none;
-            margin-right: 5px; /* Reduced margin */
+            margin-right: 5px;
         }}
         .codehilite pre {{
             margin: 0;
-            padding: 10px 5px 10px 5px; /* Reduced left and right padding */
+            padding: 10px 5px 10px 5px;
             background-color: transparent;
             border: none;
         }}
         </style>
         {html_content}
         """
-
         return html_with_css
 
     @staticmethod
@@ -214,6 +219,17 @@ class FormatterExtended:
                 - 'original_content': The original input string
                 - 'parts': For mixed content, a list of content parts with their types
         """
+        # Always treat triple-backtick code blocks as markdown, even if mixed
+        if re.search(r"```.*```", content_string, re.DOTALL):
+            html_content = FormatterExtended._render_markdown_to_html(
+                content_string
+            )
+            return {
+                "type": FormatterExtended.FORMAT_MARKDOWN,
+                "content": html_content,
+                "original_content": content_string,
+                "parts": [{"type": "markdown", "content": html_content}],
+            }
         # For mixed content with LaTeX formulas
         if re.search(
             r"\$\$.*?\$\$", content_string, re.DOTALL
