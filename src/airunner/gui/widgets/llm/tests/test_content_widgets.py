@@ -4,13 +4,20 @@ Test suite for content_widgets.py in LLM widgets.
 
 import pytest
 
-from airunner.gui.widgets.llm.contentwidgets.markdown_widget import MarkdownWidget
-from airunner.gui.widgets.llm.contentwidgets.plain_text_widget import PlainTextWidget
+from airunner.gui.widgets.llm.contentwidgets.base_content_widget import (
+    BaseContentWidget,
+)
+from airunner.gui.widgets.llm.contentwidgets.markdown_widget import (
+    MarkdownWidget,
+)
+from airunner.gui.widgets.llm.contentwidgets.plain_text_widget import (
+    PlainTextWidget,
+)
 
 
 @pytest.fixture
 def base_content_widget(qtbot):
-    widget = base_content_widget.BaseContentWidget()
+    widget = BaseContentWidget()
     qtbot.addWidget(widget)
     widget.show()
     return widget

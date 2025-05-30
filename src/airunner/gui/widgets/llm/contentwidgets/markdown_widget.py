@@ -10,7 +10,14 @@ from airunner.gui.widgets.llm.contentwidgets.base_content_widget import (
 
 
 class MarkdownWidget(BaseContentWidget):
-    """Widget for displaying markdown content as rendered HTML with syntax highlighting."""
+    """Widget for displaying markdown content as rendered HTML with syntax highlighting.
+
+    Args:
+        parent (QWidget, optional): The parent widget.
+
+    Public Methods:
+        setContent(content: str): Set the markdown or HTML content to display. Accepts either raw markdown or HTML. If markdown is detected, it is converted to HTML with code block support.
+    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -42,11 +49,22 @@ class MarkdownWidget(BaseContentWidget):
         self._content_height = 100
 
     def setContent(self, content):
-        super().setContent(content)
-        # Add wrapping HTML with CSS for better appearance and dark theme support
-        self.webView.setHtml(self._wrap_html_content(content))
+        """Set the markdown or HTML content to display.
 
-        # Adjust height after content is loaded
+        Args:
+            content (str): Markdown or HTML content. If markdown, it is converted to HTML with code block support.
+        """
+        super().setContent(content)
+        # Detect if content is raw markdown (not HTML)
+        if not content.strip().lower().startswith("<"):
+            from airunner.utils.text.formatter_extended import (
+                FormatterExtended,
+            )
+
+            html_content = FormatterExtended._render_markdown_to_html(content)
+        else:
+            html_content = content
+        self.webView.setHtml(self._wrap_html_content(html_content))
         self.webView.loadFinished.connect(self._adjust_height)
         self.sizeChanged.emit()  # Emit on content update
 
