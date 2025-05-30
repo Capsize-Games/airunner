@@ -17,7 +17,7 @@ from airunner.gui.widgets.llm.contentwidgets.plain_text_widget import (
 )
 from airunner.gui.widgets.llm.templates.message_ui import Ui_message
 from airunner.data.models import Conversation
-from airunner.data.session_manager import session_scope
+from airunner.utils.application import get_logger
 from airunner.utils.text.formatter_extended import FormatterExtended
 
 
@@ -478,19 +478,21 @@ class MessageWidget(BaseWidget):
     def delete(self):
         if not self._deleted:  # Check if the widget has already been deleted
             self._deleted = True
-            with session_scope() as session:
-                conversation = (
-                    session.query(Conversation)
-                    .filter(Conversation.id == self.conversation_id)
-                    .first()
+            try:
+                conversation = Conversation.objects.filter_by(current=True)[0]
+            except IndexError:
+                get_logger(__name__).warning(
+                    "No current conversation found for deletion."
                 )
-                messages = conversation.value
-                if self.message_id == 0:
-                    conversation.value = []
-                else:
-                    conversation.value = messages[0 : self.message_id]
-                session.add(conversation)
-                session.commit()
+                return
+            messages = conversation.value
+            if self.message_id == 0:
+                updated_messages = []
+            else:
+                updated_messages = messages[0 : self.message_id]
+            Conversation.objects.update(
+                conversation.id, value=updated_messages
+            )
             self.api.llm.delete_messages_after_id(self.message_id)
             self.setParent(None)
             QTimer.singleShot(0, self.deleteLater)
