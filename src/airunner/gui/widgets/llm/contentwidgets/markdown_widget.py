@@ -29,16 +29,6 @@ class MarkdownWidget(BaseContentWidget):
         self.webView.page().setBackgroundColor(Qt.GlobalColor.transparent)
         self.webView.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.webView.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-
-        # Set up scrollbar policies - don't use WebEngine settings for this
-        # as it may vary across Qt versions
-
-        # Set size policy
-        self.webView.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
-        )
-
-        # Add to layout
         self.layout.addWidget(self.webView)
 
         # Store font properties
@@ -225,9 +215,9 @@ class MarkdownWidget(BaseContentWidget):
             self.setContent(self._content)
 
     def sizeHint(self):
-        width = 500
+        width = 9000
         height = max(100, self._content_height)
         return QSize(width, height)
 
     def minimumSizeHint(self):
-        return QSize(300, 100)
+        return QSize(9000, 100)
