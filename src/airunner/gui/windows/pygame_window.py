@@ -8,7 +8,13 @@ from pygame.locals import *
 from PySide6.QtWidgets import QMainWindow, QSizePolicy
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QTimer, Qt, QSize
-from PySide6.QtGui import QResizeEvent, QPainter, QImage, QKeyEvent, QMouseEvent
+from PySide6.QtGui import (
+    QResizeEvent,
+    QPainter,
+    QImage,
+    QKeyEvent,
+    QMouseEvent,
+)
 from PySide6.QtWidgets import QVBoxLayout
 
 from airunner.enums import SignalCode
@@ -97,14 +103,15 @@ class PygameManager(ABC):
     This class is a wrapper around the Pygame library to provide
     a consistent interface for creating and managing a Pygame window.
     """
+
     def __init__(
-        self, 
+        self,
         api: API,
         game_title: str = "Pygame Window",
         width: int = 800,
         height: int = 600,
         screen_color: Tuple = (0, 0, 0),
-        fps: int = 60
+        fps: int = 60,
     ):
         self.api = api
         self.game_title: str = game_title
@@ -117,10 +124,16 @@ class PygameManager(ABC):
         self.clock = pygame.time.Clock()
         self._initialize()
         self._start()
-        
+
         for signal, handler in [
-            (SignalCode.LLM_TEXT_STREAMED_SIGNAL, self._handle_llm_response_signal),
-            (SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL, self._handle_image_response_signal),
+            (
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                self._handle_llm_response_signal,
+            ),
+            (
+                SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
+                self._handle_image_response_signal,
+            ),
         ]:
             self.api.register(signal, handler)
 
@@ -131,40 +144,39 @@ class PygameManager(ABC):
         self._initialize_pygame()
         self._initialize_screen()
         self._initialize_display()
-    
+
     def _handle_llm_response_signal(self, data: Dict):
         response = data.get("response")
         thread = threading.Thread(
-            target=self._handle_llm_response,
-            args=(response,)
+            target=self._handle_llm_response, args=(response,)
         )
         thread.start()
-    
+
     def _handle_image_response_signal(self, data: Dict):
         code = data["code"]
         callback = data.get("callback", None)
 
-        if code in (
-            EngineResponseCode.INSUFFICIENT_GPU_MEMORY,
-        ):
+        if code in (EngineResponseCode.INSUFFICIENT_GPU_MEMORY,):
             self.api.emit_signal(
                 SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
-                "Insufficient GPU memory."
+                "Insufficient GPU memory.",
             )
         elif code is EngineResponseCode.IMAGE_GENERATED:
             thread = threading.Thread(
                 target=self._handle_image_response,
-                args=(data.get("message", None),)
+                args=(data.get("message", None),),
             )
             thread.start()
         else:
             self.api.logger.error(f"Unhandled response code: {code}")
-        
-        self.api.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
-        
+
+        self.api.emit_signal(
+            SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL
+        )
+
         if callback:
             callback(data)
-    
+
     @abstractmethod
     def _handle_llm_response(self, response: LLMResponse):
         """
@@ -172,7 +184,7 @@ class PygameManager(ABC):
         This method should be overridden by subclasses to provide
         specific functionality for handling LLM responses.
         """
-    
+
     @abstractmethod
     def _handle_image_response(self, response: Optional[ImageResponse]):
         """
@@ -180,7 +192,7 @@ class PygameManager(ABC):
         This method should be overridden by subclasses to provide
         specific functionality for handling image responses.
         """
-            
+
     @abstractmethod
     def _start(self):
         """
@@ -188,7 +200,7 @@ class PygameManager(ABC):
         This method should be overridden by subclasses to provide
         specific functionality for the game loop.
         """
-    
+
     def process_events(self):
         """
         Process Pygame events in a single step.
@@ -196,7 +208,7 @@ class PygameManager(ABC):
         It will be called by the Qt timer.
         """
         pass
-    
+
     def update(self):
         """
         Update game state in a single step.
@@ -204,7 +216,7 @@ class PygameManager(ABC):
         specific functionality for updating the game state.
         """
         pass
-    
+
     def render(self):
         """
         Render the game state to the screen.
@@ -212,7 +224,7 @@ class PygameManager(ABC):
         specific functionality for rendering the game state.
         """
         pass
-    
+
     def handle_pygame_event(self, event):
         """
         Handle a single pygame event.
@@ -220,7 +232,7 @@ class PygameManager(ABC):
         specific functionality for handling pygame events.
         """
         pass
-    
+
     @abstractmethod
     def quit(self):
         """
@@ -228,14 +240,14 @@ class PygameManager(ABC):
         This method should be overridden by subclasses to provide
         specific functionality for quitting the game loop.
         """
-        
+
     def _initialize_pygame(self):
         """
         Initialize the pygame library.
         """
         if not pygame.get_init():
             pygame.init()
-    
+
     def _initialize_screen(self):
         """
         Initialize the screen for the pygame window.
@@ -243,14 +255,14 @@ class PygameManager(ABC):
         # Use pygame.Surface instead of pygame.display.set_mode
         # This creates an in-memory surface without a window
         self.screen = pygame.Surface((self.width, self.height))
-    
+
     def _initialize_display(self):
         """
         Initialize the display for the pygame window.
         """
         # We don't set the caption since we're running in a PySide6 window
         pass
-        
+
     def resize(self, width, height):
         """
         Resize the pygame surface.
@@ -266,13 +278,17 @@ class PygameWidget(QWidget):
         self.pygame_manager = pygame_manager
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         self.setMinimumSize(pygame_manager.width, pygame_manager.height)
 
         # Timer to update the Pygame display
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_pygame)
-        self.timer.start(int(1000 / self.pygame_manager.fps))  # Use the FPS from pygame_manager
+        self.timer.start(
+            int(1000 / self.pygame_manager.fps)
+        )  # Use the FPS from pygame_manager
 
     def update_pygame(self):
         """
@@ -280,16 +296,16 @@ class PygameWidget(QWidget):
         """
         # Process Pygame events in the Qt main thread
         self.pygame_manager.process_events()
-        
+
         # Update game state
         self.pygame_manager.update()
-        
+
         # Render the Pygame surface
         self.pygame_manager.render()
-        
+
         # Maintain the target framerate
         self.pygame_manager.clock.tick(self.pygame_manager.fps)
-        
+
         # Trigger a repaint
         self.update()
 
@@ -299,18 +315,18 @@ class PygameWidget(QWidget):
         """
         if not self.pygame_manager.screen:
             return
-            
+
         # Create a QPainter for drawing onto this widget
         painter = QPainter(self)
-        
+
         # Convert Pygame surface to QImage
         surface_data = pygame.image.tostring(self.pygame_manager.screen, "RGB")
         w = self.pygame_manager.screen.get_width()
         h = self.pygame_manager.screen.get_height()
-        
+
         # Create a QImage from the raw data
         qimage = QImage(surface_data, w, h, w * 3, QImage.Format.Format_RGB888)
-        
+
         # Draw the QImage onto the widget, scaled to fit if needed
         painter.drawImage(self.rect(), qimage)
         painter.end()
@@ -334,7 +350,7 @@ class PygameWidget(QWidget):
             pygame_event = pygame.event.Event(
                 KEYDOWN,
                 key=KEY_MAP[key],
-                mod=self._convert_modifiers(event.modifiers())
+                mod=self._convert_modifiers(event.modifiers()),
             )
             # Post the event to pygame's event queue
             pygame.event.post(pygame_event)
@@ -352,7 +368,7 @@ class PygameWidget(QWidget):
             pygame_event = pygame.event.Event(
                 KEYUP,
                 key=KEY_MAP[key],
-                mod=self._convert_modifiers(event.modifiers())
+                mod=self._convert_modifiers(event.modifiers()),
             )
             # Post the event to pygame's event queue
             pygame.event.post(pygame_event)
@@ -366,12 +382,10 @@ class PygameWidget(QWidget):
         """
         pos = (event.position().x(), event.position().y())
         button = self._convert_mouse_button(event.button())
-        
+
         # Create a pygame MOUSEBUTTONDOWN event
         pygame_event = pygame.event.Event(
-            MOUSEBUTTONDOWN,
-            pos=pos,
-            button=button
+            MOUSEBUTTONDOWN, pos=pos, button=button
         )
         # Post the event to pygame's event queue
         pygame.event.post(pygame_event)
@@ -385,12 +399,10 @@ class PygameWidget(QWidget):
         """
         pos = (event.position().x(), event.position().y())
         button = self._convert_mouse_button(event.button())
-        
+
         # Create a pygame MOUSEBUTTONUP event
         pygame_event = pygame.event.Event(
-            MOUSEBUTTONUP,
-            pos=pos,
-            button=button
+            MOUSEBUTTONUP, pos=pos, button=button
         )
         # Post the event to pygame's event queue
         pygame.event.post(pygame_event)
@@ -404,13 +416,13 @@ class PygameWidget(QWidget):
         """
         pos = (event.position().x(), event.position().y())
         buttons = self._convert_mouse_buttons(event.buttons())
-        
+
         # Create a pygame MOUSEMOTION event
         pygame_event = pygame.event.Event(
             MOUSEMOTION,
             pos=pos,
             rel=(0, 0),  # relative movement, we're not tracking this
-            buttons=buttons
+            buttons=buttons,
         )
         # Post the event to pygame's event queue
         pygame.event.post(pygame_event)
@@ -476,7 +488,7 @@ class PygameWindow(
     StylesMixin,
     PipelineMixin,
     AIModelMixin,
-    QMainWindow
+    QMainWindow,
 ):
     """
     A class to create a Pygame window using PySide6.
@@ -485,16 +497,17 @@ class PygameWindow(
     manages the Pygame event loop. The class also provides methods for
     sending requests and handling signals.
     """
+
     def __init__(
-        self, 
-        app, 
+        self,
+        app,
         game_class: Type[PygameManager],
         width: int = 800,
         height: int = 600,
         local_agent_class: Optional[Type[LocalAgent]] = None,
         fps: int = 60,
-        *args, 
-        **kwargs
+        *args,
+        **kwargs,
     ):
         """
         Initialize the Pygame window.
@@ -512,24 +525,25 @@ class PygameWindow(
             width=width,
             height=height,
             fps=fps,
-            **kwargs.get('pygame_params', {})
+            **kwargs.get("pygame_params", {}),
         )
         if AIRUNNER_SD_ON:
             self._mask_generator_worker = create_worker(MaskGeneratorWorker)
             self._sd_worker = create_worker(SDWorker)
-        
+
         if AIRUNNER_STT_ON:
             self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-            self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
+            self._stt_audio_processor_worker = create_worker(
+                AudioProcessorWorker
+            )
 
         if AIRUNNER_TTS_ON:
             self._tts_generator_worker = create_worker(TTSGeneratorWorker)
             self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
-        
+
         if AIRUNNER_LLM_ON:
             self._llm_generate_worker = create_worker(
-                LLMGenerateWorker, 
-                local_agent_class=local_agent_class
+                LLMGenerateWorker, local_agent_class=local_agent_class
             )
 
         super().__init__(*args, **kwargs)
@@ -539,25 +553,27 @@ class PygameWindow(
         # Create a central widget and layout
         central_widget = QWidget(self)
         layout = QVBoxLayout(central_widget)
-        layout.setContentsMargins(0, 0, 0, 0)  # Remove margins for better display
+        layout.setContentsMargins(
+            0, 0, 0, 0
+        )  # Remove margins for better display
 
         # Create and add the PygameWidget
         self.pygame_widget = PygameWidget(self.pygame_manager, self)
         layout.addWidget(self.pygame_widget)
 
         self.setCentralWidget(central_widget)
-        
+
         # Mark the game as running
         self.pygame_manager.running = True
-        
+
         # Make sure the window is visible and has focus
         self.show()
         self.activateWindow()
         self.pygame_widget.setFocus()
-        
+
         # Start the process to keep the game running
         QTimer.singleShot(0, self.pygame_manager.run)
-    
+
     def closeEvent(self, event):
         """
         Handle the window close event.
@@ -572,13 +588,13 @@ class PygameWindow(
 class PygameAdapter(PygameManager):
     """
     An adapter class that makes it easier to integrate existing Pygame projects.
-    
+
     This class provides a simpler interface for integrating existing Pygame
     projects with the AI Runner framework. It handles the basic setup and
     provides hooks for the existing game loop.
-    
+
     Example usage:
-    
+
     ```python
     # Original Pygame code
     def main():
@@ -586,40 +602,41 @@ class PygameAdapter(PygameManager):
         screen = pygame.display.set_mode((800, 600))
         clock = pygame.time.Clock()
         running = True
-        
+
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 # Handle other events...
-            
+
             # Update game state...
-            
+
             # Render...
             screen.fill((0, 0, 0))
             # Draw stuff...
             pygame.display.flip()
-            
+
             clock.tick(60)
-        
+
         pygame.quit()
-    
+
     # Using the adapter
     class MyGame(PygameAdapter):
         def handle_pygame_event(self, event):
             # Handle events same as in original code
             pass
-            
+
         def update(self):
             # Update game state same as in original code
             pass
-            
+
         def render(self):
             # Render same as in original code
             self.screen.fill((0, 0, 0))
             # Draw stuff...
     ```
     """
+
     def __init__(
         self,
         api: API,
@@ -630,7 +647,7 @@ class PygameAdapter(PygameManager):
         fps: int = 60,
         event_handler: Optional[Callable[[pygame.event.Event], None]] = None,
         update_handler: Optional[Callable[[], None]] = None,
-        render_handler: Optional[Callable[[pygame.Surface], None]] = None
+        render_handler: Optional[Callable[[pygame.Surface], None]] = None,
     ):
         self.event_handler = event_handler
         self.update_handler = update_handler
@@ -641,46 +658,46 @@ class PygameAdapter(PygameManager):
             width=width,
             height=height,
             screen_color=screen_color,
-            fps=fps
+            fps=fps,
         )
-    
+
     def _handle_llm_response(self, response: LLMResponse):
         # Default implementation - can be overridden
         print(f"LLM: {response.message}")
-    
+
     def _handle_image_response(self, response: Optional[ImageResponse]):
         # Default implementation - can be overridden
         if response and response.images:
             print(f"Received {len(response.images)} images")
-    
+
     def _start(self):
         # Default initialization - can be overridden
         self.screen.fill(self.screen_color)
-    
+
     def process_events(self):
         # Process all pending Pygame events
         for event in pygame.event.get():
-            if event.type == QUIT:
+            if event.type == pygame.QUIT:
                 self.running = False
             self.handle_pygame_event(event)
-    
+
     def handle_pygame_event(self, event):
         # Use the provided event handler if available
         if self.event_handler:
             self.event_handler(event)
-    
+
     def update(self):
         # Use the provided update handler if available
         if self.update_handler:
             self.update_handler()
-    
+
     def render(self):
         # Use the provided render handler if available
         if self.render_handler:
             self.render_handler(self.screen)
-    
+
     def quit(self):
         self.running = False
-    
+
     def run(self):
         pass

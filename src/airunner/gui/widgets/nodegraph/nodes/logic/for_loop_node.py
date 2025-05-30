@@ -63,10 +63,6 @@ class ForLoopNode(BaseLogicNode):
             # engine to process each index in sequence
             current_index = first_index
 
-            print(
-                f"{self.name()}: Processing index {current_index} (range: {first_index} to {last_index})"
-            )
-
             # Return the current index
             return {
                 "Index": current_index,
@@ -75,7 +71,4 @@ class ForLoopNode(BaseLogicNode):
             }
         else:
             # If there's no valid range, trigger completed
-            print(
-                f"{self.name()}: No valid range ({first_index} to {last_index}), completing loop"
-            )
             return {"_exec_triggered": self.COMPLETED_PORT_NAME}
