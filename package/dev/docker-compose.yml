@@ -73,6 +73,7 @@ services:
       - AIRUNNER_DEFAULT_LLM_HF_PATH=w4ffl35/Ministral-8B-Instruct-2410-doublequant
       - HOST_HOME=${HOST_HOME}
       - AIRUNNER_HOME_DIR=${HOST_HOME}/.local/share/airunner
+      - MATHJAX_VERSION=3.2.2
     env_file:
       - ../../.env
     stdin_open: true
