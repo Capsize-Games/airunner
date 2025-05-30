@@ -23,12 +23,6 @@ class LatexWidget(BaseContentWidget):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
         self.webView.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-
-        # Set size policy
-        self.webView.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
-        )
-
         # Add to layout
         self.layout.addWidget(
             self.webView
@@ -99,7 +93,7 @@ class LatexWidget(BaseContentWidget):
 
     def sizeHint(self):
         # A reasonable default size for LaTeX content
-        return QSize(500, 150)
+        return QSize(9000, 150)
 
     def minimumSizeHint(self):
-        return QSize(300, 50)
+        return QSize(9000, 50)

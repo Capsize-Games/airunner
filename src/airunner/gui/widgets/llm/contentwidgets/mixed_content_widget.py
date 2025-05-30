@@ -76,7 +76,7 @@ class MixedContentWidget(BaseContentWidget):
             else:
                 html_body += f"<span class='text'>{html.escape(part['content']).replace('\\n', '<br>')}</span>"
         return f"""
-        <html style='height:auto;width:100%;background:transparent;'>
+        <html>
         <head>
         <script type='text/javascript'>
           window.MathJax = {{
@@ -87,8 +87,15 @@ class MixedContentWidget(BaseContentWidget):
         </script>
         <script type='text/javascript' src='{self.mathjax_url}'></script>
         <style>
-        html, body {{
-            background: transparent !important;
+        html {{
+            background: rgba(255,0,0,0.05) !important;
+            width: 100%;
+            height: auto;
+            box-sizing: border-box;
+            border: 4px solid red !important;
+        }}
+        body {{
+            background: rgba(0,0,255,0.05) !important;
             color: #fff !important;
             font-family: '{self.font_family}', 'Arial', 'Liberation Sans', sans-serif !important;
             font-size: {self.font_size}px;
@@ -98,20 +105,46 @@ class MixedContentWidget(BaseContentWidget):
             width: 100%;
             box-sizing: border-box;
             overflow: visible !important;
+            border: 4px solid blue !important;
         }}
         .text {{
             white-space: pre-wrap;
+            border: 4px solid green !important;
+            display: inline-block;
+            background: rgba(0,255,0,0.08) !important;
+        }}
+        .latex-debug {{
+            border: 4px dashed orange !important;
+            background: rgba(255,165,0,0.08) !important;
+            display: inline-block;
         }}
         </style>
         </head>
-        <body style='background:transparent !important;height:auto;width:100%;margin:0;padding:0;overflow:visible !important;'>
-          {html_body}
+        <body>
+          {self._wrap_latex_debug(html_body)}
         </body>
         </html>
         """
 
+    def _wrap_latex_debug(self, html_body: str) -> str:
+        """Wrap LaTeX content in a debug span for border visibility."""
+        import re
+
+        # This is a simple regex to wrap LaTeX blocks (very basic, for debug only)
+        # It will wrap $$...$$ and $...$ blocks
+        html_body = re.sub(
+            r"(\$\$.*?\$\$)",
+            r'<span class="latex-debug">\\1</span>',
+            html_body,
+            flags=re.DOTALL,
+        )
+        html_body = re.sub(
+            r"(\$[^$]+\$)", r'<span class="latex-debug">\\1</span>', html_body
+        )
+        return html_body
+
     def sizeHint(self):
-        return QSize(500, 150)
+        return QSize(9000, 150)
 
     def minimumSizeHint(self):
-        return QSize(300, 50)
+        return QSize(9000, 50)
