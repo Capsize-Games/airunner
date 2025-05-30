@@ -1222,8 +1222,6 @@ class BaseAgent(
                 )
                 # Debug: Print the conversation history for inspection
             chat_history = kwargs.get("chat_history", [])
-            print("*" * 100)
-            print(chat_history)
             for i, msg in enumerate(chat_history):
                 self.logger.info(
                     f"  [{i}] {msg.role}: {getattr(msg, 'content', str(msg))}"
