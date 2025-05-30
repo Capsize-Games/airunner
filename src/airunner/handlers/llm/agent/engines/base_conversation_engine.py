@@ -25,10 +25,7 @@ class BaseConversationEngine:
     ) -> None:
         """
         Append user and assistant messages to the conversation value.
-        Args:
-            conversation: The Conversation object.
-            user_message (str): The user's message.
-            assistant_message (Optional[str]): The assistant's message (if any).
+        Always store with both 'content' and 'blocks' fields for compatibility.
         """
         now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         conversation.value.append(
@@ -37,6 +34,7 @@ class BaseConversationEngine:
                 "name": self.agent.username,
                 "content": user_message,
                 "timestamp": now,
+                "blocks": [{"block_type": "text", "text": user_message}],
             }
         )
         if assistant_message is not None:
@@ -46,6 +44,9 @@ class BaseConversationEngine:
                     "name": self.agent.botname,
                     "content": assistant_message,
                     "timestamp": now,
+                    "blocks": [
+                        {"block_type": "text", "text": assistant_message}
+                    ],
                 }
             )
         if self._logger:
