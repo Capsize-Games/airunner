@@ -55,10 +55,6 @@ class ForEachLoopNode(BaseLogicNode):
             element = array[0]
             index = 0
 
-            print(
-                f"{self.name()}: Processing element {element} at index {index}"
-            )
-
             # Return the current element and index
             return {
                 "Array Element": element,

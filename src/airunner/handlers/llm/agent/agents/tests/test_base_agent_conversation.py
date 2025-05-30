@@ -5,9 +5,6 @@ Tests for BaseAgent conversation and memory integration with unified engine logi
 import pytest
 from unittest.mock import MagicMock, patch
 from airunner.handlers.llm.agent.agents.base import BaseAgent
-from airunner.handlers.llm.agent.engines.base_conversation_engine import (
-    BaseConversationEngine,
-)
 from airunner.handlers.llm.agent.chat_engine import RefreshSimpleChatEngine
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 from airunner.handlers.llm.agent.tools.search_engine_tool import (
