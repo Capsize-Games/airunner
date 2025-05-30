@@ -141,9 +141,6 @@ class InstallWorker(
             self.parent.total_steps += len(files)
             self.total_models_in_current_step += len(files)
 
-        print(
-            f"Downloading {self.total_models_in_current_step} StableDiffusion files"
-        )
         for model in models:
             if model["name"] == "CompVis Safety Checker":
                 action_key = "safety_checker"
@@ -196,9 +193,6 @@ class InstallWorker(
             ]
             self.parent.total_steps += len(files)
             self.total_models_in_current_step += len(files)
-        print(
-            f"Downloading {self.total_models_in_current_step} Controlnet files"
-        )
         for controlnet_model in controlnet_bootstrap_data:
             if not self.models_enabled.get(controlnet_model["name"], True):
                 continue
@@ -277,9 +271,6 @@ class InstallWorker(
         )
         self.total_models_in_current_step += len(controlnet_processor_files)
         self.parent.total_steps += len(controlnet_processor_files)
-        print(
-            f"Downloading {self.total_models_in_current_step} ControlNet files"
-        )
         for filename in controlnet_processor_files:
             requested_file_path = os.path.expanduser(
                 os.path.join(
@@ -300,7 +291,6 @@ class InstallWorker(
                 print(f"Error downloading {filename}: {e}")
 
     def download_llms(self):
-        print("DOWNLOAD LLMS", self.models_enabled["mistral"])
         if not self.models_enabled["mistral"]:
             self.set_page()
             return
@@ -347,8 +337,6 @@ class InstallWorker(
         )
         for k, v in WHISPER_FILES.items():
             self.total_models_in_current_step += len(v)
-
-        print(f"Downloading {self.total_models_in_current_step} STT files")
 
         for k, v in WHISPER_FILES.items():
             for filename in v:
@@ -413,9 +401,6 @@ class InstallWorker(
         )
         for k, v in OPENVOICE_FILES.items():
             self.total_models_in_current_step += len(v["files"])
-        print(
-            f"Downloading {self.total_models_in_current_step} OpenVoice files"
-        )
         for k, v in OPENVOICE_FILES.items():
             for filename in v["files"]:
                 requested_file_path = os.path.expanduser(
@@ -925,9 +910,6 @@ class InstallWorker(
                 # Check for state flags to track progress through step 8
                 if not hasattr(self, "_openvoice_unidic_download_attempted"):
                     # First phase: OpenVoice models are done, now download zip files
-                    print(
-                        "Step 8: Starting download of OpenVoice/unidic zip files"
-                    )
                     self.download_openvoice_and_unidic()
                     return
                 elif not hasattr(
@@ -947,22 +929,15 @@ class InstallWorker(
                                 has_openvoice = True
                                 break
 
-                    print(
-                        f"Step 8: Extraction check - has_unidic: {has_unidic}, has_openvoice: {has_openvoice}"
-                    )
-
                     # Attempt extraction if we have any zip files
                     if has_unidic or has_openvoice:
-                        print("Step 8: Extracting OpenVoice/unidic files")
                         self.extract_openvoice_and_unidic()
                         return
                     else:
                         # No files to extract, mark step as complete
                         self._openvoice_unidic_extraction_complete = True
-                        print("Step 8: Nothing to extract, marking complete")
 
             # Move to next step only if we get here
-            print(f"Moving from step {self.current_step} to next step")
             self.set_page()
 
     @Slot()
@@ -976,7 +951,6 @@ class InstallWorker(
 
     def set_page(self):
         if self.current_step == -1:
-            print("STEP 1")
             """
             Create the airunner paths
             """
@@ -988,46 +962,39 @@ class InstallWorker(
             self.current_step = 1
             self.download_stable_diffusion()
         elif self.current_step == 1:
-            print("STEP 2")
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Controlnet"}
             )
             self.current_step = 2
             self.download_controlnet()
         elif self.current_step == 2:
-            print("STEP 3")
             self.current_step = 3
             self.download_controlnet_processors()
         elif self.current_step == 3:
-            print("STEP 4")
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading LLM"}
             )
             self.current_step = 4
             self.download_llms()
         elif self.current_step == 4:
-            print("STEP 5")
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Text-to-Speech"}
             )
             self.current_step = 5
             self.download_tts()
         elif self.current_step == 5:
-            print("STEP 6")
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Text-to-Speech"}
             )
             self.current_step = 6
             self.download_tts()
         elif self.current_step == 6:
-            print("STEP 7")
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Speech-to-Text"}
             )
             self.current_step = 7
             self.download_stt()
         elif self.current_step == 7:
-            print("STEP 8")
             # Set step before downloading to ensure processing in download_finished
             self.current_step = 8
             self.download_openvoice()
@@ -1035,7 +1002,6 @@ class InstallWorker(
             # download_openvoice_and_unidic will be called automatically when OpenVoice models finish
         elif self.current_step == 8:
             # Only called when set_page() runs after step 8 completes
-            print("Finalizing installation")
             self.finalize_installation()
 
     def finalize_installation(self, *_args):

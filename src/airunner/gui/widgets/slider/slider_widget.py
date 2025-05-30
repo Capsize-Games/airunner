@@ -325,7 +325,6 @@ class SliderWidget(BaseWidget):
     def set_settings_value(self, settings_property: str, val: Any):
         # Store the current update parameters for the timer callback
         self._pending_update = (settings_property, val)
-        print(f"DEBUG: Debouncing update for {settings_property} = {val}")
 
         # Cancel any existing timer to reset the debounce period
         self._debounce_timer.stop()
@@ -348,8 +347,6 @@ class SliderWidget(BaseWidget):
                 self.update_setting_by_table_name(
                     table_name=keys[0], column_name=keys[1], val=val
                 )
-        else:
-            print("DEBUG: No pending update to process")
 
     def set_slider_and_spinbox_values(self, val):
         if val is None:
