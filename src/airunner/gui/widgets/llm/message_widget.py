@@ -1,15 +1,20 @@
 from PySide6.QtGui import QFontDatabase, QFont
 from PySide6.QtWidgets import QTextEdit, QApplication, QWidget, QVBoxLayout
-from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer, QThread, QObject
+from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer
 from PySide6.QtCore import Signal, QPropertyAnimation, QEasingCurve
-import queue
 
 from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.llm.contentwidgets.latex_widget import LatexWidget
-from airunner.gui.widgets.llm.contentwidgets.markdown_widget import MarkdownWidget
-from airunner.gui.widgets.llm.contentwidgets.mixed_content_widget import MixedContentWidget
-from airunner.gui.widgets.llm.contentwidgets.plain_text_widget import PlainTextWidget
+from airunner.gui.widgets.llm.contentwidgets.markdown_widget import (
+    MarkdownWidget,
+)
+from airunner.gui.widgets.llm.contentwidgets.mixed_content_widget import (
+    MixedContentWidget,
+)
+from airunner.gui.widgets.llm.contentwidgets.plain_text_widget import (
+    PlainTextWidget,
+)
 from airunner.gui.widgets.llm.templates.message_ui import Ui_message
 from airunner.data.models import Conversation
 from airunner.data.session_manager import session_scope
@@ -20,30 +25,6 @@ class AutoResizingTextEdit(QTextEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.document().contentsChanged.connect(self.sizeChange)
-
-
-# Worker class for the resize operation
-class ResizeWorker(QObject):
-    finished = Signal()
-
-    def __init__(self, message_queue):
-        super().__init__()
-        self.message_queue = message_queue
-        self.running = True
-
-    def process(self):
-        while self.running:
-            try:
-                # Get the next message widget from the queue with a timeout
-                message_widget = self.message_queue.get(timeout=0.1)
-                message_widget.set_content_size()
-                self.message_queue.task_done()
-            except queue.Empty:
-                # If the queue is empty, just continue and check again
-                pass
-
-    def stop(self):
-        self.running = False
 
 
 def set_global_tooltip_style():
@@ -74,24 +55,6 @@ class MessageWidget(BaseWidget):
         ("play", "play_audio_button"),
     ]
 
-    # Class-level thread and queue for all instances
-    resize_queue = queue.Queue()
-    resize_thread = None
-    resize_worker = None
-
-    @classmethod
-    def initialize_resize_worker(cls):
-        if cls.resize_thread is None:
-            cls.resize_thread = QThread()
-            cls.resize_worker = ResizeWorker(cls.resize_queue)
-            cls.resize_worker.moveToThread(cls.resize_thread)
-
-            # Connect signals and slots
-            cls.resize_thread.started.connect(cls.resize_worker.process)
-
-            # Start the thread
-            cls.resize_thread.start()
-
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
@@ -120,9 +83,6 @@ class MessageWidget(BaseWidget):
         for k in ["mood", "mood_emoji"]:
             kwargs.pop(k, None)
         super().__init__(*args, **kwargs)
-
-        # Initialize the class-level worker if not already done
-        self.__class__.initialize_resize_worker()
 
         self._deleted = False
         self.ui.user_name.setText(f"{self.name}")
@@ -259,53 +219,115 @@ class MessageWidget(BaseWidget):
     def set_message_content(self, message):
         """
         Set the message content in the widget, displaying the appropriate specialized widget
-        based on content type.
+        based on content type. Enhanced with safety checks and robust streaming support.
         """
-        # Clear any existing content widget
-        if self.content_widget is not None:
-            self.content_layout.removeWidget(self.content_widget)
-            self.content_widget.deleteLater()
-            self.content_widget = None
+        if self._deleted:
+            return
 
-        # Use the extended formatter to get detailed content information
-        result = FormatterExtended.format_content(message)
+        try:
+            # Use the extended formatter to get detailed content information
+            result = FormatterExtended.format_content(message)
+            new_type = result["type"]
 
-        # Create and configure the appropriate content widget based on content type
-        if result["type"] == FormatterExtended.FORMAT_MIXED:
-            self.content_widget = MixedContentWidget(self.ui.content_container)
-            self.content_widget.setContent(result["parts"])
-        elif result["type"] == FormatterExtended.FORMAT_LATEX:
-            self.content_widget = LatexWidget(self.ui.content_container)
-            self.content_widget.setContent(result["content"])
-        elif result["type"] == FormatterExtended.FORMAT_MARKDOWN:
-            self.content_widget = MarkdownWidget(self.ui.content_container)
-            self.content_widget.setContent(result["content"])
-        else:  # Plain text (default)
-            self.content_widget = PlainTextWidget(self.ui.content_container)
-            self.content_widget.setContent(result["content"])
+            # Track the current content type to avoid unnecessary widget replacement
+            current_type = getattr(self, "_current_content_type", None)
 
-        # Apply font settings to the content widget
-        if self.font_family and self.font_size:
-            font = QFont(self.font_family, self.font_size)
-            self.content_widget.setFont(font)
+            # Only replace the widget if the type has changed
+            if self.content_widget is None or current_type != new_type:
+                # Remove and delete the old widget if present
+                if self.content_widget is not None:
+                    self.content_layout.removeWidget(self.content_widget)
+                    self.content_widget.deleteLater()
+                    self.content_widget = None
 
-        # Add the content widget to the container
-        self.content_layout.addWidget(self.content_widget)
+                # Create and configure the appropriate content widget based on content type
+                if new_type == FormatterExtended.FORMAT_MIXED:
+                    self.content_widget = MixedContentWidget(
+                        self.ui.content_container
+                    )
+                    self.content_widget.setContent(result["parts"])
+                elif new_type == FormatterExtended.FORMAT_LATEX:
+                    self.content_widget = LatexWidget(
+                        self.ui.content_container
+                    )
+                    self.content_widget.setContent(result["content"])
+                elif new_type == FormatterExtended.FORMAT_MARKDOWN:
+                    self.content_widget = MarkdownWidget(
+                        self.ui.content_container
+                    )
+                    self.content_widget.setContent(result["content"])
+                else:  # Plain text (default)
+                    self.content_widget = PlainTextWidget(
+                        self.ui.content_container
+                    )
+                    self.content_widget.setContent(result["content"])
 
-        # Connect size changed signal
-        if hasattr(self.content_widget, "sizeChanged"):
-            self.content_widget.sizeChanged.connect(self.content_size_changed)
+                # Apply font settings to the content widget
+                if self.font_family and self.font_size:
+                    font = QFont(self.font_family, self.font_size)
+                    self.content_widget.setFont(font)
+
+                # Add the content widget to the container
+                self.content_layout.addWidget(self.content_widget)
+
+                # Connect size changed signal
+                if hasattr(self.content_widget, "sizeChanged"):
+                    self.content_widget.sizeChanged.connect(
+                        self.content_size_changed
+                    )
+
+                # Update the current content type
+                self._current_content_type = new_type
+            else:
+                # If the widget type is the same, just update the content
+                if new_type == FormatterExtended.FORMAT_MIXED:
+                    self.content_widget.setContent(result["parts"])
+                elif new_type == FormatterExtended.FORMAT_LATEX:
+                    self.content_widget.setContent(result["content"])
+                elif new_type == FormatterExtended.FORMAT_MARKDOWN:
+                    self.content_widget.setContent(result["content"])
+                else:
+                    self.content_widget.setContent(result["content"])
+        except Exception as e:
+            # Log error but don't crash
+            if hasattr(self, "logger"):
+                self.logger.error(f"Error setting message content: {e}")
+            # Fallback to plain text widget
+            try:
+                if self.content_widget is not None:
+                    self.content_layout.removeWidget(self.content_widget)
+                    self.content_widget.deleteLater()
+                    self.content_widget = None
+                self.content_widget = PlainTextWidget(
+                    self.ui.content_container
+                )
+                self.content_widget.setContent(message)
+                self.content_layout.addWidget(self.content_widget)
+                self._current_content_type = "plain"
+            except Exception as fallback_error:
+                if hasattr(self, "logger"):
+                    self.logger.error(f"Fallback error: {fallback_error}")
 
     def content_size_changed(self):
-        """Handle content widget size changes."""
+        """Handle content widget size changes safely in the main thread."""
         if self.content_widget:
-            self.adjustSize()
-            self.updateGeometry()
-            parent = self.parentWidget()
-            while parent is not None:
-                parent.updateGeometry()
-                parent = parent.parentWidget()
-        self.messageResized.emit()
+            # Use QTimer.singleShot to ensure this runs in the main thread
+            QTimer.singleShot(0, self._update_size_deferred)
+
+    def _update_size_deferred(self):
+        """Deferred size update that runs in the main thread."""
+        if self.content_widget and not self._deleted:
+            try:
+                self.adjustSize()
+                self.updateGeometry()
+                parent = self.parentWidget()
+                while parent is not None:
+                    parent.updateGeometry()
+                    parent = parent.parentWidget()
+                self.messageResized.emit()
+            except RuntimeError:
+                # Widget may have been deleted
+                pass
 
     def on_delete_messages_after_id(self, data):
         message_id = data.get("message_id", None)
@@ -384,15 +406,23 @@ class MessageWidget(BaseWidget):
     def set_content_size(self):
         """
         Set the content size of the widget based on the content widget's size hint.
-        This method is called from the resize worker thread.
+        This method is now safe to call from any thread via QTimer.singleShot.
         """
-        if self.content_widget:
-            self.content_widget.adjustSize()
-            self.adjustSize()
-            self.updateGeometry()
-            parent = self.parentWidget()
-            if parent:
-                parent.updateGeometry()
+        QTimer.singleShot(0, self._set_content_size_safe)
+
+    def _set_content_size_safe(self):
+        """Safe content size setting that runs in the main thread."""
+        if self.content_widget and not self._deleted:
+            try:
+                self.content_widget.adjustSize()
+                self.adjustSize()
+                self.updateGeometry()
+                parent = self.parentWidget()
+                if parent:
+                    parent.updateGeometry()
+            except RuntimeError:
+                # Widget may have been deleted
+                pass
 
     def sizeChange(self):
         # Notify that the text has changed
@@ -434,73 +464,11 @@ class MessageWidget(BaseWidget):
         # Reasonable minimum size
         return QSize(300, 100)
 
-    def update_message(self, text_chunk: str):
-        """
-        Update the message content with a new chunk of text.
-        This method is responsible for determining the type of content
-        and updating the content widget accordingly.
-        It also handles the case where the content type changes and
-        a new widget needs to be created.
-        """
-        self.message += text_chunk
+    def update_message(self, text):
+        self.message += text
         self.message = self.message.replace("  ", " ")
-
-        # Determine the type of the entire accumulated message
-        new_format_result = FormatterExtended.format_content(self.message)
-        new_full_message_type = new_format_result["type"]
-
-        rebuild_widget = False
-        if self.content_widget is None:
-            rebuild_widget = True
-        elif isinstance(self.content_widget, PlainTextWidget):
-            # If current is PlainText, rebuild if new type is NOT plain (i.e., it's a special format)
-            if new_full_message_type in [
-                FormatterExtended.FORMAT_LATEX,
-                FormatterExtended.FORMAT_MARKDOWN,
-                FormatterExtended.FORMAT_MIXED,
-            ]:
-                rebuild_widget = True
-        elif isinstance(self.content_widget, LatexWidget):
-            if new_full_message_type != FormatterExtended.FORMAT_LATEX:
-                rebuild_widget = True
-        elif isinstance(self.content_widget, MarkdownWidget):
-            if new_full_message_type != FormatterExtended.FORMAT_MARKDOWN:
-                rebuild_widget = True
-        elif isinstance(self.content_widget, MixedContentWidget):
-            if new_full_message_type != FormatterExtended.FORMAT_MIXED:
-                rebuild_widget = True
-        else:
-            rebuild_widget = True
-
-        if rebuild_widget:
-            self.set_message_content(self.message)
-        else:
-            if isinstance(self.content_widget, PlainTextWidget):
-                self.content_widget.appendText(text_chunk)
-            elif isinstance(
-                self.content_widget, (LatexWidget, MarkdownWidget)
-            ):
-                # Only update if content has changed to avoid repeated extension reloads
-                if self.content_widget.content() != self.message:
-                    self.content_widget.setContent(self.message)
-            elif isinstance(self.content_widget, MixedContentWidget):
-                self.content_widget.setContent(new_format_result["parts"])
-
-    def append_streamed_text(self, text):
-        """
-        Append streamed text to the content widget (for plain text streaming).
-        This will trigger sizeChanged and thus content_size_changed.
-        """
-        if isinstance(self.content_widget, PlainTextWidget):
-            self.content_widget.appendText(text)
-            self.message += text
-        elif isinstance(self.content_widget, (LatexWidget, MarkdownWidget)):
-            self.message += text
-            # Only update if content has changed
-            if self.content_widget.content() != self.message:
-                self.content_widget.setContent(self.message)
-        else:
-            self.message += text
+        # Always update the content for all types (Markdown, Mixed, LaTeX, PlainText)
+        self.set_message_content(self.message)
 
     @Slot()
     def on_play_audio_button_clicked(self):

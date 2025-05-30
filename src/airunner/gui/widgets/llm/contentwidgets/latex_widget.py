@@ -30,9 +30,9 @@ class LatexWidget(BaseContentWidget):
         )
 
         # Add to layout
-        self.layout.addWidget(self.webView)
-
-        # Store the font properties for later use
+        self.layout.addWidget(
+            self.webView
+        )  # Store the font properties for later use
         self.font_family = "Arial"
         self.font_size = 14
 
