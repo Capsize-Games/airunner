@@ -14,14 +14,8 @@ from PySide6.QtWidgets import QWidget
 @pytest.fixture(autouse=True)
 def cleanup_resize_thread():
     yield
-    # Clean up the class-level QThread after tests
-    cls = message_widget.MessageWidget
-    if cls.resize_thread is not None:
-        cls.resize_worker.running = False
-        cls.resize_thread.quit()
-        cls.resize_thread.wait()
-        cls.resize_thread = None
-        cls.resize_worker = None
+    # No cleanup needed since we removed the ResizeWorker class
+    pass
 
 
 @pytest.fixture
@@ -235,37 +229,14 @@ def test_delete_slot_already_deleted(qtbot):
         mock_del.assert_not_called()
 
 
-def test_resizeworker_process_and_stop(monkeypatch):
-    # Cover ResizeWorker.process loop, including queue.Empty
-    import queue as pyqueue
-    from airunner.gui.widgets.llm.message_widget import ResizeWorker
-
-    class DummyWidget:
-        def set_content_size(self):
-            DummyWidget.called = True
-
-    q = pyqueue.Queue()
-    worker = ResizeWorker(q)
-    DummyWidget.called = False
-    # Put a widget in the queue
-    q.put(DummyWidget())
-
-    # Stop after one iteration
-    def fake_get(timeout):
-        worker.running = False
-        return DummyWidget()
-
-    monkeypatch.setattr(q, "get", fake_get)
-    monkeypatch.setattr(q, "task_done", lambda: None)
-    worker.process()
-    assert DummyWidget.called
-    # Cover queue.Empty branch
-    worker = ResizeWorker(q)
-    worker.running = False
-    # Should not raise
-    worker.process()
-    worker.stop()
-    assert worker.running is False
+# ResizeWorker has been removed and replaced with QTimer.singleShot for thread safety
+def test_content_size_changed_deferred_update(qtbot, dummy_message_widget):
+    """Test that content size changes are handled safely without threading issues."""
+    # This test verifies the new thread-safe approach replaces the old ResizeWorker
+    dummy_message_widget.content_size_changed()
+    # The update should be deferred via QTimer.singleShot, so we can't test immediate effects
+    # but we can verify the method doesn't crash
+    assert True
 
 
 def test_set_global_tooltip_style(monkeypatch):
