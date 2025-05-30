@@ -352,9 +352,8 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         if not conversation_id:
             conversation = Conversation.create()
             data["conversation_id"] = conversation.id
-            # Update LLMGeneratorSettings with new conversation id (for test compatibility)
-            LLMGeneratorSettings.objects.update(
-                id=1, current_conversation_id=conversation.id
+            self.update_llm_generator_settings(
+                "current_conversation_id", conversation.id
             )
         else:
             conversation = Conversation.objects.get(conversation_id)
