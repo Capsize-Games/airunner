@@ -125,6 +125,8 @@ extras_require = {
         "aiohttp>=3.11.0",
         "google-api-python-client>=2.170.0",
         "wikipedia>=1.4.0",
+        "scrapy==2.13.1",
+        "trafilatura==2.0.0",
     ],
 }
 
