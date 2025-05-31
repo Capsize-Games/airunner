@@ -106,6 +106,7 @@ except OSError as e:
     TTSVocalizerWorker = None
 
 from .model_load_balancer import ModelLoadBalancer
+from airunner.gui.widgets.llm.contentwidgets.conversation_widget import ConversationWidget
 
 
 class MainWindow(
@@ -951,6 +952,13 @@ class MainWindow(
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
+        # --- ConversationWidget integration ---
+        self.conversation_widget = ConversationWidget(self)
+        # TODO: Replace/add to the appropriate layout or tab in the UI
+        # Example: self.ui.chat_area_layout.addWidget(self.conversation_widget)
+        # Or: self.ui.center_tab_container.addTab(self.conversation_widget, "Chat")
+        # You may need to adjust this depending on your UI structure
+        # --- End ConversationWidget integration ---
         if not self.api:
             self.logger.warning(
                 "MainWindow: self.api is missing. Cannot clear status message."
