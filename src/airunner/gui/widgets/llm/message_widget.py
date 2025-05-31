@@ -246,21 +246,25 @@ class MessageWidget(BaseWidget):
                         self.ui.content_container
                     )
                     self.content_widget.setContent(result["parts"])
+                    self.content_layout.addWidget(self.content_widget)
                 elif new_type == FormatterExtended.FORMAT_LATEX:
                     self.content_widget = LatexWidget(
                         self.ui.content_container
                     )
                     self.content_widget.setContent(result["content"])
+                    self.content_layout.addWidget(self.content_widget)
                 elif new_type == FormatterExtended.FORMAT_MARKDOWN:
                     self.content_widget = MarkdownWidget(
                         self.ui.content_container
                     )
                     self.content_widget.setContent(result["content"])
+                    self.content_layout.addWidget(self.content_widget)
                 else:  # Plain text (default)
                     self.content_widget = PlainTextWidget(
                         self.ui.content_container
                     )
                     self.content_widget.setContent(result["content"])
+                    self.content_layout.addWidget(self.content_widget)
 
                 # Apply font settings to the content widget
                 if self.font_family and self.font_size:
@@ -467,8 +471,16 @@ class MessageWidget(BaseWidget):
     def update_message(self, text):
         self.message += text
         self.message = self.message.replace("  ", " ")
-        # Always update the content for all types (Markdown, Mixed, LaTeX, PlainText)
-        self.set_message_content(self.message)
+        # Optimize streaming: if current widget is PlainTextWidget, append text directly
+        if (
+            self.content_widget is not None
+            and isinstance(self.content_widget, PlainTextWidget)
+            and getattr(self, "_current_content_type", None) == "plain"
+        ):
+            self.content_widget.appendText(text)
+        else:
+            # Always update the content for all types (Markdown, Mixed, LaTeX, PlainText)
+            self.set_message_content(self.message)
 
     @Slot()
     def on_play_audio_button_clicked(self):
