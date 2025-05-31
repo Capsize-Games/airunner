@@ -425,6 +425,12 @@ class ChatPromptWidget(BaseWidget):
     def _clear_conversation(self, skip_update: bool = False):
         self.conversation = None
         self.conversation_history = []
+        self._streamed_messages = (
+            []
+        )  # Ensure buffer is cleared when conversation is cleared
+        self.conversation_html_widget.set_conversation(
+            []
+        )  # Also clear the HTML widget explicitly
         self._clear_conversation_widgets(skip_update=skip_update)
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
