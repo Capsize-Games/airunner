@@ -9,6 +9,8 @@ See REFACTOR.md for design rationale.
 from typing import List, Dict, Any
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtCore import QObject, Signal, Slot, Property
 from jinja2 import (
     Environment,
     FileSystemLoader,
@@ -20,6 +22,24 @@ from airunner.utils.text.formatter_extended import FormatterExtended
 from airunner.settings import CONTENT_WIDGETS_BASE_PATH
 
 logger = logging.getLogger(__name__)
+
+
+class ChatBridge(QObject):
+    appendMessage = Signal(dict)
+    clearMessages = Signal()
+    setMessages = Signal(list)
+
+    @Slot(list)
+    def set_messages(self, messages):
+        self.setMessages.emit(messages)
+
+    @Slot(dict)
+    def append_message(self, msg):
+        self.appendMessage.emit(msg)
+
+    @Slot()
+    def clear_messages(self):
+        self.clearMessages.emit()
 
 
 class ConversationWidget(QWidget):
@@ -45,6 +65,14 @@ class ConversationWidget(QWidget):
         )
         self._template = self._env.get_template("conversation.html")
 
+        self._web_channel = QWebChannel(self._view.page())
+        self._chat_bridge = ChatBridge()
+        self._web_channel.registerObject("chatBridge", self._chat_bridge)
+        self._view.page().setWebChannel(self._web_channel)
+        html = self._template.render(messages=[])  # Initial empty
+        base_url = f"file://{static_html_dir}/"
+        self._view.setHtml(html, base_url)
+
     def _get_widget_template_for_type(self, content_type: str) -> str:
         """Return the relative path to the widget template for a given content type."""
         mapping = {
@@ -58,13 +86,47 @@ class ConversationWidget(QWidget):
             "plain_text_widget.jinja2.html",
         )
 
+    def wait_for_js_ready(self, callback, max_attempts=50):
+        """Wait for the JS QWebChannel to be ready before calling setMessages.
+
+        Args:
+            callback: Function to call when JS is ready
+            max_attempts: Maximum number of retry attempts (default 50 = ~2.5 seconds)
+        """
+        from PySide6.QtCore import QTimer
+
+        attempt_count = 0
+
+        def check_ready():
+            nonlocal attempt_count
+            attempt_count += 1
+
+            self._view.page().runJavaScript(
+                "window.isChatReady === true",
+                lambda ready: handle_result(ready),
+            )
+
+        def handle_result(ready):
+            if ready:
+                callback()
+            elif attempt_count < max_attempts:
+                # Use QTimer to properly wait before retrying
+                QTimer.singleShot(50, check_ready)
+            else:
+                # Timeout reached, log warning and call callback anyway
+                logger.warning(
+                    f"ConversationWidget: JavaScript initialization timeout after {max_attempts} attempts"
+                )
+                callback()
+
+        check_ready()
+
     def set_conversation(self, messages: List[Dict[str, Any]]) -> None:
         """Update the conversation display.
 
         Args:
             messages (List[Dict[str, Any]]): List of message dicts (sender, text, timestamp, etc).
         """
-        # Enrich each message with widget_template and content fields
         enriched_messages = []
         for msg in messages:
             content = msg.get("text") or msg.get("content") or ""
@@ -77,17 +139,13 @@ class ConversationWidget(QWidget):
                     "content": fmt["content"],
                     "content_type": fmt["type"],
                     "parts": fmt.get("parts"),
-                    # Provide defaults for widget templates
                     "font_size": 16,
                     "static_base_path": "/static/content_widgets",
                     "base_href": None,
                 }
             )
-        html = self._template.render(messages=enriched_messages)
-        self._view.setHtml(html)
-        self._view.page().runJavaScript(
-            """
-            var container = document.getElementById('conversation-container');
-            if (container) { container.scrollTop = container.scrollHeight; }
-            """
-        )
+
+        def send():
+            self._chat_bridge.set_messages(enriched_messages)
+
+        self.wait_for_js_ready(send)
