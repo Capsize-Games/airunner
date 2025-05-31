@@ -1,0 +1,109 @@
+/* content_widget.css: Base styles for all content widgets */
+
+html,
+body {
+    background: transparent !important;
+    color: #fff !important;
+    font-family: 'Arial', 'Liberation Sans', sans-serif !important;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: bold;
+    margin: 1.2em 0 0.5em 0;
+}
+
+p {
+    margin: 0.5em 0;
+}
+
+ul,
+ol {
+    margin: 0.5em 0 0.5em 1.5em;
+}
+
+li {
+    margin: 0.2em 0;
+}
+
+blockquote {
+    border-left: 3px solid #888;
+    margin: 0.5em 0;
+    padding: 0.5em 1em;
+    color: #ccc;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+code,
+pre,
+.codehilite {
+    font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', 'monospace';
+    font-size: 0.98em;
+}
+
+pre {
+    background: #232323;
+    border-radius: 5px;
+    padding: 10px 8px;
+    margin: 10px 0;
+    overflow-x: auto;
+}
+
+.codehilite {
+    background: #272822;
+    border-radius: 5px;
+    margin: 10px 0;
+    overflow-x: auto;
+    border: 1px solid #3c3c3c;
+}
+
+.linenodiv {
+    background-color: #262626;
+    border-right: 1px solid #444;
+    padding: 3px 5px 3px 3px;
+    color: #777;
+    text-align: right;
+    user-select: none;
+    margin-right: 5px;
+}
+
+.codehilite pre {
+    margin: 0;
+    padding: 10px 5px 10px 5px;
+    background-color: transparent;
+    border: none;
+}
+
+table {
+    border-collapse: collapse;
+    margin: 1em 0;
+}
+
+th,
+td {
+    border: 1px solid #444;
+    padding: 4px 8px;
+}
+
+a {
+    color: #6cf;
+    text-decoration: underline;
+}
+
+img {
+    max-width: 100%;
+    border-radius: 4px;
+}
+
+.MathJax {
+    outline: none;
+}

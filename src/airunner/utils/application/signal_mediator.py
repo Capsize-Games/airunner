@@ -96,4 +96,7 @@ class SignalMediator(metaclass=SingletonMeta):
             self.backend.emit_signal(code, data)
         elif code in self.signals:
             for signal in self.signals[code]:
-                signal.signal.emit(data)
+                try:
+                    signal.signal.emit(data)
+                except RuntimeError as e:
+                    pass

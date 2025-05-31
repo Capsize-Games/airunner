@@ -28,13 +28,6 @@ class BaseManager:
                         rel_attr.property, "direction"
                     ):
                         query = query.options(subqueryload(rel_attr))
-                        self.logger.debug(
-                            f"Applied eager load for relationship: {relationship}"
-                        )
-                    else:
-                        self.logger.debug(
-                            f"Skipped eager load for non-relationship: {relationship}"
-                        )
                 except AttributeError:
                     self.logger.warning(
                         f"Class {self.cls.__name__} does not have relationship {relationship}"
@@ -55,10 +48,6 @@ class BaseManager:
             query = self._apply_eager_load(query, eager_load)
             result = query.filter(self.cls.id == pk).first()
             session.expunge_all()
-            if result is None:
-                self.logger.debug(f"No result found for get({pk})")
-            else:
-                self.logger.debug(f"Query result for get({pk}): {result}")
             return result.to_dataclass() if result else None
 
     def get_orm(
@@ -72,7 +61,6 @@ class BaseManager:
                 query = session.query(self.cls)
                 query = self._apply_eager_load(query, eager_load)
                 result = query.filter(self.cls.id == pk).first()
-                self.logger.debug(f"Query result for get_orm({pk}): {result}")
                 return result
             except Exception as e:
                 self.logger.error(f"Error in get_orm({pk}): {e}")
@@ -87,15 +75,12 @@ class BaseManager:
             query = self._apply_eager_load(query, eager_load)
             result = query.first()
             session.expunge_all()
-            if result is None:
-                self.logger.debug(f"No result found for first()")
             return result.to_dataclass() if result else None
 
     def all(self) -> List[_T]:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).all()
-                self.logger.debug(f"Query result for all(): {result}")
                 session.expunge_all()
                 return [obj.to_dataclass() for obj in result]
             except Exception as e:
@@ -106,9 +91,6 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).filter_by(**kwargs).all()
-                self.logger.debug(
-                    f"Query result for filter_by({kwargs}): {result}"
-                )
                 session.expunge_all()
                 return [obj.to_dataclass() for obj in result]
             except Exception as e:
@@ -119,7 +101,6 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).filter(*args).first()
-                self.logger.debug(f"Query result for filter({args}): {result}")
                 session.expunge_all()
                 return result.to_dataclass() if result else None
             except Exception as e:
@@ -130,7 +111,6 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).filter(*args).all()
-                self.logger.debug(f"Query result for filter({args}): {result}")
                 session.expunge_all()
                 return [obj.to_dataclass() for obj in result]
             except Exception as e:
@@ -158,9 +138,6 @@ class BaseManager:
                             )
                             pass
                 result = query.filter_by(**kwargs).first()
-                self.logger.debug(
-                    f"Query result for filter_by({kwargs}): {result}"
-                )
                 session.expunge_all()
                 return result.to_dataclass() if result else None
             except Exception as e:
@@ -171,9 +148,6 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).order_by(*args)
-                self.logger.debug(
-                    f"Query result for order_by({args}): {result}"
-                )
                 session.expunge_all()
                 return result
             except Exception as e:
@@ -184,9 +158,6 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).options(*args)
-                self.logger.debug(
-                    f"Query result for options({args}): {result}"
-                )
                 session.expunge_all()
                 return result
             except Exception as e:
@@ -198,9 +169,6 @@ class BaseManager:
             try:
                 result = session.query(self.cls).delete()
                 session.commit()
-                self.logger.debug(
-                    f"Deleted {result} {self.cls.__name__} objects"
-                )
                 return result
             except Exception as e:
                 self.logger.error(f"Error in delete(): {e}")
@@ -211,9 +179,6 @@ class BaseManager:
             try:
                 result = session.query(self.cls).filter_by(**kwargs).delete()
                 session.commit()
-                self.logger.debug(
-                    f"Deleted {result} {self.cls.__name__} objects"
-                )
                 return result
             except Exception as e:
                 self.logger.error(f"Error in delete_by({kwargs}): {e}")
@@ -231,26 +196,16 @@ class BaseManager:
                     if obj:
                         session.delete(obj)
                         session.commit()
-                        self.logger.debug(
-                            f"Deleted {self.cls.__name__} with id {pk}"
-                        )
                         return True
                     else:
-                        self.logger.debug(
-                            f"No {self.cls.__name__} found with id {pk}"
-                        )
                         return False
                 elif kwargs:
                     result = (
                         session.query(self.cls).filter_by(**kwargs).delete()
                     )
                     session.commit()
-                    self.logger.debug(
-                        f"Deleted {result} {self.cls.__name__} objects"
-                    )
                     return result
                 else:
-                    self.logger.debug("No arguments provided to delete()")
                     return False
             except Exception as e:
                 self.logger.error(f"Error in delete({pk}): {e}")
@@ -264,14 +219,8 @@ class BaseManager:
                     for key, value in kwargs.items():
                         setattr(obj, key, value)
                     session.commit()
-                    self.logger.debug(
-                        f"Updated {self.cls.__name__} with id {pk}"
-                    )
                     return True
                 else:
-                    self.logger.debug(
-                        f"No {self.cls.__name__} found with id {pk}"
-                    )
                     return False
             except Exception as e:
                 self.logger.error(f"Error in update({pk}, {kwargs}): {e}")
@@ -288,9 +237,6 @@ class BaseManager:
                             session.commit()
                     return True
                 else:
-                    self.logger.debug(
-                        f"No {self.cls.__name__} found with {kwargs}"
-                    )
                     return False
             except Exception as e:
                 self.logger.error(f"Error in update: {e}")
@@ -301,7 +247,6 @@ class BaseManager:
             try:
                 session.merge(obj)
                 session.commit()
-                self.logger.debug(f"Merged {self.cls.__name__}")
                 return True
             except Exception as e:
                 self.logger.error(f"Error in merge(): {e}")
@@ -311,9 +256,6 @@ class BaseManager:
         with session_scope() as session:
             try:
                 result = session.query(self.cls).distinct(*args)
-                self.logger.debug(
-                    f"Query result for distinct({args}): {result}"
-                )
                 session.expunge_all()
                 return result
             except Exception as e:
@@ -336,7 +278,6 @@ class BaseManager:
                 obj = self.cls(*args, **kwargs)
                 session.add(obj)
                 session.commit()
-                self.logger.debug(f"Created {self.cls.__name__}")
                 return obj.to_dataclass()
             except Exception as e:
                 self.logger.error(f"Error in create({args}, {kwargs}): {e}")
