@@ -275,9 +275,7 @@ def test_status_indicator_shows_and_hides_on_mood_summary_update(
     assert not chat_prompt.loading_widget.isVisible()
 
 
-def test_status_indicator_custom_message(
-    qtbot, chat_prompt
-):
+def test_status_indicator_custom_message(qtbot, chat_prompt):
     chat_prompt._conversation_history_manager.get_most_recent_conversation_id.reset_mock()
     chat_prompt._conversation_history_manager.load_conversation_history.reset_mock()
     """Test that the status indicator shows a custom message from the signal payload."""
@@ -297,3 +295,30 @@ def test_status_indicator_custom_message(
     # Hide indicator
     chat_prompt.hide_status_indicator()  # Use chat_prompt from fixture
     assert not chat_prompt.loading_widget.isVisible()
+
+
+def test_set_conversation_widgets_updates_html(chat_prompt, qtbot):
+    """Test that _set_conversation_widgets updates the ConversationWidget HTML view."""
+    messages = [
+        {"sender": "User", "text": "Hello!", "timestamp": "2025-05-31 10:00"},
+        {
+            "sender": "Assistant",
+            "text": "Hi!",
+            "timestamp": "2025-05-31 10:01",
+        },
+    ]
+    # Patch ConversationWidget.set_conversation to track calls
+    with patch.object(
+        chat_prompt.conversation_html_widget, "set_conversation"
+    ) as mock_set_conv:
+        chat_prompt._set_conversation_widgets(messages)
+        mock_set_conv.assert_called_once_with(messages)
+
+
+def test_clear_conversation_widgets_clears_html(chat_prompt, qtbot):
+    """Test that _clear_conversation_widgets clears the ConversationWidget HTML view."""
+    with patch.object(
+        chat_prompt.conversation_html_widget, "set_conversation"
+    ) as mock_set_conv:
+        chat_prompt._clear_conversation_widgets()
+        mock_set_conv.assert_called_once_with([])

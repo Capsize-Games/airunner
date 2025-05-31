@@ -151,6 +151,8 @@ class Ui_chat_prompt(object):
         self.gridLayout_2.addWidget(self.conversation, 0, 0, 1, 1)
 
         self.chat_container.setWidget(self.scrollAreaWidgetContents)
+        self.chat_container_layout = QVBoxLayout(self.chat_container)
+        self.chat_container_layout.setObjectName(u"chat_container_layout")
 
         self.verticalLayout.addWidget(self.chat_container)
 

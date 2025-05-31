@@ -302,6 +302,7 @@
                </item>
               </layout>
              </widget>
+             <layout class="QVBoxLayout" name="chat_container_layout"/>
             </widget>
            </item>
           </layout>
