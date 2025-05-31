@@ -20,7 +20,7 @@ def activate(
     darklock_os_whitelisted_filenames: List = None,
     darklock_os_whitelisted_modules: List = None,  # Changed from darklock_os_whitelisted_imports
     darklock_os_whitelisted_directories: List = None,
-    darklock_os_allow_network: bool = False,  # Added allow_network
+    darklock_os_allow_network: bool = False,
 ):
     nullscream_blacklist = nullscream_blacklist or [
         "huggingface_hub.commands",

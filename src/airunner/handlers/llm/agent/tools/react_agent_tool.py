@@ -1,16 +1,76 @@
 from typing import Any
-from llama_index.core.tools.types import ToolOutput
+from llama_index.core.tools.types import ToolOutput, ToolMetadata
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 from airunner.handlers.llm.agent.chat_engine import ReactAgentEngine
 from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
+from airunner.handlers.llm.agent.engines.base_conversation_engine import (
+    BaseConversationEngine,
+)
+
+import logging
 
 
-class ReActAgentTool(ChatEngineTool):
+class ReActAgentTool(BaseConversationEngine):
     """ReActAgentTool.
 
     A tool for determining which actions to take.
     """
+
+    def __init__(
+        self,
+        chat_engine,
+        metadata: ToolMetadata = None,
+        resolve_input_errors: bool = True,
+        agent=None,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(agent)
+        self.chat_engine = chat_engine
+        self._metadata = metadata
+        self._resolve_input_errors = resolve_input_errors
+        self.agent = agent
+        self._logger = kwargs.pop("logger", None)
+        if self._logger is None:
+            from airunner.utils.application.get_logger import get_logger
+            from airunner.settings import AIRUNNER_LOG_LEVEL
+
+            self._logger = get_logger(
+                self.__class__.__name__, AIRUNNER_LOG_LEVEL
+            )
+
+    @property
+    def logger(self):
+        return self._logger
+
+    @property
+    def metadata(self) -> ToolMetadata:
+        return self._metadata
+
+    @classmethod
+    def from_defaults(
+        cls,
+        chat_engine,
+        name: str = None,
+        description: str = None,
+        return_direct: bool = False,
+        resolve_input_errors: bool = True,
+        agent=None,
+    ):
+        name = name or "react_agent_tool"
+        description = (
+            description or """Useful for determining which tool to use."""
+        )
+        metadata = ToolMetadata(
+            name=name, description=description, return_direct=return_direct
+        )
+        return cls(
+            chat_engine=chat_engine,
+            metadata=metadata,
+            resolve_input_errors=resolve_input_errors,
+            agent=agent,
+        )
 
     @classmethod
     def from_tools(cls, *args, **kwargs) -> "ReActAgentTool":
@@ -19,6 +79,25 @@ class ReActAgentTool(ChatEngineTool):
         chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
+        logging.getLogger(__name__).info(
+            f"[ReActAgentTool.from_tools] args: {args}, kwargs keys: {list(kwargs.keys())}"
+        )
+        if hasattr(chat_engine, "tools"):
+            tool_names = [
+                getattr(
+                    t,
+                    "name",
+                    getattr(
+                        getattr(t, "metadata", None),
+                        "name",
+                        t.__class__.__name__,
+                    ),
+                )
+                for t in getattr(chat_engine, "tools", [])
+            ]
+            logging.getLogger(__name__).info(
+                f"[ReActAgentTool.from_tools] Registered tool names: {tool_names}"
+            )
         return cls.from_defaults(
             chat_engine=chat_engine,
             name=name,
@@ -27,17 +106,53 @@ class ReActAgentTool(ChatEngineTool):
             agent=agent,
         )
 
+    def __call__(self, *args, **kwargs):
+        return self.call(*args, **kwargs)
+
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
+        # Use agent's chat_memory if chat_history not provided
+        if (
+            chat_history is None
+            and self.agent is not None
+            and hasattr(self.agent, "chat_memory")
+        ):
+            chat_history = (
+                self.agent.chat_memory.get() if self.agent.chat_memory else []
+            )
+        if chat_history is None:
+            chat_history = []
         tool_choice = kwargs.get("tool_choice", None)
+        logging.getLogger(__name__).info(
+            f"[ReActAgentTool.call] tool_choice: {tool_choice}, query_str: {query_str}"
+        )
+        if hasattr(self.chat_engine, "tools"):
+            tool_names = [
+                getattr(
+                    t,
+                    "name",
+                    getattr(
+                        getattr(t, "metadata", None),
+                        "name",
+                        t.__class__.__name__,
+                    ),
+                )
+                for t in getattr(self.chat_engine, "tools", [])
+            ]
+            logging.getLogger(__name__).info(
+                f"[ReActAgentTool.call] Available tool names: {tool_names}"
+            )
         try:
             streaming_response = self.chat_engine.stream_chat(
                 query_str,
                 chat_history=chat_history if chat_history else [],
                 tool_choice=tool_choice,
             )
-        except Exception:
+        except Exception as e:
+            logging.getLogger(__name__).error(
+                f"[ReActAgentTool.call] Exception: {e}"
+            )
             # Return empty ToolOutput on error
             return ToolOutput(
                 content="",
@@ -73,3 +188,18 @@ class ReActAgentTool(ChatEngineTool):
             raw_input={"input": query_str},
             raw_output=response,
         )
+
+    def _get_query_str(self, *args: Any, **kwargs: Any) -> str:
+        """Extract query string from arguments - same pattern as ChatEngineTool."""
+        if args is not None and len(args) > 0:
+            query_str = str(args[0])
+        elif kwargs is not None and "input" in kwargs:
+            # NOTE: this assumes our default function schema of `input`
+            query_str = kwargs["input"]
+        elif kwargs is not None and self._resolve_input_errors:
+            query_str = str(kwargs)
+        else:
+            raise ValueError(
+                "Cannot call ReActAgentTool without specifying `input` parameter."
+            )
+        return query_str

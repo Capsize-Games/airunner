@@ -23,7 +23,7 @@ class DummyChatbot:
     use_system_instructions = False
     use_guardrails = False
     use_backstory = False
-    use_weather_prompt = False  # Added for weather mixin
+    use_weather_prompt = False
     system_instructions = ""
     guardrails_prompt = ""
     backstory = ""

@@ -214,8 +214,6 @@ class Gemma3Manager(LLMModelManager):
                 generation, skip_special_tokens=True
             )
 
-            print(decoded)
-
             # Create response object
             response = AgentChatResponse(response=decoded)
 

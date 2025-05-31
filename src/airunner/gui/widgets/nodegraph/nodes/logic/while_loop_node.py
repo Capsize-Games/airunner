@@ -48,11 +48,8 @@ class WhileLoopNode(BaseLogicNode):
                 condition = False
 
         if condition:
-            print(f"{self.name()}: Condition is True, continuing loop")
-
             # Trigger the loop body output
             return {"_exec_triggered": self.LOOP_BODY_PORT_NAME}
         else:
             # If condition is false, trigger completed
-            print(f"{self.name()}: Condition is False, completing loop")
             return {"_exec_triggered": self.COMPLETED_PORT_NAME}
