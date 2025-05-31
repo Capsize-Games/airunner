@@ -1,0 +1,1 @@
+Legacy tests for per-message chat widgets and streaming logic were removed on 2025-05-31 as part of the HTML chat refactor. See README.md for details.

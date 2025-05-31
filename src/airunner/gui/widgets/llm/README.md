@@ -23,6 +23,13 @@ This module provides the chat prompt widget for the AI Runner LLM interface, inc
 - `templates/`: Qt Designer `.ui` files for all widgets.
 - `tests/`: Pytest-based tests for widget logic and UI behavior.
 
+## Refactor: Single Conversation Widget
+
+- As of 2025-05-31, the chat prompt now uses a single ConversationWidget (HTML-based, QWebEngineView) for all message display.
+- The old per-message MessageWidget logic is deprecated and will be removed.
+- See `user/conversation_widget.py` for implementation details.
+- All conversation rendering is now handled by Jinja2 HTML templates for performance and maintainability.
+
 ## Usage
 
 - The mood/summary system is always enabled by default. No user action is required.

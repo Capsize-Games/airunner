@@ -1,0 +1,162 @@
+<!--
+conversation.html: Jinja2 template for ConversationWidget
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            background: #111;
+            color: #fff;
+            box-sizing: border-box;
+            overflow-x: hidden !important;
+            width: 100vw;
+            max-width: 100vw;
+        }
+        #conversation-container {
+            min-height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden !important;
+            padding: 24px 0 24px 0;
+            box-sizing: border-box;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            width: 100vw;
+            max-width: 100vw;
+        }
+        .message {
+            margin: 0 auto;
+            padding: 16px 22px;
+            border-radius: 14px;
+            min-width: 0;
+            max-width: 98vw;
+            word-break: break-word;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+            display: flex;
+            flex-direction: column;
+            background: #232323;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .message.user {
+            background: linear-gradient(90deg, #2d2d2d 80%, #3a3a3a 100%);
+            align-self: flex-end;
+            margin-left: 20%;
+            margin-right: 0;
+            width: 80%;
+            box-shadow: 0 2px 16px rgba(60,60,60,0.12);
+        }
+        .message.assistant {
+            background: linear-gradient(90deg, #181818 80%, #232323 100%);
+            align-self: flex-start;
+            margin-right: 20%;
+            margin-left: 0;
+            width: 80%;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.14);
+        }
+        #conversation-container > .message:nth-child(even) {
+            filter: brightness(1.08);
+        }
+        .message .sender {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #bdbdbd;
+            font-size: 1em;
+        }
+        pre, code {
+            color: #e0e0e0 !important;
+            border-radius: 6px;
+            font-size: 1em;
+            line-height: 1.5;
+            padding: 8px 12px;
+            overflow-x: auto;
+            max-width: 100%;
+            box-sizing: border-box;
+            font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', 'monospace';
+        }
+        pre {
+            margin: 8px 0 0 0;
+            min-height: 32px;
+            white-space: pre;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+        code {
+            padding: 2px 6px;
+            white-space: pre-wrap;
+        }
+        .timestamp {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 4px;
+            text-align: right;
+        }
+        .sender {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        /* Hide horizontal scrollbar for all browsers */
+        #conversation-container::-webkit-scrollbar {
+            height: 0 !important;
+            width: 8px;
+        }
+        #conversation-container {
+            scrollbar-width: thin;
+            scrollbar-color: #444 #222;
+        }
+        /* Prevent horizontal scroll on body and html */
+        html, body, #conversation-container, .message {
+            overflow-x: hidden !important;
+        }
+    </style>
+    <script>
+        // Smooth scroll to bottom when new content is added
+        function smoothScrollToBottom() {
+            const container = document.getElementById('conversation-container');
+            if (container) {
+                container.scrollTo({
+                    top: container.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        }
+        // Observe for new messages and auto-scroll
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('conversation-container');
+            if (container) {
+                // Initial scroll
+                smoothScrollToBottom();
+                // Mutation observer for streaming updates
+                const observer = new MutationObserver((mutations) => {
+                    for (const mutation of mutations) {
+                        if (mutation.addedNodes.length > 0) {
+                            smoothScrollToBottom();
+                        }
+                    }
+                });
+                observer.observe(container, { childList: true });
+            }
+        });
+    </script>
+</head>
+<body>
+<div id="conversation-container">
+    {% for msg in messages %}
+        <div class="message {{ 'assistant' if msg.is_bot else 'user' }}">
+            <div class="sender">{{ msg.name or msg.sender }}</div>
+            {% set font_size = msg.font_size %}
+            {% set static_base_path = msg.static_base_path %}
+            {% set base_href = msg.base_href %}
+            {% set content = msg.content %}
+            {% include msg.widget_template %}
+        </div>
+    {% endfor %}
+</div>
+</body>
+</html>

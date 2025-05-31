@@ -20,3 +20,17 @@ This directory contains static assets (HTML, CSS, JS) for content widgets used i
 
 - Keep logic and presentation separated: no inline JS or CSS in Python; use static files.
 - Update this README when adding new static assets or templates.
+
+## Jinja2 Template Integration (2025-05-31)
+
+- Each message in the ConversationWidget is rendered using a Jinja2 template from `html/` based on its content type (plain, latex, mixed, etc).
+- The backend determines the correct template and passes its path as `widget_template` in each message dict.
+- The main conversation template includes the correct widget template for each message:
+
+```jinja2
+{% for msg in messages %}
+  {% include msg.widget_template %}
+{% endfor %}
+```
+
+- To add a new content type, add a new template to `html/` and update the backend mapping.
