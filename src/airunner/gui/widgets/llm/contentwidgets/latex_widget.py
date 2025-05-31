@@ -7,6 +7,9 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from airunner.gui.widgets.llm.contentwidgets.base_content_widget import (
     BaseContentWidget,
 )
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+import os
+from airunner.settings import CONTENT_WIDGETS_BASE_PATH
 
 
 class LatexWidget(BaseContentWidget):
@@ -30,25 +33,30 @@ class LatexWidget(BaseContentWidget):
         self.font_family = "Arial"
         self.font_size = 14
 
+        # Jinja2 template setup
+        static_html_dir = os.path.join(CONTENT_WIDGETS_BASE_PATH, "html")
+        self._jinja_env = Environment(
+            loader=FileSystemLoader(static_html_dir),
+            autoescape=select_autoescape(["html", "xml"]),
+        )
+        self._template = self._jinja_env.get_template(
+            "latex_widget.jinja2.html"
+        )
+
     def setContent(self, content):
         super().setContent(content)
-
-        # Generate HTML with LaTeX content and MathJax rendering
-        html_content = self._wrap_latex_html(content)
-        self.webView.setHtml(html_content)
-
-        # Run JavaScript to adjust the size after rendering
-        self.webView.page().runJavaScript(
-            """
-            document.body.style.overflow = 'hidden';
-            document.documentElement.style.overflow = 'hidden';
-            let height = document.body.scrollHeight;
-            window.scrollTo(0,0);
-            if (height > 0) {
-                window.qtWidgetResize && window.qtWidgetResize(height);
-            }
-            """
+        static_html_dir = os.path.join(CONTENT_WIDGETS_BASE_PATH, "html")
+        static_base_path = "http://127.0.0.1:8765/content_widgets"
+        base_href = static_base_path + "/"
+        html_content = self._template.render(
+            content=content,
+            mathjax_url=self.mathjax_url,
+            font_family=self.font_family,
+            font_size=self.font_size,
+            static_base_path=static_base_path,
+            base_href=base_href,
         )
+        self.webView.setHtml(html_content)
         self.sizeChanged.emit()
 
     def setFont(self, font):
@@ -57,39 +65,6 @@ class LatexWidget(BaseContentWidget):
         if self._content:
             # Re-render with new font settings
             self.setContent(self._content)
-
-    def _wrap_latex_html(self, latex_content):
-        return f"""
-        <html style='height:auto;width:100%;background:transparent;'>
-        <head>
-        <script type='text/javascript'>
-          window.MathJax = {{
-            tex: {{inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]}},
-            options: {{ skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }},
-            svg: {{ fontCache: 'global' }}
-          }};
-        </script>
-        <script type='text/javascript' src='{self.mathjax_url}'></script>
-        <style>
-        html, body {{
-            background: transparent !important;
-            color: #fff !important;
-            font-family: '{self.font_family}', 'Arial', 'Liberation Sans', sans-serif !important;
-            font-size: {self.font_size}px;
-            margin: 0;
-            padding: 0;
-            height: auto;
-            width: 100%;
-            box-sizing: border-box;
-            overflow: visible !important;
-        }}
-        </style>
-        </head>
-        <body style='background:transparent !important;height:auto;width:100%;margin:0;padding:0;overflow:visible !important;'>
-          {latex_content}
-        </body>
-        </html>
-        """
 
     def sizeHint(self):
         # A reasonable default size for LaTeX content
