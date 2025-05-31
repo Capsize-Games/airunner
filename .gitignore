@@ -51,3 +51,31 @@ docs
 .github/instructions
 .github/prompts
 .github/*.md
+
+# Web content extraction cache (dynamic location, but ignore any instance)
+.cache/
+.cache/*
+.cache/**
+.cache
+.cache.*
+.cache/**
+.cache/.webcache/
+.cache/.webcache/*
+.cache/.webcache/**
+.cache/.webcache
+src/airunner/tools/.webcache/
+src/airunner/tools/.webcache/*
+src/airunner/tools/.webcache/**
+.cache
+.cache/**
+.cache/.webcache
+.cache/.webcache/**
+
+# AI Runner dynamic cache (new location)
+cache/
+cache/*
+cache/**
+cache/.webcache/
+cache/.webcache/*
+cache/.webcache/**
+cache/.webcache

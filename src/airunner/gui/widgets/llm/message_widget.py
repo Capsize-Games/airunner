@@ -1,5 +1,11 @@
 from PySide6.QtGui import QFontDatabase, QFont
-from PySide6.QtWidgets import QTextEdit, QApplication, QWidget, QVBoxLayout
+from PySide6.QtWidgets import (
+    QTextEdit,
+    QApplication,
+    QWidget,
+    QVBoxLayout,
+    QSizePolicy,
+)
 from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer
 from PySide6.QtCore import Signal, QPropertyAnimation, QEasingCurve
 
@@ -108,12 +114,11 @@ class MessageWidget(BaseWidget):
         if self.is_bot:
             self.ui.message_container.setProperty("class", "alternate")
 
-        # Set size policies for better expansion
-        from PySide6.QtWidgets import QSizePolicy
-
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
         self.ui.content_container.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Minimum
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
 
         # Always keep buttons in the layout but make them transparent when not visible
