@@ -1,0 +1,28 @@
+<!-- latex_widget.jinja2.html
+   - Jinja2 template for LaTeX content widget.
+   - Loads MathJax and content_widget.js from static folders.
+   - Only LaTeX content, minimal HTML, no code highlighting.
+-->
+<html>
+  <head>
+    {% if base_href %}
+    <base href="{{ base_href }}" />
+    {% endif %}
+    <script type="text/javascript">
+      window.MathJax = {
+        tex: {inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]},
+        options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] },
+        svg: { fontCache: 'global' }
+      };
+    </script>
+    <script type="text/javascript" src="{{ mathjax_url }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ static_base_path }}/css/content_widget.css">
+    <script type='text/javascript' src='{{ static_base_path }}/js/content_widget.js'></script>
+    <style>
+      body { font-size: {{ font_size|int }}px; }
+    </style>
+  </head>
+  <body>
+    {{ content | safe }}
+  </body>
+</html>

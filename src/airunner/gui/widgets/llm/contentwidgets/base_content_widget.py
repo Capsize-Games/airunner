@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSize, Signal
 import os
+from airunner.settings import MATHJAX_VERSION
 
 
 class BaseContentWidget(QWidget):
@@ -29,7 +30,7 @@ class BaseContentWidget(QWidget):
         return (
             ("https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js")
             if use_cdn
-            else "http://127.0.0.1:8765/tex-mml-chtml.js"
+            else f"http://127.0.0.1:8765/mathjax/MathJax-{MATHJAX_VERSION}/es5/tex-mml-chtml.js"
         )
 
     def setContent(self, content):

@@ -566,8 +566,7 @@ class SettingsMixin:
                     exc_info=True,
                 )
                 raise RuntimeError(
-                    f"Fatal error in settings: Could not instantiate default for {model_class_.__name__} "
-                    f"after initial load failed. Original error: {e}"
+                    f"Fatal error in settings: Could not instantiate default for {model_class_.__name__} after initial load failed. Original error: {e}"
                 ) from e_create_fallback
 
         return settings_instance
@@ -839,9 +838,6 @@ class SettingsMixin:
                     eager_load=[
                         "target_files",
                         "target_directories",
-                        "voice_settings",
-                        # We'll handle this special case in the base_manager.py
-                        "voice_settings.settings",
                     ],
                 )
                 if chatbot is None:

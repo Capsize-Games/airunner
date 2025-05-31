@@ -69,19 +69,16 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         self._ensure_mathjax()
 
-        # Only start HTTP server if MathJax is present
-        mathjax_dir = os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__),
-                "static",
-                "mathjax",
-                f"MathJax-{MATHJAX_VERSION}",
-                "es5",
-            )
+        # Start HTTP server for static assets (MathJax and content widgets)
+        static_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "static")
+        )
+        mathjax_dir = os.path.join(
+            static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
         )
         if self.initialize_gui and os.path.isdir(mathjax_dir):
             self.http_server_thread = LocalHttpServerThread(
-                directory=mathjax_dir, port=8765
+                directory=static_dir, port=8765
             )
             self.http_server_thread.start()
             self.start()

@@ -1220,12 +1220,6 @@ class BaseAgent(
                 kwargs["chat_history"] = (
                     self.chat_memory.get() if self.chat_memory else []
                 )
-                # Debug: Print the conversation history for inspection
-            chat_history = kwargs.get("chat_history", [])
-            for i, msg in enumerate(chat_history):
-                self.logger.info(
-                    f"  [{i}] {msg.role}: {getattr(msg, 'content', str(msg))}"
-                )
             return self.react_tool_agent.call(**kwargs)
 
         def generate_image_handler(**kwargs: Any) -> Any:

@@ -3,7 +3,6 @@ from llama_index.core.tools.types import ToolOutput, ToolMetadata
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 from airunner.handlers.llm.agent.chat_engine import ReactAgentEngine
-from airunner.handlers.llm.agent.tools.chat_engine_tool import ChatEngineTool
 from airunner.handlers.llm.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
 )
@@ -83,6 +82,7 @@ class ReActAgentTool(BaseConversationEngine):
         do_handle_response = kwargs.pop(
             "do_handle_response", False
         )  # Default to False for orchestrator
+        kwargs["verbose"] = False
         chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
@@ -132,9 +132,6 @@ class ReActAgentTool(BaseConversationEngine):
         if chat_history is None:
             chat_history = []
         tool_choice = kwargs.get("tool_choice", None)
-        logging.getLogger(__name__).info(
-            f"[ReActAgentTool.call] tool_choice: {tool_choice}, query_str: {query_str}"
-        )
         if hasattr(self.chat_engine, "tools"):
             tool_names = [
                 getattr(
@@ -148,9 +145,6 @@ class ReActAgentTool(BaseConversationEngine):
                 )
                 for t in getattr(self.chat_engine, "tools", [])
             ]
-            logging.getLogger(__name__).info(
-                f"[ReActAgentTool.call] Available tool names: {tool_names}"
-            )
         try:
             streaming_response = self.chat_engine.stream_chat(
                 query_str,

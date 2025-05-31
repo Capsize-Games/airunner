@@ -23,6 +23,7 @@ from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.handlers.llm.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
 )
+from airunner.tools.web_content_extractor import WebContentExtractor
 
 
 class SearchEngineTool(BaseConversationEngine):
@@ -199,9 +200,7 @@ class SearchEngineTool(BaseConversationEngine):
             if not self._do_interrupt:
                 category = kwargs.get("category", "all")
                 try:
-                    self.logger.info(
-                        f"SearchEngineTool: Performing search for query: '{query_str}'"
-                    )
+                    self.logger.info(f"SearchEngineTool: Performing search")
                     search_results = (
                         AggregatedSearchTool.aggregated_search_sync(
                             query_str, category
@@ -231,22 +230,38 @@ class SearchEngineTool(BaseConversationEngine):
                         exc_info=True,
                     )
 
-        # --- Only ONE summary should be generated for all combined results ---
-        if not consolidated_results:
+        # --- NEW: Fetch and clean main content for top N URLs ---
+        top_n = kwargs.get("top_n", 3)
+        url_items = [
+            item
+            for item in consolidated_results
+            if item.get("link") and item.get("link") != "#"
+        ]
+        url_items = url_items[:top_n]
+        clean_documents = []
+        for item in url_items:
+            url = item["link"]
+            try:
+                text = WebContentExtractor.fetch_and_extract(url)
+                if text:
+                    clean_documents.append(text)
+                else:
+                    self.logger.warning(f"No main content extracted for {url}")
+            except Exception as e:
+                self.logger.error(f"Error extracting content for {url}: {e}")
+        if not clean_documents:
             response = "I couldn't find relevant information for your query."
         else:
-            # Step 2: Format combined search results (use consolidated_results)
-            formatted_results = self._format_search_results(
-                {"Consolidated": consolidated_results}
-            )
-            # Step 3: Synthesize response using LLM (single prompt for all queries)
+            # Step 2: Synthesize response using LLM (single prompt for all queries)
             synthesis_prompt = (
                 f"User's original queries: {queries}\n\n"
-                f"Relevant information found (deduplicated, do not repeat information):\n{formatted_results}\n\n"
-                "Please provide a comprehensive answer to the user's original queries based on this information. Avoid repeating the same facts or stories."
+                f"Relevant information (cleaned from web pages):\n\n"
+                + "\n\n".join(clean_documents)
+                + "\n\nPlease provide a comprehensive answer to the user's original queries based on this information. Avoid repeating the same facts or stories."
             )
+            print("synthesis_prompt", synthesis_prompt)
             self.logger.info(
-                "SearchEngineTool: Synthesizing response from combined search results"
+                "SearchEngineTool: Synthesizing response from cleaned web content"
             )
             synthesis_engine = self._get_synthesis_engine()
             # Pass chat_history to the synthesis engine for context
