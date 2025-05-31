@@ -88,14 +88,11 @@ class MixedContentWidget(BaseContentWidget):
         <script type='text/javascript' src='{self.mathjax_url}'></script>
         <style>
         html {{
-            background: rgba(255,0,0,0.05) !important;
             width: 100%;
             height: auto;
             box-sizing: border-box;
-            border: 4px solid red !important;
         }}
         body {{
-            background: rgba(0,0,255,0.05) !important;
             color: #fff !important;
             font-family: '{self.font_family}', 'Arial', 'Liberation Sans', sans-serif !important;
             font-size: {self.font_size}px;
