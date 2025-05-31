@@ -1,5 +1,12 @@
 [![AI Runner](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
+
+<img src="https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa" alt="AI Runner Screenshot" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002;">
+
+<video src="https://github.com/user-attachments/assets/2d5b41ff-a0cd-4239-945b-d9e7a1bc5644" controls width="100%" style="border-radius: 8px; box-shadow: 0 2px 8px #0002;"></video>
+
+[✉️ Get notified when the packaged version releases](https://airunner.org/)
+
 <table>
   <tr>
     <td valign="top" colspan="4">
@@ -33,9 +40,6 @@
 </tr>
 
 </table>
-<table>
-  <tr>
-    <td valign="top">
 
 | ✨ Key Features |
 |:--------------------------------|
@@ -67,20 +71,6 @@
 
 [🫰 Request language support](https://github.com/Capsize-Games/airunner/issues/new?template=language_support.md)
 ---
-
-</td>
-<td valign="top">
-
-<img src="https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa" alt="AI Runner Screenshot" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002;">
-
-<video src="https://github.com/user-attachments/assets/2d5b41ff-a0cd-4239-945b-d9e7a1bc5644" controls width="100%" style="border-radius: 8px; box-shadow: 0 2px 8px #0002;"></video>
-
-[✉️ Get notified when the packaged version releases](https://airunner.org/)
----
-
-</td>
-</tr>
-</table>
 
 ## 💾 Installation Quick Start
 
