@@ -6,7 +6,6 @@ import pytest
 from airunner.handlers.llm.storage.chat_store.database import DatabaseChatStore
 from airunner.data.models import Conversation
 from airunner.data.session_manager import session_scope
-from llama_index.core.llms import ChatMessage
 
 
 @pytest.fixture(autouse=True)

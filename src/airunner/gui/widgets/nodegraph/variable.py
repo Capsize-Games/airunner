@@ -76,7 +76,7 @@ class Variable:
         var_type = get_variable_type_from_string(var_type_str)
         if not var_type:
             print(
-                f"Warning: Unknown variable type '{var_type_str}' encountered during deserialization."
+                f"Warning: Unknown variable type '{var_type}' encountered during deserialization."
             )
             # Decide how to handle: return None, use a default type, or raise error
             return None  # Or fallback: var_type = VariableType.STRING

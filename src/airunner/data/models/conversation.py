@@ -166,14 +166,8 @@ class Conversation(BaseModel):
                 user = User.objects.first()
             if not user:
                 user_dc = User.objects.create(username="User")
-                from airunner.data.session_manager import session_scope
-
-                with session_scope() as session:
-                    orm_user = (
-                        session.query(User).filter_by(id=user_dc.id).first()
-                    )
-                    user_id = orm_user.id
-                    user_username = orm_user.username
+                user_id = user_dc.id
+                user_username = user_dc.username
             else:
                 user_id = user.id
                 user_username = user.username

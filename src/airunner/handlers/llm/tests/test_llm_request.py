@@ -136,7 +136,7 @@ class TestLLMRequest(unittest.TestCase):
         self.assertAlmostEqual(request.temperature, 0.8)
         self.assertEqual(
             request.top_k, mock_chatbot.top_k
-        )  # Fixed: This should match the mock value
+        )
         self.assertAlmostEqual(request.top_p, 0.95)
         self.assertEqual(request.use_cache, mock_chatbot.use_cache)
 
@@ -210,7 +210,6 @@ class TestLLMRequest(unittest.TestCase):
 
         # Setup for override_parameters False (should fallback to from_chatbot)
         mock_settings.override_parameters = False
-        # mock_settings.current_chatbot = 42  # Removed: no longer used
         mock_cb = MagicMock()
         mock_chatbot_class.objects.get.return_value = mock_cb
         mock_cb.do_sample = False

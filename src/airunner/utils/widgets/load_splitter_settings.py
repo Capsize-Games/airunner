@@ -1,6 +1,6 @@
 import os
 from typing import List
-from PySide6.QtCore import Qt  # ADDED IMPORT
+from PySide6.QtCore import Qt
 from airunner.utils.settings import get_qsettings
 
 

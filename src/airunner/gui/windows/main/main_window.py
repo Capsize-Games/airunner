@@ -317,28 +317,6 @@ class MainWindow(
     """
 
     @Slot()
-    def on_tray_icon_activated(self, reason: QSystemTrayIcon.ActivationReason):
-        """Handle tray icon activation events."""
-        print(f"Tray icon activated with reason: {reason}")
-
-        # For single left click or double click, toggle visibility
-        if (
-            reason is QSystemTrayIcon.ActivationReason.Trigger
-            or reason is QSystemTrayIcon.ActivationReason.DoubleClick
-        ):
-            print(f"Left click detected (reason: {reason})")
-            self.toggle_window_visibility()
-        elif reason == QSystemTrayIcon.ActivationReason.MiddleClick:
-            print("Middle click detected")
-        elif reason == QSystemTrayIcon.ActivationReason.Context:
-            print("Context menu requested")
-            # Update menu text before showing context menu
-            if self.isVisible():
-                self.toggle_visibility_action.setText("Hide Window")
-            else:
-                self.toggle_visibility_action.setText("Show Window")
-
-    @Slot()
     def on_actionQuit_triggered(self):
         self.handle_close()
 
@@ -894,7 +872,6 @@ class MainWindow(
 
     def handle_double_click(self):
         """Handle double-click on the tray icon."""
-        print("Double click detected")
         self.toggle_window_visibility()  # Use toggle instead of just showing
 
     @staticmethod
@@ -949,7 +926,6 @@ class MainWindow(
         active_index = 0
         tab = Tab.objects.filter_by(section="center", active=True)
         if tab:
-            print(tab)
             active_index = tab[0].index
 
         self.ui.center_tab_container.setCurrentIndex(active_index)

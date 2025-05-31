@@ -127,9 +127,6 @@ class ChooseModelsPage(BaseWizard):
 
     @Slot(bool)
     def controlnet_model_toggled(self, item, val: bool):
-        print(
-            f"DEBUG: controlnet_model_toggled called with item={item['name']}, val={val}"
-        )
         self.models_enabled[item["name"]] = val
 
         # Check if any stable diffusion model is still enabled
@@ -144,8 +141,5 @@ class ChooseModelsPage(BaseWizard):
 
         # Update the stable_diffusion flag based on whether any model is enabled
         self.models_enabled["stable_diffusion"] = any_enabled
-        print(
-            f"DEBUG: stable_diffusion flag is now: {self.models_enabled['stable_diffusion']}"
-        )
 
         self.update_total_size_label()
