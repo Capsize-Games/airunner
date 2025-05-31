@@ -24,7 +24,8 @@ from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.data.models.application_settings import ApplicationSettings
 from airunner.settings import (
     AIRUNNER_DISABLE_SETUP_WIZARD,
-    AIRUNNER_DISCORD_URL,  # Add this import
+    AIRUNNER_DISCORD_URL,
+    MATHJAX_VERSION,  # Add this import
 )
 from airunner.gui.widgets.llm.local_http_server import LocalHttpServerThread
 import os
@@ -72,10 +73,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
         mathjax_dir = os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
-                "..",
                 "static",
                 "mathjax",
-                "MathJax-3.2.2",
+                f"MathJax-{MATHJAX_VERSION}",
                 "es5",
             )
         )
@@ -372,13 +372,13 @@ class App(MediatorMixin, SettingsMixin, QObject):
     def _ensure_mathjax(self):
         # Only run setup if MathJax is not present
         mathjax_dir = os.path.join(
-            os.path.dirname(__file__),
-            "..",
+            os.path.dirname(os.path.abspath(__file__)),
             "static",
             "mathjax",
-            "MathJax-3.2.2",
+            f"MathJax-{MATHJAX_VERSION}",
             "es5",
         )
+        os.makedirs(mathjax_dir, exist_ok=True)
         entry = os.path.join(mathjax_dir, "tex-mml-chtml.js")
         if not os.path.exists(entry):
             print("MathJax not found, attempting to download and set up...")
