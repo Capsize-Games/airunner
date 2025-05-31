@@ -23,6 +23,7 @@ class ReActAgentTool(BaseConversationEngine):
         metadata: ToolMetadata = None,
         resolve_input_errors: bool = True,
         agent=None,
+        do_handle_response: bool = True,
         *args,
         **kwargs,
     ):
@@ -31,6 +32,7 @@ class ReActAgentTool(BaseConversationEngine):
         self._metadata = metadata
         self._resolve_input_errors = resolve_input_errors
         self.agent = agent
+        self.do_handle_response = do_handle_response
         self._logger = kwargs.pop("logger", None)
         if self._logger is None:
             from airunner.utils.application.get_logger import get_logger
@@ -57,6 +59,7 @@ class ReActAgentTool(BaseConversationEngine):
         return_direct: bool = False,
         resolve_input_errors: bool = True,
         agent=None,
+        do_handle_response: bool = True,
     ):
         name = name or "react_agent_tool"
         description = (
@@ -70,12 +73,16 @@ class ReActAgentTool(BaseConversationEngine):
             metadata=metadata,
             resolve_input_errors=resolve_input_errors,
             agent=agent,
+            do_handle_response=do_handle_response,
         )
 
     @classmethod
     def from_tools(cls, *args, **kwargs) -> "ReActAgentTool":
         agent = kwargs.pop("agent", None)
         return_direct = kwargs.pop("return_direct", False)
+        do_handle_response = kwargs.pop(
+            "do_handle_response", False
+        )  # Default to False for orchestrator
         chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
@@ -104,6 +111,7 @@ class ReActAgentTool(BaseConversationEngine):
             description=description,
             return_direct=return_direct,
             agent=agent,
+            do_handle_response=do_handle_response,
         )
 
     def __call__(self, *args, **kwargs):
@@ -170,7 +178,7 @@ class ReActAgentTool(BaseConversationEngine):
             if not token:
                 continue  # Skip empty tokens
             response += token
-            if self.agent is not None:
+            if self.agent is not None and self.do_handle_response:
                 # Pass the individual token, not the accumulated response
                 self.agent.handle_response(
                     token,
