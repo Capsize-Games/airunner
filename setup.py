@@ -58,11 +58,13 @@ extras_require = {
         "llama-index-vector-stores-faiss==0.4.0",
         "llama-index-embeddings-huggingface==0.5.4",
         "llama-index-llms-openrouter==0.3.1",
-        "llama-index-llms-ollama==0.5.4",
         "langchain-community==0.3.24",
         "EbookLib==0.19",
         "html2text==2024.2.26",
         "rake_nltk==1.0.6",
+    ],
+    "ollama": [
+        "llama-index-llms-ollama==0.5.4",
     ],
     "llm_weather": [  # LLM dependencies for weather (requires llm dependencies)
         "requests-cache==1.2.1",
@@ -118,6 +120,12 @@ extras_require = {
         "gruut[de,es,fr]==2.4.0",
         "networkx==3.4.2",
     ],
+    "search": [
+        "duckduckgo-search>=8.0.2 ",
+        "aiohttp>=3.11.0",
+        "google-api-python-client>=2.170.0",
+        "wikipedia>=1.4.0",
+    ],
 }
 
 extras_require["all"] = []
@@ -146,7 +154,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.10.1",
+    version="4.11.1",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),

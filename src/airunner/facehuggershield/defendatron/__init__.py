@@ -21,10 +21,10 @@ def activate(
     # darklock properites
     darklock_os_whitelisted_operations: list = None,
     darklock_os_whitelisted_filenames: list = None,
-    darklock_os_whitelisted_modules: list = None,  # Corrected from darklock_os_whitelisted_imports
-    # darklock_os_blacklisted_filenames: list = None, # Removed as it's not used by darklock.activate
+    darklock_os_whitelisted_modules: list = None,
+    # darklock_os_blacklisted_filenames: list = None,
     darklock_os_whitelisted_directories: list = None,
-    darklock_os_allow_network: bool = False,  # Added darklock_os_allow_network parameter
+    darklock_os_allow_network: bool = False,
     activate_shadowlogger: bool = False,
     activate_darklock: bool = False,
     activate_nullscream: bool = False,

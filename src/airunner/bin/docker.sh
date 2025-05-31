@@ -262,18 +262,18 @@ COMMON_ARGS="--rm \
              -w /app"
 
 # Ensure MathJax is present (for Docker)
-# Use the correct MathJax 3.2.2 release asset
-MATHJAX_URL="https://github.com/mathjax/MathJax/releases/download/3.2.2/mathjax-3.2.2.zip"
+# Use the correct MathJax release asset
+MATHJAX_URL="https://github.com/mathjax/MathJax/releases/download/$MATHJAX_VERSION/mathjax-$MATHJAX_VERSION.zip"
 
 # In main/entry logic, before starting the app:
-MATHJAX_DIR="/app/src/static/mathjax/MathJax-3.2.2/es5"
+MATHJAX_DIR="/app/src/airunner/static/mathjax/MathJax-{$MATHJAX_VERSION}/es5"
 MATHJAX_ENTRY="$MATHJAX_DIR/tex-mml-chtml.js"
 if [ ! -f "$MATHJAX_ENTRY" ]; then
     echo "MathJax not found, downloading..."
     mkdir -p "$MATHJAX_DIR"
     TMP_ZIP="/tmp/mathjax.zip"
     wget -O "$TMP_ZIP" "$MATHJAX_URL"
-    unzip -o "$TMP_ZIP" -d /app/src/static/mathjax/
+    unzip -o "$TMP_ZIP" -d /app/src/airunner/static/mathjax/
     rm "$TMP_ZIP"
 fi
 
