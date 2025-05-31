@@ -29,6 +29,9 @@ from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.workers.llm_response_worker import LLMResponseWorker
 from airunner.settings import AIRUNNER_ART_ENABLED
 from airunner.gui.widgets.llm.loading_widget import LoadingWidget
+from airunner.gui.widgets.llm.contentwidgets.conversation_widget import (
+    ConversationWidget,
+)
 
 
 class ChatPromptWidget(BaseWidget):
@@ -84,6 +87,18 @@ class ChatPromptWidget(BaseWidget):
         self.loading_widget = LoadingWidget(self)
         self.loading_widget.hide()
         self.ui.gridLayout_3.addWidget(self.loading_widget, 1, 0, 1, 1)
+        self._streamed_messages = []  # Buffer for live conversation messages
+        self.conversation_html_widget = ConversationWidget(self)
+        # # Remove old per-message widget logic
+        # self.ui.scrollAreaWidgetContents.hide()  # Hide old widget area
+        # self.ui.gridLayout_3.addWidget(
+        #     self.conversation_html_widget, 0, 0, 1, 1
+        # )
+        # self.ui.conversation = self.conversation_html_widget
+        self.ui.conversation.hide()
+        self.ui.chat_container.layout().addWidget(
+            self.conversation_html_widget
+        )
 
         # Hide the old conversation widget since we're using MessageWidget streaming now
         self.ui.conversation.hide()
@@ -293,22 +308,11 @@ class ChatPromptWidget(BaseWidget):
         }
 
     def _set_conversation_widgets(self, messages, skip_scroll: bool = False):
-        for i, message in enumerate(messages):
-            norm = self._normalize_message(message, i)
-            real_message_id = message.get("id", i)
-            self.add_message_to_conversation(
-                name=norm["name"],
-                message=norm["message"],
-                is_bot=norm["is_bot"],
-                first_message=True,
-                _profile_widget=True,
-                mood=norm.get("bot_mood"),
-                mood_emoji=norm.get("bot_mood_emoji"),
-                user_mood=norm.get("user_mood"),
-                _message_id=real_message_id,
-            )
-        if not skip_scroll:
-            QTimer.singleShot(100, self.scroll_to_bottom)
+        """Replace per-message widgets with a single HTML conversation view."""
+        self._streamed_messages = list(
+            messages
+        )  # Reset buffer to loaded messages
+        self.conversation_html_widget.set_conversation(self._streamed_messages)
 
     def on_hear_signal(self, data: Dict):
         transcription = data["transcription"]
@@ -324,10 +328,38 @@ class ChatPromptWidget(BaseWidget):
         if llm_response.node_id is not None:
             return
 
-        self.token_buffer.append(llm_response.message)
-
+        # Streamed message chunk
+        if not self._streamed_messages:
+            self._streamed_messages = []
         if llm_response.is_first_message:
             self.stop_progress_bar()
+            # Start a new bot message
+            self._streamed_messages.append(
+                {
+                    "name": self.chatbot.botname,
+                    "content": llm_response.message,
+                    "role": "assistant",
+                    "is_bot": True,
+                }
+            )
+        else:
+            # Append to last bot message
+            if (
+                self._streamed_messages
+                and self._streamed_messages[-1]["is_bot"]
+            ):
+                self._streamed_messages[-1]["content"] += llm_response.message
+            else:
+                # Fallback: start a new bot message
+                self._streamed_messages.append(
+                    {
+                        "name": self.chatbot.botname,
+                        "content": llm_response.message,
+                        "role": "assistant",
+                        "is_bot": True,
+                    }
+                )
+        self.conversation_html_widget.set_conversation(self._streamed_messages)
 
         if llm_response.is_end_of_message:
             self.enable_generate()
@@ -357,11 +389,23 @@ class ChatPromptWidget(BaseWidget):
         self.token_buffer.clear()
 
         if combined_message != "":
-            self.add_message_to_conversation(
-                name=self.chatbot.botname,
-                message=combined_message,
-                is_bot=True,
-                first_message=False,
+            # Append to last bot message in buffer
+            if (
+                self._streamed_messages
+                and self._streamed_messages[-1]["is_bot"]
+            ):
+                self._streamed_messages[-1]["content"] += combined_message
+            else:
+                self._streamed_messages.append(
+                    {
+                        "name": self.chatbot.botname,
+                        "content": combined_message,
+                        "role": "assistant",
+                        "is_bot": True,
+                    }
+                )
+            self.conversation_html_widget.set_conversation(
+                self._streamed_messages
             )
 
     def enable_generate(self):
@@ -384,17 +428,8 @@ class ChatPromptWidget(BaseWidget):
         self._clear_conversation_widgets(skip_update=skip_update)
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
-        layout = self.ui.scrollAreaWidgetContents.layout()
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.setParent(None)
-                widget.deleteLater()
-            else:
-                del item
-        if not skip_update:
-            layout.update()
+        """Clear the HTML conversation view."""
+        self.conversation_html_widget.set_conversation([])
 
     @Slot(bool)
     def action_button_clicked_send(self):
@@ -444,6 +479,15 @@ class ChatPromptWidget(BaseWidget):
         widget = self.add_message_to_conversation(
             name=self.user.username, message=self.prompt, is_bot=False
         )
+        self._streamed_messages.append(
+            {
+                "name": self.user.username,
+                "content": self.prompt,
+                "role": "user",
+                "is_bot": False,
+            }
+        )
+        self.conversation_html_widget.set_conversation(self._streamed_messages)
         if widget is not None:
             QTimer.singleShot(100, widget.set_content_size)
             QTimer.singleShot(100, self.scroll_to_bottom)
@@ -596,7 +640,6 @@ class ChatPromptWidget(BaseWidget):
                                 current_widget.update_message(message)
                                 QTimer.singleShot(0, self.scroll_to_bottom)
                             return
-                        break
 
         self.remove_spacer()
         widget = None
