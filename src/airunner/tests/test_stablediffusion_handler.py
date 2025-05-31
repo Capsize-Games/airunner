@@ -478,17 +478,8 @@ class TestStableDiffusionModelManager(unittest.TestCase):
 
             self.assertIsNone(self.handler.image_request)
             mock_load_scheduler.assert_called_with("TestScheduler")
-            # mock_load.assert_called_once()  # Removed: handle_generate_signal does not call load
             mock_clear_cached.assert_called_once()
-            # mock_swap_pipeline.assert_called_once()  # Removed: handle_generate_signal does not call _swap_pipeline
             mock_generate.assert_called_once()
-            # mock_emit.assert_called_with(  # Removed: handle_generate_signal does not call emit_signal
-            #     SignalCode.ENGINE_RESPONSE_WORKER_RESPONSE_SIGNAL,
-            #     {
-            #         "code": EngineResponseCode.IMAGE_GENERATED,
-            #         "message": "Generated image",
-            #     },
-            # )
             self.assertEqual(self.handler._current_state, HandlerState.READY)
             mock_clear_memory.assert_called_once()
             mock_handle_action.assert_called_once()

@@ -113,12 +113,10 @@ class SetupWizardWindow(
         return super(SetupWizardWindow, self).nextId()
 
     def accept(self):
-        print("SetupWizardWindow.accept() called")
         self.canceled = False
         super().accept()
 
     @Slot()
     def cancel(self):
-        print("SetupWizardWindow.cancel() called")
         self.canceled = True
         super().reject()

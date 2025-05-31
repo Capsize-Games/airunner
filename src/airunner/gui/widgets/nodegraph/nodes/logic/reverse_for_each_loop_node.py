@@ -55,10 +55,6 @@ class ReverseForEachLoopNode(BaseLogicNode):
             index = len(array) - 1
             element = array[index]
 
-            print(
-                f"{self.name()}: Processing element {element} at index {index} (in reverse)"
-            )
-
             # Return the current element and index
             return {
                 "Array Element": element,

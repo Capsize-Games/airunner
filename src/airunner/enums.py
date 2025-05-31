@@ -335,6 +335,7 @@ class LLMActionType(Enum):
     )
     GET_WEATHER = "get_weather"
     STORE_DATA = "store_data"
+    SEARCH = "search"
 
 
 class CanvasToolName(Enum):

@@ -400,9 +400,41 @@ class RAGMixin:
         self.logger.debug("Loading index from documents...")
         start_time = time.time()
         try:
+            # Get documents with error handling
+            documents = []
+            try:
+                documents = self.documents
+                self.logger.debug(
+                    f"Retrieved {len(documents)} documents for indexing"
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Error getting documents for indexing: {str(e)}"
+                )
+                # Try to get documents without conversation documents
+                try:
+                    documents = (
+                        self.document_reader.load_data()
+                        if self.document_reader
+                        else []
+                    )
+                    documents += self.news_articles
+                    self.logger.debug(
+                        f"Retrieved {len(documents)} documents without conversation documents"
+                    )
+                except Exception as e2:
+                    self.logger.error(
+                        f"Error getting fallback documents: {str(e2)}"
+                    )
+                    documents = []
+
+            if not documents:
+                self.logger.warning("No documents available for indexing")
+                return
+
             # Batch process documents for better performance
             self.__index = RAKEKeywordTableIndex.from_documents(
-                self.documents,
+                documents,
                 llm=self.llm,
                 show_progress=True,  # Show progress for better visibility during lengthy operations
             )
@@ -412,6 +444,8 @@ class RAGMixin:
             )
         except TypeError as e:
             self.logger.error(f"Error loading index: {str(e)}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error loading index: {str(e)}")
 
     def _save_index_to_disc(self):
         """Save index to disc with performance logging."""
@@ -579,35 +613,86 @@ class RAGMixin:
             conversations = conversations[:-1]
         return conversations
 
+    def _extract_message_text(self, message):
+        # Helper to robustly extract text from a message dict or any object
+        try:
+            if isinstance(message, dict):
+                blocks = message.get("blocks")
+                if (
+                    isinstance(blocks, list)
+                    and len(blocks) > 0
+                    and blocks[0] is not None
+                    and isinstance(blocks[0], dict)
+                    and "text" in blocks[0]
+                    and blocks[0]["text"] is not None
+                ):
+                    return blocks[0]["text"]
+                if "text" in message and message["text"] is not None:
+                    return message["text"]
+            return str(message)
+        except Exception as e:
+            if hasattr(self, "logger"):
+                self.logger.error(
+                    f"Error extracting message text: {e}; message={message}"
+                )
+            return str(message)
+
     @property
     def conversation_documents(self) -> List[Document]:
         conversation_documents = []
-        conversations = Conversation.objects.filter(
-            (Conversation.status != "indexed") | (Conversation.status is None)
-        )
-        total_conversations = len(conversations)
-        if total_conversations == 1:
-            conversations = []
-        elif total_conversations > 1:
-            conversations = conversations[:-1]
-        for conversation in conversations:
-            messages = conversation.value or []
-            for message_id, message in enumerate(messages):
-                username = (
-                    conversation.user_name
-                    if message["role"] == "user"
-                    else conversation.chatbot_name
-                )
-                conversation_documents.append(
-                    Document(
-                        text=f'{message["role"]}: "{message["blocks"][0]["text"]}"',
-                        metadata={
-                            "id": str(conversation.id) + "_" + str(message_id),
-                            "speaker": username,
-                            "role": message["role"],
-                        },
+        try:
+            conversations = Conversation.objects.filter(
+                (Conversation.status != "indexed")
+                | (Conversation.status is None)
+            )
+            total_conversations = len(conversations)
+            if total_conversations == 1:
+                conversations = []
+            elif total_conversations > 1:
+                conversations = conversations[:-1]
+
+            for conversation in conversations:
+                try:
+                    messages = conversation.value or []
+                    for message_id, message in enumerate(messages):
+                        try:
+                            username = (
+                                conversation.user_name
+                                if isinstance(message, dict)
+                                and message.get("role") == "user"
+                                else conversation.chatbot_name
+                            )
+                            msg_text = self._extract_message_text(message)
+                            conversation_documents.append(
+                                Document(
+                                    text=f'{message.get("role", "unknown") if isinstance(message, dict) else "unknown"}: "{msg_text}"',
+                                    metadata={
+                                        "id": str(conversation.id)
+                                        + "_"
+                                        + str(message_id),
+                                        "speaker": username,
+                                        "role": (
+                                            message.get("role", "unknown")
+                                            if isinstance(message, dict)
+                                            else "unknown"
+                                        ),
+                                    },
+                                )
+                            )
+                        except Exception as e:
+                            self.logger.error(
+                                f"Error processing message {message_id} in conversation {conversation.id}: {str(e)}"
+                            )
+                            continue
+                except Exception as e:
+                    self.logger.error(
+                        f"Error processing conversation {conversation.id}: {str(e)}"
                     )
-                )
+                    continue
+        except Exception as e:
+            self.logger.error(
+                f"Error getting conversation documents: {str(e)}"
+            )
         return conversation_documents
 
     @property
@@ -616,7 +701,13 @@ class RAGMixin:
             self.document_reader.load_data() if self.document_reader else []
         )
         if self.llm_settings.perform_conversation_rag:
-            documents += self.conversation_documents
+            try:
+                documents += self.conversation_documents
+            except Exception as e:
+                self.logger.error(
+                    f"Error getting conversation documents: {str(e)}"
+                )
+                # Continue without conversation documents
         documents += self.news_articles
         return documents
 
