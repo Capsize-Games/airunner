@@ -47,7 +47,8 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.CONVERSATION_DELETED: self.on_delete_conversation,
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_clear_conversation,
             SignalCode.QUEUE_LOAD_CONVERSATION: self.on_queue_load_conversation,
-            SignalCode.LLM_TOKEN_SIGNAL: self.on_token_signal,
+            # Disabled old streaming system that conflicts with MessageWidget streaming:
+            # SignalCode.LLM_TOKEN_SIGNAL: self.on_token_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
             SignalCode.MOOD_SUMMARY_UPDATE_STARTED: self._handle_mood_summary_update_started,
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated_signal,
@@ -58,7 +59,9 @@ class ChatPromptWidget(BaseWidget):
         self._conversation_history_manager = ConversationHistoryManager()
         self.token_buffer = []
         self.ui_update_timer = QTimer(self)
-        self.ui_update_timer.setInterval(50)
+        self.ui_update_timer.setInterval(
+            50
+        )  # Changed back to 50ms for better performance and stability
         self.ui_update_timer.timeout.connect(self.flush_token_buffer)
         self.ui_update_timer.start()
         self.registered: bool = False
@@ -81,6 +84,9 @@ class ChatPromptWidget(BaseWidget):
         self.loading_widget = LoadingWidget(self)
         self.loading_widget.hide()
         self.ui.gridLayout_3.addWidget(self.loading_widget, 1, 0, 1, 1)
+
+        # Hide the old conversation widget since we're using MessageWidget streaming now
+        self.ui.conversation.hide()
 
         # Initialize action menu cleanly
         self.ui.action.blockSignals(True)
@@ -234,16 +240,17 @@ class ChatPromptWidget(BaseWidget):
 
         QTimer.singleShot(100, self.scroll_to_bottom)
 
-    @Slot(str)
-    def handle_token_signal(self, val: str):
-        if val != "[END]":
-            text = self.ui.conversation.toPlainText()
-            text += val
-            self.ui.conversation.setPlainText(text)
-        else:
-            self.stop_progress_bar()
-            self.generating = False
-            self.enable_send_button()
+    # DISABLED: Old streaming system that conflicts with MessageWidget streaming
+    # @Slot(str)
+    # def handle_token_signal(self, val: str):
+    #     if val != "[END]":
+    #         text = self.ui.conversation.toPlainText()
+    #         text += val
+    #         self.ui.conversation.setPlainText(text)
+    #     else:
+    #         self.stop_progress_bar()
+    #         self.generating = False
+    #         self.enable_send_button()
 
     def on_model_status_changed_signal(self, data):
         if data["model"] == ModelType.LLM:
@@ -350,30 +357,12 @@ class ChatPromptWidget(BaseWidget):
         self.token_buffer.clear()
 
         if combined_message != "":
-            # Prevent duplicate bot messages: only add if not already last bot message
-            if (
-                len(self.conversation_history) == 0
-                or not self.conversation_history[-1]["is_bot"]
-                or self.conversation_history[-1]["content"] != combined_message
-            ):
-                new_id = 0
-                if (
-                    self.conversation
-                    and hasattr(self.conversation, "value")
-                    and isinstance(self.conversation.value, list)
-                ):
-                    new_id = len(self.conversation.value)
-                widget = self.add_message_to_conversation(
-                    name=self.chatbot.botname,
-                    message=combined_message,
-                    is_bot=True,
-                    first_message=False,
-                    _message_id=new_id,
-                )
-                if widget is not None:
-                    widget.message_id = new_id
-                else:
-                    self.logger.warning("Failed to create bot message widget")
+            self.add_message_to_conversation(
+                name=self.chatbot.botname,
+                message=combined_message,
+                is_bot=True,
+                first_message=False,
+            )
 
     def enable_generate(self):
         self.generating = False
@@ -468,8 +457,9 @@ class ChatPromptWidget(BaseWidget):
             do_tts_reply=False,
         )
 
-    def on_token_signal(self, val):
-        self.handle_token_signal(val)
+    # DISABLED: Old streaming system that conflicts with MessageWidget streaming
+    # def on_token_signal(self, val):
+    #     self.handle_token_signal(val)
 
     def showEvent(self, event):
         super().showEvent(event)

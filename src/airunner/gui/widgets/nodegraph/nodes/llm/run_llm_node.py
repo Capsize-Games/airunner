@@ -158,7 +158,7 @@ class RunLLMNode(BaseLLMNode):
         llm_request: LLMRequest,
         model_type: str,
         model_name: str,
-    ):  # Removed -> LLMResponse return type hint
+    ):
         """
         Call the LLM with the given request parameters.
 

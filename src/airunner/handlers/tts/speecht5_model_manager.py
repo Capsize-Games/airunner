@@ -235,8 +235,6 @@ class SpeechT5ModelManager(TTSModelManager):
                 self.model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.torch_dtype,
-                # Removed incorrect device_map argument
-                # device_map=self.device,
             )
             self.logger.debug("Main model loaded.")
         except Exception as e:  # Catch broader exceptions during loading
@@ -247,12 +245,9 @@ class SpeechT5ModelManager(TTSModelManager):
         self.logger.debug("Loading tokenizer")
         try:
             self.tokenizer = self.tokenizer_class.from_pretrained(
-                self.model_path,  # Correctly uses model_path for SpeechT5 tokenizer
+                self.model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 trust_remote_code=False,
-                # Removed potentially incorrect arguments
-                # device_map=self.device,
-                # torch_dtype=self.torch_dtype,
             )
             self.logger.debug("Tokenizer loaded.")
         except Exception as e:
@@ -266,8 +261,6 @@ class SpeechT5ModelManager(TTSModelManager):
                 self.vocoder_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 torch_dtype=self.torch_dtype,
-                # Removed incorrect device_map argument
-                # device_map=self.device,
             )
             self.logger.debug("Vocoder loaded.")
         except Exception as e:
@@ -281,9 +274,6 @@ class SpeechT5ModelManager(TTSModelManager):
                 self.processor = self.processor_class.from_pretrained(
                     self.processor_path,
                     local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                    # Removed potentially incorrect arguments
-                    # torch_dtype=self.torch_dtype,
-                    # device_map=self.device,
                 )
                 self.logger.debug("Processor loaded.")
             except Exception as e:

@@ -235,6 +235,48 @@ Organize them under your local AI Runner data directory:
 - The mood and summary engines are now fully integrated into the agent runtime. When the agent updates mood or summarizes the conversation, it emits a signal to the UI with a customizable loading message. The chat prompt widget displays this message as a loading indicator.
 - See `src/airunner/handlers/llm/agent/agents/base.py` for integration details and `src/airunner/api/chatbot_services.py` for the API function.
 
+## 🔍 Aggregated Search Tool
+
+AI Runner includes an Aggregated Search Tool for querying multiple online services from a unified interface. This tool is available as a NodeGraphQt node, an LLM agent tool, and as a Python API.
+
+**Supported Search Services:**
+- DuckDuckGo (no API key required)
+- Wikipedia (no API key required)
+- arXiv (no API key required)
+- Google Custom Search (requires `GOOGLE_API_KEY` and `GOOGLE_CSE_ID`)
+- Bing Web Search (requires `BING_SUBSCRIPTION_KEY`)
+- NewsAPI (requires `NEWSAPI_KEY`)
+- StackExchange (optional `STACKEXCHANGE_KEY` for higher quota)
+- GitHub Repositories (optional `GITHUB_TOKEN` for higher rate limits)
+- OpenLibrary (no API key required)
+
+**API Key Setup:**
+- Set the required API keys as environment variables before running AI Runner. Only services with valid keys will be queried.
+- Example:
+  ```bash
+  export GOOGLE_API_KEY=your_google_api_key
+  export GOOGLE_CSE_ID=your_google_cse_id
+  export BING_SUBSCRIPTION_KEY=your_bing_key
+  export NEWSAPI_KEY=your_newsapi_key
+  export STACKEXCHANGE_KEY=your_stackexchange_key
+  export GITHUB_TOKEN=your_github_token
+  ```
+
+**Usage:**
+- Use the Aggregated Search node in NodeGraphQt for visual workflows.
+- Call the tool from LLM agents or Python code:
+  ```python
+  from airunner.tools.search_tool import AggregatedSearchTool
+  results = await AggregatedSearchTool.aggregated_search("python", category="web")
+  ```
+- See `src/airunner/tools/README.md` for more details.
+
+**Note:**
+- DuckDuckGo, Wikipedia, arXiv, and OpenLibrary do not require API keys and can be used out-of-the-box.
+- For best results and full service coverage, configure all relevant API keys.
+
+---
+
 ## Contributing
 
 We welcome pull requests for new features, bug fixes, or documentation improvements. You can also build and share **extensions** to expand AI Runner’s functionality. For details, see the [Extensions Wiki](https://github.com/Capsize-Games/airunner/wiki/Extensions).

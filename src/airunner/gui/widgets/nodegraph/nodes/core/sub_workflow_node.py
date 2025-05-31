@@ -1,3 +1,4 @@
+from airunner.data.session_manager import Session
 from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
 from airunner.gui.widgets.nodegraph.nodes.core.base_core_node import (
@@ -45,8 +46,6 @@ class SubWorkflowNode(BaseCoreNode):
         # Note: This should ideally be using a dependency-injected session
         # This is a placeholder that should be replaced with your actual DB session
         try:
-            from airunner.data.session import Session
-
             with Session() as session:
                 workflows = session.query(Workflow).all()
                 return [
@@ -63,8 +62,6 @@ class SubWorkflowNode(BaseCoreNode):
 
         # Load the workflow details
         try:
-            from airunner.data.session import Session
-
             with Session() as session:
                 workflow = (
                     session.query(Workflow).filter_by(id=workflow_id).first()

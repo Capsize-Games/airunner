@@ -3,12 +3,10 @@ Test suite for chat_prompt_widget.py in LLM widgets.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock, PropertyMock, call  # Added call
-from PySide6.QtCore import QTimer  # Added QTimer for singleShot mocking
+from unittest.mock import patch, MagicMock, PropertyMock
 
 from airunner.gui.widgets.llm import chat_prompt_widget
-from airunner.data.models import Conversation  # Added Conversation
-from airunner.enums import SignalCode  # Added SignalCode
+from airunner.data.models import Conversation
 
 
 @pytest.fixture
@@ -241,7 +239,7 @@ def test_do_generate_sends_prompt(chat_prompt, qtbot):
 
 def test_status_indicator_shows_and_hides_on_mood_summary_update(
     qtbot, chat_prompt
-):  # Added chat_prompt fixture
+):
     chat_prompt._conversation_history_manager.get_most_recent_conversation_id.reset_mock()
     chat_prompt._conversation_history_manager.load_conversation_history.reset_mock()
     """Test that the status indicator shows when mood/summary update starts and hides when a bot message arrives."""
@@ -279,7 +277,7 @@ def test_status_indicator_shows_and_hides_on_mood_summary_update(
 
 def test_status_indicator_custom_message(
     qtbot, chat_prompt
-):  # Added chat_prompt fixture
+):
     chat_prompt._conversation_history_manager.get_most_recent_conversation_id.reset_mock()
     chat_prompt._conversation_history_manager.load_conversation_history.reset_mock()
     """Test that the status indicator shows a custom message from the signal payload."""

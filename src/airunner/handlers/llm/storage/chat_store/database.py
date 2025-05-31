@@ -9,7 +9,6 @@ from llama_index.core.base.llms.types import TextBlock
 
 from airunner.data.models import Conversation
 from airunner.utils.llm import strip_names_from_message
-from airunner.data.session_manager import session_scope
 
 
 class SafeChatMessage(ChatMessage):
@@ -178,27 +177,21 @@ class DatabaseChatStore(BaseChatStore):
         self, key: str, message_index: int, new_message: SafeChatMessage
     ) -> None:
         """Update a message in a conversation."""
-        index = int(key)
-        from airunner.data.session_manager import session_scope
-
-        with session_scope() as session:
-            conversation = (
-                session.query(Conversation)
-                .filter(Conversation.id == index)
-                .first()
-            )
-            if conversation:
-                messages = conversation.value or []
-                if 0 <= message_index < len(messages):
-                    new_message.blocks[0].text = strip_names_from_message(
-                        new_message.blocks[0].text,
-                        conversation.user_name,
-                        conversation.chatbot_name,
-                    )
-                    messages[message_index] = new_message.model_dump()
-                    conversation.value = messages
-                    flag_modified(conversation, "value")
-                    session.commit()
+        try:
+            conversation = conversation.objects.filter_by(current=True)[0]
+        except IndexError:
+            conversation = None
+        if conversation:
+            messages = conversation.value or []
+            if 0 <= message_index < len(messages):
+                new_message.blocks[0].text = strip_names_from_message(
+                    new_message.blocks[0].text,
+                    conversation.user_name,
+                    conversation.chatbot_name,
+                )
+                messages[message_index] = new_message.model_dump()
+                Conversation.objects.update(conversation.id, value=messages)
+                flag_modified(conversation, "value")
 
 
 def params_from_uri(uri: str) -> dict:
