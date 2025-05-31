@@ -252,9 +252,9 @@ def test_undo_stack_and_clear(nodegraph):
 def test_repr_subgraph(dummy_qgraphics_item):
     # SubGraph repr should include node name
     from airunner.vendor.nodegraphqt.base.graph import SubGraph
-    from PySide6 import QtCore
+    from PySide6.QtCore import QObject
 
-    class DummyParent(QtCore.QObject):
+    class DummyParent(QObject):
         is_root = True
 
         def __init__(self):
@@ -284,7 +284,5 @@ def test_repr_subgraph(dummy_qgraphics_item):
             return "Group"
 
     parent = DummyParent()
-    sg = SubGraph(
-        parent=parent, node=DummyGroupNode(), node_factory=NodeFactory()
-    )
+    sg = SubGraph(parent=parent, node=DummyGroupNode(), node_factory=NodeFactory())
     assert "SubGraph" in repr(sg)
