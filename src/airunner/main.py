@@ -16,6 +16,7 @@ import os
 # Prevent Qt WebEngine from crashing
 os.environ["QT_QUICK_BACKEND"] = "software"
 os.environ["QT_XCB_GL_INTEGRATION"] = "none"
+os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
 """
 Temporary fix for windows - Facehuggershield is not working correctly
@@ -25,7 +26,9 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
     from airunner.facehuggershield.huggingface import activate
     import sys  # Import sys to access executable path
 
-    airunner_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
+    airunner_path = os.path.join(
+        os.path.expanduser("~"), ".local", "share", "airunner"
+    )
     # Determine site-packages path dynamically
     venv_path = os.path.dirname(os.path.dirname(sys.executable))
     site_packages_path = os.path.join(
@@ -87,7 +90,9 @@ from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE
 import argparse
 from airunner.utils.settings.get_qsettings import get_qsettings
 
-base_path = os.path.join(os.path.expanduser("~"), ".local", "share", "airunner")
+base_path = os.path.join(
+    os.path.expanduser("~"), ".local", "share", "airunner"
+)
 
 ################################################################
 # Ensure that the base directory exists.
@@ -109,7 +114,9 @@ if AIRUNNER_SAVE_LOG_TO_FILE and not DEV_ENV:
 import torch
 
 torch.hub.set_dir(
-    os.environ.get("TORCH_HOME", "/home/appuser/.local/share/airunner/torch/hub")
+    os.environ.get(
+        "TORCH_HOME", "/home/appuser/.local/share/airunner/torch/hub"
+    )
 )
 
 ################################################################
@@ -140,7 +147,9 @@ def main():
         action="store_true",
         help="Perform LLM analysis",
     )
-    parser.add_argument("--chatbot-only", action="store_true", help="Run LLM only")
+    parser.add_argument(
+        "--chatbot-only", action="store_true", help="Run LLM only"
+    )
     args = parser.parse_args()
 
     if args.clear_window_settings:
