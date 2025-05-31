@@ -17,11 +17,13 @@ conversation.html: Jinja2 template for ConversationWidget
             width: 100vw;
             max-width: 100vw;
         }
+        * {
+            box-sizing: border-box;
+        }
         #conversation-container {
             min-height: 100vh;
             overflow-y: auto;
             overflow-x: hidden !important;
-            padding: 24px 0 24px 0;
             box-sizing: border-box;
             color: #fff;
             display: flex;
@@ -32,32 +34,18 @@ conversation.html: Jinja2 template for ConversationWidget
         }
         .message {
             margin: 0 auto;
-            padding: 16px 22px;
-            border-radius: 14px;
-            min-width: 0;
-            max-width: 98vw;
+            padding: 20px;
+            min-width: 100%;
             word-break: break-word;
             box-shadow: 0 2px 12px rgba(0,0,0,0.10);
             display: flex;
             flex-direction: column;
-            background: #232323;
-            transition: background 0.2s, box-shadow 0.2s;
         }
         .message.user {
-            background: linear-gradient(90deg, #2d2d2d 80%, #3a3a3a 100%);
-            align-self: flex-end;
-            margin-left: 20%;
-            margin-right: 0;
-            width: 80%;
-            box-shadow: 0 2px 16px rgba(60,60,60,0.12);
+            background: #010101;
         }
         .message.assistant {
-            background: linear-gradient(90deg, #181818 80%, #232323 100%);
-            align-self: flex-start;
-            margin-right: 20%;
-            margin-left: 0;
-            width: 80%;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.14);
+            background: #101010;
         }
         #conversation-container > .message:nth-child(even) {
             filter: brightness(1.08);
@@ -70,10 +58,9 @@ conversation.html: Jinja2 template for ConversationWidget
         }
         pre, code {
             color: #e0e0e0 !important;
-            border-radius: 6px;
             font-size: 1em;
             line-height: 1.5;
-            padding: 8px 12px;
+            padding: 8px 12px; /* Reduce padding for better fit */
             overflow-x: auto;
             max-width: 100%;
             box-sizing: border-box;
@@ -115,28 +102,59 @@ conversation.html: Jinja2 template for ConversationWidget
             overflow-x: hidden !important;
         }
     </style>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script>
-        // Smooth scroll to bottom when new content is added
+        let chatBridge = null;
+        window.isChatReady = false;
+        window.chatReady = new Promise((resolve) => {
+            document.addEventListener('DOMContentLoaded', function() {
+                new QWebChannel(qt.webChannelTransport, function(channel) {
+                    chatBridge = channel.objects.chatBridge;
+                    chatBridge.appendMessage.connect(appendMessage);
+                    chatBridge.clearMessages.connect(clearMessages);
+                    chatBridge.setMessages.connect(function(msgs) {
+                        clearMessages();
+                        for (let i = 0; i < msgs.length; ++i) appendMessage(msgs[i], false);
+                        setTimeout(smoothScrollToBottom, 0);
+                        console.debug('[ConversationWidget] setMessages: rendered', msgs.length, 'messages');
+                    });
+                    window.isChatReady = true;
+                    resolve();
+                    console.debug('[ConversationWidget] QWebChannel ready');
+                });
+            });
+        });
+        function appendMessage(msg, scroll=true) {
+            const container = document.getElementById('conversation-container');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = 'message ' + (msg.is_bot ? 'assistant' : 'user');
+            div.innerHTML = `<div class="sender">${msg.name || msg.sender || ''}</div>`;
+            div.innerHTML += msg.content;
+            container.appendChild(div);
+            if (scroll) setTimeout(smoothScrollToBottom, 0);
+        }
+        function clearMessages() {
+            const container = document.getElementById('conversation-container');
+            if (container) container.innerHTML = '';
+        }
         function smoothScrollToBottom() {
             const container = document.getElementById('conversation-container');
             if (container) {
                 container.scrollTo({
                     top: container.scrollHeight,
-                    behavior: 'smooth'
+                    behavior: 'auto' // Use 'auto' for instant scroll on load
                 });
             }
         }
-        // Observe for new messages and auto-scroll
+        // MutationObserver for streaming updates
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('conversation-container');
             if (container) {
-                // Initial scroll
-                smoothScrollToBottom();
-                // Mutation observer for streaming updates
                 const observer = new MutationObserver((mutations) => {
                     for (const mutation of mutations) {
                         if (mutation.addedNodes.length > 0) {
-                            smoothScrollToBottom();
+                            setTimeout(smoothScrollToBottom, 0);
                         }
                     }
                 });
@@ -147,16 +165,7 @@ conversation.html: Jinja2 template for ConversationWidget
 </head>
 <body>
 <div id="conversation-container">
-    {% for msg in messages %}
-        <div class="message {{ 'assistant' if msg.is_bot else 'user' }}">
-            <div class="sender">{{ msg.name or msg.sender }}</div>
-            {% set font_size = msg.font_size %}
-            {% set static_base_path = msg.static_base_path %}
-            {% set base_href = msg.base_href %}
-            {% set content = msg.content %}
-            {% include msg.widget_template %}
-        </div>
-    {% endfor %}
+    <!-- Messages will be rendered via JS/QWebChannel only -->
 </div>
 </body>
 </html>
