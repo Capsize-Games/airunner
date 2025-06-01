@@ -31,6 +31,7 @@ class LLMGenerateWorker(Worker):
             SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
             SignalCode.WEB_BROWSER_PAGE_HTML: self.on_web_browser_page_html_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
+            SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
         }
         self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
         self._ollama_model_manager: Optional[OllamaModelManager] = None
@@ -119,6 +120,18 @@ class LLMGenerateWorker(Worker):
         # Reset the model manager to ensure it's re-evaluated on next access
         self._model_manager = None
         self.unload_llm()
+
+    def on_rag_load_documents_signal(self, data: Dict):
+        """
+        Handle the signal to load documents into the RAG engine.
+        This method is called when the RAG engine needs to load new documents.
+        """
+        if self.model_manager and self.model_manager.agent:
+            documents = data.get("documents", [])
+            if documents:
+                # Call the RAGMixin's load_html_into_rag for each document string
+                for doc in documents:
+                    self.model_manager.agent.load_html_into_rag(doc)
 
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")

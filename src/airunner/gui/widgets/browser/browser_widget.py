@@ -17,15 +17,29 @@ class BrowserWidget(BaseWidget):
     widget_class_ = Ui_browser
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.registered: bool = False
         self.signal_handlers = {
             SignalCode.BROWSER_NAVIGATE_SIGNAL: self.on_browser_navigate,
         }
+        super().__init__(*args, **kwargs)
+        self.registered: bool = False
+        self.ui.stage.loadFinished.connect(self.on_load_finished)
 
     def on_browser_navigate(self, data):
+        print("navigate", data)
         url = data.get("url", None)
         if url is not None:
             self.ui.stage.load(url)
         else:
             self.logger.error("No URL provided for navigation.")
+
+    def on_load_finished(self, ok):
+        if ok:
+            # Get the HTML content from the QWebEngineView
+            def handle_html(html):
+                # Emit the signal with the HTML string as a document
+                self.emit_signal(
+                    SignalCode.RAG_LOAD_DOCUMENTS,
+                    {"documents": [html], "type": "html_string"},
+                )
+
+            self.ui.stage.page().toHtml(handle_html)
