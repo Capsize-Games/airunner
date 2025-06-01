@@ -1198,11 +1198,45 @@ class BaseAgent(
             return self.chat_engine_tool.call(**kwargs)
 
         def rag_tool_handler(**kwargs: Any) -> Any:
+            # Ensure the query is always forwarded as 'query' (and 'input' for compatibility)
             if "chat_history" not in kwargs:
                 kwargs["chat_history"] = (
                     self.chat_memory.get() if self.chat_memory else []
                 )
-            return self.rag_engine_tool.call(**kwargs)
+            # Defensive: ensure chat_memory and rag_engine.memory are set up with correct chat_store_key
+            if hasattr(self, "chat_memory") and self.chat_memory is not None:
+                self.chat_memory.chat_store_key = str(self.conversation_id)
+            if hasattr(self, "rag_engine") and self.rag_engine is not None:
+                self.rag_engine.memory = self.chat_memory
+            # Patch: Forward 'prompt' or 'input' as 'query' if 'query' is missing
+            query_arg = None
+            if "query" in kwargs:
+                query_arg = kwargs["query"]
+            elif "input" in kwargs:
+                query_arg = kwargs["input"]
+            elif "prompt" in kwargs:
+                query_arg = kwargs["prompt"]
+            # Remove 'query', 'input', and 'prompt' from kwargs to avoid TypeError
+            for k in ["query", "input", "prompt"]:
+                if k in kwargs:
+                    del kwargs[k]
+            if query_arg is not None:
+                response = self.rag_engine_tool.call(query_arg, **kwargs)
+            else:
+                response = self.rag_engine_tool.call(**kwargs)
+            # Handle/display the response as with other tools
+            if response is not None:
+                # If response is a ToolOutput, AgentChatResponse, or similar, extract string content
+                content = getattr(response, "content", None)
+                if content is None and hasattr(response, "response"):
+                    content = response.response
+                if content is None:
+                    content = str(response)
+                self.handle_response(
+                    content, is_first_message=True, is_last_message=True
+                )
+                self._complete_response = content
+            return response
 
         def store_data_handler(**kwargs: Any) -> Any:
             kwargs["tool_choice"] = "store_user_tool"

@@ -195,7 +195,7 @@ class SearchEngineTool(BaseConversationEngine):
             if consolidated_results
             else "I couldn't find relevant information for your query."
         )
-        
+
         self._do_interrupt = False
 
         return ToolOutput(
@@ -232,6 +232,8 @@ class SearchEngineTool(BaseConversationEngine):
             f"User's original queries: {queries}\n\n"
             f"Relevant information found:\n{formatted_results}\n\n"
             "Please provide a comprehensive answer to the user's original queries based on this information."
+            "Always provide a markdown list of source urls at the end of your response, "
+            "citing the sources of the information you used in your answer."
         )
         self.logger.info(
             "SearchEngineTool: Synthesizing response from combined search results via chat engine tool"
