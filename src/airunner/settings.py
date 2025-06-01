@@ -397,3 +397,7 @@ MATHJAX_VERSION = "3.2.2"
 CONTENT_WIDGETS_BASE_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "static", "content_widgets")
 )
+
+VERBOSE_REACT_TOOL_AGENT = (
+    os.environ.get("VERBOSE_REACT_TOOL_AGENT", "0") == "1"
+)
