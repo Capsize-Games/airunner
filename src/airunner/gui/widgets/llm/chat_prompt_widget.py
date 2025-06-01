@@ -271,8 +271,11 @@ class ChatPromptWidget(BaseWidget):
 
     def on_add_bot_message_to_conversation(self, data: Dict):
         llm_response = data.get("response", None)
-        if llm_response.is_first_message:
+        if llm_response is not None and getattr(
+            llm_response, "is_first_message", False
+        ):
             self.stop_progress_bar()
+            self.enable_generate()
 
     def load_conversation(self, conversation_id: int = None):
         """Loads and displays a conversation. Minimal implementation for test compatibility."""
