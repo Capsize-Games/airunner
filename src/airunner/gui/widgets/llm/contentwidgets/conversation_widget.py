@@ -69,7 +69,6 @@ class ConversationWidget(BaseWidget):
         # )
         self._web_channel.registerObject("chatBridge", self._chat_bridge)
         self.ui.stage.page().setWebChannel(self._web_channel)
-        self.render_template(self.ui.stage, "conversation.html", messages=[])
 
     def navigate(self, url: str):
         self.api.navigate(url)
@@ -99,6 +98,9 @@ class ConversationWidget(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         if not self.registered:
+            self.render_template(
+                self.ui.stage, "conversation.html", messages=[]
+            )
             self.registered = True
             self.logger.debug(
                 f"showEvent: self._conversation_id before load: {self._conversation_id}"

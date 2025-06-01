@@ -127,6 +127,10 @@ class LLMGenerateWorker(Worker):
         This method is called when the RAG engine needs to load new documents.
         """
         if self.model_manager and self.model_manager.agent:
+            if data.get("clear_documents", False):
+                # Clear all previous RAG documents before loading new ones
+                if hasattr(self.model_manager.agent, "clear_rag_documents"):
+                    self.model_manager.agent.clear_rag_documents()
             documents = data.get("documents", [])
             if documents:
                 # Call the RAGMixin's load_html_into_rag for each document string

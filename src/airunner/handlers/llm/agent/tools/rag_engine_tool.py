@@ -42,6 +42,24 @@ class RAGEngineTool(BaseConversationEngine):
     def __call__(self, *args, **kwargs):
         return self.call(*args, **kwargs)
 
+    def call(self, *args, **kwargs):
+        """Main entry point for RAGEngineTool. Performs a RAG query using the chat engine."""
+        query_str = kwargs.get("query") or (args[0] if args else None)
+        if not query_str:
+            raise ValueError("No query provided for RAGEngineTool.call().")
+        llm_request = kwargs.get("llm_request", None)
+        system_prompt = kwargs.get("system_prompt", None)
+        if system_prompt is not None and hasattr(
+            self.chat_engine, "update_system_prompt"
+        ):
+            self.chat_engine.update_system_prompt(system_prompt)
+        if llm_request is not None and hasattr(
+            self.chat_engine.llm, "llm_request"
+        ):
+            self.chat_engine.llm.llm_request = llm_request
+        response = self.chat_engine.chat(query_str, **kwargs)
+        return response
+
     @property
     def logger(self):
         """
