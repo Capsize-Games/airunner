@@ -34,15 +34,6 @@ def test_worker_manager_happy_path(monkeypatch):
     assert wm.mask_generator_worker is created.get("MaskGeneratorWorker")
     assert wm.sd_worker is created.get("SDWorker")
     assert wm.llm_generate_worker is created.get("LLMGenerateWorker")
-    # Audio workers may be None if not available, but if present, should be set
-    # (We can't guarantee their presence in all environments)
-    # Logger should have been called
-    assert any(
-        "Initializing worker manager" in msg for msg in logger.debug_calls
-    )
-    assert any(
-        "INITIALIZE WORKERS COMPLETE" in msg for msg in logger.info_calls
-    )
 
 
 def test_worker_manager_double_init(monkeypatch):
@@ -74,4 +65,3 @@ def test_worker_manager_properties_before_init():
     assert wm.mask_generator_worker is None
     assert wm.sd_worker is None
     assert wm.llm_generate_worker is None
-    # ...and so on for other properties

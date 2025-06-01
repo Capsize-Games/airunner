@@ -55,9 +55,7 @@ class ConversationHistoryManager:
         try:
             conversation = Conversation.most_recent()
             if conversation:
-                self.logger.info(
-                    f"Most recent conversation ID: {conversation.id}"
-                )
+                self.logger.info(f"Most recent conversation ID: {conversation.id}")
                 return conversation.id
             self.logger.info("No conversations found.")
             return None
@@ -74,42 +72,16 @@ class ConversationHistoryManager:
         conversation_id: Optional[int] = None,
         max_messages: int = 50,
     ) -> List[Dict[str, Any]]:
-        """Loads and formats messages from a specified or most recent conversation.
-
-        Args:
-            conversation: The Conversation object to load. If None, conversation_id is used.
-            conversation_id: The ID of the conversation to load. If None and conversation is None,
-                             the most recent conversation is loaded.
-            max_messages: The maximum number of messages to return from the end of the conversation.
-
-        Returns:
-            List[Dict[str, Any]]: A list of formatted message dictionaries.
-                                  Each dictionary contains 'name', 'content',
-                                  'is_bot', and 'id' keys. Returns an empty
-                                  list if the conversation is not found or
-                                  an error occurs.
-        """
-        # Fetch conversation if only ID is provided
         if conversation is None and conversation_id is not None:
-            try:
-                conversation = Conversation.objects.filter_by_first(
-                    id=conversation_id
-                )
-            except Exception as e:
-                self.logger.error(
-                    f"Error loading conversation with id {conversation_id}: {e}",
-                    exc_info=True,
-                )
-                return []
+            conversation = Conversation.objects.filter_by_first(id=conversation_id)
             if conversation is None:
-                self.logger.warning(
-                    "Conversation not found for id %s", conversation_id
-                )
                 return []
         elif conversation is None:
+            conversation = self.get_current_conversation()
+
+        if conversation is None:
             conversation = Conversation.most_recent()
             if conversation is None:
-                self.logger.warning("No conversations found.")
                 return []
 
         self.logger.debug(
