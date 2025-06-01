@@ -82,6 +82,9 @@ logging.getLogger("datasets").setLevel(logging.WARNING)
 logging.getLogger("bitsandbytes").setLevel(logging.WARNING)
 logging.getLogger("trafilatura").setLevel(logging.WARNING)
 logging.getLogger("scrapy").setLevel(logging.WARNING)
+logging.getLogger("rquest").setLevel(logging.WARNING)
+logging.getLogger("primp").setLevel(logging.WARNING)
+logging.getLogger("cookie_store").setLevel(logging.WARNING)
 
 import sys
 from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE

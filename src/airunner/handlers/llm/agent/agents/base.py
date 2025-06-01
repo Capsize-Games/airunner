@@ -46,6 +46,7 @@ from airunner.data.models import Conversation
 from airunner.settings import (
     AIRUNNER_ART_ENABLED,
     AIRUNNER_MOOD_PROMPT_OVERRIDE,
+    VERBOSE_REACT_TOOL_AGENT,
 )
 from airunner.utils.llm.language import detect_language
 from airunner.handlers.llm.agent.agents.registry import (
@@ -65,10 +66,6 @@ from airunner.handlers.llm.agent.agents.tool_mixins import (
     AnalysisToolsMixin,
 )
 from .prompt_config import PromptConfig
-from airunner.utils.application.logging_utils import log_method_entry_exit
-from airunner.handlers.llm.agent.engines.base_conversation_engine import (
-    BaseConversationEngine,
-)
 
 
 class BaseAgent(
@@ -118,6 +115,7 @@ class BaseAgent(
         conversation_strategy: Optional[Any] = None,
         memory_strategy: Optional[Any] = None,
         llm_strategy: Optional[Any] = None,
+        verbose_react_tool_agent: bool = VERBOSE_REACT_TOOL_AGENT,
         *args,
         **kwargs,
     ) -> None:
@@ -169,6 +167,7 @@ class BaseAgent(
         self._llm_strategy = llm_strategy
         self._chatbot = None
         self._api = None
+        self.verbose_react_tool_agent = verbose_react_tool_agent
         self._logger = kwargs.pop("logger", None)
         if self._logger is None:
             from airunner.utils.application.get_logger import get_logger
@@ -527,11 +526,11 @@ class BaseAgent(
                 agent=self,
                 memory=self.chat_memory,
                 llm=self.llm,
-                verbose=True,
                 max_function_calls=self.llm_settings.max_function_calls,
                 default_tool_choice=self.default_tool_choice,
                 return_direct=True,
                 context=self.react_agent_prompt,
+                verbose=self.verbose_react_tool_agent,
             )
         return self._react_tool_agent
 
@@ -1192,7 +1191,6 @@ class BaseAgent(
         """
 
         def chat_tool_handler(**kwargs: Any) -> Any:
-            # Always pass chat_history for context
             if "chat_history" not in kwargs:
                 kwargs["chat_history"] = (
                     self.chat_memory.get() if self.chat_memory else []
@@ -1231,11 +1229,11 @@ class BaseAgent(
             return self.react_tool_agent.call(**kwargs)
 
         def search_tool_handler(**kwargs: Any) -> Any:
-            # Use SearchEngineTool directly - it handles the entire search and synthesis flow
             if "chat_history" not in kwargs:
                 kwargs["chat_history"] = (
                     self.chat_memory.get() if self.chat_memory else []
                 )
+            # Only call the search tool; it will invoke the chat engine tool as needed
             return self.search_engine_tool.call(**kwargs)
 
         tool_handlers = {
@@ -1321,9 +1319,12 @@ class BaseAgent(
                         chat_messages.append(msg)
                     elif isinstance(msg, dict):
                         content = msg.get("content", "")
+                        role = msg.get("role", "user")
+                        if role == "bot":
+                            role = "assistant"
                         chat_messages.append(
                             ChatMessage(
-                                role=msg.get("role", "user"),
+                                role=role,
                                 blocks=[TextBlock(text=content)],
                             )
                         )

@@ -157,17 +157,27 @@ conversation.html: Jinja2 template for ConversationWidget
         });
         function appendMessage(msg, scroll=true) {
             const container = document.getElementById('conversation-container');
-            if (!container) return;
+            if (!container) {
+                console.error('[ConversationWidget] appendMessage: conversation-container not found');
+                return;
+            }
             const div = document.createElement('div');
             div.className = 'message ' + (msg.is_bot ? 'assistant' : 'user');
             div.innerHTML = `<div class="sender">${msg.name || msg.sender || ''}</div>`;
             div.innerHTML += msg.content;
             container.appendChild(div);
+            console.debug('[ConversationWidget] appendMessage: added message', msg);
             if (scroll) setTimeout(smoothScrollToBottom, 0);
         }
+
         function clearMessages() {
             const container = document.getElementById('conversation-container');
-            if (container) container.innerHTML = '';
+            if (!container) {
+                console.error('[ConversationWidget] clearMessages: conversation-container not found');
+                return;
+            }
+            container.innerHTML = '';
+            console.debug('[ConversationWidget] clearMessages: cleared all messages');
         }
         function smoothScrollToBottom() {
             const container = document.getElementById('conversation-container');
