@@ -108,7 +108,9 @@ def test_load_conversation_with_specific_id(chat_prompt):
     mock_set_widgets.assert_called_once_with(
         expected_messages, skip_scroll=True
     )
-    mock_timer_shot.assert_called_with(100, chat_prompt.scroll_to_bottom)
+    mock_timer_shot.assert_called_with(
+        200, chat_prompt.conversation_html_widget.scroll_to_bottom
+    )
 
 
 def test_load_conversation_no_id_and_no_recent_found(chat_prompt):
