@@ -14,22 +14,104 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
-   <property name="spacing">
-    <number>0</number>
-   </property>
+   <item row="0" column="4">
+    <widget class="QPushButton" name="next_button">
+     <property name="toolTip">
+      <string>Next</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources/feather.qrc">
+       <normaloff>:/dark/icons/feather/dark/arrow-right-circle.svg</normaloff>:/dark/icons/feather/dark/arrow-right-circle.svg</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QPushButton" name="submit_button">
+     <property name="toolTip">
+      <string>Submit</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources/feather.qrc">
+       <normaloff>:/dark/icons/feather/dark/chevron-up.svg</normaloff>:/dark/icons/feather/dark/chevron-up.svg</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QPushButton" name="refresh_button">
+     <property name="toolTip">
+      <string>Refresh</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources/feather.qrc">
+       <normaloff>:/dark/icons/feather/dark/refresh-cw.svg</normaloff>:/dark/icons/feather/dark/refresh-cw.svg</iconset>
+     </property>
+    </widget>
+   </item>
    <item row="0" column="0">
+    <widget class="QLineEdit" name="url">
+     <property name="placeholderText">
+      <string>https://</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="5">
+    <widget class="QPushButton" name="plaintext_button">
+     <property name="toolTip">
+      <string>Plaintext</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources/feather.qrc">
+       <normaloff>:/dark/icons/feather/dark/align-justify.svg</normaloff>:/dark/icons/feather/dark/align-justify.svg</iconset>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="3">
+    <widget class="QPushButton" name="back_button">
+     <property name="toolTip">
+      <string>Back</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources/feather.qrc">
+       <normaloff>:/dark/icons/feather/dark/arrow-left-circle.svg</normaloff>:/dark/icons/feather/dark/arrow-left-circle.svg</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="6">
+    <widget class="QPushButton" name="summarize_button">
+     <property name="toolTip">
+      <string>Summarize</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources/feather.qrc">
+       <normaloff>:/dark/icons/feather/dark/list.svg</normaloff>:/dark/icons/feather/dark/list.svg</iconset>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="7">
     <widget class="QWebEngineView" name="stage">
      <property name="minimumSize">
       <size>
@@ -53,6 +135,8 @@
    <header location="global">QtWebEngineWidgets/QWebEngineView</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../../../resources/feather.qrc"/>
+ </resources>
  <connections/>
 </ui>

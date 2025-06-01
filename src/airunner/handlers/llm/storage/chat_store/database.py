@@ -74,8 +74,13 @@ class DatabaseChatStore(BaseChatStore):
         ]
 
     def get_messages(self, key: str) -> list[SafeChatMessage]:
-        """Get messages for a key."""
-        index = int(key)
+        """Get messages for a key. Returns an empty list if key is None or not a valid integer."""
+        if key is None or key == "None":
+            return []
+        try:
+            index = int(key)
+        except (TypeError, ValueError):
+            return []
         result = Conversation.objects.get(index)
         messages = (result.value if result else None) or []
         formatted_messages = []
