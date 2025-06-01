@@ -83,6 +83,8 @@ class DatabaseChatStore(BaseChatStore):
             role = message.get("role")
             if not isinstance(role, str) or not role:
                 role = "user"
+            if role == "bot":
+                role = "assistant"
             blocks = message.get("blocks")
             sanitized_blocks = []
             if isinstance(blocks, list) and len(blocks) > 0:
