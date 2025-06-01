@@ -17,6 +17,9 @@ import logging
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.utils.llm import strip_names_from_message
 from airunner.utils.text.formatter_extended import FormatterExtended
+from airunner.gui.widgets.llm.contentwidgets.conversation_webengine_page import (
+    ConversationWebEnginePage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +58,9 @@ class ConversationWidget(BaseWidget):
         self.loading_widget.hide()
         super().__init__()
         self.token_buffer = []
+        # Use custom QWebEnginePage to intercept link clicks and emit navigation signal
+        custom_page = ConversationWebEnginePage(self.ui.stage, self)
+        self.ui.stage.setPage(custom_page)
         self._web_channel = QWebChannel(self.ui.stage.page())
         self._chat_bridge = ChatBridge()
         self._chat_bridge.scrollRequested.connect(self._handle_scroll_request)
@@ -64,6 +70,9 @@ class ConversationWidget(BaseWidget):
         self._web_channel.registerObject("chatBridge", self._chat_bridge)
         self.ui.stage.page().setWebChannel(self._web_channel)
         self.render_template(self.ui.stage, "conversation.html", messages=[])
+
+    def navigate(self, url: str):
+        self.api.navigate(url)
 
     @property
     def conversation(self) -> Optional[Conversation]:
