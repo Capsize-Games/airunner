@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
     QMenuBar, QSizePolicy, QSplitter, QStatusBar,
     QTabWidget, QToolBar, QVBoxLayout, QWidget)
 
+from airunner.gui.widgets.browser.browser_widget import BrowserWidget
 from airunner.gui.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.gui.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
@@ -342,6 +343,17 @@ class Ui_MainWindow(object):
         self.gridLayout_5.addWidget(self.graph, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.agent_workflow_tab, "")
+        self.tab = QWidget()
+        self.tab.setObjectName(u"tab")
+        self.gridLayout_7 = QGridLayout(self.tab)
+        self.gridLayout_7.setObjectName(u"gridLayout_7")
+        self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.browser = BrowserWidget(self.tab)
+        self.browser.setObjectName(u"browser")
+
+        self.gridLayout_7.addWidget(self.browser, 0, 0, 1, 1)
+
+        self.center_tab_container.addTab(self.tab, "")
 
         self.gridLayout_4.addWidget(self.center_tab_container, 0, 0, 1, 1)
 
@@ -596,6 +608,7 @@ class Ui_MainWindow(object):
         self.actionRecenter.setText(QCoreApplication.translate("MainWindow", u"Recenter", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.art_tab), QCoreApplication.translate("MainWindow", u"Art", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.agent_workflow_tab), QCoreApplication.translate("MainWindow", u"Agent Workflow", None))
+        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.tab), QCoreApplication.translate("MainWindow", u"Browser", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
         self.menuChat.setTitle(QCoreApplication.translate("MainWindow", u"Chat", None))
