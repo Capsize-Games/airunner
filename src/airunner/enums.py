@@ -34,6 +34,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    BROWSER_NAVIGATE_SIGNAL = "browser_navigate_signal"
     UPATE_LOCALE = "update_locale_signal"
     RETRANSLATE_UI_SIGNAL = "retranslate_ui_signal"
     SD_UPDATE_BATCH_IMAGES_SIGNAL = "sd_update_batch_images_signal"
