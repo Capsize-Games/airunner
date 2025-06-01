@@ -105,6 +105,10 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self._conversation_history_manager = ConversationHistoryManager()
 
     @property
+    def agent(self):
+        return self._chat_agent
+
+    @property
     def is_mistral(self) -> bool:
         """
         Check if the current model is a Mistral model.

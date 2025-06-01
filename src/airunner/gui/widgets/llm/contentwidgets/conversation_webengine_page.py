@@ -24,8 +24,6 @@ class ConversationWebEnginePage(QWebEnginePage):
             nav_type == QWebEnginePage.NavigationType.NavigationTypeLinkClicked
             and is_main_frame
         ):
-            self._parent_widget.emit(
-                SignalCode.BROWSER_NAVIGATE_SIGNAL, {"url": url.toString()}
-            )
+            self._parent_widget.navigate(url.toString())
             return False
         return super().acceptNavigationRequest(url, nav_type, is_main_frame)
