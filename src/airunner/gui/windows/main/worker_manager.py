@@ -30,37 +30,20 @@ class WorkerManager:
             self.logger.debug("WorkerManager initialized.")
 
     def initialize_workers(self):
-        if self.logger:
-            self.logger.debug("Initializing worker manager...")
-            self.logger.info("imported workers, initializing")
+        self.logger.debug("Initializing worker manager...")
         self._mask_generator_worker = create_worker(MaskGeneratorWorker)
-        if self.logger:
-            self.logger.debug("MaskGeneratorWorker created.")
         self._sd_worker = create_worker(SDWorker)
-        if self.logger:
-            self.logger.debug("SDWorker created.")
         if AudioCaptureWorker is not None:
             self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-            if self.logger:
-                self.logger.debug("AudioCaptureWorker created.")
         if AudioProcessorWorker is not None:
             self._stt_audio_processor_worker = create_worker(
                 AudioProcessorWorker
             )
-            if self.logger:
-                self.logger.debug("AudioProcessorWorker created.")
         if TTSGeneratorWorker is not None:
             self._tts_generator_worker = create_worker(TTSGeneratorWorker)
-            if self.logger:
-                self.logger.debug("TTSGeneratorWorker created.")
         if TTSVocalizerWorker is not None:
             self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
-            if self.logger:
-                self.logger.debug("TTSVocalizerWorker created.")
         self._llm_generate_worker = create_worker(LLMGenerateWorker)
-        if self.logger:
-            self.logger.debug("LLMGenerateWorker created.")
-            self.logger.info("INITIALIZE WORKERS COMPLETE")
 
     @property
     def mask_generator_worker(self):
