@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Roguelike</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        #gameCanvas { border: 1px solid #ccc; image-rendering: pixelated; image-rendering: crisp-edges; }
+        .game-container { display: flex; flex-direction: column; align-items: center; }
+        .ui-panel { background-color: #f0f0f0; border-radius: 8px; padding: 10px; margin-top:10px; width: 100%; max-width: 600px; min-height: 100px; overflow-y: auto; }
+        .choice-button { background-color: #4CAF50; color: white; padding: 8px 12px; margin: 4px; border: none; border-radius: 4px; cursor: pointer; }
+        .choice-button:hover { background-color: #45a049; }
+        .log-message { margin-bottom: 4px; font-size: 0.9em; }
+        .inventory-item { background-color: #e0e0e0; padding: 2px 6px; border-radius: 3px; margin-right: 4px; display: inline-block; }
+    </style>
+</head>
+<body class="bg-gray-800 text-white p-4 flex justify-center items-start min-h-screen">
+
+    <div class="game-container w-full max-w-4xl">
+        <h1 class="text-3xl font-bold mb-4 text-center">LLM Roguelike Adventure</h1>
+
+        <div class="flex flex-col md:flex-row gap-4 w-full">
+            <div class="flex-grow flex flex-col items-center">
+                <canvas id="gameCanvas" width="600" height="400"></canvas>
+                <div id="player-info" class="ui-panel mt-2 text-sm text-gray-900">
+                    <p><strong>Player:</strong> <span id="player-name"></span></p>
+                    <p><strong>Position:</strong> (<span id="player-x">0</span>, <span id="player-y">0</span>)</p>
+                    <p><strong>HP:</strong> <span id="player-hp">---</span></p>
+                </div>
+            </div>
+
+            <div class="w-full md:w-1/3 flex flex-col gap-4">
+                <div id="message-log" class="ui-panel h-48 text-gray-900">
+                    </div>
+                <div id="choices-area" class="ui-panel min-h-24 text-gray-900">
+                    </div>
+                <div id="inventory-area" class="ui-panel text-gray-900">
+                    <h3 class="font-semibold mb-1">Inventory:</h3>
+                    <div id="inventory-items">
+                        </div>
+                </div>
+                 <div id="debug-area" class="ui-panel text-xs text-gray-700 h-32">
+                    <h3 class="font-semibold mb-1">Debug Log:</h3>
+                    <div id="debug-log-content"></div>
+                </div>
+            </div>
+        </div>
+         <button id="resetGameButton" class="mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+            New Game / Reset
+        </button>
+    </div>
+
+    <script type="module">
+        // --- Start of Adapted node-maze-generator Library ---
+
+        // --- utils.js ---
+        const Utils = {};
+        Utils.Random = {
+            next: (min, max) => {
+                if (min === undefined && max === undefined) {
+                    min = 0;
+                    max = 1;
+                } else if (max === undefined) {
+                    max = min;
+                    min = 0;
+                }
+                return Math.random() * (max - min) + min;
+            },
+            nextInt: (min, max) => {
+                return Math.floor(Utils.Random.next(min, max));
+            },
+            nextBool: (percentage) => {
+                if (percentage === undefined) {
+                    percentage = 0.5;
+                }
+                return Math.random() < percentage;
+            },
+            pick: (array) => {
+                return array[Utils.Random.nextInt(array.length)];
+            }
+        };
+
+        Utils.Directions = {
+            N: 1, S: 2, E: 4, W: 8,
+            ALL: 15, // N | S | E | W
+            OPPOSITE: { 1:2, 2:1, 4:8, 8:4 } // N:S, S:N, E:W, W:E
+        };
+        // --- End of utils.js ---
+
+        // --- cell.js ---
+        class Cell {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.walls = [true, true, true, true]; // top, right, bottom, left (NESW is N,E,S,W so 0:N, 1:E, 2:S, 3:W)
+                                                        // Using standard array indexing: 0:Top (N), 1:Right (E), 2:Bottom (S), 3:Left (W)
+                this.visited = false;
+                this.isPath = false; // Part of the main maze path
+                this.isRoom = false; // Part of a room
+                this.isCorridor = false; // Part of a corridor connecting rooms
+                this.isStairs = false;
+                this.isEntrance = false;
+                this.isExit = false;
+                this.entity = null; // For game specific things: 'player', 'monster', 'item', 'npc'
+                this.room = null; // If part of a room, reference to the room object
+            }
+
+            // Helper to check if wall exists in a direction (0:N, 1:E, 2:S, 3:W)
+            hasWall(direction) {
+                return this.walls[direction];
+            }
+
+            // Helper to remove a wall (carve a passage)
+            removeWall(direction) {
+                this.walls[direction] = false;
+            }
+        }
+        // --- End of cell.js ---
+
+        // --- grid.js ---
+        class Grid {
+            constructor(width, height) {
+                this.width = width;
+                this.height = height;
+                this.cells = []; // 2D array: cells[x][y]
+
+                for (let x = 0; x < width; x++) {
+                    this.cells[x] = [];
+                    for (let y = 0; y < height; y++) {
+                        this.cells[x][y] = new Cell(x, y);
+                    }
+                }
+            }
+
+            getCell(x, y) {
+                if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+                    return null; // Out of bounds
+                }
+                return this.cells[x][y];
+            }
+
+            // Get neighbors of a cell that are within bounds
+            getNeighbors(cell) {
+                const neighbors = [];
+                const { x, y } = cell;
+
+                // Order: N, E, S, W
+                const potential = [
+                    { dx: 0, dy: -1, wallDirCurrent: 0, wallDirNeighbor: 2 }, // North
+                    { dx: 1, dy: 0,  wallDirCurrent: 1, wallDirNeighbor: 3 }, // East
+                    { dx: 0, dy: 1,  wallDirCurrent: 2, wallDirNeighbor: 0 }, // South
+                    { dx: -1, dy: 0, wallDirCurrent: 3, wallDirNeighbor: 1 }  // West
+                ];
+
+                for (const p of potential) {
+                    const nx = x + p.dx;
+                    const ny = y + p.dy;
+                    const neighborCell = this.getCell(nx, ny);
+                    if (neighborCell) {
+                        neighbors.push({
+                            cell: neighborCell,
+                            wallDirCurrent: p.wallDirCurrent, // Direction of wall on current cell to break
+                            wallDirNeighbor: p.wallDirNeighbor // Direction of wall on neighbor cell to break
+                        });
+                    }
+                }
+                return neighbors;
+            }
+            
+            // Get *unvisited* neighbors
+            getUnvisitedNeighbors(cell) {
+                return this.getNeighbors(cell).filter(n => n.cell && !n.cell.visited);
+            }
+        }
+        // --- End of grid.js ---
+
+        // --- generators/generator.js ---
+        class Generator {
+            constructor(grid, config = {}) {
+                this.grid = grid;
+                this.config = config;
+            }
+
+            generate() {
+                throw new Error("Generator.generate() must be implemented by subclass.");
+            }
+
+            // Helper to connect two cells by removing walls between them
+            _connectCells(cell1, cell2, wallDir1, wallDir2) {
+                cell1.removeWall(wallDir1);
+                cell2.removeWall(wallDir2);
+                cell1.isPath = true;
+                cell2.isPath = true;
+            }
+        }
+        // --- End of generators/generator.js ---
+
+        // --- generators/maze.js (Recursive Backtracker) ---
+        class MazeGenerator extends Generator {
+            constructor(grid, config = {}) {
+                super(grid, config);
+            }
+
+            generate(startX = 0, startY = 0) {
+                const stack = [];
+                const startCell = this.grid.getCell(startX, startY);
+                if (!startCell) {
+                    console.error("Invalid start cell for maze generation");
+                    return;
+                }
+                startCell.visited = true;
+                startCell.isPath = true;
+                stack.push(startCell);
+
+                while (stack.length > 0) {
+                    const current = stack[stack.length - 1]; // Peek
+                    const neighbors = this.grid.getUnvisitedNeighbors(current);
+                    
+                    if (neighbors.length > 0) {
+                        const { cell: next, wallDirCurrent, wallDirNeighbor } = Utils.Random.pick(neighbors);
+                        this._connectCells(current, next, wallDirCurrent, wallDirNeighbor);
+                        next.visited = true;
+                        next.isPath = true;
+                        stack.push(next);
+                    } else {
+                        stack.pop();
+                    }
+                }
+            }
+        }
+        // --- End of generators/maze.js ---
+        
+        // --- generators/room.js ---
+        class Room { // Helper class for RoomGenerator
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.id = Utils.Random.nextInt(100000); // Simple ID
+                this.cells = []; // Cells belonging to this room
+            }
+
+            // Check if this room overlaps with another room
+            overlaps(otherRoom) {
+                return (this.x < otherRoom.x + otherRoom.width &&
+                        this.x + this.width > otherRoom.x &&
+                        this.y < otherRoom.y + otherRoom.height &&
+                        this.y + this.height > otherRoom.y);
+            }
+
+            // Get center coordinates
+            getCenter() {
+                return {
+                    x: Math.floor(this.x + this.width / 2),
+                    y: Math.floor(this.y + this.height / 2)
+                };
+            }
+        }
+
+        class RoomGenerator extends Generator {
+            constructor(grid, config = {}) {
+                super(grid, config);
+                this.rooms = [];
+                this.config.roomAttempts = config.roomAttempts || 100;
+                this.config.minRoomSize = config.minRoomSize || 3;
+                this.config.maxRoomSize = config.maxRoomSize || 7; // Max size should be odd for centered doors usually
+            }
+
+            generate() {
+                this.rooms = [];
+                for (let i = 0; i < this.config.roomAttempts; i++) {
+                    let width = Utils.Random.nextInt(this.config.minRoomSize, this.config.maxRoomSize + 1);
+                    let height = Utils.Random.nextInt(this.config.minRoomSize, this.config.maxRoomSize + 1);
+                    // Ensure odd dimensions for easier centering if needed, though not strictly required by this lib
+                    // width = width % 2 === 0 ? width + 1 : width; 
+                    // height = height % 2 === 0 ? height + 1 : height;
+
+                    const x = Utils.Random.nextInt(0, this.grid.width - width -1); // -1 to keep within bounds
+                    const y = Utils.Random.nextInt(0, this.grid.height - height -1); // -1 to keep within bounds
+                    
+                    if (x < 0 || y < 0) continue; // Skip if too close to edge after size calc
+
+                    const newRoom = new Room(x, y, width, height);
+
+                    let overlaps = false;
+                    for (const room of this.rooms) {
+                        if (newRoom.overlaps(room)) {
+                            overlaps = true;
+                            break;
+                        }
+                    }
+
+                    if (!overlaps) {
+                        this._carveRoom(newRoom);
+                        this.rooms.push(newRoom);
+                    }
+                }
+                this._connectRooms();
+                return this.rooms; // Return generated rooms
+            }
+
+            _carveRoom(room) {
+                for (let i = 0; i < room.width; i++) {
+                    for (let j = 0; j < room.height; j++) {
+                        const cellX = room.x + i;
+                        const cellY = room.y + j;
+                        const cell = this.grid.getCell(cellX, cellY);
+                        if (cell) {
+                            cell.isRoom = true;
+                            cell.isPath = true; // Rooms are traversable paths
+                            cell.room = room;
+                            room.cells.push(cell);
+                            // Clear internal walls for room cells
+                            if (i > 0) this._connectCells(cell, this.grid.getCell(cellX - 1, cellY), 3, 1); // West-East
+                            if (j > 0) this._connectCells(cell, this.grid.getCell(cellX, cellY - 1), 0, 2); // North-South
+                        }
+                    }
+                }
+            }
+            
+            _connectRooms() { // Simple L-corridor connector
+                for (let i = 0; i < this.rooms.length - 1; i++) {
+                    const roomA = this.rooms[i];
+                    const roomB = this.rooms[i+1]; // Connect sequentially for simplicity
+                    const centerA = roomA.getCenter();
+                    const centerB = roomB.getCenter();
+
+                    this._carveCorridor(centerA.x, centerA.y, centerB.x, centerB.y);
+                }
+            }
+
+            _carveCorridor(startX, startY, endX, endY) {
+                let currentX = startX;
+                let currentY = startY;
+
+                while(currentX !== endX || currentY !== endY) {
+                    const cell = this.grid.getCell(currentX, currentY);
+                    if (cell) {
+                        cell.isCorridor = true;
+                        cell.isPath = true; // Corridors are paths
+                        cell.visited = true; // Mark as visited to prevent maze generator from overriding
+                    }
+
+                    if (Utils.Random.nextBool() && currentX !== endX) { // Move horizontally
+                        const prevX = currentX;
+                        currentX += (endX > currentX) ? 1 : -1;
+                        const nextCell = this.grid.getCell(currentX, currentY);
+                        if (cell && nextCell) {
+                            if (endX > prevX) this._connectCells(cell, nextCell, 1, 3); // East
+                            else this._connectCells(cell, nextCell, 3, 1); // West
+                        }
+                    } else if (currentY !== endY) { // Move vertically
+                        const prevY = currentY;
+                        currentY += (endY > currentY) ? 1 : -1;
+                        const nextCell = this.grid.getCell(currentX, currentY);
+                        if (cell && nextCell) {
+                            if (endY > prevY) this._connectCells(cell, nextCell, 2, 0); // South
+                            else this._connectCells(cell, nextCell, 0, 2); // North
+                        }
+                    } else if (currentX !== endX) { // Forced horizontal if vertical is done
+                         const prevX = currentX;
+                        currentX += (endX > currentX) ? 1 : -1;
+                        const nextCell = this.grid.getCell(currentX, currentY);
+                        if (cell && nextCell) {
+                            if (endX > prevX) this._connectCells(cell, nextCell, 1, 3); // East
+                            else this._connectCells(cell, nextCell, 3, 1); // West
+                        }
+                    } else { // Should not happen if logic is correct
+                        break;
+                    }
+                }
+                 // Ensure the final cell is also marked
+                const endCell = this.grid.getCell(endX, endY);
+                if (endCell) {
+                    endCell.isCorridor = true;
+                    endCell.isPath = true;
+                    endCell.visited = true;
+                }
+            }
+        }
+        // --- End of generators/room.js ---
+
+        // --- main.js (Maze class) ---
+        class Maze {
+            constructor(width, height, generatorType = 'MazeGenerator', roomsConfig = {}, mazeConfig = {}) {
+                this.grid = new Grid(width, height);
+                this.rooms = [];
+
+                if (generatorType === 'RoomThenMaze') {
+                    // First, generate rooms
+                    const roomGen = new RoomGenerator(this.grid, roomsConfig);
+                    this.rooms = roomGen.generate();
+                    
+                    // Then, fill remaining unvisited areas with maze
+                    // For each cell, if not visited (i.e. not part of a room/corridor), start maze gen
+                    const mazeGen = new MazeGenerator(this.grid, mazeConfig);
+                    for (let y = 0; y < this.grid.height; y++) {
+                        for (let x = 0; x < this.grid.width; x++) {
+                            const cell = this.grid.getCell(x,y);
+                            if (cell && !cell.visited) { // If not part of a room or corridor
+                                mazeGen.generate(x, y);
+                            }
+                        }
+                    }
+
+                } else if (generatorType === 'MazeGenerator') {
+                     const mazeGen = new MazeGenerator(this.grid, mazeConfig);
+                     mazeGen.generate(0,0); // Start maze from 0,0 or a random point
+                }
+                // Other generator types can be added here
+            }
+
+            getGrid() {
+                return this.grid;
+            }
+
+            getRooms() {
+                return this.rooms;
+            }
+        }
+        // --- End of main.js (Maze class) ---
+        // --- End of Adapted node-maze-generator Library ---
+
+
+        // --- Game Configuration (config.js) ---
+        const Config = {
+            LLM_API_ENDPOINT: '/request', // Your local LLM API endpoint
+            MAZE_WIDTH: 30, // cells
+            MAZE_HEIGHT: 20, // cells
+            CELL_SIZE: 20, // pixels
+            PLAYER_VISUAL: '🧑',
+            TILE_VISUALS: {
+                WALL: '🧱', // Used if a cell is a solid wall block
+                FLOOR: ' ', // Visual for floor
+                FOG: '▓', // Fog of war
+                DEFAULT_ENTITY: '?'
+            },
+            PLAYER_START_HP: 100, // Example, LLM might override
+            // System Prompt for the LLM
+            SYSTEM_PROMPT: `
+You are the Dungeon Master AI for a roguelike game. Your role is to dynamically generate all game content, including character details, room descriptions, NPC interactions, monster encounters, combat actions, and outcomes based on player actions and the current game state. You must respond in JSON format only.
+
+Game Premise: The player is an adventurer exploring a mysterious, ever-changing dungeon filled with dangers, treasures, and strange inhabitants.
+
+Core Principles:
+1.  JSON Responses Only: All your responses MUST be valid JSON.
+2.  Creativity and Immersion: Generate imaginative and engaging content. Describe scenes vividly. Make NPCs and monsters unique.
+3.  Game Logic via Narrative: Instead of numerical stats and dice rolls, you determine outcomes narratively. For example, if the player chooses to attack, you describe the attack and its result.
+4.  Player Agency: Provide meaningful choices, especially in NPC interactions (decision trees) and combat (action lists).
+5.  Consistency (Loose): Maintain a general sense of continuity, but don't be afraid to introduce surprises. The dungeon is magical and unpredictable.
+6.  Adaptability: The 'context_prompt' in the request will guide the specific type of content you need to generate. Pay close attention to 'request_type'.
+7.  Visuals: For items, monsters, NPCs, use simple emojis (preferred) or short descriptive text for their 'visual' property. This 'visual' will be displayed on the game map. For example, a "potion of healing" could have visual: "❤️". A goblin could be "👺". Treasure "💎".
+8.  Player HP: The player has HP. Some actions might cause HP loss. If HP reaches 0, it's game over. Mention HP changes in outcome descriptions.
+9.  State Updates: You can suggest updates to player inventory or HP in your responses.
+
+Response Structures (Examples - adapt as needed based on request_type):
+
+If request_type is "character_creation":
+{
+  "player_name": "Generated Name",
+  "description": "Generated character background/flavor text.",
+  "initial_items": [{"name": "Item Name", "description": "Item desc", "visual": "✨", "type": "misc/weapon/armor/consumable"}],
+  "initial_hp": 100
+}
+
+If request_type is "room_description" (player enters a new cell):
+(You decide what's in the room: empty, monster, NPC, treasure, or just a description. Consider game_state.current_location_visited_before)
+{
+  "type": "event_type", // "description_only", "combat_start", "npc_interaction_start", "treasure_found", "trap_sprung"
+  "description": "Detailed description of the room/area and what the player perceives.",
+  "event_details": { // Content depends on "type"
+    // if "combat_start": { "monster": { "name": "Monster Name", "description": "Monster desc", "visual": "👻", "hp_estimate": "healthy/wounded/dying", "id": "monster_unique_id_123" } }
+    // if "npc_interaction_start": { "npc": { "name": "NPC Name", "description": "NPC desc", "visual": "👤", "id": "npc_unique_id_456" } }
+    // if "treasure_found": { "treasure": { "name": "Treasure Name", "description": "Treasure desc", "visual": "💎", "type": "gold/item/key" } }
+    // if "trap_sprung": { "trap_name": "Spike Trap", "damage_taken": 10, "effect_description": "You stepped on a hidden spike!" }
+  },
+  "ambient_sound": "faint dripping water" // optional
+}
+
+If request_type is "npc_dialogue" or "initiate_npc_interaction":
+(Input will include 'game_state.current_interaction_context.npc_id' and possibly 'user_choice_payload')
+{
+  "dialogue": "NPC's current speech.",
+  "options": [ // Player's choices
+    { "text": "Choice 1 text", "next_request_type": "npc_dialogue", "user_choice_payload": "unique_key_for_choice_1_outcome" },
+    { "text": "Choice 2 text (e.g., leave)", "next_request_type": "end_interaction", "user_choice_payload": "leave_conversation" }
+  ],
+  "npc_mood": "neutral/friendly/hostile" // optional
+}
+
+If request_type is "initiate_combat":
+(Input includes 'game_state.current_interaction_context.monster_id' and details)
+{
+  "combat_intro_text": "Text describing the start of combat with [Monster Name].",
+  "player_actions": [ // Initial set of actions
+    { "text": "Attack with [equipped_weapon_name_or_fists]", "action_id": "attack_weapon" },
+    { "text": "Try to talk to the monster", "action_id": "talk_to_monster" },
+    { "text": "Use an item from inventory", "action_id": "use_item_combat" } // This would then need another step or LLM call to pick item
+  ],
+  "enemy_status_text": "The [Monster Name] looks ready to fight!"
+}
+
+If request_type is "combat_action" (player chose an action):
+(Input will include 'user_choice.action_id', 'user_choice.item_id' (if applicable), and 'game_state.current_interaction_context.monster_id' and 'game_state.player')
+{
+  "action_result_text": "Description of what happened (e.g., 'You swing your sword, but the slime dodges easily! It gurgles menacingly.').",
+  "player_hp_change": -5, // Can be positive (healing) or negative (damage). 0 if no change.
+  "player_status_text": "Your current condition (e.g., 'You feel a sharp pain as it retaliates!').", // Optional
+  "enemy_status_text": "The [Monster Name]'s current condition (e.g., 'The slime seems unfazed/wounded/near_death.').",
+  "combat_over": false, // true if combat ended
+  "victory": null, // true if player won, false if player lost (and combat_over is true)
+  "loot_dropped": null, // if victory: [{"name": "Slime Gel", "description": "Sticky goo", "visual": "🦠", "type": "material"}]
+  "next_player_actions": [] // if combat_over is false, new list of actions for player's next turn
+}
+
+If request_type is "loot_pickup_decision": // When player finds treasure
+(Input includes 'game_state.current_interaction_context.treasure_details')
+{
+    "description": "You found [Treasure Name]! ([Treasure Description])",
+    "options": [
+        {"text": "Take it", "action_id": "take_loot"},
+        {"text": "Leave it", "action_id": "leave_loot"}
+    ]
+}
+
+If request_type is "process_loot_pickup": // After player decides to take loot
+(Input includes 'user_choice.action_id' and 'game_state.current_interaction_context.treasure_details')
+{
+    "outcome_text": "You pocket the [Treasure Name].", // Or "You leave the treasure behind."
+    "item_added_to_inventory": {"name": "Treasure Name", ...}, // if taken, null otherwise
+    "next_action": "continue_exploration"
+}
+
+
+Always be creative and ensure the JSON is well-formed. The game's fun depends on your descriptions and the scenarios you create!
+If the player's HP is 0 or less, the 'combat_over' should be true, 'victory' false, and the 'action_result_text' should describe the game over.
+`
+        };
+        // --- End of Game Configuration ---
+
+
+        // --- LLM API Interaction (llm_api.js) ---
+        const LLM_API = {
+            async callLlmApi(requestData) {
+                addDebugMessage(`Sending to LLM: ${requestData.request_type}`);
+                try {
+                    const response = await fetch(Config.LLM_API_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            system_prompt: Config.SYSTEM_PROMPT, // Send system prompt each time, or assume LLM retains it
+                            ...requestData // Merges request_type, game_state, context_prompt, user_choice
+                        }),
+                    });
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`LLM API request failed: ${response.status} ${errorText}`);
+                    }
+                    const data = await response.json();
+                    addDebugMessage(`LLM Response for ${requestData.request_type} received.`);
+                    return data;
+                } catch (error) {
+                    console.error('LLM API call error:', error);
+                    Render.displayMessage(`Error communicating with the LLM: ${error.message}. Is the local Python server running?`);
+                    addDebugMessage(`LLM API Error: ${error.message}`);
+                    // Provide a fallback or error state for the game
+                    return { error: true, message: error.message };
+                }
+            }
+        };
+        // --- End of LLM API Interaction ---
+
+        // --- Rendering Logic (render.js) ---
+        const Render = {
+            canvas: document.getElementById('gameCanvas'),
+            ctx: null,
+            messageLog: document.getElementById('message-log'),
+            choicesArea: document.getElementById('choices-area'),
+            inventoryItemsDiv: document.getElementById('inventory-items'),
+            playerNameSpan: document.getElementById('player-name'),
+            playerXSpan: document.getElementById('player-x'),
+            playerYSpan: document.getElementById('player-y'),
+            playerHpSpan: document.getElementById('player-hp'),
+
+            init() {
+                this.ctx = this.canvas.getContext('2d');
+                this.canvas.width = Config.MAZE_WIDTH * Config.CELL_SIZE;
+                this.canvas.height = Config.MAZE_HEIGHT * Config.CELL_SIZE;
+            },
+
+            clearCanvas() {
+                this.ctx.fillStyle = '#374151'; // bg-gray-700
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            },
+
+            drawMaze(grid, entities, player) {
+                this.clearCanvas();
+                const { cells, width, height } = grid;
+                this.ctx.font = `${Config.CELL_SIZE * 0.8}px monospace`;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+
+                for (let x = 0; x < width; x++) {
+                    for (let y = 0; y < height; y++) {
+                        const cell = cells[x][y];
+                        const cellXPos = x * Config.CELL_SIZE;
+                        const cellYPos = y * Config.CELL_SIZE;
+                        
+                        // Draw floor for path cells
+                        if (cell.isPath || cell.isRoom || cell.isCorridor) {
+                            this.ctx.fillStyle = cell.isRoom ? '#777' : (cell.isCorridor ? '#666' : '#555'); // Different shades for room/corridor/maze
+                            this.ctx.fillRect(cellXPos, cellYPos, Config.CELL_SIZE, Config.CELL_SIZE);
+                        } else { // It's a solid wall block (or ungenerated area)
+                            this.ctx.fillStyle = '#333'; // Darker for walls
+                            this.ctx.fillRect(cellXPos, cellYPos, Config.CELL_SIZE, Config.CELL_SIZE);
+                            // this.ctx.fillText(Config.TILE_VISUALS.WALL, cellXPos + Config.CELL_SIZE / 2, cellYPos + Config.CELL_SIZE / 2);
+                        }
+
+                        // Draw walls based on cell.walls array (lines)
+                        this.ctx.strokeStyle = '#999'; // Wall line color
+                        this.ctx.lineWidth = 2;
+                        // Top wall (N)
+                        if (cell.walls[0]) this.ctx.strokeRect(cellXPos, cellYPos, Config.CELL_SIZE, 1);
+                        // Right wall (E)
+                        if (cell.walls[1]) this.ctx.strokeRect(cellXPos + Config.CELL_SIZE -1 , cellYPos, 1, Config.CELL_SIZE);
+                        // Bottom wall (S)
+                        if (cell.walls[2]) this.ctx.strokeRect(cellXPos, cellYPos + Config.CELL_SIZE -1, Config.CELL_SIZE, 1);
+                        // Left wall (W)
+                        if (cell.walls[3]) this.ctx.strokeRect(cellXPos, cellYPos, 1, Config.CELL_SIZE);
+                    }
+                }
+                
+                // Draw entities (monsters, items, NPCs)
+                for (const key in entities) {
+                    const entity = entities[key];
+                    const [ex, ey] = key.split(',').map(Number);
+                    this.ctx.fillText(entity.visual || Config.TILE_VISUALS.DEFAULT_ENTITY, 
+                                      ex * Config.CELL_SIZE + Config.CELL_SIZE / 2, 
+                                      ey * Config.CELL_SIZE + Config.CELL_SIZE / 2);
+                }
+
+                // Draw player
+                this.ctx.fillText(Config.PLAYER_VISUAL, 
+                                  player.x * Config.CELL_SIZE + Config.CELL_SIZE / 2, 
+                                  player.y * Config.CELL_SIZE + Config.CELL_SIZE / 2);
+            },
+
+            displayMessage(message, type = 'info') { // type can be 'info', 'event', 'error', 'dialogue'
+                const messageEl = document.createElement('p');
+                messageEl.textContent = message;
+                messageEl.classList.add('log-message');
+                if (type === 'error') messageEl.style.color = 'red';
+                if (type === 'event') messageEl.style.fontWeight = 'bold';
+                if (type === 'dialogue') messageEl.style.fontStyle = 'italic';
+                this.messageLog.appendChild(messageEl);
+                this.messageLog.scrollTop = this.messageLog.scrollHeight; // Auto-scroll
+            },
+
+            clearMessages() {
+                this.messageLog.innerHTML = '';
+            },
+
+            displayChoices(options, callback) {
+                this.choicesArea.innerHTML = ''; // Clear previous choices
+                if (!options || options.length === 0) return;
+
+                options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option.text;
+                    button.classList.add('choice-button');
+                    button.onclick = () => {
+                        this.choicesArea.innerHTML = ''; // Clear choices once one is made
+                        callback(option);
+                    };
+                    this.choicesArea.appendChild(button);
+                });
+            },
+            
+            clearChoices() {
+                this.choicesArea.innerHTML = '';
+            },
+
+            updatePlayerInfo(player) {
+                this.playerNameSpan.textContent = player.name;
+                this.playerXSpan.textContent = player.x;
+                this.playerYSpan.textContent = player.y;
+                this.playerHpSpan.textContent = player.hp;
+            },
+
+            updateInventory(inventory) {
+                this.inventoryItemsDiv.innerHTML = '';
+                inventory.forEach(item => {
+                    const itemEl = document.createElement('span');
+                    itemEl.classList.add('inventory-item');
+                    itemEl.textContent = `${item.visual || ''} ${item.name}`;
+                    itemEl.title = item.description;
+                    this.inventoryItemsDiv.appendChild(itemEl);
+                });
+            }
+        };
+        // --- End of Rendering Logic ---
+
+        // --- Main Game Logic (game.js) ---
+        const Game = {
+            player: {
+                name: "Adventurer",
+                x: 0,
+                y: 0,
+                hp: Config.PLAYER_START_HP,
+                inventory: [],
+                // other stats can be added by LLM
+            },
+            maze: null,
+            entities: {}, // {"x,y": {type: "monster/npc/item", visual: "M", details: {...}}}
+            gameState: "LOADING", // LOADING, EXPLORING, COMBAT, DIALOGUE, GAME_OVER
+            currentInteractionContext: null, // For combat (monsterId) or dialogue (npcId, treasureDetails)
+            visitedCellEvents: new Set(), // "x,y" strings for cells where LLM room_description was called
+
+            async init() {
+                this.gameState = "LOADING";
+                Render.init();
+                Render.clearMessages();
+                Render.displayMessage("Welcome, brave adventurer! Creating your destiny...");
+                addDebugMessage("Game Init Started");
+
+                // 1. Character Creation
+                const charCreationResponse = await LLM_API.callLlmApi({
+                    request_type: "character_creation",
+                    context_prompt: "A new adventurer seeks fortune. Create their profile."
+                });
+
+                if (charCreationResponse.error || !charCreationResponse.player_name) {
+                    Render.displayMessage("Failed to create character. Please check LLM connection and try resetting.", "error");
+                    addDebugMessage("Character creation failed.");
+                    this.gameState = "GAME_OVER";
+                    return;
+                }
+
+                this.player.name = charCreationResponse.player_name;
+                this.player.hp = charCreationResponse.initial_hp || Config.PLAYER_START_HP;
+                this.player.inventory = charCreationResponse.initial_items || [];
+                Render.displayMessage(`You are ${this.player.name}. ${charCreationResponse.description || ''}`);
+                Render.updateInventory(this.player.inventory);
+                Render.updatePlayerInfo(this.player);
+                addDebugMessage(`Character created: ${this.player.name}, HP: ${this.player.hp}`);
+
+                // 2. Maze Generation
+                Render.displayMessage("Carving the dungeon depths...");
+                this.maze = new Maze(Config.MAZE_WIDTH, Config.MAZE_HEIGHT, 'RoomThenMaze', 
+                    { roomAttempts: 50, minRoomSize: 4, maxRoomSize: 8 }, {}
+                );
+                
+                // Find a starting position (e.g., center of the first room or a clear path cell)
+                if (this.maze.getRooms().length > 0) {
+                    const firstRoom = this.maze.getRooms()[0];
+                    const center = firstRoom.getCenter();
+                    this.player.x = center.x;
+                    this.player.y = center.y;
+                } else { // Fallback if no rooms, find first path cell
+                    const grid = this.maze.getGrid();
+                    let foundStart = false;
+                    for(let y=0; y < grid.height; y++) {
+                        for(let x=0; x < grid.width; x++) {
+                            if(grid.getCell(x,y).isPath) {
+                                this.player.x = x;
+                                this.player.y = y;
+                                foundStart = true; break;
+                            }
+                        }
+                        if(foundStart) break;
+                    }
+                }
+                Render.updatePlayerInfo(this.player);
+                addDebugMessage(`Maze generated. Player start: ${this.player.x},${this.player.y}`);
+
+                // 3. Initial Render and Game State
+                this.entities = {}; // Clear entities for new game
+                this.visitedCellEvents.clear();
+                this.currentInteractionContext = null;
+                Render.drawMaze(this.maze.getGrid(), this.entities, this.player);
+                this.gameState = "EXPLORING";
+                Render.displayMessage("The air is thick with anticipation. Use arrow keys to move.");
+                
+                // Initial room description
+                await this.processNewCell(); 
+                
+                window.addEventListener('keydown', this.handleInput.bind(this));
+                addDebugMessage("Game Initialized and Ready.");
+            },
+
+            handleInput(event) {
+                if (this.gameState !== "EXPLORING") { // Only allow movement when exploring
+                    if (this.gameState === "GAME_OVER" && event.key === "Enter") {
+                         // Could add a prompt to restart here
+                    }
+                    return; 
+                }
+
+                let dx = 0, dy = 0;
+                let wallIndex = -1; // 0:N, 1:E, 2:S, 3:W
+
+                switch (event.key) {
+                    case 'ArrowUp': dy = -1; wallIndex = 0; break;
+                    case 'ArrowDown': dy = 1; wallIndex = 2; break;
+                    case 'ArrowLeft': dx = -1; wallIndex = 3; break;
+                    case 'ArrowRight': dx = 1; wallIndex = 1; break;
+                    default: return;
+                }
+                event.preventDefault(); // Prevent page scrolling
+
+                const currentCell = this.maze.getGrid().getCell(this.player.x, this.player.y);
+                if (currentCell && !currentCell.walls[wallIndex]) {
+                    this.player.x += dx;
+                    this.player.y += dy;
+                    Render.updatePlayerInfo(this.player);
+                    Render.drawMaze(this.maze.getGrid(), this.entities, this.player);
+                    this.processNewCell();
+                } else {
+                    Render.displayMessage("Ouch! A wall.", "info");
+                }
+            },
+
+            async processNewCell() {
+                if (this.gameState === "GAME_OVER") return;
+                this.gameState = "LOADING"; // Prevent actions while LLM processes
+                Render.clearChoices();
+
+                const cellKey = `${this.player.x},${this.player.y}`;
+                const currentGridCell = this.maze.getGrid().getCell(this.player.x, this.player.y);
+                let contextPrompt = `Player is at (${this.player.x}, ${this.player.y}).`;
+                if (currentGridCell.isRoom) contextPrompt += " This area is part of a room.";
+                if (currentGridCell.isCorridor) contextPrompt += " This area is a corridor.";
+                
+                let triggerEvent = true;
+                // Simple logic: trigger event if cell not visited for event, or if it's a special entity location
+                // More complex logic can be added (e.g. chance to re-trigger, LLM decides if room changed)
+                if (this.visitedCellEvents.has(cellKey) && !this.entities[cellKey]) {
+                     // Render.displayMessage("You've been here before. It seems quiet now.", "info");
+                     // triggerEvent = false; // Don't re-trigger for now, unless an entity is here
+                }
+
+
+                if (this.entities[cellKey]) { // If there's already an entity placed by LLM, interact with it
+                    const entity = this.entities[cellKey];
+                    Render.displayMessage(`You see ${entity.description || entity.name}.`, "event");
+                    if (entity.type === "monster") {
+                        this.currentInteractionContext = { monster_id: entity.id, monster_details: entity };
+                        await this.initiateCombat(entity);
+                    } else if (entity.type === "npc") {
+                        this.currentInteractionContext = { npc_id: entity.id, npc_details: entity };
+                        await this.initiateNpcInteraction(entity);
+                    } else if (entity.type === "treasure") {
+                         this.currentInteractionContext = { treasure_details: entity };
+                         await this.handleTreasureFound(entity);
+                    } else {
+                        this.gameState = "EXPLORING"; // No specific interaction
+                    }
+                    return; // Interaction handled
+                }
+                
+                // If no pre-existing entity and cell not processed for event, ask LLM
+                if (!this.visitedCellEvents.has(cellKey)) {
+                    this.visitedCellEvents.add(cellKey); // Mark as processed for an event by LLM
+                    
+                    const llmResponse = await LLM_API.callLlmApi({
+                        request_type: "room_description",
+                        game_state: this.getGameStatePayload(),
+                        context_prompt: `${contextPrompt} Describe what the player finds or what happens here.`
+                    });
+
+                    if (llmResponse.error) {
+                        Render.displayMessage("Error getting room description.", "error");
+                        this.gameState = "EXPLORING";
+                        return;
+                    }
+                    
+                    Render.displayMessage(llmResponse.description, "event");
+                    if (llmResponse.ambient_sound) Render.displayMessage(`You hear ${llmResponse.ambient_sound}.`, "info");
+
+                    if (llmResponse.type === "combat_start" && llmResponse.event_details && llmResponse.event_details.monster) {
+                        const monster = llmResponse.event_details.monster;
+                        monster.id = monster.id || `monster_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                        this.entities[cellKey] = { type: "monster", ...monster };
+                        this.currentInteractionContext = { monster_id: monster.id, monster_details: monster };
+                        await this.initiateCombat(monster);
+                    } else if (llmResponse.type === "npc_interaction_start" && llmResponse.event_details && llmResponse.event_details.npc) {
+                        const npc = llmResponse.event_details.npc;
+                        npc.id = npc.id || `npc_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                        this.entities[cellKey] = { type: "npc", ...npc };
+                        this.currentInteractionContext = { npc_id: npc.id, npc_details: npc };
+                        await this.initiateNpcInteraction(npc);
+                    } else if (llmResponse.type === "treasure_found" && llmResponse.event_details && llmResponse.event_details.treasure) {
+                        const treasure = llmResponse.event_details.treasure;
+                        // Don't place in entities yet, let player decide to pick up
+                        this.currentInteractionContext = { treasure_details: treasure };
+                        await this.handleTreasureFound(treasure);
+                    } else if (llmResponse.type === "trap_sprung" && llmResponse.event_details) {
+                        const trap = llmResponse.event_details;
+                        Render.displayMessage(trap.effect_description, "event");
+                        if (trap.damage_taken) {
+                            this.player.hp -= trap.damage_taken;
+                            Render.displayMessage(`You take ${trap.damage_taken} damage!`, "error");
+                            Render.updatePlayerInfo(this.player);
+                            if (this.player.hp <= 0) {
+                                await this.gameOver("You succumbed to a deadly trap!");
+                                return;
+                            }
+                        }
+                        this.gameState = "EXPLORING";
+                    } else {
+                        // Description only or unhandled event type
+                        this.gameState = "EXPLORING";
+                    }
+                } else {
+                    // Cell already processed by LLM and no persistent entity was placed or it was cleared
+                    Render.displayMessage("This area seems familiar and currently uneventful.", "info");
+                    this.gameState = "EXPLORING";
+                }
+                Render.drawMaze(this.maze.getGrid(), this.entities, this.player); // Re-render in case entities were added
+            },
+
+            async initiateCombat(monster) {
+                this.gameState = "COMBAT";
+                Render.displayMessage(`A wild ${monster.name} (${monster.visual}) appears! ${monster.description || ''}`, "event");
+                
+                const combatInitResponse = await LLM_API.callLlmApi({
+                    request_type: "initiate_combat",
+                    game_state: this.getGameStatePayload(), // Includes current_interaction_context with monster details
+                    context_prompt: `Player encounters ${monster.name}. Start the combat.`
+                });
+
+                if (combatInitResponse.error) {
+                    Render.displayMessage("Error initiating combat.", "error");
+                    this.gameState = "EXPLORING"; return;
+                }
+                
+                Render.displayMessage(combatInitResponse.combat_intro_text || `Combat with ${monster.name} begins!`, "event");
+                if(combatInitResponse.enemy_status_text) Render.displayMessage(`Enemy: ${combatInitResponse.enemy_status_text}`, "info");
+                Render.displayChoices(combatInitResponse.player_actions, this.handleCombatAction.bind(this));
+            },
+
+            async handleCombatAction(chosenAction) {
+                if (this.gameState !== "COMBAT") return;
+                this.gameState = "LOADING"; // Loading while LLM processes action
+
+                const combatResponse = await LLM_API.callLlmApi({
+                    request_type: "combat_action",
+                    user_choice: { action_id: chosenAction.action_id, text: chosenAction.text }, // LLM might need chosenAction.text for context
+                    game_state: this.getGameStatePayload(),
+                    context_prompt: `Player chose to '${chosenAction.text}' against ${this.currentInteractionContext.monster_details.name}. Determine the outcome.`
+                });
+
+                if (combatResponse.error) {
+                    Render.displayMessage("Error during combat action.", "error");
+                    this.gameState = "COMBAT"; // Revert to combat to allow another try or different action
+                    // Potentially re-display previous actions or fetch new ones
+                    // For now, just let player try again if API fails. A better way would be to re-fetch actions.
+                    const prevActions = this.choicesArea.getElementsByTagName('button');
+                    if (prevActions.length > 0) { // If choices are still there, re-enable them
+                         Render.displayChoices(Array.from(prevActions).map(btn => ({text: btn.textContent, action_id: btn.dataset.actionId || "unknown"})), this.handleCombatAction.bind(this));
+                    } else {
+                        // If choices were cleared, we might need to call initiate_combat again or a get_combat_actions
+                        Render.displayMessage("Stuck in combat due to error. Try moving if possible or reset.", "error");
+                        this.gameState = "EXPLORING"; // Try to break loop
+                    }
+                    return;
+                }
+
+                Render.displayMessage(combatResponse.action_result_text, "event");
+                if (combatResponse.player_status_text) Render.displayMessage(`Player: ${combatResponse.player_status_text}`, "info");
+                if (combatResponse.enemy_status_text) Render.displayMessage(`Enemy: ${combatResponse.enemy_status_text}`, "info");
+
+                if (combatResponse.player_hp_change) {
+                    this.player.hp += combatResponse.player_hp_change; // player_hp_change can be negative
+                    Render.updatePlayerInfo(this.player);
+                    Render.displayMessage(`Your HP changed by ${combatResponse.player_hp_change}. Current HP: ${this.player.hp}`, "info");
+                }
+
+                if (this.player.hp <= 0) {
+                    await this.gameOver(combatResponse.action_result_text || `You were defeated by ${this.currentInteractionContext.monster_details.name}!`);
+                    return;
+                }
+
+                if (combatResponse.combat_over) {
+                    if (combatResponse.victory) {
+                        Render.displayMessage("Victory!", "event");
+                        const cellKey = `${this.player.x},${this.player.y}`;
+                        delete this.entities[cellKey]; // Remove defeated monster
+                        Render.drawMaze(this.maze.getGrid(), this.entities, this.player);
+
+                        if (combatResponse.loot_dropped && combatResponse.loot_dropped.length > 0) {
+                            combatResponse.loot_dropped.forEach(item => {
+                                this.player.inventory.push(item);
+                                Render.displayMessage(`You looted ${item.name}!`, "info");
+                            });
+                            Render.updateInventory(this.player.inventory);
+                        }
+                    } else {
+                         // Player lost but HP > 0? LLM might have specific scenario.
+                         // If HP <=0, gameOver handles it. If LLM says defeat but HP > 0, it's a special case.
+                        Render.displayMessage("Defeated, but somehow you survived...", "event");
+                    }
+                    this.gameState = "EXPLORING";
+                    this.currentInteractionContext = null;
+                    Render.clearChoices();
+                } else {
+                    this.gameState = "COMBAT";
+                    Render.displayChoices(combatResponse.next_player_actions, this.handleCombatAction.bind(this));
+                }
+            },
+            
+            async initiateNpcInteraction(npc) {
+                this.gameState = "DIALOGUE";
+                Render.displayMessage(`You meet ${npc.name} (${npc.visual}). ${npc.description || ''}`, "event");
+
+                const dialogueResponse = await LLM_API.callLlmApi({
+                    request_type: "initiate_npc_interaction", // Or just "npc_dialogue" with a specific context_prompt
+                    game_state: this.getGameStatePayload(), // Includes current_interaction_context with npc details
+                    context_prompt: `Player starts a conversation with ${npc.name}. Provide initial dialogue and options.`
+                });
+                
+                this.handleNpcDialogueResponse(dialogueResponse);
+            },
+
+            async handleNpcDialogue(chosenOption) {
+                if (this.gameState !== "DIALOGUE") return;
+                this.gameState = "LOADING";
+
+                if (chosenOption.next_request_type === "end_interaction") {
+                    Render.displayMessage("You end the conversation.", "info");
+                    this.gameState = "EXPLORING";
+                    this.currentInteractionContext = null;
+                    Render.clearChoices();
+                    return;
+                }
+                
+                // If chosenOption leads to combat
+                if (chosenOption.next_request_type === "combat_start_from_npc") {
+                    const npc = this.currentInteractionContext.npc_details;
+                    Render.displayMessage(`You chose to attack ${npc.name}!`, "error");
+                    // Transform NPC to a monster-like entity for combat
+                    const monsterDataFromNpc = {
+                        name: npc.name,
+                        description: `The enraged ${npc.name}!`,
+                        visual: npc.visual || '😠', // Angry visual
+                        id: npc.id // reuse npc id as monster id for this encounter
+                    };
+                    this.entities[`${this.player.x},${this.player.y}`] = { type: "monster", ...monsterDataFromNpc }; // Replace NPC with monster
+                    this.currentInteractionContext = { monster_id: monsterDataFromNpc.id, monster_details: monsterDataFromNpc };
+                    await this.initiateCombat(monsterDataFromNpc);
+                    return;
+                }
+
+
+                const dialogueResponse = await LLM_API.callLlmApi({
+                    request_type: chosenOption.next_request_type || "npc_dialogue",
+                    user_choice: { payload: chosenOption.user_choice_payload, text: chosenOption.text },
+                    game_state: this.getGameStatePayload(),
+                    context_prompt: `Player chose '${chosenOption.text}'. Continue dialogue with ${this.currentInteractionContext.npc_details.name}.`
+                });
+                
+                this.handleNpcDialogueResponse(dialogueResponse);
+            },
+
+            handleNpcDialogueResponse(response) {
+                if (response.error) {
+                    Render.displayMessage("Error in dialogue.", "error");
+                    this.gameState = "EXPLORING"; // Or revert to DIALOGUE with previous options if possible
+                    return;
+                }
+
+                Render.displayMessage(`${this.currentInteractionContext.npc_details.name}: "${response.dialogue}"`, "dialogue");
+                if (response.options && response.options.length > 0) {
+                    this.gameState = "DIALOGUE";
+                    Render.displayChoices(response.options, this.handleNpcDialogue.bind(this));
+                } else {
+                    // Dialogue ended by LLM
+                    Render.displayMessage("The conversation ends.", "info");
+                    this.gameState = "EXPLORING";
+                    this.currentInteractionContext = null;
+                    Render.clearChoices();
+                }
+                // Handle potential state changes from LLM (e.g., got an item)
+                if (response.updated_player_state) {
+                    this.applyPlayerStateUpdates(response.updated_player_state);
+                }
+            },
+
+            async handleTreasureFound(treasure) {
+                this.gameState = "DIALOGUE"; // Use DIALOGUE state for simple choice
+                Render.displayMessage(`You found: ${treasure.name} (${treasure.visual || '?'}) - ${treasure.description}`, "event");
+
+                const decisionResponse = await LLM_API.callLlmApi({
+                    request_type: "loot_pickup_decision",
+                    game_state: this.getGameStatePayload(), // includes treasure in currentInteractionContext
+                    context_prompt: `Player found ${treasure.name}. Ask if they want to take it.`
+                });
+
+                if (decisionResponse.error || !decisionResponse.options) {
+                    Render.displayMessage("Error processing treasure. Leaving it for now.", "error");
+                    this.gameState = "EXPLORING";
+                    this.currentInteractionContext = null;
+                    return;
+                }
+                Render.displayChoices(decisionResponse.options, async (choice) => {
+                    const pickupResponse = await LLM_API.callLlmApi({
+                        request_type: "process_loot_pickup",
+                        user_choice: { action_id: choice.action_id },
+                        game_state: this.getGameStatePayload(),
+                        context_prompt: `Player chose to '${choice.text}' the ${treasure.name}.`
+                    });
+
+                    if (pickupResponse.error) {
+                        Render.displayMessage("Error picking up treasure.", "error");
+                    } else {
+                        Render.displayMessage(pickupResponse.outcome_text, "info");
+                        if (pickupResponse.item_added_to_inventory) {
+                            this.player.inventory.push(pickupResponse.item_added_to_inventory);
+                            Render.updateInventory(this.player.inventory);
+                        }
+                    }
+                    this.gameState = "EXPLORING";
+                    this.currentInteractionContext = null;
+                    Render.clearChoices();
+                });
+            },
+            
+            applyPlayerStateUpdates(updates) {
+                if (updates.inventory_add && updates.inventory_add.length > 0) {
+                    updates.inventory_add.forEach(item => {
+                        this.player.inventory.push(item);
+                        Render.displayMessage(`You received ${item.name}!`, "info");
+                    });
+                    Render.updateInventory(this.player.inventory);
+                }
+                if (updates.inventory_remove && updates.inventory_remove.length > 0) {
+                    updates.inventory_remove.forEach(itemNameToRemove => {
+                        const itemIndex = this.player.inventory.findIndex(invItem => invItem.name === itemNameToRemove);
+                        if (itemIndex > -1) {
+                            const removed = this.player.inventory.splice(itemIndex, 1);
+                            Render.displayMessage(`${removed[0].name} was removed from your inventory.`, "info");
+                        }
+                    });
+                    Render.updateInventory(this.player.inventory);
+                }
+                if (updates.hp_change) {
+                    this.player.hp += updates.hp_change;
+                    Render.updatePlayerInfo(this.player);
+                    Render.displayMessage(`Your HP changed by ${updates.hp_change}.`, "info");
+                     if (this.player.hp <= 0) {
+                        this.gameOver("Your journey ends here..."); // LLM might provide a more specific message
+                        return;
+                    }
+                }
+            },
+
+            getGameStatePayload() {
+                // Prune unnecessary details or very large objects if performance becomes an issue
+                return {
+                    player: { ...this.player }, // Send a copy
+                    current_maze_level: 1, // Example
+                    current_location_type: this.maze.getGrid().getCell(this.player.x, this.player.y)?.isRoom ? "room" : "corridor/maze",
+                    current_location_visited_before: this.visitedCellEvents.has(`${this.player.x},${this.player.y}`),
+                    entities_nearby: { /* Could list entities in adjacent cells for more context */ },
+                    current_interaction_context: this.currentInteractionContext, // Contains monster_id/npc_id/treasure_details
+                    // recent_events: this.messageLog.innerText.slice(-500) // Last few messages for context, might be too much
+                };
+            },
+
+            async gameOver(message) {
+                this.gameState = "GAME_OVER";
+                Render.displayMessage(message, "error");
+                Render.displayMessage("--- GAME OVER ---", "error");
+                Render.displayMessage("Press 'New Game / Reset' to try again.", "info");
+                Render.clearChoices();
+                window.removeEventListener('keydown', this.handleInput.bind(this)); // Stop listening to keys
+            }
+        };
+        // --- End of Main Game Logic ---
+
+        // --- Debugging Helpers ---
+        const debugLogContent = document.getElementById('debug-log-content');
+        function addDebugMessage(message) {
+            console.log(`DEBUG: ${message}`);
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            p.classList.add('text-xs', 'mb-1');
+            if (debugLogContent.childNodes.length > 20) { // Keep log short
+                debugLogContent.removeChild(debugLogContent.firstChild);
+            }
+            debugLogContent.appendChild(p);
+            debugLogContent.scrollTop = debugLogContent.scrollHeight;
+        }
+        // --- End of Debugging Helpers ---
+
+
+        // --- Initialization ---
+        document.getElementById('resetGameButton').addEventListener('click', () => {
+            // Clean up existing event listeners if any were dynamically added and not bound correctly
+            // For this structure, the main keydown listener is added once in init.
+            // If gameOver removes it, init will re-add it.
+            addDebugMessage("Reset button clicked. Initializing new game...");
+            Game.init();
+        });
+        
+        Game.init(); // Start the game
+        // --- End of Initialization ---
+
+    </script>
+</body>
+</html>
