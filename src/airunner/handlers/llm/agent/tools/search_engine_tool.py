@@ -1,16 +1,7 @@
-"""
-SearchEngineTool: A tool for performing internet searches and synthesizing responses.
-
-This tool follows the same pattern as ChatEngineTool, providing a clean interface
-for search functionality with proper streaming response handling.
-"""
-
-from typing import Any, Optional, Dict, List, Union
-import logging
-import json
+import time
+from typing import Any, Optional, Dict, List
 
 from llama_index.core.tools.types import (
-    AsyncBaseTool,
     ToolMetadata,
     ToolOutput,
 )
@@ -18,12 +9,9 @@ from llama_index.core.tools.types import (
 from airunner.handlers.llm.agent.chat_engine import RefreshSimpleChatEngine
 from airunner.tools.search_tool import AggregatedSearchTool
 from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.handlers.llm.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
 )
-from airunner.tools.web_content_extractor import WebContentExtractor
 
 
 class SearchEngineTool(BaseConversationEngine):
@@ -80,7 +68,7 @@ class SearchEngineTool(BaseConversationEngine):
         llm: Any,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        return_direct: bool = True,  # Default to True for final responses
+        return_direct: bool = True,
         resolve_input_errors: bool = True,
         agent: Any = None,
         do_handle_response: bool = True,
@@ -90,6 +78,7 @@ class SearchEngineTool(BaseConversationEngine):
             "Performs up to 3 unique internet searches for a given query or list of queries and returns a comprehensive, "
             "natural language answer based on the combined search results. Input may be a string or a list of up to 3 unique strings. "
             "Duplicate queries will be ignored. Use this tool when you need to find current information from the internet."
+            "Your queries should be concise and specific to get the best results. Try to find the best query based on the context of the conversation."
         )
 
         metadata = ToolMetadata(
@@ -120,7 +109,7 @@ class SearchEngineTool(BaseConversationEngine):
             self._synthesis_engine = RefreshSimpleChatEngine.from_defaults(
                 system_prompt=system_prompt,
                 llm=self.llm,
-                memory=None,  # This tool is stateless for synthesis
+                memory=None,
             )
         return self._synthesis_engine
 
@@ -148,8 +137,10 @@ class SearchEngineTool(BaseConversationEngine):
             )
         return formatted_results_str
 
-    def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
-        # Accept either a single query string or a list of up to 3 queries
+    def prepare_queries(self, *args: Any, **kwargs: Any) -> List[str]:
+        """
+        Accept either a single query string or a list of up to 3 queries
+        """
         queries = kwargs.get("input", None)
         if args and not queries:
             queries = args[0]
@@ -159,7 +150,6 @@ class SearchEngineTool(BaseConversationEngine):
             raise ValueError(
                 "Input to SearchEngineTool must be a string or a list of strings."
             )
-        # Filter to unique queries, preserving order
         seen = set()
         unique_queries = []
         for q in queries:
@@ -167,28 +157,109 @@ class SearchEngineTool(BaseConversationEngine):
                 seen.add(q)
                 unique_queries.append(q)
         queries = unique_queries[:3]
+        return queries
 
+    def call(
+        self, *args: Any, tool_call: bool = False, **kwargs: Any
+    ) -> ToolOutput:
+        self.logger.info(
+            "Running SearchEngineTool with args: %s, kwargs: %s", args, kwargs
+        )
+        queries = self.prepare_queries(*args, **kwargs)
         llm_request = kwargs.get("llm_request", LLMRequest.from_default())
-        if hasattr(self.llm, "llm_request"):
+
+        try:
             self.llm.llm_request = llm_request
-
-        # --- Chat history/memory integration ---
-        chat_history = kwargs.get("chat_history", None)
-        # If not provided, try to get from agent's memory (if available)
-        if (
-            chat_history is None
-            and self.agent is not None
-            and hasattr(self.agent, "chat_memory")
-        ):
-            chat_history = (
-                self.agent.chat_memory.get() if self.agent.chat_memory else []
+        except AttributeError:
+            self.logger.warning(
+                "LLM does not exist or does not have `llm_request` attribute. "
             )
-        if chat_history is None:
-            chat_history = []
 
-        import time
+        try:
+            chat_history = kwargs.get("chat_history", self.agent.chat_memory)
+        except AttributeError:
+            chat_history = None
 
-        # --- Combine all results for all queries into a single result set, deduplicating items ---
+        consolidated_results = self.combined_search_results(
+            queries=queries, category=kwargs.get("category", "all")
+        )
+
+        response = (
+            self.synthesize_response(
+                queries=queries,
+                clean_documents=consolidated_results,
+                chat_history=chat_history or [],
+                do_not_display=kwargs.get("do_not_display", False),
+                llm_request=llm_request,
+            )
+            if consolidated_results
+            else "I couldn't find relevant information for your query."
+        )
+        
+        self._do_interrupt = False
+
+        return ToolOutput(
+            content=str(response),
+            tool_name=self.metadata.name,
+            raw_input={"input": queries},
+            raw_output=response,
+        )
+
+    def synthesize_response(
+        self,
+        queries: List,
+        clean_documents: List,
+        chat_history: List,
+        do_not_display: bool = False,
+        llm_request: Optional[LLMRequest] = None,
+    ) -> str:
+        """Synthesize a conversational response from search results using the chat engine tool.
+
+        Args:
+            queries (List): The original user queries.
+            clean_documents (List): Deduplicated search results.
+            chat_history (List): The chat history for context.
+            do_not_display (bool): If True, do not display the response immediately.
+            llm_request (Optional[LLMRequest]): LLM request configuration.
+
+        Returns:
+            str: The final conversational response from the chat engine tool.
+        """
+        formatted_results = self._format_search_results(
+            {"Consolidated": clean_documents}
+        )
+        synthesis_prompt = (
+            f"User's original queries: {queries}\n\n"
+            f"Relevant information found:\n{formatted_results}\n\n"
+            "Please provide a comprehensive answer to the user's original queries based on this information."
+        )
+        self.logger.info(
+            "SearchEngineTool: Synthesizing response from combined search results via chat engine tool"
+        )
+        # Ensure chat_history is a list, not a ChatMemoryBuffer
+        if hasattr(chat_history, "get") and not isinstance(chat_history, list):
+            chat_history = chat_history.get()
+        # Call the chat engine tool directly with the synthesized prompt
+        if not hasattr(self.agent, "chat_engine_tool"):
+            self.logger.error(
+                "Agent does not have a chat_engine_tool. Returning synthesized prompt as fallback."
+            )
+            return synthesis_prompt
+        chat_response = self.agent.chat_engine_tool.call(
+            input=synthesis_prompt,
+            chat_history=chat_history,
+            do_not_display=do_not_display,
+            llm_request=llm_request,
+            system_prompt="You are an AI assistant. Based on the following search results and the user's original query, ",
+            tool_call=True,  # Mark this as a tool call
+        )
+        return (
+            chat_response.content
+            if hasattr(chat_response, "content")
+            else str(chat_response)
+        )
+
+    def combined_search_results(self, queries: List, category: str) -> List:
         all_results = {}
         seen_items = set()  # (title, link) tuples
         consolidated_results = (
@@ -198,7 +269,6 @@ class SearchEngineTool(BaseConversationEngine):
             if idx > 0:
                 time.sleep(0.5)  # Rate limit between requests
             if not self._do_interrupt:
-                category = kwargs.get("category", "all")
                 try:
                     self.logger.info(f"SearchEngineTool: Performing search")
                     search_results = (
@@ -229,99 +299,7 @@ class SearchEngineTool(BaseConversationEngine):
                         f"Error in SearchEngineTool for query '{query_str}': {e}",
                         exc_info=True,
                     )
-
-        # --- NEW: Fetch and clean main content for top N URLs ---
-        top_n = kwargs.get("top_n", 3)
-        url_items = [
-            item
-            for item in consolidated_results
-            if item.get("link") and item.get("link") != "#"
-        ]
-        url_items = url_items[:top_n]
-        clean_documents = []
-        for item in url_items:
-            url = item["link"]
-            try:
-                text = WebContentExtractor.fetch_and_extract(url)
-                if text:
-                    clean_documents.append(text)
-                else:
-                    self.logger.warning(f"No main content extracted for {url}")
-            except Exception as e:
-                self.logger.error(f"Error extracting content for {url}: {e}")
-        if not clean_documents:
-            response = "I couldn't find relevant information for your query."
-        else:
-            # Step 2: Synthesize response using LLM (single prompt for all queries)
-            synthesis_prompt = (
-                f"User's original queries: {queries}\n\n"
-                f"Relevant information (cleaned from web pages):\n\n"
-                + "\n\n".join(clean_documents)
-                + "\n\nPlease provide a comprehensive answer to the user's original queries based on this information. Avoid repeating the same facts or stories."
-            )
-            print("synthesis_prompt", synthesis_prompt)
-            self.logger.info(
-                "SearchEngineTool: Synthesizing response from cleaned web content"
-            )
-            synthesis_engine = self._get_synthesis_engine()
-            # Pass chat_history to the synthesis engine for context
-            streaming_response = synthesis_engine.stream_chat(
-                synthesis_prompt, chat_history=chat_history
-            )
-            response = ""
-            is_first_message = True
-            try:
-                for token in streaming_response.response_gen:
-                    if self._do_interrupt:
-                        break
-                    if not token:
-                        continue
-                    response += token
-                    if (
-                        response != "Empty Response"
-                        and self.do_handle_response
-                        and self.agent
-                        and hasattr(self.agent, "handle_response")
-                    ):
-                        self.agent.handle_response(
-                            token,
-                            is_first_message,
-                            do_not_display=kwargs.get("do_not_display", False),
-                            do_tts_reply=llm_request.do_tts_reply,
-                        )
-                    is_first_message = False
-            except Exception as e:
-                self.logger.error(f"Error during response streaming: {e}")
-                response = "I encountered an error while processing the search results."
-
-        # --- Update memory/chat history with the new turn ---
-        if (
-            self.agent is not None
-            and hasattr(self.agent, "chat_memory")
-            and self.agent.chat_memory
-        ):
-            # Add user queries as a single message, and the assistant's response
-            from llama_index.core.base.llms.types import (
-                ChatMessage,
-                MessageRole,
-            )
-
-            user_message = ChatMessage(
-                content=str(queries), role=MessageRole.USER
-            )
-            assistant_message = ChatMessage(
-                content=str(response), role=MessageRole.ASSISTANT
-            )
-            self.agent.chat_memory.put(user_message)
-            self.agent.chat_memory.put(assistant_message)
-
-        self._do_interrupt = False
-        return ToolOutput(
-            content=str(response),
-            tool_name=self.metadata.name,
-            raw_input={"input": queries},
-            raw_output=response,
-        )
+        return consolidated_results
 
     async def acall(self, *args, **kwargs):
         """Async version - for now, just call the sync version."""

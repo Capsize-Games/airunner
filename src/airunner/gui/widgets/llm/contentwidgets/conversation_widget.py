@@ -111,10 +111,14 @@ class ConversationWidget(BaseWidget):
         self.logger.debug(
             f"ChatPromptWidget.load_conversation called with conversation_id: {conversation_id}"
         )
-        conversation = self._conversation_history_manager.get_current_conversation()
+        conversation = (
+            self._conversation_history_manager.get_current_conversation()
+        )
 
         if conversation is None:
-            self.logger.info("No conversation found, clearing conversation display.")
+            self.logger.info(
+                "No conversation found, clearing conversation display."
+            )
             self._clear_conversation()
             self.conversation = None
             return
@@ -122,8 +126,10 @@ class ConversationWidget(BaseWidget):
         self._conversation_id = conversation.id
         self._conversation = conversation
 
-        messages = self._conversation_history_manager.load_conversation_history(
-            conversation=conversation, max_messages=50
+        messages = (
+            self._conversation_history_manager.load_conversation_history(
+                conversation=conversation, max_messages=50
+            )
         )
 
         self.logger.debug(
@@ -158,7 +164,10 @@ class ConversationWidget(BaseWidget):
                 }
             )
         else:
-            if self._streamed_messages and self._streamed_messages[-1]["is_bot"]:
+            if (
+                self._streamed_messages
+                and self._streamed_messages[-1]["is_bot"]
+            ):
                 self._streamed_messages[-1]["content"] += llm_response.message
             else:
                 self._streamed_messages.append(
@@ -455,7 +464,7 @@ class ConversationWidget(BaseWidget):
 
     def on_bot_mood_updated_signal(self, data):
         """Handle live mood/emoji update for a message widget."""
-        print("BOT MOOD UPDATED")
+        print("TODO: BOT MOOD UPDATED")
 
     def flush_token_buffer(self):
         """
@@ -465,7 +474,10 @@ class ConversationWidget(BaseWidget):
         self.token_buffer.clear()
 
         if combined_message != "":
-            if self._streamed_messages and self._streamed_messages[-1]["is_bot"]:
+            if (
+                self._streamed_messages
+                and self._streamed_messages[-1]["is_bot"]
+            ):
                 self._streamed_messages[-1]["content"] += combined_message
             else:
                 self._streamed_messages.append(
@@ -493,3 +505,12 @@ class ConversationWidget(BaseWidget):
             }
         )
         self.set_conversation(self._streamed_messages)
+
+    def _get_view(self):
+        """Return the QWebEngineView used for rendering the conversation."""
+        return self.ui.stage if self.ui and hasattr(self.ui, "stage") else None
+
+    @property
+    def _view(self):
+        """Compat property for tests expecting a _view attribute (QWebEngineView)."""
+        return self._get_view()
