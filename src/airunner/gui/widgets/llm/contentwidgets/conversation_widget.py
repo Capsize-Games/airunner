@@ -199,19 +199,6 @@ class ConversationWidget(BaseWidget):
         self.loading_widget.hide()
         QApplication.processEvents()
 
-    def _get_widget_template_for_type(self, content_type: str) -> str:
-        """Return the relative path to the widget template for a given content type."""
-        mapping = {
-            FormatterExtended.FORMAT_PLAINTEXT: "plain_text_widget.jinja2.html",
-            FormatterExtended.FORMAT_LATEX: "latex_widget.jinja2.html",
-            FormatterExtended.FORMAT_MIXED: "mixed_content_widget.jinja2.html",
-            FormatterExtended.FORMAT_MARKDOWN: "content_widget.jinja2.html",
-        }
-        return mapping.get(
-            content_type,
-            "plain_text_widget.jinja2.html",
-        )
-
     def wait_for_js_ready(self, callback, max_attempts=50):
         """Wait for the JS QWebChannel to be ready before calling setMessages.
 
@@ -244,15 +231,16 @@ class ConversationWidget(BaseWidget):
                 callback()
 
         def handle_result(ready):
-            if ready:
-                callback()
-            elif attempt_count < max_attempts:
-                QTimer.singleShot(50, check_ready)
-            else:
-                logger.warning(
-                    f"ConversationWidget: JavaScript initialization timeout after {max_attempts} attempts"
-                )
-                callback()
+            # if ready:
+            #     callback()
+            # elif attempt_count < max_attempts:
+            #     QTimer.singleShot(50, check_ready)
+            # else:
+            #     # logger.warning(
+            #     #     f"ConversationWidget: JavaScript initialization timeout after {max_attempts} attempts"
+            #     # )
+            #     callback()
+            callback()
 
         check_ready()
 
@@ -301,31 +289,36 @@ class ConversationWidget(BaseWidget):
         check_dom_ready()
 
     def set_conversation(self, messages: List[Dict[str, Any]]) -> None:
-        """Update the conversation display.
+        """Update the conversation display using MathJax for all content types.
 
         Args:
             messages (List[Dict[str, Any]]): List of message dicts (sender, text, timestamp, etc).
         """
-        enriched_messages = []
+        simplified_messages = []
         for msg in messages:
             content = msg.get("text") or msg.get("content") or ""
+            # Format content for MathJax compatibility
             fmt = FormatterExtended.format_content(content)
-            widget_template = self._get_widget_template_for_type(fmt["type"])
-            enriched_messages.append(
+
+            # All content types are now handled by MathJax in the main template
+            simplified_messages.append(
                 {
                     **msg,
-                    "widget_template": widget_template,
-                    "content": fmt["content"],
-                    "content_type": fmt["type"],
-                    "parts": fmt.get("parts"),
-                    "font_size": 16,
-                    "static_base_path": "/static/content_widgets",
-                    "base_href": None,
+                    "content": fmt[
+                        "content"
+                    ],  # MathJax will handle all formatting
+                    "content_type": fmt["type"],  # Keep for debugging/logging
+                    "id": msg.get("id", len(simplified_messages)),
+                    "timestamp": msg.get("timestamp", ""),
+                    "name": msg.get("name")
+                    or msg.get("sender")
+                    or ("Assistant" if msg.get("is_bot") else "User"),
+                    "is_bot": msg.get("is_bot", False),
                 }
             )
 
         def send():
-            self._chat_bridge.set_messages(enriched_messages)
+            self._chat_bridge.set_messages(simplified_messages)
 
         self.wait_for_js_ready(send)
 
