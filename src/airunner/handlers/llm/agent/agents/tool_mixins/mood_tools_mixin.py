@@ -11,6 +11,14 @@ from airunner.handlers.llm.agent.agents.tool_mixins.tool_singleton_mixin import 
 class MoodToolsMixin(ToolSingletonMixin):
     """Mixin for mood-related tools."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.conversation = None
+        self.conversation_id = None
+        self.emit_signal = None
+        self.logger = kwargs.get("logger", None)
+        self.mood_engine = kwargs.get("mood_engine", None)
+
     @property
     def mood_tool(self):
         def set_mood(
@@ -22,9 +30,7 @@ class MoodToolsMixin(ToolSingletonMixin):
             ],
             emoji: Annotated[
                 str,
-                (
-                    "An emoji representing the bot's mood. Example: 😊, 😢, 😡, etc."
-                ),
+                ("An emoji representing the bot's mood. Example: 😊, 😢, 😡, etc."),
             ],
         ) -> str:
             conversation = self.conversation
@@ -76,9 +82,7 @@ class MoodToolsMixin(ToolSingletonMixin):
                     try:
                         parsed = json.loads(resp)
                         if isinstance(parsed, dict):
-                            mood_description = parsed.get(
-                                "mood", mood_description
-                            )
+                            mood_description = parsed.get("mood", mood_description)
                             emoji = parsed.get("emoji", emoji)
                     except Exception:
                         pass
@@ -115,20 +119,29 @@ class MoodToolsMixin(ToolSingletonMixin):
         try:
             conversation = self.conversation
             if not (conversation and conversation.value):
+                self.logger.warning("Conversation is missing or invalid.")
                 return
             context = getattr(conversation, "formatted_messages", None)
             if not (context and context.strip()):
+                self.logger.warning("Formatted messages are missing or empty.")
                 return
             mood_data = self.mood_engine.chat(context)
             if mood_data is None:
                 mood_description, emoji = "neutral", "🙂"
             else:
                 mood_description, emoji = self._parse_mood_data(mood_data)
-            self.mood_tool(mood_description, emoji)
-            self._emit_mood_signal(mood_description, emoji)
+            if hasattr(self, "mood_tool"):
+                self.mood_tool(mood_description, emoji)
+            else:
+                self.logger.error("Mood tool is not available.")
+            if hasattr(self, "_emit_mood_signal"):
+                self._emit_mood_signal(mood_description, emoji)
+            else:
+                self.logger.error("Mood signal emitter is not available.")
         except Exception as e:
             self.logger.error(f"Error updating mood: {e}")
-            self.mood_tool("neutral", "🙂")
+            if hasattr(self, "mood_tool"):
+                self.mood_tool("neutral", "🙂")
 
     def update_mood(self, mood_description: str, emoji: str) -> str:
         return self.mood_tool(mood_description, emoji)

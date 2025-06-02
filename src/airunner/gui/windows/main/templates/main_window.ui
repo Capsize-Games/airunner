@@ -173,7 +173,7 @@
               </size>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>2</number>
              </property>
              <property name="tabsClosable">
               <bool>false</bool>
@@ -247,6 +247,50 @@
                </property>
                <item row="0" column="0">
                 <widget class="NodeGraphWidget" name="graph" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab">
+              <attribute name="title">
+               <string>Browser</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_7">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="BrowserWidget" name="browser" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab_2">
+              <attribute name="title">
+               <string>Game</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_8">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="GameWidget" name="widget" native="true"/>
                </item>
               </layout>
              </widget>
@@ -1013,6 +1057,18 @@
    <class>NodeGraphWidget</class>
    <extends>QWidget</extends>
    <header>airunner/gui/widgets/nodegraph/node_graph_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>BrowserWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/browser/browser_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>GameWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/browser/game_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

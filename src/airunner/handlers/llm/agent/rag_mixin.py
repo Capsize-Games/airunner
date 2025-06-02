@@ -818,3 +818,31 @@ class RAGMixin:
 
     def _save_index(self):
         pass
+
+    def load_html_into_rag(
+        self, html: str, doc_id: str = "manual_html"
+    ) -> None:
+        """Manually load an HTML string into the RAG engine as a Document."""
+        doc = Document(
+            text=html, metadata={"id": doc_id, "source": "manual_html"}
+        )
+        self.index = RAKEKeywordTableIndex.from_documents(
+            [doc], llm=self.llm, show_progress=True
+        )
+        self.retriever = KeywordTableSimpleRetriever(
+            index=self.index, similarity_top_k=2
+        )
+        self.rag_engine = RefreshContextChatEngine.from_defaults(
+            retriever=self.retriever,
+            memory=self.chat_memory,
+            system_prompt=self.rag_system_prompt,
+            node_postprocessors=[],
+            llm=self.llm,
+        )
+
+    def clear_rag_documents(self):
+        """Clear all loaded RAG documents and reset the RAG index and retriever."""
+        self.index = None
+        self.retriever = None
+        self.rag_engine = None
+        self.document_reader = None

@@ -184,6 +184,7 @@ setup(
         "sqlalchemy==2.0.38",
         "setuptools==78.1.1",
         "etils[epath]==1.12.2",
+        "jinja2==3.1.6"
     ],
     extras_require=extras_require,
     package_data={

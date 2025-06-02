@@ -82,7 +82,6 @@ class ReActAgentTool(BaseConversationEngine):
         do_handle_response = kwargs.pop(
             "do_handle_response", False
         )  # Default to False for orchestrator
-        kwargs["verbose"] = False
         chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
@@ -120,7 +119,6 @@ class ReActAgentTool(BaseConversationEngine):
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
-        # Use agent's chat_memory if chat_history not provided
         if (
             chat_history is None
             and self.agent is not None
@@ -152,10 +150,11 @@ class ReActAgentTool(BaseConversationEngine):
                 tool_choice=tool_choice,
             )
         except Exception as e:
+            import logging
+
             logging.getLogger(__name__).error(
                 f"[ReActAgentTool.call] Exception: {e}"
             )
-            # Return empty ToolOutput on error
             return ToolOutput(
                 content="",
                 tool_name=self.metadata.name,
@@ -165,15 +164,13 @@ class ReActAgentTool(BaseConversationEngine):
         self.chat_engine.chat_history.append(
             ChatMessage(content=query_str, role=MessageRole.USER)
         )
-
         response = ""
         is_first_message = True
         for token in streaming_response.response_gen:
             if not token:
-                continue  # Skip empty tokens
+                continue
             response += token
             if self.agent is not None and self.do_handle_response:
-                # Pass the individual token, not the accumulated response
                 self.agent.handle_response(
                     token,
                     is_first_message,
@@ -183,7 +180,6 @@ class ReActAgentTool(BaseConversationEngine):
         self.chat_engine.chat_history.append(
             ChatMessage(content=response, role=MessageRole.ASSISTANT)
         )
-
         return ToolOutput(
             content=str(response),
             tool_name=self.metadata.name,

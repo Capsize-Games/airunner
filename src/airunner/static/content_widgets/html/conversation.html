@@ -10,54 +10,41 @@ conversation.html: Jinja2 template for ConversationWidget
             margin: 0;
             padding: 0;
             font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-            background: #111;
+            background: #000;
             color: #fff;
             box-sizing: border-box;
-            overflow-x: hidden !important;
-            width: 100vw;
-            max-width: 100vw;
+            width: 100%;
+            min-height: 100%;
+            overflow: visible;
+        }
+        * {
+            box-sizing: border-box;
         }
         #conversation-container {
-            min-height: 100vh;
-            overflow-y: auto;
-            overflow-x: hidden !important;
-            padding: 24px 0 24px 0;
+            width: 100%;
+            min-height: 100%;
+            overflow: visible;
             box-sizing: border-box;
             color: #fff;
             display: flex;
             flex-direction: column;
             gap: 18px;
-            width: 100vw;
-            max-width: 100vw;
+            padding: 10px;
         }
         .message {
-            margin: 0 auto;
-            padding: 16px 22px;
-            border-radius: 14px;
-            min-width: 0;
-            max-width: 98vw;
+            margin: 0;
+            padding: 20px;
+            width: 100%;
             word-break: break-word;
             box-shadow: 0 2px 12px rgba(0,0,0,0.10);
-            display: flex;
-            flex-direction: column;
-            background: #232323;
-            transition: background 0.2s, box-shadow 0.2s;
+            display: block;
+            flex-shrink: 0;
         }
         .message.user {
-            background: linear-gradient(90deg, #2d2d2d 80%, #3a3a3a 100%);
-            align-self: flex-end;
-            margin-left: 20%;
-            margin-right: 0;
-            width: 80%;
-            box-shadow: 0 2px 16px rgba(60,60,60,0.12);
+            background: #010101;
         }
         .message.assistant {
-            background: linear-gradient(90deg, #181818 80%, #232323 100%);
-            align-self: flex-start;
-            margin-right: 20%;
-            margin-left: 0;
-            width: 80%;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.14);
+            background: #101010;
         }
         #conversation-container > .message:nth-child(even) {
             filter: brightness(1.08);
@@ -70,10 +57,9 @@ conversation.html: Jinja2 template for ConversationWidget
         }
         pre, code {
             color: #e0e0e0 !important;
-            border-radius: 6px;
             font-size: 1em;
             line-height: 1.5;
-            padding: 8px 12px;
+            padding: 8px 12px; /* Reduce padding for better fit */
             overflow-x: auto;
             max-width: 100%;
             box-sizing: border-box;
@@ -115,28 +101,135 @@ conversation.html: Jinja2 template for ConversationWidget
             overflow-x: hidden !important;
         }
     </style>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script>
-        // Smooth scroll to bottom when new content is added
+        let chatBridge = null;
+        window.isChatReady = false;
+        window.chatReady = new Promise((resolve) => {
+            window.chatReadyResolve = resolve;
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('[ConversationWidget] DOMContentLoaded');
+            const container = document.getElementById('conversation-container');
+            if (container) {
+                console.log('[ConversationWidget] Container found:', container.offsetHeight, 'height,', container.scrollHeight, 'scrollHeight');
+            } else {
+                console.error('[ConversationWidget] No container found on DOMContentLoaded!');
+            }
+            
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                chatBridge = channel.objects.chatBridge;
+                window.chatBridge = chatBridge;  // Make chatBridge globally available
+                chatBridge.appendMessage.connect(appendMessage);
+                chatBridge.clearMessages.connect(clearMessages);
+                chatBridge.setMessages.connect(function(msgs) {
+                    clearMessages();
+                    for (let i = 0; i < msgs.length; ++i) appendMessage(msgs[i], false);
+                    
+                    // Multiple scroll attempts with different timing
+                    console.log('[ConversationWidget] setMessages: rendered', msgs.length, 'messages, attempting scroll...');
+                    
+                    // Immediate scroll
+                    setTimeout(() => {
+                        smoothScrollToBottom();
+                    }, 0);
+                    
+                    // Delayed scroll for any layout changes
+                    setTimeout(() => {
+                        smoothScrollToBottom();
+                    }, 100);
+                    
+                    // Even more delayed scroll for any async content
+                    setTimeout(() => {
+                        smoothScrollToBottom();
+                    }, 300);
+                    
+                    console.debug('[ConversationWidget] setMessages: rendered', msgs.length, 'messages');
+                });
+                window.isChatReady = true;
+                console.log('[ConversationWidget] QWebChannel initialized, chatBridge available:', !!window.chatBridge);
+                if (window.chatReadyResolve) {
+                    window.chatReadyResolve();
+                }
+                console.debug('[ConversationWidget] QWebChannel ready');
+            });
+        });
+        function appendMessage(msg, scroll=true) {
+            const container = document.getElementById('conversation-container');
+            if (!container) {
+                console.error('[ConversationWidget] appendMessage: conversation-container not found');
+                return;
+            }
+            const div = document.createElement('div');
+            div.className = 'message ' + (msg.is_bot ? 'assistant' : 'user');
+            div.innerHTML = `<div class="sender">${msg.name || msg.sender || ''}</div>`;
+            div.innerHTML += msg.content;
+            container.appendChild(div);
+            console.debug('[ConversationWidget] appendMessage: added message', msg);
+            if (scroll) setTimeout(smoothScrollToBottom, 0);
+        }
+
+        function clearMessages() {
+            const container = document.getElementById('conversation-container');
+            if (!container) {
+                console.error('[ConversationWidget] clearMessages: conversation-container not found');
+                return;
+            }
+            container.innerHTML = '';
+            console.debug('[ConversationWidget] clearMessages: cleared all messages');
+        }
         function smoothScrollToBottom() {
             const container = document.getElementById('conversation-container');
             if (container) {
-                container.scrollTo({
-                    top: container.scrollHeight,
-                    behavior: 'smooth'
-                });
+                // Calculate the content height and send it to Qt
+                const contentHeight = container.scrollHeight;
+                const containerHeight = container.offsetHeight;
+                
+                console.log('[ConversationWidget] smoothScrollToBottom: Content height:', contentHeight, 'Container height:', containerHeight);
+                
+                // Wait for QWebChannel to be ready before calling Qt functions
+                if (window.isChatReady && window.chatBridge) {
+                    // Send content height info to Python.
+                    // Python's _handle_content_height_changed will then handle resizing and scrolling.
+                    if (window.chatBridge.update_content_height) {
+                        window.chatBridge.update_content_height(contentHeight);
+                        console.log('[ConversationWidget] Content height update sent to Qt with content height:', contentHeight);
+                    } else {
+                        console.warn('[ConversationWidget] chatBridge.update_content_height method not available on chatBridge:', window.chatBridge);
+                        // If update_content_height is not available, the old request_scroll could be a fallback,
+                        // but it's better to ensure update_content_height is the primary mechanism.
+                        // For now, we'll rely on update_content_height being present.
+                        // if (window.chatBridge.request_scroll) { // Potential fallback
+                        //     console.warn('[ConversationWidget] Fallback: update_content_height missing, calling request_scroll.');
+                        //     window.chatBridge.request_scroll();
+                        // }
+                    }
+                } else if (!window.isChatReady) {
+                    // QWebChannel not ready yet, try again later
+                    console.debug('[ConversationWidget] QWebChannel not ready yet (isChatReady:', window.isChatReady, '), retrying scroll in 100ms');
+                    setTimeout(smoothScrollToBottom, 100);
+                } else if (!window.chatBridge) {
+                    console.warn('[ConversationWidget] chatBridge object not available (isChatReady:', window.isChatReady, ')');
+                    // Try again in case it's a timing issue
+                    setTimeout(smoothScrollToBottom, 100);
+                } else {
+                    // This case should ideally not be reached if chatBridge is present but update_content_height is not.
+                    // The check for window.chatBridge.update_content_height handles that.
+                    console.warn('[ConversationWidget] smoothScrollToBottom: chatBridge available but could not proceed.');
+                }
+            } else {
+                console.warn('[ConversationWidget] smoothScrollToBottom - No container found');
             }
         }
-        // Observe for new messages and auto-scroll
+        // MutationObserver for streaming updates
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('conversation-container');
             if (container) {
-                // Initial scroll
-                smoothScrollToBottom();
-                // Mutation observer for streaming updates
                 const observer = new MutationObserver((mutations) => {
                     for (const mutation of mutations) {
                         if (mutation.addedNodes.length > 0) {
-                            smoothScrollToBottom();
+                            setTimeout(smoothScrollToBottom, 0);
                         }
                     }
                 });
@@ -147,16 +240,7 @@ conversation.html: Jinja2 template for ConversationWidget
 </head>
 <body>
 <div id="conversation-container">
-    {% for msg in messages %}
-        <div class="message {{ 'assistant' if msg.is_bot else 'user' }}">
-            <div class="sender">{{ msg.name or msg.sender }}</div>
-            {% set font_size = msg.font_size %}
-            {% set static_base_path = msg.static_base_path %}
-            {% set base_href = msg.base_href %}
-            {% set content = msg.content %}
-            {% include msg.widget_template %}
-        </div>
-    {% endfor %}
+    <!-- Messages will be rendered via JS/QWebChannel only -->
 </div>
 </body>
 </html>

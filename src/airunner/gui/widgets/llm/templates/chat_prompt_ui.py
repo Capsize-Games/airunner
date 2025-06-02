@@ -15,10 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
-    QHBoxLayout, QPlainTextEdit, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QSplitter, QTextEdit,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout,
+    QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
+    QSizePolicy, QSplitter, QWidget)
+
+from airunner.gui.widgets.llm.contentwidgets.conversation_widget import ConversationWidget
 import airunner.feather_rc
 
 class Ui_chat_prompt(object):
@@ -116,49 +117,14 @@ class Ui_chat_prompt(object):
         self.chat_prompt_splitter.setObjectName(u"chat_prompt_splitter")
         self.chat_prompt_splitter.setOrientation(Qt.Orientation.Vertical)
         self.chat_prompt_splitter.setChildrenCollapsible(False)
-        self.verticalLayoutWidget = QWidget(self.chat_prompt_splitter)
-        self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
-        self.verticalLayout = QVBoxLayout(self.verticalLayoutWidget)
-        self.verticalLayout.setSpacing(0)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.chat_container = QScrollArea(self.verticalLayoutWidget)
-        self.chat_container.setObjectName(u"chat_container")
-        self.chat_container.setMinimumSize(QSize(150, 0))
-        self.chat_container.setFrameShape(QFrame.Shape.NoFrame)
-        self.chat_container.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 593, 321))
+        self.conversation = ConversationWidget(self.chat_prompt_splitter)
+        self.conversation.setObjectName(u"conversation")
+        self.chat_prompt_splitter.addWidget(self.conversation)
+        self.prompt = QPlainTextEdit(self.chat_prompt_splitter)
+        self.prompt.setObjectName(u"prompt")
         sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy3.setHorizontalStretch(0)
         sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth())
-        self.scrollAreaWidgetContents.setSizePolicy(sizePolicy3)
-        self.scrollAreaWidgetContents.setMinimumSize(QSize(150, 0))
-        self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
-        self.gridLayout_2.setSpacing(0)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.conversation = QTextEdit(self.scrollAreaWidgetContents)
-        self.conversation.setObjectName(u"conversation")
-        self.conversation.setMinimumSize(QSize(150, 0))
-        font = QFont()
-        font.setFamilies([u"CCJoeKubert"])
-        self.conversation.setFont(font)
-        self.conversation.setReadOnly(True)
-
-        self.gridLayout_2.addWidget(self.conversation, 0, 0, 1, 1)
-
-        self.chat_container.setWidget(self.scrollAreaWidgetContents)
-        self.chat_container_layout = QVBoxLayout(self.chat_container)
-        self.chat_container_layout.setObjectName(u"chat_container_layout")
-
-        self.verticalLayout.addWidget(self.chat_container)
-
-        self.chat_prompt_splitter.addWidget(self.verticalLayoutWidget)
-        self.prompt = QPlainTextEdit(self.chat_prompt_splitter)
-        self.prompt.setObjectName(u"prompt")
         sizePolicy3.setHeightForWidth(self.prompt.sizePolicy().hasHeightForWidth())
         self.prompt.setSizePolicy(sizePolicy3)
         self.prompt.setMinimumSize(QSize(0, 150))
