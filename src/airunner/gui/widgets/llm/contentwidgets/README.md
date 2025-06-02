@@ -1,23 +1,23 @@
 # ConversationWidget module
 
-ConversationWidget provides a modern, single-view chat display for AI Runner using QWebEngineView and Jinja2 HTML templates.
+## Refactored Conversation System (June 2025)
 
-## Features
-- Renders the entire conversation as HTML for performance and flexibility.
-- Modern, responsive styles with no horizontal scrollbar (vertical scroll only).
-- Smooth auto-scroll to bottom when new messages are added, including during streaming updates.
-- Supports multiple content types (plain text, markdown, LaTeX, mixed) via per-message widget templates.
+- The conversation display now uses a single HTML template (`conversation.jinja2.html`) for all message types.
+- MathJax is used for rendering all mathematical and code content.
+- All previous per-type widget templates (LaTeX, mixed, plain text) are obsolete and have been removed.
+- The backend logic (`ConversationWidget`) is simplified and robust, with all content routed through MathJax.
 
 ## Usage
-- Instantiate `ConversationWidget` and call `set_conversation(messages)` with a list of message dicts.
-- Each message dict should include at least: `sender`, `text` (or `content`), and `is_bot` (True for assistant, False for user).
+- Use `set_conversation(messages)` with a list of message dicts (see code for structure).
+- For styling or template changes, edit `conversation.jinja2.html` and the associated CSS/JS files.
+
+See the main project README for architecture and rationale.
 
 ## Testing
 - See `tests/` for Pytest and pytest-qt based tests verifying scroll behavior and rendering.
 
 ## Customization
 - To change styles, edit `conversation.jinja2.html` and the CSS in `content_widget.css`.
-- For new content types, add a new widget template and update the mapping in `ConversationWidget`.
 
 ---
 

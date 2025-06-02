@@ -872,6 +872,8 @@ class BaseDiffusersModelManager(BaseModelManager):
                     self._export_images(images, data)
                 else:
                     images = images or []
+                
+                print("preparing to generate")
 
                 self._current_state = HandlerState.PREPARING_TO_GENERATE
                 response = None
