@@ -1,6 +1,7 @@
 import re
 import os
 import hashlib
+import shutil
 from airunner.enums import SignalCode
 from airunner.gui.widgets.browser.templates.browser_ui import Ui_browser
 import logging
@@ -48,6 +49,16 @@ class BrowserWidget(BaseWidget):
         # Set QWebEngineView background to transparent/black
         self.ui.stage.setStyleSheet("background: #111;")
         self.ui.stage.page().setBackgroundColor("#111111")
+
+        # Log privacy initialization
+        self.logger.info("Browser widget initialized with privacy features:")
+        self.logger.info("- Off-the-record profile: Active (true OTR)")
+        self.logger.info("- HTTPS-only mode: Enforced")
+        self.logger.info("- Certificate validation: Strict")
+        self.logger.info("- Permissions: Denied by default")
+        self.logger.info("- Local storage: Disabled")
+        self.logger.info("- Cookies: Session-only (OTR)")
+        self.logger.info("- Custom disk cache: Cleared on session clear")
 
         # Initialize with privacy status logging
         self.log_privacy_status()
@@ -181,9 +192,9 @@ class BrowserWidget(BaseWidget):
     def profile(self):
         """Initialize the off-the-record profile for the browser widget."""
         if self._profile is None:
-            # Create an off-the-record profile to prevent persistent storage
-            # Using an empty string as storageName creates an off-the-record profile
-            self._profile = QWebEngineProfile("")
+            # Create a true off-the-record profile that doesn't persist data to disk
+            # Passing parent=self ensures cleanup when widget is destroyed
+            self._profile = QWebEngineProfile(parent=self)
         return self._profile
 
     @property
@@ -339,6 +350,40 @@ class BrowserWidget(BaseWidget):
         # Storage is automatically cleared when OTR profile is destroyed
         pass
 
+    def _clear_custom_html_cache(self):
+        """Clear the custom HTML disk cache that bypasses OTR profile."""
+        cache_dir = os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "cache",
+            "browser",
+        )
+        if os.path.exists(cache_dir):
+            cleared_count = 0
+            try:
+                for item in os.listdir(cache_dir):
+                    item_path = os.path.join(cache_dir, item)
+                    try:
+                        if os.path.isfile(item_path) or os.path.islink(
+                            item_path
+                        ):
+                            os.unlink(item_path)
+                            cleared_count += 1
+                        elif os.path.isdir(item_path):
+                            # Remove subdirectories if cache creates them
+                            shutil.rmtree(item_path)
+                            cleared_count += 1
+                    except Exception as e:
+                        self.logger.error(
+                            f"Failed to delete cached item {item_path}: {e}"
+                        )
+                self.logger.info(
+                    f"Custom HTML disk cache cleared - {cleared_count} items removed"
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to access cache directory {cache_dir}: {e}"
+                )
+
     def clear_session(self):
         """
         Clear history, cookies, HTTP cache, HTML5 Storage (Local Storage, IndexedDB, etc.),
@@ -348,6 +393,7 @@ class BrowserWidget(BaseWidget):
         self._clear_cookies()
         self._clear_http_cache()
         self._clear_html5_storage()
+        self._clear_custom_html_cache()  # Clear custom disk cache to maintain OTR privacy
 
     def on_browser_navigate(self, data):
         print("navigate", data)
@@ -442,7 +488,9 @@ class BrowserWidget(BaseWidget):
         """
         current_url = self.ui.stage.url().toString()
         return {
-            "otr_profile_active": bool(self._profile),
+            "otr_profile_active": bool(
+                self._profile and self._profile.isOffTheRecord()
+            ),
             "https_only": (
                 current_url.startswith("https://") if current_url else True
             ),
@@ -451,6 +499,7 @@ class BrowserWidget(BaseWidget):
             "local_storage_disabled": True,
             "permissions_blocked": True,
             "certificate_validation": True,
+            "custom_cache_cleared": True,  # We clear custom cache in clear_session()
         }
 
     def log_privacy_status(self) -> None:
