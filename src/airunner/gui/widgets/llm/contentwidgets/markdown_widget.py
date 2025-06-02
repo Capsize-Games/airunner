@@ -9,7 +9,7 @@ from airunner.gui.widgets.llm.contentwidgets.base_content_widget import (
 )
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 import os
-from airunner.settings import CONTENT_WIDGETS_BASE_PATH
+from airunner.settings import CONTENT_WIDGETS_BASE_PATH, STATIC_BASE_PATH
 
 
 class MarkdownWidget(BaseContentWidget):
@@ -74,17 +74,14 @@ class MarkdownWidget(BaseContentWidget):
             html_content = FormatterExtended._render_markdown_to_html(content)
         else:
             html_content = content
-        static_base_path = "http://127.0.0.1:8765/content_widgets"
-        base_href = static_base_path + "/"
-
         self.webView.setHtml(
             self._template.render(
                 content=html_content,
                 mathjax_url=self.mathjax_url,
                 font_family=self.font_family,
                 font_size=self.font_size,
-                static_base_path=static_base_path,
-                base_href=base_href,
+                static_base_path=f"{STATIC_BASE_PATH}/content_widgets",
+                base_href=f"{STATIC_BASE_PATH}/content_widgets/",
             )
         )
         # self.sizeChanged.emit()  # Emit on content update
@@ -115,15 +112,13 @@ class MarkdownWidget(BaseContentWidget):
                 self.sizeChanged.emit()
 
     def _wrap_html_content(self, content):
-        static_base_path = "http://127.0.0.1:8765/content_widgets"
-        base_href = static_base_path + "/"
         return self._template.render(
             content=content,
             mathjax_url=self.mathjax_url,
             font_family=self.font_family,
             font_size=self.font_size,
-            static_base_path=static_base_path,
-            base_href=base_href,
+            static_base_path=f"{STATIC_BASE_PATH}/content_widgets",
+            base_href=f"{STATIC_BASE_PATH}/content_widgets/",
         )
 
     def setFont(self, font):
