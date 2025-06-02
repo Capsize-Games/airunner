@@ -1065,25 +1065,6 @@ class BaseAgent(
         """
         pass
 
-    def on_web_browser_page_html(self, content: str) -> None:
-        """
-        Handle web browser page HTML content.
-        Args:
-            content (str): The HTML content.
-        """
-        self.webpage_html = content
-
-    def on_delete_messages_after_id(self) -> None:
-        """
-        Handle deletion of messages after a specific ID.
-        """
-        conversation = self.conversation
-        if conversation:
-            messages = conversation.value
-            self.chat_memory.set(messages)
-            if self._chat_engine:
-                self._chat_engine.memory = self.chat_memory
-
     def _update_system_prompt(
         self,
         system_prompt: Optional[str] = None,
@@ -1411,6 +1392,60 @@ class BaseAgent(
         """
         return ChatMessage(role=role, blocks=[TextBlock(text=content)])
 
+    def on_web_browser_page_html(self, content: str) -> None:
+        """
+        Handle web browser page HTML content.
+        Args:
+            content (str): The HTML content.
+        """
+        self.webpage_html = content
+
+    def on_delete_messages_after_id(self) -> None:
+        """
+        Handle deletion of messages after a specific ID.
+        """
+        conversation = self.conversation
+        if conversation:
+            messages = conversation.value
+            self.chat_memory.set(messages)
+            if self._chat_engine:
+                self._chat_engine.memory = self.chat_memory
+
+    def on_load_conversation(self, data: Optional[Dict] = None) -> None:
+        """
+        Handle loading a conversation and ensure chat store/memory are restored.
+        Args:
+            data (Optional[Dict]): The conversation data.
+        """
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        self.conversation = Conversation.objects.get(conversation_id)
+        if conversation_id is not None and self.use_memory:
+            # Always re-initialize chat memory for the loaded conversation
+            self._chat_memory = None  # Force re-creation
+            messages = self.chat_store.get_messages(str(conversation_id))
+            # This will create a new ChatMemoryBuffer with the correct key
+            _ = (
+                self.chat_memory
+            )  # property will re-initialize with correct key
+            self.chat_memory.set(messages)
+            self._sync_memory_to_all_engines()
+
+    def on_conversation_deleted(self, data: Optional[Dict] = None) -> None:
+        """
+        Handle conversation deletion.
+        Args:
+            data (Optional[Dict]): The conversation data.
+        """
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        if (
+            conversation_id == self.conversation_id
+            or self.conversation_id is None
+        ):
+            self.conversation = None
+            self.conversation_id = None
+
     def chat(
         self,
         message: str,
@@ -1457,41 +1492,6 @@ class BaseAgent(
             return AgentChatResponse(response=self._complete_response)
         finally:
             self._in_chat = False
-
-    def on_load_conversation(self, data: Optional[Dict] = None) -> None:
-        """
-        Handle loading a conversation and ensure chat store/memory are restored.
-        Args:
-            data (Optional[Dict]): The conversation data.
-        """
-        data = data or {}
-        conversation_id = data.get("conversation_id", None)
-        self.conversation = Conversation.objects.get(conversation_id)
-        if conversation_id is not None and self.use_memory:
-            # Always re-initialize chat memory for the loaded conversation
-            self._chat_memory = None  # Force re-creation
-            messages = self.chat_store.get_messages(str(conversation_id))
-            # This will create a new ChatMemoryBuffer with the correct key
-            _ = (
-                self.chat_memory
-            )  # property will re-initialize with correct key
-            self.chat_memory.set(messages)
-            self._sync_memory_to_all_engines()
-
-    def on_conversation_deleted(self, data: Optional[Dict] = None) -> None:
-        """
-        Handle conversation deletion.
-        Args:
-            data (Optional[Dict]): The conversation data.
-        """
-        data = data or {}
-        conversation_id = data.get("conversation_id", None)
-        if (
-            conversation_id == self.conversation_id
-            or self.conversation_id is None
-        ):
-            self.conversation = None
-            self.conversation_id = None
 
     def clear_history(self, data: Optional[Dict] = None) -> None:
         """
