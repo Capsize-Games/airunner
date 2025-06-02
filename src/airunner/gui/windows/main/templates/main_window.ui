@@ -179,10 +179,10 @@
               <bool>false</bool>
              </property>
              <property name="tabsClosable">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
              <property name="movable">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
              <widget class="QWidget" name="art_tab">
               <attribute name="title">
@@ -479,9 +479,6 @@
     <addaction name="separator"/>
     <addaction name="actionBrowse_Images_Path_2"/>
     <addaction name="separator"/>
-    <addaction name="actionArt"/>
-    <addaction name="actionAgent_Workflow"/>
-    <addaction name="actionBrowser"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
@@ -1015,33 +1012,6 @@
    </property>
    <property name="text">
     <string>Recenter</string>
-   </property>
-  </action>
-  <action name="actionArt">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Art</string>
-   </property>
-  </action>
-  <action name="actionAgent_Workflow">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Agent Workflow</string>
-   </property>
-  </action>
-  <action name="actionBrowser">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Browser</string>
    </property>
   </action>
  </widget>
