@@ -82,12 +82,20 @@ class Ui_browser(object):
 
         self.gridLayout.addWidget(self.summarize_button, 0, 6, 1, 1)
 
+        self.clear_data_button = QPushButton(browser)
+        self.clear_data_button.setObjectName(u"clear_data_button")
+        icon6 = QIcon()
+        icon6.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.clear_data_button.setIcon(icon6)
+
+        self.gridLayout.addWidget(self.clear_data_button, 0, 7, 1, 1)
+
         self.stage = QWebEngineView(browser)
         self.stage.setObjectName(u"stage")
         self.stage.setMinimumSize(QSize(200, 200))
         self.stage.setUrl(QUrl(u"about:blank"))
 
-        self.gridLayout.addWidget(self.stage, 1, 0, 1, 7)
+        self.gridLayout.addWidget(self.stage, 1, 0, 1, 8)
 
 
         self.retranslateUi(browser)
@@ -122,5 +130,9 @@ class Ui_browser(object):
         self.summarize_button.setToolTip(QCoreApplication.translate("browser", u"Summarize", None))
 #endif // QT_CONFIG(tooltip)
         self.summarize_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.clear_data_button.setToolTip(QCoreApplication.translate("browser", u"Clear Browsing Data", None))
+#endif // QT_CONFIG(tooltip)
+        self.clear_data_button.setText("")
     # retranslateUi
 
