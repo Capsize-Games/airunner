@@ -76,9 +76,14 @@ class App(MediatorMixin, SettingsMixin, QObject):
         mathjax_dir = os.path.join(
             static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
         )
+        user_web_dir = os.path.join(
+            os.path.expanduser(self.path_settings.base_path), "web"
+        )
         if self.initialize_gui and os.path.isdir(mathjax_dir):
             self.http_server_thread = LocalHttpServerThread(
-                directory=static_dir, port=8765
+                directory=static_dir,
+                additional_directories=[user_web_dir],
+                port=8765,
             )
             self.http_server_thread.start()
             self.start()

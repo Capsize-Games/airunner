@@ -16,7 +16,7 @@ ConversationWidget provides a modern, single-view chat display for AI Runner usi
 - See `tests/` for Pytest and pytest-qt based tests verifying scroll behavior and rendering.
 
 ## Customization
-- To change styles, edit `conversation.html` and the CSS in `content_widget.css`.
+- To change styles, edit `conversation.jinja2.html` and the CSS in `content_widget.css`.
 - For new content types, add a new widget template and update the mapping in `ConversationWidget`.
 
 ---
