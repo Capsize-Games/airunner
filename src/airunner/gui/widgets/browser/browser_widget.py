@@ -17,8 +17,6 @@ from PySide6.QtWebEngineCore import (
 )
 from airunner.gui.widgets.base_widget import BaseWidget
 
-logger = logging.getLogger(__name__)
-
 
 class BrowserWidget(BaseWidget):
     """Widget that displays a conversation using a single QWebEngineView and HTML template.
@@ -50,15 +48,6 @@ class BrowserWidget(BaseWidget):
         # Set QWebEngineView background to transparent/black
         self.ui.stage.setStyleSheet("background: #111;")
         self.ui.stage.page().setBackgroundColor("#111111")
-
-        # Log privacy initialization
-        logger.info("Browser widget initialized with privacy features:")
-        logger.info("- Off-the-record profile: Active")
-        logger.info("- HTTPS-only mode: Enforced")
-        logger.info("- Certificate validation: Strict")
-        logger.info("- Permissions: Denied by default")
-        logger.info("- Local storage: Disabled")
-        logger.info("- Cookies: Session-only (OTR)")
 
         # Initialize with privacy status logging
         self.log_privacy_status()
@@ -125,7 +114,7 @@ class BrowserWidget(BaseWidget):
         # Always use https for security (force upgrade)
         if url.startswith("http://"):
             url = url.replace("http://", "https://", 1)
-            logger.info(f"Upgraded insecure URL to HTTPS: {url}")
+            self.logger.info(f"Upgraded insecure URL to HTTPS: {url}")
 
         # Update the URL field if it was modified
         if url != original_url:
@@ -164,7 +153,7 @@ class BrowserWidget(BaseWidget):
             else:
                 self.ui.stage.setUrl(QUrl(url))
         else:
-            logger.warning(f"Invalid or insecure URL rejected: {url}")
+            self.logger.warning(f"Invalid or insecure URL rejected: {url}")
             # Show security warning to user
             self.ui.url.setStyleSheet(
                 "QLineEdit { background: #331111; color: #ff9999; }"
@@ -174,7 +163,7 @@ class BrowserWidget(BaseWidget):
     def on_clear_data_button_clicked(self) -> None:
         """Clear all browsing data and session information."""
         self.clear_session()
-        logger.info("Browser data cleared - all session data removed")
+        self.logger.info("Browser data cleared - all session data removed")
 
         # Reset to secure state
         self.ui.stage.setUrl(QUrl("about:blank"))
@@ -276,7 +265,7 @@ class BrowserWidget(BaseWidget):
 
         Deny all permission requests for privacy and security.
         """
-        logger.info(f"Permission request denied for {url}: {feature}")
+        self.logger.info(f"Permission request denied for {url}: {feature}")
         self.profile_page.setFeaturePermission(
             url, feature, QWebEnginePage.PermissionDeniedByUser
         )
@@ -290,7 +279,7 @@ class BrowserWidget(BaseWidget):
         Returns:
             bool: Whether to ignore the certificate error
         """
-        logger.warning(
+        self.logger.warning(
             f"SSL Certificate error for {error.url().toString()}: {error.description()}"
         )
         # For maximum security, reject all certificate errors
@@ -314,13 +303,13 @@ class BrowserWidget(BaseWidget):
             self.ui.url.setStyleSheet(
                 "QLineEdit { background: #112211; color: #eee; }"
             )
-            logger.debug(f"Secure connection: {current_url}")
+            self.logger.debug(f"Secure connection: {current_url}")
         elif current_url.startswith("http://"):
             # Insecure connection - red tint
             self.ui.url.setStyleSheet(
                 "QLineEdit { background: #221111; color: #eee; }"
             )
-            logger.warning(f"Insecure connection: {current_url}")
+            self.logger.warning(f"Insecure connection: {current_url}")
         else:
             # Unknown protocol
             self.ui.url.setStyleSheet(
@@ -416,7 +405,7 @@ class BrowserWidget(BaseWidget):
                             [str(sentence) for sentence in summary_sentences]
                         )
                     except Exception as e:
-                        logger.warning(f"Summarization failed: {e}")
+                        self.logger.warning(f"Summarization failed: {e}")
                 self._page_cache["summary"] = summary
                 # If plaintext or summary toggles are active, update the view
                 if (
@@ -467,4 +456,4 @@ class BrowserWidget(BaseWidget):
     def log_privacy_status(self) -> None:
         """Log current privacy status for debugging."""
         status = self.get_privacy_status()
-        logger.info(f"Browser privacy status: {status}")
+        self.logger.info(f"Browser privacy status: {status}")
