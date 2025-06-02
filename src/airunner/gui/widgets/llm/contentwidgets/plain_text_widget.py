@@ -12,7 +12,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QTextEdit, QFrame
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 import os
-from airunner.settings import CONTENT_WIDGETS_BASE_PATH
+from airunner.settings import CONTENT_WIDGETS_BASE_PATH, STATIC_BASE_PATH
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
 from airunner.gui.widgets.llm.contentwidgets.base_content_widget import (
@@ -46,15 +46,12 @@ class PlainTextWidget(BaseContentWidget):
 
     def setContent(self, content):
         super().setContent(content)
-        static_html_dir = os.path.join(CONTENT_WIDGETS_BASE_PATH, "html")
-        static_base_path = "http://127.0.0.1:8765/content_widgets"
-        base_href = static_base_path + "/"
         html_content = self._template.render(
             content=content,
             font_family=self.font_family,
             font_size=self.font_size,
-            static_base_path=static_base_path,
-            base_href=base_href,
+            static_base_path=f"{STATIC_BASE_PATH}/content_widgets",
+            base_href=f"{STATIC_BASE_PATH}/content_widgets/",
         )
         self.webView.setHtml(html_content)
         self.sizeChanged.emit()
