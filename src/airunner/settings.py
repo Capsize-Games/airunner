@@ -391,6 +391,7 @@ LANGUAGES = {
 }
 LOCAL_SERVER_HOST = os.environ.get("LOCAL_SERVER_HOST", "127.0.0.1")
 LOCAL_SERVER_PORT = os.environ.get("LOCAL_SERVER_PORT", 8765)
+STATIC_BASE_PATH = f"http://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}"
 MATHJAX_VERSION = "3.2.2"
 
 # Absolute path to static content widgets (html, css, js)

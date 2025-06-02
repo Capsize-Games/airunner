@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
     QTabWidget, QToolBar, QVBoxLayout, QWidget)
 
 from airunner.gui.widgets.browser.browser_widget import BrowserWidget
-from airunner.gui.widgets.browser.game_widget import GameWidget
 from airunner.gui.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.gui.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
@@ -262,6 +261,16 @@ class Ui_MainWindow(object):
         icon36 = QIcon()
         icon36.addFile(u":/light/icons/feather/light/target.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.actionRecenter.setIcon(icon36)
+        self.actionArt = QAction(MainWindow)
+        self.actionArt.setObjectName(u"actionArt")
+        self.actionArt.setCheckable(True)
+        self.actionArt.setChecked(True)
+        self.actionAgent_Workflow = QAction(MainWindow)
+        self.actionAgent_Workflow.setObjectName(u"actionAgent_Workflow")
+        self.actionAgent_Workflow.setCheckable(True)
+        self.actionBrowser = QAction(MainWindow)
+        self.actionBrowser.setObjectName(u"actionBrowser")
+        self.actionBrowser.setCheckable(True)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setEnabled(True)
@@ -314,8 +323,9 @@ class Ui_MainWindow(object):
         sizePolicy2.setHeightForWidth(self.center_tab_container.sizePolicy().hasHeightForWidth())
         self.center_tab_container.setSizePolicy(sizePolicy2)
         self.center_tab_container.setBaseSize(QSize(0, 0))
-        self.center_tab_container.setTabsClosable(False)
-        self.center_tab_container.setMovable(False)
+        self.center_tab_container.setDocumentMode(False)
+        self.center_tab_container.setTabsClosable(True)
+        self.center_tab_container.setMovable(True)
         self.art_tab = QWidget()
         self.art_tab.setObjectName(u"art_tab")
         self.gridLayout_2 = QGridLayout(self.art_tab)
@@ -355,17 +365,6 @@ class Ui_MainWindow(object):
         self.gridLayout_7.addWidget(self.browser, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.tab, "")
-        self.tab_2 = QWidget()
-        self.tab_2.setObjectName(u"tab_2")
-        self.gridLayout_8 = QGridLayout(self.tab_2)
-        self.gridLayout_8.setObjectName(u"gridLayout_8")
-        self.gridLayout_8.setContentsMargins(0, 0, 0, 0)
-        self.widget = GameWidget(self.tab_2)
-        self.widget.setObjectName(u"widget")
-
-        self.gridLayout_8.addWidget(self.widget, 0, 0, 1, 1)
-
-        self.center_tab_container.addTab(self.tab_2, "")
 
         self.gridLayout_4.addWidget(self.center_tab_container, 0, 0, 1, 1)
 
@@ -512,6 +511,9 @@ class Ui_MainWindow(object):
         self.menuView.addSeparator()
         self.menuView.addAction(self.actionBrowse_Images_Path_2)
         self.menuView.addSeparator()
+        self.menuView.addAction(self.actionArt)
+        self.menuView.addAction(self.actionAgent_Workflow)
+        self.menuView.addAction(self.actionBrowser)
         self.menuTools.addAction(self.menuStable_Diffusion.menuAction())
         self.menuTools.addSeparator()
         self.menuTools.addAction(self.actionToggle_LLM)
@@ -536,7 +538,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.center_tab_container.setCurrentIndex(2)
+        self.center_tab_container.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -618,10 +620,12 @@ class Ui_MainWindow(object):
         self.actionUndo.setText(QCoreApplication.translate("MainWindow", u"Undo", None))
         self.actionRedo.setText(QCoreApplication.translate("MainWindow", u"Redo", None))
         self.actionRecenter.setText(QCoreApplication.translate("MainWindow", u"Recenter", None))
+        self.actionArt.setText(QCoreApplication.translate("MainWindow", u"Art", None))
+        self.actionAgent_Workflow.setText(QCoreApplication.translate("MainWindow", u"Agent Workflow", None))
+        self.actionBrowser.setText(QCoreApplication.translate("MainWindow", u"Browser", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.art_tab), QCoreApplication.translate("MainWindow", u"Art", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.agent_workflow_tab), QCoreApplication.translate("MainWindow", u"Agent Workflow", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.tab), QCoreApplication.translate("MainWindow", u"Browser", None))
-        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"Game", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
         self.menuChat.setTitle(QCoreApplication.translate("MainWindow", u"Chat", None))
