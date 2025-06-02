@@ -1026,6 +1026,39 @@ class BaseAgent(
         """
         return f"{self.system_prompt}\n"
 
+    @property
+    def chatbot(self) -> Any:
+        """
+        Get the chatbot instance.
+        Returns:
+            Any: The chatbot instance.
+        """
+        if hasattr(self, "_chatbot") and self._chatbot is not None:
+            return self._chatbot
+        return super().chatbot
+
+    @chatbot.setter
+    def chatbot(self, value: Any) -> None:
+        """
+        Set the chatbot instance.
+        Args:
+            value (Any): The chatbot instance to set.
+        """
+        self._chatbot = value
+
+    @property
+    def api(self):
+        """Return the API manager instance (must provide externally if not set)."""
+        if hasattr(self, "_api") and self._api is not None:
+            return self._api
+        raise AttributeError(
+            "API manager not set on agent. Set agent._api = api_manager instance."
+        )
+
+    @api.setter
+    def api(self, value):
+        self._api = value
+
     def _llm_updated(self) -> None:
         """
         Handle LLM updates.
@@ -1414,7 +1447,6 @@ class BaseAgent(
             if conversation is not None:
                 self._append_conversation_messages(conversation, message)
                 self._update_conversation_state(conversation)
-                # --- Restore: update mood after assistant message is appended ---
                 if (
                     self.llm_settings.use_chatbot_mood
                     and getattr(self, "chatbot", None)
@@ -1567,36 +1599,3 @@ class BaseAgent(
             Optional[RefreshSimpleChatEngine]: The engine instance.
         """
         return EngineRegistry.get(name)
-
-    @property
-    def chatbot(self) -> Any:
-        """
-        Get the chatbot instance.
-        Returns:
-            Any: The chatbot instance.
-        """
-        if hasattr(self, "_chatbot") and self._chatbot is not None:
-            return self._chatbot
-        return super().chatbot
-
-    @chatbot.setter
-    def chatbot(self, value: Any) -> None:
-        """
-        Set the chatbot instance.
-        Args:
-            value (Any): The chatbot instance to set.
-        """
-        self._chatbot = value
-
-    @property
-    def api(self):
-        """Return the API manager instance (must provide externally if not set)."""
-        if hasattr(self, "_api") and self._api is not None:
-            return self._api
-        raise AttributeError(
-            "API manager not set on agent. Set agent._api = api_manager instance."
-        )
-
-    @api.setter
-    def api(self, value):
-        self._api = value
