@@ -4,7 +4,6 @@ import hashlib
 import shutil
 from airunner.enums import SignalCode
 from airunner.gui.widgets.browser.templates.browser_ui import Ui_browser
-import logging
 from trafilatura import extract
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer

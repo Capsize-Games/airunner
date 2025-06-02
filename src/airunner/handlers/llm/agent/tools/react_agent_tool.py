@@ -85,9 +85,6 @@ class ReActAgentTool(BaseConversationEngine):
         chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
-        logging.getLogger(__name__).info(
-            f"[ReActAgentTool.from_tools] args: {args}, kwargs keys: {list(kwargs.keys())}"
-        )
         if hasattr(chat_engine, "tools"):
             tool_names = [
                 getattr(
@@ -101,9 +98,6 @@ class ReActAgentTool(BaseConversationEngine):
                 )
                 for t in getattr(chat_engine, "tools", [])
             ]
-            logging.getLogger(__name__).info(
-                f"[ReActAgentTool.from_tools] Registered tool names: {tool_names}"
-            )
         return cls.from_defaults(
             chat_engine=chat_engine,
             name=name,
