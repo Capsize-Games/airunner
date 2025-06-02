@@ -51,10 +51,13 @@
 | - Text-to-Image (Stable Diffusion 1.5, SDXL, Turbo)<br>- Drawing tools & ControlNet<br>- LoRA & Embeddings<br>- Inpainting, outpainting, filters |
 | **🌍 Multi-lingual Capabilities** |
 | - Partial multi-lingual TTS/STT/interface<br>- English & Japanese GUI |
+| **🌐 Privacy-First Web Browser** |
+| - Built-in secure browser with off-the-record profiles<br>- HTTPS-only enforcement & strict certificate validation<br>- RAG integration for web content analysis<br>- Text extraction & summarization tools<br>- Zero persistent tracking or data storage |
 | **🔒 Privacy and Security** |
 | - Runs locally, no external API (default)<br>- Customizable LLM guardrails & image safety<br>- Disables HuggingFace telemetry<br> - Restricts network access |
 | **⚡ Performance & Utility** |
 | - Fast generation (~2s on RTX 2080s)<br>- Docker-based setup & GPU acceleration<br>- Theming (Light/Dark/System)<br>- NSFW toggles<br>- Extension API<br>- Python library & API support |
+
 
 ### 🌍 Language Support
 
