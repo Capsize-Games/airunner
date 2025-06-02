@@ -76,6 +76,7 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
                 "content": user_message,
                 "timestamp": now,
                 "blocks": [{"block_type": "text", "text": user_message}],
+                "additional_kwargs": {"timestamp": now},
             }
         )
         if assistant_message is not None:
@@ -88,6 +89,7 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
                     "blocks": [
                         {"block_type": "text", "text": assistant_message}
                     ],
+                    "additional_kwargs": {"timestamp": now},
                 }
             )
         # Optionally, trigger persistence if needed (depends on agent/manager logic)

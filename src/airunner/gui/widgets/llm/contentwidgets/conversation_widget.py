@@ -99,7 +99,7 @@ class ConversationWidget(BaseWidget):
         super().showEvent(event)
         if not self.registered:
             self.render_template(
-                self.ui.stage, "conversation.html", messages=[]
+                self.ui.stage, "conversation.jinja2.html", messages=[]
             )
             self.registered = True
             self.logger.debug(
