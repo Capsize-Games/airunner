@@ -4,7 +4,6 @@ import hashlib
 import shutil
 from airunner.enums import SignalCode
 from airunner.gui.widgets.browser.templates.browser_ui import Ui_browser
-import logging
 from trafilatura import extract
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
@@ -117,6 +116,39 @@ class BrowserWidget(BaseWidget):
         if not url:
             return
         original_url = url
+
+        # Handle local: scheme for local static files
+        if url.startswith("local:"):
+            # Map local:game -> game.html (prefer .html, fallback to .jinja2.html)
+            local_name = url[len("local:") :].strip()
+            if not local_name:
+                self.logger.warning(
+                    "No local file specified after 'local:' scheme."
+                )
+                return
+            user_web_dir = os.path.expanduser("~/.local/share/airunner/web")
+            candidates = [
+                os.path.join(user_web_dir, "html", f"{local_name}.html"),
+                os.path.join(
+                    user_web_dir, "html", f"{local_name}.jinja2.html"
+                ),
+            ]
+            for file_path in candidates:
+                if os.path.exists(file_path):
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        html = f.read()
+                    self.ui.stage.setHtml(html, QUrl.fromLocalFile(file_path))
+                    self.ui.url.setText(f"local:{local_name}")
+                    self._page_cache["html"] = html
+                    self._page_cache["url"] = f"local:{local_name}"
+                    self._page_cache["plaintext"] = None
+                    self._page_cache["summary"] = None
+                    return
+            self.logger.warning(f"Local file not found for: {local_name}")
+            self.ui.url.setStyleSheet(
+                "QLineEdit { background: #331111; color: #ff9999; }"
+            )
+            return
 
         # Add scheme if missing
         if not url.startswith("http://") and not url.startswith("https://"):

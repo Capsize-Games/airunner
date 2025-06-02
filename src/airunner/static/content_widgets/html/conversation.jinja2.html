@@ -1,5 +1,5 @@
 <!--
-conversation.html: Jinja2 template for ConversationWidget
+conversation.jinja2.html: Jinja2 template for ConversationWidget
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -39,6 +39,9 @@ conversation.html: Jinja2 template for ConversationWidget
             box-shadow: 0 2px 12px rgba(0,0,0,0.10);
             display: block;
             flex-shrink: 0;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background: #202020;
         }
         .message.user {
             background: #010101;
@@ -53,7 +56,7 @@ conversation.html: Jinja2 template for ConversationWidget
             font-weight: 600;
             margin-bottom: 4px;
             color: #bdbdbd;
-            font-size: 1em;
+            font-size: 0.8em;
         }
         pre, code {
             color: #e0e0e0 !important;
@@ -165,6 +168,10 @@ conversation.html: Jinja2 template for ConversationWidget
             div.className = 'message ' + (msg.is_bot ? 'assistant' : 'user');
             div.innerHTML = `<div class="sender">${msg.name || msg.sender || ''}</div>`;
             div.innerHTML += msg.content;
+            // Add timestamp if present
+            if (msg.timestamp) {
+                div.innerHTML += `<div class="timestamp">${msg.timestamp}</div>`;
+            }
             container.appendChild(div);
             console.debug('[ConversationWidget] appendMessage: added message', msg);
             if (scroll) setTimeout(smoothScrollToBottom, 0);

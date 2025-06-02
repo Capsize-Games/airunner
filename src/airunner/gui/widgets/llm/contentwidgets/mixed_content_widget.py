@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from airunner.gui.widgets.llm.contentwidgets.base_content_widget import (
     BaseContentWidget,
 )
-from airunner.settings import CONTENT_WIDGETS_BASE_PATH
+from airunner.settings import CONTENT_WIDGETS_BASE_PATH, STATIC_BASE_PATH
 
 
 class MixedContentWidget(BaseContentWidget):
@@ -48,20 +48,18 @@ class MixedContentWidget(BaseContentWidget):
         super().setContent(parts)
 
         static_html_dir = os.path.join(CONTENT_WIDGETS_BASE_PATH, "html")
-        static_base_path = "http://127.0.0.1:8765/content_widgets"
         env = Environment(
             loader=FileSystemLoader(static_html_dir),
             autoescape=select_autoescape(["html", "xml"]),
         )
         template = env.get_template("mixed_content_widget.jinja2.html")
-        base_href = static_base_path + "/"
         html_content = template.render(
             content=self._wrap_mixed_html(parts),
             mathjax_url=self.mathjax_url,
             font_family=self.font_family,
             font_size=self.font_size,
-            static_base_path=static_base_path,
-            base_href=base_href,
+            static_base_path=f"{STATIC_BASE_PATH}/content_widgets",
+            base_href=f"{STATIC_BASE_PATH}/content_widgets/",
         )
         self.webView.setHtml(html_content)
 
