@@ -6,9 +6,11 @@ import os
 from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QTimer
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from airunner.enums import CanvasToolName
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.settings import CONTENT_WIDGETS_BASE_PATH
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import create_worker
 from airunner.utils.widgets import (
@@ -50,7 +52,7 @@ class BaseWidget(AbstractBaseWidget):
     ui: Optional[object] = None
     _splitters: List[str] = []
     _splitter_debounce_timer: Optional[QTimer] = None
-    _splitter_debounce_ms = 300  # 300ms debounce for splitter movements
+    _splitter_debounce_ms = 300
 
     def __init__(self, *args, **kwargs):
         self.icon_manager: Optional[IconManager] = None
@@ -63,8 +65,10 @@ class BaseWidget(AbstractBaseWidget):
         )
         self.settings = get_qsettings()
         super().__init__(*args, **kwargs)
+
         if self.widget_class_:
             self.ui = self.widget_class_()
+
         if self.ui:
             self.ui.setupUi(self)
             self.icon_manager = IconManager(self.icons, self.ui)
@@ -73,8 +77,14 @@ class BaseWidget(AbstractBaseWidget):
         self.services: Dict = {}
         self.worker_class_map: Dict = {}
         self.initialize_ui()
-
         self._setup_splitters()
+
+    @property
+    def static_html_dir(self) -> str:
+        """
+        Return the directory where static HTML files are stored.
+        """
+        return os.path.join(CONTENT_WIDGETS_BASE_PATH, "html")
 
     @property
     def splitters(self) -> List[str]:
@@ -162,7 +172,6 @@ class BaseWidget(AbstractBaseWidget):
         """
         Callback for the RETRANSLATE_UI_SIGNAL signal.
         """
-        # Safely call the correct retranslateUi method if it exists
         if self.ui:
             self.ui.retranslateUi(self)
 
@@ -179,9 +188,7 @@ class BaseWidget(AbstractBaseWidget):
         try:
             getattr(self, button_name).setIcon(
                 QtGui.QIcon(
-                    os.path.join(
-                        f"src/icons/{icon}{'-light' if is_dark else ''}.png"
-                    )
+                    os.path.join(f"src/icons/{icon}{'-light' if is_dark else ''}.png")
                 )
             )
         except AttributeError as _e:
@@ -245,29 +252,28 @@ class BaseWidget(AbstractBaseWidget):
             return False
 
     def _setup_splitters(self):
-        # Initialize the debounce timer for splitter movements
         self._splitter_debounce_timer = QTimer(self)
         self._splitter_debounce_timer.setSingleShot(True)
-        self._splitter_debounce_timer.timeout.connect(
-            self._save_splitter_state
-        )
+        self._splitter_debounce_timer.timeout.connect(self._save_splitter_state)
 
-        # Connect splitter moved signals with debouncing
         for splitter_name in self.splitters:
             try:
                 splitter = getattr(self.ui, splitter_name)
                 if splitter:
-                    # When splitter moves, reset the timer
-                    splitter.splitterMoved.connect(
-                        self._debounce_splitter_moved
-                    )
+                    splitter.splitterMoved.connect(self._debounce_splitter_moved)
             except AttributeError:
                 pass
 
     def _debounce_splitter_moved(self, *args):
-        # Reset the timer whenever the splitter moves
         self._splitter_debounce_timer.start(self._splitter_debounce_ms)
 
     def _save_splitter_state(self):
-        # This is called only after the debounce delay with no more movements
         save_splitter_settings(self.ui, self.splitters)
+
+    def render_template(self, element, template_name: str, **kwargs):
+        env = Environment(
+            loader=FileSystemLoader(self.static_html_dir),
+            autoescape=select_autoescape(["html", "xml"]),
+        )
+        template = env.get_template(template_name)
+        element.setHtml(template.render(**kwargs), f"file://{self.static_html_dir}/")

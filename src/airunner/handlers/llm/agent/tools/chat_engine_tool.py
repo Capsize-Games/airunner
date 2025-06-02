@@ -105,7 +105,12 @@ class ChatEngineTool(
     def metadata(self) -> ToolMetadata:
         return self._metadata
 
-    def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
+    def call(
+        self, *args: Any, tool_call: bool = False, **kwargs: Any
+    ) -> ToolOutput:
+        system_prompt = kwargs.get("system_prompt", None)
+        if system_prompt is not None:
+            self.chat_engine.update_system_prompt(system_prompt)
         query_str = self._get_query_str(*args, **kwargs)
         llm_request = kwargs.get("llm_request", LLMRequest.from_default())
         if hasattr(self.chat_engine.llm, "llm_request"):
@@ -140,27 +145,20 @@ class ChatEngineTool(
                 )
 
             is_first_message = True
-            try:
-                for token in streaming_response.response_gen:
-                    if self._do_interrupt:
-                        break
-                    if not token:
-                        continue  # Skip empty tokens
-                    response += token
-                    if (
-                        response != "Empty Response"
-                        and self.do_handle_response
-                    ):
-                        # Pass the individual token, not the accumulated response
-                        self.agent.handle_response(
-                            token,
-                            is_first_message,
-                            do_not_display=do_not_display,
-                            do_tts_reply=llm_request.do_tts_reply,
-                        )
-                    is_first_message = False
-            except openai.APIError as e:
-                response = ""
+            for token in streaming_response.response_gen:
+                if self._do_interrupt:
+                    break
+                if not token:
+                    continue
+                response += token
+                if response != "Empty Response" and self.do_handle_response:
+                    self.agent.handle_response(
+                        token,
+                        is_first_message,
+                        do_not_display=do_not_display,
+                        do_tts_reply=llm_request.do_tts_reply,
+                    )
+                is_first_message = False
 
         self._do_interrupt = False
 

@@ -83,3 +83,62 @@ class BaseConversationEngine:
             self.agent.chat_memory.set(chat_messages)
         if hasattr(self.agent, "_sync_memory_to_all_engines"):
             self.agent._sync_memory_to_all_engines()
+
+    def append_message_and_persist(
+        self,
+        conversation: Any,
+        role: str,
+        content: str,
+        name: Optional[str] = None,
+        tool_call: bool = False,
+    ) -> None:
+        """
+        Append a message (user, assistant, or tool) to both chat_memory and conversation.value, and persist.
+        Args:
+            conversation: The Conversation object.
+            role: 'user', 'assistant', or 'tool'.
+            content: The message content.
+            name: The name to use (username, botname, or tool name).
+            tool_call: If True, treat as a tool message.
+        """
+        import datetime
+
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        if name is None:
+            if role == "user":
+                name = getattr(self.agent, "username", "User")
+            elif role == "assistant":
+                name = getattr(self.agent, "botname", "Assistant")
+            else:
+                name = "Tool"
+        msg_dict = {
+            "role": role,
+            "name": name,
+            "content": content,
+            "timestamp": now,
+            "blocks": [{"block_type": "text", "text": content}],
+        }
+        conversation.value.append(msg_dict)
+        # Add to chat_memory if available
+        if hasattr(self.agent, "chat_memory") and self.agent.chat_memory:
+            from llama_index.core.base.llms.types import (
+                ChatMessage,
+                MessageRole,
+            )
+
+            role_map = {
+                "user": MessageRole.USER,
+                "assistant": MessageRole.ASSISTANT,
+                "tool": MessageRole.TOOL,
+            }
+            chat_msg = ChatMessage(
+                content=content, role=role_map.get(role, MessageRole.USER)
+            )
+            self.agent.chat_memory.put(chat_msg)
+        # Persist conversation state
+        if hasattr(self.agent, "_update_conversation_state"):
+            self.agent._update_conversation_state(conversation)
+        if self._logger:
+            self._logger.debug(
+                f"[BaseConversationEngine] Appended and persisted message: role='{role}', content='{content[:40]}', tool_call={tool_call}"
+            )

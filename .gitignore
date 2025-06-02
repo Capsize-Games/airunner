@@ -79,3 +79,5 @@ cache/.webcache/
 cache/.webcache/*
 cache/.webcache/**
 cache/.webcache
+
+**/tests/*

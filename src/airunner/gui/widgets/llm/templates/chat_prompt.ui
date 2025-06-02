@@ -226,87 +226,7 @@
          <property name="childrenCollapsible">
           <bool>false</bool>
          </property>
-         <widget class="QWidget" name="verticalLayoutWidget">
-          <layout class="QVBoxLayout" name="verticalLayout">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QScrollArea" name="chat_container">
-             <property name="minimumSize">
-              <size>
-               <width>150</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::Shape::NoFrame</enum>
-             </property>
-             <property name="widgetResizable">
-              <bool>true</bool>
-             </property>
-             <widget class="QWidget" name="scrollAreaWidgetContents">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>593</width>
-                <height>321</height>
-               </rect>
-              </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>150</width>
-                <height>0</height>
-               </size>
-              </property>
-              <layout class="QGridLayout" name="gridLayout_2">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <property name="spacing">
-                <number>0</number>
-               </property>
-               <item row="0" column="0">
-                <widget class="QTextEdit" name="conversation">
-                 <property name="minimumSize">
-                  <size>
-                   <width>150</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>CCJoeKubert</family>
-                  </font>
-                 </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-             <layout class="QVBoxLayout" name="chat_container_layout"/>
-            </widget>
-           </item>
-          </layout>
-         </widget>
+         <widget class="ConversationWidget" name="conversation" native="true"/>
          <widget class="QPlainTextEdit" name="prompt">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -335,6 +255,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ConversationWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/llm/contentwidgets/conversation_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../../../resources/feather.qrc"/>
  </resources>

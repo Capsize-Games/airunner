@@ -34,6 +34,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    BROWSER_NAVIGATE_SIGNAL = "browser_navigate_signal"
     UPATE_LOCALE = "update_locale_signal"
     RETRANSLATE_UI_SIGNAL = "retranslate_ui_signal"
     SD_UPDATE_BATCH_IMAGES_SIGNAL = "sd_update_batch_images_signal"
@@ -168,6 +169,7 @@ class SignalCode(Enum):
     SD_UNLOAD_SIGNAL = "unload_stablediffusion_signal"
     SD_ART_MODEL_CHANGED = "reload_stablediffusion_signal"
     LLM_MODEL_CHANGED = "llm_model_changed_signal"
+    RAG_LOAD_DOCUMENTS = "rag_load_documents_signal"
     CONTROLNET_LOAD_SIGNAL = "load_controlnet_signal"
     CONTROLNET_UNLOAD_SIGNAL = "unload_controlnet_signal"
     SAFETY_CHECKER_LOAD_SIGNAL = "SAFETY_CHECKER_LOAD_SIGNAL"
