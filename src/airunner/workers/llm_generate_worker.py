@@ -32,7 +32,9 @@ class LLMGenerateWorker(Worker):
             SignalCode.WEB_BROWSER_PAGE_HTML: self.on_web_browser_page_html_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
             SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
+            SignalCode.BROWSER_EXTRA_CONTEXT: self.on_browser_extra_context,
         }
+        self.extra_context: list[str] = []
         self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
         self._ollama_model_manager: Optional[OllamaModelManager] = None
         self._local_model_manager: Optional[LLMModelManager] = None
@@ -103,6 +105,28 @@ class LLMGenerateWorker(Worker):
             else:
                 self._model_manager = self.local_model_manager
         return self._model_manager
+
+    def on_browser_extra_context(self, data: dict) -> None:
+        """
+        Handle extra context sent from the browser widget.
+        Args:
+            data (dict): Dictionary with 'plaintext' and 'url'.
+        """
+        context = data.get("plaintext", "")
+        if context:
+            self.add_extra_context(context)
+            self.logger.info(
+                "Added browser context to extra_context knowledge base."
+            )
+
+    def add_extra_context(self, context: str) -> None:
+        """
+        Add a new context string to the extra_context knowledge base.
+        Args:
+            context (str): The context string to add.
+        """
+        if context:
+            self.extra_context.append(context)
 
     def on_conversation_deleted_signal(self, data):
         self.model_manager.on_conversation_deleted(data)
@@ -192,7 +216,7 @@ class LLMGenerateWorker(Worker):
 
     def handle_message(self, message):
         if self.model_manager:
-            self.model_manager.handle_request(message)
+            self.model_manager.handle_request(message, self.extra_context)
 
     def _load_llm_thread(self, data=None):
         self._llm_thread = threading.Thread(

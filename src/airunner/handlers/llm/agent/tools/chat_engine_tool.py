@@ -4,7 +4,6 @@ from typing import (
     Union,
 )
 import jinja2
-import openai
 
 from llama_index.core.tools.types import (
     AsyncBaseTool,

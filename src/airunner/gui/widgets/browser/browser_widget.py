@@ -500,13 +500,12 @@ class BrowserWidget(BaseWidget):
                 ):
                     html_out = self._format_plaintext_as_html(summary)
                     self.ui.stage.setHtml(html_out, QUrl(url))
-                # Emit the signal with the HTML string as a document
+                # Instead of emitting RAG_LOAD_DOCUMENTS, emit BROWSER_EXTRA_CONTEXT with plaintext
                 self.emit_signal(
-                    SignalCode.RAG_LOAD_DOCUMENTS,
+                    SignalCode.BROWSER_EXTRA_CONTEXT,
                     {
-                        "documents": [html],
-                        "type": "html_string",
-                        "clear_documents": True,
+                        "plaintext": plaintext,
+                        "url": url,
                     },
                 )
 
