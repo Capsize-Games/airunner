@@ -26,8 +26,12 @@ class BookmarkFolder(BaseModel):
 class HistoryEntry(BaseModel):
     title: str
     url: str
-    visited_at: str  # ISO8601
+    visits: list[str] = Field(default_factory=list)  # ISO8601 timestamps
     icon: Optional[str] = None
+
+    @property
+    def last_visited(self) -> Optional[str]:
+        return self.visits[-1] if self.visits else None
 
 
 class BrowserSettings(BaseModel):
