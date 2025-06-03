@@ -7,7 +7,10 @@ import sys
 
 class InterceptHandler(logging.Handler):
     def __init__(
-        self, shadow_logger, show_stdout: bool = True, hook: callable = lambda x: None
+        self,
+        shadow_logger,
+        show_stdout: bool = True,
+        hook: callable = lambda x: None,
     ):
         """
         InterceptHandler intercepts and logs print statements, file operations, and network operations.
@@ -75,21 +78,29 @@ class InterceptHandler(logging.Handler):
 
         with self.lock:
             # Overriding sys.stdout to capture print statements
-            sys.stdout = self.LogStream(self.emit_record, show_stdout=self.show_stdout)
+            sys.stdout = self.LogStream(
+                self.emit_record, show_stdout=self.show_stdout
+            )
             for k, v in self.__original_sys_stdout.items():
                 self.__original_sys_stdout[k] = getattr(sys, k, None)
-                setattr(sys, k, self.__override_sys_stdout(getattr(sys, k, None)))
+                setattr(
+                    sys, k, self.__override_sys_stdout(getattr(sys, k, None))
+                )
 
             # Overriding file writes
             for k, v in self.__original_os_functions.items():
                 self.__original_os_functions[k] = getattr(os, k, None)
-                setattr(os, k, self.__override_os_function(getattr(os, k, None)))
+                setattr(
+                    os, k, self.__override_os_function(getattr(os, k, None))
+                )
 
             # Overriding network operations
             for k, v in self.__original_socket_functions.items():
                 self.__original_socket_functions[k] = getattr(socket, k, None)
                 setattr(
-                    socket, k, self.__override_socket_function(getattr(socket, k, None))
+                    socket,
+                    k,
+                    self.__override_socket_function(getattr(socket, k, None)),
                 )
 
     @property
@@ -135,7 +146,9 @@ class InterceptHandler(logging.Handler):
 
         def custom_os_function(*args, **kwargs):
             with self.lock:
-                logging.info(f"Performing file operation: {original_function.__name__}")
+                logging.info(
+                    f"Performing file operation: {original_function.__name__}"
+                )
                 return original_function(*args, **kwargs)
 
         return custom_os_function
@@ -173,7 +186,9 @@ class InterceptHandler(logging.Handler):
         log_entry: str = self.__sanitized_log_entry(record)
         log_info = self.prepare_log_info(record, log_entry)
         if "Shadowlogger" not in log_entry:
-            self.shadow_logger.handle_message(log_entry, record.levelno, log_info)
+            self.shadow_logger.handle_message(
+                log_entry, record.levelno, log_info
+            )
         self.__hook(log_entry)
 
     def prepare_log_info(self, record, log_entry):
@@ -187,7 +202,9 @@ class InterceptHandler(logging.Handler):
             "lineno": record.lineno,
             "funcName": record.funcName,
             "created": record.created,
-            "file_op": record.__dict__.get("file_op"),  # Check for file operation
+            "file_op": record.__dict__.get(
+                "file_op"
+            ),  # Check for file operation
         }
 
     def __sanitized_log_entry(self, record: logging.LogRecord) -> str:

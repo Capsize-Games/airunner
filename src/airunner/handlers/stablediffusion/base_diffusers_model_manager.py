@@ -135,9 +135,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._current_prompt_2: str = ""
         self._current_negative_prompt_2: str = ""
         self._generator: Optional[torch.Generator] = None
-        self._textual_inversion_manager: Optional[DiffusersTextualInversionManager] = (
-            None
-        )
+        self._textual_inversion_manager: Optional[
+            DiffusersTextualInversionManager
+        ] = None
         self._compel_proc: Optional[Compel] = None
         self._loaded_lora: Dict = {}
         self._disabled_lora: List = []
@@ -304,9 +304,11 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.logger.debug(
                 f"Loading controlnet model from database {self.controlnet_settings.controlnet} {self.version}"
             )
-            self._controlnet_model = ControlnetDataModel.objects.filter_by_first(
-                display_name=self.controlnet_settings.controlnet,
-                version=self.version,
+            self._controlnet_model = (
+                ControlnetDataModel.objects.filter_by_first(
+                    display_name=self.controlnet_settings.controlnet,
+                    version=self.version,
+                )
             )
         return self._controlnet_model
 
@@ -395,7 +397,9 @@ class BaseDiffusersModelManager(BaseModelManager):
     def custom_path(
         self,
     ) -> Optional[str]:  # Changed return type to Optional[str]
-        path_value = self.image_request.custom_path if self.image_request else None
+        path_value = (
+            self.image_request.custom_path if self.image_request else None
+        )
         if path_value is None:
             path_value = self.generator_settings.custom_path
         if path_value is not None and path_value != "":
@@ -430,7 +434,9 @@ class BaseDiffusersModelManager(BaseModelManager):
                 return expanded_path
             else:
                 # Log a warning if the path is specified but doesn't exist
-                self.logger.warning(f"Model path specified but does not exist: {path}")
+                self.logger.warning(
+                    f"Model path specified but does not exist: {path}"
+                )
 
         return None  # Return None if no valid path found
 
@@ -471,7 +477,9 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def safety_checker_is_loading(self):
-        return self.model_status[ModelType.SAFETY_CHECKER] is ModelStatus.LOADING
+        return (
+            self.model_status[ModelType.SAFETY_CHECKER] is ModelStatus.LOADING
+        )
 
     @property
     def sd_is_loading(self):
@@ -550,14 +558,20 @@ class BaseDiffusersModelManager(BaseModelManager):
         return prompt_utils.format_prompt(
             self.image_request.prompt,
             prompt_utils.get_prompt_preset(self.image_request.image_preset),
-            (self.image_request.additional_prompts if self.do_join_prompts else None),
+            (
+                self.image_request.additional_prompts
+                if self.do_join_prompts
+                else None
+            ),
         )
 
     @property
     def negative_prompt(self) -> str:
         return prompt_utils.format_negative_prompt(
             self.image_request.negative_prompt,
-            prompt_utils.get_negative_prompt_preset(self.image_request.image_preset),
+            prompt_utils.get_negative_prompt_preset(
+                self.image_request.image_preset
+            ),
         )
 
     @property
@@ -647,7 +661,9 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def _swap_pipeline(self):
         pipeline_class_ = self._pipeline_class
-        if self._pipe.__class__ is pipeline_class_ or self._pipe is None:  # noqa
+        if (
+            self._pipe.__class__ is pipeline_class_ or self._pipe is None
+        ):  # noqa
             return
         self.logger.info(
             "Swapping pipeline from %s to %s",
@@ -660,7 +676,9 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._clear_memory_efficient_settings()
             clear_memory()
             original_config = dict(self._pipe.config)
-            kwargs = {k: getattr(self._pipe, k) for k in original_config.keys()}
+            kwargs = {
+                k: getattr(self._pipe, k) for k in original_config.keys()
+            }
 
             if self.controlnet_enabled:
                 kwargs["controlnet"] = self.controlnet
@@ -839,10 +857,14 @@ class BaseDiffusersModelManager(BaseModelManager):
                 # Benchmark getting images from results
                 images = results.get("images", [])
 
-                images, nsfw_content_detected = self._check_and_mark_nsfw_images(images)
+                images, nsfw_content_detected = (
+                    self._check_and_mark_nsfw_images(images)
+                )
 
                 if images is not None:
-                    self.api.art.final_progress_update(total=self.image_request.steps)
+                    self.api.art.final_progress_update(
+                        total=self.image_request.steps
+                    )
 
                     # Benchmark exporting images
                     self._export_images(images, data)
@@ -901,7 +923,9 @@ class BaseDiffusersModelManager(BaseModelManager):
                 if not self.image_request.generate_infinite_images:
                     total += 1
 
-    def _initialize_metadata(self, images: List[Any], data: Dict) -> Optional[dict]:
+    def _initialize_metadata(
+        self, images: List[Any], data: Dict
+    ) -> Optional[dict]:
         metadata = None
         if self.metadata_settings.export_metadata:
             metadata_dict = {}
@@ -909,8 +933,12 @@ class BaseDiffusersModelManager(BaseModelManager):
                 metadata_dict["prompt"] = self._current_prompt
                 metadata_dict["prompt_2"] = self._current_prompt_2
             if self.metadata_settings.image_export_metadata_negative_prompt:
-                metadata_dict["negative_prompt"] = self._current_negative_prompt
-                metadata_dict["negative_prompt_2"] = self._current_negative_prompt_2
+                metadata_dict["negative_prompt"] = (
+                    self._current_negative_prompt
+                )
+                metadata_dict["negative_prompt_2"] = (
+                    self._current_negative_prompt_2
+                )
             if self.metadata_settings.image_export_metadata_scale:
                 metadata_dict["scale"] = data.get("guidance_scale", 0)
             if self.metadata_settings.image_export_metadata_seed:
@@ -920,7 +948,9 @@ class BaseDiffusersModelManager(BaseModelManager):
             if self.metadata_settings.image_export_metadata_ddim_eta:
                 metadata_dict["ddim_eta"] = self.image_request.ddim_eta
             if self.metadata_settings.image_export_metadata_iterations:
-                metadata_dict["num_inference_steps"] = data["num_inference_steps"]
+                metadata_dict["num_inference_steps"] = data[
+                    "num_inference_steps"
+                ]
             if self.metadata_settings.image_export_metadata_samples:
                 metadata_dict["n_samples"] = self.image_request.n_samples
             if self.metadata_settings.image_export_metadata_model:
@@ -946,7 +976,9 @@ class BaseDiffusersModelManager(BaseModelManager):
                 metadata_dict.update(
                     {
                         "guess_mode": data["guess_mode"],
-                        "control_guidance_start": data["control_guidance_start"],
+                        "control_guidance_start": data[
+                            "control_guidance_start"
+                        ],
                         "control_guidance_end": data["control_guidance_end"],
                         "controlnet_strength": data["strength"],
                         "controlnet_guidance_scale": data["guidance_scale"],
@@ -967,8 +999,12 @@ class BaseDiffusersModelManager(BaseModelManager):
                         "mask_blur": self.mask_blur,
                     }
                 )
-            metadata_dict["tome_sd"] = self._memory_settings_flags["use_tome_sd"]
-            metadata_dict["tome_ratio"] = self._memory_settings_flags["tome_ratio"]
+            metadata_dict["tome_sd"] = self._memory_settings_flags[
+                "use_tome_sd"
+            ]
+            metadata_dict["tome_ratio"] = self._memory_settings_flags[
+                "tome_ratio"
+            ]
             metadata = [metadata_dict for _ in range(len(images))]
         return metadata
 
@@ -980,7 +1016,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         extension = self.application_settings.image_export_type
         filename = "image"
         file_path = os.path.expanduser(
-            os.path.join(self.path_settings.image_path, f"{filename}.{extension}")
+            os.path.join(
+                self.path_settings.image_path, f"{filename}.{extension}"
+            )
         )
         metadata = self._initialize_metadata(images, data)
         export_images(images, file_path, metadata)
@@ -991,9 +1029,9 @@ class BaseDiffusersModelManager(BaseModelManager):
 
         self._safety_checker.to(self._device)
 
-        safety_checker_input = self._feature_extractor(images, return_tensors="pt").to(
-            self._device
-        )
+        safety_checker_input = self._feature_extractor(
+            images, return_tensors="pt"
+        ).to(self._device)
         _, has_nsfw_concepts = self._safety_checker(
             images=[np.array(img) for img in images],
             clip_input=safety_checker_input.pixel_values.to(self._device),
@@ -1023,7 +1061,9 @@ class BaseDiffusersModelManager(BaseModelManager):
                 text_y = (img.height - text_height) // 2
 
                 # Draw the text at the calculated position, ensuring the text line is centered
-                draw.text((text_x, text_y), text, font=font, fill=(255, 255, 255))
+                draw.text(
+                    (text_x, text_y), text, font=font, fill=(255, 255, 255)
+                )
 
                 images[i] = img
 
@@ -1032,7 +1072,10 @@ class BaseDiffusersModelManager(BaseModelManager):
         return images, has_nsfw_concepts
 
     def _load_safety_checker(self):
-        if not self.application_settings.nsfw_filter or self.safety_checker_is_loading:
+        if (
+            not self.application_settings.nsfw_filter
+            or self.safety_checker_is_loading
+        ):
             return
         self._safety_checker = model_loader.load_safety_checker(
             self.application_settings, self.path_settings, self.data_type
@@ -1041,9 +1084,13 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.path_settings, self.data_type
         )
         if self._safety_checker:
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED)
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.LOADED
+            )
         else:
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED)
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.FAILED
+            )
 
     def _unload_safety_checker(self):
         model_loader.unload_safety_checker(self._pipe, self.logger)
@@ -1084,7 +1131,9 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def _load_lora(self):
         self.logger.debug("Loading LORA weights")
-        enabled_lora = Lora.objects.filter_by(version=self.version, enabled=True)
+        enabled_lora = Lora.objects.filter_by(
+            version=self.version, enabled=True
+        )
         for lora in enabled_lora:
             if model_loader.load_lora_weights(
                 self._pipe, lora, self.lora_base_path, self.logger
@@ -1131,7 +1180,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         )
 
     def _unload_deep_cache(self):
-        model_loader.unload_deep_cache_helper(self._deep_cache_helper, self.logger)
+        model_loader.unload_deep_cache_helper(
+            self._deep_cache_helper, self.logger
+        )
         self._deep_cache_helper = None
 
     def _check_and_mark_nsfw_images(self, images):
@@ -1145,10 +1196,14 @@ class BaseDiffusersModelManager(BaseModelManager):
         extension = self.application_settings.image_export_type
         filename = "image"
         file_path = os.path.expanduser(
-            os.path.join(self.path_settings.image_path, f"{filename}.{extension}")
+            os.path.join(
+                self.path_settings.image_path, f"{filename}.{extension}"
+            )
         )
         metadata = self._initialize_metadata(images, data)
-        image_generation.export_images_with_metadata(images, file_path, metadata)
+        image_generation.export_images_with_metadata(
+            images, file_path, metadata
+        )
 
     def _resize_image(self, image, max_width, max_height):
         return utils.resize_image(image, max_width, max_height)
@@ -1167,21 +1222,29 @@ class BaseDiffusersModelManager(BaseModelManager):
             )
         )
         try:
-            self._safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-                safety_checker_path,
-                torch_dtype=self.data_type,
-                device_map="cpu",
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                use_safetensors=False,
+            self._safety_checker = (
+                StableDiffusionSafetyChecker.from_pretrained(
+                    safety_checker_path,
+                    torch_dtype=self.data_type,
+                    device_map="cpu",
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                    use_safetensors=False,
+                )
             )
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADED)
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.LOADED
+            )
         except Exception as e:
             self.logger.error(f"Unable to load safety checker: {e}")
-            self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.FAILED)
+            self.change_model_status(
+                ModelType.SAFETY_CHECKER, ModelStatus.FAILED
+            )
 
     def _load_feature_extractor(self):
         self.logger.debug("Loading feature extractor")
-        self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING)
+        self.change_model_status(
+            ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADING
+        )
         feature_extractor_path = os.path.expanduser(
             os.path.join(
                 self.path_settings.base_path,
@@ -1199,10 +1262,14 @@ class BaseDiffusersModelManager(BaseModelManager):
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 use_safetensors=True,
             )
-            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED)
+            self.change_model_status(
+                ModelType.FEATURE_EXTRACTOR, ModelStatus.LOADED
+            )
         except Exception as e:
             self.logger.error(f"Unable to load feature extractor {e}")
-            self.change_model_status(ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED)
+            self.change_model_status(
+                ModelType.FEATURE_EXTRACTOR, ModelStatus.FAILED
+            )
 
     def _load_controlnet_processor(self):
         if not self.controlnet_enabled:
@@ -1240,7 +1307,9 @@ class BaseDiffusersModelManager(BaseModelManager):
             )
         )
 
-        scheduler = Schedulers.objects.filter_by_first(display_name=scheduler_name)
+        scheduler = Schedulers.objects.filter_by_first(
+            display_name=scheduler_name
+        )
         if not scheduler:
             self.logger.error(f"Failed to find scheduler {scheduler_name}")
             return None
@@ -1256,14 +1325,18 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.current_scheduler_name = scheduler_name
             self.logger.debug(f"Loaded scheduler {scheduler_name}")
         except Exception as e:
-            self.logger.error(f"Failed to load scheduler {scheduler_name}: {e}")
+            self.logger.error(
+                f"Failed to load scheduler {scheduler_name}: {e}"
+            )
             self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
             return
         if self._pipe:
             self._pipe.scheduler = self.scheduler
 
     def _load_pipe(self) -> bool:
-        self.logger.debug(f"Loading pipe {self._pipeline_class} for {self.section}")
+        self.logger.debug(
+            f"Loading pipe {self._pipeline_class} for {self.section}"
+        )
         self.change_model_status(ModelType.SD, ModelStatus.LOADING)
         data = {
             "torch_dtype": self.data_type,
@@ -1303,7 +1376,9 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def _set_pipe(self, config_path: str, data: Dict):
         pipeline_class_ = self._pipeline_class
-        self.logger.info(f"Loading {pipeline_class_.__class__} from {self.model_path}")
+        self.logger.info(
+            f"Loading {pipeline_class_.__class__} from {self.model_path}"
+        )
         self._pipe = pipeline_class_.from_single_file(
             self.model_path,
             config=config_path,
@@ -1371,7 +1446,9 @@ class BaseDiffusersModelManager(BaseModelManager):
             adapter_name = adapter_name.replace(".", "_")
             adapter_names.append(adapter_name)
         if len(adapter_weights) > 0:
-            self._pipe.set_adapters(adapter_names, adapter_weights=adapter_weights)
+            self._pipe.set_adapters(
+                adapter_names, adapter_weights=adapter_weights
+            )
             self.logger.debug("LORA adapters set")
         else:
             self.logger.debug("No LORA adapters to set")
@@ -1390,12 +1467,19 @@ class BaseDiffusersModelManager(BaseModelManager):
 
         for embedding in embeddings:
             embedding_path = embedding.path
-            if embedding.active and embedding_path not in self._loaded_embeddings:
+            if (
+                embedding.active
+                and embedding_path not in self._loaded_embeddings
+            ):
                 if not os.path.exists(embedding_path):
-                    self.logger.error(f"Embedding path {embedding_path} does not exist")
+                    self.logger.error(
+                        f"Embedding path {embedding_path} does not exist"
+                    )
                 else:
                     try:
-                        self.logger.debug(f"Loading embedding {embedding_path}")
+                        self.logger.debug(
+                            f"Loading embedding {embedding_path}"
+                        )
                         self._pipe.load_textual_inversion(
                             embedding_path,
                             token=embedding.name,
@@ -1416,7 +1500,9 @@ class BaseDiffusersModelManager(BaseModelManager):
             try:
                 self._load_textual_inversion_manager()
             except Exception as e:
-                self.logger.error(f"Error creating textual inversion manager: {e}")
+                self.logger.error(
+                    f"Error creating textual inversion manager: {e}"
+                )
 
             try:
                 self._load_compel_proc()
@@ -1435,7 +1521,9 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def _load_textual_inversion_manager(self):
         self.logger.debug("Loading textual inversion manager")
-        self._textual_inversion_manager = DiffusersTextualInversionManager(self._pipe)
+        self._textual_inversion_manager = DiffusersTextualInversionManager(
+            self._pipe
+        )
 
     def _load_compel_proc(self):
         self.logger.debug("Loading compel proc")
@@ -1445,12 +1533,15 @@ class BaseDiffusersModelManager(BaseModelManager):
         safety_checker_ready = True
         if self.use_safety_checker:
             safety_checker_ready = (
-                self._safety_checker is not None and self._feature_extractor is not None
+                self._safety_checker is not None
+                and self._feature_extractor is not None
             )
         if self._pipe is not None and safety_checker_ready:
             self._current_state = HandlerState.READY
         else:
-            self.logger.error("Something went wrong with Stable Diffusion loading")
+            self.logger.error(
+                "Something went wrong with Stable Diffusion loading"
+            )
             self.unload()
             self._clear_cached_properties()
 
@@ -1488,7 +1579,9 @@ class BaseDiffusersModelManager(BaseModelManager):
             f"{'Enabling' if enabled else 'Disabling'} torch.channels_last"
         )
         self._pipe.unet.to(
-            memory_format=(torch.channels_last if enabled else torch.contiguous_format)
+            memory_format=(
+                torch.channels_last if enabled else torch.contiguous_format
+            )
         )
 
     def _apply_vae_slicing(self, attr_val):
@@ -1564,7 +1657,9 @@ class BaseDiffusersModelManager(BaseModelManager):
                 self.logger.debug("Enabling sequential cpu offload")
                 self._pipe.enable_sequential_cpu_offload(self._device_index)
             except NotImplementedError as e:
-                self.logger.warning(f"Error applying sequential cpu offload: {e}")
+                self.logger.warning(
+                    f"Error applying sequential cpu offload: {e}"
+                )
                 self._pipe.to(self._device)
         else:
             self.logger.debug("Sequential cpu offload disabled")
@@ -1573,7 +1668,10 @@ class BaseDiffusersModelManager(BaseModelManager):
         enabled = AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD
         if enabled is None:
             enabled = attr_val
-        if enabled and not self.memory_settings.use_enable_sequential_cpu_offload:
+        if (
+            enabled
+            and not self.memory_settings.use_enable_sequential_cpu_offload
+        ):
             self.logger.debug("Enabling model cpu offload")
             # self._move_stable_diffusion_to_cpu()
             self._pipe.enable_model_cpu_offload(self._device_index)
@@ -1590,12 +1688,16 @@ class BaseDiffusersModelManager(BaseModelManager):
                 ratio = self.memory_settings.tome_sd_ratio / 1000
             else:
                 ratio = float(ratio)
-            self.logger.debug(f"Applying ToMe SD weight merging with ratio {ratio}")
+            self.logger.debug(
+                f"Applying ToMe SD weight merging with ratio {ratio}"
+            )
             self._remove_tome_sd()
             try:
                 tomesd.apply_patch(self._pipe, ratio=ratio)
             except Exception as e:
-                self.logger.error(f"Error applying ToMe SD weight merging: {e}")
+                self.logger.error(
+                    f"Error applying ToMe SD weight merging: {e}"
+                )
         else:
             self._remove_tome_sd()
 
@@ -1612,7 +1714,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.LOADING)
         self._unload_safety_checker_model()
         self._unload_feature_extractor_model()
-        self.change_model_status(ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED)
+        self.change_model_status(
+            ModelType.SAFETY_CHECKER, ModelStatus.UNLOADED
+        )
 
     def _unload_safety_checker_model(self):
         self.logger.debug("Unloading safety checker model")
@@ -1623,7 +1727,9 @@ class BaseDiffusersModelManager(BaseModelManager):
             try:
                 self._safety_checker.to("cpu")
             except RuntimeError as e:
-                self.logger.warning(f"Failed to load model from {self.model_path}: {e}")
+                self.logger.warning(
+                    f"Failed to load model from {self.model_path}: {e}"
+                )
         del self._safety_checker
         self._safety_checker = None
 
@@ -1687,7 +1793,10 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._loaded_embeddings = []
 
     def _unload_compel(self):
-        if self._textual_inversion_manager is not None or self._compel_proc is not None:
+        if (
+            self._textual_inversion_manager is not None
+            or self._compel_proc is not None
+        ):
             self.logger.debug("Unloading compel")
             self._unload_textual_inversion_manager()
             self._unload_compel_proc()
@@ -1744,8 +1853,12 @@ class BaseDiffusersModelManager(BaseModelManager):
         Override this method to load the prompt embeds.
         """
 
-    def _build_conditioning_tensors(self, compel_prompt, compel_negative_prompt):
-        prompt_embeds = self._compel_proc.build_conditioning_tensor(compel_prompt)
+    def _build_conditioning_tensors(
+        self, compel_prompt, compel_negative_prompt
+    ):
+        prompt_embeds = self._compel_proc.build_conditioning_tensor(
+            compel_prompt
+        )
         negative_prompt_embeds = self._compel_proc.build_conditioning_tensor(
             compel_negative_prompt
         )
@@ -1814,8 +1927,13 @@ class BaseDiffusersModelManager(BaseModelManager):
 
         if self.is_img2img:
             image = self.img2img_image
-            if data["num_inference_steps"] < AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG:
-                data["num_inference_steps"] = AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
+            if (
+                data["num_inference_steps"]
+                < AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
+            ):
+                data["num_inference_steps"] = (
+                    AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
+                )
         elif self.is_outpaint:
             image = self.outpaint_image
             if not image:
@@ -1845,7 +1963,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self.controlnet_enabled:
             controlnet_image = self.controlnet_image
             if controlnet_image:
-                controlnet_image = self._resize_image(controlnet_image, width, height)
+                controlnet_image = self._resize_image(
+                    controlnet_image, width, height
+                )
                 control_image = self._controlnet_processor(
                     controlnet_image,
                     to_pil=True,
@@ -1870,7 +1990,9 @@ class BaseDiffusersModelManager(BaseModelManager):
 
         if mask is not None and self.is_outpaint:
             mask = self._resize_image(mask, width, height)
-            mask = self._pipe.mask_processor.blur(mask, blur_factor=self.mask_blur)
+            mask = self._pipe.mask_processor.blur(
+                mask, blur_factor=self.mask_blur
+            )
             data["mask_image"] = mask
 
         if self.controlnet_enabled:
@@ -1900,7 +2022,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         return data
 
     @staticmethod
-    def _resize_image(image: Image, max_width: int, max_height: int) -> Optional[Image]:
+    def _resize_image(
+        image: Image, max_width: int, max_height: int
+    ) -> Optional[Image]:
         """
         Resize the image to ensure it is not larger than max_width and max_height,
         while maintaining the aspect ratio.

@@ -73,7 +73,9 @@ class Gemma3Manager(LLMModelManager):
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 trust_remote_code=True,
             )
-            self._tokenizer = self._processor  # For compatibility with parent class
+            self._tokenizer = (
+                self._processor
+            )  # For compatibility with parent class
             self.logger.debug("Gemma3 processor loaded successfully")
         except Exception as e:
             self.logger.error(f"Error loading Gemma3 processor: {e}")
@@ -208,7 +210,9 @@ class Gemma3Manager(LLMModelManager):
                 generation = generation[0][input_len:]
 
             # Decode response
-            decoded = self._processor.decode(generation, skip_special_tokens=True)
+            decoded = self._processor.decode(
+                generation, skip_special_tokens=True
+            )
 
             # Create response object
             response = AgentChatResponse(response=decoded)
@@ -221,7 +225,9 @@ class Gemma3Manager(LLMModelManager):
 
         except Exception as e:
             self.logger.error(f"Error generating with Gemma3: {e}")
-            return AgentChatResponse(response=f"Error generating response: {str(e)}")
+            return AgentChatResponse(
+                response=f"Error generating response: {str(e)}"
+            )
 
     def _load_agent(self) -> None:
         """

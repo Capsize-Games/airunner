@@ -2,7 +2,9 @@ import re
 
 from PySide6 import QtCore, QtWidgets
 
-_NUMB_REGEX = re.compile(r"^((?:\-)*\d+)*([\.,])*(\d+(?:[eE](?:[\-\+])*\d+)*)*")
+_NUMB_REGEX = re.compile(
+    r"^((?:\-)*\d+)*([\.,])*(\d+(?:[eE](?:[\-\+])*\d+)*)*"
+)
 
 
 class _NumberValueMenu(QtWidgets.QMenu):
@@ -18,7 +20,9 @@ class _NumberValueMenu(QtWidgets.QMenu):
         self.last_action = None
 
     def __repr__(self):
-        return "<{}() object at {}>".format(self.__class__.__name__, hex(id(self)))
+        return "<{}() object at {}>".format(
+            self.__class__.__name__, hex(id(self))
+        )
 
     # re-implemented.
 
@@ -100,7 +104,9 @@ class _NumberValueEdit(QtWidgets.QLineEdit):
         self.set_data_type(data_type)
 
     def __repr__(self):
-        return "<{}() object at {}>".format(self.__class__.__name__, hex(id(self)))
+        return "<{}() object at {}>".format(
+            self.__class__.__name__, hex(id(self))
+        )
 
     # re-implemented
 

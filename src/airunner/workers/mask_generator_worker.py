@@ -56,11 +56,13 @@ class MaskGeneratorWorker(Worker):
             black_top = max(0, -self.active_rect.top())
             black_right = min(
                 image_width,
-                self.application_settings.working_width - self.active_rect.left(),
+                self.application_settings.working_width
+                - self.active_rect.left(),
             )
             black_bottom = min(
                 image_height,
-                self.application_settings.working_height - self.active_rect.top(),
+                self.application_settings.working_height
+                - self.active_rect.top(),
             )
 
             # Ensure the coordinates are valid

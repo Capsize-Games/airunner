@@ -169,7 +169,9 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         is_chat_model: Optional[bool] = False,
         callback_manager: Optional[CallbackManager] = None,
         system_prompt: str = "",
-        messages_to_prompt: Optional[Callable[[Sequence[ChatMessage]], str]] = None,
+        messages_to_prompt: Optional[
+            Callable[[Sequence[ChatMessage]], str]
+        ] = None,
         completion_to_prompt: Optional[Callable[[str], str]] = None,
         pydantic_program_mode: PydanticProgramMode = PydanticProgramMode.DEFAULT,
         output_parser: Optional[BaseOutputParser] = None,
@@ -249,7 +251,9 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             query_wrapper_prompt = PromptTemplate(query_wrapper_prompt)
 
         # Use tokenizer-specific method or fallback to generic for messages_to_prompt
-        messages_to_prompt = messages_to_prompt or self._tokenizer_messages_to_prompt
+        messages_to_prompt = (
+            messages_to_prompt or self._tokenizer_messages_to_prompt
+        )
 
         super().__init__(
             context_window=context_window,
@@ -329,7 +333,9 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         self._tokenizer = None
         self._stopping_criteria = None
 
-    def _tokenizer_messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
+    def _tokenizer_messages_to_prompt(
+        self, messages: Sequence[ChatMessage]
+    ) -> str:
         """
         Convert chat messages to a prompt string using the tokenizer.
 
@@ -370,7 +376,9 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         full_prompt = prompt
         if not formatted:
             if self.query_wrapper_prompt:
-                full_prompt = self.query_wrapper_prompt.format(query_str=prompt)
+                full_prompt = self.query_wrapper_prompt.format(
+                    query_str=prompt
+                )
             if self.completion_to_prompt:
                 full_prompt = self.completion_to_prompt(full_prompt)
             elif self.system_prompt:
@@ -394,9 +402,13 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
 
         # Extract and decode the generated text
         completion_tokens = tokens[0][inputs["input_ids"].size(1) :]
-        completion = self._tokenizer.decode(completion_tokens, skip_special_tokens=True)
+        completion = self._tokenizer.decode(
+            completion_tokens, skip_special_tokens=True
+        )
 
-        return CompletionResponse(text=completion, raw={"model_output": tokens})
+        return CompletionResponse(
+            text=completion, raw={"model_output": tokens}
+        )
 
     @llm_completion_callback()
     def stream_complete(
@@ -418,7 +430,9 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         full_prompt = prompt
         if not formatted:
             if self.query_wrapper_prompt:
-                full_prompt = self.query_wrapper_prompt.format(query_str=prompt)
+                full_prompt = self.query_wrapper_prompt.format(
+                    query_str=prompt
+                )
             if self.system_prompt:
                 full_prompt = f"{self.system_prompt} {full_prompt}"
 
@@ -457,7 +471,9 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         return gen()
 
     @llm_chat_callback()
-    def chat(self, messages: Sequence[ChatMessage], **kwargs: Any) -> ChatResponse:
+    def chat(
+        self, messages: Sequence[ChatMessage], **kwargs: Any
+    ) -> ChatResponse:
         """
         Generate a chat response for the given messages.
 
@@ -487,5 +503,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             ChatResponseGen: Generator yielding parts of the chat response as they're generated.
         """
         prompt = self.messages_to_prompt(messages)
-        completion_response = self.stream_complete(prompt, formatted=True, **kwargs)
+        completion_response = self.stream_complete(
+            prompt, formatted=True, **kwargs
+        )
         return stream_completion_response_to_chat_response(completion_response)

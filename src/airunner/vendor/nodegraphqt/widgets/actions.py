@@ -32,7 +32,9 @@ class BaseMenu(QtWidgets.QMenu):
             },
             "QMenu::item:selected": {
                 "color": "rgb({0},{1},{2})".format(*text_color),
-                "background-color": "rgba({0},{1},{2},200)".format(*selected_color),
+                "background-color": "rgba({0},{1},{2},200)".format(
+                    *selected_color
+                ),
             },
             "QMenu::item:disabled": {
                 "color": "rgba({0},{1},{2},60)".format(*text_color),

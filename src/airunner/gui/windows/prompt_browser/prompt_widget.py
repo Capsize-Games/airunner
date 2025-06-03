@@ -18,7 +18,9 @@ class PromptWidget(BaseWidget):
         self.ui.secondary_negative_prompt.blockSignals(True)
         self.ui.prompt.setPlainText(self.saved_prompt.prompt)
         self.ui.negative_prompt.setPlainText(self.saved_prompt.negative_prompt)
-        self.ui.secondary_prompt.setPlainText(self.saved_prompt.secondary_prompt)
+        self.ui.secondary_prompt.setPlainText(
+            self.saved_prompt.secondary_prompt
+        )
         self.ui.secondary_negative_prompt.setPlainText(
             self.saved_prompt.secondary_negative_prompt
         )
@@ -40,19 +42,27 @@ class PromptWidget(BaseWidget):
 
     def save_prompt(self):
         self.saved_prompt.prompt = self.ui.prompt.toPlainText()
-        self.saved_prompt.negative_prompt = self.ui.negative_prompt.toPlainText()
-        self.saved_prompt.secondary_prompt = self.ui.secondary_prompt.toPlainText()
+        self.saved_prompt.negative_prompt = (
+            self.ui.negative_prompt.toPlainText()
+        )
+        self.saved_prompt.secondary_prompt = (
+            self.ui.secondary_prompt.toPlainText()
+        )
         self.saved_prompt.secondary_negative_prompt = (
             self.ui.secondary_negative_prompt.toPlainText()
         )
         self.save()
 
     def save(self):
-        new_saved_prompt = SavedPrompt.objects.filter_by_first(id=self.saved_prompt.id)
+        new_saved_prompt = SavedPrompt.objects.filter_by_first(
+            id=self.saved_prompt.id
+        )
         if new_saved_prompt:
             for key in self.saved_prompt.__dict__.keys():
                 if key != "_sa_instance_state":
-                    setattr(new_saved_prompt, key, getattr(self.saved_prompt, key))
+                    setattr(
+                        new_saved_prompt, key, getattr(self.saved_prompt, key)
+                    )
             new_saved_prompt.save()
         else:
             self.saved_prompt.save()

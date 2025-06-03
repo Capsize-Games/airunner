@@ -47,7 +47,9 @@ class PipeItem(QtWidgets.QGraphicsPathItem):
 
         self._dir_pointer = QtWidgets.QGraphicsPolygonItem(self)
         self._dir_pointer.setPolygon(self._poly)
-        self._dir_pointer.setFlag(QtWidgets.QGraphicsPathItem.ItemIsSelectable, False)
+        self._dir_pointer.setFlag(
+            QtWidgets.QGraphicsPathItem.ItemIsSelectable, False
+        )
 
         self.reset()
 
@@ -70,7 +72,10 @@ class PipeItem(QtWidgets.QGraphicsPathItem):
             self.highlight()
 
     def itemChange(self, change, value):
-        if change == QtWidgets.QGraphicsPathItem.ItemSelectedChange and self.scene():
+        if (
+            change == QtWidgets.QGraphicsPathItem.ItemSelectedChange
+            and self.scene()
+        ):
             if value:
                 self.highlight()
             else:
@@ -335,11 +340,15 @@ class PipeItem(QtWidgets.QGraphicsPathItem):
         if end_port and not self.viewer().acyclic:
             if end_port.node == start_port.node:
                 if direction is LayoutDirectionEnum.VERTICAL.value:
-                    self._draw_path_cycled_vertical(start_port, pos1, pos2, path)
+                    self._draw_path_cycled_vertical(
+                        start_port, pos1, pos2, path
+                    )
                     self._draw_direction_pointer()
                     return
                 elif direction is LayoutDirectionEnum.HORIZONTAL.value:
-                    self._draw_path_cycled_horizontal(start_port, pos1, pos2, path)
+                    self._draw_path_cycled_horizontal(
+                        start_port, pos1, pos2, path
+                    )
                     self._draw_direction_pointer()
                     return
 
@@ -575,7 +584,9 @@ class LivePipeItem(PipeItem):
         """
         QtWidgets.QGraphicsPathItem.hoverEnterEvent(self, event)
 
-    def draw_path(self, start_port, end_port=None, cursor_pos=None, color=None):
+    def draw_path(
+        self, start_port, end_port=None, cursor_pos=None, color=None
+    ):
         """
         re-implemented to also update the index pointer arrow position.
 
@@ -603,14 +614,20 @@ class LivePipeItem(PipeItem):
 
         transform = QtGui.QTransform()
         transform.translate(cursor_pos.x(), cursor_pos.y())
-        if self.viewer_layout_direction() is LayoutDirectionEnum.VERTICAL.value:
+        if (
+            self.viewer_layout_direction()
+            is LayoutDirectionEnum.VERTICAL.value
+        ):
             text_pos = (
                 cursor_pos.x() + (text_rect.width() / 2.5),
                 cursor_pos.y() - (text_rect.height() / 2),
             )
             if start_port.port_type == PortTypeEnum.OUT.value:
                 transform.rotate(180)
-        elif self.viewer_layout_direction() is LayoutDirectionEnum.HORIZONTAL.value:
+        elif (
+            self.viewer_layout_direction()
+            is LayoutDirectionEnum.HORIZONTAL.value
+        ):
             text_pos = (
                 cursor_pos.x() - (text_rect.width() / 2),
                 cursor_pos.y() - (text_rect.height() * 1.25),

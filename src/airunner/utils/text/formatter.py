@@ -33,7 +33,9 @@ class Formatter:
         if re.search(r"\\\(.*\\\)", text):
             return True
         # Check for common LaTeX math commands
-        if re.search(r"\\frac|\\sqrt|\\sum|\\int|\\alpha|\\beta|\\cos|\\sin", text):
+        if re.search(
+            r"\\frac|\\sqrt|\\sum|\\int|\\alpha|\\beta|\\cos|\\sin", text
+        ):
             return True
         return False
 
@@ -65,7 +67,9 @@ class Formatter:
         Looks for common Markdown elements like # (headers), * (lists/emphasis), ` (code), []() (links).
         """
         # Headers
-        if re.search(r"^(#+\s.*)|(\s\S+\n=+$)|(\s\S+\n-+$)", text, re.MULTILINE):
+        if re.search(
+            r"^(#+\s.*)|(\s\S+\n=+$)|(\s\S+\n-+$)", text, re.MULTILINE
+        ):
             return True
         # Lists (unordered and ordered)
         if re.search(r"^(-|\*|\+|\d+\.)\s", text, re.MULTILINE):
@@ -114,7 +118,9 @@ class Formatter:
             width_px = max(width_px, 300)
             height_px = max(height_px, 100)
 
-            img = Image.new("RGB", (width_px, height_px), color=(255, 255, 255))
+            img = Image.new(
+                "RGB", (width_px, height_px), color=(255, 255, 255)
+            )
             d = ImageDraw.Draw(img)
 
             # Try to load a common monospaced font

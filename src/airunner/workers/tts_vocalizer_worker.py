@@ -38,7 +38,9 @@ class TTSVocalizerWorker(Worker):
         self._stream_samplerate: Optional[int] = (
             None  # Store the actual stream sample rate
         )
-        self._device_default_samplerate: Optional[int] = None  # Store device default
+        self._device_default_samplerate: Optional[int] = (
+            None  # Store device default
+        )
 
     @property
     def is_espeak(self) -> bool:
@@ -115,17 +117,23 @@ class TTSVocalizerWorker(Worker):
                     f"Failed to initialize with model sample rate {self._model_samplerate}. "
                     f"Falling back to device default sample rate: {self._device_default_samplerate}"
                 )
-                initialized = self._initialize_stream(self._device_default_samplerate)
+                initialized = self._initialize_stream(
+                    self._device_default_samplerate
+                )
 
             if not initialized:
                 self.logger.error(
                     "Failed to initialize audio stream with both model and default sample rates."
                 )
-                self.api.sounddevice_manager.out_stream = None  # Ensure stream is None
+                self.api.sounddevice_manager.out_stream = (
+                    None  # Ensure stream is None
+                )
                 self._stream_samplerate = None
 
         except Exception as e:
-            self.logger.error(f"Error querying device or starting audio stream: {e}")
+            self.logger.error(
+                f"Error querying device or starting audio stream: {e}"
+            )
             # Use the manager's method to stop the stream
             self.api.sounddevice_manager._stop_output_stream()
             self._stream_samplerate = None
@@ -137,7 +145,9 @@ class TTSVocalizerWorker(Worker):
 
     def _initialize_stream(self, samplerate: int) -> bool:
         """Attempts to initialize the output stream with the given samplerate. Returns True on success, False on failure."""
-        self.logger.info(f"Initializing TTS stream with samplerate: {samplerate}")
+        self.logger.info(
+            f"Initializing TTS stream with samplerate: {samplerate}"
+        )
         try:
             self.api.sounddevice_manager.initialize_output_stream(
                 samplerate=samplerate,
@@ -145,13 +155,17 @@ class TTSVocalizerWorker(Worker):
                 device_name=self.playback_device,
             )
             if self.api.sounddevice_manager.out_stream:
-                self._stream_samplerate = samplerate  # Store the successful sample rate
+                self._stream_samplerate = (
+                    samplerate  # Store the successful sample rate
+                )
                 self.logger.info(
                     f"Successfully initialized stream with samplerate: {self._stream_samplerate}"
                 )
                 return True
             else:
-                self.logger.error("Stream object is None after initialization attempt.")
+                self.logger.error(
+                    "Stream object is None after initialization attempt."
+                )
                 return False
         except sd.PortAudioError as e:
             if e.args[0] == sd.PaErrorCode.INVALID_SAMPLE_RATE:
@@ -223,7 +237,9 @@ class TTSVocalizerWorker(Worker):
                 resampled_item = item
 
         # Add debug statement to check we got past resampling
-        self.logger.debug("Resampling complete or bypassed. Proceeding to write check.")
+        self.logger.debug(
+            "Resampling complete or bypassed. Proceeding to write check."
+        )
 
         # Check if stream exists before write
         self.logger.debug(
@@ -235,7 +251,9 @@ class TTSVocalizerWorker(Worker):
             self.logger.debug(
                 f"Attempting to write audio data with shape: {resampled_item.shape}, dtype: {resampled_item.dtype}"
             )
-            success = self.api.sounddevice_manager.write_to_output(resampled_item)
+            success = self.api.sounddevice_manager.write_to_output(
+                resampled_item
+            )
             self.logger.debug(f"write_to_output returned: {success}")
             if success:
                 self.started = True
@@ -248,7 +266,9 @@ class TTSVocalizerWorker(Worker):
                 self.api.sounddevice_manager._stop_output_stream()
                 self._stream_samplerate = None
         else:
-            self.logger.warning("Cannot write audio, output stream is None in worker.")
+            self.logger.warning(
+                "Cannot write audio, output stream is None in worker."
+            )
 
         QThread.msleep(AIRUNNER_SLEEP_TIME_IN_MS)
 

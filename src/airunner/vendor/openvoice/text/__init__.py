@@ -40,7 +40,9 @@ def cleaned_text_to_sequence(cleaned_text, symbols):
     """
     symbol_to_id = {s: i for i, s in enumerate(symbols)}
     sequence = [
-        symbol_to_id[symbol] for symbol in cleaned_text if symbol in symbol_to_id.keys()
+        symbol_to_id[symbol]
+        for symbol in cleaned_text
+        if symbol in symbol_to_id.keys()
     ]
     return sequence
 
@@ -48,7 +50,9 @@ def cleaned_text_to_sequence(cleaned_text, symbols):
 from airunner.vendor.openvoice.text.symbols import language_tone_start_map
 
 
-def cleaned_text_to_sequence_vits2(cleaned_text, tones, language, symbols, languages):
+def cleaned_text_to_sequence_vits2(
+    cleaned_text, tones, language, symbols, languages
+):
     """Converts a string of text to a sequence of IDs corresponding to the symbols in the text.
     Args:
       text: string to convert to a sequence

@@ -84,9 +84,9 @@ def _expand_number(m):
             return "two thousand " + _inflect.number_to_words(num % 100)
         if num % 100 == 0:
             return _inflect.number_to_words(num // 100) + " hundred"
-        return _inflect.number_to_words(num, andword="", zero="oh", group=2).replace(
-            ", ", " "
-        )
+        return _inflect.number_to_words(
+            num, andword="", zero="oh", group=2
+        ).replace(", ", " ")
     return _inflect.number_to_words(num, andword="")
 
 

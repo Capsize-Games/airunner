@@ -30,7 +30,9 @@ class MoodToolsMixin(ToolSingletonMixin):
             ],
             emoji: Annotated[
                 str,
-                ("An emoji representing the bot's mood. Example: 😊, 😢, 😡, etc."),
+                (
+                    "An emoji representing the bot's mood. Example: 😊, 😢, 😡, etc."
+                ),
             ],
         ) -> str:
             conversation = self.conversation
@@ -82,7 +84,9 @@ class MoodToolsMixin(ToolSingletonMixin):
                     try:
                         parsed = json.loads(resp)
                         if isinstance(parsed, dict):
-                            mood_description = parsed.get("mood", mood_description)
+                            mood_description = parsed.get(
+                                "mood", mood_description
+                            )
                             emoji = parsed.get("emoji", emoji)
                     except Exception:
                         pass

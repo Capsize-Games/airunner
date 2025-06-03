@@ -9,7 +9,9 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import Qt
 from PySide6.QtWidgets import QApplication
 
-from airunner.gui.windows.setup_wizard.setup_wizard_window import SetupWizardWindow
+from airunner.gui.windows.setup_wizard.setup_wizard_window import (
+    SetupWizardWindow,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.download_wizard.download_wizard_window import (
     DownloadWizardWindow,

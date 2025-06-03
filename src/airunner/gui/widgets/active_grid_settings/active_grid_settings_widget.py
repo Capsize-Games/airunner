@@ -43,7 +43,9 @@ class ActiveGridSettingsWidget(BaseWidget):
         self.ui.active_grid_fill_groupbox.setChecked(
             self.active_grid_settings.render_fill
         )
-        self.ui.active_grid_area_checkbox.setChecked(self.active_grid_settings.enabled)
+        self.ui.active_grid_area_checkbox.setChecked(
+            self.active_grid_settings.enabled
+        )
         self.ui.size_lock_button.setChecked(
             self.application_settings.active_grid_size_lock
         )
@@ -59,8 +61,12 @@ class ActiveGridSettingsWidget(BaseWidget):
         self.ui.fill_choose_color_button.setStyleSheet(
             f"background-color: {self.active_grid_settings.fill_color}"
         )
-        self.current_active_grid_width = self.application_settings.working_width
-        self.current_active_grid_height = self.application_settings.working_height
+        self.current_active_grid_width = (
+            self.application_settings.working_width
+        )
+        self.current_active_grid_height = (
+            self.application_settings.working_height
+        )
 
     @Slot(bool)
     def size_lock_toggled(self, val):

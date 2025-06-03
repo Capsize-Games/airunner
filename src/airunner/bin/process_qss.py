@@ -96,7 +96,9 @@ def process_qss(_path=None):
                     )
                     if var_block_match:
                         var_block_contents = var_block_match.group(1)
-                        for match in re.finditer(var_pattern, var_block_contents):
+                        for match in re.finditer(
+                            var_pattern, var_block_contents
+                        ):
                             var_name = match.group(0)
                             if var_name not in variables:
                                 variables[var_name] = get_variable_value(

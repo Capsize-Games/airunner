@@ -107,7 +107,9 @@ class NodeGraphMenu(object):
             airunner.vendor.nodegraphqt.NodeGraphMenu: the appended menu item.
         """
         if name in self._menus:
-            raise NodeMenuError('menu object "{}" already exists!'.format(name))
+            raise NodeMenuError(
+                'menu object "{}" already exists!'.format(name)
+            )
         base_menu = BaseMenu(name, self.qmenu)
         self.qmenu.addMenu(base_menu)
         menu = NodeGraphMenu(self._graph, base_menu)
@@ -122,7 +124,9 @@ class NodeGraphMenu(object):
             if search:
                 shortcut = getattr(QtGui.QKeySequence, search.group(1))
             elif all([i in ["Alt", "Enter"] for i in shortcut.split("+")]):
-                shortcut = QtGui.QKeySequence(QtCore.Qt.ALT | QtCore.Qt.Key_Return)
+                shortcut = QtGui.QKeySequence(
+                    QtCore.Qt.ALT | QtCore.Qt.Key_Return
+                )
             elif all([i in ["Return", "Enter"] for i in shortcut.split("+")]):
                 shortcut = QtCore.Qt.Key_Return
         if shortcut:

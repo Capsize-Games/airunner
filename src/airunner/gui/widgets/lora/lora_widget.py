@@ -76,7 +76,9 @@ class LoraWidget(BaseWidget):
     def create_trigger_word_widgets(self, lora, defer=False):
         if defer:
             # Defer the creation of trigger word widgets
-            QTimer.singleShot(0, lambda: self._create_trigger_word_widgets(lora))
+            QTimer.singleShot(
+                0, lambda: self._create_trigger_word_widgets(lora)
+            )
         else:
             self._create_trigger_word_widgets(lora)
 

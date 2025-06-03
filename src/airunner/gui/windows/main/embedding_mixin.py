@@ -36,7 +36,10 @@ class EmbeddingMixin:
 
     def _delete_embedding(self, embedding):
         for index, _embedding in enumerate(self.embeddings):
-            if _embedding.name == embedding.name and _embedding.path == embedding.path:
+            if (
+                _embedding.name == embedding.name
+                and _embedding.path == embedding.path
+            ):
                 self._delete_embedding(embedding)
                 return
 
@@ -44,5 +47,7 @@ class EmbeddingMixin:
         embeddings = scan_path_for_embeddings(self.path_settings.base_path)
         self.update_embeddings(embeddings)
         self.api.art.get_all_results(
-            embeddings=get_embeddings_by_version(self.generator_settings.version)
+            embeddings=get_embeddings_by_version(
+                self.generator_settings.version
+            )
         )

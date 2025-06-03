@@ -80,7 +80,9 @@ class _NodesGridDelegate(QtWidgets.QStyledItemDelegate):
         pos_y = sub_rect.center().y() - (edge_size[1] / 2)
 
         for pos_x in [left_x, right_x]:
-            painter.drawRect(QtCore.QRectF(pos_x, pos_y, edge_size[0], edge_size[1]))
+            painter.drawRect(
+                QtCore.QRectF(pos_x, pos_y, edge_size[0], edge_size[1])
+            )
 
         # painter.setPen(QtCore.Qt.NoPen)
         painter.setBrush(QtGui.QBrush(bg_color))
@@ -89,7 +91,9 @@ class _NodesGridDelegate(QtWidgets.QStyledItemDelegate):
         right_x = sub_rect.right() - (dot_size - 1)
         pos_y = sub_rect.center().y() - (dot_size / 2)
         for pos_x in [left_x, right_x]:
-            painter.drawEllipse(QtCore.QRectF(pos_x, pos_y, dot_size, dot_size))
+            painter.drawEllipse(
+                QtCore.QRectF(pos_x, pos_y, dot_size, dot_size)
+            )
             pos_x -= dot_size + 2
 
         # text
@@ -122,7 +126,9 @@ class _NodesGridProxyModel(QtCore.QSortFilterProxyModel):
         super(_NodesGridProxyModel, self).__init__(parent)
 
     def mimeData(self, indexes, p_int=None):
-        node_ids = ["node:{}".format(i.data(QtCore.Qt.ToolTipRole)) for i in indexes]
+        node_ids = [
+            "node:{}".format(i.data(QtCore.Qt.ToolTipRole)) for i in indexes
+        ]
         node_urn = URN_SCHEME + ";".join(node_ids)
         mime_data = QtCore.QMimeData()
         mime_data.setData(MIME_TYPE, QtCore.QByteArray(node_urn.encode()))
@@ -210,7 +216,9 @@ class NodesPaletteWidget(QtWidgets.QWidget):
         node_graph.nodes_registered.connect(self._on_nodes_registered)
 
     def __repr__(self):
-        return "<{} object at {}>".format(self.__class__.__name__, hex(id(self)))
+        return "<{} object at {}>".format(
+            self.__class__.__name__, hex(id(self))
+        )
 
     def _on_nodes_registered(self, nodes):
         """
@@ -242,7 +250,8 @@ class NodesPaletteWidget(QtWidgets.QWidget):
         Update the tab labels.
         """
         tabs_idx = {
-            self._tab_widget.tabText(x): x for x in range(self._tab_widget.count())
+            self._tab_widget.tabText(x): x
+            for x in range(self._tab_widget.count())
         }
         for category, label in self._custom_labels.items():
             if category in tabs_idx:
@@ -300,7 +309,9 @@ class NodesPaletteWidget(QtWidgets.QWidget):
         if label in self._custom_labels.values():
             labels = {v: k for k, v in self._custom_labels.items()}
             raise ValueError(
-                'label "{}" already in use for "{}"'.format(label, labels[label])
+                'label "{}" already in use for "{}"'.format(
+                    label, labels[label]
+                )
             )
         previous_label = self._custom_labels.get(category, "")
         for idx in range(self._tab_widget.count()):

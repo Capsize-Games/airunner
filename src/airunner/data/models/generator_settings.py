@@ -54,7 +54,9 @@ class GeneratorSettings(BaseModel):
     negative_crops_coords_top_left = Column(JSON, default={"x": 0, "y": 0})
     original_size = Column(JSON, default={"width": 512, "height": 512})
     target_size = Column(JSON, default={"width": 1024, "height": 1024})
-    negative_original_size = Column(JSON, default={"width": 512, "height": 512})
+    negative_original_size = Column(
+        JSON, default={"width": 512, "height": 512}
+    )
     negative_target_size = Column(JSON, default={"width": 512, "height": 512})
 
     lora_scale = Column(Integer, default=100)

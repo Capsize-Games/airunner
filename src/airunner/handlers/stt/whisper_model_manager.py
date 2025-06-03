@@ -52,7 +52,9 @@ class AudioProcessingWorker(QObject):
                     try:
                         transcription = self.manager._process_inputs(inputs)
                     except Exception as e:
-                        self.manager.logger.error(f"Failed to process inputs {e}")
+                        self.manager.logger.error(
+                            f"Failed to process inputs {e}"
+                        )
                         self.manager.logger.error(e)
 
                     if transcription:
@@ -148,7 +150,9 @@ class WhisperModelManager(BaseModelManager):
 
         if hasattr(self, "worker_thread") and self.worker_thread:
             self.worker_thread.quit()
-            self.worker_thread.wait(1000)  # Wait up to 1 second for thread to finish
+            self.worker_thread.wait(
+                1000
+            )  # Wait up to 1 second for thread to finish
 
     def process_audio(self, audio_data):
         """
@@ -290,7 +294,9 @@ class WhisperModelManager(BaseModelManager):
             model_device = next(self._model.parameters()).device
 
             # Place features on the same device as model with correct dtype
-            input_features = input_features.to(device=model_device, dtype=self.dtype)
+            input_features = input_features.to(
+                device=model_device, dtype=self.dtype
+            )
 
             self.logger.debug(
                 f"Input features prepared on device: {input_features.device}"
@@ -317,7 +323,9 @@ class WhisperModelManager(BaseModelManager):
         except RuntimeError as e:
             self.logger.error(f"RuntimeError in audio processing: {e}")
             if "device" in str(e).lower():
-                self.logger.error(f"Device mismatch detected. Model on: {model_device}")
+                self.logger.error(
+                    f"Device mismatch detected. Model on: {model_device}"
+                )
             return ""
         except Exception as e:
             self.logger.error(f"Error in audio processing: {e}")

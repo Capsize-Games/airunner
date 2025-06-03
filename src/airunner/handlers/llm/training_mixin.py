@@ -156,20 +156,33 @@ class TrainingMixin:
                     f"Incorrect. {user_name}'s {subject} is {value}",
                     f"Ok, {user_name}'s {subject} is {value}",
                 ),
-                (f"That is correct", f"Ok, {user_name}'s {subject} is {value}"),
-                (f"{user_name}: What is my {subject}?", f"{bot_name}: {value}"),
+                (
+                    f"That is correct",
+                    f"Ok, {user_name}'s {subject} is {value}",
+                ),
+                (
+                    f"{user_name}: What is my {subject}?",
+                    f"{bot_name}: {value}",
+                ),
                 (f"{user_name}: Correct", f"{bot_name}: Ok, got it."),
             ]
 
             incorrect_answers = []
             for name in other_names:
-                incorrect_answers.append((f"What is {name}'s {subject}?", value))
-                incorrect_answers.append((f"That is incorrect.", "Then I do not know"))
+                incorrect_answers.append(
+                    (f"What is {name}'s {subject}?", value)
+                )
+                incorrect_answers.append(
+                    (f"That is incorrect.", "Then I do not know")
+                )
                 incorrect_answers.append(
                     (f"What is {name}'s {subject}?", "I do not know")
                 )
                 incorrect_answers.append(
-                    (f"{name}: What is my {subject}?", f"{bot_name}: I do not know")
+                    (
+                        f"{name}: What is my {subject}?",
+                        f"{bot_name}: I do not know",
+                    )
                 )
 
             return correct_answers + incorrect_answers + correct_answers
@@ -233,7 +246,10 @@ class TrainingMixin:
         def tokenize_function(examples):
             """Tokenize input examples for the model."""
             tokens = self._tokenizer(
-                examples["text"], truncation=True, padding="max_length", max_length=128
+                examples["text"],
+                truncation=True,
+                padding="max_length",
+                max_length=128,
             )
             tokens["labels"] = tokens["input_ids"].copy()
             return tokens
@@ -243,7 +259,9 @@ class TrainingMixin:
 
         # Create and configure trainer
         trainer = Trainer(
-            model=self._model, args=training_args, train_dataset=tokenized_dataset
+            model=self._model,
+            args=training_args,
+            train_dataset=tokenized_dataset,
         )
 
         # Set up checkpoint resumption
@@ -280,7 +298,9 @@ class TrainingMixin:
             "tokenizer_class": self._tokenizer.__class__.__name__,
             "model_max_length": self._tokenizer.model_max_length,
             "padding_side": self._tokenizer.padding_side,
-            "truncation_side": getattr(self._tokenizer, "truncation_side", "right"),
+            "truncation_side": getattr(
+                self._tokenizer, "truncation_side", "right"
+            ),
             "special_tokens": {
                 "bos_token": self._tokenizer.bos_token,
                 "eos_token": self._tokenizer.eos_token,
@@ -290,7 +310,10 @@ class TrainingMixin:
         }
 
         # Save chat template if available
-        if hasattr(self._tokenizer, "chat_template") and self._tokenizer.chat_template:
+        if (
+            hasattr(self._tokenizer, "chat_template")
+            and self._tokenizer.chat_template
+        ):
             minimal_config["chat_template"] = self._tokenizer.chat_template
 
         # Save the config to disk
