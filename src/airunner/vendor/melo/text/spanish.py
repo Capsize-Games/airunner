@@ -76,9 +76,7 @@ class Spanish(LanguageBase):
             if w == "[UNK]":
                 phone_list = ["UNK"]
             else:
-                phone_list = list(
-                    filter(lambda p: p != " ", es_to_ipa.es2ipa(w))
-                )
+                phone_list = list(filter(lambda p: p != " ", es_to_ipa.es2ipa(w)))
 
             for ph in phone_list:
                 phones.append(ph)

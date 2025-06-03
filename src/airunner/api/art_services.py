@@ -18,14 +18,10 @@ class ARTAPIService(APIServiceBase):
         self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
         self.embeddings = EmbeddingAPIServices(emit_signal=self.emit_signal)
         self.lora = LoraAPIServices(emit_signal=self.emit_signal)
-        self.image_filter = ImageFilterAPIServices(
-            emit_signal=self.emit_signal
-        )
+        self.image_filter = ImageFilterAPIServices(emit_signal=self.emit_signal)
 
     def update_batch_images(self, images: List[Image]):
-        self.emit_signal(
-            SignalCode.SD_UPDATE_BATCH_IMAGES_SIGNAL, {"images": images}
-        )
+        self.emit_signal(SignalCode.SD_UPDATE_BATCH_IMAGES_SIGNAL, {"images": images})
 
     def save_prompt(
         self,
@@ -74,9 +70,7 @@ class ARTAPIService(APIServiceBase):
         self.emit_signal(SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL)
 
     def change_scheduler(self, val: str):
-        self.emit_signal(
-            SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": val}
-        )
+        self.emit_signal(SignalCode.CHANGE_SCHEDULER_SIGNAL, {"scheduler": val})
 
     def lora_updated(self):
         self.emit_signal(SignalCode.LORA_UPDATED_SIGNAL, {})
@@ -88,9 +82,7 @@ class ARTAPIService(APIServiceBase):
         self.progress_update(total, total)
 
     def progress_update(self, step: int, total: int):
-        self.emit_signal(
-            SignalCode.SD_PROGRESS_SIGNAL, {"step": step, "total": total}
-        )
+        self.emit_signal(SignalCode.SD_PROGRESS_SIGNAL, {"step": step, "total": total})
 
     def pipeline_loaded(self, section: GeneratorSection):
         self.emit_signal(
@@ -101,9 +93,7 @@ class ARTAPIService(APIServiceBase):
     def generate_image_signal(self):
         self.emit_signal(SignalCode.SD_GENERATE_IMAGE_SIGNAL)
 
-    def llm_image_generated(
-        self, prompt, second_prompt, section, width, height
-    ):
+    def llm_image_generated(self, prompt, second_prompt, section, width, height):
         self.emit_signal(
             SignalCode.LLM_IMAGE_PROMPT_GENERATED_SIGNAL,
             {
@@ -138,9 +128,7 @@ class ARTAPIService(APIServiceBase):
         data: Optional[Dict] = None,
     ):
         data = data or {}
-        image_request = data.get(
-            "image_request", image_request or ImageRequest()
-        )
+        image_request = data.get("image_request", image_request or ImageRequest())
         data.update({"image_request": image_request})
         self.emit_signal(SignalCode.DO_GENERATE_SIGNAL, data)
 
@@ -160,11 +148,7 @@ class ARTAPIService(APIServiceBase):
         )
 
     def load_non_sd(self, callback):
-        self.emit_signal(
-            SignalCode.LOAD_NON_SD_MODELS, dict(callback=callback)
-        )
+        self.emit_signal(SignalCode.LOAD_NON_SD_MODELS, dict(callback=callback))
 
     def unload_non_sd(self, callback):
-        self.emit_signal(
-            SignalCode.UNLOAD_NON_SD_MODELS, dict(callback=callback)
-        )
+        self.emit_signal(SignalCode.UNLOAD_NON_SD_MODELS, dict(callback=callback))

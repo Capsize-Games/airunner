@@ -36,9 +36,7 @@ class WorkerManager:
         if AudioCaptureWorker is not None:
             self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
         if AudioProcessorWorker is not None:
-            self._stt_audio_processor_worker = create_worker(
-                AudioProcessorWorker
-            )
+            self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
         if TTSGeneratorWorker is not None:
             self._tts_generator_worker = create_worker(TTSGeneratorWorker)
         if TTSVocalizerWorker is not None:

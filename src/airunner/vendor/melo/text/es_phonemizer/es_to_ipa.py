@@ -1,11 +1,14 @@
 from airunner.vendor.melo.text.es_phonemizer.gruut_wrapper import Gruut
 
+
 def es2ipa(text):
-    e = Gruut(language="es-es", keep_puncs=True, keep_stress=True, use_espeak_phonemes=True)
+    e = Gruut(
+        language="es-es", keep_puncs=True, keep_stress=True, use_espeak_phonemes=True
+    )
     # text = spanish_cleaners(text)
     phonemes = e.phonemize(text, separator="")
     return phonemes
 
 
-if __name__ == '__main__':
-  print(es2ipa('¿Y a quién echaría de menos, en el mundo si no fuese a vos?'))
+if __name__ == "__main__":
+    print(es2ipa("¿Y a quién echaría de menos, en el mundo si no fuese a vos?"))

@@ -42,9 +42,7 @@ def downgrade() -> None:
     constraint_name = "uq_chatbots_voice_id"
     inspector = inspect(connection)
     constraints = inspector.get_unique_constraints("chatbots")
-    if any(
-        constraint["name"] == constraint_name for constraint in constraints
-    ):
+    if any(constraint["name"] == constraint_name for constraint in constraints):
         drop_constraint(Chatbot, "uq_chatbots_voice_id")
     drop_column(Chatbot, "voice_id")
     drop_table(VoiceSettings)

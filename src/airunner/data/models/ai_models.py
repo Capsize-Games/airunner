@@ -5,7 +5,7 @@ from airunner.data.models.base import BaseModel
 
 
 class AIModels(BaseModel):
-    __tablename__ = 'aimodels'
+    __tablename__ = "aimodels"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, default="Model")
     path = Column(String, nullable=False, default="")

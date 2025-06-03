@@ -1,4 +1,12 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QLabel, QWidget, QDialog
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QLabel,
+    QWidget,
+    QDialog,
+)
+
 
 def render_ui_from_spec(spec, parent_window):
     if spec["type"] == "window":
@@ -19,6 +27,7 @@ def render_ui_from_spec(spec, parent_window):
             parent_window.setLayout(layout)
         parent_window.show()
 
+
 def test_hello_world_window():
     app = QApplication([])
     main_window = QMainWindow()
@@ -26,9 +35,7 @@ def test_hello_world_window():
         "type": "window",
         "title": "Hello Window",
         "layout": "vertical",
-        "widgets": [
-            {"type": "label", "text": "Hello, world!"}
-        ]
+        "widgets": [{"type": "label", "text": "Hello, world!"}],
     }
     render_ui_from_spec(spec, main_window)
     app.exec()

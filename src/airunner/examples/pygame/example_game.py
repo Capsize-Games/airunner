@@ -102,9 +102,7 @@ class ExampleGame(PygameAdapter):
         self.font = pygame.font.SysFont("Arial", 18)
         self.full_message = "Welcome to the AI Runner Pygame example!"
         self.show_message = self.full_message
-        self.show_message_time = (
-            time.time() + 5
-        )  # Show welcome message for 5 seconds
+        self.show_message_time = time.time() + 5  # Show welcome message for 5 seconds
 
     def handle_pygame_event(self, event):
         """
@@ -154,9 +152,7 @@ class ExampleGame(PygameAdapter):
                             width=512,
                             height=512,
                             steps=20,
-                            seed=random.randint(
-                                -AIRUNNER_MAX_SEED, AIRUNNER_MAX_SEED
-                            ),
+                            seed=random.randint(-AIRUNNER_MAX_SEED, AIRUNNER_MAX_SEED),
                             strength=0.5,
                             n_samples=1,
                             scale=7.5,
@@ -213,9 +209,7 @@ class ExampleGame(PygameAdapter):
                 img_size = self.generated_image.size
                 img_mode = self.generated_image.mode
 
-                pygame_img = pygame.image.fromstring(
-                    img_data, img_size, img_mode
-                )
+                pygame_img = pygame.image.fromstring(img_data, img_size, img_mode)
                 self.screen.blit(pygame_img, self.image_position)
             except Exception as e:
                 self.api.logger.error(f"Error displaying image: {e}")

@@ -71,9 +71,7 @@ class ChatPromptWidget(BaseWidget):
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
-        self._llm_response_worker = create_worker(
-            LLMResponseWorker, sleep_time_in_ms=1
-        )
+        self._llm_response_worker = create_worker(LLMResponseWorker, sleep_time_in_ms=1)
         self.loading = True
         self.conversation_id: int = None  # For test compatibility
         self.conversation = None  # For test compatibility
@@ -295,10 +293,8 @@ class ChatPromptWidget(BaseWidget):
         if hasattr(self.api, "llm") and hasattr(self.api.llm, "clear_history"):
             self.api.llm.clear_history(conversation_id=conversation_id)
         self._clear_conversation(skip_update=True)
-        messages = (
-            self._conversation_history_manager.load_conversation_history(
-                conversation_id=conversation_id, max_messages=50
-            )
+        messages = self._conversation_history_manager.load_conversation_history(
+            conversation_id=conversation_id, max_messages=50
         )
         self._set_conversation_widgets(messages)
 

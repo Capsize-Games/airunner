@@ -5,6 +5,7 @@ class PromptWeightBridge:
     """
     A bridge for converting prompt weights from A1111 syntax to compel syntax.
     """
+
     @classmethod
     def get_weight(cls, total, subtract=False):
         """

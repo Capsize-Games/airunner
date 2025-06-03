@@ -37,14 +37,10 @@ class TTS(nn.Module):
         return {
             AvailableLanguage.EN: self.api.paths["myshell-ai/MeloTTS-English-v3"],
             AvailableLanguage.FR: self.api.paths["myshell-ai/MeloTTS-French"],
-            AvailableLanguage.JP: self.api.paths[
-                "myshell-ai/MeloTTS-Japanese"
-            ],
+            AvailableLanguage.JP: self.api.paths["myshell-ai/MeloTTS-Japanese"],
             AvailableLanguage.ES: self.api.paths["myshell-ai/MeloTTS-Spanish"],
             AvailableLanguage.ZH: self.api.paths["myshell-ai/MeloTTS-Chinese"],
-            AvailableLanguage.ZH_MIX_EN: self.api.paths[
-                "myshell-ai/MeloTTS-Chinese"
-            ],
+            AvailableLanguage.ZH_MIX_EN: self.api.paths["myshell-ai/MeloTTS-Chinese"],
             AvailableLanguage.KR: self.api.paths["myshell-ai/MeloTTS-Korean"],
         }
 
@@ -75,9 +71,7 @@ class TTS(nn.Module):
                 num_languages=self.hps.num_languages,
                 **self.hps.model,
             ).to(self.device)
-            self._model.load_state_dict(
-                self.checkpoint_dict["model"], strict=True
-            )
+            self._model.load_state_dict(self.checkpoint_dict["model"], strict=True)
             self._model.eval()
         return self._model
 
@@ -178,13 +172,11 @@ class TTS(nn.Module):
             ]:
                 t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
             try:
-                bert, ja_bert, phones, tones, lang_ids = (
-                    self.get_text_for_tts_infer(t, self.hps)
+                bert, ja_bert, phones, tones, lang_ids = self.get_text_for_tts_infer(
+                    t, self.hps
                 )
             except AssertionError as e:
-                print(
-                    f"Error in text processing: {e}. Skipping this sentence."
-                )
+                print(f"Error in text processing: {e}. Skipping this sentence.")
                 continue
             except NotImplementedError as e:
                 print(f"Skipping sentence due to unsupported language: {e}")
@@ -195,9 +187,7 @@ class TTS(nn.Module):
                 lang_ids = lang_ids.to(self.device).unsqueeze(0)
                 bert = bert.to(self.device).unsqueeze(0)
                 ja_bert = ja_bert.to(self.device).unsqueeze(0)
-                x_tst_lengths = torch.LongTensor([phones.size(0)]).to(
-                    self.device
-                )
+                x_tst_lengths = torch.LongTensor([phones.size(0)]).to(self.device)
                 del phones
                 speakers = torch.LongTensor([speaker_id]).to(self.device)
 
@@ -275,14 +265,10 @@ class TTS(nn.Module):
                     format=format,
                 )
             else:
-                soundfile.write(
-                    output_path, audio, self.hps.data.sampling_rate
-                )
+                soundfile.write(output_path, audio, self.hps.data.sampling_rate)
 
     def get_text_for_tts_infer(self, text, hps):
-        norm_text, phone, tone, word2ph = self.cleaner.clean_text(
-            text, self.language
-        )
+        norm_text, phone, tone, word2ph = self.cleaner.clean_text(text, self.language)
         symbol_to_id = {s: i for i, s in enumerate(self.hps.symbols)}
         phone, tone, language = cleaned_text_to_sequence(
             phone, tone, self.language, symbol_to_id
@@ -300,9 +286,7 @@ class TTS(nn.Module):
             bert = torch.zeros(1024, len(phone))
             ja_bert = torch.zeros(768, len(phone))
         else:
-            bert = self.cleaner.language_module.get_bert_feature(
-                norm_text, word2ph
-            )
+            bert = self.cleaner.language_module.get_bert_feature(norm_text, word2ph)
 
             del word2ph
 

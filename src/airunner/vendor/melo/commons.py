@@ -29,9 +29,7 @@ def kl_divergence(m_p, logs_p, m_q, logs_q):
     """KL(P||Q)"""
     kl = (logs_q - logs_p) - 0.5
     kl += (
-        0.5
-        * (torch.exp(2.0 * logs_p) + ((m_p - m_q) ** 2))
-        * torch.exp(-2.0 * logs_q)
+        0.5 * (torch.exp(2.0 * logs_p) + ((m_p - m_q) ** 2)) * torch.exp(-2.0 * logs_q)
     )
     return kl
 
@@ -61,24 +59,19 @@ def rand_slice_segments(x, x_lengths=None, segment_size=4):
     if x_lengths is None:
         x_lengths = t
     ids_str_max = x_lengths - segment_size + 1
-    ids_str = (torch.rand([b]).to(device=x.device) * ids_str_max).to(
-        dtype=torch.long
-    )
+    ids_str = (torch.rand([b]).to(device=x.device) * ids_str_max).to(dtype=torch.long)
     ret = slice_segments(x, ids_str, segment_size)
     return ret, ids_str
 
 
-def get_timing_signal_1d(
-    length, channels, min_timescale=1.0, max_timescale=1.0e4
-):
+def get_timing_signal_1d(length, channels, min_timescale=1.0, max_timescale=1.0e4):
     position = torch.arange(length, dtype=torch.float)
     num_timescales = channels // 2
-    log_timescale_increment = math.log(
-        float(max_timescale) / float(min_timescale)
-    ) / (num_timescales - 1)
+    log_timescale_increment = math.log(float(max_timescale) / float(min_timescale)) / (
+        num_timescales - 1
+    )
     inv_timescales = min_timescale * torch.exp(
-        torch.arange(num_timescales, dtype=torch.float)
-        * -log_timescale_increment
+        torch.arange(num_timescales, dtype=torch.float) * -log_timescale_increment
     )
     scaled_time = position.unsqueeze(0) * inv_timescales.unsqueeze(1)
     signal = torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)], 0)
@@ -89,17 +82,13 @@ def get_timing_signal_1d(
 
 def add_timing_signal_1d(x, min_timescale=1.0, max_timescale=1.0e4):
     b, channels, length = x.size()
-    signal = get_timing_signal_1d(
-        length, channels, min_timescale, max_timescale
-    )
+    signal = get_timing_signal_1d(length, channels, min_timescale, max_timescale)
     return x + signal.to(dtype=x.dtype, device=x.device)
 
 
 def cat_timing_signal_1d(x, min_timescale=1.0, max_timescale=1.0e4, axis=1):
     b, channels, length = x.size()
-    signal = get_timing_signal_1d(
-        length, channels, min_timescale, max_timescale
-    )
+    signal = get_timing_signal_1d(length, channels, min_timescale, max_timescale)
     return torch.cat([x, signal.to(dtype=x.dtype, device=x.device)], axis)
 
 
@@ -148,9 +137,7 @@ def generate_path(duration, mask):
     cum_duration_flat = cum_duration.view(b * t_x)
     path = sequence_mask(cum_duration_flat, t_y).to(mask.dtype)
     path = path.view(b, t_x, t_y)
-    path = (
-        path - F.pad(path, convert_pad_shape([[0, 0], [1, 0], [0, 0]]))[:, :-1]
-    )
+    path = path - F.pad(path, convert_pad_shape([[0, 0], [1, 0], [0, 0]]))[:, :-1]
     path = path.unsqueeze(1).transpose(2, 3) * mask
     return path
 

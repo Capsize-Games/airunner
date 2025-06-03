@@ -1,6 +1,7 @@
 from .api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 
+
 class LoraAPIServices(APIServiceBase):
     def update(self):
         self.emit_signal(SignalCode.LORA_UPDATE_SIGNAL)

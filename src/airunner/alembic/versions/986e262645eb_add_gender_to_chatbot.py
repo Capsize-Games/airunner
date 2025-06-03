@@ -5,6 +5,7 @@ Revises: 16a14e141cc8
 Create Date: 2025-04-01 14:31:11.689080
 
 """
+
 from typing import Sequence, Union
 
 from airunner.data.models import Chatbot
@@ -12,8 +13,8 @@ from airunner.utils.db import add_column, drop_column
 
 
 # revision identifiers, used by Alembic.
-revision: str = '986e262645eb'
-down_revision: Union[str, None] = '16a14e141cc8'
+revision: str = "986e262645eb"
+down_revision: Union[str, None] = "16a14e141cc8"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

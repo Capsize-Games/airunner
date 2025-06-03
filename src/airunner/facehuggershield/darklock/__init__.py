@@ -16,7 +16,7 @@ def activate(
     whitelisted_modules: list = None,
     allow_network: bool = False,
     whitelisted_operations: list = None,  # This parameter is not used by RestrictOSAccess.activate
-    whitelisted_files: list = None,        # This parameter is not used by RestrictOSAccess.activate
+    whitelisted_files: list = None,  # This parameter is not used by RestrictOSAccess.activate
     whitelisted_directories: list = None,
 ):
     """

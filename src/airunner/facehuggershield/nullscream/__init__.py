@@ -37,9 +37,7 @@ class NoopLoader(abc.Loader):
 
 
 class NoopFinder(importlib.abc.MetaPathFinder):
-    def __init__(
-        self, blacklist=None, whitelist=None, function_blacklist=None
-    ):
+    def __init__(self, blacklist=None, whitelist=None, function_blacklist=None):
         # Remove all whitelisted modules from the blacklist
         if whitelist:
             for module_name in whitelist:
@@ -72,16 +70,12 @@ class NoopFinder(importlib.abc.MetaPathFinder):
 
 
 def activate(blacklist=None, whitelist=None, function_blacklist=None):
-    sys.meta_path.insert(
-        0, NoopFinder(blacklist, whitelist, function_blacklist)
-    )
+    sys.meta_path.insert(0, NoopFinder(blacklist, whitelist, function_blacklist))
 
 
 def deactivate(blacklist=None):
     sys.meta_path = [
-        finder
-        for finder in sys.meta_path
-        if not isinstance(finder, NoopFinder)
+        finder for finder in sys.meta_path if not isinstance(finder, NoopFinder)
     ]
     if blacklist:
         for module_name in blacklist:

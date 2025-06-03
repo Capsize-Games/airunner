@@ -53,9 +53,7 @@ class CustomGraphicsView(
         self._scene_is_active: bool = False
         self.last_pos: QPoint = self.zero_point
         self.zoom_handler: ZoomHandler = ZoomHandler()
-        self.canvas_offset = QPointF(
-            0, 0
-        )  # Explicitly use QPointF, not QPoint
+        self.canvas_offset = QPointF(0, 0)  # Explicitly use QPointF, not QPoint
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
         self.grid_item = None
@@ -207,9 +205,7 @@ class CustomGraphicsView(
         # 5. If there's an image in the scene, update its position to match the active grid area
         if self.scene and hasattr(self.scene, "item") and self.scene.item:
             # Store the same absolute position for the image as we did for the active grid area
-            self.scene._original_item_positions[self.scene.item] = QPointF(
-                pos_x, pos_y
-            )
+            self.scene._original_item_positions[self.scene.item] = QPointF(pos_x, pos_y)
 
         # 6. Update all display positions based on new offset
         self.updateImagePositions()
@@ -398,9 +394,7 @@ class CustomGraphicsView(
 
         # Start or reset the throttling timer - wait for resize to finish
         if not self._resize_timer.isActive():
-            self._resize_timer.start(
-                150
-            )  # 150ms delay before processing resize
+            self._resize_timer.start(150)  # 150ms delay before processing resize
         else:
             # Reset the timer if already running
             self._resize_timer.stop()
@@ -434,9 +428,7 @@ class CustomGraphicsView(
             worker: The BackgroundWorker instance running this task (automatically provided)
         """
         # Get resize data from the worker's callback_data
-        resize_data = (
-            worker.callback_data.get("resize_data") if worker else None
-        )
+        resize_data = worker.callback_data.get("resize_data") if worker else None
 
         if not resize_data:
             return None
@@ -454,9 +446,7 @@ class CustomGraphicsView(
             return None
 
         # Calculate central reference point
-        canvas_center_point = QPointF(
-            new_size.width() / 2, new_size.height() / 2
-        )
+        canvas_center_point = QPointF(new_size.width() / 2, new_size.height() / 2)
 
         # Calculate size differences
         delta_width = new_size.width() - old_size.width()
@@ -482,9 +472,7 @@ class CustomGraphicsView(
     def _on_resize_processed(self, data):
         """Handle the completion of resize processing"""
         if "error" in data:
-            self.logger.error(
-                f"Error during resize processing: {data['error']}"
-            )
+            self.logger.error(f"Error during resize processing: {data['error']}")
             return
 
         if "result" not in data:
@@ -643,11 +631,7 @@ class CustomGraphicsView(
 
     def updateImagePositions(self):
         """Update positions of all images in the scene based on canvas offset."""
-        if (
-            not self.scene
-            or not hasattr(self.scene, "item")
-            or not self.scene.item
-        ):
+        if not self.scene or not hasattr(self.scene, "item") or not self.scene.item:
             return
 
         # Get the main item directly
@@ -677,9 +661,7 @@ class CustomGraphicsView(
         item.prepareGeometryChange()
 
         # Force the scene to update the entire viewport
-        self.scene.invalidate(
-            item.boundingRect(), QGraphicsScene.SceneLayer.ItemLayer
-        )
+        self.scene.invalidate(item.boundingRect(), QGraphicsScene.SceneLayer.ItemLayer)
 
         # Force entire viewport update to handle negative coordinates
         self.viewport().update()
@@ -791,21 +773,15 @@ class CustomGraphicsView(
             text_item.setPos(pos)
             self.scene.addItem(text_item)
             self._text_items.append(text_item)
-            text_item.focusOutEvent = self._make_text_focus_out_handler(
-                text_item
-            )
-            text_item.keyPressEvent = self._make_text_key_press_handler(
-                text_item
-            )
+            text_item.focusOutEvent = self._make_text_focus_out_handler(text_item)
+            text_item.keyPressEvent = self._make_text_key_press_handler(text_item)
             text_item.setFocus()
             self._editing_text_item = text_item
             text_item.setZValue(20)
             text_item.setDefaultTextColor(QColor("white"))
             text_item.setFont(self._get_default_text_font())
             text_item.setFlag(QGraphicsTextItem.ItemSendsGeometryChanges, True)
-            text_item.itemChange = self._make_text_item_change_handler(
-                text_item
-            )
+            text_item.itemChange = self._make_text_item_change_handler(text_item)
             self._save_text_items_to_db()
 
     def _edit_text_item(self, item):
@@ -893,15 +869,9 @@ class CustomGraphicsView(
             text_item.setFlag(QGraphicsTextItem.ItemIsFocusable, True)
             text_item.setFlag(QGraphicsTextItem.ItemSendsGeometryChanges, True)
             text_item.setZValue(20)
-            text_item.focusOutEvent = self._make_text_focus_out_handler(
-                text_item
-            )
-            text_item.keyPressEvent = self._make_text_key_press_handler(
-                text_item
-            )
-            text_item.itemChange = self._make_text_item_change_handler(
-                text_item
-            )
+            text_item.focusOutEvent = self._make_text_focus_out_handler(text_item)
+            text_item.keyPressEvent = self._make_text_key_press_handler(text_item)
+            text_item.itemChange = self._make_text_item_change_handler(text_item)
             self.scene.addItem(text_item)
             self._text_items.append(text_item)
 

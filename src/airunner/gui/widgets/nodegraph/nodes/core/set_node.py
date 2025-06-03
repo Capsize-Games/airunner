@@ -91,9 +91,7 @@ class SetNode(BaseCoreNode):
                         self.graph.connection_changed.connect(
                             self._on_connection_changed
                         )
-                        self.logger.debug(
-                            "Connected to connection_changed signal"
-                        )
+                        self.logger.debug("Connected to connection_changed signal")
             except Exception as e:
                 self.logger.debug(f"Error connecting to signals: {e}")
 
@@ -107,9 +105,7 @@ class SetNode(BaseCoreNode):
         try:
             connected_ports = self.variable_input_port.connected_ports()
             if connected_ports:
-                self.logger.debug(
-                    f"Found existing connections: {len(connected_ports)}"
-                )
+                self.logger.debug(f"Found existing connections: {len(connected_ports)}")
                 connected_port = connected_ports[0]
                 connected_node = connected_port.node()
 
@@ -132,13 +128,8 @@ class SetNode(BaseCoreNode):
             connected (list): List of connected port pairs (port1, port2)
         """
         for port1, port2 in disconnected:
-            if (
-                port1 == self.variable_input_port
-                or port2 == self.variable_input_port
-            ):
-                self.logger.debug(
-                    "Variable input disconnected, resetting node"
-                )
+            if port1 == self.variable_input_port or port2 == self.variable_input_port:
+                self.logger.debug("Variable input disconnected, resetting node")
                 self._set_neutral_state()
                 return
 
@@ -221,9 +212,7 @@ class SetNode(BaseCoreNode):
             try:
                 if hasattr(self, "view") and hasattr(self.view, "properties"):
                     if self.value_property_name in self.view.properties:
-                        self.view.properties.pop(
-                            self.value_property_name, None
-                        )
+                        self.view.properties.pop(self.value_property_name, None)
                     props = self._get_properties()
                     if self.value_property_name not in props:
                         self.create_property(
@@ -314,9 +303,7 @@ class SetNode(BaseCoreNode):
     def on_property_changed(self, prop_name):
         """Called when a property value has changed in the properties bin."""
         if prop_name == self.value_property_name and self.variable_name:
-            self.update_variable_value(
-                self.get_property(self.value_property_name)
-            )
+            self.update_variable_value(self.get_property(self.value_property_name))
 
     def update_variable_value(self, value):
         """
@@ -332,9 +319,7 @@ class SetNode(BaseCoreNode):
             return False
 
         if self.graph and hasattr(self.graph, "widget_ref"):
-            variable = self.graph.widget_ref._find_variable_by_name(
-                self.variable_name
-            )
+            variable = self.graph.widget_ref._find_variable_by_name(self.variable_name)
             if variable:
                 variable.set_value(value)
                 self.set_property(self.value_property_name, value)
@@ -437,9 +422,7 @@ class SetNode(BaseCoreNode):
         data = super().serialize()
         data["custom"] = {
             "variable_name": self.variable_name,
-            "variable_type": (
-                self.variable_type.value if self.variable_type else None
-            ),
+            "variable_type": (self.variable_type.value if self.variable_type else None),
             "value": self.get_property(self.value_property_name),
         }
         return data

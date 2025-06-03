@@ -23,9 +23,7 @@ def encode_prompt_conds(
 
     # LLAMA
 
-    prompt_llama = [
-        DEFAULT_PROMPT_TEMPLATE["template"].format(p) for p in prompt
-    ]
+    prompt_llama = [DEFAULT_PROMPT_TEMPLATE["template"].format(p) for p in prompt]
     crop_start = DEFAULT_PROMPT_TEMPLATE["crop_start"]
 
     llama_inputs = tokenizer(
@@ -49,13 +47,9 @@ def encode_prompt_conds(
         output_hidden_states=True,
     )
 
-    llama_vec = llama_outputs.hidden_states[-3][
-        :, crop_start:llama_attention_length
-    ]
+    llama_vec = llama_outputs.hidden_states[-3][:, crop_start:llama_attention_length]
     # llama_vec_remaining = llama_outputs.hidden_states[-3][:, llama_attention_length:]
-    llama_attention_mask = llama_attention_mask[
-        :, crop_start:llama_attention_length
-    ]
+    llama_attention_mask = llama_attention_mask[:, crop_start:llama_attention_length]
 
     assert torch.all(llama_attention_mask.bool())
 
@@ -120,9 +114,7 @@ def vae_decode(latents, vae, image_mode=False):
     latents = latents / vae.config.scaling_factor
 
     if not image_mode:
-        image = vae.decode(
-            latents.to(device=vae.device, dtype=vae.dtype)
-        ).sample
+        image = vae.decode(latents.to(device=vae.device, dtype=vae.dtype)).sample
     else:
         latents = latents.to(device=vae.device, dtype=vae.dtype).unbind(2)
         image = [vae.decode(l.unsqueeze(2)).sample for l in latents]
