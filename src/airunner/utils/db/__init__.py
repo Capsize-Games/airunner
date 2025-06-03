@@ -19,6 +19,7 @@ from airunner.utils.db.table import add_table
 from airunner.utils.db.table import add_tables
 from airunner.utils.db.table import drop_table
 from airunner.utils.db.table import drop_tables
+from airunner.utils.db.foreign_key import create_foreign_key
 
 
 __all__ = [
@@ -43,4 +44,5 @@ __all__ = [
     "add_tables",
     "drop_table",
     "drop_tables",
+    "create_foreign_key",
 ]
