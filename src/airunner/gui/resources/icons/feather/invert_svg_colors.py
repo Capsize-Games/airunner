@@ -33,7 +33,9 @@ def invert_color(color_str):
         return "black"
 
     # Handle rgb format
-    rgb_match = re.match(r"rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)", color_str)
+    rgb_match = re.match(
+        r"rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)", color_str
+    )
     if rgb_match:
         r = int(rgb_match.group(1))
         g = int(rgb_match.group(2))
@@ -71,7 +73,10 @@ def process_svg(input_file, output_file):
                         name, value = prop.split(":", 1)
                         name = name.strip()
                         value = value.strip()
-                        if name in color_attrs and value not in ["none", "transparent"]:
+                        if name in color_attrs and value not in [
+                            "none",
+                            "transparent",
+                        ]:
                             new_value = invert_color(value)
                             style = style.replace(
                                 f"{name}:{value}", f"{name}:{new_value}"
@@ -88,7 +93,10 @@ def process_svg(input_file, output_file):
 
         # Write the modified SVG
         tree.write(
-            output_file, pretty_print=True, encoding="utf-8", xml_declaration=True
+            output_file,
+            pretty_print=True,
+            encoding="utf-8",
+            xml_declaration=True,
         )
         print(f"Successfully wrote inverted SVG to {output_file}")
         return True

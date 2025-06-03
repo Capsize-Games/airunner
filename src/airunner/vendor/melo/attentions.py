@@ -60,9 +60,13 @@ class Encoder(nn.Module):
         if "gin_channels" in kwargs:
             self.gin_channels = kwargs["gin_channels"]
             if self.gin_channels != 0:
-                self.spk_emb_linear = nn.Linear(self.gin_channels, self.hidden_channels)
+                self.spk_emb_linear = nn.Linear(
+                    self.gin_channels, self.hidden_channels
+                )
                 self.cond_layer_idx = (
-                    kwargs["cond_layer_idx"] if "cond_layer_idx" in kwargs else 2
+                    kwargs["cond_layer_idx"]
+                    if "cond_layer_idx" in kwargs
+                    else 2
                 )
                 assert (
                     self.cond_layer_idx < self.n_layers
@@ -271,23 +275,35 @@ class MultiHeadAttention(nn.Module):
     def attention(self, query, key, value, mask=None):
         # reshape [b, d, t] -> [b, n_h, t, d_k]
         b, d, t_s, t_t = (*key.size(), query.size(2))
-        query = query.view(b, self.n_heads, self.k_channels, t_t).transpose(2, 3)
+        query = query.view(b, self.n_heads, self.k_channels, t_t).transpose(
+            2, 3
+        )
         key = key.view(b, self.n_heads, self.k_channels, t_s).transpose(2, 3)
-        value = value.view(b, self.n_heads, self.k_channels, t_s).transpose(2, 3)
+        value = value.view(b, self.n_heads, self.k_channels, t_s).transpose(
+            2, 3
+        )
 
-        scores = torch.matmul(query / math.sqrt(self.k_channels), key.transpose(-2, -1))
+        scores = torch.matmul(
+            query / math.sqrt(self.k_channels), key.transpose(-2, -1)
+        )
         if self.window_size is not None:
             assert (
                 t_s == t_t
             ), "Relative attention is only available for self-attention."
-            key_relative_embeddings = self._get_relative_embeddings(self.emb_rel_k, t_s)
+            key_relative_embeddings = self._get_relative_embeddings(
+                self.emb_rel_k, t_s
+            )
             rel_logits = self._matmul_with_relative_keys(
                 query / math.sqrt(self.k_channels), key_relative_embeddings
             )
-            scores_local = self._relative_position_to_absolute_position(rel_logits)
+            scores_local = self._relative_position_to_absolute_position(
+                rel_logits
+            )
             scores = scores + scores_local
         if self.proximal_bias:
-            assert t_s == t_t, "Proximal bias is only available for self-attention."
+            assert (
+                t_s == t_t
+            ), "Proximal bias is only available for self-attention."
             scores = scores + self._attention_bias_proximal(t_s).to(
                 device=scores.device, dtype=scores.dtype
             )
@@ -307,7 +323,9 @@ class MultiHeadAttention(nn.Module):
         p_attn = self.drop(p_attn)
         output = torch.matmul(p_attn, value)
         if self.window_size is not None:
-            relative_weights = self._absolute_position_to_relative_position(p_attn)
+            relative_weights = self._absolute_position_to_relative_position(
+                p_attn
+            )
             value_relative_embeddings = self._get_relative_embeddings(
                 self.emb_rel_v, t_s
             )
@@ -346,7 +364,9 @@ class MultiHeadAttention(nn.Module):
         if pad_length > 0:
             padded_relative_embeddings = F.pad(
                 relative_embeddings,
-                commons.convert_pad_shape([[0, 0], [pad_length, pad_length], [0, 0]]),
+                commons.convert_pad_shape(
+                    [[0, 0], [pad_length, pad_length], [0, 0]]
+                ),
             )
         else:
             padded_relative_embeddings = relative_embeddings
@@ -362,7 +382,9 @@ class MultiHeadAttention(nn.Module):
         """
         batch, heads, length, _ = x.size()
         # Concat columns of pad to shift from relative to absolute indexing.
-        x = F.pad(x, commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, 1]]))
+        x = F.pad(
+            x, commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, 1]])
+        )
 
         # Concat extra elements so to add up to shape (len+1, 2*len-1).
         x_flat = x.view([batch, heads, length * 2 * length])
@@ -386,11 +408,15 @@ class MultiHeadAttention(nn.Module):
         # pad along column
         x = F.pad(
             x,
-            commons.convert_pad_shape([[0, 0], [0, 0], [0, 0], [0, length - 1]]),
+            commons.convert_pad_shape(
+                [[0, 0], [0, 0], [0, 0], [0, length - 1]]
+            ),
         )
         x_flat = x.view([batch, heads, length**2 + length * (length - 1)])
         # add 0's in the beginning that will skew the elements after reshape
-        x_flat = F.pad(x_flat, commons.convert_pad_shape([[0, 0], [0, 0], [length, 0]]))
+        x_flat = F.pad(
+            x_flat, commons.convert_pad_shape([[0, 0], [0, 0], [length, 0]])
+        )
         x_final = x_flat.view([batch, heads, length, 2 * length])[:, :, :, 1:]
         return x_final
 
@@ -403,7 +429,9 @@ class MultiHeadAttention(nn.Module):
         """
         r = torch.arange(length, dtype=torch.float32)
         diff = torch.unsqueeze(r, 0) - torch.unsqueeze(r, 1)
-        return torch.unsqueeze(torch.unsqueeze(-torch.log1p(torch.abs(diff)), 0), 0)
+        return torch.unsqueeze(
+            torch.unsqueeze(-torch.log1p(torch.abs(diff)), 0), 0
+        )
 
 
 class FFN(nn.Module):

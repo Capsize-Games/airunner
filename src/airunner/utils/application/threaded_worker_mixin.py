@@ -54,7 +54,9 @@ class ThreadedWorkerMixin:
         if on_finished:
 
             def finished_lambda(data):
-                print(f"ThreadedWorkerMixin: finished_lambda called for {task_id}")
+                print(
+                    f"ThreadedWorkerMixin: finished_lambda called for {task_id}"
+                )
                 self._handle_task_finished(task_id, data, on_finished)
 
             worker.taskFinished.connect(finished_lambda)
@@ -63,7 +65,9 @@ class ThreadedWorkerMixin:
         else:
 
             def cleanup_lambda(data):
-                print(f"ThreadedWorkerMixin: cleanup_lambda called for {task_id}")
+                print(
+                    f"ThreadedWorkerMixin: cleanup_lambda called for {task_id}"
+                )
                 self._cleanup_worker(task_id)
 
             worker.taskFinished.connect(cleanup_lambda)
@@ -96,7 +100,9 @@ class ThreadedWorkerMixin:
         self, task_id: str, data: Dict[str, Any], callback: Callable
     ) -> None:
         """Handle task completion, cleanup, and invoke callback"""
-        print(f"ThreadedWorkerMixin: _handle_task_finished called for {task_id}")
+        print(
+            f"ThreadedWorkerMixin: _handle_task_finished called for {task_id}"
+        )
         # Clean up the worker
         self._cleanup_worker(task_id)
 

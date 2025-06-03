@@ -91,7 +91,8 @@ _lazy_ipa2 = [
 
 # List of (ipa, ipa2) pairs
 _ipa_to_ipa2 = [
-    (re.compile("%s" % x[0]), x[1]) for x in [("r", "ɹ"), ("ʤ", "dʒ"), ("ʧ", "tʃ")]
+    (re.compile("%s" % x[0]), x[1])
+    for x in [("r", "ɹ"), ("ʤ", "dʒ"), ("ʧ", "tʃ")]
 ]
 
 
@@ -162,7 +163,9 @@ def _expand_number(m):
                 _inflect.number_to_words(num // 100, andword="") + " hundred"
             )  # "nineteen hundred"
         else:  # e.g., 1901, 1984
-            part1 = _inflect.number_to_words(num // 100, andword="")  # "nineteen"
+            part1 = _inflect.number_to_words(
+                num // 100, andword=""
+            )  # "nineteen"
             part2_val = num % 100
             if (
                 s_num[2] == "0"
@@ -210,22 +213,32 @@ def normalize_numbers(text):
     text = re.sub(_comma_number_re, _remove_commas, text)
 
     # 2. Process and placeholder pounds. Uses _expand_pounds.
-    text = re.sub(_pounds_re, lambda m: add_placeholder(_expand_pounds, m), text)
+    text = re.sub(
+        _pounds_re, lambda m: add_placeholder(_expand_pounds, m), text
+    )
 
     # 3. Process and placeholder dollars. Uses _expand_dollars.
-    text = re.sub(_dollars_re, lambda m: add_placeholder(_expand_dollars, m), text)
+    text = re.sub(
+        _dollars_re, lambda m: add_placeholder(_expand_dollars, m), text
+    )
 
     # 4. Process and placeholder decimals. Uses _expand_decimal_point.
     text = re.sub(
-        _decimal_number_re, lambda m: add_placeholder(_expand_decimal_point, m), text
+        _decimal_number_re,
+        lambda m: add_placeholder(_expand_decimal_point, m),
+        text,
     )
 
     # 5. Process and placeholder ordinals. Uses _expand_ordinal.
-    text = re.sub(_ordinal_re, lambda m: add_placeholder(_expand_ordinal, m), text)
+    text = re.sub(
+        _ordinal_re, lambda m: add_placeholder(_expand_ordinal, m), text
+    )
 
     # 6. Expand remaining numbers to words. Uses _expand_number.
     # These are numbers that weren't part of currency, decimals, or ordinals.
-    text = re.sub(_number_re, lambda m: add_placeholder(_expand_number, m), text)
+    text = re.sub(
+        _number_re, lambda m: add_placeholder(_expand_number, m), text
+    )
 
     # 7. Restore placeholders in the correct order.
     for key in sorted(placeholders.keys(), key=len, reverse=True):
@@ -235,7 +248,9 @@ def normalize_numbers(text):
 
 
 def mark_dark_l(text):
-    return re.sub(r"l([^aeiouæɑɔəɛɪʊ ]*(?: |$))", lambda x: "ɫ" + x.group(1), text)
+    return re.sub(
+        r"l([^aeiouæɑɔəɛɪʊ ]*(?: |$))", lambda x: "ɫ" + x.group(1), text
+    )
 
 
 def english_to_ipa(text):

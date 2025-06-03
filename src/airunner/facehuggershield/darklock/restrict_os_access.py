@@ -49,7 +49,9 @@ class RestrictOSAccess(metaclass=Singleton):
             self._initialized = True
             logger.debug("RestrictOSAccess initialized.")
 
-    def restricted_import(self, name, globals=None, locals=None, fromlist=(), level=0):
+    def restricted_import(
+        self, name, globals=None, locals=None, fromlist=(), level=0
+    ):
         # This method is currently not patched onto builtins.__import__
         # logger.debug(f"restricted_import called: name={name}, fromlist={fromlist}, level={level} - (Currently not enforcing import restrictions)")
         # Add import restriction logic here if re-enabled.
@@ -65,13 +67,18 @@ class RestrictOSAccess(metaclass=Singleton):
         logger.debug(
             f"RestrictOSAccess.activate called. Current sys._airunner_os_restriction_activated: {getattr(sys, '_airunner_os_restriction_activated', False)}"
         )
-        logger.debug(f"Provided whitelisted_directories: {whitelisted_directories}")
+        logger.debug(
+            f"Provided whitelisted_directories: {whitelisted_directories}"
+        )
         logger.debug(f"Provided whitelisted_modules: {whitelisted_modules}")
         logger.debug(f"Provided allow_network: {allow_network}")
 
         # Update whitelists regardless of prior activation state.
         self.whitelisted_directories = (
-            [os.path.abspath(os.path.normpath(d)) for d in whitelisted_directories]
+            [
+                os.path.abspath(os.path.normpath(d))
+                for d in whitelisted_directories
+            ]
             if whitelisted_directories
             else []
         )
@@ -82,7 +89,9 @@ class RestrictOSAccess(metaclass=Singleton):
         logger.debug(
             f"Set self.whitelisted_directories to: {self.whitelisted_directories}"
         )
-        logger.debug(f"Set self.whitelisted_modules to: {self.whitelisted_modules}")
+        logger.debug(
+            f"Set self.whitelisted_modules to: {self.whitelisted_modules}"
+        )
         logger.debug(f"Set self.allow_network to: {self.allow_network}")
 
         if (
@@ -136,7 +145,9 @@ class RestrictOSAccess(metaclass=Singleton):
     def is_path_whitelisted(self, file_path: str) -> bool:
         logger.debug(f"is_path_whitelisted: Checking file path '{file_path}'")
         if not file_path:
-            logger.warning("is_path_whitelisted called with empty or None file_path.")
+            logger.warning(
+                "is_path_whitelisted called with empty or None file_path."
+            )
             return False
         abs_file_path = os.path.abspath(os.path.normpath(file_path))
         directory = os.path.dirname(abs_file_path)
@@ -165,7 +176,9 @@ class RestrictOSAccess(metaclass=Singleton):
             )
 
             if abs_path_to_check == whitelisted_dir_processed:
-                logger.debug(f"Exact match: '{abs_path_to_check}' is whitelisted.")
+                logger.debug(
+                    f"Exact match: '{abs_path_to_check}' is whitelisted."
+                )
                 return True
 
             # Check if abs_path_to_check is a subdirectory of whitelisted_dir_processed
@@ -182,7 +195,9 @@ class RestrictOSAccess(metaclass=Singleton):
                         f"Path '{abs_path_to_check}' is whitelisted via root '{whitelisted_dir_processed}'."
                     )
                     return True
-            elif abs_path_to_check.startswith(whitelisted_dir_processed + os.sep):
+            elif abs_path_to_check.startswith(
+                whitelisted_dir_processed + os.sep
+            ):
                 logger.debug(
                     f"Path '{abs_path_to_check}' is whitelisted as subdirectory of '{whitelisted_dir_processed}'."
                 )
@@ -198,7 +213,9 @@ class RestrictOSAccess(metaclass=Singleton):
             f"is_file_operation_allowed: Checking file operation '{operation}' for path '{path}'"
         )
         if not path:
-            logger.warning("is_file_operation_allowed called with empty or None path.")
+            logger.warning(
+                "is_file_operation_allowed called with empty or None path."
+            )
             return False
         abs_path = os.path.abspath(os.path.normpath(path))
         logger.debug(
@@ -231,11 +248,15 @@ class RestrictOSAccess(metaclass=Singleton):
         closefd=True,
         opener=None,
     ):
-        logger.debug(f"restricted_open called for file: '{file}', mode: '{mode}'")
+        logger.debug(
+            f"restricted_open called for file: '{file}', mode: '{mode}'"
+        )
 
         file_path_str = None
         if isinstance(file, int):  # File descriptor
-            logger.debug(f"Allowing open for already opened file descriptor: {file}")
+            logger.debug(
+                f"Allowing open for already opened file descriptor: {file}"
+            )
             return self.original_open(
                 file,
                 mode,
@@ -266,7 +287,9 @@ class RestrictOSAccess(metaclass=Singleton):
         )
 
         if self.is_path_whitelisted(abs_file_path):
-            logger.info(f"Path '{abs_file_path}' is whitelisted for open. Proceeding.")
+            logger.info(
+                f"Path '{abs_file_path}' is whitelisted for open. Proceeding."
+            )
             return self.original_open(
                 file,
                 mode,
@@ -306,7 +329,9 @@ class RestrictOSAccess(metaclass=Singleton):
         # Handle exist_ok=True: if path exists and is a dir
         if exist_ok and os.path.exists(abs_target_path):
             if os.path.isdir(abs_target_path):
-                logger.debug(f"Path '{abs_target_path}' exists and is a directory.")
+                logger.debug(
+                    f"Path '{abs_target_path}' exists and is a directory."
+                )
                 if self.is_directory_whitelisted(abs_target_path):
                     logger.info(
                         f"Makedirs: Path '{abs_target_path}' exists, is whitelisted, and exist_ok=True. No operation needed."
@@ -380,7 +405,9 @@ class RestrictOSAccess(metaclass=Singleton):
             # This is OS-specific and non-trivial (e.g. os.readlink(f"/proc/self/fd/{dir_fd}") on Linux).
 
         abs_target_path = os.path.abspath(os.path.normpath(path))
-        logger.debug(f"Normalized absolute target path for mkdir: '{abs_target_path}'")
+        logger.debug(
+            f"Normalized absolute target path for mkdir: '{abs_target_path}'"
+        )
 
         # is_directory_whitelisted checks if abs_target_path is itself whitelisted OR is a child of a whitelisted directory.
         # This is sufficient for mkdir, as it creates the final directory component.
@@ -405,7 +432,9 @@ class RestrictOSAccess(metaclass=Singleton):
             )
 
     def restricted_remove(self, path, *, dir_fd=None):
-        logger.debug(f"restricted_remove called for path: '{path}', dir_fd: {dir_fd}")
+        logger.debug(
+            f"restricted_remove called for path: '{path}', dir_fd: {dir_fd}"
+        )
         # Similar to mkdir, dir_fd makes absolute path resolution complex if path is relative.
         if dir_fd is not None:
             logger.warning(
@@ -413,7 +442,9 @@ class RestrictOSAccess(metaclass=Singleton):
             )
 
         abs_target_path = os.path.abspath(os.path.normpath(path))
-        logger.debug(f"Normalized absolute target path for remove: '{abs_target_path}'")
+        logger.debug(
+            f"Normalized absolute target path for remove: '{abs_target_path}'"
+        )
 
         # is_path_whitelisted checks the directory of the file.
         # For removing a file, the file itself (or its containing directory) must be in a whitelisted location.
@@ -437,14 +468,18 @@ class RestrictOSAccess(metaclass=Singleton):
             )
 
     def restricted_rmdir(self, path, *, dir_fd=None):
-        logger.debug(f"restricted_rmdir called for path: '{path}', dir_fd: {dir_fd}")
+        logger.debug(
+            f"restricted_rmdir called for path: '{path}', dir_fd: {dir_fd}"
+        )
         if dir_fd is not None:
             logger.warning(
                 f"restricted_rmdir with dir_fd: Whitelist check for path '{path}' will use os.path.abspath. This scenario is not fully secured if 'path' is relative."
             )
 
         abs_target_path = os.path.abspath(os.path.normpath(path))
-        logger.debug(f"Normalized absolute target path for rmdir: '{abs_target_path}'")
+        logger.debug(
+            f"Normalized absolute target path for rmdir: '{abs_target_path}'"
+        )
 
         # For rmdir, the directory being removed must be whitelisted (or be a subdir of a whitelisted one).
         if self.is_directory_whitelisted(abs_target_path):
@@ -469,7 +504,9 @@ class RestrictOSAccess(metaclass=Singleton):
 
 # Ensure the logger for this module is configured if not done globally
 if not logger.hasHandlers():
-    handler = logging.StreamHandler(sys.stderr)  # Or your preferred stream/file
+    handler = logging.StreamHandler(
+        sys.stderr
+    )  # Or your preferred stream/file
     # Be cautious with log level in production for security modules
     # For debugging, DEBUG is fine. For production, INFO or WARNING.
     # level = logging.DEBUG if os.environ.get("AIRUNNER_DEBUG") else logging.INFO
@@ -481,4 +518,6 @@ if not logger.hasHandlers():
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(level)  # Set level on logger itself too
-    logger.propagate = False  # Avoid duplicate logs if root logger is also configured
+    logger.propagate = (
+        False  # Avoid duplicate logs if root logger is also configured
+    )

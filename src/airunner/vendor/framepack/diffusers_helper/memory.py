@@ -56,7 +56,9 @@ class DynamicSwapInstaller:
     @staticmethod
     def _uninstall_module(module: torch.nn.Module):
         if "forge_backup_original_class" in module.__dict__:
-            module.__class__ = module.__dict__.pop("forge_backup_original_class")
+            module.__class__ = module.__dict__.pop(
+                "forge_backup_original_class"
+            )
         return
 
     @staticmethod
@@ -72,9 +74,13 @@ class DynamicSwapInstaller:
         return
 
 
-def fake_diffusers_current_device(model: torch.nn.Module, target_device: torch.device):
+def fake_diffusers_current_device(
+    model: torch.nn.Module, target_device: torch.device
+):
     if hasattr(model, "scale_shift_table"):
-        model.scale_shift_table.data = model.scale_shift_table.data.to(target_device)
+        model.scale_shift_table.data = model.scale_shift_table.data.to(
+            target_device
+        )
         return
 
     for k, p in model.named_modules():

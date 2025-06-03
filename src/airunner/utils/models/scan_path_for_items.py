@@ -41,7 +41,11 @@ def scan_path_for_lora(base_path) -> bool:
                     )
                     path = os.path.join(dirpath, file)
                     item = Lora.objects.filter_first(Lora.name == name)
-                    if not item or item.path != path or item.version != version:
+                    if (
+                        not item
+                        or item.path != path
+                        or item.version != version
+                    ):
                         item = Lora.objects.create(
                             name=name,
                             path=path,
@@ -85,8 +89,14 @@ def scan_path_for_embeddings(base_path) -> bool:
                         .replace(".pt", "")
                     )
                     path = os.path.join(dirpath, file)
-                    item = Embedding.objects.filter_first(Embedding.name == name)
-                    if not item or item.path != path or item.version != version:
+                    item = Embedding.objects.filter_first(
+                        Embedding.name == name
+                    )
+                    if (
+                        not item
+                        or item.path != path
+                        or item.version != version
+                    ):
                         item = Embedding.objects.create(
                             name=name,
                             path=path,

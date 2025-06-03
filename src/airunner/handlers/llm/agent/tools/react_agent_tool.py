@@ -37,7 +37,9 @@ class ReActAgentTool(BaseConversationEngine):
             from airunner.utils.application.get_logger import get_logger
             from airunner.settings import AIRUNNER_LOG_LEVEL
 
-            self._logger = get_logger(self.__class__.__name__, AIRUNNER_LOG_LEVEL)
+            self._logger = get_logger(
+                self.__class__.__name__, AIRUNNER_LOG_LEVEL
+            )
 
     @property
     def logger(self):
@@ -59,7 +61,9 @@ class ReActAgentTool(BaseConversationEngine):
         do_handle_response: bool = True,
     ):
         name = name or "react_agent_tool"
-        description = description or """Useful for determining which tool to use."""
+        description = (
+            description or """Useful for determining which tool to use."""
+        )
         metadata = ToolMetadata(
             name=name, description=description, return_direct=return_direct
         )
@@ -142,7 +146,9 @@ class ReActAgentTool(BaseConversationEngine):
         except Exception as e:
             import logging
 
-            logging.getLogger(__name__).error(f"[ReActAgentTool.call] Exception: {e}")
+            logging.getLogger(__name__).error(
+                f"[ReActAgentTool.call] Exception: {e}"
+            )
             return ToolOutput(
                 content="",
                 tool_name=self.metadata.name,

@@ -46,7 +46,9 @@ class DownloadCivitAI(MediatorMixin, SettingsMixin):
         # Connect signals
         self.worker.finished.connect(lambda: self.api.download_complete)
         self.worker.finished.connect(self.thread.quit)
-        self.worker.progress.connect(lambda current, total: callback(current, total))
+        self.worker.progress.connect(
+            lambda current, total: callback(current, total)
+        )
         print(f"Starting model download thread")
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
@@ -54,7 +56,9 @@ class DownloadCivitAI(MediatorMixin, SettingsMixin):
         self.thread.start()
 
     def remove_file(self):
-        if os.path.exists(self.file_name):  # Check if the file exists and delete if so
+        if os.path.exists(
+            self.file_name
+        ):  # Check if the file exists and delete if so
             os.remove(self.file_name)
             print(
                 f"Download of {self.file_name} was cancelled and the file has been deleted."

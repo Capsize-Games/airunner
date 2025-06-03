@@ -32,7 +32,9 @@ class CanvasAPIService(APIServiceBase):
         self.emit_signal(SignalCode.MASK_UPDATED)
 
     def brush_color_changed(self, color):
-        self.emit_signal(SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, {"color": color})
+        self.emit_signal(
+            SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, {"color": color}
+        )
 
     def image_from_path(self, path):
         self.emit_signal(
@@ -79,21 +81,28 @@ class CanvasAPIService(APIServiceBase):
         self.emit_signal(SignalCode.LAYER_OPACITY_CHANGED_SIGNAL, value)
 
     def toggle_tool(self, tool, active):
-        self.emit_signal(SignalCode.TOGGLE_TOOL, {"tool": tool, "active": active})
+        self.emit_signal(
+            SignalCode.TOGGLE_TOOL, {"tool": tool, "active": active}
+        )
 
     def tool_changed(self, tool, active):
         self.emit_signal(
-            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL, {"tool": tool, "active": active}
+            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL,
+            {"tool": tool, "active": active},
         )
 
     def do_draw(self, force=False):
-        self.emit_signal(SignalCode.SCENE_DO_DRAW_SIGNAL, {"force_draw": force})
+        self.emit_signal(
+            SignalCode.SCENE_DO_DRAW_SIGNAL, {"force_draw": force}
+        )
 
     def clear_history(self):
         self.emit_signal(SignalCode.HISTORY_UPDATED, {"undo": 0, "redo": 0})
 
     def update_history(self, undo, redo):
-        self.emit_signal(SignalCode.HISTORY_UPDATED, {"undo": undo, "redo": redo})
+        self.emit_signal(
+            SignalCode.HISTORY_UPDATED, {"undo": undo, "redo": redo}
+        )
 
     def update_cursor(self, event, apply_cursor):
         self.emit_signal(
@@ -109,7 +118,8 @@ class CanvasAPIService(APIServiceBase):
 
     def send_image_to_canvas(self, image_response: ImageResponse):
         self.emit_signal(
-            SignalCode.SEND_IMAGE_TO_CANVAS_SIGNAL, {"image_response": image_response}
+            SignalCode.SEND_IMAGE_TO_CANVAS_SIGNAL,
+            {"image_response": image_response},
         )
 
     def input_image_changed(self, section, setting, value):

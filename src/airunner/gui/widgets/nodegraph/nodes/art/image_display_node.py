@@ -16,7 +16,9 @@ class ImageDisplayWidget(NodeBaseWidget):
     Following the pattern of TextEditNode which works correctly in airunner.vendor.nodegraphqt.
     """
 
-    def __init__(self, parent=None, name="image_display", label="Image Display"):
+    def __init__(
+        self, parent=None, name="image_display", label="Image Display"
+    ):
         super().__init__(parent, name, label)
         # Create the QLabel widget that will actually display the image
         self.image_label = QLabel("No Image")

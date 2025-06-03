@@ -59,7 +59,9 @@ class PixelFilter(BaseFilter):
         scale = min(base_size / width, base_size / height)
         new_width = int(width * scale)
         new_height = int(height * scale)
-        downsized = image.resize((new_width, new_height), Image.Resampling.NEAREST)
+        downsized = image.resize(
+            (new_width, new_height), Image.Resampling.NEAREST
+        )
 
         # Upscale back to original dimensions
         target_width = int(new_width / scale)
@@ -70,7 +72,9 @@ class PixelFilter(BaseFilter):
 
         # Apply smoothing if enabled
         if smoothing > 0:
-            for _ in range(smoothing // 10):  # Apply smoothing filter multiple times
+            for _ in range(
+                smoothing // 10
+            ):  # Apply smoothing filter multiple times
                 final_image = final_image.filter(ImageFilter.SMOOTH)
 
         return final_image

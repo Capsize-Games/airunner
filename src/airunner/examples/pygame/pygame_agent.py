@@ -11,4 +11,6 @@ class PygameAgent(LocalAgent):
 
     @property
     def system_prompt(self) -> str:
-        return """You are a game AI that can interact with the Pygame window."""
+        return (
+            """You are a game AI that can interact with the Pygame window."""
+        )

@@ -16,7 +16,9 @@ def _set_dir(file):
 class FileDialog(object):
 
     @staticmethod
-    def getSaveFileName(parent=None, title="Save File", file_dir=None, ext_filter="*"):
+    def getSaveFileName(
+        parent=None, title="Save File", file_dir=None, ext_filter="*"
+    ):
         if not file_dir:
             file_dir = _current_user_directory
         file_dlg = QtWidgets.QFileDialog.getSaveFileName(
@@ -28,7 +30,9 @@ class FileDialog(object):
         return file_dlg
 
     @staticmethod
-    def getOpenFileName(parent=None, title="Open File", file_dir=None, ext_filter="*"):
+    def getOpenFileName(
+        parent=None, title="Open File", file_dir=None, ext_filter="*"
+    ):
         if not file_dir:
             file_dir = _current_user_directory
         file_dlg = QtWidgets.QFileDialog.getOpenFileName(
@@ -44,7 +48,11 @@ class BaseDialog(object):
 
     @staticmethod
     def message_dialog(
-        parent=None, text="", title="Message", dialog_icon=None, custom_icon=None
+        parent=None,
+        text="",
+        title="Message",
+        dialog_icon=None,
+        custom_icon=None,
     ):
         dlg = QtWidgets.QMessageBox(parent=parent)
         dlg.setWindowTitle(title)
@@ -68,12 +76,18 @@ class BaseDialog(object):
 
     @staticmethod
     def question_dialog(
-        parent=None, text="", title="Are you sure?", dialog_icon=None, custom_icon=None
+        parent=None,
+        text="",
+        title="Are you sure?",
+        dialog_icon=None,
+        custom_icon=None,
     ):
         dlg = QtWidgets.QMessageBox(parent=parent)
         dlg.setWindowTitle(title)
         dlg.setInformativeText(text)
-        dlg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        dlg.setStandardButtons(
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        )
 
         if custom_icon:
             pixmap = QtGui.QPixmap(custom_icon).scaledToHeight(

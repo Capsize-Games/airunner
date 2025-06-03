@@ -50,10 +50,14 @@ class ChooseModelsPage(BaseWizard):
 
             # Connect with lambda to properly pass the item
             checkbox.toggled.connect(
-                lambda checked, i=item: self.controlnet_model_toggled(i, checked)
+                lambda checked, i=item: self.controlnet_model_toggled(
+                    i, checked
+                )
             )
 
-        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        spacer = QSpacerItem(
+            20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
+        )
         self.ui.stable_diffusion_layout.layout().addItem(spacer)
         self.update_total_size_label()
 

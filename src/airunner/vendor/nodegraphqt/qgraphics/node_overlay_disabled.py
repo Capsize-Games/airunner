@@ -84,7 +84,9 @@ class XDisabledItem(QtWidgets.QGraphicsItem):
         for p in point_pos:
             p.setX(p.x() - (point_size / 2))
             p.setY(p.y() - (point_size / 2))
-            point_rect = QtCore.QRectF(p, QtCore.QSizeF(point_size, point_size))
+            point_rect = QtCore.QRectF(
+                p, QtCore.QSizeF(point_size, point_size)
+            )
             painter.drawEllipse(point_rect)
 
         if self.text and not self.proxy_mode:

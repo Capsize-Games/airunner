@@ -79,7 +79,9 @@ progress::after {
 
 
 def make_progress_bar_html(number, text):
-    return progress_html.replace("*number*", str(number)).replace("*text*", text)
+    return progress_html.replace("*number*", str(number)).replace(
+        "*text*", text
+    )
 
 
 def make_progress_bar_css():

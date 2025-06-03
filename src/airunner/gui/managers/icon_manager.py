@@ -31,7 +31,9 @@ class IconManager:
             widget = data["widget"]
             icon = QtGui.QIcon()
             icon.addPixmap(
-                QtGui.QPixmap(f":/{theme}/icons/feather/{theme}/{icon_name}.svg"),
+                QtGui.QPixmap(
+                    f":/{theme}/icons/feather/{theme}/{icon_name}.svg"
+                ),
                 QtGui.QIcon.Mode.Normal,
                 QtGui.QIcon.State.Off,
             )

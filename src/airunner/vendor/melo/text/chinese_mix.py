@@ -70,7 +70,9 @@ class ChineseMix(LanguageBase):
 
     def replace_punctuation(self, text):
         text = text.replace("嗯", "恩").replace("呣", "母")
-        pattern = re.compile("|".join(re.escape(p) for p in self.rep_map.keys()))
+        pattern = re.compile(
+            "|".join(re.escape(p) for p in self.rep_map.keys())
+        )
         replaced_text = pattern.sub(lambda x: self.rep_map[x.group()], text)
         replaced_text = re.sub(
             r"[^\u4e00-\u9fa5_a-zA-Z\s" + "".join(self.punctuation) + r"]+",
@@ -129,7 +131,9 @@ class ChineseMix(LanguageBase):
                     finals.append([word])
                 else:
                     sub_initials, sub_finals = self._get_initials_finals(word)
-                    sub_finals = self.tone_modifier.modified_tone(word, pos, sub_finals)
+                    sub_finals = self.tone_modifier.modified_tone(
+                        word, pos, sub_finals
+                    )
                     initials.append(sub_initials)
                     finals.append(sub_finals)
 
@@ -144,7 +148,9 @@ class ChineseMix(LanguageBase):
                         text=None, pad_start_end=False, tokenized=tokenized_en
                     )
                     # apply offset to tones_en
-                    tones_en = [t + language_tone_start_map["EN"] for t in tones_en]
+                    tones_en = [
+                        t + language_tone_start_map["EN"] for t in tones_en
+                    ]
                     phones_list += phones_en
                     tones_list += tones_en
                     word2ph += word2ph_en
@@ -191,7 +197,9 @@ class ChineseMix(LanguageBase):
                                     "u": "w",
                                 }
                                 if pinyin[0] in single_rep_map.keys():
-                                    pinyin = single_rep_map[pinyin[0]] + pinyin[1:]
+                                    pinyin = (
+                                        single_rep_map[pinyin[0]] + pinyin[1:]
+                                    )
 
                         assert pinyin in self.pinyin_to_symbol_map.keys(), (
                             pinyin,
@@ -251,7 +259,9 @@ class ChineseMix(LanguageBase):
                         text=None, pad_start_end=False, tokenized=tokenized_en
                     )
                     # apply offset to tones_en
-                    tones_en = [t + language_tone_start_map["EN"] for t in tones_en]
+                    tones_en = [
+                        t + language_tone_start_map["EN"] for t in tones_en
+                    ]
                     phones_list += phones_en
                     tones_list += tones_en
                     word2ph += word2ph_en

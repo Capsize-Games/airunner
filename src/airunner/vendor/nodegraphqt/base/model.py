@@ -149,9 +149,13 @@ class NodeModel(object):
         tab = tab or "Properties"
 
         if name in self.properties.keys():
-            raise NodePropertyError('"{}" reserved for default property.'.format(name))
+            raise NodePropertyError(
+                '"{}" reserved for default property.'.format(name)
+            )
         if name in self._custom_prop.keys():
-            raise NodePropertyError('"{}" property already exists.'.format(name))
+            raise NodePropertyError(
+                '"{}" property already exists.'.format(name)
+            )
 
         self._custom_prop[name] = value
 
@@ -166,7 +170,9 @@ class NodeModel(object):
                 self._TEMP_property_attrs[name]["tooltip"] = widget_tooltip
 
         else:
-            attrs = {self.type_: {name: {"widget_type": widget_type, "tab": tab}}}
+            attrs = {
+                self.type_: {name: {"widget_type": widget_type, "tab": tab}}
+            }
             if items:
                 attrs[self.type_][name]["items"] = items
             if range:
@@ -221,7 +227,9 @@ class NodeModel(object):
         model = self._graph_model
         if model is None:
             return self._TEMP_property_widget_types.get(name)
-        return model.get_node_common_properties(self.type_)[name]["widget_type"]
+        return model.get_node_common_properties(self.type_)[name][
+            "widget_type"
+        ]
 
     def get_tab_name(self, name):
         """
@@ -575,9 +583,9 @@ class NodeGraphModel(object):
             connection_data[accept_ptype] = set([accept_pname])
         else:
             # ensure data remains a set instead of list after json de-serialize
-            connection_data[accept_ptype] = set(connection_data[accept_ptype]) | {
-                accept_pname
-            }
+            connection_data[accept_ptype] = set(
+                connection_data[accept_ptype]
+            ) | {accept_pname}
 
     def port_accept_connection_types(self, node_type, port_type, port_name):
         """
@@ -627,9 +635,9 @@ class NodeGraphModel(object):
             connection_data[reject_ptype] = set([reject_pname])
         else:
             # ensure data remains a set instead of list after json de-serialize
-            connection_data[reject_ptype] = set(connection_data[reject_ptype]) | {
-                reject_pname
-            }
+            connection_data[reject_ptype] = set(
+                connection_data[reject_ptype]
+            ) | {reject_pname}
 
     def port_reject_connection_types(self, node_type, port_type, port_name):
         """

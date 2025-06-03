@@ -39,7 +39,9 @@ class ShadowLogger(logging.Logger):
     )
     log_level: int = logging.DEBUG
 
-    def __init__(self, show_stdout: bool = True, trackers: List[BaseTracker] = None):
+    def __init__(
+        self, show_stdout: bool = True, trackers: List[BaseTracker] = None
+    ):
         # Append current time to name to make it unique
         super().__init__(f"{self.name}_{time.time()}")
         self.__show_stdout = show_stdout
@@ -50,7 +52,9 @@ class ShadowLogger(logging.Logger):
         self.__set_level(self.log_level)
 
     def activate(self):
-        self.addHandler(self.intercept_handler)  # Add InterceptHandler to the logger
+        self.addHandler(
+            self.intercept_handler
+        )  # Add InterceptHandler to the logger
 
     def deactivate(self):
         self.removeHandler(self.intercept_handler)
@@ -60,7 +64,8 @@ class ShadowLogger(logging.Logger):
         stream_handler.setFormatter(self.__formatter)
         stream_handler.addFilter(PrefixFilter(self.prefix))
         if not any(
-            isinstance(handler, logging.StreamHandler) for handler in self.handlers
+            isinstance(handler, logging.StreamHandler)
+            for handler in self.handlers
         ):
             self.addHandler(stream_handler)
         return stream_handler
@@ -126,7 +131,9 @@ class ShadowLogger(logging.Logger):
             level = logging.DEBUG
         self.setLevel(level)
         self.__stream_handler.setLevel(level)
-        self.intercept_handler.setLevel(level)  # Set level for InterceptHandler
+        self.intercept_handler.setLevel(
+            level
+        )  # Set level for InterceptHandler
 
     # def get_latest_log(self):
     #     return self.intercept_handler.get_latest_log()  # Method to get the latest log from InterceptHandler

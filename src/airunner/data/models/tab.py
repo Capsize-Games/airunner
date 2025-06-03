@@ -23,7 +23,9 @@ class Tab(BaseModel):
 
         with session_scope() as session:
             # Set all tabs in the section to inactive
-            session.query(Tab).filter(Tab.section == section).update({"active": False})
+            session.query(Tab).filter(Tab.section == section).update(
+                {"active": False}
+            )
 
             # Get the tab name at the given index
             tab_name = tab_widget.tabText(index)

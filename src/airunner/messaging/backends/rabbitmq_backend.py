@@ -19,7 +19,9 @@ class RabbitMQBackend:
 
         rabbitmq_url = f"amqp://{username}:{password}@{url}:{port}/"
         self.rabbitmq_url = rabbitmq_url
-        self.connection = pika.BlockingConnection(pika.URLParameters(rabbitmq_url))
+        self.connection = pika.BlockingConnection(
+            pika.URLParameters(rabbitmq_url)
+        )
         self.channel = self.connection.channel()
         self.handlers: Dict[str, Callable] = {}
 
@@ -44,7 +46,9 @@ class RabbitMQBackend:
         """
         queue_name = code.value
         self.channel.queue_declare(queue=queue_name)
-        self.channel.basic_publish(exchange="", routing_key=queue_name, body=str(data))
+        self.channel.basic_publish(
+            exchange="", routing_key=queue_name, body=str(data)
+        )
 
     def start_consuming(self):
         """

@@ -16,7 +16,9 @@ class WorkflowNode(BaseCoreNode):
 
     def __init__(self):
         super().__init__()
-        self.add_text_input("nested_workflow_id", "Workflow ID/Name", tab="widgets")
+        self.add_text_input(
+            "nested_workflow_id", "Workflow ID/Name", tab="widgets"
+        )
 
     def execute(self, input_data):
         nested_workflow_id = self.get_property("nested_workflow_id")
@@ -24,7 +26,5 @@ class WorkflowNode(BaseCoreNode):
         self.logger.info(
             f"Executing nested Workflow: {nested_workflow_id} with start data: {start_data}"
         )
-        output_data = (
-            f"Workflow '{nested_workflow_id}' completed, result from: {start_data}"
-        )
+        output_data = f"Workflow '{nested_workflow_id}' completed, result from: {start_data}"
         return {"flow_complete": output_data}

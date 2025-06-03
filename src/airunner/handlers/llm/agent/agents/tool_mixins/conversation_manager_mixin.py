@@ -41,13 +41,18 @@ class ConversationManagerMixin:
     def conversation_id(self, value: int):
         if value != getattr(self, "_conversation_id", None):
             self._conversation_id = value
-            if self.conversation and self.conversation.id != self._conversation_id:
+            if (
+                self.conversation
+                and self.conversation.id != self._conversation_id
+            ):
                 self.conversation = None
 
     def _create_conversation(self) -> Conversation:
         conversation = None
         if self.conversation_id:
-            self.logger.info(f"Loading conversation with ID: {self.conversation_id}")
+            self.logger.info(
+                f"Loading conversation with ID: {self.conversation_id}"
+            )
             conversation = Conversation.objects.get(self.conversation_id)
         if not conversation:
             self.logger.info("No conversation found, looking for most recent")
@@ -69,16 +74,21 @@ class ConversationManagerMixin:
         messages = self.conversation.value or []
         total_messages = len(messages)
         if (
-            total_messages > self.llm_settings.summarize_after_n_turns
-            and self.conversation.summary is None
-        ) or total_messages % self.llm_settings.summarize_after_n_turns == 0:
+            (
+                total_messages > self.llm_settings.summarize_after_n_turns
+                and self.conversation.summary is None
+            )
+            or total_messages % self.llm_settings.summarize_after_n_turns == 0
+        ):
             return True
         return False
 
     @property
     def conversation_summaries(self) -> str:
         summaries = ""
-        conversations = Conversation.objects.order_by(Conversation.id.desc())[:5]
+        conversations = Conversation.objects.order_by(Conversation.id.desc())[
+            :5
+        ]
         conversations = list(conversations)
         conversations = sorted(conversations, key=lambda x: x.id, reverse=True)
         for conversation in conversations:

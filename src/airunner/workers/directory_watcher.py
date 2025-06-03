@@ -5,7 +5,10 @@ class DirectoryWatcher(QObject):
     scan_completed = Signal(bool)
 
     def __init__(
-        self, base_path: str, scan_function: callable, on_scan_completed: callable
+        self,
+        base_path: str,
+        scan_function: callable,
+        on_scan_completed: callable,
     ):
         super().__init__()
         self.base_path = base_path

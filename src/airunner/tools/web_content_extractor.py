@@ -24,7 +24,9 @@ def _patch_signals_for_subprocess():
         except Exception:
             pass
         try:
-            scrapy.utils.ossignal.install_shutdown_handlers = lambda *a, **kw: None
+            scrapy.utils.ossignal.install_shutdown_handlers = (
+                lambda *a, **kw: None
+            )
         except Exception:
             pass
 

@@ -91,7 +91,9 @@ class QFlowLayout(QLayout):
             spaceX = self.horizontalSpacing()
             if spaceX == -1:
                 spaceX = wid.style().layoutSpacing(
-                    QSizePolicy.PushButton, QSizePolicy.PushButton, Qt.Horizontal
+                    QSizePolicy.PushButton,
+                    QSizePolicy.PushButton,
+                    Qt.Horizontal,
                 )
 
             spaceY = self.verticalSpacing()

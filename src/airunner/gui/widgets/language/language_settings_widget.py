@@ -21,7 +21,9 @@ class LanguageSettingsWidget(BaseWidget, AIModelMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # create a reversed mapping of LANGUAGE_DISPLAY_MAP
-        self.display_to_language_map = {v: k for k, v in LANGUAGE_DISPLAY_MAP.items()}
+        self.display_to_language_map = {
+            v: k for k, v in LANGUAGE_DISPLAY_MAP.items()
+        }
 
         self._signals_connected = False
         self._connect_signals()
