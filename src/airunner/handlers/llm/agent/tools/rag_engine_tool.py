@@ -35,9 +35,7 @@ class RAGEngineTool(BaseConversationEngine):
             from airunner.utils.application.get_logger import get_logger
             from airunner.settings import AIRUNNER_LOG_LEVEL
 
-            self._logger = get_logger(
-                self.__class__.__name__, AIRUNNER_LOG_LEVEL
-            )
+            self._logger = get_logger(self.__class__.__name__, AIRUNNER_LOG_LEVEL)
 
     def __call__(self, *args, **kwargs):
         return self.call(*args, **kwargs)
@@ -53,9 +51,7 @@ class RAGEngineTool(BaseConversationEngine):
             self.chat_engine, "update_system_prompt"
         ):
             self.chat_engine.update_system_prompt(system_prompt)
-        if llm_request is not None and hasattr(
-            self.chat_engine.llm, "llm_request"
-        ):
+        if llm_request is not None and hasattr(self.chat_engine.llm, "llm_request"):
             self.chat_engine.llm.llm_request = llm_request
         response = self.chat_engine.chat(query_str, **kwargs)
         return response

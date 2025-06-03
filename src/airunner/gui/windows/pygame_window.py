@@ -147,9 +147,7 @@ class PygameManager(ABC):
 
     def _handle_llm_response_signal(self, data: Dict):
         response = data.get("response")
-        thread = threading.Thread(
-            target=self._handle_llm_response, args=(response,)
-        )
+        thread = threading.Thread(target=self._handle_llm_response, args=(response,))
         thread.start()
 
     def _handle_image_response_signal(self, data: Dict):
@@ -170,9 +168,7 @@ class PygameManager(ABC):
         else:
             self.api.logger.error(f"Unhandled response code: {code}")
 
-        self.api.emit_signal(
-            SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL
-        )
+        self.api.emit_signal(SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL)
 
         if callback:
             callback(data)
@@ -278,9 +274,7 @@ class PygameWidget(QWidget):
         self.pygame_manager = pygame_manager
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-        )
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setMinimumSize(pygame_manager.width, pygame_manager.height)
 
         # Timer to update the Pygame display
@@ -384,9 +378,7 @@ class PygameWidget(QWidget):
         button = self._convert_mouse_button(event.button())
 
         # Create a pygame MOUSEBUTTONDOWN event
-        pygame_event = pygame.event.Event(
-            MOUSEBUTTONDOWN, pos=pos, button=button
-        )
+        pygame_event = pygame.event.Event(MOUSEBUTTONDOWN, pos=pos, button=button)
         # Post the event to pygame's event queue
         pygame.event.post(pygame_event)
         # Also let the manager handle it directly
@@ -401,9 +393,7 @@ class PygameWidget(QWidget):
         button = self._convert_mouse_button(event.button())
 
         # Create a pygame MOUSEBUTTONUP event
-        pygame_event = pygame.event.Event(
-            MOUSEBUTTONUP, pos=pos, button=button
-        )
+        pygame_event = pygame.event.Event(MOUSEBUTTONUP, pos=pos, button=button)
         # Post the event to pygame's event queue
         pygame.event.post(pygame_event)
         # Also let the manager handle it directly
@@ -533,9 +523,7 @@ class PygameWindow(
 
         if AIRUNNER_STT_ON:
             self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-            self._stt_audio_processor_worker = create_worker(
-                AudioProcessorWorker
-            )
+            self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
 
         if AIRUNNER_TTS_ON:
             self._tts_generator_worker = create_worker(TTSGeneratorWorker)
@@ -553,9 +541,7 @@ class PygameWindow(
         # Create a central widget and layout
         central_widget = QWidget(self)
         layout = QVBoxLayout(central_widget)
-        layout.setContentsMargins(
-            0, 0, 0, 0
-        )  # Remove margins for better display
+        layout.setContentsMargins(0, 0, 0, 0)  # Remove margins for better display
 
         # Create and add the PygameWidget
         self.pygame_widget = PygameWidget(self.pygame_manager, self)

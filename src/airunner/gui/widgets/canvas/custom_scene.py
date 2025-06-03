@@ -182,9 +182,7 @@ class CustomScene(
         if hasattr(self.current_settings, "x_pos") and hasattr(
             self.current_settings, "y_pos"
         ):
-            return QPointF(
-                self.current_settings.x_pos, self.current_settings.y_pos
-            )
+            return QPointF(self.current_settings.x_pos, self.current_settings.y_pos)
         return QPointF(0, 0)
 
     @property
@@ -224,9 +222,7 @@ class CustomScene(
             parent_window = self.views()[0].window()
 
             # Use the last export path if available
-            initial_dir = (
-                self.last_export_path if self.last_export_path else ""
-            )
+            initial_dir = self.last_export_path if self.last_export_path else ""
 
             file_dialog = QFileDialog(
                 parent_window,
@@ -304,9 +300,7 @@ class CustomScene(
 
     def on_preview_filter_signal(self, message):
         filter_object: ImageFilter.Filter = message["filter_object"]
-        filtered_image = self._preview_filter(
-            self.current_active_image, filter_object
-        )
+        filtered_image = self._preview_filter(self.current_active_image, filter_object)
         self._load_image_from_object(image=filtered_image)
 
     def on_image_generated_signal(self, data: Dict):
@@ -524,9 +518,7 @@ class CustomScene(
             view.setTransformationAnchor(view.ViewportAnchor.NoAnchor)
             view.setResizeAnchor(view.ViewportAnchor.NoAnchor)
             delta = event.scenePos() - self.last_pos
-            scale_factor = (
-                view.transform().m11()
-            )  # Get the current scale factor
+            scale_factor = view.transform().m11()  # Get the current scale factor
             view.translate(delta.x() / scale_factor, delta.y() / scale_factor)
             self.last_pos = event.scenePos()
         else:
@@ -544,9 +536,7 @@ class CustomScene(
     def refresh_image(self, image: Image = None):
         # Save the current viewport position
         view = self.views()[0]
-        current_viewport_rect = view.mapToScene(
-            view.viewport().rect()
-        ).boundingRect()
+        current_viewport_rect = view.mapToScene(view.viewport().rect()).boundingRect()
 
         # End the painter if it is active
         if self.painter and self.painter.isActive():
@@ -584,9 +574,7 @@ class CustomScene(
 
         if base64image is not None:
             try:
-                pil_image = convert_binary_to_image(base64image).convert(
-                    "RGBA"
-                )
+                pil_image = convert_binary_to_image(base64image).convert("RGBA")
             except AttributeError:
                 self.logger.warning("Failed to convert base64 to image")
             except PIL.UnidentifiedImageError:
@@ -650,12 +638,8 @@ class CustomScene(
         self.set_image(image)
 
         if generated:
-            self.update_drawing_pad_settings(
-                "x_pos", self.active_grid_settings.pos_x
-            )
-            self.update_drawing_pad_settings(
-                "y_pos", self.active_grid_settings.pos_y
-            )
+            self.update_drawing_pad_settings("x_pos", self.active_grid_settings.pos_x)
+            self.update_drawing_pad_settings("y_pos", self.active_grid_settings.pos_y)
             x = self.active_grid_settings.pos_x
             y = self.active_grid_settings.pos_y
         else:
@@ -675,9 +659,7 @@ class CustomScene(
         try:
             self.painter = QPainter(image)
         except TypeError as _e:
-            self.logger.error(
-                "Failed to initialize painter in initialize_image"
-            )
+            self.logger.error("Failed to initialize painter in initialize_image")
 
     def _update_current_settings(self, key, value):
         if self.settings_key == "controlnet_settings":
@@ -1078,10 +1060,7 @@ class CustomScene(
 
         # Only update position if it has significantly changed to avoid constant redraws
         current_pos = self.item.pos()
-        if (
-            abs(current_pos.x() - new_x) > 1
-            or abs(current_pos.y() - new_y) > 1
-        ):
+        if abs(current_pos.x() - new_x) > 1 or abs(current_pos.y() - new_y) > 1:
             # Before changing position, prepare the item for geometry change
             self.item.prepareGeometryChange()
             self.item.setPos(new_x, new_y)

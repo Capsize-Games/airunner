@@ -7,7 +7,7 @@ class Listener:
     task_queue = []
     lock = Lock()
     thread = None
-    
+
     @classmethod
     def _process_tasks(cls):
         while True:
@@ -15,17 +15,17 @@ class Listener:
             with cls.lock:
                 if cls.task_queue:
                     task = cls.task_queue.pop(0)
-                    
+
             if task is None:
                 time.sleep(0.001)
                 continue
-                
+
             func, args, kwargs = task
             try:
                 func(*args, **kwargs)
             except Exception as e:
                 print(f"Error in listener thread: {e}")
-    
+
     @classmethod
     def add_task(cls, func, *args, **kwargs):
         with cls.lock:

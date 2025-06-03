@@ -37,16 +37,10 @@ class LLMSettings:
     Contains configuration options for local and API-based LLM usage.
     """
 
-    use_weather_prompt: bool = (
-        AIRUNNER_LLM_USE_WEATHER_PROMPT
-    )
-    update_mood_after_n_turns: int = (
-        AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS
-    )
+    use_weather_prompt: bool = AIRUNNER_LLM_USE_WEATHER_PROMPT
+    update_mood_after_n_turns: int = AIRUNNER_LLM_AGENT_UPDATE_MOOD_AFTER_N_TURNS
     summarize_after_n_turns: int = AIRUNNER_LLM_AGENT_SUMMARIZE_AFTER_N_TURNS
-    perform_conversation_summary: bool = (
-        AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY
-    )
+    perform_conversation_summary: bool = AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY
     max_function_calls: int = AIRUNNER_LLM_AGENT_MAX_FUNCTION_CALLS
     model: str = AIRUNNER_LLM_OPENROUTER_MODEL
     print_llm_system_prompt: bool = AIRUNNER_LLM_PRINT_SYSTEM_PROMPT
@@ -63,8 +57,7 @@ class LLMSettings:
     @property
     def use_api(self) -> bool:
         return bool(
-            getattr(self, "use_openrouter", False)
-            or getattr(self, "use_openai", False)
+            getattr(self, "use_openrouter", False) or getattr(self, "use_openai", False)
         )
 
 

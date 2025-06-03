@@ -87,31 +87,19 @@ class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
                 nvidia_smi_stats[i] if i < len(nvidia_smi_stats) else (0, 0)
             )
             used_mem = (
-                round(nvidia_used, 2)
-                if nvidia_used
-                else round(stats["allocated"], 2)
+                round(nvidia_used, 2) if nvidia_used else round(stats["allocated"], 2)
             )
             total_mem = (
-                round(nvidia_total, 2)
-                if nvidia_total
-                else round(stats["total"], 2)
+                round(nvidia_total, 2) if nvidia_total else round(stats["total"], 2)
             )
             free_mem = round(free_mem, 2)
             self.ui.memory_stats.setItem(i, 0, QTableWidgetItem(device_name))
-            self.ui.memory_stats.setItem(
-                i, 1, QTableWidgetItem(f"{used_mem}GB")
-            )
-            self.ui.memory_stats.setItem(
-                i, 2, QTableWidgetItem(f"{total_mem}GB")
-            )
-            self.ui.memory_stats.setItem(
-                i, 3, QTableWidgetItem(f"{free_mem}GB")
-            )
+            self.ui.memory_stats.setItem(i, 1, QTableWidgetItem(f"{used_mem}GB"))
+            self.ui.memory_stats.setItem(i, 2, QTableWidgetItem(f"{total_mem}GB"))
+            self.ui.memory_stats.setItem(i, 3, QTableWidgetItem(f"{free_mem}GB"))
             # Set colors
             self.ui.memory_stats.item(i, 1).setForeground(Qt.GlobalColor.red)
-            self.ui.memory_stats.item(i, 2).setForeground(
-                Qt.GlobalColor.yellow
-            )
+            self.ui.memory_stats.item(i, 2).setForeground(Qt.GlobalColor.yellow)
             self.ui.memory_stats.item(i, 3).setForeground(Qt.GlobalColor.green)
 
         # Get memory details for the current process (CPU)
@@ -128,25 +116,15 @@ class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
         total = round(total, 2)
         available = round(available, 2)
         self.ui.memory_stats.setItem(row_count - 1, 0, QTableWidgetItem("CPU"))
-        self.ui.memory_stats.setItem(
-            row_count - 1, 1, QTableWidgetItem(f"{used}GB")
-        )
-        self.ui.memory_stats.setItem(
-            row_count - 1, 2, QTableWidgetItem(f"{total}GB")
-        )
+        self.ui.memory_stats.setItem(row_count - 1, 1, QTableWidgetItem(f"{used}GB"))
+        self.ui.memory_stats.setItem(row_count - 1, 2, QTableWidgetItem(f"{total}GB"))
         self.ui.memory_stats.setItem(
             row_count - 1, 3, QTableWidgetItem(f"{available}GB")
         )
         # Set colors
-        self.ui.memory_stats.item(row_count - 1, 1).setForeground(
-            Qt.GlobalColor.red
-        )
-        self.ui.memory_stats.item(row_count - 1, 2).setForeground(
-            Qt.GlobalColor.yellow
-        )
-        self.ui.memory_stats.item(row_count - 1, 3).setForeground(
-            Qt.GlobalColor.green
-        )
+        self.ui.memory_stats.item(row_count - 1, 1).setForeground(Qt.GlobalColor.red)
+        self.ui.memory_stats.item(row_count - 1, 2).setForeground(Qt.GlobalColor.yellow)
+        self.ui.memory_stats.item(row_count - 1, 3).setForeground(Qt.GlobalColor.green)
         QApplication.processEvents()
 
     @staticmethod

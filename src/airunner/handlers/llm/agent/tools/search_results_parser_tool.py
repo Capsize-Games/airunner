@@ -102,9 +102,7 @@ class RespondToSearchQueryTool(BaseTool):  # MODIFIED base class
             for service, items in search_results.items():
                 if isinstance(items, list):
                     formatted_results_str += f"Results from {service}:\n"
-                    for item in items[
-                        :5
-                    ]:  # Limit to top 5 results per service
+                    for item in items[:5]:  # Limit to top 5 results per service
                         title = item.get("title", "N/A")
                         snippet = item.get("snippet", "No snippet available.")
                         link = item.get("link", "")
@@ -129,16 +127,12 @@ class RespondToSearchQueryTool(BaseTool):  # MODIFIED base class
             # Using chat method for a single turn with the synthesis engine
             response = engine.chat(synthesis_prompt)
             final_answer = (
-                response.response
-                if hasattr(response, "response")
-                else str(response)
+                response.response if hasattr(response, "response") else str(response)
             )
             logger.debug(f"Synthesized response: {final_answer}")
             return final_answer
         except Exception as e:
-            logger.error(
-                f"Error during synthesis in RespondToSearchQueryTool: {e}"
-            )
+            logger.error(f"Error during synthesis in RespondToSearchQueryTool: {e}")
             return "I encountered an error while trying to process the search results."
 
     # Required by BaseTool

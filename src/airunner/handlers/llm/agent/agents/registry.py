@@ -2,6 +2,7 @@
 Tool and engine registry for dynamic registration and lookup.
 """
 
+
 class ToolRegistry:
     _tools = {}
 
@@ -10,6 +11,7 @@ class ToolRegistry:
         def decorator(tool):
             cls._tools[name] = tool
             return tool
+
         return decorator
 
     @classmethod
@@ -20,6 +22,7 @@ class ToolRegistry:
     def all(cls):
         return dict(cls._tools)
 
+
 class EngineRegistry:
     _engines = {}
 
@@ -28,6 +31,7 @@ class EngineRegistry:
         def decorator(engine):
             cls._engines[name] = engine
             return engine
+
         return decorator
 
     @classmethod

@@ -29,20 +29,20 @@ class PromptBuilder:
             and chatbot.system_instructions
             and chatbot.system_instructions != ""
         ):
-            system_instructions = f"Always follow these instructions:\n{chatbot.system_instructions}\n"
+            system_instructions = (
+                f"Always follow these instructions:\n{chatbot.system_instructions}\n"
+            )
         guardrails = ""
         if (
             chatbot.use_guardrails
             and chatbot.guardrails_prompt
             and chatbot.guardrails_prompt != ""
         ):
-            guardrails = f"Always follow these guardrails:\n{chatbot.guardrails_prompt}\n"
+            guardrails = (
+                f"Always follow these guardrails:\n{chatbot.guardrails_prompt}\n"
+            )
         backstory_prompt = ""
-        if (
-            chatbot.use_backstory
-            and chatbot.backstory
-            and chatbot.backstory != ""
-        ):
+        if chatbot.use_backstory and chatbot.backstory and chatbot.backstory != "":
             backstory_prompt = (
                 "------\n"
                 f"**Here is {botname}'s backstory:**\n"
@@ -51,7 +51,9 @@ class PromptBuilder:
             )
         conversation_timestamp_prompt = ""
         if self.agent.conversation is not None:
-            conversation_timestamp_prompt = f"The conversation started on {self.agent.conversation.timestamp}.\n"
+            conversation_timestamp_prompt = (
+                f"The conversation started on {self.agent.conversation.timestamp}.\n"
+            )
         prompt = (
             f"Your name is {botname}.\n"
             f"- The user ({username}) is having a conversation with the assistant ({botname}).\n"

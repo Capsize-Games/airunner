@@ -244,9 +244,7 @@ class RAGMixin:
     @property
     def text_splitter(self) -> SentenceSplitter:
         if not self.__text_splitter:
-            self.text_splitter = SentenceSplitter(
-                chunk_size=256, chunk_overlap=20
-            )
+            self.text_splitter = SentenceSplitter(chunk_size=256, chunk_overlap=20)
         return self.__text_splitter
 
     @text_splitter.setter
@@ -295,11 +293,7 @@ class RAGMixin:
                     for doc in self.documents:
                         doc_id = doc.doc_id
                         if doc_id not in existing_doc_ids:
-                            nodes = (
-                                self.text_splitter.get_nodes_from_documents(
-                                    [doc]
-                                )
-                            )
+                            nodes = self.text_splitter.get_nodes_from_documents([doc])
                             new_nodes.extend(nodes)
 
                     if new_nodes:
@@ -321,9 +315,7 @@ class RAGMixin:
                             if node_text in self.__keyword_cache:
                                 extracted = self.__keyword_cache[node_text]
                             else:
-                                extracted = self._extract_keywords_from_text(
-                                    node_text
-                                )
+                                extracted = self._extract_keywords_from_text(node_text)
                                 self.__keyword_cache[node_text] = extracted
 
                             for keyword in extracted:
@@ -342,13 +334,11 @@ class RAGMixin:
                                 )
                                 new_ids = set(node_ids)
                                 # Merge and convert back to list
-                                self.__index.index_struct.table[keyword] = (
-                                    list(existing_ids | new_ids)
+                                self.__index.index_struct.table[keyword] = list(
+                                    existing_ids | new_ids
                                 )
                             else:
-                                self.__index.index_struct.table[keyword] = (
-                                    node_ids
-                                )
+                                self.__index.index_struct.table[keyword] = node_ids
 
                         elapsed = time.time() - start_time
                         self.logger.info(
@@ -404,28 +394,20 @@ class RAGMixin:
             documents = []
             try:
                 documents = self.documents
-                self.logger.debug(
-                    f"Retrieved {len(documents)} documents for indexing"
-                )
+                self.logger.debug(f"Retrieved {len(documents)} documents for indexing")
             except Exception as e:
-                self.logger.error(
-                    f"Error getting documents for indexing: {str(e)}"
-                )
+                self.logger.error(f"Error getting documents for indexing: {str(e)}")
                 # Try to get documents without conversation documents
                 try:
                     documents = (
-                        self.document_reader.load_data()
-                        if self.document_reader
-                        else []
+                        self.document_reader.load_data() if self.document_reader else []
                     )
                     documents += self.news_articles
                     self.logger.debug(
                         f"Retrieved {len(documents)} documents without conversation documents"
                     )
                 except Exception as e2:
-                    self.logger.error(
-                        f"Error getting fallback documents: {str(e2)}"
-                    )
+                    self.logger.error(f"Error getting fallback documents: {str(e2)}")
                     documents = []
 
             if not documents:
@@ -439,9 +421,7 @@ class RAGMixin:
                 show_progress=True,  # Show progress for better visibility during lengthy operations
             )
             elapsed = time.time() - start_time
-            self.logger.debug(
-                f"Index loaded successfully in {elapsed:.2f} seconds."
-            )
+            self.logger.debug(f"Index loaded successfully in {elapsed:.2f} seconds.")
         except TypeError as e:
             self.logger.error(f"Error loading index: {str(e)}")
         except Exception as e:
@@ -452,13 +432,9 @@ class RAGMixin:
         self.logger.info("Saving index to disc...")
         start_time = time.time()
         try:
-            self.__index.storage_context.persist(
-                persist_dir=self.storage_persist_dir
-            )
+            self.__index.storage_context.persist(persist_dir=self.storage_persist_dir)
             elapsed = time.time() - start_time
-            self.logger.info(
-                f"Index saved successfully in {elapsed:.2f} seconds."
-            )
+            self.logger.info(f"Index saved successfully in {elapsed:.2f} seconds.")
             if self.llm_settings.perform_conversation_rag:
                 self.logger.info("Setting conversations status to indexed...")
                 self._update_conversations_status("indexed")
@@ -504,9 +480,7 @@ class RAGMixin:
                     f"Retriever loaded successfully with index in {elapsed:.2f} seconds."
                 )
             except Exception as e:
-                self.logger.error(
-                    f"Error setting up the RAG retriever: {str(e)}"
-                )
+                self.logger.error(f"Error setting up the RAG retriever: {str(e)}")
         return self.__retriever
 
     @retriever.setter
@@ -597,9 +571,7 @@ class RAGMixin:
 
     @property
     def target_files(self) -> Optional[List[str]]:
-        return [
-            target_file.file_path for target_file in self.chatbot.target_files
-        ]
+        return [target_file.file_path for target_file in self.chatbot.target_files]
 
     @property
     def conversations(self) -> List[Conversation]:
@@ -642,8 +614,7 @@ class RAGMixin:
         conversation_documents = []
         try:
             conversations = Conversation.objects.filter(
-                (Conversation.status != "indexed")
-                | (Conversation.status is None)
+                (Conversation.status != "indexed") | (Conversation.status is None)
             )
             total_conversations = len(conversations)
             if total_conversations == 1:
@@ -690,23 +661,17 @@ class RAGMixin:
                     )
                     continue
         except Exception as e:
-            self.logger.error(
-                f"Error getting conversation documents: {str(e)}"
-            )
+            self.logger.error(f"Error getting conversation documents: {str(e)}")
         return conversation_documents
 
     @property
     def documents(self) -> List[Document]:
-        documents = (
-            self.document_reader.load_data() if self.document_reader else []
-        )
+        documents = self.document_reader.load_data() if self.document_reader else []
         if self.llm_settings.perform_conversation_rag:
             try:
                 documents += self.conversation_documents
             except Exception as e:
-                self.logger.error(
-                    f"Error getting conversation documents: {str(e)}"
-                )
+                self.logger.error(f"Error getting conversation documents: {str(e)}")
                 # Continue without conversation documents
         documents += self.news_articles
         return documents
@@ -714,9 +679,7 @@ class RAGMixin:
     @property
     def storage_persist_dir(self) -> str:
         return os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path, "text", "other", "cache"
-            )
+            os.path.join(self.path_settings.base_path, "text", "other", "cache")
         )
 
     @property
@@ -747,9 +710,7 @@ class RAGMixin:
     def storage_context(self, value: StorageContext):
         self.__storage_context = value
 
-    def update_rag_system_prompt(
-        self, rag_system_prompt: Optional[str] = None
-    ):
+    def update_rag_system_prompt(self, rag_system_prompt: Optional[str] = None):
         rag_system_prompt = rag_system_prompt or self.rag_system_prompt
         self.rag_engine_tool.update_system_prompt(
             rag_system_prompt or self.rag_system_prompt
@@ -819,13 +780,9 @@ class RAGMixin:
     def _save_index(self):
         pass
 
-    def load_html_into_rag(
-        self, html: str, doc_id: str = "manual_html"
-    ) -> None:
+    def load_html_into_rag(self, html: str, doc_id: str = "manual_html") -> None:
         """Manually load an HTML string into the RAG engine as a Document."""
-        doc = Document(
-            text=html, metadata={"id": doc_id, "source": "manual_html"}
-        )
+        doc = Document(text=html, metadata={"id": doc_id, "source": "manual_html"})
         self.index = RAKEKeywordTableIndex.from_documents(
             [doc], llm=self.llm, show_progress=True
         )

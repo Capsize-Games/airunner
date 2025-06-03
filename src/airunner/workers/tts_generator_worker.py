@@ -136,9 +136,7 @@ class TTSGeneratorWorker(Worker):
 
     def _initialize_tts_model_manager(self):
         self.logger.info("Initializing TTS handler...")
-        model = (
-            AIRUNNER_TTS_MODEL_TYPE or self.chatbot_voice_settings.model_type
-        )
+        model = AIRUNNER_TTS_MODEL_TYPE or self.chatbot_voice_settings.model_type
         if model is None:
             self.logger.error("No TTS model found. Skipping initialization.")
             return
@@ -163,8 +161,7 @@ class TTSGeneratorWorker(Worker):
         self.add_to_queue(
             {
                 "message": str(data.get("message", "")),
-                "is_end_of_message": data.get("is_end_of_message", False)
-                is True,
+                "is_end_of_message": data.get("is_end_of_message", False) is True,
             }
         )
 
@@ -224,18 +221,14 @@ class TTSGeneratorWorker(Worker):
                         if p == ",":
                             if word_count(before) < 3 or word_count(after) < 3:
                                 continue  # Skip splitting if there are not enough words around the comma
-                        sentence = (
-                            before + p
-                        )  # Include the punctuation in the sentence
+                        sentence = before + p  # Include the punctuation in the sentence
                         self._generate(sentence)
                         self.play_queue_started = True
 
                         # Set tokens to the remaining text
                         remaining_text = after.strip()
                         if not self.do_interrupt:
-                            self.tokens = (
-                                [remaining_text] if remaining_text else []
-                            )
+                            self.tokens = [remaining_text] if remaining_text else []
                             break
 
         if self.do_interrupt:
@@ -278,9 +271,7 @@ class TTSGeneratorWorker(Worker):
         # Preprocess message for TTS: replace code/LaTeX with speakable text
         message = FormatterExtended.to_speakable_text(message)
 
-        model = (
-            AIRUNNER_TTS_MODEL_TYPE or self.chatbot_voice_settings.model_type
-        )
+        model = AIRUNNER_TTS_MODEL_TYPE or self.chatbot_voice_settings.model_type
 
         if model is None:
             self.logger.error("No TTS model found. Skipping generation.")
@@ -295,9 +286,7 @@ class TTSGeneratorWorker(Worker):
             tts_req: Optional[Type[TTSRequest]] = None
 
             if model_type is TTSModel.SPEECHT5:
-                tts_req = TTSRequest(
-                    message=message, gender=self.chatbot.gender
-                )
+                tts_req = TTSRequest(message=message, gender=self.chatbot.gender)
             elif model_type is TTSModel.OPENVOICE:
                 tts_req = OpenVoiceTTSRequest(
                     message=message, gender=self.chatbot.gender

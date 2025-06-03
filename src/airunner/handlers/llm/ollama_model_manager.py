@@ -84,8 +84,7 @@ class OllamaEnhanced(Ollama):
                     not tried_pull
                     and hasattr(e, "args")
                     and any(
-                        "not found, try pulling it first" in str(arg)
-                        for arg in e.args
+                        "not found, try pulling it first" in str(arg) for arg in e.args
                     )
                 ):
                     import subprocess
@@ -93,14 +92,10 @@ class OllamaEnhanced(Ollama):
                     import re
                     from airunner.api import API
 
-                    model_name = getattr(self, "model", None) or kwargs.get(
-                        "model"
-                    )
+                    model_name = getattr(self, "model", None) or kwargs.get("model")
                     if not model_name:
                         raise  # Can't determine model name
-                    print(
-                        f"Model '{model_name}' not found. Downloading with ollama..."
-                    )
+                    print(f"Model '{model_name}' not found. Downloading with ollama...")
                     try:
                         process = subprocess.Popen(
                             ["ollama", "pull", model_name],

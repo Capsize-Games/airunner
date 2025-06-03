@@ -1,6 +1,8 @@
 from PySide6.QtCore import Slot
 from airunner.gui.windows.setup_wizard.base_wizard import BaseWizard
-from airunner.gui.windows.setup_wizard.model_setup.controlnet.templates.controlnet_setup_ui import Ui_controlnet_setup
+from airunner.gui.windows.setup_wizard.model_setup.controlnet.templates.controlnet_setup_ui import (
+    Ui_controlnet_setup,
+)
 
 
 class ControlnetSetup(BaseWizard):

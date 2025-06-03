@@ -27,9 +27,7 @@ class LatexWidget(BaseContentWidget):
         )
         self.webView.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         # Add to layout
-        self.layout.addWidget(
-            self.webView
-        )  # Store the font properties for later use
+        self.layout.addWidget(self.webView)  # Store the font properties for later use
         self.font_family = "Arial"
         self.font_size = 14
 
@@ -39,9 +37,7 @@ class LatexWidget(BaseContentWidget):
             loader=FileSystemLoader(static_html_dir),
             autoescape=select_autoescape(["html", "xml"]),
         )
-        self._template = self._jinja_env.get_template(
-            "latex_widget.jinja2.html"
-        )
+        self._template = self._jinja_env.get_template("latex_widget.jinja2.html")
 
     def setContent(self, content):
         super().setContent(content)

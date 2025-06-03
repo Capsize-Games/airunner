@@ -16,9 +16,7 @@ def cjke_cleaners2(text):
         lambda x: japanese_to_ipa2(x.group(1)) + " ",
         text,
     )
-    text = re.sub(
-        r"\[KO\](.*?)\[KO\]", lambda x: korean_to_ipa(x.group(1)) + " ", text
-    )
+    text = re.sub(r"\[KO\](.*?)\[KO\]", lambda x: korean_to_ipa(x.group(1)) + " ", text)
     text = re.sub(
         r"\[EN\](.*?)\[EN\]", lambda x: english_to_ipa2(x.group(1)) + " ", text
     )

@@ -14,7 +14,7 @@ def expand_dims(v, dims):
 
 
 class FlowMatchUniPC:
-    def __init__(self, model, extra_args, variant='bh1'):
+    def __init__(self, model, extra_args, variant="bh1"):
         self.model = model
         self.variant = variant
         self.extra_args = extra_args
@@ -27,8 +27,8 @@ class FlowMatchUniPC:
         dims = x.dim()
 
         t_prev_0 = t_prev_list[-1]
-        lambda_prev_0 = - torch.log(t_prev_0)
-        lambda_t = - torch.log(t)
+        lambda_prev_0 = -torch.log(t_prev_0)
+        lambda_t = -torch.log(t)
         model_prev_0 = model_prev_list[-1]
 
         h = lambda_t - lambda_prev_0
@@ -38,12 +38,12 @@ class FlowMatchUniPC:
         for i in range(1, order):
             t_prev_i = t_prev_list[-(i + 1)]
             model_prev_i = model_prev_list[-(i + 1)]
-            lambda_prev_i = - torch.log(t_prev_i)
+            lambda_prev_i = -torch.log(t_prev_i)
             rk = ((lambda_prev_i - lambda_prev_0) / h)[0]
             rks.append(rk)
             D1s.append((model_prev_i - model_prev_0) / rk)
 
-        rks.append(1.)
+        rks.append(1.0)
         rks = torch.tensor(rks, device=x.device)
 
         R = []
@@ -55,17 +55,17 @@ class FlowMatchUniPC:
 
         factorial_i = 1
 
-        if self.variant == 'bh1':
+        if self.variant == "bh1":
             B_h = hh
-        elif self.variant == 'bh2':
+        elif self.variant == "bh2":
             B_h = torch.expm1(hh)
         else:
-            raise NotImplementedError('Bad variant!')
+            raise NotImplementedError("Bad variant!")
 
         for i in range(1, order + 1):
             R.append(torch.pow(rks, i - 1))
             b.append(h_phi_k * factorial_i / B_h)
-            factorial_i *= (i + 1)
+            factorial_i *= i + 1
             h_phi_k = h_phi_k / hh - 1 / factorial_i
 
         R = torch.stack(R)
@@ -88,7 +88,10 @@ class FlowMatchUniPC:
         else:
             rhos_c = torch.linalg.solve(R, b)
 
-        x_t_ = expand_dims(t / t_prev_0, dims) * x - expand_dims(h_phi_1, dims) * model_prev_0
+        x_t_ = (
+            expand_dims(t / t_prev_0, dims) * x
+            - expand_dims(h_phi_1, dims) * model_prev_0
+        )
 
         if use_predictor:
             pred_res = torch.tensordot(D1s, rhos_p, dims=([1], [0]))
@@ -103,7 +106,7 @@ class FlowMatchUniPC:
         else:
             corr_res = 0
 
-        D1_t = (model_t - model_prev_0)
+        D1_t = model_t - model_prev_0
         x_t = x_t_ - expand_dims(B_h, dims) * (corr_res + rhos_c[-1] * D1_t)
 
         return x_t, model_t
@@ -119,11 +122,15 @@ class FlowMatchUniPC:
                 t_prev_list = [vec_t]
             elif i < order:
                 init_order = i
-                x, model_x = self.update_fn(x, model_prev_list, t_prev_list, vec_t, init_order)
+                x, model_x = self.update_fn(
+                    x, model_prev_list, t_prev_list, vec_t, init_order
+                )
                 model_prev_list.append(model_x)
                 t_prev_list.append(vec_t)
             else:
-                x, model_x = self.update_fn(x, model_prev_list, t_prev_list, vec_t, order)
+                x, model_x = self.update_fn(
+                    x, model_prev_list, t_prev_list, vec_t, order
+                )
                 model_prev_list.append(model_x)
                 t_prev_list.append(vec_t)
 
@@ -131,11 +138,15 @@ class FlowMatchUniPC:
             t_prev_list = t_prev_list[-order:]
 
             if callback is not None:
-                callback({'x': x, 'i': i, 'denoised': model_prev_list[-1]})
+                callback({"x": x, "i": i, "denoised": model_prev_list[-1]})
 
         return model_prev_list[-1]
 
 
-def sample_unipc(model, noise, sigmas, extra_args=None, callback=None, disable=False, variant='bh1'):
-    assert variant in ['bh1', 'bh2']
-    return FlowMatchUniPC(model, extra_args=extra_args, variant=variant).sample(noise, sigmas=sigmas, callback=callback, disable_pbar=disable)
+def sample_unipc(
+    model, noise, sigmas, extra_args=None, callback=None, disable=False, variant="bh1"
+):
+    assert variant in ["bh1", "bh2"]
+    return FlowMatchUniPC(model, extra_args=extra_args, variant=variant).sample(
+        noise, sigmas=sigmas, callback=callback, disable_pbar=disable
+    )

@@ -13,7 +13,7 @@ class BaseWizard(
 
     def __init__(self, parent: QWizard):
         super().__init__()
-        
+
         if self.class_name_:
             self.ui = self.class_name_()
             self.ui.setupUi(self)

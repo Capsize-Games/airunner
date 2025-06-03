@@ -152,20 +152,12 @@ def txtsplit(text, desired_length=100, max_length=200):
                 d = pos - split_pos[-1]
                 seek(-d)
             else:
-                while (
-                    c not in "!?.\n "
-                    and pos > 0
-                    and len(current) > desired_length
-                ):
+                while c not in "!?.\n " and pos > 0 and len(current) > desired_length:
                     c = seek(-1)
             commit()
-        elif not in_quote and (
-            c in "!?\n" or (c in ".," and peek(1) in "\n ")
-        ):
+        elif not in_quote and (c in "!?\n" or (c in ".," and peek(1) in "\n ")):
             while (
-                pos < len(text) - 1
-                and len(current) < max_length
-                and peek(1) in "!?."
+                pos < len(text) - 1 and len(current) < max_length and peek(1) in "!?."
             ):
                 c = seek(1)
             split_pos.append(pos)

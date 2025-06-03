@@ -19,11 +19,14 @@ class ControlnetDownload(DownloadWizardPage):
             progress_bar = QProgressBar()
             progress_bar.setValue(0)
             progress_bar.setMaximum(100)
-            self.models_to_download.append(dict(
-                model=controlnet,
-                progress_bar=progress_bar
-            ))
-            checkbox.stateChanged.connect(lambda _controlnet=controlnet: self.models_to_download.append(_controlnet))
+            self.models_to_download.append(
+                dict(model=controlnet, progress_bar=progress_bar)
+            )
+            checkbox.stateChanged.connect(
+                lambda _controlnet=controlnet: self.models_to_download.append(
+                    _controlnet
+                )
+            )
             self.ui.tableWidget.setCellWidget(index, 0, checkbox)
             self.ui.tableWidget.setCellWidget(index, 1, label)
             self.ui.tableWidget.setCellWidget(index, 2, progress_bar)
