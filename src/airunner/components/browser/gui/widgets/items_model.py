@@ -30,6 +30,8 @@ def bookmarks_to_model(
                     "title": bm.title,
                     "url": bm.url,
                     "icon": bm.icon,
+                    "created_at": bm.created_at,
+                    "updated_at": bm.updated_at,
                 },
                 Qt.UserRole,
             )
@@ -41,14 +43,20 @@ def bookmarks_to_model(
 def history_to_model(history: list[HistoryEntry]) -> QStandardItemModel:
     model = QStandardItemModel()
     for entry in history:
-        item = QStandardItem(entry.title)
+        # Show the most recent visit date
+        last_visited = entry.visits[-1] if entry.visits else None
+        label = entry.title
+        if last_visited:
+            label = f"{entry.title} ({last_visited[:19].replace('T', ' ')})"
+        item = QStandardItem(label)
         item.setEditable(False)
         item.setData(
             {
                 "type": "history",
                 "title": entry.title,
                 "url": entry.url,
-                "visited_at": entry.visited_at,
+                "visited_at": last_visited,
+                "visits": entry.visits,
             },
             Qt.UserRole,
         )
