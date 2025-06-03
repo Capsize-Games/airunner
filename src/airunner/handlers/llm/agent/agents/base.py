@@ -119,24 +119,20 @@ class BaseAgent(
         *args,
         **kwargs,
     ) -> None:
-        """
-        Initialize the BaseAgent.
-        """
         self.default_tool_choice: Optional[Union[str, dict]] = (
             default_tool_choice
         )
-        self._prompt = None
-        self._language = None
-        self._llm_request: Optional[LLMRequest] = None
+        self.prompt: Optional[str] = None
+        self.webpage_html: str = ""
+        self.current_tab: Optional[Tab] = None
+        self.do_interrupt: bool = False
         self.llm_settings: LLMSettings = llm_settings
         self._use_memory: bool = use_memory
         self._action: LLMActionType = LLMActionType.NONE
         self._chat_prompt: str = ""
-        self._current_tab: Optional[Tab] = None
         self._streaming_stopping_criteria: Optional[
             ExternalConditionStoppingCriteria
         ] = None
-        self._do_interrupt: bool = False
         self._llm: Optional[LLM] = None
         self._conversation: Optional[Conversation] = None
         self._conversation_id: Optional[int] = None
@@ -159,7 +155,6 @@ class BaseAgent(
         self._react_tool_agent: Optional[Any] = react_tool_agent
         self._complete_response: str = ""
         self._store_user_tool: Optional[Any] = store_user_tool
-        self._webpage_html: str = ""
         self.model: Optional[Any] = model
         self.tokenizer: Optional[Any] = tokenizer
         self._conversation_strategy = conversation_strategy
@@ -185,30 +180,7 @@ class BaseAgent(
 
     @property
     def logger(self):
-        """
-        Get the logger instance for this agent.
-        Returns:
-            Logger: The logger instance.
-        """
         return self._logger
-
-    @property
-    def prompt(self) -> Optional[str]:
-        """
-        Get the current prompt string.
-        Returns:
-            Optional[str]: The current prompt.
-        """
-        return self._prompt
-
-    @prompt.setter
-    def prompt(self, value: str) -> None:
-        """
-        Set the current prompt string.
-        Args:
-            value (str): The prompt to set.
-        """
-        self._prompt = value
 
     @property
     def language(self) -> str:
@@ -415,59 +387,6 @@ class BaseAgent(
         self._chat_engine = None
         self._chat_engine_tool = None
         self._react_tool_agent = None
-
-    @property
-    def webpage_html(self) -> str:
-        """
-        Get the webpage HTML content.
-        Returns:
-            str: The webpage HTML content.
-        """
-        return self._webpage_html
-
-    @webpage_html.setter
-    def webpage_html(self, value: str) -> None:
-        """
-        Set the webpage HTML content.
-        Args:
-            value (str): The HTML content to set.
-        """
-        self._webpage_html = value
-
-    @property
-    def current_tab(self) -> Optional[Tab]:
-        """
-        Get the current active tab.
-        Returns:
-            Optional[Tab]: The current active tab.
-        """
-        if not self._current_tab:
-            self._current_tab = Tab.objects.filter_by_first(
-                section="center", active=True
-            )
-        return self._current_tab
-
-    @current_tab.setter
-    def current_tab(self, value: Optional[Tab]) -> None:
-        """
-        Set the current active tab.
-        Args:
-            value (Optional[Tab]): The tab to set as current.
-        """
-        self._current_tab = value
-
-    def _get_or_create_singleton(
-        self, attr_name: str, factory: Type, *args: Any, **kwargs: Any
-    ) -> Any:
-        """
-        Get or create a singleton instance for the given attribute.
-        If the attribute was injected (not None), use it as-is.
-        Otherwise, create it using the factory.
-        """
-        if hasattr(self, attr_name) and getattr(self, attr_name) is not None:
-            return getattr(self, attr_name)
-        setattr(self, attr_name, factory(*args, **kwargs))
-        return getattr(self, attr_name)
 
     @property
     def tools(self) -> list:
@@ -821,24 +740,6 @@ class BaseAgent(
             )
 
         return self._get_or_create_singleton("_search_engine_tool", factory)
-
-    @property
-    def do_interrupt(self) -> bool:
-        """
-        Whether the agent should interrupt the process.
-        Returns:
-            bool: True if the process should be interrupted.
-        """
-        return self._do_interrupt
-
-    @do_interrupt.setter
-    def do_interrupt(self, value: bool) -> None:
-        """
-        Set whether the agent should interrupt the process.
-        Args:
-            value (bool): True to interrupt the process.
-        """
-        self._do_interrupt = value
 
     @property
     def bot_mood(self) -> str:
