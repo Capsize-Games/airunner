@@ -459,18 +459,14 @@ class CircleNodeItem(NodeItem):
             if port.display_name:
                 if text.boundingRect().width() > text_width:
                     text_width = text.boundingRect().width()
-                port_widths += port.boundingRect().width() / len(
-                    self._input_items
-                )
+                port_widths += port.boundingRect().width() / len(self._input_items)
 
         for port, text in self._output_items.items():
             text.setVisible(port.display_name)
             if port.display_name:
                 if text.boundingRect().width() > text_width:
                     text_width = text.boundingRect().width()
-                port_widths += port.boundingRect().width() / len(
-                    self._output_items
-                )
+                port_widths += port.boundingRect().width() / len(self._output_items)
 
         add_width = (text_width * 2) + port_widths
         add_height = self.text_item.boundingRect().width() / 2

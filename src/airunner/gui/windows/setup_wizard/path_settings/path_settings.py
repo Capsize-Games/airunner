@@ -4,7 +4,9 @@ from PySide6.QtCore import Slot
 
 from airunner.data.bootstrap.path_settings_data import PATH_SETTINGS_DATA
 from airunner.gui.windows.setup_wizard.base_wizard import BaseWizard
-from airunner.gui.windows.setup_wizard.path_settings.templates.path_settings_ui import Ui_PathSettings
+from airunner.gui.windows.setup_wizard.path_settings.templates.path_settings_ui import (
+    Ui_PathSettings,
+)
 from airunner.settings import AIRUNNER_BASE_PATH
 
 
@@ -18,13 +20,7 @@ class PathSettings(BaseWizard):
     def _update_paths(self, base_path: str):
         self.update_path_settings("base_path", base_path)
         for k, v in PATH_SETTINGS_DATA.items():
-            self.update_path_settings(
-                k, 
-                os.path.expanduser(os.path.join(
-                    base_path, 
-                    v
-                ))
-            )
+            self.update_path_settings(k, os.path.expanduser(os.path.join(base_path, v)))
 
     @Slot()
     def browse_files(self):

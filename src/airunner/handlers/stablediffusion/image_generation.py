@@ -23,9 +23,7 @@ def check_and_mark_nsfw_images(
     if not feature_extractor or not safety_checker:
         return images, [False] * len(images)
     safety_checker.to(device)
-    safety_checker_input = feature_extractor(images, return_tensors="pt").to(
-        device
-    )
+    safety_checker_input = feature_extractor(images, return_tensors="pt").to(device)
     _, has_nsfw_concepts = safety_checker(
         images=[np.array(img) for img in images],
         clip_input=safety_checker_input.pixel_values.to(device),

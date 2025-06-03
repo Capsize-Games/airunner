@@ -1,6 +1,8 @@
 from PySide6.QtCore import Slot
 from airunner.gui.windows.setup_wizard.base_wizard import BaseWizard
-from airunner.gui.windows.setup_wizard.model_setup.llm.templates.llm_welcome_screen_ui import Ui_llm_welcome_screen
+from airunner.gui.windows.setup_wizard.model_setup.llm.templates.llm_welcome_screen_ui import (
+    Ui_llm_welcome_screen,
+)
 
 
 class LLMWelcomeScreen(BaseWizard):

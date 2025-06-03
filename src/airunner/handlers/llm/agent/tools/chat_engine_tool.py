@@ -60,9 +60,7 @@ class ChatEngineTool(
             from airunner.utils.application.get_logger import get_logger
             from airunner.settings import AIRUNNER_LOG_LEVEL
 
-            self._logger = get_logger(
-                self.__class__.__name__, AIRUNNER_LOG_LEVEL
-            )
+            self._logger = get_logger(self.__class__.__name__, AIRUNNER_LOG_LEVEL)
         super().__init__(agent)
 
     @property
@@ -105,9 +103,7 @@ class ChatEngineTool(
     def metadata(self) -> ToolMetadata:
         return self._metadata
 
-    def call(
-        self, *args: Any, tool_call: bool = False, **kwargs: Any
-    ) -> ToolOutput:
+    def call(self, *args: Any, tool_call: bool = False, **kwargs: Any) -> ToolOutput:
         system_prompt = kwargs.get("system_prompt", None)
         if system_prompt is not None:
             self.chat_engine.update_system_prompt(system_prompt)
@@ -121,21 +117,15 @@ class ChatEngineTool(
         if not self._do_interrupt:
             do_not_display = kwargs.get("do_not_display", False)
             chat_history = kwargs.get("chat_history", [])
-            params = (
-                {"chat_history": chat_history} if len(chat_history) > 0 else {}
-            )
+            params = {"chat_history": chat_history} if len(chat_history) > 0 else {}
 
             try:
-                streaming_response = self.chat_engine.stream_chat(
-                    query_str, **params
-                )
+                streaming_response = self.chat_engine.stream_chat(query_str, **params)
             except jinja2.exceptions.TemplateError as e:
                 self.logger.error(
                     f"Error in template rendering. Please check your template. {e}"
                 )
-                response = (
-                    "Error in template rendering. Please check your template."
-                )
+                response = "Error in template rendering. Please check your template."
                 self._do_interrupt = False
                 return ToolOutput(
                     content=str(response),

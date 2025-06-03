@@ -90,15 +90,9 @@ class CanvasWidget(BaseWidget):
             self.ui.grid_button,
             current_tool is CanvasToolName.ACTIVE_GRID_AREA,
         )
-        set_widget_state(
-            self.ui.brush_button, current_tool is CanvasToolName.BRUSH
-        )
-        set_widget_state(
-            self.ui.eraser_button, current_tool is CanvasToolName.ERASER
-        )
-        set_widget_state(
-            self.ui.text_button, current_tool is CanvasToolName.TEXT
-        )
+        set_widget_state(self.ui.brush_button, current_tool is CanvasToolName.BRUSH)
+        set_widget_state(self.ui.eraser_button, current_tool is CanvasToolName.ERASER)
+        set_widget_state(self.ui.text_button, current_tool is CanvasToolName.TEXT)
         set_widget_state(self.ui.grid_button, show_grid is True)
 
     @property
@@ -192,12 +186,8 @@ class CanvasWidget(BaseWidget):
         self.ui.active_grid_area_button.setChecked(
             tool is CanvasToolName.ACTIVE_GRID_AREA and active
         )
-        self.ui.brush_button.setChecked(
-            tool is CanvasToolName.BRUSH and active
-        )
-        self.ui.eraser_button.setChecked(
-            tool is CanvasToolName.ERASER and active
-        )
+        self.ui.brush_button.setChecked(tool is CanvasToolName.BRUSH and active)
+        self.ui.eraser_button.setChecked(tool is CanvasToolName.ERASER and active)
         self.ui.text_button.setChecked(tool is CanvasToolName.TEXT and active)
         self.ui.grid_button.setChecked(self.grid_settings.show_grid)
         self.ui.active_grid_area_button.blockSignals(False)
@@ -283,10 +273,7 @@ class CanvasWidget(BaseWidget):
             cursor = Qt.CursorShape.ArrowCursor
 
         # Only set cursor if it changed
-        if (
-            not hasattr(self, "_current_cursor")
-            or self._current_cursor != cursor
-        ):
+        if not hasattr(self, "_current_cursor") or self._current_cursor != cursor:
             if cursor is not None:
                 self.setCursor(cursor)
             self._current_cursor = cursor
@@ -296,6 +283,4 @@ class CanvasWidget(BaseWidget):
 
     def do_draw(self, force_draw: bool = False):
         self.api.art.canvas.do_draw(force_draw)
-        self.ui.canvas_container_size = (
-            self.ui.canvas_container.viewport().size()
-        )
+        self.ui.canvas_container_size = self.ui.canvas_container.viewport().size()

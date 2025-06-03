@@ -16,9 +16,7 @@ class BaseManager:
         self.cls = cls
         self.logger = get_logger(cls.__name__, AIRUNNER_LOG_LEVEL)
 
-    def _apply_eager_load(
-        self, query: Query, eager_load: Optional[List[str]]
-    ) -> Query:
+    def _apply_eager_load(self, query: Query, eager_load: Optional[List[str]]) -> Query:
         if eager_load:
             for relationship in eager_load:
                 try:
@@ -50,9 +48,7 @@ class BaseManager:
             session.expunge_all()
             return result.to_dataclass() if result else None
 
-    def get_orm(
-        self, pk, eager_load: Optional[List[str]] = None
-    ) -> Optional[Any]:
+    def get_orm(self, pk, eager_load: Optional[List[str]] = None) -> Optional[Any]:
         """
         Return a live ORM instance (not a dataclass) for update/delete/session operations.
         """
@@ -188,11 +184,7 @@ class BaseManager:
         with session_scope() as session:
             try:
                 if pk:
-                    obj = (
-                        session.query(self.cls)
-                        .filter(self.cls.id == pk)
-                        .first()
-                    )
+                    obj = session.query(self.cls).filter(self.cls.id == pk).first()
                     if obj:
                         session.delete(obj)
                         session.commit()
@@ -200,9 +192,7 @@ class BaseManager:
                     else:
                         return False
                 elif kwargs:
-                    result = (
-                        session.query(self.cls).filter_by(**kwargs).delete()
-                    )
+                    result = session.query(self.cls).filter_by(**kwargs).delete()
                     session.commit()
                     return result
                 else:

@@ -14,9 +14,7 @@ class NodeScene(QtWidgets.QGraphicsScene):
 
     def __repr__(self):
         cls_name = str(self.__class__.__name__)
-        return '<{}("{}") object at {}>'.format(
-            cls_name, self.viewer(), hex(id(self))
-        )
+        return '<{}("{}") object at {}>'.format(cls_name, self.viewer(), hex(id(self)))
 
     # def _draw_text(self, painter, pen):
     #     font = QtGui.QFont()

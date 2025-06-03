@@ -2,7 +2,7 @@ import importlib
 from typing import List
 
 import gruut
-from gruut_ipa import IPA # pip install gruut_ipa
+from gruut_ipa import IPA  # pip install gruut_ipa
 
 from airunner.vendor.melo.text.es_phonemizer.base import BasePhonemizer
 from airunner.vendor.melo.text.es_phonemizer.punctuation import Punctuation
@@ -54,7 +54,9 @@ class Gruut(BasePhonemizer):
     def name():
         return "gruut"
 
-    def phonemize_gruut(self, text: str, separator: str = "|", tie=False) -> str:  # pylint: disable=unused-argument
+    def phonemize_gruut(
+        self, text: str, separator: str = "|", tie=False
+    ) -> str:  # pylint: disable=unused-argument
         """Convert input text to phonemes.
 
         Gruut phonemizes the given `str` by seperating each phoneme character with `separator`, even for characters
@@ -74,7 +76,9 @@ class Gruut(BasePhonemizer):
                 with '_'. This option requires espeak>=1.49. Default to False.
         """
         ph_list = []
-        for sentence in gruut.sentences(text, lang=self.language, espeak=self.use_espeak_phonemes):
+        for sentence in gruut.sentences(
+            text, lang=self.language, espeak=self.use_espeak_phonemes
+        ):
             for word in sentence:
                 if word.is_break:
                     # Use actual character for break phoneme (e.g., comma)

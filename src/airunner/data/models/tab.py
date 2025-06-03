@@ -6,7 +6,7 @@ from airunner.data.session_manager import session_scope
 
 
 class Tab(BaseModel):
-    __tablename__ = 'tabs'
+    __tablename__ = "tabs"
     id = Column(Integer, primary_key=True, autoincrement=True)
     section = Column(String, default="", nullable=False)
     name = Column(String, default="", nullable=False)
@@ -29,5 +29,7 @@ class Tab(BaseModel):
             tab_name = tab_widget.tabText(index)
 
             # Set the selected tab to active
-            session.query(Tab).filter(Tab.section == section, Tab.name == tab_name).update({"active": True})
+            session.query(Tab).filter(
+                Tab.section == section, Tab.name == tab_name
+            ).update({"active": True})
             session.commit()

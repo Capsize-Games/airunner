@@ -55,9 +55,7 @@ class ConversationHistoryManager:
         try:
             conversation = Conversation.most_recent()
             if conversation:
-                self.logger.info(
-                    f"Most recent conversation ID: {conversation.id}"
-                )
+                self.logger.info(f"Most recent conversation ID: {conversation.id}")
                 return conversation.id
             self.logger.info("No conversations found.")
             return None
@@ -75,9 +73,7 @@ class ConversationHistoryManager:
         max_messages: int = 50,
     ) -> List[Dict[str, Any]]:
         if conversation is None and conversation_id is not None:
-            conversation = Conversation.objects.filter_by_first(
-                id=conversation_id
-            )
+            conversation = Conversation.objects.filter_by_first(id=conversation_id)
             if conversation is None:
                 self.logger.warning(
                     f"Conversation {conversation_id} not found. Returning empty history."
@@ -89,9 +85,7 @@ class ConversationHistoryManager:
         if conversation is None:
             conversation = Conversation.most_recent()
             if conversation is None:
-                self.logger.warning(
-                    "No conversation found. Returning empty history."
-                )
+                self.logger.warning("No conversation found. Returning empty history.")
                 return []
 
         self.logger.debug(

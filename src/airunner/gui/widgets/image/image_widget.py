@@ -42,12 +42,8 @@ class ImageWidget(BaseWidget):
         # Create a QPixmap object
 
         if isinstance(self.image_path, Image.Image):
-            qimage = ImageQt(
-                self.image_path
-            )  # Convert the PngImageFile to a QImage
-            pixmap = QPixmap.fromImage(
-                qimage
-            )  # Create a QPixmap from the QImage
+            qimage = ImageQt(self.image_path)  # Convert the PngImageFile to a QImage
+            pixmap = QPixmap.fromImage(qimage)  # Create a QPixmap from the QImage
         else:
             # check if thumbnail exists at path
             # if not, create it
@@ -112,9 +108,7 @@ class ImageWidget(BaseWidget):
             pixmap = QPixmap(self.image_path)
 
             # Scale the pixmap to no larger than 128x128 while maintaining aspect ratio
-            pixmap = pixmap.scaled(
-                128, 128, Qt.AspectRatioMode.KeepAspectRatio
-            )
+            pixmap = pixmap.scaled(128, 128, Qt.AspectRatioMode.KeepAspectRatio)
 
             drag.setPixmap(pixmap)
 
@@ -183,17 +177,11 @@ class ImageWidget(BaseWidget):
             QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing
             | QGraphicsView.OptimizationFlag.DontSavePainterState
         )
-        view.setViewportUpdateMode(
-            QGraphicsView.ViewportUpdateMode.FullViewportUpdate
-        )
-        view.setTransformationAnchor(
-            QGraphicsView.ViewportAnchor.AnchorUnderMouse
-        )
+        view.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
+        view.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         view.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        view.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
+        view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         view.setInteractive(True)
         view.setMouseTracking(True)
         view.setRenderHints(

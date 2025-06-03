@@ -33,16 +33,12 @@ def drop_column(cls, col: str):
         inspector = get_inspector()
         foreign_keys = inspector.get_foreign_keys(cls.__tablename__)
 
-        with op.batch_alter_table(
-            cls.__tablename__, recreate="auto"
-        ) as batch_op:
+        with op.batch_alter_table(cls.__tablename__, recreate="auto") as batch_op:
             for fk in foreign_keys:
                 if col in fk["constrained_columns"]:
                     # Only drop the constraint if it has a name
                     if fk.get("name"):
-                        batch_op.drop_constraint(
-                            fk["name"], type_="foreignkey"
-                        )
+                        batch_op.drop_constraint(fk["name"], type_="foreignkey")
                     else:
                         print(
                             f"Skipping unnamed foreign key constraint on column '{col}' (cannot drop by name)"
@@ -64,7 +60,9 @@ def alter_column(
 ):
     # check if column already equals new column
     if getattr(cls, col_a.name).type == col_b.type:
-        msg = f"Column '{col_a}' already has the same type as '{col_b}', skipping modify."
+        msg = (
+            f"Column '{col_a}' already has the same type as '{col_b}', skipping modify."
+        )
         print(msg)
         return
 
@@ -96,13 +94,9 @@ def add_column_with_fk(
     :param fk_name: Name of the foreign key constraint.
     """
     if not column_exists(cls, column_name):
-        with op.batch_alter_table(
-            cls.__tablename__, recreate="always"
-        ) as batch_op:
+        with op.batch_alter_table(cls.__tablename__, recreate="always") as batch_op:
             batch_op.add_column(sa.Column(column_name, column_type))
-            batch_op.create_foreign_key(
-                fk_name, fk_table, [column_name], [fk_column]
-            )
+            batch_op.create_foreign_key(fk_name, fk_table, [column_name], [fk_column])
 
 
 def drop_column_with_fk(cls, column_name: str, fk_name: str) -> None:
@@ -118,9 +112,7 @@ def drop_column_with_fk(cls, column_name: str, fk_name: str) -> None:
         foreign_keys = inspector.get_foreign_keys(cls.__tablename__)
         fk_exists = any(fk["name"] == fk_name for fk in foreign_keys)
 
-        with op.batch_alter_table(
-            cls.__tablename__, recreate="auto"
-        ) as batch_op:
+        with op.batch_alter_table(cls.__tablename__, recreate="auto") as batch_op:
             if fk_exists:
                 batch_op.drop_constraint(fk_name, type_="foreignkey")
             batch_op.drop_column(column_name)
@@ -154,9 +146,7 @@ def safe_alter_column(
         options["server_default"] = existing_server_default
 
     try:
-        with op.batch_alter_table(
-            cls.__tablename__, recreate="auto"
-        ) as batch_op:
+        with op.batch_alter_table(cls.__tablename__, recreate="auto") as batch_op:
             batch_op.alter_column(column_name, **options)
     except sa.exc.OperationalError as e:
         print(f"Error altering column '{column_name}'", e)
@@ -164,9 +154,7 @@ def safe_alter_column(
 
 def safe_alter_columns(cls, columns: List[sa.Column]):
     for column in columns:
-        safe_alter_column(
-            cls, column.name, column.type, column.type, column.nullable
-        )
+        safe_alter_column(cls, column.name, column.type, column.type, column.nullable)
 
 
 def set_default_and_create_fk(
@@ -204,9 +192,7 @@ def set_default(cls, column_name: str, default_value: Any) -> None:
     )
 
 
-def create_unique_constraint(
-    cls, columns: List[str], constraint_name: str
-) -> None:
+def create_unique_constraint(cls, columns: List[str], constraint_name: str) -> None:
     """
     Creates a unique constraint on the specified columns of a table.
 
@@ -231,9 +217,7 @@ def create_unique_constraint(
         print(f"SQLite limitation: {e}")
 
 
-def drop_constraint(
-    cls, constraint_name: str, constraint_type: str = "unique"
-) -> None:
+def drop_constraint(cls, constraint_name: str, constraint_type: str = "unique") -> None:
     """
     Drops a constraint from the specified table.
 

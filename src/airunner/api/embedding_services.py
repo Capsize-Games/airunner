@@ -1,6 +1,7 @@
 from .api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 
+
 class EmbeddingAPIServices(APIServiceBase):
     def delete(self, embedding_widget):
         self.emit_signal(

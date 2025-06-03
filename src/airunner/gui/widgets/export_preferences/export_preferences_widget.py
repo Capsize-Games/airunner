@@ -1,6 +1,7 @@
-
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.export_preferences.templates.export_preferences_ui import Ui_export_preferences
+from airunner.gui.widgets.export_preferences.templates.export_preferences_ui import (
+    Ui_export_preferences,
+)
 from PySide6.QtWidgets import QFileDialog
 
 
@@ -37,29 +38,69 @@ class ExportPreferencesWidget(BaseWidget):
         for element in elements:
             element.blockSignals(True)
         # initialize values:
-        self.ui.metadata_prompt.setChecked(self.metadata_settings.image_export_metadata_prompt is True)
+        self.ui.metadata_prompt.setChecked(
+            self.metadata_settings.image_export_metadata_prompt is True
+        )
         self.ui.metadata_negative_prompt.setChecked(
             self.metadata_settings.image_export_metadata_negative_prompt is True
         )
-        self.ui.metadata_scale.setChecked(self.metadata_settings.image_export_metadata_scale is True)
-        self.ui.metadata_seed.setChecked(self.metadata_settings.image_export_metadata_seed is True)
-        self.ui.metadata_steps.setChecked(self.metadata_settings.image_export_metadata_steps is True)
-        self.ui.metadata_ddim_eta.setChecked(self.metadata_settings.image_export_metadata_ddim_eta is True)
-        self.ui.metadata_iterations.setChecked(self.metadata_settings.image_export_metadata_iterations is True)
-        self.ui.metadata_samples.setChecked(self.metadata_settings.image_export_metadata_samples is True)
-        self.ui.metadata_model.setChecked(self.metadata_settings.image_export_metadata_model is True)
-        self.ui.metadata_model_branch.setChecked(self.metadata_settings.image_export_metadata_model_branch is True)
-        self.ui.metadata_scheduler.setChecked(self.metadata_settings.image_export_metadata_scheduler is True)
-        self.ui.metadata_strength.setChecked(self.metadata_settings.image_export_metadata_strength is True)
-        self.ui.metadata_clip_skip.setChecked(self.metadata_settings.image_export_metadata_clip_skip is True)
-        self.ui.metadata_version.setChecked(self.metadata_settings.image_export_metadata_version is True)
-        self.ui.metadata_lora.setChecked(self.metadata_settings.image_export_metadata_lora is True)
-        self.ui.metadata_embeddings.setChecked(self.metadata_settings.image_export_metadata_embeddings is True)
-        self.ui.metadata_timestamp.setChecked(self.metadata_settings.image_export_metadata_timestamp is True)
-        self.ui.metadata_controlnet.setChecked(self.metadata_settings.image_export_metadata_controlnet is True)
-        self.ui.export_metadata.setChecked(self.metadata_settings.export_metadata is True)
-        self.ui.actionAuto_export_images.setChecked(self.application_settings.auto_export_images is True)
-        self.ui.image_type_dropdown.setCurrentText(self.application_settings.image_export_type)
+        self.ui.metadata_scale.setChecked(
+            self.metadata_settings.image_export_metadata_scale is True
+        )
+        self.ui.metadata_seed.setChecked(
+            self.metadata_settings.image_export_metadata_seed is True
+        )
+        self.ui.metadata_steps.setChecked(
+            self.metadata_settings.image_export_metadata_steps is True
+        )
+        self.ui.metadata_ddim_eta.setChecked(
+            self.metadata_settings.image_export_metadata_ddim_eta is True
+        )
+        self.ui.metadata_iterations.setChecked(
+            self.metadata_settings.image_export_metadata_iterations is True
+        )
+        self.ui.metadata_samples.setChecked(
+            self.metadata_settings.image_export_metadata_samples is True
+        )
+        self.ui.metadata_model.setChecked(
+            self.metadata_settings.image_export_metadata_model is True
+        )
+        self.ui.metadata_model_branch.setChecked(
+            self.metadata_settings.image_export_metadata_model_branch is True
+        )
+        self.ui.metadata_scheduler.setChecked(
+            self.metadata_settings.image_export_metadata_scheduler is True
+        )
+        self.ui.metadata_strength.setChecked(
+            self.metadata_settings.image_export_metadata_strength is True
+        )
+        self.ui.metadata_clip_skip.setChecked(
+            self.metadata_settings.image_export_metadata_clip_skip is True
+        )
+        self.ui.metadata_version.setChecked(
+            self.metadata_settings.image_export_metadata_version is True
+        )
+        self.ui.metadata_lora.setChecked(
+            self.metadata_settings.image_export_metadata_lora is True
+        )
+        self.ui.metadata_embeddings.setChecked(
+            self.metadata_settings.image_export_metadata_embeddings is True
+        )
+        self.ui.metadata_timestamp.setChecked(
+            self.metadata_settings.image_export_metadata_timestamp is True
+        )
+        self.ui.metadata_controlnet.setChecked(
+            self.metadata_settings.image_export_metadata_controlnet is True
+        )
+        self.ui.export_metadata.setChecked(
+            self.metadata_settings.export_metadata is True
+        )
+        self.ui.actionAuto_export_images.setChecked(
+            self.application_settings.auto_export_images is True
+        )
+        self.ui.image_type_dropdown.setCurrentText(
+            self.application_settings.image_export_type
+        )
         self.ui.image_path.setText(self.path_settings.image_path)
         image_types = [
             "png",
@@ -69,7 +110,9 @@ class ExportPreferencesWidget(BaseWidget):
             "tiff",
         ]
         self.ui.image_type_dropdown.addItems(image_types)
-        self.ui.image_type_dropdown.setCurrentText(self.application_settings.image_export_type)
+        self.ui.image_type_dropdown.setCurrentText(
+            self.application_settings.image_export_type
+        )
         for element in elements:
             element.blockSignals(False)
 
@@ -140,7 +183,9 @@ class ExportPreferencesWidget(BaseWidget):
         self.update_application_settings("path_settings", val)
 
     def action_clicked_button_browse(self):
-        path = QFileDialog.getExistingDirectory(self, "Select Directory", self.path_settings.image_path)
+        path = QFileDialog.getExistingDirectory(
+            self, "Select Directory", self.path_settings.image_path
+        )
         if path:
             self.ui.image_path.setText(path)
             self.update_path_settings("embeddings_model_path", path)

@@ -27,4 +27,3 @@ class ChatBridge(QObject):
     @Slot(int)
     def update_content_height(self, height):
         self.contentHeightChanged.emit(height)
-

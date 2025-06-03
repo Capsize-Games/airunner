@@ -34,9 +34,7 @@ class OpenVoicePreferencesWidget(BaseWidget):
             open_voice_settings = OpenVoiceSettings.objects.get(self._id)
             if not open_voice_settings:
                 return
-            OpenVoiceSettings.objects.update(
-                self._id, reference_speaker_path=file_path
-            )
+            OpenVoiceSettings.objects.update(self._id, reference_speaker_path=file_path)
 
     @Slot(str)
     def on_voice_sample_path_textChanged(self, txt: str):
@@ -44,15 +42,11 @@ class OpenVoicePreferencesWidget(BaseWidget):
         if not open_voice_settings:
             return
         if open_voice_settings.reference_speaker_path != txt:
-            OpenVoiceSettings.objects.update(
-                self._id, reference_speaker_path=txt
-            )
+            OpenVoiceSettings.objects.update(self._id, reference_speaker_path=txt)
 
     def initialize_ui(self):
         # initialize comboboxes
-        self.ui.language_combobox.addItems(
-            [lang.value for lang in AvailableLanguage]
-        )
+        self.ui.language_combobox.addItems([lang.value for lang in AvailableLanguage])
 
         # Set the default language to the first item in the combobox
         self.ui.speed_slider.setProperty("table_item", self._item)

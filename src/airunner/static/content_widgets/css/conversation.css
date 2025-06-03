@@ -1,0 +1,126 @@
+/* conversation.css: Dedicated styles for conversation widget */
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background: #000;
+    color: #fff;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+#conversation-container {
+    width: 100%;
+    min-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #444 #222;
+}
+
+#conversation-container::-webkit-scrollbar {
+    height: 0 !important;
+    width: 8px;
+}
+
+.message {
+    margin: 0;
+    padding: 20px;
+    width: 100%;
+    word-break: break-word;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10);
+    display: block;
+    flex-shrink: 0;
+    border: 1px solid #333;
+    border-radius: 5px;
+    background: #202020;
+    overflow-x: hidden;
+}
+
+.message.user {
+    background: #010101;
+}
+
+.message.assistant {
+    background: #101010;
+}
+
+#conversation-container>.message:nth-child(even) {
+    filter: brightness(1.08);
+}
+
+.message .sender {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #bdbdbd;
+    font-size: 0.85em;
+}
+
+.message .content {
+    line-height: 1.6;
+}
+
+.message .timestamp {
+    font-size: 0.75em;
+    color: #777;
+    margin-top: 8px;
+    text-align: right;
+}
+
+/* Code and pre-formatted text styling */
+pre,
+code {
+    color: #e0e0e0 !important;
+    font-size: 0.95em;
+    line-height: 1.5;
+    padding: 8px 12px;
+    overflow-x: auto;
+    max-width: 100%;
+    box-sizing: border-box;
+    font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', 'monospace';
+    background-color: #2d2d2d;
+    border-radius: 4px;
+}
+
+pre {
+    margin: 10px 0;
+    white-space: pre;
+}
+
+code:not(pre code) {
+    padding: 2px 5px;
+    white-space: pre-wrap;
+    background-color: #333;
+}
+
+/* MathJax styling */
+.MathJax {
+    color: #fff !important;
+}
+
+.MathJax_Display {
+    margin: 1em 0 !important;
+}
+
+/* Ensure math content is properly styled */
+mjx-container {
+    color: #fff !important;
+}
+
+mjx-container[display="true"] {
+    margin: 1em 0 !important;
+}

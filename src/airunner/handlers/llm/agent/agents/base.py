@@ -119,24 +119,18 @@ class BaseAgent(
         *args,
         **kwargs,
     ) -> None:
-        """
-        Initialize the BaseAgent.
-        """
-        self.default_tool_choice: Optional[Union[str, dict]] = (
-            default_tool_choice
-        )
-        self._prompt = None
-        self._language = None
-        self._llm_request: Optional[LLMRequest] = None
+        self.default_tool_choice: Optional[Union[str, dict]] = default_tool_choice
+        self.prompt: Optional[str] = None
+        self.webpage_html: str = ""
+        self.current_tab: Optional[Tab] = None
+        self.do_interrupt: bool = False
         self.llm_settings: LLMSettings = llm_settings
         self._use_memory: bool = use_memory
         self._action: LLMActionType = LLMActionType.NONE
         self._chat_prompt: str = ""
-        self._current_tab: Optional[Tab] = None
         self._streaming_stopping_criteria: Optional[
             ExternalConditionStoppingCriteria
         ] = None
-        self._do_interrupt: bool = False
         self._llm: Optional[LLM] = None
         self._conversation: Optional[Conversation] = None
         self._conversation_id: Optional[int] = None
@@ -149,17 +143,12 @@ class BaseAgent(
         self._update_user_data_engine = update_user_data_engine
         self._update_user_data_tool = update_user_data_tool
         self._summary_engine_tool: Optional[Any] = summary_engine_tool
-        self._information_scraper_tool: Optional[Any] = (
-            information_scraper_tool
-        )
-        self._information_scraper_engine: Optional[Any] = (
-            information_scraper_engine
-        )
+        self._information_scraper_tool: Optional[Any] = information_scraper_tool
+        self._information_scraper_engine: Optional[Any] = information_scraper_engine
         self._memory: Optional[BaseMemory] = None
         self._react_tool_agent: Optional[Any] = react_tool_agent
         self._complete_response: str = ""
         self._store_user_tool: Optional[Any] = store_user_tool
-        self._webpage_html: str = ""
         self.model: Optional[Any] = model
         self.tokenizer: Optional[Any] = tokenizer
         self._conversation_strategy = conversation_strategy
@@ -173,42 +162,15 @@ class BaseAgent(
             from airunner.utils.application.get_logger import get_logger
             from airunner.settings import AIRUNNER_LOG_LEVEL
 
-            self._logger = get_logger(
-                self.__class__.__name__, AIRUNNER_LOG_LEVEL
-            )
+            self._logger = get_logger(self.__class__.__name__, AIRUNNER_LOG_LEVEL)
         self.signal_handlers.update(
-            {
-                SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id
-            }
+            {SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id}
         )
         super().__init__(*args, **kwargs)
 
     @property
     def logger(self):
-        """
-        Get the logger instance for this agent.
-        Returns:
-            Logger: The logger instance.
-        """
         return self._logger
-
-    @property
-    def prompt(self) -> Optional[str]:
-        """
-        Get the current prompt string.
-        Returns:
-            Optional[str]: The current prompt.
-        """
-        return self._prompt
-
-    @prompt.setter
-    def prompt(self, value: str) -> None:
-        """
-        Set the current prompt string.
-        Args:
-            value (str): The prompt to set.
-        """
-        self._prompt = value
 
     @property
     def language(self) -> str:
@@ -243,9 +205,7 @@ class BaseAgent(
         """
         use_memory = self._use_memory
         if (
-            self.llm
-            and self.llm_request
-            and self.llm_request.use_memory is False
+            self.llm and self.llm_request and self.llm_request.use_memory is False
         ):  # override with llm_request
             use_memory = False
         return use_memory
@@ -293,10 +253,7 @@ class BaseAgent(
         Returns:
             bool: True if RAG mode is enabled.
         """
-        return (
-            self.rag_enabled
-            and self.action is LLMActionType.PERFORM_RAG_SEARCH
-        )
+        return self.rag_enabled and self.action is LLMActionType.PERFORM_RAG_SEARCH
 
     @property
     def date_time_prompt(self) -> str:
@@ -417,59 +374,6 @@ class BaseAgent(
         self._react_tool_agent = None
 
     @property
-    def webpage_html(self) -> str:
-        """
-        Get the webpage HTML content.
-        Returns:
-            str: The webpage HTML content.
-        """
-        return self._webpage_html
-
-    @webpage_html.setter
-    def webpage_html(self, value: str) -> None:
-        """
-        Set the webpage HTML content.
-        Args:
-            value (str): The HTML content to set.
-        """
-        self._webpage_html = value
-
-    @property
-    def current_tab(self) -> Optional[Tab]:
-        """
-        Get the current active tab.
-        Returns:
-            Optional[Tab]: The current active tab.
-        """
-        if not self._current_tab:
-            self._current_tab = Tab.objects.filter_by_first(
-                section="center", active=True
-            )
-        return self._current_tab
-
-    @current_tab.setter
-    def current_tab(self, value: Optional[Tab]) -> None:
-        """
-        Set the current active tab.
-        Args:
-            value (Optional[Tab]): The tab to set as current.
-        """
-        self._current_tab = value
-
-    def _get_or_create_singleton(
-        self, attr_name: str, factory: Type, *args: Any, **kwargs: Any
-    ) -> Any:
-        """
-        Get or create a singleton instance for the given attribute.
-        If the attribute was injected (not None), use it as-is.
-        Otherwise, create it using the factory.
-        """
-        if hasattr(self, attr_name) and getattr(self, attr_name) is not None:
-            return getattr(self, attr_name)
-        setattr(self, attr_name, factory(*args, **kwargs))
-        return getattr(self, attr_name)
-
-    @property
     def tools(self) -> list:
         """
         Returns a list of tools for the agent. Tools can be registered dynamically via ToolRegistry.register('name').
@@ -542,8 +446,8 @@ class BaseAgent(
             ExternalConditionStoppingCriteria: The stopping criteria.
         """
         if not self._streaming_stopping_criteria:
-            self._streaming_stopping_criteria = (
-                ExternalConditionStoppingCriteria(self.do_interrupt_process)
+            self._streaming_stopping_criteria = ExternalConditionStoppingCriteria(
+                self.do_interrupt_process
             )
         return self._streaming_stopping_criteria
 
@@ -604,9 +508,7 @@ class BaseAgent(
                 ),
             )
 
-        return self._get_or_create_singleton(
-            "_update_user_data_engine", factory
-        )
+        return self._get_or_create_singleton("_update_user_data_engine", factory)
 
     @property
     def mood_engine(self) -> RefreshSimpleChatEngine:
@@ -628,8 +530,7 @@ class BaseAgent(
                             role=self.llm.metadata.system_role,
                         )
                     ]
-                    if hasattr(self, "_mood_update_prompt")
-                    and self._mood_update_prompt
+                    if hasattr(self, "_mood_update_prompt") and self._mood_update_prompt
                     else None
                 ),
             )
@@ -690,9 +591,7 @@ class BaseAgent(
                 ),
             )
 
-        return self._get_or_create_singleton(
-            "_information_scraper_engine", factory
-        )
+        return self._get_or_create_singleton("_information_scraper_engine", factory)
 
     @property
     def mood_engine_tool(self) -> ChatEngineTool:
@@ -821,24 +720,6 @@ class BaseAgent(
             )
 
         return self._get_or_create_singleton("_search_engine_tool", factory)
-
-    @property
-    def do_interrupt(self) -> bool:
-        """
-        Whether the agent should interrupt the process.
-        Returns:
-            bool: True if the process should be interrupted.
-        """
-        return self._do_interrupt
-
-    @do_interrupt.setter
-    def do_interrupt(self, value: bool) -> None:
-        """
-        Set whether the agent should interrupt the process.
-        Args:
-            value (bool): True to interrupt the process.
-        """
-        self._do_interrupt = value
 
     @property
     def bot_mood(self) -> str:
@@ -988,9 +869,7 @@ class BaseAgent(
         expected_keys = {"username", "botname"}
 
         # Only match single curly braces, not double (escaped) ones
-        found_keys = set(
-            re.findall(r"(?<!\{)\{([a-zA-Z0-9_]+)\}(?!\})", template)
-        )
+        found_keys = set(re.findall(r"(?<!\{)\{([a-zA-Z0-9_]+)\}(?!\})", template))
         if found_keys != expected_keys:
             raise RuntimeError(
                 f"PromptConfig.MOOD_UPDATE template keys mismatch: found {found_keys}, expected {expected_keys}. Template: {template}"
@@ -1026,30 +905,44 @@ class BaseAgent(
         """
         return f"{self.system_prompt}\n"
 
+    @property
+    def chatbot(self) -> Any:
+        """
+        Get the chatbot instance.
+        Returns:
+            Any: The chatbot instance.
+        """
+        if hasattr(self, "_chatbot") and self._chatbot is not None:
+            return self._chatbot
+        return super().chatbot
+
+    @chatbot.setter
+    def chatbot(self, value: Any) -> None:
+        """
+        Set the chatbot instance.
+        Args:
+            value (Any): The chatbot instance to set.
+        """
+        self._chatbot = value
+
+    @property
+    def api(self):
+        """Return the API manager instance (must provide externally if not set)."""
+        if hasattr(self, "_api") and self._api is not None:
+            return self._api
+        raise AttributeError(
+            "API manager not set on agent. Set agent._api = api_manager instance."
+        )
+
+    @api.setter
+    def api(self, value):
+        self._api = value
+
     def _llm_updated(self) -> None:
         """
         Handle LLM updates.
         """
         pass
-
-    def on_web_browser_page_html(self, content: str) -> None:
-        """
-        Handle web browser page HTML content.
-        Args:
-            content (str): The HTML content.
-        """
-        self.webpage_html = content
-
-    def on_delete_messages_after_id(self) -> None:
-        """
-        Handle deletion of messages after a specific ID.
-        """
-        conversation = self.conversation
-        if conversation:
-            messages = conversation.value
-            self.chat_memory.set(messages)
-            if self._chat_engine:
-                self._chat_engine.memory = self.chat_memory
 
     def _update_system_prompt(
         self,
@@ -1062,9 +955,7 @@ class BaseAgent(
             system_prompt (Optional[str]): The system prompt to set.
             rag_system_prompt (Optional[str]): The RAG system prompt to set.
         """
-        self.chat_engine_tool.update_system_prompt(
-            system_prompt or self.system_prompt
-        )
+        self.chat_engine_tool.update_system_prompt(system_prompt or self.system_prompt)
 
         if self.rag_mode_enabled:
             self.update_rag_system_prompt(rag_system_prompt)
@@ -1083,14 +974,8 @@ class BaseAgent(
             return
 
         conversation = self.conversation
-        if (
-            not conversation
-            or not conversation.value
-            or len(conversation.value) == 0
-        ):
-            self.logger.debug(
-                "Skipping analysis: no conversation or no messages"
-            )
+        if not conversation or not conversation.value or len(conversation.value) == 0:
+            self.logger.debug("Skipping analysis: no conversation or no messages")
             return
 
         total_messages = len(conversation.value)
@@ -1108,9 +993,7 @@ class BaseAgent(
         self.logger.info("Performing analysis (ReAct tools only)")
         self._update_system_prompt()
         self._update_conversation("last_analysis_time", current_time)
-        self._update_conversation(
-            "last_analyzed_message_id", total_messages - 1
-        )
+        self._update_conversation("last_analyzed_message_id", total_messages - 1)
 
         # --- Use ReAct tools for mood and analysis ---
         if self.llm_settings.use_chatbot_mood and self.chatbot.use_mood:
@@ -1133,9 +1016,9 @@ class BaseAgent(
         """
         Update the memory settings for the chat engine.
         """
-        if (
-            type(self.chat_store) is DatabaseChatStore and not self.use_memory
-        ) or (type(self.chat_store) is SimpleChatStore and self.use_memory):
+        if (type(self.chat_store) is DatabaseChatStore and not self.use_memory) or (
+            type(self.chat_store) is SimpleChatStore and self.use_memory
+        ):
             self.chat_memory = None
             self.chat_store = None
         self.chat_engine._memory = self.chat_memory
@@ -1178,9 +1061,7 @@ class BaseAgent(
         # Ensure all chat engines share the same memory instance for consistency
         self._sync_memory_to_all_engines()
 
-    def _perform_tool_call(
-        self, action: LLMActionType, **kwargs: Any
-    ) -> Optional[Any]:
+    def _perform_tool_call(self, action: LLMActionType, **kwargs: Any) -> Optional[Any]:
         """
         Perform a tool call based on the LLMActionType using a strategy pattern.
         Args:
@@ -1325,9 +1206,7 @@ class BaseAgent(
                     "name": self.botname,
                     "content": self._complete_response,
                     "timestamp": now,
-                    "blocks": [
-                        {"block_type": "text", "text": self._complete_response}
-                    ],
+                    "blocks": [{"block_type": "text", "text": self._complete_response}],
                 }
             )
 
@@ -1365,9 +1244,7 @@ class BaseAgent(
                     else:
                         # Fallback: treat as plain text
                         chat_messages.append(
-                            ChatMessage(
-                                role="user", blocks=[TextBlock(text=str(msg))]
-                            )
+                            ChatMessage(role="user", blocks=[TextBlock(text=str(msg))])
                         )
                 self.chat_memory.set(chat_messages)
             self._sync_memory_to_all_engines()
@@ -1377,6 +1254,55 @@ class BaseAgent(
         Helper to create a ChatMessage for unified engine logic.
         """
         return ChatMessage(role=role, blocks=[TextBlock(text=content)])
+
+    def on_web_browser_page_html(self, content: str) -> None:
+        """
+        Handle web browser page HTML content.
+        Args:
+            content (str): The HTML content.
+        """
+        self.webpage_html = content
+
+    def on_delete_messages_after_id(self) -> None:
+        """
+        Handle deletion of messages after a specific ID.
+        """
+        conversation = self.conversation
+        if conversation:
+            messages = conversation.value
+            self.chat_memory.set(messages)
+            if self._chat_engine:
+                self._chat_engine.memory = self.chat_memory
+
+    def on_load_conversation(self, data: Optional[Dict] = None) -> None:
+        """
+        Handle loading a conversation and ensure chat store/memory are restored.
+        Args:
+            data (Optional[Dict]): The conversation data.
+        """
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        self.conversation = Conversation.objects.get(conversation_id)
+        if conversation_id is not None and self.use_memory:
+            # Always re-initialize chat memory for the loaded conversation
+            self._chat_memory = None  # Force re-creation
+            messages = self.chat_store.get_messages(str(conversation_id))
+            # This will create a new ChatMemoryBuffer with the correct key
+            _ = self.chat_memory  # property will re-initialize with correct key
+            self.chat_memory.set(messages)
+            self._sync_memory_to_all_engines()
+
+    def on_conversation_deleted(self, data: Optional[Dict] = None) -> None:
+        """
+        Handle conversation deletion.
+        Args:
+            data (Optional[Dict]): The conversation data.
+        """
+        data = data or {}
+        conversation_id = data.get("conversation_id", None)
+        if conversation_id == self.conversation_id or self.conversation_id is None:
+            self.conversation = None
+            self.conversation_id = None
 
     def chat(
         self,
@@ -1414,7 +1340,6 @@ class BaseAgent(
             if conversation is not None:
                 self._append_conversation_messages(conversation, message)
                 self._update_conversation_state(conversation)
-                # --- Restore: update mood after assistant message is appended ---
                 if (
                     self.llm_settings.use_chatbot_mood
                     and getattr(self, "chatbot", None)
@@ -1425,41 +1350,6 @@ class BaseAgent(
             return AgentChatResponse(response=self._complete_response)
         finally:
             self._in_chat = False
-
-    def on_load_conversation(self, data: Optional[Dict] = None) -> None:
-        """
-        Handle loading a conversation and ensure chat store/memory are restored.
-        Args:
-            data (Optional[Dict]): The conversation data.
-        """
-        data = data or {}
-        conversation_id = data.get("conversation_id", None)
-        self.conversation = Conversation.objects.get(conversation_id)
-        if conversation_id is not None and self.use_memory:
-            # Always re-initialize chat memory for the loaded conversation
-            self._chat_memory = None  # Force re-creation
-            messages = self.chat_store.get_messages(str(conversation_id))
-            # This will create a new ChatMemoryBuffer with the correct key
-            _ = (
-                self.chat_memory
-            )  # property will re-initialize with correct key
-            self.chat_memory.set(messages)
-            self._sync_memory_to_all_engines()
-
-    def on_conversation_deleted(self, data: Optional[Dict] = None) -> None:
-        """
-        Handle conversation deletion.
-        Args:
-            data (Optional[Dict]): The conversation data.
-        """
-        data = data or {}
-        conversation_id = data.get("conversation_id", None)
-        if (
-            conversation_id == self.conversation_id
-            or self.conversation_id is None
-        ):
-            self.conversation = None
-            self.conversation_id = None
 
     def clear_history(self, data: Optional[Dict] = None) -> None:
         """
@@ -1567,36 +1457,3 @@ class BaseAgent(
             Optional[RefreshSimpleChatEngine]: The engine instance.
         """
         return EngineRegistry.get(name)
-
-    @property
-    def chatbot(self) -> Any:
-        """
-        Get the chatbot instance.
-        Returns:
-            Any: The chatbot instance.
-        """
-        if hasattr(self, "_chatbot") and self._chatbot is not None:
-            return self._chatbot
-        return super().chatbot
-
-    @chatbot.setter
-    def chatbot(self, value: Any) -> None:
-        """
-        Set the chatbot instance.
-        Args:
-            value (Any): The chatbot instance to set.
-        """
-        self._chatbot = value
-
-    @property
-    def api(self):
-        """Return the API manager instance (must provide externally if not set)."""
-        if hasattr(self, "_api") and self._api is not None:
-            return self._api
-        raise AttributeError(
-            "API manager not set on agent. Set agent._api = api_manager instance."
-        )
-
-    @api.setter
-    def api(self, value):
-        self._api = value

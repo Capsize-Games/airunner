@@ -52,9 +52,7 @@ class LLMAPIService(APIServiceBase):
 
     def model_changed(self, model_service: str):
         self.update_llm_generator_settings("model_service", model_service)
-        self.emit_signal(
-            SignalCode.LLM_MODEL_CHANGED, {"model_service": model_service}
-        )
+        self.emit_signal(SignalCode.LLM_MODEL_CHANGED, {"model_service": model_service})
 
     def reload_rag(self, target_files: Optional[List[str]] = None):
         self.emit_signal(
@@ -77,6 +75,4 @@ class LLMAPIService(APIServiceBase):
         )
 
     def send_llm_text_streamed_signal(self, response: LLMResponse):
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}
-        )
+        self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response})

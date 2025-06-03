@@ -1,7 +1,8 @@
-
 from PySide6.QtCore import Slot
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.memory_preferences.templates.memory_preferences_ui import Ui_memory_preferences
+from airunner.gui.widgets.memory_preferences.templates.memory_preferences_ui import (
+    Ui_memory_preferences,
+)
 
 
 class MemoryPreferencesWidget(BaseWidget):
@@ -30,8 +31,11 @@ class MemoryPreferencesWidget(BaseWidget):
             getattr(self.ui, ui_element).blockSignals(False)
 
         import torch
+
         device_count = torch.cuda.device_count()
-        available_devices = [f"{torch.cuda.get_device_name(i)}" for i in range(device_count)]
+        available_devices = [
+            f"{torch.cuda.get_device_name(i)}" for i in range(device_count)
+        ]
         self.available_devices = available_devices
         self.ui.sd_combobox.blockSignals(True)
         self.ui.llm_combobox.blockSignals(True)
@@ -41,10 +45,18 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.llm_combobox.addItems(available_devices)
         self.ui.tts_combobox.addItems(available_devices)
         self.ui.stt_combobox.addItems(available_devices)
-        self.ui.sd_combobox.setCurrentText(available_devices[self.memory_settings.default_gpu_sd])
-        self.ui.llm_combobox.setCurrentText(available_devices[self.memory_settings.default_gpu_llm])
-        self.ui.tts_combobox.setCurrentText(available_devices[self.memory_settings.default_gpu_tts])
-        self.ui.stt_combobox.setCurrentText(available_devices[self.memory_settings.default_gpu_stt])
+        self.ui.sd_combobox.setCurrentText(
+            available_devices[self.memory_settings.default_gpu_sd]
+        )
+        self.ui.llm_combobox.setCurrentText(
+            available_devices[self.memory_settings.default_gpu_llm]
+        )
+        self.ui.tts_combobox.setCurrentText(
+            available_devices[self.memory_settings.default_gpu_tts]
+        )
+        self.ui.stt_combobox.setCurrentText(
+            available_devices[self.memory_settings.default_gpu_stt]
+        )
         self.ui.sd_combobox.blockSignals(False)
         self.ui.llm_combobox.blockSignals(False)
         self.ui.tts_combobox.blockSignals(False)
@@ -60,16 +72,22 @@ class MemoryPreferencesWidget(BaseWidget):
 
     @Slot(str)
     def action_changed_llm_combobox(self, val: str):
-        self.update_memory_settings("default_gpu_llm", self.available_devices.index(val))
+        self.update_memory_settings(
+            "default_gpu_llm", self.available_devices.index(val)
+        )
 
     @Slot(str)
     def action_changed_tts_combobox(self, val: str):
-        self.update_memory_settings("default_gpu_tts", self.available_devices.index(val))
+        self.update_memory_settings(
+            "default_gpu_tts", self.available_devices.index(val)
+        )
 
     @Slot(str)
     def action_changed_stt_combobox(self, val: str):
-        self.update_memory_settings("default_gpu_stt", self.available_devices.index(val))
-    
+        self.update_memory_settings(
+            "default_gpu_stt", self.available_devices.index(val)
+        )
+
     @Slot(bool)
     def action_toggled_prevent_unload_on_llm_image_generation(self, val: bool):
         self.update_memory_settings("prevent_unload_on_llm_image_generation", val)
