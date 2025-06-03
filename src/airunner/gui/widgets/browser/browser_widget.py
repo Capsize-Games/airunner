@@ -81,7 +81,9 @@ class BrowserWidget(BaseWidget):
     def on_plaintext_button_toggled(self, checked: bool) -> None:
         """Switch to plain text mode."""
         if checked and self._page_cache["plaintext"]:
-            html = self._format_plaintext_as_html(self._page_cache["plaintext"])
+            html = self._format_plaintext_as_html(
+                self._page_cache["plaintext"]
+            )
             self.ui.stage.setHtml(html, QUrl(self._page_cache["url"]))
         elif not checked and self._page_cache["html"]:
             # Restore the original HTML using setUrl to reload the page
@@ -120,12 +122,16 @@ class BrowserWidget(BaseWidget):
             # Map local:game -> game.html (prefer .html, fallback to .jinja2.html)
             local_name = url[len("local:") :].strip()
             if not local_name:
-                self.logger.warning("No local file specified after 'local:' scheme.")
+                self.logger.warning(
+                    "No local file specified after 'local:' scheme."
+                )
                 return
             user_web_dir = os.path.expanduser("~/.local/share/airunner/web")
             candidates = [
                 os.path.join(user_web_dir, "html", f"{local_name}.html"),
-                os.path.join(user_web_dir, "html", f"{local_name}.jinja2.html"),
+                os.path.join(
+                    user_web_dir, "html", f"{local_name}.jinja2.html"
+                ),
             ]
             for file_path in candidates:
                 if os.path.exists(file_path):
@@ -207,7 +213,9 @@ class BrowserWidget(BaseWidget):
         self.ui.url.clear()
 
         # Reset security indicators
-        self.ui.url.setStyleSheet("QLineEdit { background: #111; color: #eee; }")
+        self.ui.url.setStyleSheet(
+            "QLineEdit { background: #111; color: #eee; }"
+        )
 
         # Log privacy status after clearing
         self.log_privacy_status()
@@ -232,8 +240,12 @@ class BrowserWidget(BaseWidget):
         settings = self.profile_page.settings()
 
         # Disable potentially risky features
-        settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, False)
-        settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, False)
+        settings.setAttribute(
+            QWebEngineSettings.WebAttribute.PluginsEnabled, False
+        )
+        settings.setAttribute(
+            QWebEngineSettings.WebAttribute.WebGLEnabled, False
+        )
         settings.setAttribute(
             QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, False
         )
@@ -245,7 +257,9 @@ class BrowserWidget(BaseWidget):
             QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls,
             False,
         )
-        settings.setAttribute(QWebEngineSettings.WebAttribute.DnsPrefetchEnabled, False)
+        settings.setAttribute(
+            QWebEngineSettings.WebAttribute.DnsPrefetchEnabled, False
+        )
         settings.setAttribute(
             QWebEngineSettings.WebAttribute.HyperlinkAuditingEnabled, False
         )
@@ -285,7 +299,9 @@ class BrowserWidget(BaseWidget):
         )
 
         # Connect certificate error handler
-        self.profile_page.certificateError.connect(self._handle_certificate_error)
+        self.profile_page.certificateError.connect(
+            self._handle_certificate_error
+        )
 
     def _handle_permission_request(self, url, feature):
         """Handle permission requests from web pages.
@@ -320,20 +336,28 @@ class BrowserWidget(BaseWidget):
 
         current_url = self.ui.stage.url().toString()
         if not current_url or current_url == "about:blank":
-            self.ui.url.setStyleSheet("QLineEdit { background: #111; color: #eee; }")
+            self.ui.url.setStyleSheet(
+                "QLineEdit { background: #111; color: #eee; }"
+            )
             return
 
         if current_url.startswith("https://"):
             # Secure connection - green tint
-            self.ui.url.setStyleSheet("QLineEdit { background: #112211; color: #eee; }")
+            self.ui.url.setStyleSheet(
+                "QLineEdit { background: #112211; color: #eee; }"
+            )
             self.logger.debug(f"Secure connection: {current_url}")
         elif current_url.startswith("http://"):
             # Insecure connection - red tint
-            self.ui.url.setStyleSheet("QLineEdit { background: #221111; color: #eee; }")
+            self.ui.url.setStyleSheet(
+                "QLineEdit { background: #221111; color: #eee; }"
+            )
             self.logger.warning(f"Insecure connection: {current_url}")
         else:
             # Unknown protocol
-            self.ui.url.setStyleSheet("QLineEdit { background: #111; color: #eee; }")
+            self.ui.url.setStyleSheet(
+                "QLineEdit { background: #111; color: #eee; }"
+            )
 
         # Update URL field to show actual loaded URL
         if current_url != self.ui.url.text():
@@ -371,7 +395,9 @@ class BrowserWidget(BaseWidget):
                 for item in os.listdir(cache_dir):
                     item_path = os.path.join(cache_dir, item)
                     try:
-                        if os.path.isfile(item_path) or os.path.islink(item_path):
+                        if os.path.isfile(item_path) or os.path.islink(
+                            item_path
+                        ):
                             os.unlink(item_path)
                             cleared_count += 1
                         elif os.path.isdir(item_path):
@@ -386,7 +412,9 @@ class BrowserWidget(BaseWidget):
                     f"Custom HTML disk cache cleared - {cleared_count} items removed"
                 )
             except Exception as e:
-                self.logger.error(f"Failed to access cache directory {cache_dir}: {e}")
+                self.logger.error(
+                    f"Failed to access cache directory {cache_dir}: {e}"
+                )
 
     def clear_session(self):
         """
@@ -448,7 +476,9 @@ class BrowserWidget(BaseWidget):
                         )
                         summarizer = LexRankSummarizer()
                         sentence_count = 1
-                        summary_sentences = summarizer(parser.document, sentence_count)
+                        summary_sentences = summarizer(
+                            parser.document, sentence_count
+                        )
                         summary = "\n".join(
                             [str(sentence) for sentence in summary_sentences]
                         )
@@ -493,7 +523,9 @@ class BrowserWidget(BaseWidget):
             "otr_profile_active": bool(
                 self._profile and self._profile.isOffTheRecord()
             ),
-            "https_only": (current_url.startswith("https://") if current_url else True),
+            "https_only": (
+                current_url.startswith("https://") if current_url else True
+            ),
             "current_url": current_url,
             "cookies_blocked": True,  # Always true with OTR profile
             "local_storage_disabled": True,

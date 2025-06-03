@@ -17,7 +17,9 @@ class UserToolsMixin(ToolSingletonMixin):
             self.logger.info(f"Information: {information}")
             self._update_user(tag, information)
             data = self.user.data or {}
-            data[tag] = [information] if tag not in data else data[tag] + [information]
+            data[tag] = (
+                [information] if tag not in data else data[tag] + [information]
+            )
             self._update_user("data", data)
             return "Information scraped."
 

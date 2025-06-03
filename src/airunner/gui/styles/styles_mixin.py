@@ -1,7 +1,10 @@
 import os
 from pathlib import Path
 
-from airunner.settings import AIRUNNER_DARK_THEME_NAME, AIRUNNER_LIGHT_THEME_NAME
+from airunner.settings import (
+    AIRUNNER_DARK_THEME_NAME,
+    AIRUNNER_LIGHT_THEME_NAME,
+)
 
 
 class StylesMixin:
@@ -23,12 +26,18 @@ class StylesMixin:
         if dark_mode is None:
             dark_mode = self.application_settings.dark_mode_enabled
         if override_system_theme is None:
-            override_system_theme = self.application_settings.override_system_theme
+            override_system_theme = (
+                self.application_settings.override_system_theme
+            )
 
         theme_name = (
-            AIRUNNER_DARK_THEME_NAME if dark_mode else AIRUNNER_LIGHT_THEME_NAME
+            AIRUNNER_DARK_THEME_NAME
+            if dark_mode
+            else AIRUNNER_LIGHT_THEME_NAME
         )
         base_dir = Path(os.path.dirname(os.path.realpath(__file__)))
         stylesheet_path = base_dir / theme_name / "styles.qss"
 
-        self.setStyleSheet(stylesheet_path.read_text() if override_system_theme else "")
+        self.setStyleSheet(
+            stylesheet_path.read_text() if override_system_theme else ""
+        )

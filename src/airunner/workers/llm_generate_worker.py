@@ -44,12 +44,16 @@ class LLMGenerateWorker(Worker):
     @property
     def use_openrouter(self) -> bool:
         return (
-            self.llm_generator_settings.model_service == ModelService.OPENROUTER.value
+            self.llm_generator_settings.model_service
+            == ModelService.OPENROUTER.value
         )
 
     @property
     def use_ollama(self) -> bool:
-        return self.llm_generator_settings.model_service == ModelService.OLLAMA.value
+        return (
+            self.llm_generator_settings.model_service
+            == ModelService.OLLAMA.value
+        )
 
     # @property
     # def use_gemma3(self) -> bool:
@@ -108,7 +112,9 @@ class LLMGenerateWorker(Worker):
 
     def on_web_browser_page_html_signal(self, data):
         if self.model_manager:
-            self.model_manager.on_web_browser_page_html(data.get("content", ""))
+            self.model_manager.on_web_browser_page_html(
+                data.get("content", "")
+            )
 
     def on_llm_model_changed_signal(self, data: Dict):
         # Reset the model manager to ensure it's re-evaluated on next access
@@ -189,7 +195,9 @@ class LLMGenerateWorker(Worker):
             self.model_manager.handle_request(message)
 
     def _load_llm_thread(self, data=None):
-        self._llm_thread = threading.Thread(target=self._load_llm, args=(data,))
+        self._llm_thread = threading.Thread(
+            target=self._load_llm, args=(data,)
+        )
         self._llm_thread.start()
 
     def load(self):

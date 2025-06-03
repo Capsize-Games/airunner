@@ -10,10 +10,14 @@ class WorkflowConnection(BaseModel):
     id = Column(Integer, primary_key=True)
     workflow_id = Column(Integer, ForeignKey("workflows.id"), nullable=False)
 
-    output_node_id = Column(Integer, ForeignKey("workflow_nodes.id"), nullable=False)
+    output_node_id = Column(
+        Integer, ForeignKey("workflow_nodes.id"), nullable=False
+    )
     output_port_name = Column(String, nullable=False)
 
-    input_node_id = Column(Integer, ForeignKey("workflow_nodes.id"), nullable=False)
+    input_node_id = Column(
+        Integer, ForeignKey("workflow_nodes.id"), nullable=False
+    )
     input_port_name = Column(String, nullable=False)
 
     workflow = relationship("Workflow", back_populates="connections")

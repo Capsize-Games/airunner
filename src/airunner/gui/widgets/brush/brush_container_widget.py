@@ -11,7 +11,9 @@ class BrushContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ui.brush_size_slider.setProperty("current_value", self.brush_settings.size)
+        self.ui.brush_size_slider.setProperty(
+            "current_value", self.brush_settings.size
+        )
         self.ui.brush_size_slider.initialize()
         self.set_button_color()
         self.ui.toggle_auto_generate_while_drawing.blockSignals(True)
@@ -34,4 +36,6 @@ class BrushContainerWidget(BaseWidget):
 
     def set_button_color(self):
         color = self.brush_settings.primary_color
-        self.ui.primary_color_button.setStyleSheet(f"background-color: {color};")
+        self.ui.primary_color_button.setStyleSheet(
+            f"background-color: {color};"
+        )

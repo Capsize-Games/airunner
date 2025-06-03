@@ -17,7 +17,9 @@ class LLMGeneratorSettings(BaseModel):
     use_gpu = Column(Boolean, default=True)
     message_type = Column(String, default="chat")
     override_parameters = Column(Boolean, default=True)
-    prompt_template = Column(String, default="Ministral 8B Instruct: Default Chatbot")
+    prompt_template = Column(
+        String, default="Ministral 8B Instruct: Default Chatbot"
+    )
     batch_size = Column(Integer, default=1)
     use_api = Column(Boolean, default=False)
     api_key = Column(String, nullable=True)

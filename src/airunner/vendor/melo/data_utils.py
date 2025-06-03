@@ -73,14 +73,19 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 print(item)
                 raise
             audiopath = f"{_id}"
-            if self.min_text_len <= len(phones) and len(phones) <= self.max_text_len:
+            if (
+                self.min_text_len <= len(phones)
+                and len(phones) <= self.max_text_len
+            ):
                 phones = phones.split(" ")
                 tone = [int(i) for i in tone.split(" ")]
                 word2ph = [int(i) for i in word2ph.split(" ")]
                 audiopaths_sid_text_new.append(
                     [audiopath, spk, language, text, phones, tone, word2ph]
                 )
-                lengths.append(os.path.getsize(audiopath) // (2 * self.hop_length))
+                lengths.append(
+                    os.path.getsize(audiopath) // (2 * self.hop_length)
+                )
             else:
                 skipped += 1
         logger.info(f"min: {min(lengths)}; max: {max(lengths)}")
@@ -95,7 +100,9 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
 
     def get_audio_text_speaker_pair(self, audiopath_sid_text):
         # separate filename, speaker_id and text
-        audiopath, sid, language, text, phones, tone, word2ph = audiopath_sid_text
+        audiopath, sid, language, text, phones, tone, word2ph = (
+            audiopath_sid_text
+        )
 
         bert, ja_bert, phones, tone, language = self.get_text(
             text, word2ph, phones, tone, AvailableLanguage(language), audiopath
@@ -107,7 +114,9 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         return (phones, spec, wav, sid, tone, language, bert, ja_bert)
 
     def get_audio(self, filename):
-        audio_norm, sampling_rate = load_wav_to_torch(filename, self.sampling_rate)
+        audio_norm, sampling_rate = load_wav_to_torch(
+            filename, self.sampling_rate
+        )
         if sampling_rate != self.sampling_rate:
             raise ValueError(
                 "{} {} SR doesn't match target {} SR".format(
@@ -199,7 +208,9 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         return sid
 
     def __getitem__(self, index):
-        return self.get_audio_text_speaker_pair(self.audiopaths_sid_text[index])
+        return self.get_audio_text_speaker_pair(
+            self.audiopaths_sid_text[index]
+        )
 
     def __len__(self):
         return len(self.audiopaths_sid_text)
@@ -239,7 +250,9 @@ class TextAudioSpeakerCollate:
         bert_padded = torch.FloatTensor(len(batch), 1024, max_text_len)
         ja_bert_padded = torch.FloatTensor(len(batch), 768, max_text_len)
 
-        spec_padded = torch.FloatTensor(len(batch), batch[0][1].size(0), max_spec_len)
+        spec_padded = torch.FloatTensor(
+            len(batch), batch[0][1].size(0), max_spec_len
+        )
         wav_padded = torch.FloatTensor(len(batch), 1, max_wav_len)
         text_padded.zero_()
         tone_padded.zero_()
@@ -292,7 +305,9 @@ class TextAudioSpeakerCollate:
         )
 
 
-class DistributedBucketSampler(torch.utils.data.distributed.DistributedSampler):
+class DistributedBucketSampler(
+    torch.utils.data.distributed.DistributedSampler
+):
     """
     Maintain similar input lengths in a batch.
     Length groups are specified by boundaries.
@@ -311,7 +326,9 @@ class DistributedBucketSampler(torch.utils.data.distributed.DistributedSampler):
         rank=None,
         shuffle=True,
     ):
-        super().__init__(dataset, num_replicas=num_replicas, rank=rank, shuffle=shuffle)
+        super().__init__(
+            dataset, num_replicas=num_replicas, rank=rank, shuffle=shuffle
+        )
         self.lengths = dataset.lengths
         self.batch_size = batch_size
         self.boundaries = boundaries
@@ -361,7 +378,9 @@ class DistributedBucketSampler(torch.utils.data.distributed.DistributedSampler):
         indices = []
         if self.shuffle:
             for bucket in self.buckets:
-                indices.append(torch.randperm(len(bucket), generator=g).tolist())
+                indices.append(
+                    torch.randperm(len(bucket), generator=g).tolist()
+                )
         else:
             for bucket in self.buckets:
                 indices.append(list(range(len(bucket))))

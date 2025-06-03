@@ -35,7 +35,9 @@ class French(LanguageBase):
             if w == "[UNK]":
                 phone_list = ["UNK"]
             else:
-                phone_list = list(filter(lambda p: p != " ", fr_to_ipa.fr2ipa(w)))
+                phone_list = list(
+                    filter(lambda p: p != " ", fr_to_ipa.fr2ipa(w))
+                )
 
             for ph in phone_list:
                 phones.append(ph)

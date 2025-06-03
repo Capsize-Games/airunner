@@ -14,7 +14,9 @@ from airunner.gui.widgets.canvas.brush_scene import BrushScene
 class InputImageScene(BrushScene):
     """Scene for handling drawing on input images."""
 
-    def __init__(self, canvas_type: str, settings_key: str, is_mask: bool = False):
+    def __init__(
+        self, canvas_type: str, settings_key: str, is_mask: bool = False
+    ):
         super().__init__(canvas_type)
         self._settings_key = settings_key
         self._is_mask = is_mask
@@ -64,7 +66,9 @@ class InputImageScene(BrushScene):
                 and self.use_generated_image
             ):
                 # For controlnet generated image
-                self.update_controlnet_settings("generated_image", image_binary)
+                self.update_controlnet_settings(
+                    "generated_image", image_binary
+                )
             elif self.settings_key == "outpaint_settings":
                 # For outpaint image
                 self.update_outpaint_settings("image", image_binary)
@@ -98,7 +102,9 @@ class InputImageScene(BrushScene):
                 and self.use_generated_image
             ):
                 # For controlnet generated image
-                self.update_controlnet_settings("generated_image", base_64_image)
+                self.update_controlnet_settings(
+                    "generated_image", base_64_image
+                )
                 model = self.controlnet_settings.__class__.objects.first()
                 model.generated_image = base_64_image
                 model.save()

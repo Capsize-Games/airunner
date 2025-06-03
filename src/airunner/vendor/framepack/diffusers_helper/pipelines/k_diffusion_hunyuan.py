@@ -16,7 +16,9 @@ def flux_time_shift(t, mu=1.15, sigma=1.0):
     return math.exp(mu) / (math.exp(mu) + (1 / t - 1) ** sigma)
 
 
-def calculate_flux_mu(context_length, x1=256, y1=0.5, x2=4096, y2=1.15, exp_max=7.0):
+def calculate_flux_mu(
+    context_length, x1=256, y1=0.5, x2=4096, y2=1.15, exp_max=7.0
+):
     k = (y2 - y1) / (x2 - x1)
     b = y1 - k * x1
     mu = k * context_length + b
@@ -87,7 +89,8 @@ def sample_hunyuan(
         first_sigma = sigmas[0].to(device=device, dtype=torch.float32)
         initial_latent = initial_latent.to(device=device, dtype=torch.float32)
         latents = (
-            initial_latent.float() * (1.0 - first_sigma) + latents.float() * first_sigma
+            initial_latent.float() * (1.0 - first_sigma)
+            + latents.float() * first_sigma
         )
 
     if concat_latent is not None:
@@ -100,11 +103,15 @@ def sample_hunyuan(
     prompt_embeds = repeat_to_batch_size(prompt_embeds, batch_size)
     prompt_embeds_mask = repeat_to_batch_size(prompt_embeds_mask, batch_size)
     prompt_poolers = repeat_to_batch_size(prompt_poolers, batch_size)
-    negative_prompt_embeds = repeat_to_batch_size(negative_prompt_embeds, batch_size)
+    negative_prompt_embeds = repeat_to_batch_size(
+        negative_prompt_embeds, batch_size
+    )
     negative_prompt_embeds_mask = repeat_to_batch_size(
         negative_prompt_embeds_mask, batch_size
     )
-    negative_prompt_poolers = repeat_to_batch_size(negative_prompt_poolers, batch_size)
+    negative_prompt_poolers = repeat_to_batch_size(
+        negative_prompt_poolers, batch_size
+    )
     concat_latent = repeat_to_batch_size(concat_latent, batch_size)
 
     sampler_kwargs = dict(
@@ -124,7 +131,11 @@ def sample_hunyuan(
             encoder_hidden_states=negative_prompt_embeds,
             encoder_attention_mask=negative_prompt_embeds_mask,
             guidance=distilled_guidance,
-            **(kwargs if negative_kwargs is None else {**kwargs, **negative_kwargs}),
+            **(
+                kwargs
+                if negative_kwargs is None
+                else {**kwargs, **negative_kwargs}
+            ),
         ),
     )
 

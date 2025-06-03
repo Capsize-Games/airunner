@@ -42,7 +42,8 @@ class ExportPreferencesWidget(BaseWidget):
             self.metadata_settings.image_export_metadata_prompt is True
         )
         self.ui.metadata_negative_prompt.setChecked(
-            self.metadata_settings.image_export_metadata_negative_prompt is True
+            self.metadata_settings.image_export_metadata_negative_prompt
+            is True
         )
         self.ui.metadata_scale.setChecked(
             self.metadata_settings.image_export_metadata_scale is True
@@ -135,10 +136,14 @@ class ExportPreferencesWidget(BaseWidget):
         self.update_metadata_settings("image_export_metadata_prompt", val)
 
     def action_toggled_negative_prompt(self, val):
-        self.update_metadata_settings("image_export_metadata_negative_prompt", val)
+        self.update_metadata_settings(
+            "image_export_metadata_negative_prompt", val
+        )
 
     def action_toggled_model_branch(self, val):
-        self.update_metadata_settings("image_export_metadata_model_branch", val)
+        self.update_metadata_settings(
+            "image_export_metadata_model_branch", val
+        )
 
     def action_toggled_model(self, val):
         self.update_metadata_settings("image_export_metadata_model", val)

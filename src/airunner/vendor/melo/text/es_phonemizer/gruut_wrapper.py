@@ -46,7 +46,9 @@ class Gruut(BasePhonemizer):
         use_espeak_phonemes=False,
         keep_stress=False,
     ):
-        super().__init__(language, punctuations=punctuations, keep_puncs=keep_puncs)
+        super().__init__(
+            language, punctuations=punctuations, keep_puncs=keep_puncs
+        )
         self.use_espeak_phonemes = use_espeak_phonemes
         self.keep_stress = keep_stress
 
@@ -97,7 +99,9 @@ class Gruut(BasePhonemizer):
                             # Remove primary/secondary stress
                             word_phoneme = IPA.without_stress(word_phoneme)
 
-                        word_phoneme = word_phoneme.translate(GRUUT_TRANS_TABLE)
+                        word_phoneme = word_phoneme.translate(
+                            GRUUT_TRANS_TABLE
+                        )
 
                         if word_phoneme:
                             # Flatten phonemes

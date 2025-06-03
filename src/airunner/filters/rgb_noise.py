@@ -34,7 +34,11 @@ class RGBNoiseFilter(BaseFilter):
         blue_intensity = float(getattr(self, "blue", 0.0))
 
         # If all noise values are 0, just return the original image
-        if red_intensity == 0.0 and green_intensity == 0.0 and blue_intensity == 0.0:
+        if (
+            red_intensity == 0.0
+            and green_intensity == 0.0
+            and blue_intensity == 0.0
+        ):
             return image
 
         # Ensure image is in RGBA mode

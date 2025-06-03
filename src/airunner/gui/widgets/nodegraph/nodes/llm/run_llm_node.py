@@ -108,7 +108,9 @@ class RunLLMNode(BaseLLMNode):
         model_type = self.get_property("model_type")
         model_name = self.get_property("model_name")
         system_prompt = self.get_property("system_prompt")
-        self._call_llm(prompt, system_prompt, llm_request, model_type, model_name)
+        self._call_llm(
+            prompt, system_prompt, llm_request, model_type, model_name
+        )
         return None
 
     def _generate_mock_response(
@@ -252,7 +254,9 @@ class RunLLMNode(BaseLLMNode):
                     # Assuming TextboxNode's input is 'prompt' and we connect 'llm_message' to it.
                     if port_name == "llm_message":
                         # Use the name of the *connected input port* on the downstream node
-                        downstream_node.set_property(downstream_port_name, port_data)
+                        downstream_node.set_property(
+                            downstream_port_name, port_data
+                        )
                         print(
                             f"Updated {downstream_node.name()} property '{downstream_port_name}' via set_property"
                         )

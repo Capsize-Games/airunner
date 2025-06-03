@@ -41,7 +41,9 @@ class BotPreferencesWidget(BaseWidget):
         self.ui.bot_personality.setPlainText(self.chatbot.bot_personality)
         self.ui.names_groupbox.setChecked(self.chatbot.assign_names)
         self.ui.personality_groupbox.setChecked(self.chatbot.use_personality)
-        self.ui.system_instructions.setPlainText(self.chatbot.system_instructions)
+        self.ui.system_instructions.setPlainText(
+            self.chatbot.system_instructions
+        )
         self.ui.system_instructions_groupbox.setChecked(
             self.chatbot.use_system_instructions
         )
@@ -63,7 +65,9 @@ class BotPreferencesWidget(BaseWidget):
         self.update_chatbot("botname", val)
 
     def bot_personality_changed(self):
-        self.update_chatbot("bot_personality", self.ui.bot_personality.toPlainText())
+        self.update_chatbot(
+            "bot_personality", self.ui.bot_personality.toPlainText()
+        )
 
     def guardrails_prompt_changed(self):
         self.update_chatbot(
@@ -243,7 +247,9 @@ class BotPreferencesWidget(BaseWidget):
             self.ui.voice_combobox.setCurrentIndex(0)
         else:
             self.ui.voice_combobox.setCurrentIndex(
-                self.ui.voice_combobox.findData(self.chatbot.voice_id or voices[0].id)
+                self.ui.voice_combobox.findData(
+                    self.chatbot.voice_id or voices[0].id
+                )
             )
         self.ui.voice_combobox.blockSignals(False)
 

@@ -16,7 +16,9 @@ class BackgroundWorker(QThread):
     progressUpdate = Signal(int)
     statusUpdate = Signal(str)
 
-    def __init__(self, task_function=None, callback_data=None, progress_callback=None):
+    def __init__(
+        self, task_function=None, callback_data=None, progress_callback=None
+    ):
         """
         Initialize the background worker thread.
 

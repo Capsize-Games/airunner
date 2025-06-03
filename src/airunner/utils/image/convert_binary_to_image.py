@@ -11,8 +11,12 @@ def convert_binary_to_image(binary_data: bytes) -> Image:
         bytes_ = io.BytesIO(binary_data)
         return Image.open(bytes_)
     except PIL.UnidentifiedImageError as e:
-        print(f"Something went wrong with binary data conversion to image: {e}")
+        print(
+            f"Something went wrong with binary data conversion to image: {e}"
+        )
         return None
     except TypeError as e:
-        print(f"Something went wrong with binary data conversion to image: {e}")
+        print(
+            f"Something went wrong with binary data conversion to image: {e}"
+        )
         return None

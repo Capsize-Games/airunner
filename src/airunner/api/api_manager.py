@@ -30,7 +30,9 @@ class APIManager:
             self._emit_signal = emit_signal
         self.llm = LLMAPIService(emit_signal=self._emit_signal)
         self.art = ARTAPIService(emit_signal=self._emit_signal)
-        self.image_filter = ImageFilterAPIServices(emit_signal=self._emit_signal)
+        self.image_filter = ImageFilterAPIServices(
+            emit_signal=self._emit_signal
+        )
         self.embedding = EmbeddingAPIServices(emit_signal=self._emit_signal)
         self.lora = LoraAPIServices(emit_signal=self._emit_signal)
         self.canvas = CanvasAPIService(emit_signal=self._emit_signal)

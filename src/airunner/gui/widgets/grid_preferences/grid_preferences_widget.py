@@ -19,7 +19,9 @@ class GridPreferencesWidget(BaseWidget):
         self.ui.grid_line_width_spinbox.setValue(self.grid_settings.line_width)
         self.ui.grid_size_spinbox.setValue(self.grid_settings.cell_size)
         self.ui.show_grid_checkbox.setChecked(self.grid_settings.show_grid)
-        self.ui.snap_to_grid_checkbox.setChecked(self.grid_settings.snap_to_grid)
+        self.ui.snap_to_grid_checkbox.setChecked(
+            self.grid_settings.snap_to_grid
+        )
 
         self.ui.grid_line_width_spinbox.blockSignals(False)
         self.ui.grid_size_spinbox.blockSignals(False)

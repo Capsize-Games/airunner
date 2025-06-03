@@ -353,17 +353,27 @@ class ChatbotNode(BaseLLMNode):
         chatbot_config = {
             "name": self._get_value(input_data, "name", str),
             "botname": self._get_value(input_data, "botname", str),
-            "use_personality": self._get_value(input_data, "use_personality", bool),
+            "use_personality": self._get_value(
+                input_data, "use_personality", bool
+            ),
             "use_mood": self._get_value(input_data, "use_mood", bool),
-            "use_guardrails": self._get_value(input_data, "use_guardrails", bool),
+            "use_guardrails": self._get_value(
+                input_data, "use_guardrails", bool
+            ),
             "use_system_instructions": self._get_value(
                 input_data, "use_system_instructions", bool
             ),
             "use_datetime": self._get_value(input_data, "use_datetime", bool),
             "assign_names": self._get_value(input_data, "assign_names", bool),
-            "bot_personality": self._get_value(input_data, "bot_personality", str),
-            "prompt_template": self._get_value(input_data, "prompt_template", str),
-            "use_tool_filter": self._get_value(input_data, "use_tool_filter", bool),
+            "bot_personality": self._get_value(
+                input_data, "bot_personality", str
+            ),
+            "prompt_template": self._get_value(
+                input_data, "prompt_template", str
+            ),
+            "use_tool_filter": self._get_value(
+                input_data, "use_tool_filter", bool
+            ),
             "use_gpu": self._get_value(input_data, "use_gpu", bool),
             "skip_special_tokens": self._get_value(
                 input_data, "skip_special_tokens", bool
@@ -374,19 +384,27 @@ class ChatbotNode(BaseLLMNode):
             "model_version": self._get_value(input_data, "model_version", str),
             "model_type": self._get_value(input_data, "model_type", str),
             "dtype": self._get_value(input_data, "dtype", str),
-            "return_result": self._get_value(input_data, "return_result", bool),
-            "guardrails_prompt": self._get_value(input_data, "guardrails_prompt", str),
+            "return_result": self._get_value(
+                input_data, "return_result", bool
+            ),
+            "guardrails_prompt": self._get_value(
+                input_data, "guardrails_prompt", str
+            ),
             "system_instructions": self._get_value(
                 input_data, "system_instructions", str
             ),
             "top_p": self._get_value(input_data, "top_p", int),
             "min_length": self._get_value(input_data, "min_length", int),
-            "max_new_tokens": self._get_value(input_data, "max_new_tokens", int),
+            "max_new_tokens": self._get_value(
+                input_data, "max_new_tokens", int
+            ),
             "repetition_penalty": self._get_value(
                 input_data, "repetition_penalty", int
             ),
             "do_sample": self._get_value(input_data, "do_sample", bool),
-            "early_stopping": self._get_value(input_data, "early_stopping", bool),
+            "early_stopping": self._get_value(
+                input_data, "early_stopping", bool
+            ),
             "num_beams": self._get_value(input_data, "num_beams", int),
             "temperature": self._get_value(input_data, "temperature", int),
             "ngram_size": self._get_value(input_data, "ngram_size", int),
@@ -399,9 +417,13 @@ class ChatbotNode(BaseLLMNode):
                 input_data, "decoder_start_token_id", int
             ),
             "use_cache": self._get_value(input_data, "use_cache", bool),
-            "length_penalty": self._get_value(input_data, "length_penalty", int),
+            "length_penalty": self._get_value(
+                input_data, "length_penalty", int
+            ),
             "backstory": self._get_value(input_data, "backstory", str),
-            "use_backstory": self._get_value(input_data, "use_backstory", bool),
+            "use_backstory": self._get_value(
+                input_data, "use_backstory", bool
+            ),
             "use_weather_prompt": self._get_value(
                 input_data, "use_weather_prompt", bool
             ),

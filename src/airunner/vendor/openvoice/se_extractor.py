@@ -32,7 +32,9 @@ def split_audio_vad(audio_path, audio_name, target_dir, split_seconds=10.0):
         # Load audio with torchaudio
         waveform, sample_rate = torchaudio.load(audio_path)
         if sample_rate != SAMPLE_RATE:
-            resampler = torchaudio.transforms.Resample(sample_rate, SAMPLE_RATE)
+            resampler = torchaudio.transforms.Resample(
+                sample_rate, SAMPLE_RATE
+            )
             waveform = resampler(waveform)
 
         # Convert to mono if needed (take first channel)
@@ -52,14 +54,17 @@ def split_audio_vad(audio_path, audio_name, target_dir, split_seconds=10.0):
         # Convert timestamps to segments
         segments = [(ts["start"], ts["end"]) for ts in speech_timestamps]
         segments = [
-            (float(s) / SAMPLE_RATE, float(e) / SAMPLE_RATE) for s, e in segments
+            (float(s) / SAMPLE_RATE, float(e) / SAMPLE_RATE)
+            for s, e in segments
         ]
 
         audio_active = AudioSegment.silent(duration=0)
         audio = AudioSegment.from_file(audio_path)
 
         for start_time, end_time in segments:
-            audio_active += audio[int(start_time * 1000) : int(end_time * 1000)]
+            audio_active += audio[
+                int(start_time * 1000) : int(end_time * 1000)
+            ]
 
         audio_dur = audio_active.duration_seconds
         logger.info(f"after vad: dur = {audio_dur}")
@@ -79,9 +84,13 @@ def split_audio_vad(audio_path, audio_name, target_dir, split_seconds=10.0):
             if i == num_splits - 1:
                 end_time = audio_dur
             output_file = f"{wavs_folder}/{audio_name}_seg{count}.wav"
-            audio_seg = audio_active[int(start_time * 1000) : int(end_time * 1000)]
+            audio_seg = audio_active[
+                int(start_time * 1000) : int(end_time * 1000)
+            ]
             audio_seg.export(output_file, format="wav")
-            logger.info(f"Exported segment: {output_file} ({end_time-start_time:.2f}s)")
+            logger.info(
+                f"Exported segment: {output_file} ({end_time-start_time:.2f}s)"
+            )
             start_time = end_time
             count += 1
         return wavs_folder
@@ -115,7 +124,9 @@ def get_se(audio_path, vc_model, target_dir="processed"):
         )
 
         audio_segs = glob(f"{wavs_folder}/*.wav")
-        logger.info(f"Number of audio segments for SE extraction: {len(audio_segs)}")
+        logger.info(
+            f"Number of audio segments for SE extraction: {len(audio_segs)}"
+        )
         if len(audio_segs) == 0:
             logger.error("No audio segments found for SE extraction!")
             raise NotImplementedError("No audio segments found!")

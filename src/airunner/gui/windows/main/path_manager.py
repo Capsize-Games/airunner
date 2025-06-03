@@ -75,7 +75,9 @@ class PathManager:
     def on_navigate_to_url(self, main_window, _data=None):
         if self.logger:
             self.logger.info("Navigating to URL via dialog.")
-        url, ok = QInputDialog.getText(main_window, "Browse Web", "Enter your URL:")
+        url, ok = QInputDialog.getText(
+            main_window, "Browse Web", "Enter your URL:"
+        )
         if ok:
             try:
                 result = urllib.parse.urlparse(url)
@@ -87,7 +89,9 @@ class PathManager:
                     filepath = os.path.expanduser(self.path_settings.pdf_path)
                     filename = self.download_pdf(url, filepath)
                 else:
-                    filepath = os.path.expanduser(self.path_settings.webpages_path)
+                    filepath = os.path.expanduser(
+                        self.path_settings.webpages_path
+                    )
                     filename = self.download_url(url, filepath)
             elif os.path.isfile(url):
                 filepath = os.path.dirname(url)

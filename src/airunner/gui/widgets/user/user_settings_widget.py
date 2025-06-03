@@ -2,7 +2,9 @@ from PySide6.QtCore import Slot
 
 from airunner.data.models import User
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.user.templates.user_settings_ui import Ui_user_settings_widget
+from airunner.gui.widgets.user.templates.user_settings_ui import (
+    Ui_user_settings_widget,
+)
 from airunner.utils.location import get_lat_lon
 
 

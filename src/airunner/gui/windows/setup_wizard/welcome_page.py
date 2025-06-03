@@ -8,6 +8,8 @@ class WelcomePage(BaseWizard):
 
         self.setTitle("Welcome")
         layout = QVBoxLayout()
-        label = QLabel("Welcome to the AI Runner setup wizard. Click Next to continue.")
+        label = QLabel(
+            "Welcome to the AI Runner setup wizard. Click Next to continue."
+        )
         layout.addWidget(label)
         self.setLayout(layout)

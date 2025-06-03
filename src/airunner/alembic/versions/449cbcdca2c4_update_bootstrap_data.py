@@ -69,7 +69,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    image_filter = ImageFilter.objects.first(ImageFilter.name == "color_balance")
+    image_filter = ImageFilter.objects.first(
+        ImageFilter.name == "color_balance"
+    )
     if not image_filter:
         return
-    ImageFilter.objects.update(image_filter.id, image_filter_values=color_balance_data)
+    ImageFilter.objects.update(
+        image_filter.id, image_filter_values=color_balance_data
+    )

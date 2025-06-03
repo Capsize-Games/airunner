@@ -85,7 +85,9 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
 
     @property
     def is_sd_xl_turbo(self) -> bool:
-        return self.real_model_version == StableDiffusionVersion.SDXL_TURBO.value
+        return (
+            self.real_model_version == StableDiffusionVersion.SDXL_TURBO.value
+        )
 
     @property
     def is_sd_xl_or_turbo(self) -> bool:
@@ -167,7 +169,10 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
             ):
                 data.update({key: (val["x"], val["y"])})
 
-        if self.image_request.quality_effects is QualityEffects.HIGH_RESOLUTION:
+        if (
+            self.image_request.quality_effects
+            is QualityEffects.HIGH_RESOLUTION
+        ):
             data["target_size"] = (
                 self.image_request.width,
                 self.image_request.height,
@@ -184,7 +189,9 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
                 self.image_request.width // 2,
                 self.image_request.height // 2,
             )
-        elif self.image_request.quality_effects is QualityEffects.LOW_RESOLUTION:
+        elif (
+            self.image_request.quality_effects is QualityEffects.LOW_RESOLUTION
+        ):
             data["target_size"] = (
                 0,
                 0,
@@ -206,9 +213,15 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
             QualityEffects.SUPER_SAMPLE_X4,
             QualityEffects.SUPER_SAMPLE_X8,
         ):
-            if self.image_request.quality_effects is QualityEffects.SUPER_SAMPLE_X2:
+            if (
+                self.image_request.quality_effects
+                is QualityEffects.SUPER_SAMPLE_X2
+            ):
                 multiplier = 2
-            elif self.image_request.quality_effects is QualityEffects.SUPER_SAMPLE_X4:
+            elif (
+                self.image_request.quality_effects
+                is QualityEffects.SUPER_SAMPLE_X4
+            ):
                 multiplier = 4
             else:
                 multiplier = 8
@@ -245,7 +258,9 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
 
         return data
 
-    def _build_conditioning_tensors(self, compel_prompt, compel_negative_prompt):
+    def _build_conditioning_tensors(
+        self, compel_prompt, compel_negative_prompt
+    ):
         prompt_embeds, pooled_prompt_embeds = (
             self._compel_proc.build_conditioning_tensor(compel_prompt)
         )
@@ -294,7 +309,9 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
             return
 
         if self._compel_proc is None:
-            self.logger.debug("Compel proc is not loading - attempting to load")
+            self.logger.debug(
+                "Compel proc is not loading - attempting to load"
+            )
             self._load_compel()
 
         prompt = self.prompt

@@ -29,7 +29,9 @@ class PathSettings(BaseModel):
     )
     llama_index_path = Column(
         String,
-        default=os.path.expanduser(os.path.join(AIRUNNER_BASE_PATH, "text/rag", "db")),
+        default=os.path.expanduser(
+            os.path.join(AIRUNNER_BASE_PATH, "text/rag", "db")
+        ),
     )
     webpages_path = Column(
         String,
@@ -39,11 +41,15 @@ class PathSettings(BaseModel):
     )
     stt_model_path = Column(
         String,
-        default=os.path.expanduser(os.path.join(AIRUNNER_BASE_PATH, "text/models/stt")),
+        default=os.path.expanduser(
+            os.path.join(AIRUNNER_BASE_PATH, "text/models/stt")
+        ),
     )
     tts_model_path = Column(
         String,
-        default=os.path.expanduser(os.path.join(AIRUNNER_BASE_PATH, "text/models/tts")),
+        default=os.path.expanduser(
+            os.path.join(AIRUNNER_BASE_PATH, "text/models/tts")
+        ),
     )
 
     def tts_processor_path(self) -> str:

@@ -188,7 +188,9 @@ class BaseWidget(AbstractBaseWidget):
         try:
             getattr(self, button_name).setIcon(
                 QtGui.QIcon(
-                    os.path.join(f"src/icons/{icon}{'-light' if is_dark else ''}.png")
+                    os.path.join(
+                        f"src/icons/{icon}{'-light' if is_dark else ''}.png"
+                    )
                 )
             )
         except AttributeError as _e:
@@ -254,13 +256,17 @@ class BaseWidget(AbstractBaseWidget):
     def _setup_splitters(self):
         self._splitter_debounce_timer = QTimer(self)
         self._splitter_debounce_timer.setSingleShot(True)
-        self._splitter_debounce_timer.timeout.connect(self._save_splitter_state)
+        self._splitter_debounce_timer.timeout.connect(
+            self._save_splitter_state
+        )
 
         for splitter_name in self.splitters:
             try:
                 splitter = getattr(self.ui, splitter_name)
                 if splitter:
-                    splitter.splitterMoved.connect(self._debounce_splitter_moved)
+                    splitter.splitterMoved.connect(
+                        self._debounce_splitter_moved
+                    )
             except AttributeError:
                 pass
 
@@ -276,4 +282,6 @@ class BaseWidget(AbstractBaseWidget):
             autoescape=select_autoescape(["html", "xml"]),
         )
         template = env.get_template(template_name)
-        element.setHtml(template.render(**kwargs), f"file://{self.static_html_dir}/")
+        element.setHtml(
+            template.render(**kwargs), f"file://{self.static_html_dir}/"
+        )

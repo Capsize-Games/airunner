@@ -196,7 +196,9 @@ class BaseNode(NodeObject):
             tab (str): name of the widget tab to display in.
         """
         if not isinstance(widget, NodeBaseWidget):
-            raise NodeWidgetError("'widget' must be an instance of a NodeBaseWidget")
+            raise NodeWidgetError(
+                "'widget' must be an instance of a NodeBaseWidget"
+            )
 
         widget_type = widget_type or NodePropWidgetEnum.HIDDEN.value
         self.create_property(
@@ -215,7 +217,9 @@ class BaseNode(NodeObject):
         #        to address a seg fault issue when exiting the application.
         widget.parent()
 
-    def add_combo_menu(self, name, label="", items=None, tooltip=None, tab=None):
+    def add_combo_menu(
+        self, name, label="", items=None, tooltip=None, tab=None
+    ):
         """
         Creates a custom property with the :meth:`NodeObject.create_property`
         function and embeds a :class:`PySide2.QtWidgets.QComboBox` widget

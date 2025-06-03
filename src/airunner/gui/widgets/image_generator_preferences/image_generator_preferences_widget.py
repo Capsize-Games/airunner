@@ -40,7 +40,9 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
         self.ui.action.clear()
         for item in GeneratorSection:
             self.ui.action.addItem(item.value)
-        self.ui.action.setCurrentText(self.application_settings.current_image_generator)
+        self.ui.action.setCurrentText(
+            self.application_settings.current_image_generator
+        )
         self.ui.action.blockSignals(False)
 
     def stablediffusion_toggled(self, val):

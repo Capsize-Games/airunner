@@ -60,7 +60,9 @@ class Chinese(LanguageBase):
 
     def replace_punctuation(self, text):
         text = text.replace("嗯", "恩").replace("呣", "母")
-        pattern = re.compile("|".join(re.escape(p) for p in self.rep_map.keys()))
+        pattern = re.compile(
+            "|".join(re.escape(p) for p in self.rep_map.keys())
+        )
 
         replaced_text = pattern.sub(lambda x: self.rep_map[x.group()], text)
 
@@ -117,7 +119,9 @@ class Chinese(LanguageBase):
                     pdb.set_trace()
                     continue
                 sub_initials, sub_finals = self._get_initials_finals(word)
-                sub_finals = self.tone_modifier.modified_tone(word, pos, sub_finals)
+                sub_finals = self.tone_modifier.modified_tone(
+                    word, pos, sub_finals
+                )
                 initials.append(sub_initials)
                 finals.append(sub_finals)
 

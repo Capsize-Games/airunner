@@ -8,7 +8,14 @@ from PySide6.QtCore import (
     QSize,
     Signal,
 )
-from PySide6.QtGui import QGradient, QLinearGradient, QPalette, Qt, QPainter, QColor
+from PySide6.QtGui import (
+    QGradient,
+    QLinearGradient,
+    QPalette,
+    Qt,
+    QPainter,
+    QColor,
+)
 from PySide6.QtWidgets import QAbstractButton, QApplication
 
 
@@ -66,7 +73,9 @@ class SwitchPrivate(QObject):
         self.mGradient.setFinalStop(0, r.height())
         painter.setBrush(self.mGradient)
         painter.drawRoundedRect(
-            r.adjusted(margin, margin, -margin, -margin), r.height() / 2, r.height() / 2
+            r.adjusted(margin, margin, -margin, -margin),
+            r.height() / 2,
+            r.height() / 2,
         )
 
         self.mGradient.setColorAt(0, button.darker(130))
@@ -76,7 +85,9 @@ class SwitchPrivate(QObject):
 
         x = r.height() / 2.0 + self.mPosition * (r.width() - r.height())
         painter.drawEllipse(
-            QPointF(x, r.height() / 2), r.height() / 2 - margin, r.height() / 2 - margin
+            QPointF(x, r.height() / 2),
+            r.height() / 2 - margin,
+            r.height() / 2 - margin,
         )
 
     @Slot(bool, name="animate")
@@ -99,7 +110,9 @@ class SwitchWidget(QAbstractButton):
         self.setCheckable(True)
         self.clicked.connect(self.dPtr.animate)
         self.clicked.connect(self.emitToggled)
-        self._backgroundColor = QColor("blue")  # Initialize the internal attribute
+        self._backgroundColor = QColor(
+            "blue"
+        )  # Initialize the internal attribute
         self.setChecked(False)
         self.dPtr.animate(False)
 
