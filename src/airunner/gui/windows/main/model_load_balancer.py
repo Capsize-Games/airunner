@@ -71,7 +71,9 @@ class ModelLoadBalancer(MediatorMixin):
                 worker.load()
                 self._emit_model_status(model_type, ModelStatus.LOADED)
         if self.logger:
-            self.logger.info(f"Restored non-art models: {self._last_non_art_models}")
+            self.logger.info(
+                f"Restored non-art models: {self._last_non_art_models}"
+            )
         self._last_non_art_models = []
 
     def get_loaded_models(self) -> List[ModelType]:

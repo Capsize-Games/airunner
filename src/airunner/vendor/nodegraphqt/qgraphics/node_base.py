@@ -266,7 +266,10 @@ class NodeItem(AbstractNodeItem):
             change:
             value:
         """
-        if change == QtWidgets.QGraphicsItem.ItemSelectedChange and self.scene():
+        if (
+            change == QtWidgets.QGraphicsItem.ItemSelectedChange
+            and self.scene()
+        ):
             self.reset_pipes()
             if value:
                 self.highlight_pipes()
@@ -749,8 +752,12 @@ class NodeItem(AbstractNodeItem):
             return
 
         rect = self.sceneBoundingRect()
-        l = self.viewer().mapToGlobal(self.viewer().mapFromScene(rect.topLeft()))
-        r = self.viewer().mapToGlobal(self.viewer().mapFromScene(rect.topRight()))
+        l = self.viewer().mapToGlobal(
+            self.viewer().mapFromScene(rect.topLeft())
+        )
+        r = self.viewer().mapToGlobal(
+            self.viewer().mapFromScene(rect.topRight())
+        )
         # width is the node width in screen
         width = r.x() - l.x()
 

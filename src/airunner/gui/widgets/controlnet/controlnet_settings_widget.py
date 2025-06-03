@@ -24,7 +24,10 @@ class ControlnetSettingsWidget(BaseWidget):
         self._load_controlnet_models()
 
     def _load_controlnet_models(self):
-        if self._version is None or self._version != self.generator_settings.version:
+        if (
+            self._version is None
+            or self._version != self.generator_settings.version
+        ):
             self._version = self.generator_settings.version
             current_index = 0
 

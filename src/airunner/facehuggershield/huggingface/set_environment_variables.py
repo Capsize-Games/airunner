@@ -29,7 +29,9 @@ def set_huggingface_environment_variables(allow_downloads: bool = None):
     :return:
     """
     print("Setting Hugging Face environment variables")
-    allow_downloads = HF_ALLOW_DOWNLOADS if allow_downloads is None else allow_downloads
+    allow_downloads = (
+        HF_ALLOW_DOWNLOADS if allow_downloads is None else allow_downloads
+    )
 
     if allow_downloads:
         os.environ["HF_ALLOW_DOWNLOADS"] = "1"
@@ -42,7 +44,9 @@ def set_huggingface_environment_variables(allow_downloads: bool = None):
     os.environ["HF_ENDPOINT"] = HF_ENDPOINT
     os.environ["HF_INFERENCE_ENDPOINT"] = HF_INFERENCE_ENDPOINT
     os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = HF_HUB_DISABLE_PROGRESS_BARS
-    os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = HF_HUB_DISABLE_SYMLINKS_WARNING
+    os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = (
+        HF_HUB_DISABLE_SYMLINKS_WARNING
+    )
     os.environ["HF_HUB_DISABLE_EXPERIMENTAL_WARNING"] = (
         HF_HUB_DISABLE_EXPERIMENTAL_WARNING
     )

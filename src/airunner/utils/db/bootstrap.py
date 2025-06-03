@@ -12,7 +12,9 @@ from airunner.data.models import (
     FontSetting,
     PipelineModel,
 )
-from airunner.data.bootstrap.controlnet_bootstrap_data import controlnet_bootstrap_data
+from airunner.data.bootstrap.controlnet_bootstrap_data import (
+    controlnet_bootstrap_data,
+)
 from airunner.data.bootstrap.font_settings_bootstrap_data import (
     font_settings_bootstrap_data,
 )
@@ -20,7 +22,9 @@ from airunner.data.bootstrap.imagefilter_bootstrap_data import (
     imagefilter_bootstrap_data,
 )
 from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
-from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
+from airunner.data.bootstrap.pipeline_bootstrap_data import (
+    pipeline_bootstrap_data,
+)
 from airunner.data.bootstrap.prompt_templates_bootstrap_data import (
     prompt_templates_bootstrap_data,
 )
@@ -224,7 +228,9 @@ def set_image_filter_settings():
             },
         )
         filter_id = result.lastrowid
-        for value_name, value_data in filter_data["image_filter_values"].items():
+        for value_name, value_data in filter_data[
+            "image_filter_values"
+        ].items():
             connection.execute(
                 sa.text(
                     "INSERT INTO image_filter_values (name, value, value_type, min_value, max_value, image_filter_id) "

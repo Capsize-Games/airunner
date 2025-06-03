@@ -39,13 +39,18 @@ class InputImageContainer(BaseWidget):
             self.input_image = InputImage(settings_key=self.settings_key)
             self.ui.tabWidget.addTab(self.input_image, "Input Image")
 
-        if self.generated_image is None and settings_key == "controlnet_settings":
+        if (
+            self.generated_image is None
+            and settings_key == "controlnet_settings"
+        ):
             self.generated_image = InputImage(
                 settings_key=self.settings_key, use_generated_image=True
             )
             self.ui.tabWidget.addTab(self.generated_image, "Generated Image")
         elif self.mask_image is None and settings_key == "outpaint_settings":
-            self.mask_image = InputImage(settings_key=self.settings_key, is_mask=True)
+            self.mask_image = InputImage(
+                settings_key=self.settings_key, is_mask=True
+            )
             self.ui.tabWidget.addTab(self.mask_image, "Mask")
 
     def _set_label(self):

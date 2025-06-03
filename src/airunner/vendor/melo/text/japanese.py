@@ -118,8 +118,12 @@ class Japanese(LanguageBase):
         return self.hira2kata("".join(res))
 
     def japanese_convert_numbers_to_words(self, text: str) -> str:
-        res = _NUMBER_WITH_SEPARATOR_RX.sub(lambda m: m[0].replace(",", ""), text)
-        res = _CURRENCY_RX.sub(lambda m: m[2] + _CURRENCY_MAP.get(m[1], m[1]), res)
+        res = _NUMBER_WITH_SEPARATOR_RX.sub(
+            lambda m: m[0].replace(",", ""), text
+        )
+        res = _CURRENCY_RX.sub(
+            lambda m: m[2] + _CURRENCY_MAP.get(m[1], m[1]), res
+        )
         res = _NUMBER_RX.sub(lambda m: num2words(m[0], lang="ja"), res)
         return res
 

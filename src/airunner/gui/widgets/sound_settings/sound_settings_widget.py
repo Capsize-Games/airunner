@@ -40,12 +40,16 @@ class SoundSettingsWidget(BaseWidget):
         try:
             current_output_device = sd.query_devices(kind="output")
         except sd.PortAudioError as e:
-            self.logger.error(f"PortAudioError: Unable to query output devices. {e}")
+            self.logger.error(
+                f"PortAudioError: Unable to query output devices. {e}"
+            )
 
         try:
             current_input_device = sd.query_devices(kind="input")
         except sd.PortAudioError as e:
-            self.logger.error(f"PortAudioError: Unable to query input devices. {e}")
+            self.logger.error(
+                f"PortAudioError: Unable to query input devices. {e}"
+            )
 
         input_device_names = [device["name"] for device in input_devices]
         output_device_names = [device["name"] for device in output_devices]
@@ -55,21 +59,30 @@ class SoundSettingsWidget(BaseWidget):
 
         # Set current device only if successfully queried
         if current_output_device is not None and output_device_names:
-            self.ui.playbackComboBox.setCurrentText(current_output_device["name"])
+            self.ui.playbackComboBox.setCurrentText(
+                current_output_device["name"]
+            )
 
         self.ui.recordingComboBox.clear()
         self.ui.recordingComboBox.addItems(input_device_names)
 
         # Set current device only if successfully queried
         if current_input_device is not None and input_device_names:
-            self.ui.recordingComboBox.setCurrentText(current_input_device["name"])
+            self.ui.recordingComboBox.setCurrentText(
+                current_input_device["name"]
+            )
 
         # Retrieve current settings
         sound_settings = SoundSettings.objects.first()
 
         # Set playback device
-        if sound_settings and sound_settings.playback_device in output_device_names:
-            self.ui.playbackComboBox.setCurrentText(sound_settings.playback_device)
+        if (
+            sound_settings
+            and sound_settings.playback_device in output_device_names
+        ):
+            self.ui.playbackComboBox.setCurrentText(
+                sound_settings.playback_device
+            )
         elif output_device_names:
             current_device = output_device_names[0]
             self.ui.playbackComboBox.setCurrentIndex(0)
@@ -80,8 +93,13 @@ class SoundSettingsWidget(BaseWidget):
                 )
 
         # Set recording device
-        if sound_settings and sound_settings.recording_device in input_device_names:
-            self.ui.recordingComboBox.setCurrentText(sound_settings.recording_device)
+        if (
+            sound_settings
+            and sound_settings.recording_device in input_device_names
+        ):
+            self.ui.recordingComboBox.setCurrentText(
+                sound_settings.recording_device
+            )
         elif input_device_names:
             current_device = input_device_names[0]
             self.ui.recordingComboBox.setCurrentIndex(0)
@@ -95,7 +113,9 @@ class SoundSettingsWidget(BaseWidget):
     def on_playbackComboBox_currentTextChanged(self, device: str):
         sound_settings = SoundSettings.objects.first()
         if sound_settings is None:
-            SoundSettings.objects.create(playback_device=device, recording_device=None)
+            SoundSettings.objects.create(
+                playback_device=device, recording_device=None
+            )
         sound_settings = SoundSettings.objects.first()
         SoundSettings.objects.update(sound_settings.id, playback_device=device)
         self.emit_signal(SignalCode.PLAYBACK_DEVICE_CHANGED, device)
@@ -104,19 +124,27 @@ class SoundSettingsWidget(BaseWidget):
     def on_recordingComboBox_currentTextChanged(self, device: str):
         sound_settings = SoundSettings.objects.first()
         if sound_settings is None:
-            SoundSettings.objects.create(recording_device=device, playback_device=None)
+            SoundSettings.objects.create(
+                recording_device=device, playback_device=None
+            )
             sound_settings = SoundSettings.objects.first()
-        SoundSettings.objects.update(sound_settings.id, recording_device=device)
+        SoundSettings.objects.update(
+            sound_settings.id, recording_device=device
+        )
         self.emit_signal(SignalCode.RECORDING_DEVICE_CHANGED, device)
 
     def update_microphone_volume(self, volume):
         sound_settings = SoundSettings.objects.first()
         if sound_settings is None:
             SoundSettings.objects.create(
-                microphone_volume=volume, playback_device=None, recording_device=None
+                microphone_volume=volume,
+                playback_device=None,
+                recording_device=None,
             )
             sound_settings = SoundSettings.objects.first()
-        SoundSettings.objects.update(sound_settings.id, microphone_volume=volume)
+        SoundSettings.objects.update(
+            sound_settings.id, microphone_volume=volume
+        )
 
     def adjust_input_level(self, value):
         # Adjust the microphone input level

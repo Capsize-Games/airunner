@@ -50,7 +50,9 @@ class TextboxNode(BaseCoreNode):
             widget_tooltip=tooltip,
             tab=tab,
         )
-        self.text_box = TextEditNode(self.view, name, label, text, placeholder_text)
+        self.text_box = TextEditNode(
+            self.view, name, label, text, placeholder_text
+        )
         self.text_box.setToolTip(tooltip or "")
         self.text_box.value_changed.connect(self.handle_text_change)
         self.view.add_widget(self.text_box)

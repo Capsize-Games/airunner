@@ -59,14 +59,18 @@ class DownloadWorker(Worker):
                 SignalCode.UPDATE_DOWNLOAD_LOG,
                 {"message": f"File already exists, skipping download"},
             )
-            self.emit_signal(SignalCode.DOWNLOAD_PROGRESS, {"current": 0, "total": 0})
+            self.emit_signal(
+                SignalCode.DOWNLOAD_PROGRESS, {"current": 0, "total": 0}
+            )
             self.api.download_complete(file_name)
             return
 
         size_kb = self.get_size(url)
         self.emit_signal(
             SignalCode.UPDATE_DOWNLOAD_LOG,
-            {"message": f"Downloading {url} of size {size_kb} KB to {file_name}"},
+            {
+                "message": f"Downloading {url} of size {size_kb} KB to {file_name}"
+            },
         )
 
         try:

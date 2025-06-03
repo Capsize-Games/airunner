@@ -13,9 +13,14 @@ class ImageFilterValue(BaseModel):
     min_value = Column(Float, nullable=True)
     max_value = Column(Float, nullable=True)
     image_filter_id = Column(
-        Integer, ForeignKey("image_filter_settings.id"), nullable=False, default=1
+        Integer,
+        ForeignKey("image_filter_settings.id"),
+        nullable=False,
+        default=1,
     )
-    image_filter = relationship("ImageFilter", back_populates="image_filter_values")
+    image_filter = relationship(
+        "ImageFilter", back_populates="image_filter_values"
+    )
 
 
 ImageFilterValue.image_filter = relationship(

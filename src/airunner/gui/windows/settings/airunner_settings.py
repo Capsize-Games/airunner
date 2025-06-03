@@ -95,7 +95,9 @@ class SettingsWindow(BaseWindow):
         self.qsettings = get_qsettings()
         super().__init__(**kwargs)
         self.emit_signal(SignalCode.APPLICATION_SETTINGS_LOADED_SIGNAL)
-        self.register(SignalCode.RETRANSLATE_UI_SIGNAL, self.on_retranslate_ui_signal)
+        self.register(
+            SignalCode.RETRANSLATE_UI_SIGNAL, self.on_retranslate_ui_signal
+        )
 
     def showEvent(self, event):
         super().showEvent(event)

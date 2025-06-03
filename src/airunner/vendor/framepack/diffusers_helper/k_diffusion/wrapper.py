@@ -15,7 +15,8 @@ def rescale_noise_cfg(noise_cfg, noise_pred_text, guidance_rescale=1.0):
     std_cfg = noise_cfg.std(dim=list(range(1, noise_cfg.ndim)), keepdim=True)
     noise_pred_rescaled = noise_cfg * (std_text / std_cfg)
     noise_cfg = (
-        guidance_rescale * noise_pred_rescaled + (1.0 - guidance_rescale) * noise_cfg
+        guidance_rescale * noise_pred_rescaled
+        + (1.0 - guidance_rescale) * noise_cfg
     )
     return noise_cfg
 
@@ -56,7 +57,9 @@ def fm_wrapper(transformer, t_scale=1000.0):
             )[0].float()
 
         pred_cfg = pred_negative + cfg_scale * (pred_positive - pred_negative)
-        pred = rescale_noise_cfg(pred_cfg, pred_positive, guidance_rescale=cfg_rescale)
+        pred = rescale_noise_cfg(
+            pred_cfg, pred_positive, guidance_rescale=cfg_rescale
+        )
 
         x0 = x.float() - pred.float() * append_dims(sigma, x.ndim)
 

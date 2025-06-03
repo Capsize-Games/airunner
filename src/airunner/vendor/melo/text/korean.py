@@ -34,7 +34,9 @@ class Korean(LanguageBase):
 
     def normalize_with_dictionary(self, text, dic):
         if any(key in text for key in dic.keys()):
-            pattern = re.compile("|".join(re.escape(key) for key in dic.keys()))
+            pattern = re.compile(
+                "|".join(re.escape(key) for key in dic.keys())
+            )
             return pattern.sub(lambda x: dic[x.group()], text)
         return text
 
@@ -74,7 +76,9 @@ class Korean(LanguageBase):
 
         text = self.normalize(text)
         text = self.g2p_kr(text)
-        text = list(hangul_to_jamo(text))  # '하늘' --> ['ᄒ', 'ᅡ', 'ᄂ', 'ᅳ', 'ᆯ']
+        text = list(
+            hangul_to_jamo(text)
+        )  # '하늘' --> ['ᄒ', 'ᅡ', 'ᄂ', 'ᅳ', 'ᆯ']
         return "".join(text)
 
     def text_normalize(self, text):

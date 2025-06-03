@@ -18,9 +18,12 @@ def get_next_sequence_folder(parent_folder: str, prefix: str) -> str:
     existing = [
         d
         for d in os.listdir(parent_folder)
-        if os.path.isdir(os.path.join(parent_folder, d)) and d.startswith(prefix)
+        if os.path.isdir(os.path.join(parent_folder, d))
+        and d.startswith(prefix)
     ]
-    nums = [int(d[len(prefix) :]) for d in existing if d[len(prefix) :].isdigit()]
+    nums = [
+        int(d[len(prefix) :]) for d in existing if d[len(prefix) :].isdigit()
+    ]
     next_num = max(nums, default=0) + 1
     folder = os.path.join(parent_folder, f"{prefix}{next_num}")
     os.makedirs(folder, exist_ok=True)
@@ -71,4 +74,6 @@ def export_images(
         # For single images, store in the date folder
         seq = get_next_image_sequence(today_folder, ext)
         current_path = os.path.join(today_folder, f"{seq}{ext}")
-        export_image(images[0], current_path, metadata[0] if metadata else None)
+        export_image(
+            images[0], current_path, metadata[0] if metadata else None
+        )

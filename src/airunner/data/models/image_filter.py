@@ -15,5 +15,7 @@ class ImageFilter(BaseModel):
 
 
 ImageFilter.image_filter_values = relationship(
-    "ImageFilterValue", order_by=ImageFilterValue.id, back_populates="image_filter"
+    "ImageFilterValue",
+    order_by=ImageFilterValue.id,
+    back_populates="image_filter",
 )

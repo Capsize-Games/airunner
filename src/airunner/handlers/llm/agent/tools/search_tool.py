@@ -14,7 +14,9 @@ class SearchTool:
     """LLM Tool wrapper for AggregatedSearchTool."""
 
     @staticmethod
-    async def search(query: str, category: str = "all") -> Dict[str, List[dict]]:
+    async def search(
+        query: str, category: str = "all"
+    ) -> Dict[str, List[dict]]:
         """Perform an aggregated search using the static AggregatedSearchTool.
 
         Args:
@@ -27,7 +29,9 @@ class SearchTool:
         return await AggregatedSearchTool.aggregated_search(query, category)
 
     @staticmethod
-    def search_sync(query: str, category: str = "all") -> Dict[str, List[dict]]:
+    def search_sync(
+        query: str, category: str = "all"
+    ) -> Dict[str, List[dict]]:
         """Synchronous wrapper for LLM tool compatibility."""
         return AggregatedSearchTool.aggregated_search_sync(query, category)
 

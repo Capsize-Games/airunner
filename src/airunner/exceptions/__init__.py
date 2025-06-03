@@ -17,7 +17,9 @@ class InterruptedException(Exception):
 
 
 class AutoExportSeedException(Exception):
-    def __init__(self, message="Seed must be set when auto exporting an image"):
+    def __init__(
+        self, message="Seed must be set when auto exporting an image"
+    ):
         self.message = message
         super().__init__(self.message)
 

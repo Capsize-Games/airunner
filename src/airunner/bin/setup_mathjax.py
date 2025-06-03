@@ -13,11 +13,11 @@ import shutil
 from airunner.settings import MATHJAX_VERSION
 
 # Correct MathJax release asset (contains es5/tex-mml-chtml.js)
-MATHJAX_URL = (
-    f"https://github.com/mathjax/MathJax/archive/refs/tags/{MATHJAX_VERSION}.zip"
-)
+MATHJAX_URL = f"https://github.com/mathjax/MathJax/archive/refs/tags/{MATHJAX_VERSION}.zip"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", "static", "mathjax"))
+STATIC_DIR = os.path.abspath(
+    os.path.join(SCRIPT_DIR, "..", "static", "mathjax")
+)
 ZIP_PATH = os.path.join(STATIC_DIR, "mathjax.zip")
 
 # The main entry file for MathJax 3.x CHTML output (after extraction)

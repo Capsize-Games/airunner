@@ -121,7 +121,15 @@ def replace_misc_with_words(text: str) -> str:
 
 def roman_to_int(text: str) -> str:
     """Convert Roman numerals to integers."""
-    roman_numerals = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
+    roman_numerals = {
+        "I": 1,
+        "V": 5,
+        "X": 10,
+        "L": 50,
+        "C": 100,
+        "D": 500,
+        "M": 1000,
+    }
 
     def convert_roman_to_int(roman):
         total = 0
@@ -137,6 +145,8 @@ def roman_to_int(text: str) -> str:
 
     # Replace Roman numerals with their integer values
     result = re.sub(
-        r"\b[IVXLCDM]+\b", lambda match: convert_roman_to_int(match.group(0)), text
+        r"\b[IVXLCDM]+\b",
+        lambda match: convert_roman_to_int(match.group(0)),
+        text,
     )
     return result

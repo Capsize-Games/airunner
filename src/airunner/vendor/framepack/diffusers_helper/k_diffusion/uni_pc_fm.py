@@ -144,9 +144,15 @@ class FlowMatchUniPC:
 
 
 def sample_unipc(
-    model, noise, sigmas, extra_args=None, callback=None, disable=False, variant="bh1"
+    model,
+    noise,
+    sigmas,
+    extra_args=None,
+    callback=None,
+    disable=False,
+    variant="bh1",
 ):
     assert variant in ["bh1", "bh2"]
-    return FlowMatchUniPC(model, extra_args=extra_args, variant=variant).sample(
-        noise, sigmas=sigmas, callback=callback, disable_pbar=disable
-    )
+    return FlowMatchUniPC(
+        model, extra_args=extra_args, variant=variant
+    ).sample(noise, sigmas=sigmas, callback=callback, disable_pbar=disable)

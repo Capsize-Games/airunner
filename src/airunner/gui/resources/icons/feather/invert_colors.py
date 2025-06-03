@@ -92,7 +92,9 @@ def process_svg(input_path, output_path):
                     if color not in ["none", "transparent"]:
                         inverted = invert_color(color)
                         if inverted != color:
-                            debug_print(f"Inverting {attr}='{color}' to '{inverted}'")
+                            debug_print(
+                                f"Inverting {attr}='{color}' to '{inverted}'"
+                            )
                             element.setAttribute(attr, inverted)
 
             # Style attribute
@@ -107,7 +109,10 @@ def process_svg(input_path, output_path):
                         prop = prop.strip()
                         value = value.strip()
 
-                        if prop in color_attrs and value not in ["none", "transparent"]:
+                        if prop in color_attrs and value not in [
+                            "none",
+                            "transparent",
+                        ]:
                             inverted = invert_color(value)
                             if inverted != value:
                                 debug_print(

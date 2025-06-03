@@ -40,8 +40,12 @@ class RegistrationErrorFilter(BaseFilter):
 
         # Paste the channels with their respective offsets
         r_image.paste(r, (self.red_offset_x_amount, self.red_offset_y_amount))
-        g_image.paste(g, (self.green_offset_x_amount, self.green_offset_y_amount))
-        b_image.paste(b, (self.blue_offset_x_amount, self.blue_offset_y_amount))
+        g_image.paste(
+            g, (self.green_offset_x_amount, self.green_offset_y_amount)
+        )
+        b_image.paste(
+            b, (self.blue_offset_x_amount, self.blue_offset_y_amount)
+        )
 
         # Merge the offset channels with the original alpha
         return Image.merge("RGBA", [r_image, g_image, b_image, a])

@@ -86,8 +86,12 @@ class SaveGeneratorSettingsWorker(
                 do_update_settings = False
                 generator_settings = self.generator_settings
                 generator_settings.prompt = self.current_prompt_value
-                generator_settings.negative_prompt = self.current_negative_prompt_value
-                generator_settings.second_prompt = self.current_secondary_prompt_value
+                generator_settings.negative_prompt = (
+                    self.current_negative_prompt_value
+                )
+                generator_settings.second_prompt = (
+                    self.current_secondary_prompt_value
+                )
                 generator_settings.second_negative_prompt = (
                     self.current_secondary_negative_prompt_value
                 )
@@ -139,13 +143,18 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self._sd_version: str = self.generator_settings.version
         self._toggle_sdxl_form_elements()
         self.toggle_microconditioning(
-            self.generator_settings.quality_effects == QualityEffects.CUSTOM.value
+            self.generator_settings.quality_effects
+            == QualityEffects.CUSTOM.value
         )
         self.ui.quality_effects.blockSignals(True)
         self.ui.infinite_images_button.blockSignals(True)
         self.ui.quality_effects.clear()
-        self.ui.quality_effects.addItems([effect.value for effect in QualityEffects])
-        self.ui.quality_effects.setCurrentText(self.generator_settings.quality_effects)
+        self.ui.quality_effects.addItems(
+            [effect.value for effect in QualityEffects]
+        )
+        self.ui.quality_effects.setCurrentText(
+            self.generator_settings.quality_effects
+        )
         self.ui.infinite_images_button.setChecked(
             self.generator_settings.generate_infinite_images
             if self.generator_settings.generate_infinite_images is not None
@@ -175,7 +184,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.logger.error(f"Unable to delete prompt")
             return
         prompt_container = self._prompt_containers[prompt_id]
-        self.ui.additional_prompts_container_layout.removeWidget(prompt_container)
+        self.ui.additional_prompts_container_layout.removeWidget(
+            prompt_container
+        )
         prompt_container.deleteLater()
         self._prompt_containers.pop(prompt_id)
 
@@ -198,7 +209,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.logger.info("Toggle compel form elements")
         # Iterate over all widgets in the layout and enable/disable them
         for i in range(self.ui.additional_prompts_container_layout.count()):
-            widget = self.ui.additional_prompts_container_layout.itemAt(i).widget()
+            widget = self.ui.additional_prompts_container_layout.itemAt(
+                i
+            ).widget()
             if widget:
                 widget.show() if value else widget.hide()
 
@@ -220,10 +233,18 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.ui.negative_crops_coord_top_left_x.blockSignals(True)
             self.ui.negative_crops_coord_top_left_y.blockSignals(True)
             self.ui.original_size_width.setText(
-                str((self.generator_settings.original_size or {}).get("width", 0))
+                str(
+                    (self.generator_settings.original_size or {}).get(
+                        "width", 0
+                    )
+                )
             )
             self.ui.original_size_height.setText(
-                str((self.generator_settings.original_size or {}).get("height", 0))
+                str(
+                    (self.generator_settings.original_size or {}).get(
+                        "height", 0
+                    )
+                )
             )
             self.ui.negative_original_size_width.setText(
                 str(
@@ -240,14 +261,22 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 )
             )
             self.ui.target_size_width.setText(
-                str((self.generator_settings.target_size or {}).get("width", 0))
+                str(
+                    (self.generator_settings.target_size or {}).get("width", 0)
+                )
             )
             self.ui.target_size_height.setText(
-                str((self.generator_settings.target_size or {}).get("height", 0))
+                str(
+                    (self.generator_settings.target_size or {}).get(
+                        "height", 0
+                    )
+                )
             )
             self.ui.negative_target_size_width.setText(
                 str(
-                    (self.generator_settings.negative_target_size or {}).get("width", 0)
+                    (self.generator_settings.negative_target_size or {}).get(
+                        "width", 0
+                    )
                 )
             )
             self.ui.negative_target_size_height.setText(
@@ -258,23 +287,33 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 )
             )
             self.ui.crops_coords_top_left_x.setText(
-                str((self.generator_settings.crops_coords_top_left or {}).get("x", 0))
-            )
-            self.ui.crops_coords_top_left_y.setText(
-                str((self.generator_settings.crops_coords_top_left or {}).get("y", 0))
-            )
-            self.ui.negative_crops_coord_top_left_x.setText(
                 str(
-                    (self.generator_settings.negative_crops_coords_top_left or {}).get(
+                    (self.generator_settings.crops_coords_top_left or {}).get(
                         "x", 0
                     )
                 )
             )
-            self.ui.negative_crops_coord_top_left_y.setText(
+            self.ui.crops_coords_top_left_y.setText(
                 str(
-                    (self.generator_settings.negative_crops_coords_top_left or {}).get(
+                    (self.generator_settings.crops_coords_top_left or {}).get(
                         "y", 0
                     )
+                )
+            )
+            self.ui.negative_crops_coord_top_left_x.setText(
+                str(
+                    (
+                        self.generator_settings.negative_crops_coords_top_left
+                        or {}
+                    ).get("x", 0)
+                )
+            )
+            self.ui.negative_crops_coord_top_left_y.setText(
+                str(
+                    (
+                        self.generator_settings.negative_crops_coords_top_left
+                        or {}
+                    ).get("y", 0)
                 )
             )
             self.ui.original_size_width.blockSignals(False)
@@ -378,7 +417,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
             # If SD is not enabled, enable it and then emit a signal to generate the image
             # The callback function is handled by the signal handler for the SD_LOAD_SIGNAL.
             # The finalize function is a callback which is called after the image has been generated.
-            self.logger.info("Stable Diffusion is not enabled, enabling it now.")
+            self.logger.info(
+                "Stable Diffusion is not enabled, enabling it now."
+            )
             self.api.art.toggle_sd(
                 enabled=True,
                 callback=self.handle_generate_button_clicked,
@@ -391,7 +432,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 "Stable Diffusion is already enabled, generating the image."
             )
             self.handle_generate_button_clicked(
-                dict(enabled=True, finalize=self.finalize_image_generated_by_llm)
+                dict(
+                    enabled=True, finalize=self.finalize_image_generated_by_llm
+                )
             )
 
     def finalize_image_generated_by_llm(self, _data):
@@ -605,7 +648,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         negative_original_size = self.generator_settings.negative_original_size
         negative_original_size = negative_original_size or {}
         negative_original_size["width"] = int(val)
-        self.update_generator_settings("negative_original_size", negative_original_size)
+        self.update_generator_settings(
+            "negative_original_size", negative_original_size
+        )
 
     @Slot(str)
     def on_negative_original_size_height_textChanged(self, val: str):
@@ -613,7 +658,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         negative_original_size = self.generator_settings.negative_original_size
         negative_original_size = negative_original_size or {}
         negative_original_size["height"] = int(val)
-        self.update_generator_settings("negative_original_size", negative_original_size)
+        self.update_generator_settings(
+            "negative_original_size", negative_original_size
+        )
 
     @Slot(str)
     def on_target_size_width_textChanged(self, val: str):
@@ -637,7 +684,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         negative_target_size = self.generator_settings.negative_target_size
         negative_target_size = negative_target_size or {}
         negative_target_size["width"] = int(val)
-        self.update_generator_settings("negative_target_size", negative_target_size)
+        self.update_generator_settings(
+            "negative_target_size", negative_target_size
+        )
 
     @Slot(str)
     def on_negative_target_size_height_textChanged(self, val: str):
@@ -645,7 +694,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         negative_target_size = self.generator_settings.negative_target_size
         negative_target_size = negative_target_size or {}
         negative_target_size["height"] = int(val)
-        self.update_generator_settings("negative_target_size", negative_target_size)
+        self.update_generator_settings(
+            "negative_target_size", negative_target_size
+        )
 
     @Slot(str)
     def on_crops_coords_top_left_x_textChanged(self, val: str):
@@ -653,7 +704,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         crops_coords_top_left = self.generator_settings.crops_coords_top_left
         crops_coords_top_left = crops_coords_top_left or {}
         crops_coords_top_left["x"] = int(val)
-        self.update_generator_settings("crops_coords_top_left", crops_coords_top_left)
+        self.update_generator_settings(
+            "crops_coords_top_left", crops_coords_top_left
+        )
 
     @Slot(str)
     def on_crops_coords_top_left_y_textChanged(self, val: str):
@@ -661,7 +714,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         crops_coords_top_left = self.generator_settings.crops_coords_top_left
         crops_coords_top_left = crops_coords_top_left or {}
         crops_coords_top_left["y"] = int(val)
-        self.update_generator_settings("crops_coords_top_left", crops_coords_top_left)
+        self.update_generator_settings(
+            "crops_coords_top_left", crops_coords_top_left
+        )
 
     @Slot(str)
     def on_negative_crops_coord_top_left_x_textChanged(self, val: str):
@@ -807,8 +862,12 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.quality_effects.blockSignals(True)
 
         self.ui.prompt.setPlainText(self.generator_settings.prompt)
-        self.ui.negative_prompt.setPlainText(self.generator_settings.negative_prompt)
-        self.ui.secondary_prompt.setPlainText(self.generator_settings.second_prompt)
+        self.ui.negative_prompt.setPlainText(
+            self.generator_settings.negative_prompt
+        )
+        self.ui.secondary_prompt.setPlainText(
+            self.generator_settings.second_prompt
+        )
         self.ui.secondary_negative_prompt.setPlainText(
             self.generator_settings.second_negative_prompt
         )
@@ -816,10 +875,14 @@ class StableDiffusionGeneratorForm(BaseWidget):
         image_presets = [preset.value for preset in ImagePreset]
         self.ui.image_presets.addItems(image_presets)
         self.ui.image_presets.setCurrentIndex(
-            self.ui.image_presets.findText(self.generator_settings.image_preset)
+            self.ui.image_presets.findText(
+                self.generator_settings.image_preset
+            )
         )
 
-        self.ui.quality_effects.setCurrentText(self.generator_settings.quality_effects)
+        self.ui.quality_effects.setCurrentText(
+            self.generator_settings.quality_effects
+        )
 
         self.ui.prompt.blockSignals(False)
         self.ui.negative_prompt.blockSignals(False)
@@ -850,7 +913,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         generate_image_key = ShortcutKeys.objects.filter_by_first(
             display_name="Generate Image"
         )
-        interrupt_key = ShortcutKeys.objects.filter_by_first(display_name="Interrupt")
+        interrupt_key = ShortcutKeys.objects.filter_by_first(
+            display_name="Interrupt"
+        )
         if generate_image_key:
             self.ui.generate_button.setShortcut(generate_image_key.key)
             self.ui.generate_button.setToolTip(
@@ -877,7 +942,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         settings.setValue("count", len(self._prompt_containers))
 
         # Save each container's data
-        for i, (prompt_id, container) in enumerate(self._prompt_containers.items()):
+        for i, (prompt_id, container) in enumerate(
+            self._prompt_containers.items()
+        ):
             settings.setValue(f"prompt_{i}_id", prompt_id)
             settings.setValue(f"prompt_{i}_text", container.get_prompt())
             settings.setValue(
@@ -913,7 +980,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
             prompt_container.set_prompt(prompt_text)
             prompt_container.set_prompt_secondary(prompt_text_secondary)
 
-            self.ui.additional_prompts_container_layout.addWidget(prompt_container)
+            self.ui.additional_prompts_container_layout.addWidget(
+                prompt_container
+            )
             self._prompt_containers[prompt_id] = prompt_container
 
             # Connect signals for saving on text change

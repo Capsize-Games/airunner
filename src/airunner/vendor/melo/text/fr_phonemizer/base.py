@@ -32,7 +32,10 @@ class BasePhonemizer(abc.ABC):
     """
 
     def __init__(
-        self, language, punctuations=Punctuation.default_puncs(), keep_puncs=False
+        self,
+        language,
+        punctuations=Punctuation.default_puncs(),
+        keep_puncs=False,
     ):
         # ensure the backend is installed on the system
         if not self.is_available():

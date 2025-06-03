@@ -43,9 +43,13 @@ class AggregatedSearchTool:
     NEWSAPI_KEY: Optional[str] = os.getenv("NEWSAPI_KEY")
     NEWSAPI_ENDPOINT_URL: str = "https://newsapi.org/v2/everything"
     STACKEXCHANGE_KEY: Optional[str] = os.getenv("STACKEXCHANGE_KEY")
-    STACKEXCHANGE_API_URL: str = "https://api.stackexchange.com/2.3/search/advanced"
+    STACKEXCHANGE_API_URL: str = (
+        "https://api.stackexchange.com/2.3/search/advanced"
+    )
     GITHUB_TOKEN: Optional[str] = os.getenv("GITHUB_TOKEN")
-    GITHUB_API_SEARCH_REPOS_URL: str = "https://api.github.com/search/repositories"
+    GITHUB_API_SEARCH_REPOS_URL: str = (
+        "https://api.github.com/search/repositories"
+    )
     OPENLIBRARY_SEARCH_URL: str = "http://openlibrary.org/search.json"
 
     SERVICE_CATEGORIES = {
@@ -58,7 +62,9 @@ class AggregatedSearchTool:
     }
 
     @staticmethod
-    def _format_result(title: str, link: str, snippet: str = "") -> Dict[str, str]:
+    def _format_result(
+        title: str, link: str, snippet: str = ""
+    ) -> Dict[str, str]:
         return {
             "title": title.strip(),
             "link": link.strip(),
@@ -118,7 +124,9 @@ class AggregatedSearchTool:
                     )
                     if len(results) >= num_results:
                         break
-                logger.info(f"Bing search completed. Found {len(results)} results.")
+                logger.info(
+                    f"Bing search completed. Found {len(results)} results."
+                )
         except aiohttp.ClientResponseError as e:
             logger.error(f"Bing API HTTP error: {e.status} - {e.message}")
         except Exception as e:
@@ -150,14 +158,18 @@ class AggregatedSearchTool:
                     title_e = entry.find("atom:title", atom_ns)
                     link_e = entry.find(
                         "atom:link[@rel='alternate']", atom_ns
-                    ) or entry.find("atom:link[@type='application/pdf']", atom_ns)
+                    ) or entry.find(
+                        "atom:link[@type='application/pdf']", atom_ns
+                    )
                     summary_e = entry.find("atom:summary", atom_ns)
                     title = (
                         title_e.text.strip()
                         if title_e is not None and title_e.text
                         else "N/A"
                     )
-                    link = link_e.get("href", "#") if link_e is not None else "#"
+                    link = (
+                        link_e.get("href", "#") if link_e is not None else "#"
+                    )
                     snippet = (
                         summary_e.text.strip().replace("\n", " ")
                         if summary_e is not None and summary_e.text
@@ -170,7 +182,9 @@ class AggregatedSearchTool:
                     )
                     if len(results) >= num_results:
                         break
-                logger.info(f"arXiv search completed. Found {len(results)} results.")
+                logger.info(
+                    f"arXiv search completed. Found {len(results)} results."
+                )
         except aiohttp.ClientResponseError as e:
             logger.error(f"arXiv API HTTP error: {e.status} - {e.message}")
         except ET.ParseError as e:
@@ -191,7 +205,9 @@ class AggregatedSearchTool:
         logger = logging.getLogger(__name__)
         logger.info(f"Starting NewsAPI.org search for: {query}")
         if not AggregatedSearchTool.NEWSAPI_KEY:
-            logger.warning("NewsAPI Key not configured. Skipping NewsAPI search.")
+            logger.warning(
+                "NewsAPI Key not configured. Skipping NewsAPI search."
+            )
             return []
         results = []
         params = {
@@ -220,7 +236,9 @@ class AggregatedSearchTool:
                     )
                     if len(results) >= num_results:
                         break
-                logger.info(f"NewsAPI search completed. Found {len(results)} results.")
+                logger.info(
+                    f"NewsAPI search completed. Found {len(results)} results."
+                )
         except aiohttp.ClientResponseError as e:
             logger.error(f"NewsAPI HTTP error: {e.status} - {e.message}")
         except Exception as e:
@@ -237,7 +255,9 @@ class AggregatedSearchTool:
         client: Optional[aiohttp.ClientSession] = None,
     ) -> List[Dict[str, str]]:
         logger = logging.getLogger(__name__)
-        logger.info(f"Starting Stack Exchange search for: {query} on Stack Overflow")
+        logger.info(
+            f"Starting Stack Exchange search for: {query} on Stack Overflow"
+        )
         results = []
         params = {
             "q": query,
@@ -262,9 +282,9 @@ class AggregatedSearchTool:
                         AggregatedSearchTool._format_result(
                             title=item.get("title", "N/A"),
                             link=item.get("link", "#"),
-                            snippet=item.get("excerpt", item.get("body_markdown", ""))[
-                                :300
-                            ],
+                            snippet=item.get(
+                                "excerpt", item.get("body_markdown", "")
+                            )[:300],
                         )
                     )
                     if len(results) >= num_results:
@@ -273,7 +293,9 @@ class AggregatedSearchTool:
                     f"Stack Exchange search completed. Found {len(results)} results."
                 )
         except aiohttp.ClientResponseError as e:
-            logger.error(f"Stack Exchange API HTTP error: {e.status} - {e.message}")
+            logger.error(
+                f"Stack Exchange API HTTP error: {e.status} - {e.message}"
+            )
         except Exception as e:
             logger.error(f"Stack Exchange search error: {e}")
         finally:
@@ -292,7 +314,9 @@ class AggregatedSearchTool:
         results = []
         headers = {"Accept": "application/vnd.github.v3+json"}
         if AggregatedSearchTool.GITHUB_TOKEN:
-            headers["Authorization"] = f"token {AggregatedSearchTool.GITHUB_TOKEN}"
+            headers["Authorization"] = (
+                f"token {AggregatedSearchTool.GITHUB_TOKEN}"
+            )
         else:
             logger.warning(
                 "GitHub Token not configured. Search may be rate-limited. Consider adding a token."
@@ -323,7 +347,9 @@ class AggregatedSearchTool:
                     )
                     if len(results) >= num_results:
                         break
-                logger.info(f"GitHub search completed. Found {len(results)} results.")
+                logger.info(
+                    f"GitHub search completed. Found {len(results)} results."
+                )
         except aiohttp.ClientResponseError as e:
             logger.error(f"GitHub API HTTP error: {e.status} - {e.message}")
         except Exception as e:
@@ -362,7 +388,9 @@ class AggregatedSearchTool:
                         title = f"{title} by {', '.join(author_names)}"
                     snippet_parts = []
                     if doc.get("first_publish_year"):
-                        snippet_parts.append(f"Pub: {doc.get('first_publish_year')}")
+                        snippet_parts.append(
+                            f"Pub: {doc.get('first_publish_year')}"
+                        )
                     sentences = doc.get("first_sentence_text")
                     if sentences:
                         snippet_parts.append(
@@ -387,7 +415,9 @@ class AggregatedSearchTool:
                     f"Open Library search completed. Found {len(results)} results."
                 )
         except aiohttp.ClientResponseError as e:
-            logger.error(f"Open Library API HTTP error: {e.status} - {e.message}")
+            logger.error(
+                f"Open Library API HTTP error: {e.status} - {e.message}"
+            )
         except Exception as e:
             logger.error(f"Open Library search error: {e}")
         finally:
@@ -414,7 +444,9 @@ class AggregatedSearchTool:
                 )
                 if len(results) >= num_results:
                     break
-        logger.info(f"DuckDuckGo search completed. Found {len(results)} results.")
+        logger.info(
+            f"DuckDuckGo search completed. Found {len(results)} results."
+        )
         return results
 
     @staticmethod
@@ -469,4 +501,6 @@ class AggregatedSearchTool:
         query: str, category: str = "all"
     ) -> Dict[str, List[Dict[str, str]]]:
         """Synchronous wrapper for aggregated_search (for LLM tool compatibility)."""
-        return asyncio.run(AggregatedSearchTool.aggregated_search(query, category))
+        return asyncio.run(
+            AggregatedSearchTool.aggregated_search(query, category)
+        )

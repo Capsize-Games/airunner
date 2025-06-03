@@ -58,9 +58,15 @@ def get_hparams(init=True):
     parser.add_argument("--local_rank", type=int, default=0)
     parser.add_argument("--world-size", type=int, default=1)
     parser.add_argument("--port", type=int, default=10000)
-    parser.add_argument("-m", "--model", type=str, required=True, help="Model name")
-    parser.add_argument("--pretrain_G", type=str, default=None, help="pretrain model")
-    parser.add_argument("--pretrain_D", type=str, default=None, help="pretrain model D")
+    parser.add_argument(
+        "-m", "--model", type=str, required=True, help="Model name"
+    )
+    parser.add_argument(
+        "--pretrain_G", type=str, default=None, help="pretrain model"
+    )
+    parser.add_argument(
+        "--pretrain_D", type=str, default=None, help="pretrain model D"
+    )
     parser.add_argument(
         "--pretrain_dur",
         type=str,
@@ -108,7 +114,9 @@ def get_logger(model_dir, filename="train.log"):
     logger = logging.getLogger(os.path.basename(model_dir))
     logger.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter("%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s"
+    )
     if not os.path.exists(model_dir):
         os.makedirs(model_dir, exist_ok=True)
     h = logging.FileHandler(os.path.join(model_dir, filename))
