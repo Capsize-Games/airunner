@@ -94,8 +94,12 @@ class ImageToolsMixin(ToolSingletonMixin):
                 )
                 return "Generating image..."
 
+            # Make the description very explicit for the LLM
             self._generate_image_tool = FunctionTool.from_defaults(
-                generate_image, return_direct=True
+                generate_image,
+                name="generate_image_tool",
+                description="Generate an image based on a prompt, style, and settings. Use this tool to create or draw any kind of image, artwork, or visual content. Do NOT use the search tool for image generation.",
+                return_direct=True,
             )
         return self._generate_image_tool
 
