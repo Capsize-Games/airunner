@@ -42,7 +42,9 @@ class MemoryManagerMixin:
         self.chat_store = None
         # Defensive: check for None before using
         if self.chat_store is not None:
-            messages = self.chat_store.get_messages(key=str(self.conversation_id))
+            messages = self.chat_store.get_messages(
+                key=str(self.conversation_id)
+            )
         else:
             messages = []
         if self.chat_memory is not None:
@@ -51,8 +53,13 @@ class MemoryManagerMixin:
         if self.chat_engine is not None:
             self.chat_engine.memory = self.chat_memory
         else:
-            self.logger.warning("reset_memory: chat_engine is None, cannot set memory.")
-        if hasattr(self, "react_tool_agent") and self.react_tool_agent is not None:
+            self.logger.warning(
+                "reset_memory: chat_engine is None, cannot set memory."
+            )
+        if (
+            hasattr(self, "react_tool_agent")
+            and self.react_tool_agent is not None
+        ):
             self.react_tool_agent.memory = self.chat_memory
         self.reload_rag_engine()
 

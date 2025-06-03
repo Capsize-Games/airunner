@@ -350,8 +350,14 @@ language_tone_start_map = {
     AvailableLanguage.JP: num_zh_tones,
     AvailableLanguage.EN: num_zh_tones + num_ja_tones,
     AvailableLanguage.KR: num_zh_tones + num_ja_tones + num_en_tones,
-    AvailableLanguage.ES: num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones,
-    AvailableLanguage.SP: num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones,
+    AvailableLanguage.ES: num_zh_tones
+    + num_ja_tones
+    + num_en_tones
+    + num_kr_tones,
+    AvailableLanguage.SP: num_zh_tones
+    + num_ja_tones
+    + num_en_tones
+    + num_kr_tones,
     AvailableLanguage.FR: num_zh_tones
     + num_ja_tones
     + num_en_tones

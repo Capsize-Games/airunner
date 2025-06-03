@@ -300,7 +300,9 @@ def chinese_to_romaji(text):
     text = bopomofo_to_romaji(text)
     text = re.sub("i([aoe])", r"y\1", text)
     text = re.sub("u([aoəe])", r"w\1", text)
-    text = re.sub("([ʦsɹ]`[⁼ʰ]?)([→↓↑ ]+|$)", r"\1ɹ`\2", text).replace("ɻ", "ɹ`")
+    text = re.sub("([ʦsɹ]`[⁼ʰ]?)([→↓↑ ]+|$)", r"\1ɹ`\2", text).replace(
+        "ɻ", "ɹ`"
+    )
     text = re.sub("([ʦs][⁼ʰ]?)([→↓↑ ]+|$)", r"\1ɹ\2", text)
     return text
 
@@ -319,7 +321,9 @@ def chinese_to_ipa(text):
     text = bopomofo_to_ipa(text)
     text = re.sub("i([aoe])", r"j\1", text)
     text = re.sub("u([aoəe])", r"w\1", text)
-    text = re.sub("([sɹ]`[⁼ʰ]?)([→↓↑ ]+|$)", r"\1ɹ`\2", text).replace("ɻ", "ɹ`")
+    text = re.sub("([sɹ]`[⁼ʰ]?)([→↓↑ ]+|$)", r"\1ɹ`\2", text).replace(
+        "ɻ", "ɹ`"
+    )
     text = re.sub("([s][⁼ʰ]?)([→↓↑ ]+|$)", r"\1ɹ\2", text)
     return text
 

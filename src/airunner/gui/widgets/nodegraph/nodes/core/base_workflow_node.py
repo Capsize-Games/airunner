@@ -82,14 +82,20 @@ class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
             )
         for port in self._input_ports:
             # Ensure display_name is a boolean if present
-            if "display_name" in port and not isinstance(port["display_name"], bool):
+            if "display_name" in port and not isinstance(
+                port["display_name"], bool
+            ):
                 port["display_name"] = bool(port["display_name"])
             self._registered_input_ports[port["name"]] = self.add_input(**port)
         for port in self._output_ports:
             # Ensure display_name is a boolean if present
-            if "display_name" in port and not isinstance(port["display_name"], bool):
+            if "display_name" in port and not isinstance(
+                port["display_name"], bool
+            ):
                 port["display_name"] = bool(port["display_name"])
-            self._registered_output_ports[port["name"]] = self.add_output(**port)
+            self._registered_output_ports[port["name"]] = self.add_output(
+                **port
+            )
         for prop in self._properties:
             prop["widget_type"] = prop["widget_type"].value
             self.create_property(**prop)
@@ -231,7 +237,9 @@ class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
             and data_input_port_name
             and data_input_port_name in input_data
         ):
-            passthrough_data[data_output_port_name] = input_data[data_input_port_name]
+            passthrough_data[data_output_port_name] = input_data[
+                data_input_port_name
+            ]
 
         # Return data keyed by output port name and indicate execution flow
         return {**passthrough_data, "_exec_triggered": self.EXEC_OUT_PORT_NAME}
@@ -253,7 +261,9 @@ class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
             else:
                 self.logger.info(f"Node '{self.name()}' paused.")
         except Exception as e:
-            self.logger.info(f"Error in on_pause for node '{self.name()}': {e}")
+            self.logger.info(
+                f"Error in on_pause for node '{self.name()}': {e}"
+            )
 
     def on_stop(self):
         """
@@ -284,4 +294,6 @@ class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
             else:
                 self.logger.info(f"Node '{self.name()}' resumed.")
         except Exception as e:
-            self.logger.info(f"Error in on_resume for node '{self.name()}': {e}")
+            self.logger.info(
+                f"Error in on_resume for node '{self.name()}': {e}"
+            )

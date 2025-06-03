@@ -11,7 +11,9 @@ class PropSlider(BaseProperty):
     widget.
     """
 
-    def __init__(self, parent=None, disable_scroll=True, realtime_update=False):
+    def __init__(
+        self, parent=None, disable_scroll=True, realtime_update=False
+    ):
         super(PropSlider, self).__init__(parent)
         self._block = False
         self._realtime_update = realtime_update
@@ -107,10 +109,14 @@ class QDoubleSlider(QtWidgets.QSlider):
         return super(QDoubleSlider, self).setMaximum(value * self._multiplier)
 
     def setSingleStep(self, value):
-        return super(QDoubleSlider, self).setSingleStep(value * self._multiplier)
+        return super(QDoubleSlider, self).setSingleStep(
+            value * self._multiplier
+        )
 
     def singleStep(self):
-        return float(super(QDoubleSlider, self).singleStep()) / self._multiplier
+        return (
+            float(super(QDoubleSlider, self).singleStep()) / self._multiplier
+        )
 
     def setValue(self, value):
         super(QDoubleSlider, self).setValue(int(value * self._multiplier))

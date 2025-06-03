@@ -29,7 +29,9 @@ class NodeGraphWorker(Worker):
             self._is_paused = False
             # Notify all nodes that we're resuming
             for node_id, node in self._node_map.items():
-                if hasattr(node, "on_resume") and callable(getattr(node, "on_resume")):
+                if hasattr(node, "on_resume") and callable(
+                    getattr(node, "on_resume")
+                ):
                     try:
                         node.on_resume()
                     except Exception as e:
@@ -63,7 +65,9 @@ class NodeGraphWorker(Worker):
         # Notify all nodes in the workflow to stop
         if self.graph and hasattr(self, "_node_map"):
             for node_id, node in self._node_map.items():
-                if hasattr(node, "on_stop") and callable(getattr(node, "on_stop")):
+                if hasattr(node, "on_stop") and callable(
+                    getattr(node, "on_stop")
+                ):
                     try:
                         node.on_stop()
                     except Exception as e:
@@ -83,7 +87,9 @@ class NodeGraphWorker(Worker):
         # Notify all nodes in the workflow to pause
         if self.graph and hasattr(self, "_node_map"):
             for node_id, node in self._node_map.items():
-                if hasattr(node, "on_pause") and callable(getattr(node, "on_pause")):
+                if hasattr(node, "on_pause") and callable(
+                    getattr(node, "on_pause")
+                ):
                     try:
                         node.on_pause()
                     except Exception as e:
@@ -92,15 +98,21 @@ class NodeGraphWorker(Worker):
                             exc_info=True,
                         )
 
-        self.logger.info("Workflow execution has been paused. Use run to resume.")
+        self.logger.info(
+            "Workflow execution has been paused. Use run to resume."
+        )
 
     def handle_message(self, data: Dict):
         node_id = data.get("node_id")
         result = data.get("result")
-        output_data = data.get("output_data")  # Get output data from the signal
+        output_data = data.get(
+            "output_data"
+        )  # Get output data from the signal
 
         if not node_id or not result:
-            self.logger.warning("Received incomplete node execution completed signal")
+            self.logger.warning(
+                "Received incomplete node execution completed signal"
+            )
             return
 
         self.logger.info(
@@ -173,7 +185,9 @@ class NodeGraphWorker(Worker):
                 )
             else:
                 # There are still nodes in the queue or other pending nodes
-                self.logger.info("Continuing workflow execution with existing queue")
+                self.logger.info(
+                    "Continuing workflow execution with existing queue"
+                )
                 self._resume_workflow_from_queue(self._execution_queue)
         else:
             self.logger.warning(
@@ -183,7 +197,9 @@ class NodeGraphWorker(Worker):
     def execute_workflow(self, initial_input_data: Dict = None):
         if initial_input_data is None:
             initial_input_data = {}
-        self._node_outputs = {}  # Store data outputs {node_id: {port_name: data}}
+        self._node_outputs = (
+            {}
+        )  # Store data outputs {node_id: {port_name: data}}
         execution_queue, executed_nodes, node_map = self._initialize_execution(
             initial_input_data
         )
@@ -220,7 +236,10 @@ class NodeGraphWorker(Worker):
             node_id = self._execution_queue.pop(0)
 
             # Skip if already executed or pending
-            if node_id in self._executed_nodes or node_id in self._pending_nodes:
+            if (
+                node_id in self._executed_nodes
+                or node_id in self._pending_nodes
+            ):
                 continue
 
             current_node = self._node_map.get(node_id)
@@ -229,7 +248,9 @@ class NodeGraphWorker(Worker):
                     f"Node ID {node_id} not found in map during execution. Skipping."
                 )
                 continue
-            self.logger.info(f"Executing node: {current_node.name()} (ID: {node_id})")
+            self.logger.info(
+                f"Executing node: {current_node.name()} (ID: {node_id})"
+            )
             current_input_data = self._prepare_input_data(
                 current_node, self._node_outputs, self._initial_input_data
             )
@@ -318,7 +339,9 @@ class NodeGraphWorker(Worker):
         )
         return execution_queue, executed_nodes, node_map
 
-    def _prepare_input_data(self, current_node, node_outputs, initial_input_data):
+    def _prepare_input_data(
+        self, current_node, node_outputs, initial_input_data
+    ):
         current_input_data = {}
         current_node_id = current_node.id
 
@@ -350,12 +373,17 @@ class NodeGraphWorker(Worker):
                         source_input_data = self._prepare_input_data(
                             source_node, node_outputs, initial_input_data
                         )
-                        triggered_port_name, source_output_data = self._execute_node(
-                            source_node, source_input_data, node_outputs
+                        triggered_port_name, source_output_data = (
+                            self._execute_node(
+                                source_node, source_input_data, node_outputs
+                            )
                         )
 
                         # Key fix: Check if the source node returned None (indicating async execution)
-                        if triggered_port_name is None and source_output_data is None:
+                        if (
+                            triggered_port_name is None
+                            and source_output_data is None
+                        ):
                             self.logger.info(
                                 f"  Source node '{source_node.name()}' execution is pending. Cannot continue preparing input data."
                             )
@@ -374,9 +402,9 @@ class NodeGraphWorker(Worker):
                         source_node_id in node_outputs
                         and source_port_name in node_outputs[source_node_id]
                     ):
-                        current_input_data[port_name] = node_outputs[source_node_id][
-                            source_port_name
-                        ]
+                        current_input_data[port_name] = node_outputs[
+                            source_node_id
+                        ][source_port_name]
                         self.logger.info(
                             f"  Input '{port_name}' received data from '{source_node.name()}.{source_port_name}'"
                         )
@@ -392,8 +420,12 @@ class NodeGraphWorker(Worker):
                     and port_name not in current_input_data
                     and port_name in initial_input_data
                 ):
-                    current_input_data[port_name] = initial_input_data[port_name]
-                    self.logger.info(f"  Input '{port_name}' received initial data.")
+                    current_input_data[port_name] = initial_input_data[
+                        port_name
+                    ]
+                    self.logger.info(
+                        f"  Input '{port_name}' received initial data."
+                    )
         finally:
             # Remove this node from the processing set
             self._nodes_in_processing.remove(current_node_id)
@@ -454,7 +486,9 @@ class NodeGraphWorker(Worker):
                 # Mark as failed but don't halt workflow
                 node_outputs[current_node.id] = {}
         else:
-            self.logger.info(f"  Node {current_node.name()} has no execute method.")
+            self.logger.info(
+                f"  Node {current_node.name()} has no execute method."
+            )
             node_outputs[current_node.id] = {}
 
         return triggered_exec_port_name, output_data
@@ -510,7 +544,9 @@ class NodeGraphWorker(Worker):
                 f"  Node '{current_node.name()}' did not trigger an execution output. Execution path ends here."
             )
 
-    def _finalize_execution(self, processed_count, max_steps, node_outputs, node_map):
+    def _finalize_execution(
+        self, processed_count, max_steps, node_outputs, node_map
+    ):
         """Finalize the workflow execution and log results."""
         if processed_count >= max_steps:
             self.logger.info(

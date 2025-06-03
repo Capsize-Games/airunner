@@ -307,7 +307,9 @@ class API(App):
         )
 
     def download_complete(self, file_name: str = ""):
-        self.emit_signal(SignalCode.DOWNLOAD_COMPLETE, {"file_name": file_name})
+        self.emit_signal(
+            SignalCode.DOWNLOAD_COMPLETE, {"file_name": file_name}
+        )
 
     def clear_status_message(self):
         self.emit_signal(SignalCode.APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL)
@@ -374,7 +376,9 @@ class API(App):
         self.emit_signal(SignalCode.UPATE_LOCALE, data)
 
     def llm_model_download_progress(self, percent: int):
-        self.emit_signal(SignalCode.LLM_MODEL_DOWNLOAD_PROGRESS, {"percent": percent})
+        self.emit_signal(
+            SignalCode.LLM_MODEL_DOWNLOAD_PROGRESS, {"percent": percent}
+        )
 
     def connect_signal(self, signal_code, handler):
         # Use MediatorMixin's register_signal_handler, not QApplication

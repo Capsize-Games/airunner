@@ -16,4 +16,6 @@ class AIModels(BaseModel):
     enabled = Column(Boolean, nullable=False, default=True)
     model_type = Column(String, nullable=False, default="")
     is_default = Column(Boolean, nullable=False, default=False)
-    generator_settings = relationship("GeneratorSettings", back_populates="aimodel")
+    generator_settings = relationship(
+        "GeneratorSettings", back_populates="aimodel"
+    )

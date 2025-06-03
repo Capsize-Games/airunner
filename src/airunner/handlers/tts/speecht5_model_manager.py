@@ -193,10 +193,14 @@ class SpeechT5ModelManager(TTSModelManager):
                 self._set_status_loaded()
                 self.logger.info("SpeechT5 models loaded successfully.")
             except Exception as e:
-                self.logger.error(f"Failed to move models to device {self.device}: {e}")
+                self.logger.error(
+                    f"Failed to move models to device {self.device}: {e}"
+                )
                 self._set_status_failed()
         else:
-            self.logger.error("Failed to load one or more SpeechT5 components.")
+            self.logger.error(
+                "Failed to load one or more SpeechT5 components."
+            )
             self._set_status_failed()
 
     def unload(self):
@@ -293,20 +297,24 @@ class SpeechT5ModelManager(TTSModelManager):
             self._speaker_embeddings = torch.load(embeddings_path)
             if self.use_cuda and self._speaker_embeddings is not None:
                 # Move embeddings to CUDA device with appropriate dtype
-                self._speaker_embeddings = self._speaker_embeddings.to(self.device).to(
-                    self.torch_dtype
-                )
+                self._speaker_embeddings = self._speaker_embeddings.to(
+                    self.device
+                ).to(self.torch_dtype)
                 self.logger.debug("Speaker embeddings moved to CUDA.")
             elif self._speaker_embeddings is not None:
                 # Ensure embeddings are on the correct device (CPU) and dtype
-                self._speaker_embeddings = self._speaker_embeddings.to(self.device).to(
-                    self.torch_dtype
-                )
+                self._speaker_embeddings = self._speaker_embeddings.to(
+                    self.device
+                ).to(self.torch_dtype)
                 self.logger.debug("Speaker embeddings loaded to CPU.")
 
         except Exception as e:
-            self.logger.error(f"Failed to load or process speaker embeddings: {e}")
-            self._speaker_embeddings = None  # Ensure embeddings are None on failure
+            self.logger.error(
+                f"Failed to load or process speaker embeddings: {e}"
+            )
+            self._speaker_embeddings = (
+                None  # Ensure embeddings are None on failure
+            )
 
     @staticmethod
     def _extract_speaker_key(filename):
@@ -342,8 +350,13 @@ class SpeechT5ModelManager(TTSModelManager):
                     )
                     continue
 
-                extracted_speaker = self._extract_speaker_key(entry["filename"])
-                if extracted_speaker is not None and speaker_key == extracted_speaker:
+                extracted_speaker = self._extract_speaker_key(
+                    entry["filename"]
+                )
+                if (
+                    extracted_speaker is not None
+                    and speaker_key == extracted_speaker
+                ):
                     # Convert xvector to tensor and add batch dimension
                     embeddings = torch.tensor(entry["xvector"]).unsqueeze(0)
                     self.logger.debug(
@@ -405,7 +418,9 @@ class SpeechT5ModelManager(TTSModelManager):
             return None
 
         if not self._cancel_generated_speech:
-            self.logger.debug(f"Generated speech in {time.time() - start:.2f} seconds")
+            self.logger.debug(
+                f"Generated speech in {time.time() - start:.2f} seconds"
+            )
             response = speech.cpu().float().numpy()
             return response
         if not self._do_interrupt:
@@ -421,7 +436,9 @@ class SpeechT5ModelManager(TTSModelManager):
             for key in inputs:
                 if isinstance(inputs[key], torch.Tensor):
                     if torch.is_floating_point(inputs[key]):
-                        inputs[key] = inputs[key].to(device=device, dtype=dtype)
+                        inputs[key] = inputs[key].to(
+                            device=device, dtype=dtype
+                        )
                     else:
                         inputs[key] = inputs[key].to(device=device)
                 elif isinstance(inputs[key], dict):
@@ -436,7 +453,9 @@ class SpeechT5ModelManager(TTSModelManager):
                                     device=device
                                 )
         except Exception as e:
-            self.logger.error(f"Failed to move inputs to device and dtype: {str(e)}")
+            self.logger.error(
+                f"Failed to move inputs to device and dtype: {str(e)}"
+            )
         return inputs
 
     def unblock_tts_generator_signal(self):

@@ -29,7 +29,9 @@ from airunner.utils.application.get_logger import get_logger
 class Conversation(BaseModel):
     __tablename__ = "conversations"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
+    timestamp = Column(
+        DateTime, default=datetime.datetime.now(datetime.timezone.utc)
+    )
     title = Column(String, nullable=True)
     key = Column(String, nullable=True)
     value = Column(JSON, nullable=False, default={})
@@ -70,7 +72,9 @@ class Conversation(BaseModel):
     def summarize(self) -> str:
         messages = self.formatted_messages
         if messages != "":
-            parser = PlaintextParser.from_string(messages, Tokenizer("english"))
+            parser = PlaintextParser.from_string(
+                messages, Tokenizer("english")
+            )
             summarizer = LexRankSummarizer()
             sentence_count = 1
             summary = summarizer(parser.document, sentence_count)
@@ -85,7 +89,9 @@ class Conversation(BaseModel):
         cls.objects.delete(pk, **kwargs)
 
     @classmethod
-    def create(cls, chatbot: Optional[Chatbot] = None, user: Optional[User] = None):
+    def create(
+        cls, chatbot: Optional[Chatbot] = None, user: Optional[User] = None
+    ):
         previous_conversation = (
             cls.objects.options(joinedload(cls.summaries))
             .order_by(cls.id.desc())
@@ -115,7 +121,9 @@ class Conversation(BaseModel):
                 try:
                     chatbot = Chatbot.objects.first()
                 except Exception as e:
-                    get_logger(__name__).error(f"Error retrieving first chatbot: {e}")
+                    get_logger(__name__).error(
+                        f"Error retrieving first chatbot: {e}"
+                    )
                     chatbot = None
             if not chatbot:
                 try:
@@ -125,7 +133,9 @@ class Conversation(BaseModel):
                     )
                     Chatbot.make_current(chatbot.id)
                 except Exception as e:
-                    get_logger(__name__).error(f"Error creating default chatbot: {e}")
+                    get_logger(__name__).error(
+                        f"Error creating default chatbot: {e}"
+                    )
                     chatbot = None
             if not chatbot:
                 get_logger(__name__).error(

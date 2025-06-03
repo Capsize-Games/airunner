@@ -60,7 +60,9 @@ class NodesTreeWidget(QtWidgets.QTreeWidget):
         self._build_tree()
 
     def __repr__(self):
-        return "<{} object at {}>".format(self.__class__.__name__, hex(id(self)))
+        return "<{} object at {}>".format(
+            self.__class__.__name__, hex(id(self))
+        )
 
     def mimeData(self, items):
         node_ids = ["node:{}".format(i.toolTip(0)) for i in items]
@@ -99,7 +101,9 @@ class NodesTreeWidget(QtWidgets.QTreeWidget):
             category = ".".join(node_id.split(".")[:-1])
             category_item = self._category_items[category]
 
-            item = _BaseNodeTreeItem(category_item, [node_name], type=TYPE_NODE)
+            item = _BaseNodeTreeItem(
+                category_item, [node_name], type=TYPE_NODE
+            )
             item.setToolTip(0, node_id)
             item.setSizeHint(0, QtCore.QSize(100, 26))
 

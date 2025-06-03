@@ -21,4 +21,6 @@ class ChatbotAPIService(APIServiceBase):
         Args:
             message (str): The message to display in the chat UI.
         """
-        self.emit_signal(SignalCode.MOOD_SUMMARY_UPDATE_STARTED, {"message": message})
+        self.emit_signal(
+            SignalCode.MOOD_SUMMARY_UPDATE_STARTED, {"message": message}
+        )

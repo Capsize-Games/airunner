@@ -38,7 +38,9 @@ class EspeakPreferencesWidget(BaseWidget):
             return
 
         # Ensure required attributes exist in settings
-        if not all(hasattr(settings, attr) for attr in ["rate", "volume", "pitch"]):
+        if not all(
+            hasattr(settings, attr) for attr in ["rate", "volume", "pitch"]
+        ):
             print(f"Missing attributes in settings for ID: {self._id}")
             return
 
@@ -91,7 +93,9 @@ class EspeakPreferencesWidget(BaseWidget):
         self.update_espeak_settings("gender", text)
         self.ui.voice_combobox.clear()
         self.ui.voice_combobox.addItems(ESPEAK_SETTINGS_DATA["voices"][text])
-        self.update_espeak_settings("voice", self.ui.voice_combobox.currentText())
+        self.update_espeak_settings(
+            "voice", self.ui.voice_combobox.currentText()
+        )
 
     def load_settings(self):
         """Load the Espeak settings into the widget."""

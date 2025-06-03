@@ -75,7 +75,9 @@ def update_path_values(stt_model_path, tts_model_path):
     connection = op.get_bind()
 
     # Get all path settings
-    result = connection.execute(text("SELECT id, base_path FROM path_settings"))
+    result = connection.execute(
+        text("SELECT id, base_path FROM path_settings")
+    )
     path_settings = result.fetchall()
 
     for path_setting in path_settings:

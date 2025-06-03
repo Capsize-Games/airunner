@@ -7,7 +7,9 @@ class VideoAPIService(APIServiceBase):
         self.emit_signal(SignalCode.VIDEO_GENERATE_SIGNAL, data)
 
     def frame_update(self, frame):
-        self.emit_signal(SignalCode.VIDEO_FRAME_UPDATE_SIGNAL, {"frame": frame})
+        self.emit_signal(
+            SignalCode.VIDEO_FRAME_UPDATE_SIGNAL, {"frame": frame}
+        )
 
     def generation_complete(self, path):
         self.emit_signal(SignalCode.VIDEO_GENERATED_SIGNAL, {"path": path})

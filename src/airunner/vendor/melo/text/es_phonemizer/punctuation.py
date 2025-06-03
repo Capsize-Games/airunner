@@ -59,7 +59,9 @@ class Punctuation:
         self._puncs = "".join(
             list(dict.fromkeys(list(value)))
         )  # remove duplicates without changing the oreder
-        self.puncs_regular_exp = re.compile(rf"(\s*[{re.escape(self._puncs)}]+\s*)+")
+        self.puncs_regular_exp = re.compile(
+            rf"(\s*[{re.escape(self._puncs)}]+\s*)+"
+        )
 
     def strip(self, text):
         """Remove all the punctuations by replacing with `space`.
@@ -134,7 +136,9 @@ class Punctuation:
         return cls._restore(text, puncs, 0)
 
     @classmethod
-    def _restore(cls, text, puncs, num):  # pylint: disable=too-many-return-statements
+    def _restore(
+        cls, text, puncs, num
+    ):  # pylint: disable=too-many-return-statements
         """Auxiliary method for Punctuation.restore()"""
         if not puncs:
             return text
@@ -146,10 +150,14 @@ class Punctuation:
         current = puncs[0]
 
         if current.position == PuncPosition.BEGIN:
-            return cls._restore([current.punc + text[0]] + text[1:], puncs[1:], num)
+            return cls._restore(
+                [current.punc + text[0]] + text[1:], puncs[1:], num
+            )
 
         if current.position == PuncPosition.END:
-            return [text[0] + current.punc] + cls._restore(text[1:], puncs[1:], num + 1)
+            return [text[0] + current.punc] + cls._restore(
+                text[1:], puncs[1:], num + 1
+            )
 
         if current.position == PuncPosition.ALONE:
             return [current.mark] + cls._restore(text, puncs[1:], num + 1)

@@ -62,7 +62,9 @@ class _PropertiesList(QtWidgets.QTableWidget):
         self.verticalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.ResizeToContents
         )
-        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        self.horizontalHeader().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.Stretch
+        )
         self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
 
     def wheelEvent(self, event):
@@ -71,7 +73,9 @@ class _PropertiesList(QtWidgets.QTableWidget):
             event (QtGui.QWheelEvent):
         """
         delta = event.angleDelta().y() * 0.2
-        self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta)
+        self.verticalScrollBar().setValue(
+            self.verticalScrollBar().value() - delta
+        )
 
 
 class _PropertiesContainer(QtWidgets.QWidget):
@@ -93,7 +97,9 @@ class _PropertiesContainer(QtWidgets.QWidget):
         self.__property_widgets = {}
 
     def __repr__(self):
-        return "<{} object at {}>".format(self.__class__.__name__, hex(id(self)))
+        return "<{} object at {}>".format(
+            self.__class__.__name__, hex(id(self))
+        )
 
     def add_widget(self, name, widget, value, label=None, tooltip=None):
         """
@@ -160,14 +166,18 @@ class _PortConnectionsContainer(QtWidgets.QWidget):
         self._node = node
         self._ports = {}
 
-        self.input_group, self.input_tree = self._build_tree_group("Input Ports")
+        self.input_group, self.input_tree = self._build_tree_group(
+            "Input Ports"
+        )
         self.input_group.setToolTip("Display input port connections")
         for _, port in node.inputs().items():
             self._build_row(self.input_tree, port)
         for col in range(self.input_tree.columnCount()):
             self.input_tree.resizeColumnToContents(col)
 
-        self.output_group, self.output_tree = self._build_tree_group("Output Ports")
+        self.output_group, self.output_tree = self._build_tree_group(
+            "Output Ports"
+        )
         self.output_group.setToolTip("Display output port connections")
         for _, port in node.outputs().items():
             self._build_row(self.output_tree, port)
@@ -185,7 +195,9 @@ class _PortConnectionsContainer(QtWidgets.QWidget):
         self.output_tree.setVisible(False)
 
     def __repr__(self):
-        return "<{} object at {}>".format(self.__class__.__name__, hex(id(self)))
+        return "<{} object at {}>".format(
+            self.__class__.__name__, hex(id(self))
+        )
 
     @staticmethod
     def _build_tree_group(title):
@@ -211,7 +223,9 @@ class _PortConnectionsContainer(QtWidgets.QWidget):
         tree_widget.setHeaderLabels(headers)
         tree_widget.setHeaderHidden(False)
         tree_widget.header().setStretchLastSection(False)
-        tree_widget.header().setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
+        tree_widget.header().setSectionResizeMode(
+            2, QtWidgets.QHeaderView.Stretch
+        )
 
         group_box.layout().addWidget(tree_widget)
 
@@ -250,11 +264,15 @@ class _PortConnectionsContainer(QtWidgets.QWidget):
         focus_btn = QtWidgets.QPushButton()
         focus_btn.setIcon(
             QtGui.QIcon(
-                tree.style().standardPixmap(QtWidgets.QStyle.SP_DialogYesButton)
+                tree.style().standardPixmap(
+                    QtWidgets.QStyle.SP_DialogYesButton
+                )
             )
         )
         focus_btn.clicked.connect(
-            lambda: self._on_focus_to_node(self._ports.get(combo.currentText()))
+            lambda: self._on_focus_to_node(
+                self._ports.get(combo.currentText())
+            )
         )
         tree.setItemWidget(item, 3, focus_btn)
 
@@ -310,7 +328,9 @@ class NodePropEditorWidget(QtWidgets.QWidget):
         close_btn = QtWidgets.QPushButton()
         close_btn.setIcon(
             QtGui.QIcon(
-                self.style().standardPixmap(QtWidgets.QStyle.SP_DialogCloseButton)
+                self.style().standardPixmap(
+                    QtWidgets.QStyle.SP_DialogCloseButton
+                )
             )
         )
         close_btn.setMaximumWidth(40)
@@ -346,7 +366,9 @@ class NodePropEditorWidget(QtWidgets.QWidget):
         self._port_connections = self._read_node(node)
 
     def __repr__(self):
-        return "<{} object at {}>".format(self.__class__.__name__, hex(id(self)))
+        return "<{} object at {}>".format(
+            self.__class__.__name__, hex(id(self))
+        )
 
     def _on_close(self):
         """
@@ -462,7 +484,9 @@ class NodePropEditorWidget(QtWidgets.QWidget):
             self.__tab.addTab(ports_container, "Ports")
 
         # hide/remove empty tabs with no property widgets.
-        tab_index = {self.__tab.tabText(x): x for x in range(self.__tab.count())}
+        tab_index = {
+            self.__tab.tabText(x): x for x in range(self.__tab.count())
+        }
         current_idx = None
         for tab_name, prop_window in self.__tab_windows.items():
             prop_widgets = prop_window.get_all_widgets()
@@ -661,7 +685,9 @@ class PropertiesBinWidget(QtWidgets.QWidget):
         node_graph.property_changed.connect(self.__on_graph_property_changed)
 
     def __repr__(self):
-        return "<{} object at {}>".format(self.__class__.__name__, hex(id(self)))
+        return "<{} object at {}>".format(
+            self.__class__.__name__, hex(id(self))
+        )
 
     def __on_port_tree_visible_changed(self, node_id, visible, tree_widget):
         """

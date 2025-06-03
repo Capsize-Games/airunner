@@ -48,10 +48,14 @@ def resize_and_center_crop(image, target_width, target_height):
 
     pil_image = Image.fromarray(image)
     original_width, original_height = pil_image.size
-    scale_factor = max(target_width / original_width, target_height / original_height)
+    scale_factor = max(
+        target_width / original_width, target_height / original_height
+    )
     resized_width = int(round(original_width * scale_factor))
     resized_height = int(round(original_height * scale_factor))
-    resized_image = pil_image.resize((resized_width, resized_height), Image.LANCZOS)
+    resized_image = pil_image.resize(
+        (resized_width, resized_height), Image.LANCZOS
+    )
     left = (resized_width - target_width) / 2
     top = (resized_height - target_height) / 2
     right = (resized_width + target_width) / 2
@@ -79,7 +83,9 @@ def resize_and_center_crop_pytorch(image, target_width, target_height):
 
     top = (resized_height - target_height) // 2
     left = (resized_width - target_width) // 2
-    cropped = resized[:, :, top : top + target_height, left : left + target_width]
+    cropped = resized[
+        :, :, top : top + target_height, left : left + target_width
+    ]
 
     return cropped
 
@@ -89,7 +95,9 @@ def resize_without_crop(image, target_width, target_height):
         return image
 
     pil_image = Image.fromarray(image)
-    resized_image = pil_image.resize((target_width, target_height), Image.LANCZOS)
+    resized_image = pil_image.resize(
+        (target_width, target_height), Image.LANCZOS
+    )
     return np.array(resized_image)
 
 
@@ -103,7 +111,9 @@ def just_crop(image, w, h):
     new_height = int(round(h * k))
     x_start = (original_width - new_width) // 2
     y_start = (original_height - new_height) // 2
-    cropped_image = image[y_start : y_start + new_height, x_start : x_start + new_width]
+    cropped_image = image[
+        y_start : y_start + new_height, x_start : x_start + new_width
+    ]
     return cropped_image
 
 
@@ -233,7 +243,9 @@ def get_latest_safetensors(folder_path):
 
 def generate_random_prompt_from_tags(tags_str, min_length=3, max_length=32):
     tags = tags_str.split(", ")
-    tags = random.sample(tags, k=min(random.randint(min_length, max_length), len(tags)))
+    tags = random.sample(
+        tags, k=min(random.randint(min_length, max_length), len(tags))
+    )
     prompt = ", ".join(tags)
     return prompt
 
@@ -269,7 +281,8 @@ def soft_append_bcthw(history, current, overlap=0):
         1, 0, overlap, dtype=history.dtype, device=history.device
     ).view(1, 1, -1, 1, 1)
     blended = (
-        weights * history[:, :, -overlap:] + (1 - weights) * current[:, :, :overlap]
+        weights * history[:, :, -overlap:]
+        + (1 - weights) * current[:, :, :overlap]
     )
     output = torch.cat(
         [history[:, :, :-overlap], blended, current[:, :, overlap:]], dim=2
@@ -372,7 +385,9 @@ def print_gpu_parameters(device, state_dict, log_count=1):
     return
 
 
-def visualize_txt_as_img(width, height, text, font_path="font/DejaVuSans.ttf", size=18):
+def visualize_txt_as_img(
+    width, height, text, font_path="font/DejaVuSans.ttf", size=18
+):
     from PIL import Image, ImageDraw, ImageFont
 
     txt = Image.new("RGB", (width, height), color="white")
@@ -518,7 +533,9 @@ def crop_or_pad_yield_mask(x, length):
         mask[:, :F] = True
         return y, mask
 
-    return x[:, :length, :], torch.ones((B, length), dtype=torch.bool, device=device)
+    return x[:, :length, :], torch.ones(
+        (B, length), dtype=torch.bool, device=device
+    )
 
 
 def extend_dim(x, dim, minimal_length, zero_pad=False):
@@ -587,7 +604,9 @@ def state_dict_offset_merge(A, B, C=None):
 
 def state_dict_weighted_merge(state_dicts, weights):
     if len(state_dicts) != len(weights):
-        raise ValueError("Number of state dictionaries must match number of weights")
+        raise ValueError(
+            "Number of state dictionaries must match number of weights"
+        )
 
     if not state_dicts:
         return {}

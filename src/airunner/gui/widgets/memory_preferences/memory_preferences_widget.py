@@ -68,7 +68,9 @@ class MemoryPreferencesWidget(BaseWidget):
 
     @Slot(str)
     def action_changed_sd_combobox(self, val: str):
-        self.update_memory_settings("default_gpu_sd", self.available_devices.index(val))
+        self.update_memory_settings(
+            "default_gpu_sd", self.available_devices.index(val)
+        )
 
     @Slot(str)
     def action_changed_llm_combobox(self, val: str):
@@ -90,7 +92,9 @@ class MemoryPreferencesWidget(BaseWidget):
 
     @Slot(bool)
     def action_toggled_prevent_unload_on_llm_image_generation(self, val: bool):
-        self.update_memory_settings("prevent_unload_on_llm_image_generation", val)
+        self.update_memory_settings(
+            "prevent_unload_on_llm_image_generation", val
+        )
 
     def action_toggled_setting(self, setting_name, val):
         self.update_memory_settings(setting_name, val)

@@ -40,7 +40,9 @@ class PromptTemplatesWidget(BaseWidget):
         self.ui.system_prompt.setPlainText(template.system)
         self.ui.guardrails_prompt.setPlainText(template.guardrails)
         self.ui.use_guardrails.setChecked(template.use_guardrails)
-        self.ui.use_datetime.setChecked(template.use_system_datetime_in_system_prompt)
+        self.ui.use_datetime.setChecked(
+            template.use_system_datetime_in_system_prompt
+        )
         self.ui.system_prompt.blockSignals(False)
         self.ui.guardrails_prompt.blockSignals(False)
         self.ui.use_guardrails.blockSignals(False)

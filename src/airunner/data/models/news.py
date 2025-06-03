@@ -46,14 +46,20 @@ class Article(BaseModel):
     source = Column(String, nullable=False, unique=True, default="")
     description = Column(String, nullable=True)
     categories = relationship(
-        "Category", secondary=article_category_association, back_populates="articles"
+        "Category",
+        secondary=article_category_association,
+        back_populates="articles",
     )
     image = Column(LargeBinary, nullable=True)
     content = Column(Text, nullable=True)
     status = Column(String, nullable=False, default="new")
-    scraped_at = Column(DateTime, default=datetime.datetime.now(datetime.timezone.utc))
+    scraped_at = Column(
+        DateTime, default=datetime.datetime.now(datetime.timezone.utc)
+    )
 
 
 Category.articles = relationship(
-    "Article", secondary=article_category_association, back_populates="categories"
+    "Article",
+    secondary=article_category_association,
+    back_populates="categories",
 )

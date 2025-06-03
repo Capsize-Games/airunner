@@ -1,4 +1,6 @@
-from airunner.handlers.llm.agent.memory.chat_memory_buffer import ChatMemoryBuffer
+from airunner.handlers.llm.agent.memory.chat_memory_buffer import (
+    ChatMemoryBuffer,
+)
 
 
 __all__ = [

@@ -52,7 +52,9 @@ class MarkdownWidget(BaseContentWidget):
             loader=FileSystemLoader(static_html_dir),
             autoescape=select_autoescape(["html", "xml"]),
         )
-        self._template = self._jinja_env.get_template("content_widget.jinja2.html")
+        self._template = self._jinja_env.get_template(
+            "content_widget.jinja2.html"
+        )
 
     def setContent(self, content, streaming: bool = False):
         """Set the markdown or HTML content to display.

@@ -37,8 +37,12 @@ class LanguageBase:
         self._bert_tokenizer = None
         self.eng_dict = self.get_dict()
         self.current_file_path = os.path.dirname(__file__)
-        self.cmu_dict_path = os.path.join(self.current_file_path, "cmudict.rep")
-        self.cache_path = os.path.join(self.current_file_path, "cmudict_cache.pickle")
+        self.cmu_dict_path = os.path.join(
+            self.current_file_path, "cmudict.rep"
+        )
+        self.cache_path = os.path.join(
+            self.current_file_path, "cmudict_cache.pickle"
+        )
 
     @property
     def device(self) -> str:
@@ -61,13 +65,17 @@ class LanguageBase:
                     self.bert_model_path
                 ).to(self.device)
             except OSError as e:
-                self.logger.error(f"Error loading model {self.bert_model_path}: {e}")
+                self.logger.error(
+                    f"Error loading model {self.bert_model_path}: {e}"
+                )
         return self._bert_model
 
     @property
     def bert_tokenizer(self):
         if not self._bert_tokenizer:
-            self._bert_tokenizer = AutoTokenizer.from_pretrained(self.bert_model_path)
+            self._bert_tokenizer = AutoTokenizer.from_pretrained(
+                self.bert_model_path
+            )
         return self._bert_tokenizer
 
     @property
@@ -132,7 +140,9 @@ class LanguageBase:
         return g2p_dict
 
     def call(self, text, pad_start_end=True, tokenized=None):
-        raise NotImplementedError("g2p method must be implemented in the subclass")
+        raise NotImplementedError(
+            "g2p method must be implemented in the subclass"
+        )
 
     def get_bert_feature(self, text, word2ph):
         with torch.no_grad():
