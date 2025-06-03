@@ -109,9 +109,7 @@ class OpenRouterQObject(LocalAgent):
                     **llm_request.to_dict(),
                 )
             except openai.APIError as e:
-                self.logger.error(
-                    f"Failed to initialize OpenRouterEnhanced: {e}"
-                )
+                self.logger.error(f"Failed to initialize OpenRouterEnhanced: {e}")
 
         return self._llm
 

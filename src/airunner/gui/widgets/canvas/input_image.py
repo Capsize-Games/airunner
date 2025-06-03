@@ -61,8 +61,7 @@ class InputImage(BaseWidget):
 
         # Set up the graphics view for proper interaction
         self.ui.image_container.setRenderHints(
-            QPainter.RenderHint.SmoothPixmapTransform
-            | QPainter.RenderHint.Antialiasing
+            QPainter.RenderHint.SmoothPixmapTransform | QPainter.RenderHint.Antialiasing
         )
 
         # Enable mouse tracking and clickable interaction
@@ -113,9 +112,7 @@ class InputImage(BaseWidget):
             settings = self.drawing_pad_settings
 
         if not settings:
-            raise ValueError(
-                f"Settings not found for key: {self.settings_key}"
-            )
+            raise ValueError(f"Settings not found for key: {self.settings_key}")
 
         return settings
 
@@ -239,9 +236,7 @@ class InputImage(BaseWidget):
         image = Image.open(file_path)
         self.load_image_from_object(image)
         if image is not None:
-            self.update_current_settings(
-                "image", convert_image_to_binary(image)
-            )
+            self.update_current_settings("image", convert_image_to_binary(image))
 
     def load_image_from_grid(self, forced=False):
         # Explicitly clear cache before reading settings to ensure lock status is fresh
@@ -256,11 +251,7 @@ class InputImage(BaseWidget):
 
         if settings_property_name:
             prop = getattr(type(self), settings_property_name, None)
-            if (
-                prop
-                and hasattr(prop, "fget")
-                and hasattr(prop.fget, "cache_clear")
-            ):
+            if prop and hasattr(prop, "fget") and hasattr(prop.fget, "cache_clear"):
                 try:
                     prop.fget.cache_clear()
                     self.logger.debug(
@@ -272,9 +263,7 @@ class InputImage(BaseWidget):
                     )
 
         # Check lock *before* updating settings
-        current_settings = (
-            self.current_settings
-        )  # Read potentially fresh settings
+        current_settings = self.current_settings  # Read potentially fresh settings
         if not forced and current_settings.lock_input_image:
             self.logger.debug(
                 f"Input image locked for {self.settings_key}, skipping update from grid."
@@ -329,9 +318,7 @@ class InputImage(BaseWidget):
             if self._scene.image != qimage:
                 # Update with the new image
                 self._scene.image = qimage
-                self._scene.initialize_image(
-                    image
-                )  # Pass the original PIL image
+                self._scene.initialize_image(image)  # Pass the original PIL image
             # Always set scene rect to image
             if self._scene.item and hasattr(self._scene.item, "boundingRect"):
                 rect = self._scene.item.boundingRect()
@@ -385,9 +372,7 @@ class InputImage(BaseWidget):
                     and hasattr(self, "use_generated_image")
                     and self.use_generated_image
                 ):
-                    self.update_controlnet_settings(
-                        "generated_image", base_64_image
-                    )
+                    self.update_controlnet_settings("generated_image", base_64_image)
                     model = self.controlnet_settings.__class__.objects.first()
                     model.generated_image = base_64_image
                     model.save()

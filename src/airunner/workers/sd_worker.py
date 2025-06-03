@@ -97,9 +97,7 @@ class SDWorker(Worker):
             elif version is StableDiffusionVersion.FLUX_S:
                 self._model_manager = self.flux
             else:
-                raise ValueError(
-                    f"Unsupported Stable Diffusion version: {version}"
-                )
+                raise ValueError(f"Unsupported Stable Diffusion version: {version}")
         return self._model_manager
 
     @model_manager.setter
@@ -302,9 +300,7 @@ class SDWorker(Worker):
 
     @property
     def is_flux(self) -> bool:
-        return self.generator_settings.version in (
-            StableDiffusionVersion.FLUX_S.value,
-        )
+        return self.generator_settings.version in (StableDiffusionVersion.FLUX_S.value,)
 
     @staticmethod
     def on_sd_cancel_signal(_data=None):

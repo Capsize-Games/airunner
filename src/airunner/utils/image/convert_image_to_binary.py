@@ -8,7 +8,7 @@ def convert_image_to_binary(image: Image) -> Optional[bytes]:
         raise ValueError("Image is None")
     img_byte_arr = io.BytesIO()
     try:
-        image.save(img_byte_arr, format='PNG')
+        image.save(img_byte_arr, format="PNG")
     except AttributeError as e:
         print(f"Something went wrong with image conversion to binary: {e}")
         return None

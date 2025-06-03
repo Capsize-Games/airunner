@@ -322,9 +322,7 @@ def load_deep_cache_helper(pipe: Any, logger: logging.Logger) -> Optional[Any]:
         return None
 
 
-def unload_deep_cache_helper(
-    deep_cache_helper: Any, logger: logging.Logger
-) -> None:
+def unload_deep_cache_helper(deep_cache_helper: Any, logger: logging.Logger) -> None:
     """Disable and unload DeepCacheSDHelper."""
     try:
         if deep_cache_helper is not None:

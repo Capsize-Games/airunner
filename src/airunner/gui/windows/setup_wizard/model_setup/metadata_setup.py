@@ -1,6 +1,8 @@
 from PySide6.QtCore import Slot
 from airunner.gui.windows.setup_wizard.base_wizard import BaseWizard
-from airunner.gui.windows.setup_wizard.model_setup.stable_diffusion_setup.templates.metadata_ui import Ui_metadata_setup
+from airunner.gui.windows.setup_wizard.model_setup.stable_diffusion_setup.templates.metadata_ui import (
+    Ui_metadata_setup,
+)
 
 
 class MetaDataSetup(BaseWizard):

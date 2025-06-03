@@ -23,9 +23,7 @@ class AnalysisToolsMixin(ToolSingletonMixin):
         ) -> str:
             conversation = self.conversation
             if conversation:
-                Conversation.objects.update(
-                    self.conversation_id, summary=analysis
-                )
+                Conversation.objects.update(self.conversation_id, summary=analysis)
                 # Emit signal and log
                 self.emit_signal(
                     SignalCode.MOOD_SUMMARY_UPDATE_STARTED,
@@ -87,10 +85,7 @@ class AnalysisToolsMixin(ToolSingletonMixin):
             getattr(analysis, a, None)
             for a in ("content", "message", "analysis", "data", "response")
         ]
-        return all(
-            (a is None or (isinstance(a, str) and not a.strip()))
-            for a in attrs
-        )
+        return all((a is None or (isinstance(a, str) and not a.strip())) for a in attrs)
 
     def _fallback_update_user_data(self, conversation_context):
         tool = getattr(self, "update_user_data_tool", None)
@@ -127,9 +122,7 @@ class AnalysisToolsMixin(ToolSingletonMixin):
             ) or self._is_meaningless_magicmock(analysis):
                 return
             analysis_str = (
-                analysis.strip()
-                if isinstance(analysis, str)
-                else str(analysis)
+                analysis.strip() if isinstance(analysis, str) else str(analysis)
             )
             if len(analysis_str) <= 10:
                 return
@@ -141,9 +134,7 @@ class AnalysisToolsMixin(ToolSingletonMixin):
             if not user_data_list:
                 return
             conversation.user_data = user_data_list
-            Conversation.objects.update(
-                conversation.id, user_data=user_data_list
-            )
+            Conversation.objects.update(conversation.id, user_data=user_data_list)
         except Exception as e:
             self.logger.error(f"Error updating user data: {e}")
 

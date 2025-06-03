@@ -30,9 +30,7 @@ class LLMHistoryWidget(BaseWidget):
             Conversation.id >= 1  # Get all conversations
         )
         if all_conversations:
-            conversations = sorted(
-                all_conversations, key=lambda x: x.id, reverse=True
-            )
+            conversations = sorted(all_conversations, key=lambda x: x.id, reverse=True)
         else:
             conversations = []
 
@@ -57,9 +55,7 @@ class LLMHistoryWidget(BaseWidget):
         for conversation in conversations:
             # if conversation.title == "":
             #     continue
-            llm_history_item_widget = LLMHistoryItemWidget(
-                conversation=conversation
-            )
+            llm_history_item_widget = LLMHistoryItemWidget(conversation=conversation)
             # Add to grid layout - spanning the full row
             layout.addWidget(llm_history_item_widget, row, 0, 1, 1)
             row += 1

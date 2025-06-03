@@ -6,4 +6,3 @@ from airunner.handlers.llm.agent.agents.base import BaseAgent
 class GroqAgent(BaseAgent):
     def llm(self) -> Type[LLM]:
         pass
-

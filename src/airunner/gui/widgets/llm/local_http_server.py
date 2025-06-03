@@ -91,9 +91,7 @@ class LocalHttpServerThread(QThread):
         if self.directory:
             os.chdir(self.directory)
 
-        self._server = ReusableTCPServer(
-            (LOCAL_SERVER_HOST, self.port), handler_class
-        )
+        self._server = ReusableTCPServer((LOCAL_SERVER_HOST, self.port), handler_class)
         self._server.serve_forever()
 
     def stop(self):

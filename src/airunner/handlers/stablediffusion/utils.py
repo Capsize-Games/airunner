@@ -12,9 +12,7 @@ import PIL
 logger = logging.getLogger(__name__)
 
 
-def resize_image(
-    image: Image, max_width: int, max_height: int
-) -> Optional[Image]:
+def resize_image(image: Image, max_width: int, max_height: int) -> Optional[Image]:
     """Resize the image to fit within max_width and max_height, maintaining aspect ratio."""
     if image is None:
         return None
@@ -28,9 +26,7 @@ def resize_image(
     else:
         new_height = min(max_height, original_height)
         new_width = int(new_height * aspect_ratio)
-    resized_image = image.resize(
-        (new_width, new_height), PIL.Image.Resampling.LANCZOS
-    )
+    resized_image = image.resize((new_width, new_height), PIL.Image.Resampling.LANCZOS)
     logger.info(f"Resized image to {new_width}x{new_height}")
     return resized_image
 

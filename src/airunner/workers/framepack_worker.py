@@ -106,15 +106,11 @@ class FramePackWorker(Worker):
                 success = self._framepack_handler.load()
 
                 if not success:
-                    self.api.application_error(
-                        "Failed to load FramePack models"
-                    )
+                    self.api.application_error("Failed to load FramePack models")
                     return False
 
                 # Verify model status after loading
-                model_status = self._framepack_handler.model_status.get(
-                    ModelType.VIDEO
-                )
+                model_status = self._framepack_handler.model_status.get(ModelType.VIDEO)
                 self.logger.info(
                     f"FramePack model status after loading: {model_status}"
                 )
@@ -131,9 +127,7 @@ class FramePackWorker(Worker):
                     self._framepack_handler.model_status.get(ModelType.VIDEO)
                     != ModelStatus.READY
                 ):
-                    self.logger.info(
-                        "FramePack models not ready, attempting to load"
-                    )
+                    self.logger.info("FramePack models not ready, attempting to load")
                     success = self._framepack_handler.load()
 
                     if not success:
@@ -144,9 +138,7 @@ class FramePackWorker(Worker):
 
                     # Double-check model status after loading
                     if (
-                        self._framepack_handler.model_status.get(
-                            ModelType.VIDEO
-                        )
+                        self._framepack_handler.model_status.get(ModelType.VIDEO)
                         != ModelStatus.READY
                     ):
                         self.api.application_error(
@@ -206,9 +198,7 @@ class FramePackWorker(Worker):
                 return
 
             # Report model status
-            model_status = self._framepack_handler.model_status.get(
-                ModelType.VIDEO
-            )
+            model_status = self._framepack_handler.model_status.get(ModelType.VIDEO)
             self.logger.info(f"FramePack model status: {model_status}")
 
             # Get image path or data

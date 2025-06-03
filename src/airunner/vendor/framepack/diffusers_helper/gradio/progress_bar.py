@@ -1,4 +1,4 @@
-progress_html = '''
+progress_html = """
 <div class="loader-container">
   <div class="loader"></div>
   <div class="progress-container">
@@ -6,9 +6,9 @@ progress_html = '''
   </div>
   <span>*text*</span>
 </div>
-'''
+"""
 
-css = '''
+css = """
 .loader-container {
   display: flex; /* Use flex to align items horizontally */
   align-items: center; /* Center items vertically within the container */
@@ -75,11 +75,11 @@ progress::after {
   display: none !important;
 }
 
-'''
+"""
 
 
 def make_progress_bar_html(number, text):
-    return progress_html.replace('*number*', str(number)).replace('*text*', text)
+    return progress_html.replace("*number*", str(number)).replace("*text*", text)
 
 
 def make_progress_bar_css():

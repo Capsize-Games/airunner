@@ -43,8 +43,7 @@ class PathWidget(BaseWidget):
             path = self.path_settings.model_base_path
         if not os.path.exists(path):
             path = os.path.expanduser("~")
-        path = QFileDialog.getExistingDirectory(
-            None, "Select Directory", path)
+        path = QFileDialog.getExistingDirectory(None, "Select Directory", path)
         if path != "":
             self.set_path(path)
 
