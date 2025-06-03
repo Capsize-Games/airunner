@@ -9,7 +9,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 
-from PySide6.QtCore import Slot, QUrl
+from PySide6.QtCore import Slot, QUrl, QTimer
 from PySide6.QtWebEngineCore import (
     QWebEnginePage,
     QWebEngineProfile,
@@ -45,6 +45,7 @@ class BrowserWidget(BaseWidget):
             "summary": None,
             "url": None,
         }
+        self._current_display_mode = "html"  # Track current display mode
         # Set QWebEngineView background to transparent/black
         self.ui.stage.setStyleSheet("background: #111;")
         self.ui.stage.page().setBackgroundColor("#111111")
@@ -81,25 +82,59 @@ class BrowserWidget(BaseWidget):
     def on_plaintext_button_toggled(self, checked: bool) -> None:
         """Switch to plain text mode."""
         if checked and self._page_cache["plaintext"]:
-            html = self._format_plaintext_as_html(
-                self._page_cache["plaintext"]
-            )
-            self.ui.stage.setHtml(html, QUrl(self._page_cache["url"]))
+            if self._current_display_mode != "plaintext":
+                html = self._format_plaintext_as_html(
+                    self._page_cache["plaintext"]
+                )
+                self.ui.stage.setHtml(html, QUrl(self._page_cache["url"]))
+                self._current_display_mode = "plaintext"
         elif not checked and self._page_cache["html"]:
-            # Restore the original HTML using setUrl to reload the page
-            if self._page_cache["url"]:
-                self.ui.stage.setUrl(QUrl(self._page_cache["url"]))
+            # If summary is toggled on, show summary instead
+            if (
+                hasattr(self.ui, "summarize_button")
+                and self.ui.summarize_button.isChecked()
+                and self._page_cache["summary"]
+            ):
+                if self._current_display_mode != "summary":
+                    html = self._format_plaintext_as_html(
+                        self._page_cache["summary"]
+                    )
+                    self.ui.stage.setHtml(html, QUrl(self._page_cache["url"]))
+                    self._current_display_mode = "summary"
+            else:
+                if self._current_display_mode != "html":
+                    if self._page_cache["url"]:
+                        self.ui.stage.setUrl(QUrl(self._page_cache["url"]))
+                        self._current_display_mode = "html"
 
     @Slot(bool)
     def on_summarize_button_toggled(self, checked: bool) -> None:
         """Summarize the current page."""
         if checked and self._page_cache["summary"]:
-            html = self._format_plaintext_as_html(self._page_cache["summary"])
-            self.ui.stage.setHtml(html, QUrl(self._page_cache["url"]))
+            if self._current_display_mode != "summary":
+                html = self._format_plaintext_as_html(
+                    self._page_cache["summary"]
+                )
+                self.ui.stage.setHtml(html, QUrl(self._page_cache["url"]))
+                self._current_display_mode = "summary"
         elif not checked and self._page_cache["html"]:
-            # Restore the original HTML using setUrl to reload the page
-            if self._page_cache["url"]:
-                self.ui.stage.setUrl(QUrl(self._page_cache["url"]))
+            # If plaintext is toggled on, show plaintext instead
+            if (
+                hasattr(self.ui, "plaintext_button")
+                and self.ui.plaintext_button.isChecked()
+                and self._page_cache["plaintext"]
+            ):
+                if self._current_display_mode != "plaintext":
+                    html = self._format_plaintext_as_html(
+                        self._page_cache["plaintext"]
+                    )
+                    self.ui.stage.setHtml(html, QUrl(self._page_cache["url"]))
+                    self._current_display_mode = "plaintext"
+            else:
+                if self._current_display_mode != "html":
+                    if self._page_cache["url"]:
+                        self.ui.stage.setUrl(QUrl(self._page_cache["url"]))
+                        self._current_display_mode = "html"
 
     @Slot()
     def on_submit_button_clicked(self) -> None:
@@ -126,7 +161,9 @@ class BrowserWidget(BaseWidget):
                     "No local file specified after 'local:' scheme."
                 )
                 return
-            user_web_dir = os.path.expanduser("~/.local/share/airunner/web")
+            user_web_dir = os.path.expanduser(
+                os.path.join(self.path_settings.base_path, "web")
+            )
             candidates = [
                 os.path.join(user_web_dir, "html", f"{local_name}.html"),
                 os.path.join(
@@ -445,71 +482,112 @@ class BrowserWidget(BaseWidget):
 
     def on_load_finished(self, ok):
         if ok:
-            # Update security indicators
             self._update_security_indicators()
 
-            # Get the HTML content from the QWebEngineView
-            def handle_html(html):
-                cache_dir = os.path.join(
-                    os.path.expanduser(self.path_settings.base_path),
-                    "cache",
-                    "browser",
-                )
-                os.makedirs(cache_dir, exist_ok=True)
-                url = self.ui.stage.url().toString()
-                url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()
-                cache_path = os.path.join(cache_dir, f"{url_hash}.html")
-                with open(cache_path, "w", encoding="utf-8") as f:
-                    f.write(html)
-                # In-memory cache
-                self._page_cache["html"] = html
-                self._page_cache["url"] = url
-                # Extract plaintext
-                plaintext = extract(html) or ""
-                self._page_cache["plaintext"] = plaintext
-                # Summarize using sumy LexRank (as in conversation.py)
-                summary = ""
-                if plaintext:
-                    try:
-                        parser = PlaintextParser.from_string(
-                            plaintext, Tokenizer("english")
-                        )
-                        summarizer = LexRankSummarizer()
-                        sentence_count = 1
-                        summary_sentences = summarizer(
-                            parser.document, sentence_count
-                        )
-                        summary = "\n".join(
-                            [str(sentence) for sentence in summary_sentences]
-                        )
-                    except Exception as e:
-                        self.logger.warning(f"Summarization failed: {e}")
-                self._page_cache["summary"] = summary
-                # If plaintext or summary toggles are active, update the view
-                if (
-                    hasattr(self.ui, "plaintext_button")
-                    and self.ui.plaintext_button.isChecked()
-                    and plaintext
-                ):
-                    html_out = self._format_plaintext_as_html(plaintext)
-                    self.ui.stage.setHtml(html_out, QUrl(url))
-                elif (
-                    hasattr(self.ui, "summarize_button")
-                    and self.ui.summarize_button.isChecked()
-                    and summary
-                ):
-                    html_out = self._format_plaintext_as_html(summary)
-                    self.ui.stage.setHtml(html_out, QUrl(url))
-                # Instead of emitting RAG_LOAD_DOCUMENTS, emit BROWSER_EXTRA_CONTEXT with plaintext
-                self.emit_signal(
-                    SignalCode.BROWSER_EXTRA_CONTEXT,
-                    {
-                        "plaintext": plaintext,
-                        "url": url,
-                    },
+            def poll_for_rendered_content(attempt=0, max_attempts=20):
+                # Heuristic: consider page rendered if body text is long enough
+                js = """
+                    (function() {
+                        var body = document.body;
+                        if (!body) return false;
+                        var text = body.innerText || '';
+                        return text.length > 1000;
+                    })();
+                """
+                self.ui.stage.page().runJavaScript(
+                    js,
+                    lambda ready: self._on_poll_result(
+                        ready, attempt, max_attempts
+                    ),
                 )
 
-            self.ui.stage.page().toHtml(handle_html)
+            poll_for_rendered_content()
+
+    def _on_poll_result(self, ready, attempt, max_attempts):
+        if ready or attempt >= max_attempts:
+            self._extract_and_process_html()
+        else:
+            QTimer.singleShot(
+                300, lambda: self._poll_again(attempt + 1, max_attempts)
+            )
+
+    def _poll_again(self, attempt, max_attempts):
+        js = """
+            (function() {
+                var body = document.body;
+                if (!body) return false;
+                var text = body.innerText || '';
+                return text.length > 1000;
+            })();
+        """
+        self.ui.stage.page().runJavaScript(
+            js,
+            lambda ready: self._on_poll_result(ready, attempt, max_attempts),
+        )
+
+    def _extract_and_process_html(self):
+        def handle_html(html):
+            cache_dir = os.path.join(
+                os.path.expanduser(self.path_settings.base_path),
+                "cache",
+                "browser",
+            )
+            os.makedirs(cache_dir, exist_ok=True)
+            url = self.ui.stage.url().toString()
+            url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()
+            cache_path = os.path.join(cache_dir, f"{url_hash}.html")
+            with open(cache_path, "w", encoding="utf-8") as f:
+                f.write(html)
+            self._page_cache["html"] = html
+            self._page_cache["url"] = url
+            plaintext = extract(html) or ""
+            self._page_cache["plaintext"] = plaintext
+            summary = ""
+            if plaintext:
+                try:
+                    parser = PlaintextParser.from_string(
+                        plaintext, Tokenizer("english")
+                    )
+                    summarizer = LexRankSummarizer()
+                    sentence_count = 1
+                    summary_sentences = summarizer(
+                        parser.document, sentence_count
+                    )
+                    summary = "\n".join(
+                        [str(sentence) for sentence in summary_sentences]
+                    )
+                except Exception as e:
+                    self.logger.warning(f"Summarization failed: {e}")
+            self._page_cache["summary"] = summary
+            if (
+                hasattr(self.ui, "plaintext_button")
+                and self.ui.plaintext_button.isChecked()
+                and plaintext
+            ):
+                if self._current_display_mode != "plaintext":
+                    html_out = self._format_plaintext_as_html(plaintext)
+                    self.ui.stage.setHtml(html_out, QUrl(url))
+                    self._current_display_mode = "plaintext"
+            elif (
+                hasattr(self.ui, "summarize_button")
+                and self.ui.summarize_button.isChecked()
+                and summary
+            ):
+                if self._current_display_mode != "summary":
+                    html_out = self._format_plaintext_as_html(summary)
+                    self.ui.stage.setHtml(html_out, QUrl(url))
+                    self._current_display_mode = "summary"
+            else:
+                self._current_display_mode = "html"
+            self.emit_signal(
+                SignalCode.BROWSER_EXTRA_CONTEXT,
+                {
+                    "plaintext": plaintext,
+                    "url": url,
+                },
+            )
+
+        self.ui.stage.page().toHtml(handle_html)
 
     def get_privacy_status(self) -> dict:
         """Get current privacy and security status.
