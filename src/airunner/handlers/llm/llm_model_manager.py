@@ -293,7 +293,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
         self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
-    def handle_request(self, data: Dict) -> AgentChatResponse:
+    def handle_request(self, data: Dict, extra_context: Optional[List[str]]) -> AgentChatResponse:
         """
         Handle an incoming request for LLM generation.
 
@@ -314,6 +314,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             prompt=data["request_data"]["prompt"],
             action=data["request_data"]["action"],
             llm_request=data["request_data"]["llm_request"],
+            extra_context=extra_context,
         )
 
     def do_interrupt(self) -> None:
@@ -597,6 +598,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         rag_system_prompt: Optional[str] = None,
         llm_request: Optional[LLMRequest] = None,
         do_tts_reply: bool = True,
+        extra_context: Optional[List[str]] = None,
     ) -> AgentChatResponse:
         """
         Generate a response using the loaded LLM.
@@ -640,6 +642,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             system_prompt=system_prompt,
             rag_system_prompt=rag_system_prompt,
             llm_request=llm_request,  # Pass the object directly
+            extra_context=extra_context,
         )
 
         # Handle the response

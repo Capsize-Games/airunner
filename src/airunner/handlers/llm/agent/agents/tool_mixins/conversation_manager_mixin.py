@@ -29,13 +29,13 @@ class ConversationManagerMixin:
         if not self.use_memory:
             return ""
         conversation_id = getattr(self, "_conversation_id", None)
-        if (
-            not conversation_id
-            and hasattr(self, "_conversation")
-            and self._conversation
-        ):
-            self._conversation_id = self._conversation.id
-        return self._conversation_id
+        if not conversation_id:
+            # Ensure conversation is created and _conversation_id is set
+            conversation = self.conversation  # triggers creation if needed
+            if conversation:
+                self._conversation_id = conversation.id
+                conversation_id = conversation.id
+        return conversation_id
 
     @conversation_id.setter
     def conversation_id(self, value: int):
@@ -49,11 +49,12 @@ class ConversationManagerMixin:
 
     def _create_conversation(self) -> Conversation:
         conversation = None
-        if self.conversation_id:
+        # Use the private attribute to avoid recursion
+        if getattr(self, "_conversation_id", None):
             self.logger.info(
-                f"Loading conversation with ID: {self.conversation_id}"
+                f"Loading conversation with ID: {self._conversation_id}"
             )
-            conversation = Conversation.objects.get(self.conversation_id)
+            conversation = Conversation.objects.get(self._conversation_id)
         if not conversation:
             self.logger.info("No conversation found, looking for most recent")
             conversation = Conversation.most_recent()
