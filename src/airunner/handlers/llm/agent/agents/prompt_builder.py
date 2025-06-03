@@ -52,6 +52,15 @@ class PromptBuilder:
         conversation_timestamp_prompt = ""
         if self.agent.conversation is not None:
             conversation_timestamp_prompt = f"The conversation started on {self.agent.conversation.timestamp}.\n"
+
+        browser_prompt = ""
+        if (
+            self.agent.latest_extra_context != ""
+            and self.agent.latest_extra_context is not None
+        ):
+            browser_prompt = "\nYou are viewing a browser page with the following content:\n"
+            browser_prompt += f"{self.agent.latest_extra_context}\n"
+
         prompt = (
             f"Your name is {botname}.\n"
             f"- The user ({username}) is having a conversation with the assistant ({botname}).\n"
@@ -88,6 +97,7 @@ class PromptBuilder:
             "**More information about the current conversation:**\n"
             f"The conversation is between user ({username}) and assistant ({botname}).\n"
             f"{conversation_timestamp_prompt}"
+            f"{browser_prompt}"
             "------\n"
         )
         if self.agent.language:
@@ -96,4 +106,5 @@ class PromptBuilder:
         prompt = prompt.replace("{{ botname }}", botname)
         prompt = prompt.replace("{{ speaker_name }}", username)
         prompt = prompt.replace("{{ listener_name }}", botname)
+        print("PROMPT", prompt)
         return prompt
