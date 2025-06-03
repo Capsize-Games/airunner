@@ -24,5 +24,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     drop_constraint(
-        Chatbot, constraint_type="unique", constraint_name="unique_chatbot_name"
+        Chatbot,
+        constraint_type="unique",
+        constraint_name="unique_chatbot_name",
     )

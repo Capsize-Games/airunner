@@ -119,7 +119,9 @@ class BaseAgent(
         *args,
         **kwargs,
     ) -> None:
-        self.default_tool_choice: Optional[Union[str, dict]] = default_tool_choice
+        self.default_tool_choice: Optional[Union[str, dict]] = (
+            default_tool_choice
+        )
         self.prompt: Optional[str] = None
         self.webpage_html: str = ""
         self.current_tab: Optional[Tab] = None
@@ -143,8 +145,12 @@ class BaseAgent(
         self._update_user_data_engine = update_user_data_engine
         self._update_user_data_tool = update_user_data_tool
         self._summary_engine_tool: Optional[Any] = summary_engine_tool
-        self._information_scraper_tool: Optional[Any] = information_scraper_tool
-        self._information_scraper_engine: Optional[Any] = information_scraper_engine
+        self._information_scraper_tool: Optional[Any] = (
+            information_scraper_tool
+        )
+        self._information_scraper_engine: Optional[Any] = (
+            information_scraper_engine
+        )
         self._memory: Optional[BaseMemory] = None
         self._react_tool_agent: Optional[Any] = react_tool_agent
         self._complete_response: str = ""
@@ -162,9 +168,13 @@ class BaseAgent(
             from airunner.utils.application.get_logger import get_logger
             from airunner.settings import AIRUNNER_LOG_LEVEL
 
-            self._logger = get_logger(self.__class__.__name__, AIRUNNER_LOG_LEVEL)
+            self._logger = get_logger(
+                self.__class__.__name__, AIRUNNER_LOG_LEVEL
+            )
         self.signal_handlers.update(
-            {SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id}
+            {
+                SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id
+            }
         )
         super().__init__(*args, **kwargs)
 
@@ -205,7 +215,9 @@ class BaseAgent(
         """
         use_memory = self._use_memory
         if (
-            self.llm and self.llm_request and self.llm_request.use_memory is False
+            self.llm
+            and self.llm_request
+            and self.llm_request.use_memory is False
         ):  # override with llm_request
             use_memory = False
         return use_memory
@@ -253,7 +265,10 @@ class BaseAgent(
         Returns:
             bool: True if RAG mode is enabled.
         """
-        return self.rag_enabled and self.action is LLMActionType.PERFORM_RAG_SEARCH
+        return (
+            self.rag_enabled
+            and self.action is LLMActionType.PERFORM_RAG_SEARCH
+        )
 
     @property
     def date_time_prompt(self) -> str:
@@ -446,8 +461,8 @@ class BaseAgent(
             ExternalConditionStoppingCriteria: The stopping criteria.
         """
         if not self._streaming_stopping_criteria:
-            self._streaming_stopping_criteria = ExternalConditionStoppingCriteria(
-                self.do_interrupt_process
+            self._streaming_stopping_criteria = (
+                ExternalConditionStoppingCriteria(self.do_interrupt_process)
             )
         return self._streaming_stopping_criteria
 
@@ -508,7 +523,9 @@ class BaseAgent(
                 ),
             )
 
-        return self._get_or_create_singleton("_update_user_data_engine", factory)
+        return self._get_or_create_singleton(
+            "_update_user_data_engine", factory
+        )
 
     @property
     def mood_engine(self) -> RefreshSimpleChatEngine:
@@ -530,7 +547,8 @@ class BaseAgent(
                             role=self.llm.metadata.system_role,
                         )
                     ]
-                    if hasattr(self, "_mood_update_prompt") and self._mood_update_prompt
+                    if hasattr(self, "_mood_update_prompt")
+                    and self._mood_update_prompt
                     else None
                 ),
             )
@@ -591,7 +609,9 @@ class BaseAgent(
                 ),
             )
 
-        return self._get_or_create_singleton("_information_scraper_engine", factory)
+        return self._get_or_create_singleton(
+            "_information_scraper_engine", factory
+        )
 
     @property
     def mood_engine_tool(self) -> ChatEngineTool:
@@ -869,7 +889,9 @@ class BaseAgent(
         expected_keys = {"username", "botname"}
 
         # Only match single curly braces, not double (escaped) ones
-        found_keys = set(re.findall(r"(?<!\{)\{([a-zA-Z0-9_]+)\}(?!\})", template))
+        found_keys = set(
+            re.findall(r"(?<!\{)\{([a-zA-Z0-9_]+)\}(?!\})", template)
+        )
         if found_keys != expected_keys:
             raise RuntimeError(
                 f"PromptConfig.MOOD_UPDATE template keys mismatch: found {found_keys}, expected {expected_keys}. Template: {template}"
@@ -955,7 +977,9 @@ class BaseAgent(
             system_prompt (Optional[str]): The system prompt to set.
             rag_system_prompt (Optional[str]): The RAG system prompt to set.
         """
-        self.chat_engine_tool.update_system_prompt(system_prompt or self.system_prompt)
+        self.chat_engine_tool.update_system_prompt(
+            system_prompt or self.system_prompt
+        )
 
         if self.rag_mode_enabled:
             self.update_rag_system_prompt(rag_system_prompt)
@@ -974,8 +998,14 @@ class BaseAgent(
             return
 
         conversation = self.conversation
-        if not conversation or not conversation.value or len(conversation.value) == 0:
-            self.logger.debug("Skipping analysis: no conversation or no messages")
+        if (
+            not conversation
+            or not conversation.value
+            or len(conversation.value) == 0
+        ):
+            self.logger.debug(
+                "Skipping analysis: no conversation or no messages"
+            )
             return
 
         total_messages = len(conversation.value)
@@ -993,7 +1023,9 @@ class BaseAgent(
         self.logger.info("Performing analysis (ReAct tools only)")
         self._update_system_prompt()
         self._update_conversation("last_analysis_time", current_time)
-        self._update_conversation("last_analyzed_message_id", total_messages - 1)
+        self._update_conversation(
+            "last_analyzed_message_id", total_messages - 1
+        )
 
         # --- Use ReAct tools for mood and analysis ---
         if self.llm_settings.use_chatbot_mood and self.chatbot.use_mood:
@@ -1016,9 +1048,9 @@ class BaseAgent(
         """
         Update the memory settings for the chat engine.
         """
-        if (type(self.chat_store) is DatabaseChatStore and not self.use_memory) or (
-            type(self.chat_store) is SimpleChatStore and self.use_memory
-        ):
+        if (
+            type(self.chat_store) is DatabaseChatStore and not self.use_memory
+        ) or (type(self.chat_store) is SimpleChatStore and self.use_memory):
             self.chat_memory = None
             self.chat_store = None
         self.chat_engine._memory = self.chat_memory
@@ -1061,7 +1093,9 @@ class BaseAgent(
         # Ensure all chat engines share the same memory instance for consistency
         self._sync_memory_to_all_engines()
 
-    def _perform_tool_call(self, action: LLMActionType, **kwargs: Any) -> Optional[Any]:
+    def _perform_tool_call(
+        self, action: LLMActionType, **kwargs: Any
+    ) -> Optional[Any]:
         """
         Perform a tool call based on the LLMActionType using a strategy pattern.
         Args:
@@ -1206,7 +1240,9 @@ class BaseAgent(
                     "name": self.botname,
                     "content": self._complete_response,
                     "timestamp": now,
-                    "blocks": [{"block_type": "text", "text": self._complete_response}],
+                    "blocks": [
+                        {"block_type": "text", "text": self._complete_response}
+                    ],
                 }
             )
 
@@ -1244,7 +1280,9 @@ class BaseAgent(
                     else:
                         # Fallback: treat as plain text
                         chat_messages.append(
-                            ChatMessage(role="user", blocks=[TextBlock(text=str(msg))])
+                            ChatMessage(
+                                role="user", blocks=[TextBlock(text=str(msg))]
+                            )
                         )
                 self.chat_memory.set(chat_messages)
             self._sync_memory_to_all_engines()
@@ -1288,7 +1326,9 @@ class BaseAgent(
             self._chat_memory = None  # Force re-creation
             messages = self.chat_store.get_messages(str(conversation_id))
             # This will create a new ChatMemoryBuffer with the correct key
-            _ = self.chat_memory  # property will re-initialize with correct key
+            _ = (
+                self.chat_memory
+            )  # property will re-initialize with correct key
             self.chat_memory.set(messages)
             self._sync_memory_to_all_engines()
 
@@ -1300,7 +1340,10 @@ class BaseAgent(
         """
         data = data or {}
         conversation_id = data.get("conversation_id", None)
-        if conversation_id == self.conversation_id or self.conversation_id is None:
+        if (
+            conversation_id == self.conversation_id
+            or self.conversation_id is None
+        ):
             self.conversation = None
             self.conversation_id = None
 

@@ -58,7 +58,9 @@ def create_table_with_defaults(model):
                     column_copy.server_default = column.default
                 columns.append(column_copy)
             op.create_table(
-                model.__tablename__, *columns, *getattr(model, "__table_args__", ())
+                model.__tablename__,
+                *columns,
+                *getattr(model, "__table_args__", ()),
             )
             set_default_values(model)
         except Exception as e:

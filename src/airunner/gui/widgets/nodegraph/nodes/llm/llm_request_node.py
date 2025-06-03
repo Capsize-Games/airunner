@@ -178,10 +178,16 @@ class LLMRequestNode(BaseLLMNode):
         length_penalty = self._get_value(input_data, "length_penalty", float)
         max_new_tokens = self._get_value(input_data, "max_new_tokens", int)
         min_length = self._get_value(input_data, "min_length", int)
-        no_repeat_ngram_size = self._get_value(input_data, "no_repeat_ngram_size", int)
+        no_repeat_ngram_size = self._get_value(
+            input_data, "no_repeat_ngram_size", int
+        )
         num_beams = self._get_value(input_data, "num_beams", int)
-        num_return_sequences = self._get_value(input_data, "num_return_sequences", int)
-        repetition_penalty = self._get_value(input_data, "repetition_penalty", float)
+        num_return_sequences = self._get_value(
+            input_data, "num_return_sequences", int
+        )
+        repetition_penalty = self._get_value(
+            input_data, "repetition_penalty", float
+        )
         temperature = self._get_value(input_data, "temperature", float)
         top_k = self._get_value(input_data, "top_k", int)
         top_p = self._get_value(input_data, "top_p", float)
@@ -257,7 +263,9 @@ class LLMRequestNode(BaseLLMNode):
             return value  # Return as is if no specific type conversion needed or already handled
         else:  # Value not in input_data or is None
             value = self.get_property(name)
-            if allow_none and (value is None or (expected_type == int and value == -1)):
+            if allow_none and (
+                value is None or (expected_type == int and value == -1)
+            ):
                 return None
             if expected_type == bool:
                 return bool(value)

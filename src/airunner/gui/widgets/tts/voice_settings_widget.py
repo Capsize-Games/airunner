@@ -111,7 +111,9 @@ class VoiceSettingsWidget(BaseWidget):
         )
         model_combobox.setCurrentText(voice.model_type)
         model_combobox.currentTextChanged.connect(
-            lambda val, v=voice: self.update_voice_model(v, val, container_layout)
+            lambda val, v=voice: self.update_voice_model(
+                v, val, container_layout
+            )
         )
         container_layout.addWidget(model_combobox)
 

@@ -37,7 +37,9 @@ class ControlNetModel:
     pass
 
 
-class StableDiffusionModelManager(BaseDiffusersModelManager, ModelManagerInterface):
+class StableDiffusionModelManager(
+    BaseDiffusersModelManager, ModelManagerInterface
+):
     @property
     def img2img_pipelines(self):
         return (
@@ -107,10 +109,16 @@ class StableDiffusionModelManager(BaseDiffusersModelManager, ModelManagerInterfa
         formatted_prompt = None
         if self.do_join_prompts:
             prompts = [f'"{prompt}"']
-            for additional_prompt_settings in self.image_request.additional_prompts:
-                addtional_prompt = additional_prompt_settings["prompt_secondary"]
+            for (
+                additional_prompt_settings
+            ) in self.image_request.additional_prompts:
+                addtional_prompt = additional_prompt_settings[
+                    "prompt_secondary"
+                ]
                 prompts.append(f'"{addtional_prompt}"')
-            formatted_prompt = f'({", ".join(prompts)}, "{prompt_preset}").and()'
+            formatted_prompt = (
+                f'({", ".join(prompts)}, "{prompt_preset}").and()'
+            )
 
         if prompt_preset != "":
             prompt = f'("{prompt}", "{prompt_preset}").and()'
@@ -124,7 +132,9 @@ class StableDiffusionModelManager(BaseDiffusersModelManager, ModelManagerInterfa
         prompt = self.image_request.second_negative_prompt
         negative_prompt_preset = self.negative_prompt_preset
         prompt = PromptWeightBridge.convert(prompt)
-        negative_prompt_preset = PromptWeightBridge.convert(negative_prompt_preset)
+        negative_prompt_preset = PromptWeightBridge.convert(
+            negative_prompt_preset
+        )
 
         if negative_prompt_preset != "":
             prompt = f'("{prompt}", "{negative_prompt_preset}").and()'
@@ -151,7 +161,9 @@ class StableDiffusionModelManager(BaseDiffusersModelManager, ModelManagerInterfa
             return
 
         if self._compel_proc is None:
-            self.logger.debug("Compel proc is not loading - attempting to load")
+            self.logger.debug(
+                "Compel proc is not loading - attempting to load"
+            )
             self._load_compel()
 
         prompt = self.prompt
@@ -181,7 +193,9 @@ class StableDiffusionModelManager(BaseDiffusersModelManager, ModelManagerInterfa
                 pooled_prompt_embeds,
                 negative_prompt_embeds,
                 negative_pooled_prompt_embeds,
-            ) = self._build_conditioning_tensors(compel_prompt, compel_negative_prompt)
+            ) = self._build_conditioning_tensors(
+                compel_prompt, compel_negative_prompt
+            )
 
             [prompt_embeds, negative_prompt_embeds] = (
                 self._compel_proc.pad_conditioning_tensors_to_same_length(

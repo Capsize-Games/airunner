@@ -13,7 +13,9 @@ class AddPortDialog(QDialog):
         layout = QFormLayout(self)
 
         self.port_name_input = QLineEdit(self)
-        self.port_type_input = QLineEdit(self)  # Simple text for now, could be dropdown
+        self.port_type_input = QLineEdit(
+            self
+        )  # Simple text for now, could be dropdown
 
         layout.addRow("Port Name:", self.port_name_input)
         layout.addRow("Port Type (optional):", self.port_type_input)

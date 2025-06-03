@@ -20,7 +20,9 @@ class NoInternetSocket(socket.socket):
     def __init_logger(self):
         self.logger = logging.getLogger(__name__)
         handler = logging.FileHandler("network_access_attempts.log")
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.INFO)
@@ -40,7 +42,9 @@ class NoInternetSocket(socket.socket):
             super().connect(address)
             self.logger.info(f"Allowed connection to {host} on port {port}.")
         else:
-            self.logger.info(f"Blocked connection attempt to {host} on port {port}.")
+            self.logger.info(
+                f"Blocked connection attempt to {host} on port {port}."
+            )
             raise ConnectionError(
                 f"Connection to {host} on port {port} is not allowed."
             )

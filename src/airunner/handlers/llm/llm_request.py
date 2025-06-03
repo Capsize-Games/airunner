@@ -181,7 +181,9 @@ class LLMRequest:
         )
 
     @classmethod
-    def from_llm_settings(cls, llm_settings_id: Optional[int] = None) -> "LLMRequest":
+    def from_llm_settings(
+        cls, llm_settings_id: Optional[int] = None
+    ) -> "LLMRequest":
         """
         Create an LLMRequest instance from LLMGeneratorSettings.
 

@@ -11,7 +11,8 @@ class AIModelMixin:
         return [
             model
             for model in self.ai_models
-            if model.is_default == default and search.lower() in model.name.lower()
+            if model.is_default == default
+            and search.lower() in model.name.lower()
         ]
 
     def ai_model_get_disabled_default(self):
@@ -43,10 +44,14 @@ class AIModelMixin:
     def ai_model_paths(self, model_type=None, pipeline_action=None):
         models = self.ai_models
         if model_type:
-            models = [model for model in models if model.model_type == model_type]
+            models = [
+                model for model in models if model.model_type == model_type
+            ]
         if pipeline_action:
             models = [
-                model for model in models if model.pipeline_action == pipeline_action
+                model
+                for model in models
+                if model.pipeline_action == pipeline_action
             ]
 
         return [model.path for model in models]

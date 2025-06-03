@@ -17,7 +17,11 @@ class NodeGraphWidget(QtWidgets.QTabWidget):
         super(NodeGraphWidget, self).__init__(parent)
         self.setTabsClosable(True)
         self.setTabBarAutoHide(True)
-        bg_color = QtGui.QColor(*ViewerEnum.BACKGROUND_COLOR.value).darker(120).getRgb()
+        bg_color = (
+            QtGui.QColor(*ViewerEnum.BACKGROUND_COLOR.value)
+            .darker(120)
+            .getRgb()
+        )
         text_color = tuple(map(lambda i, j: i - j, (255, 255, 255), bg_color))
         style_dict = {
             "QWidget": {

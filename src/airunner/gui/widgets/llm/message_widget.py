@@ -114,7 +114,9 @@ class MessageWidget(BaseWidget):
         if self.is_bot:
             self.ui.message_container.setProperty("class", "alternate")
 
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
         self.ui.content_container.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
@@ -126,8 +128,12 @@ class MessageWidget(BaseWidget):
         self.ui.play_audio_button.setVisible(True)
 
         # Set opacity to make them invisible but keep their layout space
-        self.ui.copy_button.setStyleSheet("background: transparent; border: none;")
-        self.ui.delete_button.setStyleSheet("background: transparent; border: none;")
+        self.ui.copy_button.setStyleSheet(
+            "background: transparent; border: none;"
+        )
+        self.ui.delete_button.setStyleSheet(
+            "background: transparent; border: none;"
+        )
         self.ui.play_audio_button.setStyleSheet(
             "background: transparent; border: none;"
         )
@@ -241,19 +247,27 @@ class MessageWidget(BaseWidget):
 
                 # Create and configure the appropriate content widget based on content type
                 if new_type == FormatterExtended.FORMAT_MIXED:
-                    self.content_widget = MixedContentWidget(self.ui.content_container)
+                    self.content_widget = MixedContentWidget(
+                        self.ui.content_container
+                    )
                     self.content_widget.setContent(result["parts"])
                     self.content_layout.addWidget(self.content_widget)
                 elif new_type == FormatterExtended.FORMAT_LATEX:
-                    self.content_widget = LatexWidget(self.ui.content_container)
+                    self.content_widget = LatexWidget(
+                        self.ui.content_container
+                    )
                     self.content_widget.setContent(result["content"])
                     self.content_layout.addWidget(self.content_widget)
                 elif new_type == FormatterExtended.FORMAT_MARKDOWN:
-                    self.content_widget = MarkdownWidget(self.ui.content_container)
+                    self.content_widget = MarkdownWidget(
+                        self.ui.content_container
+                    )
                     self.content_widget.setContent(result["content"])
                     self.content_layout.addWidget(self.content_widget)
                 else:  # Plain text (default)
-                    self.content_widget = PlainTextWidget(self.ui.content_container)
+                    self.content_widget = PlainTextWidget(
+                        self.ui.content_container
+                    )
                     self.content_widget.setContent(result["content"])
                     self.content_layout.addWidget(self.content_widget)
 
@@ -267,7 +281,9 @@ class MessageWidget(BaseWidget):
 
                 # Connect size changed signal
                 if hasattr(self.content_widget, "sizeChanged"):
-                    self.content_widget.sizeChanged.connect(self.content_size_changed)
+                    self.content_widget.sizeChanged.connect(
+                        self.content_size_changed
+                    )
 
                 # Update the current content type
                 self._current_content_type = new_type
@@ -291,7 +307,9 @@ class MessageWidget(BaseWidget):
                     self.content_layout.removeWidget(self.content_widget)
                     self.content_widget.deleteLater()
                     self.content_widget = None
-                self.content_widget = PlainTextWidget(self.ui.content_container)
+                self.content_widget = PlainTextWidget(
+                    self.ui.content_container
+                )
                 self.content_widget.setContent(message)
                 self.content_layout.addWidget(self.content_widget)
                 self._current_content_type = "plain"
@@ -323,9 +341,13 @@ class MessageWidget(BaseWidget):
     def on_delete_messages_after_id(self, data):
         message_id = data.get("message_id", None)
         if self.message_id > message_id:
-            if not self._deleted:  # Check if the widget has already been deleted
+            if (
+                not self._deleted
+            ):  # Check if the widget has already been deleted
                 try:
-                    if self.parentWidget():  # Check if the widget still has a parent
+                    if (
+                        self.parentWidget()
+                    ):  # Check if the widget still has a parent
                         self.deleteLater()
                 except RuntimeError:
                     pass
@@ -485,7 +507,9 @@ class MessageWidget(BaseWidget):
                 updated_messages = []
             else:
                 updated_messages = messages[0 : self.message_id]
-            Conversation.objects.update(conversation.id, value=updated_messages)
+            Conversation.objects.update(
+                conversation.id, value=updated_messages
+            )
             self.api.llm.delete_messages_after_id(self.message_id)
             self.setParent(None)
             QTimer.singleShot(0, self.deleteLater)

@@ -18,7 +18,9 @@ class WhisperSettingsWidget(BaseWidget):
         self.ui.is_multilingual.blockSignals(True)
         self.ui.language.addItems(LANGUAGES["whisper"])
         self.ui.language.setCurrentText(self.whisper_settings.language)
-        self.ui.is_multilingual.setChecked(self.whisper_settings.is_multilingual)
+        self.ui.is_multilingual.setChecked(
+            self.whisper_settings.is_multilingual
+        )
         self.ui.task.addItems(["transcribe", "translate"])
         self.ui.task.setCurrentText(self.whisper_settings.task)
         self.ui.is_multilingual.blockSignals(False)

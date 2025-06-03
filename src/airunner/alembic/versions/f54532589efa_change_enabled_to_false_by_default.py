@@ -24,7 +24,9 @@ def upgrade() -> None:
     alter_column(
         OutpaintSettings,
         sa.Column("enabled", sa.Boolean(), default=True),
-        sa.Column("enabled", sa.Boolean(), default=False, server_default="false"),
+        sa.Column(
+            "enabled", sa.Boolean(), default=False, server_default="false"
+        ),
     )
 
 
@@ -32,5 +34,7 @@ def downgrade() -> None:
     alter_column(
         OutpaintSettings,
         sa.Column("enabled", sa.Boolean(), default=False),
-        sa.Column("enabled", sa.Boolean(), default=True, server_default="true"),
+        sa.Column(
+            "enabled", sa.Boolean(), default=True, server_default="true"
+        ),
     )

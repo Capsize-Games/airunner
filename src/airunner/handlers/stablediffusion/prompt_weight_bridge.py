@@ -41,7 +41,9 @@ class PromptWeightBridge:
             weight = words.pop()
             words = tuple(words)
             weight_b = 1.0 - float(weight)
-            replacement = f'("{words[0]}", "{words[1]}").blend({weight}, {weight_b})'
+            replacement = (
+                f'("{words[0]}", "{words[1]}").blend({weight}, {weight_b})'
+            )
             prompt = prompt.replace(match, replacement)
 
         # find the pattern: ["word:word:0.1"]
@@ -56,7 +58,9 @@ class PromptWeightBridge:
             weight_b = words.pop()
             words = tuple(words)
             weight = 1.0 - float(weight_b)
-            replacement = f'("{words[0]}", "{words[1]}").blend({weight}, {weight_b})'
+            replacement = (
+                f'("{words[0]}", "{words[1]}").blend({weight}, {weight_b})'
+            )
             prompt = prompt.replace(match, replacement)
         return prompt
 
@@ -138,7 +142,9 @@ class PromptWeightBridge:
 
         # replace all matches with (match[0])<float>
         for match in matches:
-            prompt = prompt.replace(f"{match[0]}:{match[1]}", f"({match[0]}){match[1]}")
+            prompt = prompt.replace(
+                f"{match[0]}:{match[1]}", f"({match[0]}){match[1]}"
+            )
 
         # find all opening parentheses that are not followed by a digit
         pattern = r"\(.*?\d\)(?!\d)"

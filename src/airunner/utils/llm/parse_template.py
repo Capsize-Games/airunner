@@ -12,6 +12,12 @@ def parse_template(template: dict) -> str:
             AIRUNNER_DEFAULT_LLM_HF_PATH,
         ]:
             parsed_template = "\n".join(
-                ("[INST]<<SYS>>", system_instructions, "<</SYS>>", template, "[/INST]")
+                (
+                    "[INST]<<SYS>>",
+                    system_instructions,
+                    "<</SYS>>",
+                    template,
+                    "[/INST]",
+                )
             )
     return parsed_template

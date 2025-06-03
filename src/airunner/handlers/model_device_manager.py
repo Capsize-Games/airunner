@@ -28,5 +28,7 @@ class DeviceManagerMixin:
         if device is None:
             if not self.model_type:
                 raise ValueError("model_type not set")
-            device = getattr(self.memory_settings, f"default_gpu_{model_type_str}")
+            device = getattr(
+                self.memory_settings, f"default_gpu_{model_type_str}"
+            )
         return device

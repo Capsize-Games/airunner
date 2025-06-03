@@ -141,7 +141,9 @@ class LLMBranchNode(BaseLLMNode):
             self.api.nodegraph.node_executed(
                 node_id=self.id,
                 result=(
-                    self.EXEC_TRUE_PORT_NAME if result else self.EXEC_FALSE_PORT_NAME
+                    self.EXEC_TRUE_PORT_NAME
+                    if result
+                    else self.EXEC_FALSE_PORT_NAME
                 ),
                 data={"condition": condition, "result": result},
             )
@@ -280,7 +282,10 @@ CONDITION: {condition}"""
         normalized_response = self._accumulated_response_text.strip().upper()
 
         # Check if the response is TRUE
-        is_true = "TRUE" in normalized_response and "FALSE" not in normalized_response
+        is_true = (
+            "TRUE" in normalized_response
+            and "FALSE" not in normalized_response
+        )
 
         # Set the condition result
         self._condition_result = is_true
@@ -318,7 +323,9 @@ CONDITION: {condition}"""
             self._exec_data = {}  # Clear execution data
 
             # Emit signal indicating completion and which port to trigger next
-            self.api.nodegraph.node_executed(node_id=self.id, result=output_port_name)
+            self.api.nodegraph.node_executed(
+                node_id=self.id, result=output_port_name
+            )
 
         elif elapsed_time >= timeout:
             # We timed out, default to FALSE

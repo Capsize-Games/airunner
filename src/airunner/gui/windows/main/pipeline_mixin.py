@@ -1,4 +1,6 @@
-from airunner.data.bootstrap.pipeline_bootstrap_data import pipeline_bootstrap_data
+from airunner.data.bootstrap.pipeline_bootstrap_data import (
+    pipeline_bootstrap_data,
+)
 
 
 class PipelineMixin:
@@ -54,4 +56,6 @@ class PipelineMixin:
 
     @staticmethod
     def pipeline_actions():
-        return [pipeline["pipeline_action"] for pipeline in pipeline_bootstrap_data]
+        return [
+            pipeline["pipeline_action"] for pipeline in pipeline_bootstrap_data
+        ]

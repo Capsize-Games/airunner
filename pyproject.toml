@@ -1,0 +1,3 @@
+[tool.black]
+exclude = '.*_ui\.py$'
+line-length = 79

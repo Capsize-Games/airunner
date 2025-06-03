@@ -47,16 +47,22 @@ class SlicerPipeItem(QtWidgets.QGraphicsPathItem):
         text_color = QtGui.QColor(*PipeSlicerEnum.COLOR.value)
         text_color.setAlpha(80)
         painter.setPen(
-            QtGui.QPen(text_color, PipeSlicerEnum.WIDTH.value, QtCore.Qt.SolidLine)
+            QtGui.QPen(
+                text_color, PipeSlicerEnum.WIDTH.value, QtCore.Qt.SolidLine
+            )
         )
         painter.drawText(text_pos, text)
 
         painter.setPen(
-            QtGui.QPen(color, PipeSlicerEnum.WIDTH.value, QtCore.Qt.DashDotLine)
+            QtGui.QPen(
+                color, PipeSlicerEnum.WIDTH.value, QtCore.Qt.DashDotLine
+            )
         )
         painter.drawPath(self.path())
 
-        pen = QtGui.QPen(color, PipeSlicerEnum.WIDTH.value, QtCore.Qt.SolidLine)
+        pen = QtGui.QPen(
+            color, PipeSlicerEnum.WIDTH.value, QtCore.Qt.SolidLine
+        )
         pen.setCapStyle(QtCore.Qt.RoundCap)
         pen.setJoinStyle(QtCore.Qt.MiterJoin)
         painter.setPen(pen)

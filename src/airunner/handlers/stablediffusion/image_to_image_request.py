@@ -32,7 +32,9 @@ def create_image_to_image_request(
     Returns:
         ImageToImageRequest: The constructed request object.
     """
-    logger.debug(f"Creating ImageToImageRequest: prompt={prompt}, strength={strength}")
+    logger.debug(
+        f"Creating ImageToImageRequest: prompt={prompt}, strength={strength}"
+    )
     return ImageToImageRequest(
         input_image=input_image, prompt=prompt, strength=strength
     )
@@ -46,7 +48,11 @@ def validate_image_to_image_request(request: ImageToImageRequest) -> bool:
     Returns:
         bool: True if valid, False otherwise.
     """
-    if not request.input_image or not request.prompt or request.strength is None:
+    if (
+        not request.input_image
+        or not request.prompt
+        or request.strength is None
+    ):
         logger.warning(
             "ImageToImageRequest validation failed: missing input_image, prompt, or strength."
         )

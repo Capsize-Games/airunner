@@ -15,7 +15,9 @@ class DownloadThread(QThread):
 
     def run(self):
         self.hf_downloader = HuggingfaceDownloader()
-        self.hf_downloader.completed.connect(lambda: self.file_download_finished.emit())
+        self.hf_downloader.completed.connect(
+            lambda: self.file_download_finished.emit()
+        )
         for index, data in enumerate(self.models_to_download):
             if self._stop_event:
                 break

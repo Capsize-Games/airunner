@@ -27,7 +27,10 @@ class SystemToolsMixin(ToolSingletonMixin):
         def toggle_text_to_speech(
             enabled: Annotated[
                 bool,
-                ("Enable or disable text to speech. " "Must be 'True' or 'False'."),
+                (
+                    "Enable or disable text to speech. "
+                    "Must be 'True' or 'False'."
+                ),
             ],
         ) -> str:
             self.api.tts.toggle(enabled)
@@ -45,7 +48,10 @@ class SystemToolsMixin(ToolSingletonMixin):
         def list_files_in_directory(
             directory: Annotated[
                 str,
-                ("The directory to search in. " "Must be a valid directory path."),
+                (
+                    "The directory to search in. "
+                    "Must be a valid directory path."
+                ),
             ],
         ) -> str:
             os_path = os.path.abspath(directory)

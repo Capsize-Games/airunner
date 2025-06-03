@@ -9,7 +9,9 @@ def get_chatbot():
         "target_directories",
     ]
     try:
-        chatbot = Chatbot.objects.filter_by_first(eager_load=eager_load, current=True)
+        chatbot = Chatbot.objects.filter_by_first(
+            eager_load=eager_load, current=True
+        )
         if chatbot is None:
             chatbot = Chatbot.objects.first(eager_load=eager_load)
         if chatbot is None:

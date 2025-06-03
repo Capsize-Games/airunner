@@ -20,7 +20,9 @@ class PathSettings(BaseWizard):
     def _update_paths(self, base_path: str):
         self.update_path_settings("base_path", base_path)
         for k, v in PATH_SETTINGS_DATA.items():
-            self.update_path_settings(k, os.path.expanduser(os.path.join(base_path, v)))
+            self.update_path_settings(
+                k, os.path.expanduser(os.path.join(base_path, v))
+            )
 
     @Slot()
     def browse_files(self):

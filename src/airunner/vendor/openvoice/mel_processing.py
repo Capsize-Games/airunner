@@ -37,7 +37,9 @@ mel_basis = {}
 hann_window = {}
 
 
-def spectrogram_torch(y, n_fft, sampling_rate, hop_size, win_size, center=False):
+def spectrogram_torch(
+    y, n_fft, sampling_rate, hop_size, win_size, center=False
+):
     if torch.min(y) < -1.1:
         print("min value is ", torch.min(y))
     if torch.max(y) > 1.1:
@@ -75,7 +77,9 @@ def spectrogram_torch(y, n_fft, sampling_rate, hop_size, win_size, center=False)
     return spec
 
 
-def spectrogram_torch_conv(y, n_fft, sampling_rate, hop_size, win_size, center=False):
+def spectrogram_torch_conv(
+    y, n_fft, sampling_rate, hop_size, win_size, center=False
+):
     # if torch.min(y) < -1.:
     #     print('min value is ', torch.min(y))
     # if torch.max(y) > 1.:
@@ -121,7 +125,9 @@ def spectrogram_torch_conv(y, n_fft, sampling_rate, hop_size, win_size, center=F
     #     signal = F.pad(y[:, None, None, :], (n_fft // 2, n_fft // 2, 0, 0), mode = 'reflect').squeeze(1)
     assert center is False
 
-    forward_transform_squared = F.conv1d(y, forward_basis.to(y.device), stride=hop_size)
+    forward_transform_squared = F.conv1d(
+        y, forward_basis.to(y.device), stride=hop_size
+    )
     spec2 = torch.stack(
         [
             forward_transform_squared[:, :freq_cutoff, :],
@@ -155,7 +161,11 @@ def spec_to_mel_torch(spec, n_fft, num_mels, sampling_rate, fmin, fmax):
     fmax_dtype_device = str(fmax) + "_" + dtype_device
     if fmax_dtype_device not in mel_basis:
         mel = librosa_mel_fn(
-            sr=sampling_rate, n_fft=n_fft, n_mels=num_mels, fmin=fmin, fmax=fmax
+            sr=sampling_rate,
+            n_fft=n_fft,
+            n_mels=num_mels,
+            fmin=fmin,
+            fmax=fmax,
         )
         mel_basis[fmax_dtype_device] = torch.from_numpy(mel).to(
             dtype=spec.dtype, device=spec.device
@@ -166,7 +176,15 @@ def spec_to_mel_torch(spec, n_fft, num_mels, sampling_rate, fmin, fmax):
 
 
 def mel_spectrogram_torch(
-    y, n_fft, num_mels, sampling_rate, hop_size, win_size, fmin, fmax, center=False
+    y,
+    n_fft,
+    num_mels,
+    sampling_rate,
+    hop_size,
+    win_size,
+    fmin,
+    fmax,
+    center=False,
 ):
     if torch.min(y) < -1.0:
         print("min value is ", torch.min(y))
@@ -179,7 +197,11 @@ def mel_spectrogram_torch(
     wnsize_dtype_device = str(win_size) + "_" + dtype_device
     if fmax_dtype_device not in mel_basis:
         mel = librosa_mel_fn(
-            sr=sampling_rate, n_fft=n_fft, n_mels=num_mels, fmin=fmin, fmax=fmax
+            sr=sampling_rate,
+            n_fft=n_fft,
+            n_mels=num_mels,
+            fmin=fmin,
+            fmax=fmax,
         )
         mel_basis[fmax_dtype_device] = torch.from_numpy(mel).to(
             dtype=y.dtype, device=y.device

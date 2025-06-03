@@ -463,7 +463,9 @@ class ToneSandhi:
     # word: "家里"
     # pos: "s"
     # finals: ['ia1', 'i3']
-    def _neural_sandhi(self, word: str, pos: str, finals: List[str]) -> List[str]:
+    def _neural_sandhi(
+        self, word: str, pos: str, finals: List[str]
+    ) -> List[str]:
         # reduplication words for n. and v. e.g. 奶奶, 试试, 旺旺
         for j, item in enumerate(word):
             if (
@@ -474,7 +476,10 @@ class ToneSandhi:
             ):
                 finals[j] = finals[j][:-1] + "5"
         ge_idx = word.find("个")
-        if len(word) >= 1 and word[-1] in "吧呢啊呐噻嘛吖嗨呐哦哒额滴哩哟喽啰耶喔诶":
+        if (
+            len(word) >= 1
+            and word[-1] in "吧呢啊呐噻嘛吖嗨呐哦哒额滴哩哟喽啰耶喔诶"
+        ):
             finals[-1] = finals[-1][:-1] + "5"
         elif len(word) >= 1 and word[-1] in "的地得":
             finals[-1] = finals[-1][:-1] + "5"
@@ -492,7 +497,11 @@ class ToneSandhi:
         elif len(word) > 1 and word[-1] in "上下里" and pos in {"s", "l", "f"}:
             finals[-1] = finals[-1][:-1] + "5"
         # e.g. 上来, 下去
-        elif len(word) > 1 and word[-1] in "来去" and word[-2] in "上下进出回过起开":
+        elif (
+            len(word) > 1
+            and word[-1] in "来去"
+            and word[-2] in "上下进出回过起开"
+        ):
             finals[-1] = finals[-1][:-1] + "5"
         # 个做量词
         elif (
@@ -511,7 +520,10 @@ class ToneSandhi:
                 finals[-1] = finals[-1][:-1] + "5"
 
         word_list = self._split_word(word)
-        finals_list = [finals[: len(word_list[0])], finals[len(word_list[0]) :]]
+        finals_list = [
+            finals[: len(word_list[0])],
+            finals[len(word_list[0]) :],
+        ]
         for i, word in enumerate(word_list):
             # conventional neural in Chinese
             if (
@@ -529,7 +541,11 @@ class ToneSandhi:
         else:
             for i, char in enumerate(word):
                 # "不" before tone4 should be bu2, e.g. 不怕
-                if char == "不" and i + 1 < len(word) and finals[i + 1][-1] == "4":
+                if (
+                    char == "不"
+                    and i + 1 < len(word)
+                    and finals[i + 1][-1] == "4"
+                ):
                     finals[i] = finals[i][:-1] + "2"
         return finals
 
@@ -585,7 +601,10 @@ class ToneSandhi:
                 elif len(word_list[0]) == 1:
                     finals[1] = finals[1][:-1] + "2"
             else:
-                finals_list = [finals[: len(word_list[0])], finals[len(word_list[0]) :]]
+                finals_list = [
+                    finals[: len(word_list[0])],
+                    finals[len(word_list[0]) :],
+                ]
                 if len(finals_list) == 2:
                     for i, sub in enumerate(finals_list):
                         # e.g. 所有/人
@@ -647,7 +666,9 @@ class ToneSandhi:
                 and seg[i - 1][0] == seg[i + 1][0]
                 and seg[i - 1][1] == "v"
             ):
-                new_seg[i - 1][0] = new_seg[i - 1][0] + "一" + new_seg[i - 1][0]
+                new_seg[i - 1][0] = (
+                    new_seg[i - 1][0] + "一" + new_seg[i - 1][0]
+                )
             else:
                 if (
                     i - 2 >= 0
@@ -674,7 +695,9 @@ class ToneSandhi:
     ) -> List[Tuple[str, str]]:
         new_seg = []
         sub_finals_list = [
-            lazy_pinyin(word, neutral_tone_with_five=True, style=Style.FINALS_TONE3)
+            lazy_pinyin(
+                word, neutral_tone_with_five=True, style=Style.FINALS_TONE3
+            )
             for (word, pos) in seg
         ]
         assert len(sub_finals_list) == len(seg)
@@ -709,7 +732,9 @@ class ToneSandhi:
     ) -> List[Tuple[str, str]]:
         new_seg = []
         sub_finals_list = [
-            lazy_pinyin(word, neutral_tone_with_five=True, style=Style.FINALS_TONE3)
+            lazy_pinyin(
+                word, neutral_tone_with_five=True, style=Style.FINALS_TONE3
+            )
             for (word, pos) in seg
         ]
         assert len(sub_finals_list) == len(seg)
@@ -743,7 +768,9 @@ class ToneSandhi:
                 new_seg.append([word, pos])
         return new_seg
 
-    def _merge_reduplication(self, seg: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    def _merge_reduplication(
+        self, seg: List[Tuple[str, str]]
+    ) -> List[Tuple[str, str]]:
         new_seg = []
         for i, (word, pos) in enumerate(seg):
             if new_seg and word == new_seg[-1][0]:
@@ -752,7 +779,9 @@ class ToneSandhi:
                 new_seg.append([word, pos])
         return new_seg
 
-    def pre_merge_for_modify(self, seg: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    def pre_merge_for_modify(
+        self, seg: List[Tuple[str, str]]
+    ) -> List[Tuple[str, str]]:
         seg = self._merge_bu(seg)
         try:
             seg = self._merge_yi(seg)
@@ -764,7 +793,9 @@ class ToneSandhi:
         seg = self._merge_er(seg)
         return seg
 
-    def modified_tone(self, word: str, pos: str, finals: List[str]) -> List[str]:
+    def modified_tone(
+        self, word: str, pos: str, finals: List[str]
+    ) -> List[str]:
         finals = self._bu_sandhi(word, finals)
         finals = self._yi_sandhi(word, finals)
         finals = self._neural_sandhi(word, pos, finals)
