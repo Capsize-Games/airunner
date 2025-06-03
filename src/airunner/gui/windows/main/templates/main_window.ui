@@ -1043,7 +1043,7 @@
   <customwidget>
    <class>BrowserWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/browser/browser_widget</header>
+   <header>airunner/components/browser/gui/widgets/browser_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

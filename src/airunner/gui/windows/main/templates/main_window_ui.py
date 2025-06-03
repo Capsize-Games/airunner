@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
     QMenuBar, QSizePolicy, QSplitter, QStatusBar,
     QTabWidget, QToolBar, QVBoxLayout, QWidget)
 
-from airunner.gui.widgets.browser.browser_widget import BrowserWidget
+from airunner.components.browser.gui.widgets.browser_widget import BrowserWidget
 from airunner.gui.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.gui.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
