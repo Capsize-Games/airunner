@@ -5,6 +5,7 @@ import urllib
 import webbrowser
 from functools import partial
 from typing import Dict, Optional
+import time
 
 from airunner.gui.windows.main.worker_manager import WorkerManager
 from airunner.gui.windows.wayland_helper import (
@@ -109,6 +110,8 @@ from .model_load_balancer import ModelLoadBalancer
 from airunner.gui.widgets.llm.contentwidgets.conversation_widget import (
     ConversationWidget,
 )
+import threading
+import socket
 
 
 class MainWindow(
@@ -180,6 +183,8 @@ class MainWindow(
         ("save", "actionSave_As"),
         ("target", "actionRecenter"),
     ]
+    _last_reload_time = 0
+    _reload_debounce_seconds = 1.0
 
     def __init__(self, *args, **kwargs):
         self.ui = self.ui_class_()
@@ -968,18 +973,8 @@ class MainWindow(
             return
         self.api.clear_status_message()
         self.initialize_widget_elements()
-        self._load_plugins()
-        if not self.api:
-            self.logger.warning(
-                "MainWindow: self.api is missing. Cannot load main window."
-            )
-            return
-        self.api.main_window_loaded(self)
-
-        if not AIRUNNER_DISCORD_URL:
-            self.ui.actionDiscord.deleteLater()
-
-        self._toggle_agent_workflow_feature(self.enable_workflows)
+        self.last_tray_click_time = 0
+        self.settings_window = None
 
     def update_tab_index(self, section: str, index: int):
         Tab.objects.update_by(filter=dict(section=section), active=False)

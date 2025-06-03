@@ -204,13 +204,14 @@ setup(
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "airunner=airunner.main:main",
+            "airunner=airunner.launcher:main",
             "airunner-setup=airunner.installer:main",
             "airunner-build-ui=airunner.bin.build_ui:main",
             "airunner-compile-translations=airunner.bin.compile_translations:main",
             "airunner-tests=airunner.bin.run_tests:main",
             "airunner-test-coverage-report=airunner.bin.coverage_report:main",
             "airunner-docker=airunner.bin.docker_wrapper:main",
+            "airunner-generate-migration=airunner.bin.generate_migration:main",
         ],
     },
 )
