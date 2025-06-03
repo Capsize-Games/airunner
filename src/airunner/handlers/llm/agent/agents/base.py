@@ -173,10 +173,20 @@ class BaseAgent(
             )
         self.signal_handlers.update(
             {
-                SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id
+                SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id,
             }
         )
+        self.extra_context: list[str] = []
         super().__init__(*args, **kwargs)
+
+    @property
+    def latest_extra_context(self) -> str:
+        """
+        Get the most recently added extra context string.
+        Returns:
+            str: The latest context string, or empty string if none.
+        """
+        return self.extra_context[-1] if self.extra_context else ""
 
     @property
     def logger(self):
@@ -1187,6 +1197,7 @@ class BaseAgent(
 
         tool_handlers = {
             LLMActionType.CHAT: chat_tool_handler,
+            LLMActionType.DECISION: chat_tool_handler,
             LLMActionType.PERFORM_RAG_SEARCH: rag_tool_handler,
             LLMActionType.STORE_DATA: store_data_handler,
             LLMActionType.APPLICATION_COMMAND: application_command_handler,
@@ -1287,6 +1298,28 @@ class BaseAgent(
                 self.chat_memory.set(chat_messages)
             self._sync_memory_to_all_engines()
 
+    def _remove_last_message_from_conversation(self, conversation) -> None:
+        """
+        Remove the last message from the conversation.
+        This is used to handle cases where the last message needs to be deleted or modified.
+        Ensures memory buffer receives ChatMessage objects, not dicts.
+        """
+        if conversation and conversation.value:
+            conversation.value.pop()
+            # Convert dicts to ChatMessage objects for memory compatibility
+            from llama_index.core.base.llms.types import ChatMessage, TextBlock
+
+            messages = []
+            for msg in conversation.value:
+                if isinstance(msg, dict):
+                    text = msg.get("content", "")
+                    role = msg.get("role", "user")
+                    blocks = [TextBlock(text=text)]
+                    messages.append(ChatMessage(role=role, blocks=blocks))
+                else:
+                    messages.append(msg)
+            self.chat_memory.set(messages)
+
     def _make_chat_message(self, role: str, content: str) -> ChatMessage:
         """
         Helper to create a ChatMessage for unified engine logic.
@@ -1359,40 +1392,31 @@ class BaseAgent(
         """
         Handle a chat message and generate a response.
         """
-        if getattr(self, "_in_chat", False):
-            self.logger.warning(
-                "Re-entrant call to chat() detected, aborting to prevent loop."
-            )
-            return AgentChatResponse(response="")
-        self._in_chat = True
-        try:
-            self.prompt = message
-            self.action = action
-            system_prompt = self.system_prompt
-            self._chat_prompt = message
-            self._complete_response = ""
-            self.do_interrupt = False
-            self._update_memory(action)
-            kwargs = kwargs or {}
-            kwargs["input"] = f"{self.username}: {message}"
-            self._update_system_prompt(system_prompt, rag_system_prompt)
-            self._update_llm_request(llm_request)
-            self._update_memory_settings()
-            self._perform_tool_call(action, **kwargs)
-            conversation = self.conversation
-            if conversation is not None:
-                self._append_conversation_messages(conversation, message)
-                self._update_conversation_state(conversation)
-                if (
-                    self.llm_settings.use_chatbot_mood
-                    and getattr(self, "chatbot", None)
-                    and getattr(self.chatbot, "use_mood", False)
-                ):
-                    self._update_mood()
-            self._perform_analysis(action)
-            return AgentChatResponse(response=self._complete_response)
-        finally:
-            self._in_chat = False
+        self.prompt = message
+        self.action = action
+        system_prompt = self.system_prompt
+        self._chat_prompt = message
+        self._complete_response = ""
+        self.do_interrupt = False
+        self._update_memory(action)
+        kwargs = kwargs or {}
+        kwargs["input"] = f"{self.username}: {message}"
+        self._update_system_prompt(system_prompt, rag_system_prompt)
+        self._update_llm_request(llm_request)
+        self._update_memory_settings()
+        self._perform_tool_call(action, **kwargs)
+        conversation = self.conversation
+        if conversation is not None:
+            self._append_conversation_messages(conversation, message)
+            self._update_conversation_state(conversation)
+            if (
+                self.llm_settings.use_chatbot_mood
+                and getattr(self, "chatbot", None)
+                and getattr(self.chatbot, "use_mood", False)
+            ):
+                self._update_mood()
+        self._perform_analysis(action)
+        return AgentChatResponse(response=self._complete_response)
 
     def clear_history(self, data: Optional[Dict] = None) -> None:
         """
