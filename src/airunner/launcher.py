@@ -14,6 +14,26 @@ from airunner.data.models.airunner_settings import AIRunnerSettings
 COMPONENTS_PATH = os.path.join(os.path.dirname(__file__), "components")
 
 
+def deep_merge(defaults, current):
+    """Recursively merge defaults into current, overwriting type mismatches and adding missing fields."""
+    if not isinstance(defaults, dict) or not isinstance(current, dict):
+        return defaults
+    merged = dict(current)
+    for k, v in defaults.items():
+        if k not in merged:
+            merged[k] = v
+        else:
+            if isinstance(v, dict) and isinstance(merged[k], dict):
+                merged[k] = deep_merge(v, merged[k])
+            elif type(merged[k]) != type(v):
+                merged[k] = v
+    # Optionally remove keys not in defaults (strict sync)
+    # for k in list(merged.keys()):
+    #     if k not in defaults:
+    #         del merged[k]
+    return merged
+
+
 def register_component_settings():
     """Register settings for each component with a data/settings.py Pydantic dataclass."""
     import traceback
@@ -34,34 +54,64 @@ def register_component_settings():
             continue
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
+        print(f"[DEBUG] Processing module: {module.__name__}")
         for attr in dir(module):
+            print(f"[DEBUG] Found attribute: {attr}")
             obj = getattr(module, attr)
             if (
                 isinstance(obj, type)
                 and hasattr(obj, "__fields__")
                 and "name" in obj.__fields__
             ):
+                print(f"[DEBUG] Processing settings class: {obj.__name__}")
                 try:
                     instance = obj()
                     name = getattr(instance, "name", None)
+                    print(f"[DEBUG] Settings instance name: {name}")
                     if not name:
                         continue
                     found_count += 1
-                    exists = AIRunnerSettings.objects.filter_by(name=name)
-                    if not exists:
+                    existing = AIRunnerSettings.objects.filter_by(name=name)
+                    if not existing:
                         data = (
                             instance.dict()
                             if hasattr(instance, "dict")
                             else instance.model_dump()
                         )
-                        AIRunnerSettings.objects.create(
-                            name=name,
-                            data=data,
-                        )
+                        AIRunnerSettings.objects.create(name=name, data=data)
                         created_count += 1
+                    else:
+                        # Deep merge: update all fields to match dataclass, preserve user data where possible
+                        defaults = (
+                            instance.dict()
+                            if hasattr(instance, "dict")
+                            else instance.model_dump()
+                        )
+                        current = (
+                            existing[0].data
+                            if isinstance(existing, list) and existing
+                            else existing.data
+                        )
+                        print(
+                            f"\n[DEBUG] Existing data for {name}:\n{current}"
+                        )
+                        print(
+                            f"[DEBUG] Expected (defaults) data for {name}:\n{defaults}\n"
+                        )
+                        merged = deep_merge(defaults, current)
+                        for key in ("name", "id"):
+                            if key in current:
+                                merged[key] = current[key]
+                        if merged != current:
+                            print(
+                                f"[DEBUG] Updating DB for {name} with merged data:\n{merged}\n"
+                            )
+                            AIRunnerSettings.objects.update_by(
+                                {"name": name}, data=merged
+                            )
                 except Exception as e:
                     logging.warning(
-                        f"Failed to create default settings for {attr}: {e}\n{traceback.format_exc()}"
+                        f"Failed to create/update default settings for {attr}: {e}\n{traceback.format_exc()}"
                     )
     logging.info(
         f"register_component_settings: found {found_count} settings classes, created {created_count} new entries."

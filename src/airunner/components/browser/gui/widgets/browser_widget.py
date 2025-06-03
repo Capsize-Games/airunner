@@ -22,6 +22,20 @@ from PySide6.QtWebEngineCore import (
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.data.models.airunner_settings import AIRunnerSettings
 from airunner.components.browser.data.settings import BrowserSettings
+from PySide6.QtWidgets import QSplitter, QVBoxLayout
+from airunner.components.browser.gui.widgets.items_widget import ItemsWidget
+from PySide6.QtCore import Qt
+from airunner.components.browser.gui.widgets.items_model import (
+    bookmarks_to_model,
+    history_to_model,
+)
+from airunner.components.browser.data.settings import (
+    BookmarkFolder,
+    HistoryEntry,
+)
+from PySide6.QtCore import QSettings
+import uuid
+from datetime import datetime
 
 
 class BrowserWidget(BaseWidget):
@@ -45,6 +59,9 @@ class BrowserWidget(BaseWidget):
         self.set_flags()
         self.ui.stage.loadFinished.connect(self.on_load_finished)
         self.ui.url.returnPressed.connect(self.on_submit_button_clicked)
+        self.ui.bookmark_page_button.toggled.connect(
+            self.on_bookmark_page_button_toggled
+        )
         self._page_cache = {
             "html": None,
             "plaintext": None,
@@ -66,14 +83,23 @@ class BrowserWidget(BaseWidget):
                     else json.loads(settings_obj.data)
                 )
                 browser_settings = BrowserSettings(**settings_data)
-                # Set widget state from settings
-                self.ui.user_agent_browser.setCurrentText(
-                    browser_settings.browser_type
-                )
-                self.ui.user_agent_os.setCurrentText(browser_settings.os_type)
-                self._random_user_agent = browser_settings.random
-                if hasattr(self.ui, "pushButton"):
-                    self.ui.pushButton.setChecked(browser_settings.random)
+                # Defensive: check for browser_type and os_type attributes
+                if hasattr(browser_settings, "browser_type"):
+                    self.ui.user_agent_browser.setCurrentText(
+                        browser_settings.browser_type
+                    )
+                if hasattr(browser_settings, "os_type"):
+                    self.ui.user_agent_os.setCurrentText(
+                        browser_settings.os_type
+                    )
+                if hasattr(browser_settings, "random_user_agent"):
+                    self._random_user_agent = (
+                        browser_settings.random_user_agent
+                    )
+                    if hasattr(self.ui, "pushButton"):
+                        self.ui.pushButton.setChecked(
+                            browser_settings.random_user_agent
+                        )
             except Exception as e:
                 self.logger.warning(f"Failed to load browser settings: {e}")
 
@@ -113,13 +139,331 @@ class BrowserWidget(BaseWidget):
         # Initialize with privacy status logging
         self.log_privacy_status()
 
-    def _on_stage_title_changed(self, title: str) -> None:
-        """Update the browser tab title when the page title changes."""
-        if not title:
-            title = "New Tab"
-        self.ui.browser_tab_widget.setTabText(
-            self.ui.browser_tab_widget.indexOf(self.ui.tab), title
+        # Panels setup
+        self.ui.left_panel.hide()
+        self.ui.right_panel.hide()
+        self._current_panel = None  # Track which panel is open
+        # Items widgets for bookmarks/history
+        self.bookmarks_widget = ItemsWidget(self.ui.left_panel)
+        self.history_widget = ItemsWidget(self.ui.left_panel)
+        self.bookmarks_widget.hide()
+        self.history_widget.hide()
+        # Layout for left_panel
+        left_layout = self.ui.left_panel.layout() or QVBoxLayout(
+            self.ui.left_panel
         )
+        left_layout.addWidget(self.bookmarks_widget)
+        left_layout.addWidget(self.history_widget)
+        self.ui.left_panel.setLayout(left_layout)
+        # Connect buttons
+        self.ui.private_browse_button.toggled.connect(
+            self.on_private_browse_button_toggled
+        )
+        self.ui.bookmark_button.clicked.connect(
+            self.on_bookmark_button_clicked
+        )
+        self.ui.history_button.clicked.connect(self.on_history_button_clicked)
+
+        self.qsettings = QSettings()
+        self._splitter_key = "browser_splitter"
+        self._restore_splitter_settings()
+        self.ui.splitter.splitterMoved.connect(self._save_splitter_settings)
+
+    def _save_splitter_settings(self):
+        sizes = self.ui.splitter.sizes()
+        self.qsettings.beginGroup(self._splitter_key)
+        for i, size in enumerate(sizes):
+            self.qsettings.setValue(f"size_{i}", size)
+        self.qsettings.endGroup()
+
+    def _restore_splitter_settings(self):
+        self.qsettings.beginGroup(self._splitter_key)
+        sizes = []
+        i = 0
+        while True:
+            val = self.qsettings.value(f"size_{i}")
+            if val is None:
+                break
+            sizes.append(int(val))
+            i += 1
+        self.qsettings.endGroup()
+        if sizes:
+            self.ui.splitter.setSizes(sizes)
+        else:
+            # Set default left panel width to 250px if no QSettings
+            total = self.ui.splitter.size().width() or 800
+            left = 250
+            center = total - left
+            self.ui.splitter.setSizes([left, center, 0])
+
+    @Slot(bool)
+    def on_private_browse_button_toggled(self, checked: bool) -> None:
+        """Toggle private browsing mode and update settings."""
+        self._set_private_browsing(checked)
+        self._save_browser_settings()
+
+    def _set_private_browsing(self, enabled: bool):
+        # Hide/show history/bookmarks, clear session if enabling
+        if enabled:
+            self.clear_session()
+        # Optionally: update UI indicators
+        # ...
+
+    @Slot()
+    def on_bookmark_button_clicked(self):
+        """Show bookmarks panel in left_panel and untoggle history button."""
+        self.ui.history_button.setChecked(False)
+        self._show_panel("bookmarks")
+
+    @Slot()
+    def on_history_button_clicked(self):
+        """Show history panel in left_panel and untoggle bookmark button."""
+        self.ui.bookmark_button.setChecked(False)
+        self._show_panel("history")
+
+    def _show_panel(self, which: str):
+        if which == "bookmarks":
+            settings_obj = AIRunnerSettings.objects.filter_by_first(
+                name="browser"
+            )
+            bookmarks = []
+            if settings_obj:
+                try:
+                    data = (
+                        settings_obj.data
+                        if isinstance(settings_obj.data, dict)
+                        else json.loads(settings_obj.data)
+                    )
+                    bookmarks = data.get("bookmarks", [])
+                except Exception as e:
+                    self.logger.warning(f"Failed to load bookmarks: {e}")
+            model = (
+                bookmarks_to_model([BookmarkFolder(**f) for f in bookmarks])
+                if bookmarks
+                else bookmarks_to_model([])
+            )
+            self.bookmarks_widget.set_model(model)
+            self.history_widget.hide()
+            self.bookmarks_widget.show()
+            self.ui.left_panel.show()
+            self._current_panel = "bookmarks"
+            self.ui.left_panel.setWindowTitle("Bookmarks")
+            if hasattr(self.bookmarks_widget.ui, "label"):
+                self.bookmarks_widget.ui.label.setText("Bookmarks")
+            try:
+                self.bookmarks_widget.item_activated.disconnect()
+            except Exception:
+                pass
+            self.bookmarks_widget.item_activated.connect(
+                self._on_bookmark_activated
+            )
+        elif which == "history":
+            settings_obj = AIRunnerSettings.objects.filter_by_first(
+                name="browser"
+            )
+            history = []
+            if settings_obj:
+                try:
+                    data = (
+                        settings_obj.data
+                        if isinstance(settings_obj.data, dict)
+                        else json.loads(settings_obj.data)
+                    )
+                    history = [
+                        h if isinstance(h, dict) else h.dict()
+                        for h in data.get("history", [])
+                    ]
+                except Exception as e:
+                    self.logger.warning(f"Failed to load history: {e}")
+            model = (
+                history_to_model([HistoryEntry(**h) for h in history])
+                if history
+                else history_to_model([])
+            )
+            self.history_widget.set_model(model)
+            self.bookmarks_widget.hide()
+            self.history_widget.show()
+            self.ui.left_panel.show()
+            self._current_panel = "history"
+            self.ui.left_panel.setWindowTitle("History")
+            if hasattr(self.history_widget.ui, "label"):
+                self.history_widget.ui.label.setText("History")
+            try:
+                self.history_widget.item_activated.disconnect()
+            except Exception:
+                pass
+            self.history_widget.item_activated.connect(
+                self._on_history_activated
+            )
+        else:
+            self.bookmarks_widget.hide()
+            self.history_widget.hide()
+            self.ui.left_panel.hide()
+            self._current_panel = None
+        # Control splitter handle visibility and movement
+        if which in ("bookmarks", "history"):
+            self.ui.splitter.handle(1).setEnabled(True)
+            self.ui.splitter.setCollapsible(0, False)
+            # If panel is hidden, open to default width if not already open
+            if self.ui.splitter.sizes()[0] == 0:
+                total = self.ui.splitter.size().width() or 800
+                left = 250
+                center = total - left
+                self.ui.splitter.setSizes([left, center, 0])
+        else:
+            self.ui.splitter.setSizes([0, 1, 0])
+            self.ui.splitter.handle(1).setEnabled(False)
+            self.ui.splitter.setCollapsible(0, True)
+
+    def _on_bookmark_activated(self, item_data: dict):
+        """Open the URL for the activated bookmark."""
+        if item_data.get("type") == "bookmark":
+            url = item_data.get("url")
+            if url:
+                self.ui.url.setText(url)
+                self.on_submit_button_clicked()
+
+    def _on_history_activated(self, item_data: dict):
+        """Open the URL for the activated history entry."""
+        if item_data.get("type") == "history":
+            url = item_data.get("url")
+            if url:
+                self.ui.url.setText(url)
+                self.on_submit_button_clicked()
+
+    def _save_browser_settings(self):
+        settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
+        if settings_obj:
+            try:
+                data = (
+                    settings_obj.data
+                    if isinstance(settings_obj.data, dict)
+                    else json.loads(settings_obj.data)
+                )
+                data["private_browsing"] = (
+                    self.ui.private_browse_button.isChecked()
+                )
+                settings_obj.data = data
+                if hasattr(settings_obj, "save"):
+                    settings_obj.save()
+                else:
+                    self.logger.warning(
+                        "settings_obj is not ORM instance; cannot save browser settings."
+                    )
+            except Exception as e:
+                self.logger.warning(f"Failed to save browser settings: {e}")
+
+    def add_bookmark(
+        self,
+        title: str,
+        url: str,
+        folder: str = "Default",
+        uuid_key: str = None,
+    ):
+        settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
+        if not settings_obj:
+            return
+        try:
+            data = (
+                settings_obj.data
+                if isinstance(settings_obj.data, dict)
+                else json.loads(settings_obj.data)
+            )
+            bookmarks = data.get("bookmarks", [])
+            if not uuid_key:
+                uuid_key = str(uuid.uuid4())
+            now = datetime.utcnow().isoformat()
+            # Find or create folder
+            for f in bookmarks:
+                if f["name"] == folder:
+                    f["bookmarks"].append(
+                        {
+                            "title": title,
+                            "url": url,
+                            "uuid": uuid_key,
+                            "created_at": now,
+                        }
+                    )
+                    break
+            else:
+                bookmarks.append(
+                    {
+                        "name": folder,
+                        "bookmarks": [
+                            {
+                                "title": title,
+                                "url": url,
+                                "uuid": uuid_key,
+                                "created_at": now,
+                            }
+                        ],
+                        "created_at": now,
+                    }
+                )
+            data["bookmarks"] = bookmarks
+            # Store plaintext/page_summary as dicts keyed by uuid
+            if "plaintext" not in data or not isinstance(
+                data["plaintext"], dict
+            ):
+                data["plaintext"] = {}
+            if "page_summary" not in data or not isinstance(
+                data["page_summary"], dict
+            ):
+                data["page_summary"] = {}
+            # Optionally: set content for this uuid if available (caller must provide)
+            settings_obj.data = data
+            if hasattr(settings_obj, "save"):
+                settings_obj.save()
+            else:
+                self.logger.warning(
+                    "settings_obj is not ORM instance; cannot save bookmark."
+                )
+        except Exception as e:
+            self.logger.warning(f"Failed to add/update bookmark: {e}")
+
+    def add_history_entry(
+        self, title: str, url: str, visited_at: str, uuid_key: str = None
+    ):
+        settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
+        if not settings_obj:
+            return
+        try:
+            data = (
+                settings_obj.data
+                if isinstance(settings_obj.data, dict)
+                else json.loads(settings_obj.data)
+            )
+            history = data.get("history", [])
+            if not uuid_key:
+                uuid_key = str(uuid.uuid4())
+            now = visited_at or datetime.utcnow().isoformat()
+            history.append(
+                {
+                    "title": title,
+                    "url": url,
+                    "visited_at": now,
+                    "uuid": uuid_key,
+                }
+            )
+            data["history"] = history[-1000:]  # Keep last 1000 entries
+            # Store plaintext/page_summary as dicts keyed by uuid
+            if "plaintext" not in data or not isinstance(
+                data["plaintext"], dict
+            ):
+                data["plaintext"] = {}
+            if "page_summary" not in data or not isinstance(
+                data["page_summary"], dict
+            ):
+                data["page_summary"] = {}
+            settings_obj.data = data
+            if hasattr(settings_obj, "save"):
+                settings_obj.save()
+            else:
+                self.logger.warning(
+                    "settings_obj is not ORM instance; cannot save history entry."
+                )
+        except Exception as e:
+            self.logger.warning(f"Failed to add history entry: {e}")
 
     @Slot(bool)
     def on_random_button_toggled(self, checked: bool) -> None:
@@ -551,6 +895,21 @@ class BrowserWidget(BaseWidget):
     def on_load_finished(self, ok):
         if ok:
             self._update_security_indicators()
+            # Save to history if not in private mode
+            if not self.ui.private_browse_button.isChecked():
+                url = self.ui.stage.url().toString()
+                title = (
+                    self.ui.stage.title()
+                    if hasattr(self.ui.stage, "title")
+                    else url
+                )
+                from datetime import datetime
+
+                visited_at = datetime.utcnow().isoformat()
+                self.add_history_entry(
+                    title=title, url=url, visited_at=visited_at
+                )
+            self._update_bookmark_page_button()
 
             def poll_for_rendered_content(attempt=0, max_attempts=20):
                 # Heuristic: consider page rendered if body text is long enough
@@ -627,26 +986,55 @@ class BrowserWidget(BaseWidget):
                 except Exception as e:
                     self.logger.warning(f"Summarization failed: {e}")
             self._page_cache["summary"] = summary
-            if (
-                hasattr(self.ui, "plaintext_button")
-                and self.ui.plaintext_button.isChecked()
-                and plaintext
-            ):
-                if self._current_display_mode != "plaintext":
-                    html_out = self._format_plaintext_as_html(plaintext)
-                    self.ui.stage.setHtml(html_out, QUrl(url))
-                    self._current_display_mode = "plaintext"
-            elif (
-                hasattr(self.ui, "summarize_button")
-                and self.ui.summarize_button.isChecked()
-                and summary
-            ):
-                if self._current_display_mode != "summary":
-                    html_out = self._format_plaintext_as_html(summary)
-                    self.ui.stage.setHtml(html_out, QUrl(url))
-                    self._current_display_mode = "summary"
-            else:
-                self._current_display_mode = "html"
+            # Store plaintext and summary in settings keyed by uuid
+            settings_obj = AIRunnerSettings.objects.filter_by_first(
+                name="browser"
+            )
+            if settings_obj:
+                try:
+                    data = (
+                        settings_obj.data
+                        if isinstance(settings_obj.data, dict)
+                        else json.loads(settings_obj.data)
+                    )
+                    # Find uuid for current url in history or bookmarks
+                    uuid_key = None
+                    for h in data.get("history", []):
+                        if h["url"] == url:
+                            uuid_key = h.get("uuid")
+                            break
+                    if not uuid_key:
+                        for f in data.get("bookmarks", []):
+                            for bm in f["bookmarks"]:
+                                if bm["url"] == url:
+                                    uuid_key = bm.get("uuid")
+                                    break
+                    if uuid_key:
+                        now = datetime.utcnow().isoformat()
+                        if "plaintext" not in data or not isinstance(
+                            data["plaintext"], dict
+                        ):
+                            data["plaintext"] = {}
+                        if "page_summary" not in data or not isinstance(
+                            data["page_summary"], dict
+                        ):
+                            data["page_summary"] = {}
+                        data["plaintext"][uuid_key] = {
+                            "text": plaintext,
+                            "timestamp": now,
+                        }
+                        data["page_summary"][uuid_key] = {
+                            "text": summary,
+                            "timestamp": now,
+                        }
+                        settings_obj.data = data
+                        if hasattr(settings_obj, "save"):
+                            settings_obj.save()
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to store plaintext/summary: {e}"
+                    )
+            # ...existing code for UI update and signals...
             self.emit_signal(
                 SignalCode.BROWSER_EXTRA_CONTEXT,
                 {
@@ -683,3 +1071,116 @@ class BrowserWidget(BaseWidget):
         """Log current privacy status for debugging."""
         status = self.get_privacy_status()
         self.logger.info(f"Browser privacy status: {status}")
+
+    def _on_stage_title_changed(self, title: str) -> None:
+        """Update the browser tab title when the page title changes."""
+        if not title:
+            title = "New Tab"
+        self.ui.browser_tab_widget.setTabText(
+            self.ui.browser_tab_widget.indexOf(self.ui.tab), title
+        )
+
+    @Slot(bool)
+    def on_bookmark_page_button_toggled(self, checked: bool):
+        """Add or remove bookmark for the current page and update button state."""
+        url = self.ui.stage.url().toString()
+        title = (
+            self.ui.stage.title() if hasattr(self.ui.stage, "title") else url
+        )
+        if checked:
+            self._add_or_update_bookmark(title, url)
+        else:
+            self._remove_bookmark(url)
+        self._update_bookmark_page_button()
+        self._save_browser_settings()
+
+    def _add_or_update_bookmark(
+        self, title: str, url: str, folder: str = "Default"
+    ):
+        settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
+        if not settings_obj:
+            return
+        try:
+            data = (
+                settings_obj.data
+                if isinstance(settings_obj.data, dict)
+                else json.loads(settings_obj.data)
+            )
+            bookmarks = data.get("bookmarks", [])
+            found = False
+            for f in bookmarks:
+                if f["name"] == folder:
+                    for bm in f["bookmarks"]:
+                        if bm["url"] == url:
+                            bm["title"] = title
+                            found = True
+                            break
+                    if not found:
+                        f["bookmarks"].append({"title": title, "url": url})
+                        found = True
+                    break
+            if not found:
+                bookmarks.append(
+                    {
+                        "name": folder,
+                        "bookmarks": [{"title": title, "url": url}],
+                    }
+                )
+            data["bookmarks"] = bookmarks
+            settings_obj.data = data
+            if hasattr(settings_obj, "save"):
+                settings_obj.save()
+            else:
+                self.logger.warning(
+                    "settings_obj is not ORM instance; cannot save bookmark."
+                )
+        except Exception as e:
+            self.logger.warning(f"Failed to add/update bookmark: {e}")
+
+    def _remove_bookmark(self, url: str, folder: str = "Default"):
+        settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
+        if not settings_obj:
+            return
+        try:
+            data = (
+                settings_obj.data
+                if isinstance(settings_obj.data, dict)
+                else json.loads(settings_obj.data)
+            )
+            bookmarks = data.get("bookmarks", [])
+            for f in bookmarks:
+                if f["name"] == folder:
+                    f["bookmarks"] = [
+                        bm for bm in f["bookmarks"] if bm["url"] != url
+                    ]
+            data["bookmarks"] = [f for f in bookmarks if f["bookmarks"]]
+            settings_obj.data = data
+            if hasattr(settings_obj, "save"):
+                settings_obj.save()
+            else:
+                self.logger.warning(
+                    "settings_obj is not ORM instance; cannot save bookmark removal."
+                )
+        except Exception as e:
+            self.logger.warning(f"Failed to remove bookmark: {e}")
+
+    def _update_bookmark_page_button(self):
+        url = self.ui.stage.url().toString()
+        settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
+        checked = False
+        if settings_obj:
+            try:
+                data = (
+                    settings_obj.data
+                    if isinstance(settings_obj.data, dict)
+                    else json.loads(settings_obj.data)
+                )
+                bookmarks = data.get("bookmarks", [])
+                for f in bookmarks:
+                    for bm in f["bookmarks"]:
+                        if bm["url"] == url:
+                            checked = True
+                            break
+            except Exception:
+                pass
+        self.ui.bookmark_page_button.setChecked(checked)
