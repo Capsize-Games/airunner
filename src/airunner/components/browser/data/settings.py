@@ -1,35 +1,44 @@
 """
-Browser settings data model for AI Runner.
+Browser component settings models.
 
-This module defines the Pydantic data class for browser settings configuration.
+This module defines the settings dataclass for the browser component, including support for private browsing, bookmarks (with folders), history, plaintext, and page summary.
 """
 
-from pydantic import BaseModel as PydanticBaseModel, Field
-from typing import Optional
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
 
-class BrowserSettings(PydanticBaseModel):
-    """Browser settings configuration.
+class Bookmark(BaseModel):
+    title: str
+    url: str
+    icon: Optional[str] = None  # base64 or url
+    created_at: Optional[str] = None  # ISO8601
+    updated_at: Optional[str] = None
 
-    Attributes:
-        id (Optional[int]): Unique identifier for the settings.
-        browser_type (str): Type of browser (e.g., 'chrome', 'firefox').
-        os_type (str): Operating system type (e.g., 'linux', 'windows').
-        random (bool): Whether to randomize browser selection.
-    """
 
+class BookmarkFolder(BaseModel):
+    name: str
+    bookmarks: List[Bookmark] = Field(default_factory=list)
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class HistoryEntry(BaseModel):
+    title: str
+    url: str
+    visited_at: str  # ISO8601
+    icon: Optional[str] = None
+
+
+class BrowserSettings(BaseModel):
     name: str = "browser"
-    id: Optional[int] = Field(
-        default=None, description="Unique identifier for the settings."
-    )
-    browser_type: str = Field(
-        default="chrome",
-        description="Type of browser (e.g., 'chrome', 'firefox').",
-    )
-    os_type: str = Field(
-        default="linux",
-        description="Operating system type (e.g., 'linux', 'windows').",
-    )
-    random: bool = Field(
-        default=False, description="Whether to randomize browser selection."
-    )
+    private_browsing: bool = False
+    random_user_agent: bool = False
+    bookmarks: List[BookmarkFolder] = Field(default_factory=list)
+    history: List[HistoryEntry] = Field(default_factory=list)
+    plaintext: Optional[str] = None
+    page_summary: Optional[str] = None
+
+    class Config:
+        title = "BrowserSettings"
+        validate_assignment = True
