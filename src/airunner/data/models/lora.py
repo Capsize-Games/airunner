@@ -4,7 +4,7 @@ from airunner.data.models.base import BaseModel
 
 
 class Lora(BaseModel):
-    __tablename__ = 'lora'
+    __tablename__ = "lora"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, default="")
     scale = Column(Integer, nullable=False, default=0)

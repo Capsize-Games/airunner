@@ -1,7 +1,9 @@
 from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
     BaseArtNode,
 )
-from airunner.gui.widgets.nodegraph.nodes.art.scheduler_art_node_widget import SchedulerArtNodeWidget
+from airunner.gui.widgets.nodegraph.nodes.art.scheduler_art_node_widget import (
+    SchedulerArtNodeWidget,
+)
 
 
 class SchedulerNode(BaseArtNode):

@@ -2,10 +2,7 @@ from typing import List
 from airunner.utils.settings import get_qsettings
 
 
-def save_splitter_settings(
-    ui: object,
-    splitters: List[str]
-):
+def save_splitter_settings(ui: object, splitters: List[str]):
     """
     Save the state of splitter widgets to PySide6 application settings.
     """

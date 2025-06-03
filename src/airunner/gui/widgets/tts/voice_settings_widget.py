@@ -111,9 +111,7 @@ class VoiceSettingsWidget(BaseWidget):
         )
         model_combobox.setCurrentText(voice.model_type)
         model_combobox.currentTextChanged.connect(
-            lambda val, v=voice: self.update_voice_model(
-                v, val, container_layout
-            )
+            lambda val, v=voice: self.update_voice_model(v, val, container_layout)
         )
         container_layout.addWidget(model_combobox)
 
@@ -194,9 +192,7 @@ class VoiceSettingsWidget(BaseWidget):
                 SpeechT5Settings.objects.delete(voice.settings_id)
             elif voice.model_type == TTSModel.ESPEAK:
                 EspeakSettings.objects.delete(voice.settings_id)
-            elif (
-                voice.model_type == TTSModel.OPENVOICE
-            ):
+            elif voice.model_type == TTSModel.OPENVOICE:
                 OpenVoiceSettings.objects.delete(voice.settings_id)
 
             # Create new settings
@@ -204,9 +200,7 @@ class VoiceSettingsWidget(BaseWidget):
                 settings = SpeechT5Settings.objects.create()
             elif model_type == TTSModel.ESPEAK.value:
                 settings = EspeakSettings.objects.create()
-            elif (
-                model_type == TTSModel.OPENVOICE.value
-            ):
+            elif model_type == TTSModel.OPENVOICE.value:
                 settings = OpenVoiceSettings.objects.create()
             else:
                 return
@@ -233,9 +227,7 @@ class VoiceSettingsWidget(BaseWidget):
                 SpeechT5Settings.objects.delete(voice.settings_id)
             elif voice.model_type == TTSModel.ESPEAK.value:
                 EspeakSettings.objects.delete(voice.settings_id)
-            elif (
-                voice.model_type == TTSModel.OPENVOICE.value
-            ):
+            elif voice.model_type == TTSModel.OPENVOICE.value:
                 OpenVoiceSettings.objects.delete(voice.settings_id)
 
             VoiceSettings.objects.delete(voice.id)

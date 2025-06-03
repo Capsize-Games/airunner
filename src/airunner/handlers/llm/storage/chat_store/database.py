@@ -108,9 +108,7 @@ class DatabaseChatStore(BaseChatStore):
                 logging.getLogger(__name__).warning(
                     f"Failed to construct SafeChatMessage at index {i}: {message} ({e})"
                 )
-                chat_msg = SafeChatMessage(
-                    role=role, blocks=[TextBlock(text="")]
-                )
+                chat_msg = SafeChatMessage(role=role, blocks=[TextBlock(text="")])
             formatted_messages.append(chat_msg)
         return formatted_messages
 

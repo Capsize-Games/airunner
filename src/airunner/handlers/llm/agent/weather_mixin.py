@@ -22,14 +22,14 @@ class WeatherMixin:
                 "text",
                 "other",
                 "cache",
-                ".requests_cache"
+                ".requests_cache",
             )
         )
 
     @property
     def unit_system(self) -> str:
         return self.user.unit_system
-    
+
     @property
     def is_metric(self) -> bool:
         return self.unit_system == "metric"
@@ -40,25 +40,25 @@ class WeatherMixin:
             return "celsius"
         else:
             return "fahrenheit"
-    
+
     @property
     def wind_speed_unit(self) -> str:
         if self.is_metric:
             return "km/h"
         else:
             return "mph"
-    
+
     @property
     def precipitation_unit(self) -> str:
         if self.is_metric:
             return "mm"
         else:
             return "inch"
-    
+
     @property
     def forecast_days(self) -> int:
         return 1
-    
+
     @property
     def weather_prompt(self) -> str:
         weather = self.get_weather()
@@ -83,19 +83,18 @@ class WeatherMixin:
             f"- wind direction: {current_wind_direction_10m}\n"
             f"- wind gusts: {current_wind_gusts_10m} {self.wind_speed_unit}\n"
         )
-    
+
     def get_weather(self) -> Optional[VariablesWithTime]:
         if (
-            not self.user.latitude or 
-            not self.user.longitude or 
-            not self.chatbot.use_weather_prompt or
-            not self.llm_settings.use_weather_prompt
+            not self.user.latitude
+            or not self.user.longitude
+            or not self.chatbot.use_weather_prompt
+            or not self.llm_settings.use_weather_prompt
         ):
             return None
-        
+
         cache_session = requests_cache.CachedSession(
-            self.cache_path, 
-            expire_after=self.weather_cache_expiration
+            self.cache_path, expire_after=self.weather_cache_expiration
         )
         retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
         openmeteo = openmeteo_requests.Client(session=retry_session)
@@ -104,14 +103,14 @@ class WeatherMixin:
             "latitude": self.user.latitude,
             "longitude": self.user.longitude,
             "current": [
-                "temperature_2m", 
-                "precipitation", 
-                "rain", 
-                "showers", 
-                "snowfall", 
-                "wind_speed_10m", 
-                "wind_direction_10m", 
-                "wind_gusts_10m"
+                "temperature_2m",
+                "precipitation",
+                "rain",
+                "showers",
+                "snowfall",
+                "wind_speed_10m",
+                "wind_direction_10m",
+                "wind_gusts_10m",
             ],
             "temperature_unit": self.temperature_unit,
             "wind_speed_unit": self.wind_speed_unit,

@@ -82,16 +82,12 @@ class NodeGraphWidget(BaseWidget):
         self.graph.widget_ref = self
 
         # Replace the default viewer with our debounced viewer
-        debounced_viewer = DebouncedNodeViewer(
-            undo_stack=self.graph._undo_stack
-        )
+        debounced_viewer = DebouncedNodeViewer(undo_stack=self.graph._undo_stack)
         # Copy over necessary properties from the original viewer
         original_viewer = self.graph._viewer
         debounced_viewer.set_zoom(original_viewer.get_zoom())
         debounced_viewer.set_pipe_layout(original_viewer.get_pipe_layout())
-        debounced_viewer.set_layout_direction(
-            original_viewer.get_layout_direction()
-        )
+        debounced_viewer.set_layout_direction(original_viewer.get_layout_direction())
         # Replace the viewer in the graph
         self.graph._viewer = debounced_viewer
         # Reconnect all signals from the new viewer to the NodeGraph instance
@@ -226,9 +222,7 @@ class NodeGraphWidget(BaseWidget):
             return
 
         workflows = Workflow.objects.all()
-        workflow_map = {
-            wf.name: wf for wf in workflows
-        }  # Map name to workflow object
+        workflow_map = {wf.name: wf for wf in workflows}  # Map name to workflow object
 
         dialog = QDialog(self)
         dialog.setWindowTitle("Save Workflow")
@@ -241,15 +235,11 @@ class NodeGraphWidget(BaseWidget):
 
         # Workflow Name input (enabled only for new)
         name_input = QLineEdit(dialog)
-        name_input.setPlaceholderText(
-            "Enter a unique name for the new workflow"
-        )
+        name_input.setPlaceholderText("Enter a unique name for the new workflow")
 
         # Workflow Description input
         description_input = QLineEdit(dialog)
-        description_input.setPlaceholderText(
-            "(Optional) Describe the workflow"
-        )
+        description_input.setPlaceholderText("(Optional) Describe the workflow")
 
         # Combo box for existing workflows (enabled only for overwrite)
         existing_combo = QComboBox(dialog)
@@ -325,9 +315,7 @@ class NodeGraphWidget(BaseWidget):
                     )
                     if reply == QMessageBox.Yes:
                         # Overwrite existing
-                        self._perform_save(
-                            workflow_map[name].id, name, description
-                        )
+                        self._perform_save(workflow_map[name].id, name, description)
                     elif reply == QMessageBox.Cancel:
                         return  # User cancelled
                     else:
@@ -355,9 +343,7 @@ class NodeGraphWidget(BaseWidget):
                     (wf for wf in workflows if wf.id == selected_id), None
                 )
                 if selected_wf:
-                    self._perform_save(
-                        selected_id, selected_wf.name, description
-                    )
+                    self._perform_save(selected_id, selected_wf.name, description)
                 else:
                     QMessageBox.critical(
                         self, "Save Workflow", "Selected workflow not found."
@@ -404,9 +390,7 @@ class NodeGraphWidget(BaseWidget):
             if selected_id != -1:
                 self._perform_load(selected_id)
             else:
-                QMessageBox.warning(
-                    self, "Load Workflow", "No workflow selected."
-                )
+                QMessageBox.warning(self, "Load Workflow", "No workflow selected.")
 
     def edit_workflow(self):
         print("TODO: EDIT WORKFLOW")
@@ -591,19 +575,13 @@ class NodeGraphWidget(BaseWidget):
             return
 
         name = workflow.name if name is None else name
-        description = (
-            workflow.description if description is None else description
-        )
+        description = workflow.description if description is None else description
 
         # Update workflow metadata using the manager's update method
         try:
-            Workflow.objects.update(
-                workflow_id, name=name, description=description
-            )
+            Workflow.objects.update(workflow_id, name=name, description=description)
         except Exception as e:
-            self.logger.error(
-                f"Error updating workflow metadata: {e}", exc_info=True
-            )
+            self.logger.error(f"Error updating workflow metadata: {e}", exc_info=True)
             QMessageBox.critical(
                 self, "Save Error", f"Could not update workflow metadata: {e}"
             )
@@ -614,18 +592,14 @@ class NodeGraphWidget(BaseWidget):
         nodes_map = self._save_nodes(workflow_id)
         self._save_connections(workflow_id, nodes_map)
 
-        self.logger.info(
-            f"Workflow '{name}' (ID: {workflow_id}) saved successfully."
-        )
+        self.logger.info(f"Workflow '{name}' (ID: {workflow_id}) saved successfully.")
         QMessageBox.information(
             self, "Save Workflow", f"Workflow '{name}' saved successfully."
         )
 
     def _create_and_save_workflow(self, name: str, description: str):
         """Creates a new workflow record and then saves the current graph to it."""
-        self.logger.info(
-            f"Attempting to create and save new workflow: '{name}'"
-        )
+        self.logger.info(f"Attempting to create and save new workflow: '{name}'")
         try:
             # Ensure name uniqueness again just before creation (though dialog should handle it)
             existing = Workflow.objects.filter_by_first(name=name)
@@ -642,9 +616,7 @@ class NodeGraphWidget(BaseWidget):
 
             workflow = self._create_workflow(name, description)
             if workflow:
-                self.logger.info(
-                    f"Created new workflow '{name}' with ID {workflow.id}"
-                )
+                self.logger.info(f"Created new workflow '{name}' with ID {workflow.id}")
                 # Now save the graph data to this new workflow
                 self._perform_save(workflow.id, name, description)
             else:
@@ -695,13 +667,9 @@ class NodeGraphWidget(BaseWidget):
         deleted_connection_count = WorkflowConnection.objects.delete_by(
             workflow_id=workflow.id
         )
-        self.logger.info(
-            f"Deleted {deleted_connection_count} existing connections."
-        )
+        self.logger.info(f"Deleted {deleted_connection_count} existing connections.")
         # Then delete nodes
-        deleted_node_count = WorkflowNode.objects.delete_by(
-            workflow_id=workflow.id
-        )
+        deleted_node_count = WorkflowNode.objects.delete_by(workflow_id=workflow.id)
         self.logger.info(f"Deleted {deleted_node_count} existing nodes.")
 
     def _save_variables(self, workflow):
@@ -713,9 +681,7 @@ class NodeGraphWidget(BaseWidget):
                     "Workflow object missing 'id' attribute or is detached."
                 )
                 return
-            variables_data = [
-                var.to_dict() for var in self.ui.variables.variables
-            ]
+            variables_data = [var.to_dict() for var in self.ui.variables.variables]
             self.logger.info(
                 f"Data being saved to workflow.variables: {variables_data}"
             )
@@ -734,14 +700,10 @@ class NodeGraphWidget(BaseWidget):
         """
         nodes_map = {}  # Maps graph node IDs to database node IDs
         all_graph_nodes = self.graph.all_nodes()
-        self.logger.info(
-            f"Processing {len(all_graph_nodes)} nodes for saving..."
-        )
+        self.logger.info(f"Processing {len(all_graph_nodes)} nodes for saving...")
 
         # Check for multiple StartNodes in the graph
-        start_nodes = [
-            node for node in all_graph_nodes if isinstance(node, StartNode)
-        ]
+        start_nodes = [node for node in all_graph_nodes if isinstance(node, StartNode)]
         if len(start_nodes) > 1:
             self.logger.warning(
                 f"Multiple StartNodes ({len(start_nodes)}) detected in graph. Will save only the first one."
@@ -750,8 +712,7 @@ class NodeGraphWidget(BaseWidget):
             all_graph_nodes = [
                 node
                 for node in all_graph_nodes
-                if not isinstance(node, StartNode)
-                or node.id == kept_start_node.id
+                if not isinstance(node, StartNode) or node.id == kept_start_node.id
             ]
             self.logger.info(
                 f"Keeping StartNode: {kept_start_node.name()} (ID: {kept_start_node.id}), filtering out {len(start_nodes) - 1} duplicate StartNodes."
@@ -770,9 +731,7 @@ class NodeGraphWidget(BaseWidget):
                 f"Found {len(existing_node_map)} existing nodes in the database"
             )
         except Exception as e:
-            self.logger.error(
-                f"Error retrieving existing nodes: {e}", exc_info=True
-            )
+            self.logger.error(f"Error retrieving existing nodes: {e}", exc_info=True)
             existing_node_map = {}
 
         used_db_node_ids = set()
@@ -820,9 +779,7 @@ class NodeGraphWidget(BaseWidget):
                             f"Created new node: {node.name()} (Graph ID: {node.id}, DB ID: {db_node.id})"
                         )
                     else:
-                        self.logger.error(
-                            f"Failed to create node: {node.name()}"
-                        )
+                        self.logger.error(f"Failed to create node: {node.name()}")
                 except Exception as e:
                     self.logger.error(
                         f"Error creating node {node.name()}: {e}",
@@ -843,9 +800,7 @@ class NodeGraphWidget(BaseWidget):
                     f"Deleted {len(nodes_to_delete)} obsolete nodes from the database"
                 )
             except Exception as e:
-                self.logger.error(
-                    f"Error deleting obsolete nodes: {e}", exc_info=True
-                )
+                self.logger.error(f"Error deleting obsolete nodes: {e}", exc_info=True)
 
         return nodes_map
 
@@ -857,9 +812,7 @@ class NodeGraphWidget(BaseWidget):
             if key not in IGNORED_NODE_PROPERTIES:
                 # Skip internal properties that reference the node itself or other non-serializable objects
                 if key == "_graph_item" or key.startswith("__"):
-                    self.logger.info(
-                        f"  Skipping non-serializable property: {key}"
-                    )
+                    self.logger.info(f"  Skipping non-serializable property: {key}")
                     continue
 
                 # Try to filter out other non-serializable values
@@ -883,18 +836,14 @@ class NodeGraphWidget(BaseWidget):
             # If these attributes don't exist, BaseWorkflowNode needs modification.
             dynamic_input_names = getattr(node, "_dynamic_input_names", [])
             if dynamic_input_names:
-                properties_to_save["_dynamic_input_names"] = (
-                    dynamic_input_names
-                )
+                properties_to_save["_dynamic_input_names"] = dynamic_input_names
                 self.logger.info(
                     f"  Saving dynamic input names for {node.name()}: {dynamic_input_names}"
                 )
 
             dynamic_output_names = getattr(node, "_dynamic_output_names", [])
             if dynamic_output_names:
-                properties_to_save["_dynamic_output_names"] = (
-                    dynamic_output_names
-                )
+                properties_to_save["_dynamic_output_names"] = dynamic_output_names
                 self.logger.info(
                     f"  Saving dynamic output names for {node.name()}: {dynamic_output_names}"
                 )
@@ -943,9 +892,7 @@ class NodeGraphWidget(BaseWidget):
 
         # Always extract workflow_id at the start to avoid DetachedInstanceError
         if workflow_id is None:
-            self.logger.error(
-                "Workflow object missing 'id' attribute or is detached."
-            )
+            self.logger.error("Workflow object missing 'id' attribute or is detached.")
             return
 
         # Get all existing connections for this workflow from the database
@@ -984,10 +931,7 @@ class NodeGraphWidget(BaseWidget):
         # Process all current connections
         for conn in current_connections:
             # Map the graph node IDs to database node IDs
-            if (
-                conn["out_node_id"] in nodes_map
-                and conn["in_node_id"] in nodes_map
-            ):
+            if conn["out_node_id"] in nodes_map and conn["in_node_id"] in nodes_map:
                 output_node_db_id = nodes_map[conn["out_node_id"]]
                 input_node_db_id = nodes_map[conn["in_node_id"]]
 
@@ -1138,9 +1082,7 @@ class NodeGraphWidget(BaseWidget):
                 f"Explicitly cleared dynamic nodes from factory. Remaining: {list(original_node_types.keys())}"
             )
         else:
-            self.logger.warning(
-                "Could not explicitly clear node factory registry."
-            )
+            self.logger.warning("Could not explicitly clear node factory registry.")
 
         # Automatically add a StartNode to the workflow
         if add_start_node:
@@ -1150,9 +1092,7 @@ class NodeGraphWidget(BaseWidget):
         """Add a StartNode to the workflow at a default position if one doesn't already exist."""
         # Check if there's already a StartNode in the graph
         existing_start_nodes = [
-            node
-            for node in self.graph.all_nodes()
-            if isinstance(node, StartNode)
+            node for node in self.graph.all_nodes() if isinstance(node, StartNode)
         ]
 
         if existing_start_nodes:
@@ -1180,9 +1120,7 @@ class NodeGraphWidget(BaseWidget):
     def _remove_start_node(self):
         """Remove the StartNode from the workflow if it exists."""
         start_nodes = [
-            node
-            for node in self.graph.all_nodes()
-            if isinstance(node, StartNode)
+            node for node in self.graph.all_nodes() if isinstance(node, StartNode)
         ]
         for start_node in start_nodes:
             self.graph.delete_node(start_node)
@@ -1199,12 +1137,8 @@ class NodeGraphWidget(BaseWidget):
 
                 if output_node and input_node:
                     # Find the port objects on the nodes
-                    output_port = output_node.outputs().get(
-                        db_conn.output_port_name
-                    )
-                    input_port = input_node.inputs().get(
-                        db_conn.input_port_name
-                    )
+                    output_port = output_node.outputs().get(db_conn.output_port_name)
+                    input_port = input_node.inputs().get(db_conn.input_port_name)
 
                     if output_port and input_port:
                         # Use the connect_to method on the output port
@@ -1259,9 +1193,7 @@ class NodeGraphWidget(BaseWidget):
                 and hasattr(workflow_data, "connections")
             ):
                 db_nodes = (
-                    workflow_data.nodes
-                    if workflow_data.nodes is not None
-                    else []
+                    workflow_data.nodes if workflow_data.nodes is not None else []
                 )
                 db_connections = (
                     workflow_data.connections
@@ -1272,9 +1204,7 @@ class NodeGraphWidget(BaseWidget):
                     f"Successfully fetched workflow data with eager loading for ID {workflow.id}"
                 )
             else:
-                raise ValueError(
-                    "Eager loading failed or returned incomplete data."
-                )
+                raise ValueError("Eager loading failed or returned incomplete data.")
 
         except Exception as e_eager:
             self.logger.warning(
@@ -1283,18 +1213,14 @@ class NodeGraphWidget(BaseWidget):
 
             # Fallback to fetching separately
             try:
-                nodes_result = WorkflowNode.objects.filter_by(
-                    workflow_id=workflow.id
-                )
+                nodes_result = WorkflowNode.objects.filter_by(workflow_id=workflow.id)
                 connections_result = WorkflowConnection.objects.filter_by(
                     workflow_id=workflow.id
                 )
 
                 db_nodes = nodes_result if nodes_result is not None else []
                 db_connections = (
-                    connections_result
-                    if connections_result is not None
-                    else []
+                    connections_result if connections_result is not None else []
                 )
 
                 self.logger.info(
@@ -1348,9 +1274,7 @@ class NodeGraphWidget(BaseWidget):
         """Center the nodegraph view on the loaded nodes."""
         if not node_instances:
             return
-        positions = [
-            node.pos() for node in node_instances if hasattr(node, "pos")
-        ]
+        positions = [node.pos() for node in node_instances if hasattr(node, "pos")]
         if not positions:
             return
         min_x = min(pos[0] for pos in positions)
@@ -1363,9 +1287,7 @@ class NodeGraphWidget(BaseWidget):
             self.viewer.centerOn(center_x, center_y)
         elif hasattr(self.viewer, "setSceneRect"):
             # Fallback: set scene rect to fit all nodes
-            self.viewer.setSceneRect(
-                min_x, min_y, max_x - min_x + 1, max_y - min_y + 1
-            )
+            self.viewer.setSceneRect(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
 
     def _reset_zoom_level(self):
         """Reset the nodegraph view zoom to default (100%)."""
@@ -1387,9 +1309,7 @@ class NodeGraphWidget(BaseWidget):
                         node_instance, custom_prop_name, custom_prop_value
                     )
             else:
-                self._set_property_on_node(
-                    node_instance, prop_name, prop_value
-                )
+                self._set_property_on_node(node_instance, prop_name, prop_value)
 
     def _set_property_on_node(self, node_instance, prop_name, prop_value):
         # Skip ignored properties and dynamic port lists (handled in _load_workflow_nodes)
@@ -1412,9 +1332,7 @@ class NodeGraphWidget(BaseWidget):
             "negative_target_size",
             "negative_original_size",
         ]
-        if prop_name in VECTOR2_PROPERTY_NAMES and isinstance(
-            prop_value, dict
-        ):
+        if prop_name in VECTOR2_PROPERTY_NAMES and isinstance(prop_value, dict):
             # Try x/y first, then width/height for size properties
             if "x" in prop_value and "y" in prop_value:
                 prop_value = (prop_value["x"], prop_value["y"])
@@ -1427,9 +1345,7 @@ class NodeGraphWidget(BaseWidget):
             # Use airunner.vendor.nodegraphqt's property system primarily
             if node_instance.has_property(prop_name):
                 node_instance.set_property(prop_name, prop_value)
-                self.logger.info(
-                    f"    Set property {prop_name} = {prop_value}"
-                )
+                self.logger.info(f"    Set property {prop_name} = {prop_value}")
             # Fallback for direct attributes ONLY if necessary and NOT callable (methods)
             elif hasattr(node_instance, prop_name) and not callable(
                 getattr(node_instance, prop_name)
@@ -1511,9 +1427,7 @@ class NodeGraphWidget(BaseWidget):
         workflow = None
         try:
             if self.current_workflow_id is not None:
-                workflow = self._find_workflow_by_id(
-                    int(self.current_workflow_id)
-                )
+                workflow = self._find_workflow_by_id(int(self.current_workflow_id))
                 if hasattr(workflow, "nodegraph_zoom"):
                     zoom = getattr(workflow, "nodegraph_zoom", None)
                 if hasattr(workflow, "nodegraph_center_x"):
@@ -1528,13 +1442,9 @@ class NodeGraphWidget(BaseWidget):
         if zoom is None:
             zoom = getattr(self.application_settings, "nodegraph_zoom", None)
         if center_x is None:
-            center_x = getattr(
-                self.application_settings, "nodegraph_center_x", None
-            )
+            center_x = getattr(self.application_settings, "nodegraph_center_x", None)
         if center_y is None:
-            center_y = getattr(
-                self.application_settings, "nodegraph_center_y", None
-            )
+            center_y = getattr(self.application_settings, "nodegraph_center_y", None)
         # Apply zoom and center if available
         viewer = getattr(self.graph, "_viewer", None)
         if viewer:
@@ -1563,9 +1473,7 @@ class NodeGraphWidget(BaseWidget):
                 if zoom is not None and hasattr(viewer, "set_zoom_absolute"):
                     QtCore.QTimer.singleShot(1200, force_zoom_final)
             except Exception as e:
-                self.logger.warning(
-                    f"Failed to restore nodegraph zoom/center: {e}"
-                )
+                self.logger.warning(f"Failed to restore nodegraph zoom/center: {e}")
 
     def _save_state(self):
         zoom = self.graph._viewer.get_zoom()

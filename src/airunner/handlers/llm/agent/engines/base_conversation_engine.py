@@ -44,9 +44,7 @@ class BaseConversationEngine:
                     "name": self.agent.botname,
                     "content": assistant_message,
                     "timestamp": now,
-                    "blocks": [
-                        {"block_type": "text", "text": assistant_message}
-                    ],
+                    "blocks": [{"block_type": "text", "text": assistant_message}],
                 }
             )
         if self._logger:

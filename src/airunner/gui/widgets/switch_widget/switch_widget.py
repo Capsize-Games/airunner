@@ -1,4 +1,13 @@
-from PySide6.QtCore import QObject, QPropertyAnimation, QEasingCurve, Property, QPointF, Slot, QSize, Signal
+from PySide6.QtCore import (
+    QObject,
+    QPropertyAnimation,
+    QEasingCurve,
+    Property,
+    QPointF,
+    Slot,
+    QSize,
+    Signal,
+)
 from PySide6.QtGui import QGradient, QLinearGradient, QPalette, Qt, QPainter, QColor
 from PySide6.QtWidgets import QAbstractButton, QApplication
 
@@ -14,7 +23,7 @@ class SwitchPrivate(QObject):
 
         self.animation = QPropertyAnimation(self)
         self.animation.setTargetObject(self)
-        self.animation.setPropertyName(b'position')
+        self.animation.setPropertyName(b"position")
         self.animation.setStartValue(0.0)
         self.animation.setEndValue(1.0)
         self.animation.setDuration(200)
@@ -56,7 +65,9 @@ class SwitchPrivate(QObject):
         self.mGradient.setStart(0, 0)
         self.mGradient.setFinalStop(0, r.height())
         painter.setBrush(self.mGradient)
-        painter.drawRoundedRect(r.adjusted(margin, margin, -margin, -margin), r.height() / 2, r.height() / 2)
+        painter.drawRoundedRect(
+            r.adjusted(margin, margin, -margin, -margin), r.height() / 2, r.height() / 2
+        )
 
         self.mGradient.setColorAt(0, button.darker(130))
         self.mGradient.setColorAt(1, button)
@@ -64,13 +75,17 @@ class SwitchPrivate(QObject):
         painter.setBrush(self.mGradient)
 
         x = r.height() / 2.0 + self.mPosition * (r.width() - r.height())
-        painter.drawEllipse(QPointF(x, r.height() / 2), r.height() / 2 - margin, r.height() / 2 - margin)
+        painter.drawEllipse(
+            QPointF(x, r.height() / 2), r.height() / 2 - margin, r.height() / 2 - margin
+        )
 
-    @Slot(bool, name='animate')
+    @Slot(bool, name="animate")
     def animate(self, checked):
         self.checked = checked
         self.animation.setDirection(
-            QPropertyAnimation.Direction.Forward if checked else QPropertyAnimation.Direction.Backward
+            QPropertyAnimation.Direction.Forward
+            if checked
+            else QPropertyAnimation.Direction.Backward
         )
         self.animation.start()
 
@@ -109,8 +124,9 @@ class SwitchWidget(QAbstractButton):
         self.update()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
+
     app = QApplication(sys.argv)
     w = SwitchWidget()
     w.setProperty("backgroundColor", QColor("blue"))

@@ -49,9 +49,7 @@ class SearchEngineTool(BaseConversationEngine):
             from airunner.utils.application.get_logger import get_logger
             from airunner.settings import AIRUNNER_LOG_LEVEL
 
-            self._logger = get_logger(
-                self.__class__.__name__, AIRUNNER_LOG_LEVEL
-            )
+            self._logger = get_logger(self.__class__.__name__, AIRUNNER_LOG_LEVEL)
 
     @property
     def logger(self):
@@ -122,9 +120,7 @@ class SearchEngineTool(BaseConversationEngine):
             for service, items in search_results.items():
                 if isinstance(items, list):
                     formatted_results_str += f"Results from {service}:\n"
-                    for item in items[
-                        :5
-                    ]:  # Limit to top 5 results per service
+                    for item in items[:5]:  # Limit to top 5 results per service
                         title = item.get("title", "N/A")
                         snippet = item.get("snippet", "No snippet available.")
                         link = item.get("link", "")
@@ -159,9 +155,7 @@ class SearchEngineTool(BaseConversationEngine):
         queries = unique_queries[:3]
         return queries
 
-    def call(
-        self, *args: Any, tool_call: bool = False, **kwargs: Any
-    ) -> ToolOutput:
+    def call(self, *args: Any, tool_call: bool = False, **kwargs: Any) -> ToolOutput:
         self.logger.info(
             "Running SearchEngineTool with args: %s, kwargs: %s", args, kwargs
         )
@@ -264,19 +258,15 @@ class SearchEngineTool(BaseConversationEngine):
     def combined_search_results(self, queries: List, category: str) -> List:
         all_results = {}
         seen_items = set()  # (title, link) tuples
-        consolidated_results = (
-            []
-        )  # List of unique results across all services/queries
+        consolidated_results = []  # List of unique results across all services/queries
         for idx, query_str in enumerate(queries):
             if idx > 0:
                 time.sleep(0.5)  # Rate limit between requests
             if not self._do_interrupt:
                 try:
                     self.logger.info(f"SearchEngineTool: Performing search")
-                    search_results = (
-                        AggregatedSearchTool.aggregated_search_sync(
-                            query_str, category
-                        )
+                    search_results = AggregatedSearchTool.aggregated_search_sync(
+                        query_str, category
                     )
                     if search_results and isinstance(search_results, dict):
                         for service, items in search_results.items():

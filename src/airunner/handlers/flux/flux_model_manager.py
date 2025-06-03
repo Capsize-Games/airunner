@@ -176,9 +176,7 @@ class FluxModelManager(BaseDiffusersModelManager, ModelManagerInterface):
         )
         # Ensure components are loaded via properties before calling base method
         data["tokenizer"] = self.tokenizer
-        data["text_encoder"] = (
-            self.text_encoder
-        )  # Already moved to device in property
+        data["text_encoder"] = self.text_encoder  # Already moved to device in property
         data["tokenizer_2"] = self.tokenizer_2
         data["text_encoder_2"] = (
             self.text_encoder_2

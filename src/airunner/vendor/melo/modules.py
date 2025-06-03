@@ -162,9 +162,7 @@ class WN(torch.nn.Module):
             cond_layer = torch.nn.Conv1d(
                 gin_channels, 2 * hidden_channels * n_layers, 1
             )
-            self.cond_layer = torch.nn.utils.weight_norm(
-                cond_layer, name="weight"
-            )
+            self.cond_layer = torch.nn.utils.weight_norm(cond_layer, name="weight")
 
         for i in range(n_layers):
             dilation = dilation_rate**i
@@ -185,12 +183,8 @@ class WN(torch.nn.Module):
             else:
                 res_skip_channels = hidden_channels
 
-            res_skip_layer = torch.nn.Conv1d(
-                hidden_channels, res_skip_channels, 1
-            )
-            res_skip_layer = torch.nn.utils.weight_norm(
-                res_skip_layer, name="weight"
-            )
+            res_skip_layer = torch.nn.Conv1d(hidden_channels, res_skip_channels, 1)
+            res_skip_layer = torch.nn.utils.weight_norm(res_skip_layer, name="weight")
             self.res_skip_layers.append(res_skip_layer)
 
     def forward(self, x, x_mask, g=None, **kwargs):
@@ -204,15 +198,11 @@ class WN(torch.nn.Module):
             x_in = self.in_layers[i](x)
             if g is not None:
                 cond_offset = i * 2 * self.hidden_channels
-                g_l = g[
-                    :, cond_offset : cond_offset + 2 * self.hidden_channels, :
-                ]
+                g_l = g[:, cond_offset : cond_offset + 2 * self.hidden_channels, :]
             else:
                 g_l = torch.zeros_like(x_in)
 
-            acts = commons.fused_add_tanh_sigmoid_multiply(
-                x_in, g_l, n_channels_tensor
-            )
+            acts = commons.fused_add_tanh_sigmoid_multiply(x_in, g_l, n_channels_tensor)
             acts = self.drop(acts)
 
             res_skip_acts = self.res_skip_layers[i](acts)
@@ -445,9 +435,7 @@ class ResidualCouplingLayer(nn.Module):
             p_dropout=p_dropout,
             gin_channels=gin_channels,
         )
-        self.post = nn.Conv1d(
-            hidden_channels, self.half_channels * (2 - mean_only), 1
-        )
+        self.post = nn.Conv1d(hidden_channels, self.half_channels * (2 - mean_only), 1)
         self.post.weight.data.zero_()
         self.post.bias.data.zero_()
 
@@ -493,9 +481,7 @@ class ConvFlow(nn.Module):
         self.half_channels = in_channels // 2
 
         self.pre = nn.Conv1d(self.half_channels, filter_channels, 1)
-        self.convs = DDSConv(
-            filter_channels, kernel_size, n_layers, p_dropout=0.0
-        )
+        self.convs = DDSConv(filter_channels, kernel_size, n_layers, p_dropout=0.0)
         self.proj = nn.Conv1d(
             filter_channels, self.half_channels * (num_bins * 3 - 1), 1
         )
@@ -509,16 +495,12 @@ class ConvFlow(nn.Module):
         h = self.proj(h) * x_mask
 
         b, c, t = x0.shape
-        h = h.reshape(b, c, -1, t).permute(
-            0, 1, 3, 2
-        )  # [b, cx?, t] -> [b, c, t, ?]
+        h = h.reshape(b, c, -1, t).permute(0, 1, 3, 2)  # [b, cx?, t] -> [b, c, t, ?]
 
-        unnormalized_widths = h[..., : self.num_bins] / math.sqrt(
+        unnormalized_widths = h[..., : self.num_bins] / math.sqrt(self.filter_channels)
+        unnormalized_heights = h[..., self.num_bins : 2 * self.num_bins] / math.sqrt(
             self.filter_channels
         )
-        unnormalized_heights = h[
-            ..., self.num_bins : 2 * self.num_bins
-        ] / math.sqrt(self.filter_channels)
         unnormalized_derivatives = h[..., 2 * self.num_bins :]
 
         x1, logabsdet = piecewise_rational_quadratic_transform(
@@ -578,9 +560,7 @@ class TransformerCouplingLayer(nn.Module):
             if wn_sharing_parameter is None
             else wn_sharing_parameter
         )
-        self.post = nn.Conv1d(
-            hidden_channels, self.half_channels * (2 - mean_only), 1
-        )
+        self.post = nn.Conv1d(hidden_channels, self.half_channels * (2 - mean_only), 1)
         self.post.weight.data.zero_()
         self.post.bias.data.zero_()
 

@@ -100,9 +100,7 @@ class LoraContainerWidget(BaseWidget):
 
     def _toggle_lora_widgets(self, enable: bool):
         for i in range(self.ui.lora_scroll_area.widget().layout().count()):
-            lora_widget = (
-                self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
-            )
+            lora_widget = self.ui.lora_scroll_area.widget().layout().itemAt(i).widget()
             if isinstance(lora_widget, LoraWidget):
                 if enable:
                     lora_widget.enable_lora_widget()
@@ -227,9 +225,7 @@ class LoraContainerWidget(BaseWidget):
 
     def initialize_lora_trigger_words(self):
         for lora in self.lora:
-            trigger_word = (
-                lora["trigger_word"] if "trigger_word" in lora else ""
-            )
+            trigger_word = lora["trigger_word"] if "trigger_word" in lora else ""
             for tab_name in self.tabs.keys():
                 for i in range(
                     self.tool_menu_widget.lora_container_widget.lora_scroll_area.widget()
@@ -285,11 +281,7 @@ class LoraContainerWidget(BaseWidget):
     def clear_lora_widgets(self):
         if self.spacer:
             self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
-        for i in reversed(
-            range(self.ui.scrollAreaWidgetContents.layout().count())
-        ):
-            widget = (
-                self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
-            )
+        for i in reversed(range(self.ui.scrollAreaWidgetContents.layout().count())):
+            widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
             if isinstance(widget, LoraWidget):
                 widget.deleteLater()

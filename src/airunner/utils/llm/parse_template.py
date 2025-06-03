@@ -11,11 +11,7 @@ def parse_template(template: dict) -> str:
         if model in [
             AIRUNNER_DEFAULT_LLM_HF_PATH,
         ]:
-            parsed_template = "\n".join((
-                "[INST]<<SYS>>",
-                system_instructions,
-                "<</SYS>>",
-                template,
-                "[/INST]"
-            ))
+            parsed_template = "\n".join(
+                ("[INST]<<SYS>>", system_instructions, "<</SYS>>", template, "[/INST]")
+            )
     return parsed_template

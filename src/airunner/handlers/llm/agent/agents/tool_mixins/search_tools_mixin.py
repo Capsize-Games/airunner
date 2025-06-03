@@ -15,9 +15,7 @@ from typing import Dict, List
 class SearchToolsMixin(ToolSingletonMixin):
     """Provides a search tool interface for LLM agents."""
 
-    async def search(
-        self, query: str, category: str = "all"
-    ) -> Dict[str, List[dict]]:
+    async def search(self, query: str, category: str = "all") -> Dict[str, List[dict]]:
         """Perform an internet search for a given query and category.
 
         Args:
@@ -31,9 +29,7 @@ class SearchToolsMixin(ToolSingletonMixin):
 
     @property
     def search_tool(self):
-        def search_sync(
-            query: str, category: str = "all"
-        ) -> Dict[str, List[dict]]:
+        def search_sync(query: str, category: str = "all") -> Dict[str, List[dict]]:
             """Perform an internet search for a given query and category.
 
             Args:
@@ -50,9 +46,7 @@ class SearchToolsMixin(ToolSingletonMixin):
                 loop = asyncio.get_running_loop()
             except RuntimeError:
                 # No running event loop in this thread: safe to use asyncio.run()
-                return AggregatedSearchTool.aggregated_search_sync(
-                    query, category
-                )
+                return AggregatedSearchTool.aggregated_search_sync(query, category)
             else:
                 # There is a running event loop (main thread or async context)
                 # Use run_until_complete if not already running

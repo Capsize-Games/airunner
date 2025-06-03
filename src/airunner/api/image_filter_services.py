@@ -1,6 +1,7 @@
 from .api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 
+
 class ImageFilterAPIServices(APIServiceBase):
     def cancel(self):
         self.emit_signal(SignalCode.CANVAS_CANCEL_FILTER_SIGNAL)

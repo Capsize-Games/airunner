@@ -18,7 +18,6 @@ WHAT YOU ARE DOING.
 ====================================================================
 """
 
-
 """
 Environment variables for huggingface libraries
 The following environment variables control huggingface libraries.
@@ -263,6 +262,4 @@ DEFAULT_HF_ENDPOINT = "https://huggingface.co"
 # You may change this value if you want to use a different endpoint.
 # This variable is currently unused by AI Runner.
 ####################################################################
-DEFAULT_HF_INFERENCE_ENDPOINT = (
-    "https://api-inference.huggingface.com"
-)
+DEFAULT_HF_INFERENCE_ENDPOINT = "https://api-inference.huggingface.com"

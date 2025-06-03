@@ -17,9 +17,7 @@ class KeyboardShortcutsWidget(BaseWidget):
     widget_class_ = Ui_keyboard_shortcuts
 
     def __init__(self, **kwargs):
-        self.shortcut_key_widgets = [
-            None for _i in range(len(self.shortcut_keys))
-        ]
+        self.shortcut_key_widgets = [None for _i in range(len(self.shortcut_keys))]
         self.spacer = QSpacerItem(
             20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
         )
@@ -51,9 +49,7 @@ class KeyboardShortcutsWidget(BaseWidget):
         self.clear_shortcut_setting(key)
         line_edit.setText("Press any key to set shortcut (esc to cancel)")
 
-    def get_shortcut(
-        self, shortcut_key: ShortcutKeys, line_edit, event, index
-    ):
+    def get_shortcut(self, shortcut_key: ShortcutKeys, line_edit, event, index):
         if event.isAutoRepeat():
             return
 
@@ -105,12 +101,8 @@ class KeyboardShortcutsWidget(BaseWidget):
 
     @staticmethod
     def get_key_text(event):
-        key_sequence = QtGui.QKeySequence(
-            event.key() | event.modifiers().value
-        )
-        return key_sequence.toString(
-            QtGui.QKeySequence.SequenceFormat.NativeText
-        )
+        key_sequence = QtGui.QKeySequence(event.key() | event.modifiers().value)
+        return key_sequence.toString(QtGui.QKeySequence.SequenceFormat.NativeText)
 
     def save_shortcuts(self):
 

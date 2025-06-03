@@ -40,9 +40,7 @@ class PlainTextWidget(BaseContentWidget):
             loader=FileSystemLoader(static_html_dir),
             autoescape=select_autoescape(["html", "xml"]),
         )
-        self._template = self._jinja_env.get_template(
-            "plain_text_widget.jinja2.html"
-        )
+        self._template = self._jinja_env.get_template("plain_text_widget.jinja2.html")
 
     def setContent(self, content):
         super().setContent(content)

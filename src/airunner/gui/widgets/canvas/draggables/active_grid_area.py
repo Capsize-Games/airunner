@@ -38,9 +38,7 @@ class ActiveGridArea(DraggablePixmap):
         painter = self.draw_border()
         super().paint(painter, None, None)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-        self.register(
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.render_fill
-        )
+        self.register(SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.render_fill)
 
     @property
     def rect(self):
@@ -67,9 +65,7 @@ class ActiveGridArea(DraggablePixmap):
             self.image = self.image.scaled(width, height)
 
         fill_color = (
-            self.get_fill_color()
-            if self._do_render_fill
-            else QColor(0, 0, 0, 1)
+            self.get_fill_color() if self._do_render_fill else QColor(0, 0, 0, 1)
         )
         self.image.fill(fill_color)
         self.updateImage(self.image)
@@ -218,8 +214,7 @@ class ActiveGridArea(DraggablePixmap):
             # Emit signal if we moved
             if has_moved:
                 if (
-                    int(self._current_snapped_pos[0])
-                    != self.active_grid_settings.pos_x
+                    int(self._current_snapped_pos[0]) != self.active_grid_settings.pos_x
                     or int(self._current_snapped_pos[1])
                     != self.active_grid_settings.pos_y
                 ):
@@ -232,12 +227,8 @@ class ActiveGridArea(DraggablePixmap):
                     )
 
                     # Update the in-memory settings object immediately
-                    self.active_grid_settings.pos_x = int(
-                        self._current_snapped_pos[0]
-                    )
-                    self.active_grid_settings.pos_y = int(
-                        self._current_snapped_pos[1]
-                    )
+                    self.active_grid_settings.pos_x = int(self._current_snapped_pos[0])
+                    self.active_grid_settings.pos_y = int(self._current_snapped_pos[1])
 
                 # Update the visual position to match the new settings
                 try:
@@ -245,12 +236,8 @@ class ActiveGridArea(DraggablePixmap):
                     canvas_offset = view.canvas_offset
                 except (AttributeError, IndexError):
                     canvas_offset = QPointF(0, 0)
-                display_x = (
-                    int(self._current_snapped_pos[0]) - canvas_offset.x()
-                )
-                display_y = (
-                    int(self._current_snapped_pos[1]) - canvas_offset.y()
-                )
+                display_x = int(self._current_snapped_pos[0]) - canvas_offset.x()
+                display_y = int(self._current_snapped_pos[1]) - canvas_offset.y()
                 self.setPos(display_x, display_y)
 
                 self.api.art.canvas.generate_mask()

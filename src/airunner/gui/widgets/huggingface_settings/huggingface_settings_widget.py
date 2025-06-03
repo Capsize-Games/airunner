@@ -15,8 +15,7 @@ class HuggingfaceSettingsWidget(BaseWidget):
         self.ui.api_key.setText(self.settings.value("huggingface/api_key", ""))
         self.ui.allow.blockSignals(True)
         self.ui.allow.setChecked(
-            self.settings.value("huggingface/allow_downloads", "false")
-            == "true"
+            self.settings.value("huggingface/allow_downloads", "false") == "true"
         )
         self.ui.allow.blockSignals(False)
 
