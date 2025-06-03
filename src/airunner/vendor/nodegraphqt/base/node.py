@@ -86,9 +86,7 @@ class NodeObject(object):
 
         _NodeItem = qgraphics_item
         if _NodeItem is None:
-            raise RuntimeError(
-                "No qgraphics item specified for the node object!"
-            )
+            raise RuntimeError("No qgraphics item specified for the node object!")
 
         self._view = _NodeItem()
         self._view.type_ = self.type_
@@ -415,9 +413,7 @@ class NodeObject(object):
         if self.graph:
             undo_cmd = PropertyChangedCmd(self, name, value)
             if name == "name":
-                undo_cmd.setText(
-                    'renamed "{}" to "{}"'.format(self.name(), value)
-                )
+                undo_cmd.setText('renamed "{}" to "{}"'.format(self.name(), value))
             if push_undo:
                 undo_stack = self.graph.undo_stack()
                 undo_stack.push(undo_cmd)

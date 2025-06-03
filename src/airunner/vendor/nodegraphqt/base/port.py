@@ -37,9 +37,7 @@ class Port(object):
 
     def __repr__(self):
         port = str(self.__class__.__name__)
-        return '<{}("{}") object at {}>'.format(
-            port, self.name(), hex(id(self))
-        )
+        return '<{}("{}") object at {}>'.format(port, self.name(), hex(id(self)))
 
     @property
     def view(self):
@@ -189,9 +187,7 @@ class Port(object):
             undo_cmd.redo()
         if connected_ports:
             for port in self.connected_ports():
-                port.set_locked(
-                    state, connected_ports=False, push_undo=push_undo
-                )
+                port.set_locked(state, connected_ports=False, push_undo=push_undo)
 
     def connected_ports(self):
         """
@@ -229,9 +225,7 @@ class Port(object):
 
         if self.locked() or port.locked():
             name = [p.name() for p in [self, port] if p.locked()][0]
-            raise PortError(
-                'Can\'t connect port because "{}" is locked.'.format(name)
-            )
+            raise PortError('Can\'t connect port because "{}" is locked.'.format(name))
 
         # validate accept connection.
         node_type = self.node().type_
@@ -277,9 +271,7 @@ class Port(object):
         if not port:
             if pre_conn_port:
                 if push_undo:
-                    undo_stack.push(
-                        PortDisconnectedCmd(self, port, emit_signal)
-                    )
+                    undo_stack.push(PortDisconnectedCmd(self, port, emit_signal))
                     undo_stack.push(NodeInputDisconnectedCmd(self, port))
                     undo_stack.endMacro()
                 else:
@@ -293,14 +285,10 @@ class Port(object):
                     undo_stack.push(
                         PortDisconnectedCmd(self, pre_conn_port, emit_signal)
                     )
-                    undo_stack.push(
-                        NodeInputDisconnectedCmd(self, pre_conn_port)
-                    )
+                    undo_stack.push(NodeInputDisconnectedCmd(self, pre_conn_port))
                     undo_stack.endMacro()
                 else:
-                    PortDisconnectedCmd(
-                        self, pre_conn_port, emit_signal
-                    ).redo()
+                    PortDisconnectedCmd(self, pre_conn_port, emit_signal).redo()
                     NodeInputDisconnectedCmd(self, pre_conn_port).redo()
                 return
 
@@ -308,18 +296,14 @@ class Port(object):
         if not port.multi_connection() and trg_conn_ports:
             dettached_port = trg_conn_ports[0]
             if push_undo:
-                undo_stack.push(
-                    PortDisconnectedCmd(port, dettached_port, emit_signal)
-                )
+                undo_stack.push(PortDisconnectedCmd(port, dettached_port, emit_signal))
                 undo_stack.push(NodeInputDisconnectedCmd(port, dettached_port))
             else:
                 PortDisconnectedCmd(port, dettached_port, emit_signal).redo()
                 NodeInputDisconnectedCmd(port, dettached_port).redo()
         if pre_conn_port:
             if push_undo:
-                undo_stack.push(
-                    PortDisconnectedCmd(self, pre_conn_port, emit_signal)
-                )
+                undo_stack.push(PortDisconnectedCmd(self, pre_conn_port, emit_signal))
                 undo_stack.push(NodeInputDisconnectedCmd(self, pre_conn_port))
             else:
                 PortDisconnectedCmd(self, pre_conn_port, emit_signal).redo()
@@ -355,9 +339,7 @@ class Port(object):
         graph = self.node().graph
         if push_undo:
             graph.undo_stack().beginMacro("disconnect port")
-            graph.undo_stack().push(
-                PortDisconnectedCmd(self, port, emit_signal)
-            )
+            graph.undo_stack().push(PortDisconnectedCmd(self, port, emit_signal))
             graph.undo_stack().push(NodeInputDisconnectedCmd(self, port))
             graph.undo_stack().endMacro()
         else:

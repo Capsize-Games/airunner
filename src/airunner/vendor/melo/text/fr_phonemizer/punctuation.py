@@ -56,7 +56,9 @@ class Punctuation:
     def puncs(self, value):
         if not isinstance(value, six.string_types):
             raise ValueError("[!] Punctuations must be of type str.")
-        self._puncs = "".join(list(dict.fromkeys(list(value))))  # remove duplicates without changing the oreder
+        self._puncs = "".join(
+            list(dict.fromkeys(list(value)))
+        )  # remove duplicates without changing the oreder
         self.puncs_regular_exp = re.compile(rf"(\s*[{re.escape(self._puncs)}]+\s*)+")
 
     def strip(self, text):
@@ -156,5 +158,6 @@ class Punctuation:
             # mark (I) has not been phonemized
             return cls._restore([text[0] + current.punc], puncs[1:], num)
 
-        return cls._restore([text[0] + current.punc + text[1]] + text[2:], puncs[1:], num)
-
+        return cls._restore(
+            [text[0] + current.punc + text[1]] + text[2:], puncs[1:], num
+        )

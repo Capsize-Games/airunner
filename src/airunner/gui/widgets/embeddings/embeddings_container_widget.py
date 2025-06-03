@@ -87,14 +87,9 @@ class EmbeddingsContainerWidget(BaseWidget):
     def toggle_all_toggled(self, val):
         embedding_widgets = [
             self.ui.embeddings_scroll_area.widget().layout().itemAt(i).widget()
-            for i in range(
-                self.ui.embeddings_scroll_area.widget().layout().count()
-            )
+            for i in range(self.ui.embeddings_scroll_area.widget().layout().count())
             if isinstance(
-                self.ui.embeddings_scroll_area.widget()
-                .layout()
-                .itemAt(i)
-                .widget(),
+                self.ui.embeddings_scroll_area.widget().layout().itemAt(i).widget(),
                 EmbeddingWidget,
             )
         ]
@@ -204,17 +199,11 @@ class EmbeddingsContainerWidget(BaseWidget):
     def clear_embedding_widgets(self):
         if self.spacer:
             try:
-                self.ui.scrollAreaWidgetContents.layout().removeWidget(
-                    self.spacer
-                )
+                self.ui.scrollAreaWidgetContents.layout().removeWidget(self.spacer)
             except RuntimeError as _e:
                 pass
-        for i in reversed(
-            range(self.ui.scrollAreaWidgetContents.layout().count())
-        ):
-            widget = (
-                self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
-            )
+        for i in reversed(range(self.ui.scrollAreaWidgetContents.layout().count())):
+            widget = self.ui.scrollAreaWidgetContents.layout().itemAt(i).widget()
             if isinstance(widget, EmbeddingWidget):
                 widget.deleteLater()
 
@@ -231,14 +220,9 @@ class EmbeddingsContainerWidget(BaseWidget):
         self._toggle_embedding_widgets(True)
 
     def _toggle_embedding_widgets(self, enable: bool):
-        for i in range(
-            self.ui.embeddings_scroll_area.widget().layout().count()
-        ):
+        for i in range(self.ui.embeddings_scroll_area.widget().layout().count()):
             embedding_widget = (
-                self.ui.embeddings_scroll_area.widget()
-                .layout()
-                .itemAt(i)
-                .widget()
+                self.ui.embeddings_scroll_area.widget().layout().itemAt(i).widget()
             )
             if isinstance(embedding_widget, EmbeddingWidget):
                 if enable:

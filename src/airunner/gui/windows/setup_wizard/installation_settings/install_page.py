@@ -106,9 +106,7 @@ class InstallWorker(
             lambda a, b: self.progress_updated.emit(a, b),
             initialize_gui=initialize_gui,
         )
-        self.hf_downloader.completed.connect(
-            lambda: self.file_download_finished.emit()
-        )
+        self.hf_downloader.completed.connect(lambda: self.file_download_finished.emit())
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.download_finished)
         self.register(SignalCode.PATH_SET, self.path_set)
 
@@ -188,17 +186,13 @@ class InstallWorker(
         for controlnet_model in controlnet_bootstrap_data:
             if not self.models_enabled.get(controlnet_model["name"], True):
                 continue
-            files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]][
-                "controlnet"
-            ]
+            files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]]["controlnet"]
             self.parent.total_steps += len(files)
             self.total_models_in_current_step += len(files)
         for controlnet_model in controlnet_bootstrap_data:
             if not self.models_enabled.get(controlnet_model["name"], True):
                 continue
-            files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]][
-                "controlnet"
-            ]
+            files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]]["controlnet"]
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -442,9 +436,7 @@ class InstallWorker(
                             if total > 0:
                                 self.progress_updated.emit(downloaded, total)
             if label:
-                self.parent.update_download_log(
-                    {"message": f"Downloaded {label}"}
-                )
+                self.parent.update_download_log({"message": f"Downloaded {label}"})
 
             # Check if this is an OpenVoice zip file
             if "openvoice" in dest_path and dest_path.endswith(".zip"):
@@ -454,9 +446,7 @@ class InstallWorker(
                 # The special handler will manage the download sequence
             else:
                 # For regular files, emit standard completion signals
-                self.emit_signal(
-                    SignalCode.DOWNLOAD_COMPLETE, {"file_name": dest_path}
-                )
+                self.emit_signal(SignalCode.DOWNLOAD_COMPLETE, {"file_name": dest_path})
                 self.file_download_finished.emit()
 
         except Exception as e:
@@ -488,9 +478,7 @@ class InstallWorker(
         # Find unidic package path
         unidic_spec = importlib.util.find_spec("unidic")
         if unidic_spec is not None and unidic_spec.submodule_search_locations:
-            self._unidic_dir = os.path.join(
-                unidic_spec.submodule_search_locations[0]
-            )
+            self._unidic_dir = os.path.join(unidic_spec.submodule_search_locations[0])
         else:
             self._unidic_dir = None
 
@@ -506,9 +494,7 @@ class InstallWorker(
 
         if unidic_exists and openvoice_exists:
             self.parent.update_download_log(
-                {
-                    "message": "Unidic and OpenVoice already present, skipping download."
-                }
+                {"message": "Unidic and OpenVoice already present, skipping download."}
             )
             # Signal completion through normal flow rather than directly calling finalize_installation
             self._openvoice_unidic_complete = True
@@ -525,10 +511,10 @@ class InstallWorker(
             self.parent.on_set_downloading_status_label(
                 {"label": "Downloading unidic dictionary..."}
             )
-            self._unidic_zip_path = os.path.join(
-                self._unidic_dir, "unidic-3.1.0.zip"
+            self._unidic_zip_path = os.path.join(self._unidic_dir, "unidic-3.1.0.zip")
+            unidic_url = (
+                "https://cotonoha-dic.s3-ap-northeast-1.amazonaws.com/unidic-3.1.0.zip"
             )
-            unidic_url = "https://cotonoha-dic.s3-ap-northeast-1.amazonaws.com/unidic-3.1.0.zip"
             self.total_models_in_current_step += 1  # Track unidic zip
             self._download_file_with_progress(
                 unidic_url, self._unidic_zip_path, label="unidic-3.1.0.zip"
@@ -573,9 +559,7 @@ class InstallWorker(
             )
 
             # Download the first zip file - completion handler will trigger the next one
-            self._download_file_with_progress(
-                first_url, zip_path, label=zip_name
-            )
+            self._download_file_with_progress(first_url, zip_path, label=zip_name)
         else:
             self.parent.update_download_log(
                 {"message": "OpenVoice already present, skipping download."}
@@ -634,9 +618,7 @@ class InstallWorker(
                     {"label": f"Unzipping unidic to {self._unidic_dir}..."}
                 )
                 self.parent.update_download_log(
-                    {
-                        "message": f"Extracting unidic zip from {self._unidic_zip_path}"
-                    }
+                    {"message": f"Extracting unidic zip from {self._unidic_zip_path}"}
                 )
                 with zipfile.ZipFile(self._unidic_zip_path, "r") as zip_ref:
                     zip_ref.extractall(self._unidic_dir)
@@ -670,9 +652,7 @@ class InstallWorker(
             for zip_path in self._openvoice_zip_paths:
                 if not os.path.exists(zip_path):
                     self.parent.update_download_log(
-                        {
-                            "message": f"OpenVoice zip file not found at {zip_path}"
-                        }
+                        {"message": f"OpenVoice zip file not found at {zip_path}"}
                     )
                     continue
 
@@ -735,9 +715,7 @@ class InstallWorker(
             self.file_download_finished.emit()
         else:
             self.parent.on_set_downloading_status_label(
-                {
-                    "label": "OpenVoice setup incomplete - some files may be missing"
-                }
+                {"label": "OpenVoice setup incomplete - some files may be missing"}
             )
 
         # The download_finished method will handle step progression based on total_models_in_current_step
@@ -875,9 +853,7 @@ class InstallWorker(
             next_file_path = os.path.join(self._openvoice_dir, next_file_name)
 
             self.parent.update_download_log(
-                {
-                    "message": f"Starting next OpenVoice zip download: {next_file_name}"
-                }
+                {"message": f"Starting next OpenVoice zip download: {next_file_name}"}
             )
 
             # Increment the counter since we're starting another download
@@ -912,9 +888,7 @@ class InstallWorker(
                     # First phase: OpenVoice models are done, now download zip files
                     self.download_openvoice_and_unidic()
                     return
-                elif not hasattr(
-                    self, "_openvoice_unidic_extraction_complete"
-                ):
+                elif not hasattr(self, "_openvoice_unidic_extraction_complete"):
                     # Check if we have OpenVoice zip files that need extraction
                     has_unidic = (
                         hasattr(self, "_unidic_zip_path")
@@ -971,9 +945,7 @@ class InstallWorker(
             self.current_step = 3
             self.download_controlnet_processors()
         elif self.current_step == 3:
-            self.parent.on_set_downloading_status_label(
-                {"label": f"Downloading LLM"}
-            )
+            self.parent.on_set_downloading_status_label({"label": f"Downloading LLM"})
             self.current_step = 4
             self.download_llms()
         elif self.current_step == 4:
@@ -1006,10 +978,7 @@ class InstallWorker(
 
     def finalize_installation(self, *_args):
         # Check if installation is already finalized to prevent multiple calls
-        if (
-            hasattr(self, "_installation_finalized")
-            and self._installation_finalized
-        ):
+        if hasattr(self, "_installation_finalized") and self._installation_finalized:
             return
 
         self._installation_finalized = True
@@ -1021,9 +990,7 @@ class InstallWorker(
         # Perform a verification check on OpenVoice files before finalizing
         # This ensures files are extracted even if the normal process didn't work
         try:
-            self.parent.update_download_log(
-                {"message": "Verifying OpenVoice files..."}
-            )
+            self.parent.update_download_log({"message": "Verifying OpenVoice files..."})
             self.verify_openvoice_downloads()
         except Exception as e:
             self.parent.update_download_log(
@@ -1031,9 +998,7 @@ class InstallWorker(
             )
 
         # Download NLTK data with proper error handling
-        self.parent.update_download_log(
-            {"message": "Downloading NLTK data..."}
-        )
+        self.parent.update_download_log({"message": "Downloading NLTK data..."})
         nltk_data = ["averaged_perceptron_tagger_eng", "punkt", "punkt_tab"]
 
         try:
@@ -1053,9 +1018,7 @@ class InstallWorker(
                     )
                 except Exception as e:
                     self.parent.update_download_log(
-                        {
-                            "message": f"Failed to download NLTK {data_name}: {e}"
-                        }
+                        {"message": f"Failed to download NLTK {data_name}: {e}"}
                     )
 
             # Reset recursion limit
@@ -1066,9 +1029,7 @@ class InstallWorker(
                 {"message": f"Failed to download NLTK data: {e}"}
             )
 
-        self.parent.on_set_downloading_status_label(
-            {"label": "Installation complete."}
-        )
+        self.parent.on_set_downloading_status_label({"label": "Installation complete."})
 
         # Log final completion
         self.parent.update_download_log(
@@ -1104,9 +1065,7 @@ class InstallPage(BaseWizard):
         self.ui.progress_bar.setMaximum(100)
 
         # Disable the Next button when starting downloads
-        if hasattr(parent, "button") and parent.button(
-            QWizard.WizardButton.NextButton
-        ):
+        if hasattr(parent, "button") and parent.button(QWizard.WizardButton.NextButton):
             parent.button(QWizard.WizardButton.BackButton).setEnabled(False)
             parent.button(QWizard.WizardButton.NextButton).setEnabled(False)
 
@@ -1118,9 +1077,7 @@ class InstallPage(BaseWizard):
 
         # Determine total controlnet models being downloaded
         if self.models_enabled["safety_checker"]:
-            self.total_steps += len(
-                SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["safety_checker"]
-            )
+            self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["safety_checker"])
 
         if self.models_enabled["feature_extractor"]:
             self.total_steps += len(
@@ -1136,9 +1093,7 @@ class InstallPage(BaseWizard):
                 continue
             if self.models_enabled[model["name"]]:
                 self.total_steps += len(
-                    SD_FILE_BOOTSTRAP_DATA[model["version"]][
-                        model["pipeline_action"]
-                    ]
+                    SD_FILE_BOOTSTRAP_DATA[model["version"]][model["pipeline_action"]]
                 )
 
         # Increase total number of LLMs downloaded
@@ -1168,9 +1123,7 @@ class InstallPage(BaseWizard):
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.on_download_complete)
         self.register(SignalCode.DOWNLOAD_PROGRESS, self.download_progress)
         self.register(SignalCode.UPDATE_DOWNLOAD_LOG, self.update_download_log)
-        self.register(
-            SignalCode.CLEAR_DOWNLOAD_STATUS_BAR, self.clear_status_bar
-        )
+        self.register(SignalCode.CLEAR_DOWNLOAD_STATUS_BAR, self.clear_status_bar)
         self.register(
             SignalCode.SET_DOWNLOAD_STATUS_LABEL,
             self.on_set_downloading_status_label,
@@ -1210,9 +1163,7 @@ class InstallPage(BaseWizard):
                 if not self.models_enabled.get(action, True):
                     continue
                 try:
-                    files = SD_FILE_BOOTSTRAP_DATA[model["version"]][
-                        action_key
-                    ]
+                    files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
                     self.total_files += len(files)
                 except KeyError:
                     continue
@@ -1259,12 +1210,8 @@ class InstallPage(BaseWizard):
         if hasattr(self.parent, "button") and self.parent.button(
             QWizard.WizardButton.NextButton
         ):
-            self.parent.button(QWizard.WizardButton.BackButton).setEnabled(
-                False
-            )
-            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(
-                False
-            )
+            self.parent.button(QWizard.WizardButton.BackButton).setEnabled(False)
+            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(False)
 
         # Connect signals and start the thread
         self.calculate_total_files()
@@ -1331,9 +1278,7 @@ class InstallPage(BaseWizard):
         if hasattr(self.parent, "button") and self.parent.button(
             QWizard.WizardButton.NextButton
         ):
-            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(
-                True
-            )
+            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(True)
 
     def set_status(self, message: str):
         # set the text of a QProgressBar

@@ -65,9 +65,7 @@ class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
             )
 
             if os.path.exists(file_name):
-                self.api.update_download_log(
-                    "File already exists, skipping download"
-                )
+                self.api.update_download_log("File already exists, skipping download")
                 self.api.set_download_progress(current=size_kb, total=size_kb)
                 self.progress.emit(size_kb, size_kb)
                 self.finished.emit()
@@ -86,9 +84,7 @@ class CivitAIDownloadWorker(MediatorMixin, SettingsMixin, QObject):
                             )
                             self.progress.emit(f.tell(), size_kb)
 
-                self.api.update_download_log(
-                    f"Finished downloading {file_name}"
-                )
+                self.api.update_download_log(f"Finished downloading {file_name}")
                 self.finished.emit()
 
             except Exception as e:

@@ -8,6 +8,7 @@ class PygameAgent(LocalAgent):
     The system_prompt is used to provide the agent with a specific instruction set
     for interacting with the Pygame window.
     """
+
     @property
     def system_prompt(self) -> str:
         return """You are a game AI that can interact with the Pygame window."""

@@ -1,5 +1,7 @@
 from airunner.gui.windows.prompt_browser.prompt_widget import PromptWidget
-from airunner.gui.windows.prompt_browser.templates.prompt_browser_ui import Ui_prompt_browser
+from airunner.gui.windows.prompt_browser.templates.prompt_browser_ui import (
+    Ui_prompt_browser,
+)
 from airunner.gui.windows.base_window import BaseWindow
 
 

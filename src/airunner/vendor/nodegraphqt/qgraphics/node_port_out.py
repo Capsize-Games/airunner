@@ -66,9 +66,7 @@ class PortOutputNodeItem(NodeItem):
         poly = transform.map(triangle)
 
         if self.selected:
-            pen = QtGui.QPen(
-                QtGui.QColor(*NodeEnum.SELECTED_BORDER_COLOR.value), 1.3
-            )
+            pen = QtGui.QPen(QtGui.QColor(*NodeEnum.SELECTED_BORDER_COLOR.value), 1.3)
             painter.setBrush(QtGui.QColor(*NodeEnum.SELECTED_COLOR.value))
         else:
             pen = QtGui.QPen(QtGui.QColor(*self.border_color), 1.2)
@@ -131,9 +129,7 @@ class PortOutputNodeItem(NodeItem):
         poly = transform.map(triangle)
 
         if self.selected:
-            pen = QtGui.QPen(
-                QtGui.QColor(*NodeEnum.SELECTED_BORDER_COLOR.value), 1.3
-            )
+            pen = QtGui.QPen(QtGui.QColor(*NodeEnum.SELECTED_BORDER_COLOR.value), 1.3)
             painter.setBrush(QtGui.QColor(*NodeEnum.SELECTED_COLOR.value))
         else:
             pen = QtGui.QPen(QtGui.QColor(*self.border_color), 1.2)

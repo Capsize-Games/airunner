@@ -146,9 +146,7 @@ class Gemma3Node(BaseLLMNode):
                     # Convert PIL image to base64
                     buffer = io.BytesIO()
                     image.save(buffer, format="PNG")
-                    img_str = base64.b64encode(buffer.getvalue()).decode(
-                        "utf-8"
-                    )
+                    img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
                     content.append(
                         {
                             "type": "image",

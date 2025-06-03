@@ -4,7 +4,7 @@ from airunner.data.models.base import BaseModel
 
 
 class ControlnetSettings(BaseModel):
-    __tablename__ = 'controlnet_settings'
+    __tablename__ = "controlnet_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
     image = Column(LargeBinary, nullable=True)
     generated_image = Column(LargeBinary, nullable=True)

@@ -16,11 +16,7 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
         **kwargs
     ):
         super().__init__(
-            llm=llm,
-            memory=memory,
-            prefix_messages=prefix_messages,
-            *args,
-            **kwargs
+            llm=llm, memory=memory, prefix_messages=prefix_messages, *args, **kwargs
         )
         self._llm = llm
         self._memory = memory
@@ -86,14 +82,10 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
                     "name": botname,
                     "content": assistant_message,
                     "timestamp": now,
-                    "blocks": [
-                        {"block_type": "text", "text": assistant_message}
-                    ],
+                    "blocks": [{"block_type": "text", "text": assistant_message}],
                     "additional_kwargs": {"timestamp": now},
                 }
             )
         # Optionally, trigger persistence if needed (depends on agent/manager logic)
-        if hasattr(self, "agent") and hasattr(
-            self.agent, "_update_conversation_state"
-        ):
+        if hasattr(self, "agent") and hasattr(self.agent, "_update_conversation_state"):
             self.agent._update_conversation_state(conversation)

@@ -98,9 +98,7 @@ class ConversationWidget(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         if not self.registered:
-            self.render_template(
-                self.ui.stage, "conversation.jinja2.html", messages=[]
-            )
+            self.render_template(self.ui.stage, "conversation.jinja2.html", messages=[])
             self.registered = True
             self.logger.debug(
                 f"showEvent: self._conversation_id before load: {self._conversation_id}"
@@ -122,14 +120,10 @@ class ConversationWidget(BaseWidget):
         self.logger.debug(
             f"ChatPromptWidget.load_conversation called with conversation_id: {conversation_id}"
         )
-        conversation = (
-            self._conversation_history_manager.get_current_conversation()
-        )
+        conversation = self._conversation_history_manager.get_current_conversation()
 
         if conversation is None:
-            self.logger.info(
-                "No conversation found, clearing conversation display."
-            )
+            self.logger.info("No conversation found, clearing conversation display.")
             self._clear_conversation()
             self.conversation = None
             return
@@ -137,10 +131,8 @@ class ConversationWidget(BaseWidget):
         self._conversation_id = conversation.id
         self._conversation = conversation
 
-        messages = (
-            self._conversation_history_manager.load_conversation_history(
-                conversation=conversation, max_messages=50
-            )
+        messages = self._conversation_history_manager.load_conversation_history(
+            conversation=conversation, max_messages=50
         )
 
         self.logger.debug(
@@ -175,10 +167,7 @@ class ConversationWidget(BaseWidget):
                 }
             )
         else:
-            if (
-                self._streamed_messages
-                and self._streamed_messages[-1]["is_bot"]
-            ):
+            if self._streamed_messages and self._streamed_messages[-1]["is_bot"]:
                 self._streamed_messages[-1]["content"] += llm_response.message
             else:
                 self._streamed_messages.append(
@@ -198,19 +187,6 @@ class ConversationWidget(BaseWidget):
         """Hide the loading spinner."""
         self.loading_widget.hide()
         QApplication.processEvents()
-
-    def _get_widget_template_for_type(self, content_type: str) -> str:
-        """Return the relative path to the widget template for a given content type."""
-        mapping = {
-            FormatterExtended.FORMAT_PLAINTEXT: "plain_text_widget.jinja2.html",
-            FormatterExtended.FORMAT_LATEX: "latex_widget.jinja2.html",
-            FormatterExtended.FORMAT_MIXED: "mixed_content_widget.jinja2.html",
-            FormatterExtended.FORMAT_MARKDOWN: "content_widget.jinja2.html",
-        }
-        return mapping.get(
-            content_type,
-            "plain_text_widget.jinja2.html",
-        )
 
     def wait_for_js_ready(self, callback, max_attempts=50):
         """Wait for the JS QWebChannel to be ready before calling setMessages.
@@ -244,15 +220,16 @@ class ConversationWidget(BaseWidget):
                 callback()
 
         def handle_result(ready):
-            if ready:
-                callback()
-            elif attempt_count < max_attempts:
-                QTimer.singleShot(50, check_ready)
-            else:
-                logger.warning(
-                    f"ConversationWidget: JavaScript initialization timeout after {max_attempts} attempts"
-                )
-                callback()
+            # if ready:
+            #     callback()
+            # elif attempt_count < max_attempts:
+            #     QTimer.singleShot(50, check_ready)
+            # else:
+            #     # logger.warning(
+            #     #     f"ConversationWidget: JavaScript initialization timeout after {max_attempts} attempts"
+            #     # )
+            #     callback()
+            callback()
 
         check_ready()
 
@@ -301,31 +278,34 @@ class ConversationWidget(BaseWidget):
         check_dom_ready()
 
     def set_conversation(self, messages: List[Dict[str, Any]]) -> None:
-        """Update the conversation display.
+        """Update the conversation display using MathJax for all content types.
 
         Args:
             messages (List[Dict[str, Any]]): List of message dicts (sender, text, timestamp, etc).
         """
-        enriched_messages = []
+        simplified_messages = []
         for msg in messages:
             content = msg.get("text") or msg.get("content") or ""
+            # Format content for MathJax compatibility
             fmt = FormatterExtended.format_content(content)
-            widget_template = self._get_widget_template_for_type(fmt["type"])
-            enriched_messages.append(
+
+            # All content types are now handled by MathJax in the main template
+            simplified_messages.append(
                 {
                     **msg,
-                    "widget_template": widget_template,
-                    "content": fmt["content"],
-                    "content_type": fmt["type"],
-                    "parts": fmt.get("parts"),
-                    "font_size": 16,
-                    "static_base_path": "/static/content_widgets",
-                    "base_href": None,
+                    "content": fmt["content"],  # MathJax will handle all formatting
+                    "content_type": fmt["type"],  # Keep for debugging/logging
+                    "id": msg.get("id", len(simplified_messages)),
+                    "timestamp": msg.get("timestamp", ""),
+                    "name": msg.get("name")
+                    or msg.get("sender")
+                    or ("Assistant" if msg.get("is_bot") else "User"),
+                    "is_bot": msg.get("is_bot", False),
                 }
             )
 
         def send():
-            self._chat_bridge.set_messages(enriched_messages)
+            self._chat_bridge.set_messages(simplified_messages)
 
         self.wait_for_js_ready(send)
 
@@ -485,10 +465,7 @@ class ConversationWidget(BaseWidget):
         self.token_buffer.clear()
 
         if combined_message != "":
-            if (
-                self._streamed_messages
-                and self._streamed_messages[-1]["is_bot"]
-            ):
+            if self._streamed_messages and self._streamed_messages[-1]["is_bot"]:
                 self._streamed_messages[-1]["content"] += combined_message
             else:
                 self._streamed_messages.append(

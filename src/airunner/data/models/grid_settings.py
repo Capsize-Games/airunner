@@ -4,7 +4,7 @@ from airunner.data.models.base import BaseModel
 
 
 class GridSettings(BaseModel):
-    __tablename__ = 'grid_settings'
+    __tablename__ = "grid_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
     cell_size = Column(Integer, default=64)
     line_width = Column(Integer, default=1)

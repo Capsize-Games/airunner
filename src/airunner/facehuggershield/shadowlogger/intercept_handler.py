@@ -7,10 +7,7 @@ import sys
 
 class InterceptHandler(logging.Handler):
     def __init__(
-        self,
-        shadow_logger,
-        show_stdout: bool = True,
-        hook: callable = lambda x: None
+        self, shadow_logger, show_stdout: bool = True, hook: callable = lambda x: None
     ):
         """
         InterceptHandler intercepts and logs print statements, file operations, and network operations.
@@ -91,7 +88,9 @@ class InterceptHandler(logging.Handler):
             # Overriding network operations
             for k, v in self.__original_socket_functions.items():
                 self.__original_socket_functions[k] = getattr(socket, k, None)
-                setattr(socket, k, self.__override_socket_function(getattr(socket, k, None)))
+                setattr(
+                    socket, k, self.__override_socket_function(getattr(socket, k, None))
+                )
 
     @property
     def show_stdout(self):
@@ -146,7 +145,9 @@ class InterceptHandler(logging.Handler):
 
         def custom_socket_function(*args, **kwargs):
             with self.lock:
-                logging.info(f"Performing network operation: {original_function.__name__}")
+                logging.info(
+                    f"Performing network operation: {original_function.__name__}"
+                )
                 return original_function(*args, **kwargs)
 
         return custom_socket_function
@@ -157,7 +158,15 @@ class InterceptHandler(logging.Handler):
 
     def emit_record(self, message, level=logging.INFO):
         # Manually emit log record from captured print statements
-        record = self.shadow_logger.makeRecord(self.shadow_logger.name, level, fn='', lno='', msg=message, args=None, exc_info=None)
+        record = self.shadow_logger.makeRecord(
+            self.shadow_logger.name,
+            level,
+            fn="",
+            lno="",
+            msg=message,
+            args=None,
+            exc_info=None,
+        )
         self.process_log_record(record)
 
     def process_log_record(self, record):
@@ -170,15 +179,15 @@ class InterceptHandler(logging.Handler):
     def prepare_log_info(self, record, log_entry):
         """Prepare log information dictionary with enhanced details."""
         return {
-            'name': record.name,
-            'level': record.levelno,
-            'message': log_entry,
-            'module': record.module,
-            'filename': record.filename,
-            'lineno': record.lineno,
-            'funcName': record.funcName,
-            'created': record.created,
-            'file_op': record.__dict__.get('file_op'),  # Check for file operation
+            "name": record.name,
+            "level": record.levelno,
+            "message": log_entry,
+            "module": record.module,
+            "filename": record.filename,
+            "lineno": record.lineno,
+            "funcName": record.funcName,
+            "created": record.created,
+            "file_op": record.__dict__.get("file_op"),  # Check for file operation
         }
 
     def __sanitized_log_entry(self, record: logging.LogRecord) -> str:
@@ -191,11 +200,11 @@ class InterceptHandler(logging.Handler):
     def _sanitize_log_entry(log_entry: str) -> str:
         """Customizable method to further sanitize log entries."""
         # Default implementation: HTML escape
-        return log_entry.replace('<', '&lt;').replace('>', '&gt;')
+        return log_entry.replace("<", "&lt;").replace(">", "&gt;")
 
     def handle(self, record: logging.LogRecord) -> bool:
         """Handle records, potentially logging additional operations."""
-        if record.__dict__.get('file_op'):
+        if record.__dict__.get("file_op"):
             os_info = f"{record.__dict__['file_op']} on {record.filename}"
             logging.info(os_info)
         self.emit(record)
@@ -224,7 +233,7 @@ class InterceptHandler(logging.Handler):
     class LogStream:
         """Stream object to capture print statements and redirect them as log entries."""
 
-        def __init__(self, log_function, show_stdout:bool = True):
+        def __init__(self, log_function, show_stdout: bool = True):
             self.log_function = log_function
             self.__show_stdout = show_stdout
 
@@ -232,7 +241,7 @@ class InterceptHandler(logging.Handler):
             if message.strip() != "":
                 self.log_function(message.strip())
                 if self.__show_stdout:
-                    sys.__stdout__.write((message.strip() + '\n'))
+                    sys.__stdout__.write((message.strip() + "\n"))
 
         def flush(self):
             pass
