@@ -14,7 +14,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 
-from PySide6.QtCore import Slot, QUrl, QTimer, Signal
+from PySide6.QtCore import Slot, QUrl, QTimer
 from PySide6.QtWebEngineCore import (
     QWebEnginePage,
     QWebEngineProfile,
@@ -25,7 +25,6 @@ from airunner.data.models.airunner_settings import AIRunnerSettings
 from airunner.components.browser.data.settings import BrowserSettings
 from PySide6.QtWidgets import QVBoxLayout
 from airunner.components.browser.gui.widgets.items_widget import ItemsWidget
-from PySide6.QtGui import QShortcut, QKeySequence
 from airunner.components.browser.gui.widgets.items_model import (
     bookmarks_to_model,
     history_to_model,
