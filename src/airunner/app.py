@@ -33,6 +33,21 @@ import subprocess
 import sys
 from airunner.settings import LOCAL_SERVER_PORT
 
+os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9223"
+
+from PySide6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtCore import qVersion
+
+
+class CapturingWebEnginePage(QWebEnginePage):
+    """QWebEnginePage subclass to capture JS console messages for diagnostics."""
+
+    def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+        log_message = f"JSCONSOLE::: Level: {level}, Msg: {message}, Src: {sourceID}:{lineNumber}"
+        print(log_message)
+        super().javaScriptConsoleMessage(level, message, lineNumber, sourceID)
+
 
 class App(MediatorMixin, SettingsMixin, QObject):
     """
@@ -374,6 +389,26 @@ class App(MediatorMixin, SettingsMixin, QObject):
             window = window_class(app=self, **self.window_class_params)
             app.main_window = window
             window.raise_()
+            # --- LNA/diagnostics: log Qt version, enable dev tools, set custom page if QWebEngineView present ---
+            print(f"Qt Version: {qVersion()}")
+            if hasattr(window, "ui"):
+                for attr in dir(window.ui):
+                    widget = getattr(window.ui, attr)
+                    if isinstance(widget, QWebEngineView):
+                        settings = widget.settings()
+                        settings.setAttribute(
+                            QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows,
+                            True,
+                        )
+                        settings.setAttribute(
+                            QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls,
+                            True,
+                        )
+                        settings.setAttribute(
+                            QWebEngineSettings.WebAttribute.DeveloperExtrasEnabled,
+                            True,
+                        )
+                        widget.setPage(CapturingWebEnginePage(widget))
         except Exception as e:
             traceback.print_exc()
             print(e)

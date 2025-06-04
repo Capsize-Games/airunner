@@ -30,6 +30,8 @@ extras_require = {
         "coverage==7.8.0",
         "black==25.1.0",
         "pyinstaller==6.12.0",
+        "flake8==7.2.0",
+        "mypy==1.16.0",
     ],
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",
@@ -156,7 +158,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.11.2",
+    version="4.11.3",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
