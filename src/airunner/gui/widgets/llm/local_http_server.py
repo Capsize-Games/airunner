@@ -8,6 +8,7 @@ import mimetypes
 import json
 import ssl
 import logging
+import functools
 
 from airunner.settings import LOCAL_SERVER_PORT, LOCAL_SERVER_HOST
 
@@ -17,7 +18,11 @@ class ReusableTCPServer(ThreadingTCPServer):
 
 
 class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
-    """Request handler with CORS, Jinja2 template rendering, and multiple directory support."""
+    """Request handler with CORS, Jinja2 template rendering, and multiple directory support.
+
+    Args:
+        lna_enabled (bool): If True, send LNA and permissive CORS headers for Chromium LNA compliance.
+    """
 
     DANGEROUS_EXTENSIONS = {
         ".py",
@@ -55,19 +60,29 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         "font/",
     )
 
-    def __init__(self, *args, directories=None, **kwargs):
+    def __init__(self, *args, directories=None, lna_enabled=False, **kwargs):
         self.directories = directories or []
+        self.lna_enabled = lna_enabled
         super().__init__(*args, **kwargs)
 
     def _send_lna_cors_headers(self):
-        """Send only minimal CORS headers, never allow LNA."""
-        # Do NOT send Access-Control-Allow-Private-Network
-        # Only allow CORS for trusted origins if needed, else block all
-        # self.send_header("Access-Control-Allow-Origin", "https://your-trusted-origin.com")
-        pass
+        """Send LNA and CORS headers if lna_enabled, else do nothing (strict mode)."""
+        if self.lna_enabled:
+            self.send_header("Access-Control-Allow-Private-Network", "true")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header(
+                "Access-Control-Allow-Methods",
+                "GET, POST, OPTIONS, PUT, DELETE",
+            )
+            self.send_header(
+                "Access-Control-Allow-Headers",
+                "Content-Type, Authorization, X-Requested-With",
+            )
+        # else: strict mode, do not send permissive headers
 
     def end_headers(self):
-        # Do not send LNA or permissive CORS headers
+        if self.lna_enabled:
+            self._send_lna_cors_headers()
         self.send_header(
             "Strict-Transport-Security",
             "max-age=63072000; includeSubDomains; preload",
@@ -184,8 +199,13 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         self.send_error(405)
 
     def do_OPTIONS(self):
-        logging.warning(f"[SECURITY] Blocked OPTIONS request: {self.path}")
-        self.send_error(403)
+        if self.lna_enabled:
+            self.send_response(204)
+            self._send_lna_cors_headers()
+            self.end_headers()
+        else:
+            logging.warning(f"[SECURITY] Blocked OPTIONS request: {self.path}")
+            self.send_error(403)
 
     def list_directory(self, path):
         logging.warning(f"[SECURITY] Directory listing attempt: {path}")
@@ -271,7 +291,11 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
 
 
 class LocalHttpServerThread(QThread):
-    """Thread to run a local HTTPS server with optional directory and SSL support."""
+    """Thread to run a local HTTPS server with optional directory and SSL support.
+
+    Args:
+        lna_enabled (bool): If True, server sends LNA/CORS headers for Chromium LNA compliance.
+    """
 
     def __init__(
         self,
@@ -281,6 +305,7 @@ class LocalHttpServerThread(QThread):
         parent=None,
         certfile=None,
         keyfile=None,
+        lna_enabled=False,
     ):
         super().__init__(parent)
         self.directory = directory
@@ -288,6 +313,7 @@ class LocalHttpServerThread(QThread):
         self.port = port
         self.certfile = certfile
         self.keyfile = keyfile
+        self.lna_enabled = lna_enabled
         self._server = None
 
     def run(self):
@@ -330,12 +356,11 @@ class LocalHttpServerThread(QThread):
             static_dirs.extend(self.additional_directories)
         static_dirs = list(dict.fromkeys(static_dirs))
 
-        def handler_factory(*args, **kwargs):
-            return MultiDirectoryCORSRequestHandler(
-                *args, directories=static_dirs, **kwargs
-            )
-
-        handler_class = handler_factory
+        handler_class = functools.partial(
+            MultiDirectoryCORSRequestHandler,
+            directories=static_dirs,
+            lna_enabled=self.lna_enabled,
+        )
 
         if self.directory:
             os.chdir(self.directory)
