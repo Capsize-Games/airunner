@@ -11,7 +11,9 @@ from airunner.data.models import Conversation
 from airunner.enums import SignalCode
 from airunner.gui.widgets.llm.contentwidgets.chat_bridge import ChatBridge
 from airunner.gui.widgets.llm.loading_widget import LoadingWidget
-from airunner.gui.widgets.llm.templates.conversation_ui import Ui_conversation
+from airunner.components.chat.gui.widgets.templates.conversation_ui import (
+    Ui_conversation,
+)
 import logging
 
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -98,9 +100,14 @@ class ConversationWidget(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         if not self.registered:
-            self.render_template(
-                self.ui.stage, "conversation.jinja2.html", messages=[]
-            )
+            self.logger.debug("Rendering conversation template in showEvent")
+            try:
+                self.render_template(
+                    self.ui.stage, "conversation.jinja2.html", messages=[]
+                )
+                self.logger.debug("Template rendered successfully.")
+            except Exception as e:
+                self.logger.error(f"Failed to render template: {e}")
             self.registered = True
             self.logger.debug(
                 f"showEvent: self._conversation_id before load: {self._conversation_id}"
@@ -231,16 +238,15 @@ class ConversationWidget(BaseWidget):
                 callback()
 
         def handle_result(ready):
-            # if ready:
-            #     callback()
-            # elif attempt_count < max_attempts:
-            #     QTimer.singleShot(50, check_ready)
-            # else:
-            #     # logger.warning(
-            #     #     f"ConversationWidget: JavaScript initialization timeout after {max_attempts} attempts"
-            #     # )
-            #     callback()
-            callback()
+            if ready:
+                callback()
+            elif attempt_count < max_attempts:
+                QTimer.singleShot(50, check_ready)
+            else:
+                logger.warning(
+                    f"ConversationWidget: JavaScript initialization timeout after {max_attempts} attempts"
+                )
+                callback()
 
         check_ready()
 
@@ -316,8 +322,14 @@ class ConversationWidget(BaseWidget):
                     "is_bot": msg.get("is_bot", False),
                 }
             )
+        self.logger.debug(
+            f"set_conversation: sending messages: {simplified_messages}"
+        )
 
         def send():
+            self.logger.debug(
+                f"Sending {len(simplified_messages)} messages to chat bridge"
+            )
             self._chat_bridge.set_messages(simplified_messages)
 
         self.wait_for_js_ready(send)

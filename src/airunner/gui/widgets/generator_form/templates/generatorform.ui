@@ -76,7 +76,7 @@
   <customwidget>
    <class>ChatPromptWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/llm/chat_prompt_widget</header>
+   <header>airunner/components/chat/gui/widgets/chat_prompt_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

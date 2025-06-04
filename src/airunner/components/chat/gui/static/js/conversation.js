@@ -1,5 +1,17 @@
 // conversation.js: JavaScript for conversation widget with MathJax integration
 
+console.log('[ConversationWidget] conversation.js loaded');
+if (typeof QWebChannel === 'undefined') {
+    console.error('[ConversationWidget] QWebChannel is NOT defined!');
+} else {
+    console.log('[ConversationWidget] QWebChannel is defined.');
+}
+if (typeof qt === 'undefined' || typeof qt.webChannelTransport === 'undefined') {
+    console.error('[ConversationWidget] qt.webChannelTransport is NOT available!');
+} else {
+    console.log('[ConversationWidget] qt.webChannelTransport is available.');
+}
+
 let chatBridge = null;
 window.isChatReady = false;
 window.chatReady = new Promise((resolve) => {
