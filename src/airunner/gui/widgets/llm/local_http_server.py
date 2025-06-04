@@ -38,9 +38,20 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         if rel_path.endswith(".jinja2.html"):
             for directory in self.directories:
                 normalized_rel_path = os.path.normpath(rel_path)
-                if not os.path.commonprefix([os.path.abspath(directory), os.path.abspath(os.path.join(directory, normalized_rel_path))]) == os.path.abspath(directory):
-                    continue  # Skip if the path is outside the intended directory
-                jinja2_path = os.path.join(directory, normalized_rel_path)
+                abs_directory = os.path.abspath(directory)
+                abs_target = os.path.abspath(
+                    os.path.join(abs_directory, normalized_rel_path)
+                )
+                try:
+                    # Use commonpath for secure directory check
+                    if (
+                        os.path.commonpath([abs_directory, abs_target])
+                        != abs_directory
+                    ):
+                        continue  # Skip if the path is outside the intended directory
+                except ValueError:
+                    continue  # In case of different drives or invalid paths
+                jinja2_path = abs_target
                 if os.path.exists(jinja2_path):
                     # Parse query parameters as context
                     parsed_url = urllib.parse.urlparse(self.path)
