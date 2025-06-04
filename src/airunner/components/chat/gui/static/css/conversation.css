@@ -39,24 +39,37 @@ body {
 
 .message {
     margin: 0;
-    padding: 20px;
+    padding: 20px 28px;
     width: 100%;
     word-break: break-word;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.16), 0 1.5px 4px rgba(0, 0, 0, 0.10);
     display: block;
     flex-shrink: 0;
-    border: 1px solid #333;
-    border-radius: 5px;
-    background: #202020;
-    overflow-x: hidden;
+    border-radius: 18px;
+    border: none;
+    background: linear-gradient(120deg, #23272f 60%, #181a20 100%);
+    position: relative;
+    transition: box-shadow 0.2s;
 }
 
 .message.user {
-    background: #010101;
+    background: linear-gradient(120deg, #0a1a2f 60%, #1a2233 100%);
+    align-self: flex-end;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-top-left-radius: 18px;
+    box-shadow: 0 2px 12px rgba(0, 64, 255, 0.10);
 }
 
 .message.assistant {
-    background: #101010;
+    background: linear-gradient(120deg, #181a20 60%, #23272f 100%);
+    align-self: flex-start;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    border-top-right-radius: 18px;
+    box-shadow: 0 2px 12px rgba(0, 255, 128, 0.08);
 }
 
 #conversation-container>.message:nth-child(even) {
@@ -64,21 +77,58 @@ body {
 }
 
 .message .sender {
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: #bdbdbd;
-    font-size: 0.85em;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #7ecfff;
+    font-size: 0.92em;
+    letter-spacing: 0.02em;
+}
+
+.message.assistant .sender {
+    color: #ffb86c;
 }
 
 .message .content {
-    line-height: 1.6;
+    line-height: 1.7;
+    font-size: 1.08em;
+    color: #f3f3f3;
 }
 
 .message .timestamp {
-    font-size: 0.75em;
-    color: #777;
-    margin-top: 8px;
+    font-size: 0.78em;
+    color: #888;
+    margin-top: 10px;
     text-align: right;
+    opacity: 0.7;
+}
+
+.message .delete-link {
+    color: #ff5c5c;
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 10px;
+    opacity: 0.85;
+    transition: color 0.15s, opacity 0.15s;
+}
+
+.message .delete-link:hover {
+    color: #ff2222;
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.message .content a {
+    color: #7ecfff;
+    text-decoration: none;
+    border-bottom: 1px dotted #7ecfff;
+    transition: color 0.15s, border-bottom 0.15s;
+    word-break: break-all;
+}
+
+.message .content a:hover {
+    color: #fff;
+    border-bottom: 1px solid #fff;
+    text-decoration: underline;
 }
 
 /* Code and pre-formatted text styling */
