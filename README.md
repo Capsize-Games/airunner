@@ -92,7 +92,7 @@
 1. **Install system requirements**
    ```bash
    sudo apt update && sudo apt upgrade -y
-   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme mecab libmecab-dev mecab-ipadic-utf8 libxslt-dev
+   sudo apt install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 gnupg gpg-agent pinentry-curses espeak xclip cmake qt6-qpa-plugins qt6-wayland qt6-gtk-platformtheme mecab libmecab-dev mecab-ipadic-utf8 libxslt-dev mkcert
    sudo apt install espeak
    sudo apt install espeak-ng-espeak
    ```
@@ -275,6 +275,68 @@ AI Runner includes an Aggregated Search Tool for querying multiple online servic
 **Note:**
 - DuckDuckGo, Wikipedia, arXiv, and OpenLibrary do not require API keys and can be used out-of-the-box.
 - For best results and full service coverage, configure all relevant API keys.
+
+---
+
+## 🔒 Enabling HTTPS for the Local HTTP Server
+
+AI Runner's local server enforces HTTPS-only operation for all local resources. HTTP is never used or allowed for local static assets or API endpoints. At startup, the server logs explicit details about HTTPS mode and the certificate/key in use. Security headers are set and only GET/HEAD methods are allowed for further hardening.
+
+### How to Enable SSL/TLS (HTTPS)
+
+1. **Automatic Certificate Generation (Recommended):**
+   - By default, AI Runner will auto-generate a self-signed certificate in `~/.local/share/airunner/certs/` if one does not exist. No manual steps are required for most users.
+   - If you want to provide your own certificate, place `cert.pem` and `key.pem` in the `certs` directory under your AI Runner base path.
+
+2. **Manual Certificate Generation (Optional):**
+   - You can manually generate a self-signed certificate with:
+     ```bash
+     airunner-generate-cert
+     ```
+   - This will create `cert.pem` and `key.pem` in your current directory. Move them to your AI Runner certs directory if you want to use them.
+
+3. **Configure AI Runner to Use SSL:**
+   - The app will automatically use the certificates in the certs directory. If you want to override, set the environment variables:
+     ```bash
+     export AIRUNNER_SSL_CERT=~/path/to/cert.pem
+     export AIRUNNER_SSL_KEY=~/path/to/key.pem
+     airunner
+     ```
+   - The server will use HTTPS if both files are provided.
+
+4. **Access the App via `https://localhost:<port>`**
+   - The default port is 5005 (configurable in `src/airunner/settings.py`).
+   - Your browser may warn about the self-signed certificate; you can safely bypass this for local development.
+
+### Security Notes
+- **For production or remote access, use a certificate from a trusted CA.**
+- **Never share your private key (`key.pem`).**
+- The server only binds to `127.0.0.1` by default for safety.
+- For additional hardening, see the [Security](SECURITY.md) guide and the code comments in `local_http_server.py`.
+
+### 🔑 Generate a Self-Signed Certificate (airunner-generate-cert)
+
+You can generate a self-signed SSL certificate for local HTTPS with a single command:
+
+```bash
+airunner-generate-cert
+```
+
+This will create `cert.pem` and `key.pem` in your current directory. Use these files with the local HTTP server as described above.
+
+See the [SSL/TLS section](#🔒-enabling-https-for-the-local-http-server) for full details.
+
+### Additional Requirements for Trusted Local HTTPS
+
+- For a browser-trusted local HTTPS experience (no warnings), install [mkcert](https://github.com/FiloSottile/mkcert):
+  ```bash
+  # On Ubuntu/Debian:
+  sudo apt install libnss3-tools
+  brew install mkcert   # (on macOS, or use your package manager)
+  mkcert -install
+  ```
+- If `mkcert` is not installed, AI Runner will fall back to OpenSSL self-signed certificates, which will show browser warnings.
+- See the [SSL/TLS section](#🔒-enabling-https-for-the-local-http-server) for details.
 
 ---
 

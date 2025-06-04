@@ -280,9 +280,7 @@ class BaseWidget(AbstractBaseWidget):
         Load a Jinja2 template from the local HTTP server, passing kwargs as query parameters for server-side rendering.
         """
         # Build the URL to the template on the local server
-        base_url = (
-            f"http://localhost:{LOCAL_SERVER_PORT}/static/html/{template_name}"
-        )
+        base_url = f"https://localhost:{LOCAL_SERVER_PORT}/static/html/{template_name}"
         # Pass kwargs as query parameters (JSON-encode complex values)
         query = urlencode(
             {k: v if isinstance(v, str) else str(v) for k, v in kwargs.items()}
