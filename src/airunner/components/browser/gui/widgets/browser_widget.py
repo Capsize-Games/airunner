@@ -3,6 +3,7 @@ import os
 import hashlib
 import shutil
 import json
+from typing import Optional
 from airunner.components.browser.gui.enums import BrowserOS, BrowserType
 from airunner.enums import SignalCode
 from airunner.components.browser.gui.widgets.templates.browser_ui import (
@@ -13,7 +14,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 
-from PySide6.QtCore import Slot, QUrl, QTimer
+from PySide6.QtCore import Slot, QUrl, QTimer, Signal
 from PySide6.QtWebEngineCore import (
     QWebEnginePage,
     QWebEngineProfile,
@@ -22,9 +23,9 @@ from PySide6.QtWebEngineCore import (
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.data.models.airunner_settings import AIRunnerSettings
 from airunner.components.browser.data.settings import BrowserSettings
-from PySide6.QtWidgets import QSplitter, QVBoxLayout
+from PySide6.QtWidgets import QVBoxLayout
 from airunner.components.browser.gui.widgets.items_widget import ItemsWidget
-from PySide6.QtCore import Qt
+from PySide6.QtGui import QShortcut, QKeySequence
 from airunner.components.browser.gui.widgets.items_model import (
     bookmarks_to_model,
     history_to_model,
@@ -39,28 +40,69 @@ from datetime import datetime
 
 
 class BrowserWidget(BaseWidget):
-    """Widget that displays a conversation using a single QWebEngineView and HTML template.
+    """Widget that displays a single browser instance (address bar, navigation, webview, etc.).
+
+    Signals:
+        titleChanged (str): Emitted when the page title changes. Main window should connect this to update the tab text.
+
+    Usage:
+        - Instantiate a new BrowserWidget for each tab in the main window's QTabWidget.
+        - Connect the titleChanged signal to QTabWidget.setTabText.
+        - Call clear() to reset the browser state (for the last tab).
 
     Args:
         parent (QWidget, optional): Parent widget.
     """
 
+    titleChanged = Signal(str)
     widget_class_ = Ui_browser
 
-    def __init__(self, *args, **kwargs):
+    # --- Favicon, Title, URL, Print, Save, State, and Session Persistence ---
+    from PySide6.QtCore import Signal
+    from PySide6.QtGui import QIcon, QPixmap
+
+    titleChanged = Signal(str)
+    urlChanged = Signal(str, str)  # url, title
+    faviconChanged = Signal(QIcon)
+
+    def __init__(self, *args, private: bool = False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._favicon = None
+        self._private = private
+        self.ui.stage.iconChanged.connect(self._on_favicon_changed)
+        self.ui.stage.urlChanged.connect(self._on_url_changed)
+        self.ui.stage.titleChanged.connect(self._on_title_changed)
         self.signal_handlers = {
             SignalCode.BROWSER_NAVIGATE_SIGNAL: self.on_browser_navigate,
         }
-        super().__init__(*args, **kwargs)
         self.registered: bool = False
         self._profile = None
         self._profile_page = None
+        self._private_browsing_enabled = (
+            False  # Default to non-private browsing
+        )
+
+        # Load browser settings FIRST before creating profile
+        self._load_browser_settings()
+
+        # Ensure UI indicators are set even if no settings were loaded
+        if not hasattr(self, "_ui_indicators_set"):
+            self._update_private_browsing_icon(self._private_browsing_enabled)
+            self._update_private_browsing_styling(
+                self._private_browsing_enabled
+            )
+            self._ui_indicators_set = True
+
+        # Now create profile and page with correct privacy settings
         self.ui.stage.setPage(self.profile_page)
         self.set_flags()
         self.ui.stage.loadFinished.connect(self.on_load_finished)
         self.ui.url.returnPressed.connect(self.on_submit_button_clicked)
         self.ui.bookmark_page_button.toggled.connect(
             self.on_bookmark_page_button_toggled
+        )
+        self.ui.private_browse_button.toggled.connect(
+            self.on_private_browse_button_toggled
         )
         self._page_cache = {
             "html": None,
@@ -73,40 +115,11 @@ class BrowserWidget(BaseWidget):
         self.ui.stage.setStyleSheet("background: #111;")
         self.ui.stage.page().setBackgroundColor("#111111")
 
-        # Load browser settings from AIRunnerSettings
-        settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
-        if settings_obj:
-            try:
-                settings_data = (
-                    settings_obj.data
-                    if isinstance(settings_obj.data, dict)
-                    else json.loads(settings_obj.data)
-                )
-                browser_settings = BrowserSettings(**settings_data)
-                # Defensive: check for browser_type and os_type attributes
-                if hasattr(browser_settings, "browser_type"):
-                    self.ui.user_agent_browser.setCurrentText(
-                        browser_settings.browser_type
-                    )
-                if hasattr(browser_settings, "os_type"):
-                    self.ui.user_agent_os.setCurrentText(
-                        browser_settings.os_type
-                    )
-                if hasattr(browser_settings, "random_user_agent"):
-                    self._random_user_agent = (
-                        browser_settings.random_user_agent
-                    )
-                    if hasattr(self.ui, "pushButton"):
-                        self.ui.pushButton.setChecked(
-                            browser_settings.random_user_agent
-                        )
-            except Exception as e:
-                self.logger.warning(f"Failed to load browser settings: {e}")
-
         # Set initial tab title to 'New Tab'
-        self.ui.browser_tab_widget.setTabText(
-            self.ui.browser_tab_widget.indexOf(self.ui.tab), "New Tab"
-        )
+        if hasattr(self.ui, "browser_tab_widget") and hasattr(self.ui, "tab"):
+            self.ui.browser_tab_widget.setTabText(
+                self.ui.browser_tab_widget.indexOf(self.ui.tab), "New Tab"
+            )
         # Update tab title when page title changes
         self.ui.stage.titleChanged.connect(self._on_stage_title_changed)
 
@@ -126,17 +139,7 @@ class BrowserWidget(BaseWidget):
 
         self._random_user_agent = False
 
-        # Log privacy initialization
-        self.logger.info("Browser widget initialized with privacy features:")
-        self.logger.info("- Off-the-record profile: Active (true OTR)")
-        self.logger.info("- HTTPS-only mode: Enforced")
-        self.logger.info("- Certificate validation: Strict")
-        self.logger.info("- Permissions: Denied by default")
-        self.logger.info("- Local storage: Disabled")
-        self.logger.info("- Cookies: Session-only (OTR)")
-        self.logger.info("- Custom disk cache: Cleared on session clear")
-
-        # Initialize with privacy status logging
+        # Initialize with accurate privacy status logging
         self.log_privacy_status()
 
         # Panels setup
@@ -188,6 +191,63 @@ class BrowserWidget(BaseWidget):
             center = total - left
             self.ui.splitter.setSizes([left, center, 0])
 
+    def _load_browser_settings(self):
+        """Load browser settings from database and apply to UI."""
+        settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
+        if settings_obj:
+            try:
+                settings_data = (
+                    settings_obj.data
+                    if isinstance(settings_obj.data, dict)
+                    else json.loads(settings_obj.data)
+                )
+                browser_settings = BrowserSettings(**settings_data)
+
+                # Load and apply private browsing setting BEFORE profile creation
+                if hasattr(browser_settings, "private_browsing"):
+                    self._private_browsing_enabled = (
+                        browser_settings.private_browsing
+                    )
+                    self.ui.private_browse_button.setChecked(
+                        browser_settings.private_browsing
+                    )
+                    # Update UI indicators to match loaded state
+                    self._update_private_browsing_icon(
+                        browser_settings.private_browsing
+                    )
+                    self._update_private_browsing_styling(
+                        browser_settings.private_browsing
+                    )
+                    self._ui_indicators_set = True
+
+                # Load other settings
+                if hasattr(browser_settings, "browser_type"):
+                    self.ui.user_agent_browser.setCurrentText(
+                        browser_settings.browser_type
+                    )
+                if hasattr(browser_settings, "os_type"):
+                    self.ui.user_agent_os.setCurrentText(
+                        browser_settings.os_type
+                    )
+                if hasattr(browser_settings, "random_user_agent"):
+                    self._random_user_agent = (
+                        browser_settings.random_user_agent
+                    )
+                    if hasattr(self.ui, "pushButton"):
+                        self.ui.pushButton.setChecked(
+                            browser_settings.random_user_agent
+                        )
+
+            except Exception as e:
+                self.logger.warning(f"Failed to load browser settings: {e}")
+                # Use defaults if loading fails
+                self._private_browsing_enabled = False
+                self.ui.private_browse_button.setChecked(False)
+                # Set default UI indicators
+                self._update_private_browsing_icon(False)
+                self._update_private_browsing_styling(False)
+                self._ui_indicators_set = True
+
     @Slot(bool)
     def on_private_browse_button_toggled(self, checked: bool) -> None:
         """Toggle private browsing mode and update settings."""
@@ -195,11 +255,89 @@ class BrowserWidget(BaseWidget):
         self._save_browser_settings()
 
     def _set_private_browsing(self, enabled: bool):
-        # Hide/show history/bookmarks, clear session if enabling
+        """Set private browsing mode and update all UI indicators."""
+        # Update the internal state
+        self._private_browsing_enabled = enabled
+
+        # Update button icon based on state
+        self._update_private_browsing_icon(enabled)
+
+        # Apply/remove purple styling
+        self._update_private_browsing_styling(enabled)
+
+        # Clear session if enabling private browsing
         if enabled:
             self.clear_session()
-        # Optionally: update UI indicators
-        # ...
+            self.logger.info("Private browsing enabled - session data cleared")
+        else:
+            self.logger.info(
+                "Private browsing disabled - normal browsing mode"
+            )
+
+        # Force profile recreation on next access to apply new privacy settings
+        self._profile = None
+        self._profile_page = None
+
+        # Update the webview to use the new profile
+        self.ui.stage.setPage(self.profile_page)
+
+        # Log the privacy status
+        self.log_privacy_status()
+
+    def _update_private_browsing_icon(self, enabled: bool):
+        """Update the private browsing button icon based on the current state."""
+        from PySide6.QtGui import QIcon
+
+        if enabled:
+            # Private browsing enabled - use eye-off icon (data is hidden)
+            icon_path = ":/dark/icons/feather/dark/eye-off.svg"
+            self.ui.private_browse_button.setToolTip(
+                "Private browsing enabled - Click to disable"
+            )
+        else:
+            # Private browsing disabled - use eye icon (data is visible/tracked)
+            icon_path = ":/dark/icons/feather/dark/eye.svg"
+            self.ui.private_browse_button.setToolTip(
+                "Private browsing disabled - Click to enable"
+            )
+
+        icon = QIcon()
+        icon.addFile(icon_path)
+        self.ui.private_browse_button.setIcon(icon)
+
+    def _update_private_browsing_styling(self, enabled: bool):
+        """Apply or remove purple styling to indicate private browsing mode."""
+        if enabled:
+            # Apply purple styling for private browsing mode
+            purple_style = """
+                QPushButton#private_browse_button {
+                    background-color: #4a1a4a;
+                    border: 2px solid #8b4a8b;
+                    border-radius: 4px;
+                    color: #e6b3e6;
+                }
+                QPushButton#private_browse_button:checked {
+                    background-color: #6b2a6b;
+                    border-color: #aa5aaa;
+                }
+                QPushButton#private_browse_button:hover {
+                    background-color: #5a2a5a;
+                    border-color: #9a5a9a;
+                }
+            """
+            self.ui.private_browse_button.setStyleSheet(purple_style)
+
+            # Optional: Add purple accent to the URL bar to indicate private mode
+            url_style = """
+                QLineEdit#url {
+                    border-left: 3px solid #8b4a8b;
+                }
+            """
+            self.ui.url.setStyleSheet(url_style)
+        else:
+            # Remove purple styling for normal browsing mode
+            self.ui.private_browse_button.setStyleSheet("")
+            self.ui.url.setStyleSheet("")
 
     @Slot(bool)
     def on_bookmark_button_toggled(self, checked: bool):
@@ -275,7 +413,7 @@ class BrowserWidget(BaseWidget):
     def _on_bookmark_edit_requested(self, item: dict):
         """Open edit dialog for a bookmark (stub for now)."""
         # TODO: Implement bookmark edit dialog
-        self.logger.info(f"Edit requested for bookmark: {item}")
+        self.logger.info("Edit requested for bookmark")
 
     def _on_bookmarks_delete_all(self):
         """Delete all bookmarks."""
@@ -353,7 +491,7 @@ class BrowserWidget(BaseWidget):
     def _on_history_edit_requested(self, item: dict):
         """Edit history entry (stub for now)."""
         # Not typically supported for history, but stub provided
-        self.logger.info(f"Edit requested for history entry: {item}")
+        self.logger.info("Edit requested for history entry")
 
     def _on_history_delete_all(self):
         """Delete all history entries."""
@@ -602,7 +740,7 @@ class BrowserWidget(BaseWidget):
         self, title: str, url: str, visited_at: str, uuid_key: str = None
     ):
         self.logger.debug(
-            f"add_history_entry called with title='{title}', url='{url}', visited_at='{visited_at}', uuid_key='{uuid_key}'"
+            f"add_history_entry called with title='{title}', visited_at='{visited_at}', uuid_key='{uuid_key}'"
         )
         settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
         if not settings_obj:
@@ -779,7 +917,7 @@ class BrowserWidget(BaseWidget):
                     self._page_cache["plaintext"] = None
                     self._page_cache["summary"] = None
                     return
-            self.logger.warning(f"Local file not found for: {local_name}")
+            self.logger.warning("Local file not found")
             self.ui.url.setStyleSheet(
                 "QLineEdit { background: #331111; color: #ff9999; }"
             )
@@ -792,7 +930,7 @@ class BrowserWidget(BaseWidget):
         # Always use https for security (force upgrade)
         if url.startswith("http://"):
             url = url.replace("http://", "https://", 1)
-            self.logger.info(f"Upgraded insecure URL to HTTPS: {url}")
+            self.logger.info("Upgraded insecure URL to HTTPS")
 
         # Update the URL field if it was modified
         if url != original_url:
@@ -831,7 +969,7 @@ class BrowserWidget(BaseWidget):
             else:
                 self.ui.stage.setUrl(QUrl(url))
         else:
-            self.logger.warning(f"Invalid or insecure URL rejected: {url}")
+            self.logger.warning("Invalid or insecure URL rejected")
             # Show security warning to user
             self.ui.url.setStyleSheet(
                 "QLineEdit { background: #331111; color: #ff9999; }"
@@ -857,11 +995,33 @@ class BrowserWidget(BaseWidget):
 
     @property
     def profile(self):
-        """Initialize the off-the-record profile for the browser widget."""
+        """Initialize the browser profile based on private browsing settings."""
         if self._profile is None:
-            # Create a true off-the-record profile that doesn't persist data to disk
-            # Passing parent=self ensures cleanup when widget is destroyed
-            self._profile = QWebEngineProfile(parent=self)
+            # Use stored private browsing setting or fall back to UI button state
+            private_mode = getattr(
+                self,
+                "_private_browsing_enabled",
+                (
+                    self.ui.private_browse_button.isChecked()
+                    if hasattr(self, "ui")
+                    else False
+                ),
+            )
+
+            if private_mode:
+                # Create off-the-record profile for private browsing
+                self._profile = QWebEngineProfile(parent=self)
+                self.logger.info(f"Private browsing: Enabled")
+                self.logger.info(f"Persistent storage: Disabled")
+                self.logger.info(f"Cookies: Session-only")
+            else:
+                # Create persistent profile for normal browsing
+                self._profile = QWebEngineProfile(
+                    "airunner_persistent", parent=self
+                )
+                self.logger.info(f"Private browsing: Disabled")
+                self.logger.info(f"Persistent storage: Enabled")
+                self.logger.info(f"Cookies: Persistent allowed")
         return self._profile
 
     @property
@@ -943,7 +1103,7 @@ class BrowserWidget(BaseWidget):
 
         Deny all permission requests for privacy and security.
         """
-        self.logger.info(f"Permission request denied for {url}: {feature}")
+        self.logger.info(f"Permission request denied for feature: {feature}")
         self.profile_page.setFeaturePermission(
             url, feature, QWebEnginePage.PermissionDeniedByUser
         )
@@ -981,13 +1141,13 @@ class BrowserWidget(BaseWidget):
             self.ui.url.setStyleSheet(
                 "QLineEdit { background: #112211; color: #eee; }"
             )
-            self.logger.debug(f"Secure connection: {current_url}")
+            self.logger.debug("Secure connection detected")
         elif current_url.startswith("http://"):
             # Insecure connection - red tint
             self.ui.url.setStyleSheet(
                 "QLineEdit { background: #221111; color: #eee; }"
             )
-            self.logger.warning(f"Insecure connection: {current_url}")
+            self.logger.warning("Insecure connection detected")
         else:
             # Unknown protocol
             self.ui.url.setStyleSheet(
@@ -1063,7 +1223,6 @@ class BrowserWidget(BaseWidget):
         self._clear_custom_html_cache()  # Clear custom disk cache to maintain OTR privacy
 
     def on_browser_navigate(self, data):
-        print("navigate", data)
         url = data.get("url", None)
         if url is not None:
             self.ui.stage.load(url)
@@ -1245,36 +1404,35 @@ class BrowserWidget(BaseWidget):
         """Get current privacy and security status.
 
         Returns:
-            dict: Privacy status information
+            dict: Privacy status information (without exposing URLs)
         """
         current_url = self.ui.stage.url().toString()
+        is_otr = bool(self._profile and self._profile.isOffTheRecord())
+
         return {
-            "otr_profile_active": bool(
-                self._profile and self._profile.isOffTheRecord()
-            ),
+            "otr_profile_active": is_otr,
             "https_only": (
                 current_url.startswith("https://") if current_url else True
             ),
-            "current_url": current_url,
-            "cookies_blocked": True,  # Always true with OTR profile
-            "local_storage_disabled": True,
-            "permissions_blocked": True,
-            "certificate_validation": True,
+            "has_url": bool(current_url and current_url != "about:blank"),
+            "cookies_blocked": is_otr,  # True only with OTR profile
+            "local_storage_disabled": is_otr,  # True only with OTR profile
+            "persistent_storage_enabled": not is_otr,  # True only with persistent profile
+            "permissions_blocked": True,  # Always blocked for security
+            "certificate_validation": True,  # Always enabled for security
             "custom_cache_cleared": True,  # We clear custom cache in clear_session()
         }
 
     def log_privacy_status(self) -> None:
-        """Log current privacy status for debugging."""
+        """Log current privacy status without exposing URLs."""
         status = self.get_privacy_status()
         self.logger.info(f"Browser privacy status: {status}")
 
     def _on_stage_title_changed(self, title: str) -> None:
-        """Update the browser tab title when the page title changes."""
+        """Emit titleChanged signal when the page title changes."""
         if not title:
             title = "New Tab"
-        self.ui.browser_tab_widget.setTabText(
-            self.ui.browser_tab_widget.indexOf(self.ui.tab), title
-        )
+        self.titleChanged.emit(title)
 
     @Slot(bool)
     def on_bookmark_page_button_toggled(self, checked: bool):
@@ -1333,7 +1491,7 @@ class BrowserWidget(BaseWidget):
         except Exception as e:
             self.logger.warning(f"Failed to add/update bookmark: {e}")
 
-    def _remove_bookmark(self, url: str, folder: str = "Default"):
+    def _remove_bookmark(self, url: str, folder: str = "Bookmarks"):
         settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
         if not settings_obj:
             return
@@ -1374,3 +1532,114 @@ class BrowserWidget(BaseWidget):
             except Exception:
                 pass
         self.ui.bookmark_page_button.setChecked(checked)
+
+    def clear(self):
+        """Clear the browser state (reset to blank page and clear URL field)."""
+        self.ui.stage.setUrl(QUrl("about:blank"))
+        self.ui.url.clear()
+        # Optionally reset other UI elements if needed
+
+    def _on_favicon_changed(self, icon: QIcon):
+        self._favicon = icon
+        self.faviconChanged.emit(icon)
+
+    def _on_url_changed(self, qurl):
+        url = qurl.toString()
+        title = self.current_title
+        self.urlChanged.emit(url, title)
+
+    def _on_title_changed(self, title: str):
+        self.titleChanged.emit(title)
+
+    @property
+    def current_url(self) -> str:
+        return self.ui.stage.url().toString()
+
+    @property
+    def current_title(self) -> str:
+        return self.ui.stage.title() or self.current_url
+
+    @property
+    def favicon(self) -> Optional[QIcon]:
+        return self._favicon
+
+    def get_current_url(self) -> str:
+        """Get the current URL as a method (for session save compatibility)."""
+        return self.current_url
+
+    def get_current_title(self) -> str:
+        """Get the current title as a method (for session save compatibility)."""
+        return self.current_title
+
+    def print_page(self):
+        if hasattr(self.ui.stage, "printToPdf"):
+            from PySide6.QtWidgets import QFileDialog
+
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Print to PDF", "", "PDF Files (*.pdf)"
+            )
+            if path:
+                self.ui.stage.page().printToPdf(path)
+
+    def save_page_with_assets(self, folder: str):
+        # Save HTML and static assets (images, css, js) to folder
+        # This is a stub; real implementation would parse and download assets
+        html = self.ui.stage.page().toHtml(
+            lambda html: self._save_html_and_assets(html, folder)
+        )
+
+    def _save_html_and_assets(self, html: str, folder: str):
+        import re, requests
+        import os
+
+        os.makedirs(folder, exist_ok=True)
+        url = self.current_url
+        html_path = os.path.join(folder, "index.html")
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(html)
+        # Download images (very basic)
+        img_urls = re.findall(r'<img[^>]+src=["\']([^"\'>]+)', html)
+        for img_url in img_urls:
+            try:
+                if img_url.startswith("http"):
+                    img_data = requests.get(img_url, timeout=5).content
+                    img_name = os.path.basename(img_url.split("?")[0])
+                    with open(os.path.join(folder, img_name), "wb") as imgf:
+                        imgf.write(img_data)
+            except Exception:
+                pass
+        # Could add CSS/JS download here
+
+    def get_state(self) -> dict:
+        return {
+            "url": self.current_url,
+            "title": self.current_title,
+            "private": self._private,
+        }
+
+    def set_state(self, state: dict):
+        url = state.get("url")
+        if url:
+            self.load_url(url)
+
+    def load_url(self, url: str):
+        self.ui.url.setText(url)
+        self.on_submit_button_clicked()
+
+    # --- Session Persistence (Non-Private Tabs) ---
+    # To be called by main_window.py on app close/start
+    @staticmethod
+    def save_tab_sessions(tab_states: list, path: str):
+        import json
+
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(tab_states, f)
+
+    @staticmethod
+    def load_tab_sessions(path: str) -> list:
+        import json
+
+        if not os.path.exists(path):
+            return []
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
