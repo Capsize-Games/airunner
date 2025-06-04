@@ -6,11 +6,10 @@ import os
 from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QTimer
-from jinja2 import Environment, FileSystemLoader, select_autoescape
-
+from urllib.parse import urlencode
 from airunner.enums import CanvasToolName
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.settings import CONTENT_WIDGETS_BASE_PATH
+from airunner.settings import CONTENT_WIDGETS_BASE_PATH, LOCAL_SERVER_PORT
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import create_worker
 from airunner.utils.widgets import (
@@ -277,11 +276,15 @@ class BaseWidget(AbstractBaseWidget):
         save_splitter_settings(self.ui, self.splitters)
 
     def render_template(self, element, template_name: str, **kwargs):
-        env = Environment(
-            loader=FileSystemLoader(self.static_html_dir),
-            autoescape=select_autoescape(["html", "xml"]),
+        """
+        Load a Jinja2 template from the local HTTP server, passing kwargs as query parameters for server-side rendering.
+        """
+        # Build the URL to the template on the local server
+        base_url = f"https://localhost:{LOCAL_SERVER_PORT}/static/html/{template_name}"
+        # Pass kwargs as query parameters (JSON-encode complex values)
+        query = urlencode(
+            {k: v if isinstance(v, str) else str(v) for k, v in kwargs.items()}
         )
-        template = env.get_template(template_name)
-        element.setHtml(
-            template.render(**kwargs), f"file://{self.static_html_dir}/"
-        )
+        url = f"{base_url}?{query}" if query else base_url
+        # Load the URL in the QWebEngineView
+        element.setUrl(url)

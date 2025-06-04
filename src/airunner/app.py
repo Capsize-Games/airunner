@@ -31,6 +31,7 @@ from airunner.gui.widgets.llm.local_http_server import LocalHttpServerThread
 import os
 import subprocess
 import sys
+from airunner.settings import LOCAL_SERVER_PORT
 
 
 class App(MediatorMixin, SettingsMixin, QObject):
@@ -69,21 +70,37 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         self._ensure_mathjax()
 
-        # Start HTTP server for static assets (MathJax and content widgets)
+        # Start HTTPS server for static assets (MathJax and content widgets)
         static_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "static")
         )
-        mathjax_dir = os.path.join(
-            static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
+        # Find all components/**/gui/static directories
+        import glob
+
+        components_static_dirs = glob.glob(
+            os.path.join(
+                os.path.dirname(__file__), "components", "**", "gui", "static"
+            ),
+            recursive=True,
         )
+        # Add user web dir if it exists
         user_web_dir = os.path.join(
             os.path.expanduser(self.path_settings.base_path), "web"
         )
+        static_search_dirs = [static_dir] + components_static_dirs
+        if os.path.isdir(user_web_dir):
+            static_search_dirs.append(user_web_dir)
+        mathjax_dir = os.path.join(
+            static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
+        )
         if self.initialize_gui and os.path.isdir(mathjax_dir):
+            import logging
+
+            logging.info("Starting local HTTPS server for static assets.")
             self.http_server_thread = LocalHttpServerThread(
                 directory=static_dir,
-                additional_directories=[user_web_dir],
-                port=8765,
+                additional_directories=static_search_dirs[1:],
+                port=LOCAL_SERVER_PORT,
             )
             self.http_server_thread.start()
             self.start()

@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout
     QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
     QSizePolicy, QSpacerItem, QSplitter, QWidget)
 
-from airunner.gui.widgets.llm.contentwidgets.conversation_widget import ConversationWidget
+from airunner.components.chat.gui.widgets.conversation_widget import ConversationWidget
 import airunner.feather_rc
 
 class Ui_chat_prompt(object):
@@ -51,17 +51,18 @@ class Ui_chat_prompt(object):
 
         self.horizontalLayout_2.addWidget(self.clear_conversation_button)
 
-        self.pushButton_2 = QPushButton(chat_prompt)
-        self.pushButton_2.setObjectName(u"pushButton_2")
-        sizePolicy.setHeightForWidth(self.pushButton_2.sizePolicy().hasHeightForWidth())
-        self.pushButton_2.setSizePolicy(sizePolicy)
-        self.pushButton_2.setMinimumSize(QSize(25, 25))
-        self.pushButton_2.setMaximumSize(QSize(25, 25))
+        self.history_button = QPushButton(chat_prompt)
+        self.history_button.setObjectName(u"history_button")
+        sizePolicy.setHeightForWidth(self.history_button.sizePolicy().hasHeightForWidth())
+        self.history_button.setSizePolicy(sizePolicy)
+        self.history_button.setMinimumSize(QSize(25, 25))
+        self.history_button.setMaximumSize(QSize(25, 25))
         icon1 = QIcon()
         icon1.addFile(u":/light/icons/feather/light/clock.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pushButton_2.setIcon(icon1)
+        self.history_button.setIcon(icon1)
+        self.history_button.setCheckable(True)
 
-        self.horizontalLayout_2.addWidget(self.pushButton_2)
+        self.horizontalLayout_2.addWidget(self.history_button)
 
 
         self.gridLayout_2.addLayout(self.horizontalLayout_2, 0, 0, 1, 1)
@@ -176,7 +177,7 @@ class Ui_chat_prompt(object):
         self.clear_conversation_button.setToolTip(QCoreApplication.translate("chat_prompt", u"New converation", None))
 #endif // QT_CONFIG(tooltip)
         self.clear_conversation_button.setText("")
-        self.pushButton_2.setText("")
+        self.history_button.setText("")
 #if QT_CONFIG(tooltip)
         self.send_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Send message", None))
 #endif // QT_CONFIG(tooltip)

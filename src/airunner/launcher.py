@@ -9,7 +9,10 @@ import logging
 import importlib.util
 import os
 
+from airunner.bin.process_qss import build_ui
 from airunner.data.models.airunner_settings import AIRunnerSettings
+from airunner.data.models.path_settings import PathSettings
+from airunner.settings import AIRUNNER_BASE_PATH
 
 COMPONENTS_PATH = os.path.join(os.path.dirname(__file__), "components")
 
@@ -105,11 +108,101 @@ def register_component_settings():
     )
 
 
+def generate_local_certs_if_needed(base_path):
+    """
+    Generate a trusted local certificate using mkcert if available, otherwise fall back to OpenSSL self-signed.
+    Certs are always generated in base_path/certs.
+    """
+    import shutil
+    import subprocess
+
+    cert_dir = os.path.join(base_path, "certs")
+    cert_file = os.path.join(cert_dir, "cert.pem")
+    key_file = os.path.join(cert_dir, "key.pem")
+    if not os.path.exists(cert_dir):
+        os.makedirs(cert_dir, exist_ok=True)
+    if not (os.path.exists(cert_file) and os.path.exists(key_file)):
+        mkcert_path = shutil.which("mkcert")
+        if mkcert_path:
+            print(
+                "Using mkcert to generate a trusted certificate for localhost..."
+            )
+            try:
+                subprocess.run([mkcert_path, "-install"], check=True)
+                subprocess.run(
+                    [
+                        mkcert_path,
+                        "-cert-file",
+                        cert_file,
+                        "-key-file",
+                        key_file,
+                        "localhost",
+                        "127.0.0.1",
+                        "::1",
+                    ],
+                    check=True,
+                )
+                print(
+                    f"Trusted certificate generated with mkcert: {cert_file}, {key_file}"
+                )
+            except Exception as e:
+                print(
+                    f"mkcert failed: {e}. Falling back to OpenSSL self-signed certificate."
+                )
+                subprocess.run(
+                    [
+                        "openssl",
+                        "req",
+                        "-x509",
+                        "-newkey",
+                        "rsa:4096",
+                        "-keyout",
+                        key_file,
+                        "-out",
+                        cert_file,
+                        "-days",
+                        "365",
+                        "-nodes",
+                        "-subj",
+                        "/CN=localhost",
+                    ],
+                    check=True,
+                )
+                print(
+                    f"Self-signed certificate generated: {cert_file}, {key_file}"
+                )
+        else:
+            print(
+                "mkcert not found, falling back to OpenSSL self-signed certificate."
+            )
+            subprocess.run(
+                [
+                    "openssl",
+                    "req",
+                    "-x509",
+                    "-newkey",
+                    "rsa:4096",
+                    "-keyout",
+                    key_file,
+                    "-out",
+                    cert_file,
+                    "-days",
+                    "365",
+                    "-nodes",
+                    "-subj",
+                    "/CN=localhost",
+                ],
+                check=True,
+            )
+            print(
+                f"Self-signed certificate generated: {cert_file}, {key_file}"
+            )
+    return cert_file, key_file
+
+
 def main():
     # Build UI files first
     try:
-        from airunner.bin import build_ui
-
         build_ui.main()
     except Exception as e:
         logging.warning(f"UI build step failed: {e}")
@@ -122,6 +215,18 @@ def main():
         import traceback
 
         traceback.print_exc()
+
+    # --- SSL certificate auto-generation ---
+    path_settings = PathSettings.objects.first()
+    if not path_settings:
+        base_path = AIRUNNER_BASE_PATH
+    else:
+        base_path = path_settings.base_path
+    cert_file, key_file = generate_local_certs_if_needed(
+        os.path.join(base_path, "certs")
+    )
+    os.environ["AIRUNNER_SSL_CERT"] = cert_file
+    os.environ["AIRUNNER_SSL_KEY"] = key_file
 
     # Only run the main app, no watcher logic
     from airunner.main import main as real_main
