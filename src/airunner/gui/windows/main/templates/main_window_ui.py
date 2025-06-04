@@ -349,8 +349,12 @@ class Ui_MainWindow(object):
         self.gridLayout_7 = QGridLayout(self.tab)
         self.gridLayout_7.setObjectName(u"gridLayout_7")
         self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.browser = BrowserWidget(self.tab)
+        self.browser = QTabWidget(self.tab)
         self.browser.setObjectName(u"browser")
+        self.browser.setMovable(True)
+        self.browser_page = BrowserWidget()
+        self.browser_page.setObjectName(u"browser_page")
+        self.browser.addTab(self.browser_page, "")
 
         self.gridLayout_7.addWidget(self.browser, 0, 0, 1, 1)
 
@@ -525,7 +529,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.center_tab_container.setCurrentIndex(0)
+        self.center_tab_container.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -609,6 +613,7 @@ class Ui_MainWindow(object):
         self.actionRecenter.setText(QCoreApplication.translate("MainWindow", u"Recenter", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.art_tab), QCoreApplication.translate("MainWindow", u"Art", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.agent_workflow_tab), QCoreApplication.translate("MainWindow", u"Agent Workflow", None))
+        self.browser.setTabText(self.browser.indexOf(self.browser_page), "")
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.tab), QCoreApplication.translate("MainWindow", u"Browser", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
