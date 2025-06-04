@@ -307,7 +307,7 @@ class BrowserControlMixin:
 
     @Slot(int)
     def close_browser_tab(self, index: int):
-        """Close browser tab at given index."""
+        """Close browser tab at given index, safely unloading QWebEngineView before deletion."""
         browser_widget = self._get_browser_tab_widget()
         if not browser_widget or index < 0 or index >= browser_widget.count():
             return
@@ -340,27 +340,28 @@ class BrowserControlMixin:
             if len(self._closed_tabs_history) > 10:
                 self._closed_tabs_history.pop(0)
 
-        # Remove from tracking
-        if tab_widget in self._browser_tabs:
-            self._browser_tabs.remove(tab_widget)
+        def really_close():
+            # Remove from tracking
+            if tab_widget in self._browser_tabs:
+                self._browser_tabs.remove(tab_widget)
+            # Remove from tab widget
+            browser_widget.removeTab(index)
+            # Clean up the widget
+            if tab_widget:
+                tab_widget.deleteLater()
+            # Update current tab reference
+            current_widget = browser_widget.currentWidget()
+            self._current_browser_tab = (
+                current_widget
+                if isinstance(current_widget, BrowserWidget)
+                else None
+            )
 
-        # Remove from tab widget
-        browser_widget.removeTab(index)
-
-        # Clean up the widget
-        if tab_widget:
-            tab_widget.deleteLater()
-
-        # Update current tab reference
-        current_widget = browser_widget.currentWidget()
-        self._current_browser_tab = (
-            current_widget
-            if isinstance(current_widget, BrowserWidget)
-            else None
-        )
-
-        # Update tab styling in case we removed a private tab
-        self._update_all_tab_styling()
+        # Use safe_close if available
+        if hasattr(tab_widget, "safe_close"):
+            tab_widget.safe_close(really_close)
+        else:
+            really_close()
 
     @Slot()
     def close_current_browser_tab(self):
