@@ -173,7 +173,7 @@
               </size>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>2</number>
              </property>
              <property name="documentMode">
               <bool>false</bool>
@@ -271,7 +271,16 @@
                 <number>0</number>
                </property>
                <item row="0" column="0">
-                <widget class="BrowserWidget" name="browser" native="true"/>
+                <widget class="QTabWidget" name="browser">
+                 <property name="movable">
+                  <bool>true</bool>
+                 </property>
+                 <widget class="BrowserWidget" name="browser_page" native="true">
+                  <attribute name="title">
+                   <string/>
+                  </attribute>
+                 </widget>
+                </widget>
                </item>
               </layout>
              </widget>
@@ -1043,7 +1052,7 @@
   <customwidget>
    <class>BrowserWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/browser/browser_widget</header>
+   <header>airunner/components/browser/gui/widgets/browser_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
