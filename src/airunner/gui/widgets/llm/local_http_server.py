@@ -188,23 +188,32 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
     def translate_path(self, path):
         if path.startswith("/static/"):
             path = path[len("/static/") :]
-        original_path = super().translate_path(path)
-        if os.path.exists(original_path):
-            return original_path
         import urllib.parse
         import posixpath
 
-        path = path.split("?", 1)[0]
-        path = path.split("#", 1)[0]
-        path = urllib.parse.unquote(path, errors="surrogatepass")
-        path = posixpath.normpath(path)
-        if path.startswith("/"):
-            path = path[1:]
+        # Remove query and fragment
+        safe_path = path.split("?", 1)[0]
+        safe_path = safe_path.split("#", 1)[0]
+        safe_path = urllib.parse.unquote(safe_path, errors="surrogatepass")
+        safe_path = posixpath.normpath(safe_path)
+        # Prevent absolute paths and directory traversal
+        if safe_path.startswith(os.sep) or safe_path.startswith("..") or ".." in safe_path:
+            logging.warning(f"[SECURITY] Attempted directory traversal or absolute path: {path}")
+            return ""
+        # Use only safe, sanitized path
         for directory in self.directories:
-            potential_path = os.path.join(directory, path)
-            if os.path.exists(potential_path):
-                return potential_path
-        return original_path
+            potential_path = os.path.join(directory, safe_path)
+            abs_directory = os.path.abspath(directory)
+            abs_potential = os.path.abspath(potential_path)
+            try:
+                if os.path.commonpath([abs_directory, abs_potential]) != abs_directory:
+                    continue
+            except ValueError:
+                continue
+            if os.path.exists(abs_potential):
+                return abs_potential
+        # Fallback to default handler, but only with sanitized path
+        return super().translate_path(safe_path)
 
 
 class CORSRequestHandler(SimpleHTTPRequestHandler):
