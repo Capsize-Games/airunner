@@ -59,8 +59,15 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         self.directories = directories or []
         super().__init__(*args, **kwargs)
 
+    def _send_lna_cors_headers(self):
+        """Send only minimal CORS headers, never allow LNA."""
+        # Do NOT send Access-Control-Allow-Private-Network
+        # Only allow CORS for trusted origins if needed, else block all
+        # self.send_header("Access-Control-Allow-Origin", "https://your-trusted-origin.com")
+        pass
+
     def end_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        # Do not send LNA or permissive CORS headers
         self.send_header(
             "Strict-Transport-Security",
             "max-age=63072000; includeSubDomains; preload",
@@ -178,7 +185,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
 
     def do_OPTIONS(self):
         logging.warning(f"[SECURITY] Blocked OPTIONS request: {self.path}")
-        self.send_error(405)
+        self.send_error(403)
 
     def list_directory(self, path):
         logging.warning(f"[SECURITY] Directory listing attempt: {path}")
@@ -197,8 +204,14 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         safe_path = urllib.parse.unquote(safe_path, errors="surrogatepass")
         safe_path = posixpath.normpath(safe_path)
         # Prevent absolute paths and directory traversal
-        if safe_path.startswith(os.sep) or safe_path.startswith("..") or ".." in safe_path:
-            logging.warning(f"[SECURITY] Attempted directory traversal or absolute path: {path}")
+        if (
+            safe_path.startswith(os.sep)
+            or safe_path.startswith("..")
+            or ".." in safe_path
+        ):
+            logging.warning(
+                f"[SECURITY] Attempted directory traversal or absolute path: {path}"
+            )
             return ""
         # Use only safe, sanitized path
         for directory in self.directories:
@@ -206,7 +219,10 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             abs_directory = os.path.abspath(directory)
             abs_potential = os.path.abspath(potential_path)
             try:
-                if os.path.commonpath([abs_directory, abs_potential]) != abs_directory:
+                if (
+                    os.path.commonpath([abs_directory, abs_potential])
+                    != abs_directory
+                ):
                     continue
             except ValueError:
                 continue
@@ -217,10 +233,13 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
 
 
 class CORSRequestHandler(SimpleHTTPRequestHandler):
-    """Request handler with CORS support."""
+    """Request handler with CORS support (locked down for production)."""
+
+    def _send_lna_cors_headers(self):
+        # Do NOT send Access-Control-Allow-Private-Network or permissive CORS
+        pass
 
     def end_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header(
             "Strict-Transport-Security",
             "max-age=63072000; includeSubDomains; preload",
@@ -244,7 +263,7 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
         self.send_error(405, "Method Not Allowed")
 
     def do_OPTIONS(self):
-        self.send_error(405, "Method Not Allowed")
+        self.send_error(403, "Forbidden")
 
     def list_directory(self, path):
         self.send_error(403, "Directory listing not allowed")
