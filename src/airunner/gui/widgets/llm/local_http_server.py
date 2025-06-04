@@ -37,7 +37,10 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         # Only handle .jinja2.html files
         if rel_path.endswith(".jinja2.html"):
             for directory in self.directories:
-                jinja2_path = os.path.join(directory, rel_path)
+                normalized_rel_path = os.path.normpath(rel_path)
+                if not os.path.commonprefix([os.path.abspath(directory), os.path.abspath(os.path.join(directory, normalized_rel_path))]) == os.path.abspath(directory):
+                    continue  # Skip if the path is outside the intended directory
+                jinja2_path = os.path.join(directory, normalized_rel_path)
                 if os.path.exists(jinja2_path):
                     # Parse query parameters as context
                     parsed_url = urllib.parse.urlparse(self.path)
