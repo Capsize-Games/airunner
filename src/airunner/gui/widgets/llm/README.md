@@ -30,6 +30,52 @@ This module provides the chat prompt widget for the AI Runner LLM interface, inc
 - See `user/conversation_widget.py` for implementation details.
 - All conversation rendering is now handled by Jinja2 HTML templates for performance and maintainability.
 
+## Local Network Access (LNA) Support
+
+### Overview
+This module's local HTTP server (`local_http_server.py`) is LNA-compliant for Chromium-based clients (e.g., QWebEngineView in PySide6). It automatically responds to preflight OPTIONS requests and all actual requests with the required headers for Local Network Access (LNA) and CORS.
+
+### LNA/CORS Headers
+- `Access-Control-Allow-Private-Network: true`
+- `Access-Control-Allow-Origin: *` (or specific origin if needed)
+- `Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE`
+- `Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With`
+
+### Diagnostics & Debugging
+- The PySide6 application enables QWebEngineView diagnostics:
+  - Remote debugging via `QTWEBENGINE_REMOTE_DEBUGGING=9223`.
+  - JavaScript console messages are captured and printed to stdout.
+  - Developer tools are enabled in all QWebEngineView widgets.
+- To inspect LNA/CORS issues, check the application logs for `JSCONSOLE:::` messages and use the remote debugging port if needed.
+
+### Security Notes
+- The server is strict about directory traversal and dangerous file types.
+- LNA headers are always sent for both preflight and actual requests.
+- For production, consider restricting `Access-Control-Allow-Origin` to a specific origin.
+
+### Testing LNA
+- Use the PySide6 app's QWebEngineView to load local network resources.
+- Automated tests should verify that OPTIONS and actual requests receive the correct headers and are not blocked by Chromium's LNA enforcement.
+
+## Security Hardening: Local Network Access (LNA) and CORS
+
+### Hardened Production Mode
+- The local HTTP server is now locked down for production:
+  - **No LNA:** Never sends `Access-Control-Allow-Private-Network`.
+  - **No permissive CORS:** Does not send `Access-Control-Allow-Origin` except for trusted origins (commented out by default).
+  - **OPTIONS requests:** All preflight (OPTIONS) requests are blocked with 403 Forbidden.
+  - **Unsafe HTTP methods:** POST, PUT, DELETE, OPTIONS are all blocked with 405/403.
+  - **Directory traversal:** Strict checks, all attempts are logged and blocked.
+  - **Dangerous file types:** Never served.
+  - **Directory listing:** Always forbidden.
+  - **Strict MIME enforcement:** Only whitelisted types are served.
+  - **Security headers:** HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, X-XSS-Protection always set.
+
+### Security Notes
+- This configuration is designed to be as close to unhackable as possible for a local HTTP server.
+- No website (even if loaded in QWebEngineView or Chromium) can access this server via LNA or CORS.
+- If you need to allow access for a specific trusted origin, uncomment and set the `Access-Control-Allow-Origin` header in `_send_lna_cors_headers`.
+
 ## Usage
 
 - The mood/summary system is always enabled by default. No user action is required.
