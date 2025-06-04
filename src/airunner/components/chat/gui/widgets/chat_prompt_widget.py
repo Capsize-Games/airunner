@@ -3,6 +3,9 @@ from typing import Dict
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QApplication
 
+from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
+    Ui_chat_prompt,
+)
 from airunner.enums import (
     SignalCode,
     LLMActionType,
@@ -10,7 +13,6 @@ from airunner.enums import (
     ModelStatus,
 )
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.llm.templates.chat_prompt_ui import Ui_chat_prompt
 from airunner.utils.application import create_worker
 from airunner.utils.widgets import load_splitter_settings
 from airunner.handlers.llm.llm_request import LLMRequest
@@ -23,6 +25,7 @@ class ChatPromptWidget(BaseWidget):
     icons = [
         ("chevron-up", "send_button"),
         ("plus", "clear_conversation_button"),
+        ("clock", "history_button"),
         ("x", "pushButton"),
     ]
 
@@ -109,6 +112,13 @@ class ChatPromptWidget(BaseWidget):
     @Slot(bool)
     def action_button_clicked_send(self):
         self.do_generate()
+
+    @Slot(bool)
+    def history_button_toggled(self, checked: bool):
+        """
+        Toggle the history button. Minimal implementation for test compatibility.
+        """
+        pass
 
     @property
     def action(self) -> LLMActionType:

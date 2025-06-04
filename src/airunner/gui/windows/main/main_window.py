@@ -85,7 +85,7 @@ from airunner.gui.managers.icon_manager import IconManager
 from airunner.plugin_loader import PluginLoader
 
 from .model_load_balancer import ModelLoadBalancer
-from airunner.gui.widgets.llm.contentwidgets.conversation_widget import (
+from airunner.components.chat.gui.widgets.conversation_widget import (
     ConversationWidget,
 )
 

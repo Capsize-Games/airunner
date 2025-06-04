@@ -68,13 +68,13 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset resource="../../../resources/feather.qrc">
+        <iconset resource="../../../../../gui/resources/feather.qrc">
          <normaloff>:/light/icons/feather/light/plus.svg</normaloff>:/light/icons/feather/light/plus.svg</iconset>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_2">
+      <widget class="QPushButton" name="history_button">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
          <horstretch>0</horstretch>
@@ -97,8 +97,11 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset resource="../../../resources/feather.qrc">
+        <iconset resource="../../../../../gui/resources/feather.qrc">
          <normaloff>:/light/icons/feather/light/clock.svg</normaloff>:/light/icons/feather/light/clock.svg</iconset>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -254,7 +257,7 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset resource="../../../resources/feather.qrc">
+        <iconset resource="../../../../../gui/resources/feather.qrc">
          <normaloff>:/light/icons/feather/light/chevron-up.svg</normaloff>:/light/icons/feather/light/chevron-up.svg</iconset>
        </property>
       </widget>
@@ -286,7 +289,7 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset resource="../../../resources/feather.qrc">
+        <iconset resource="../../../../../gui/resources/feather.qrc">
          <normaloff>:/light/icons/feather/light/stop-circle.svg</normaloff>:/light/icons/feather/light/stop-circle.svg</iconset>
        </property>
       </widget>
@@ -299,12 +302,12 @@
   <customwidget>
    <class>ConversationWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/llm/contentwidgets/conversation_widget</header>
+   <header>airunner/components/chat/gui/widgets/conversation_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources/feather.qrc"/>
+  <include location="../../../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
   <connection>
