@@ -33,9 +33,16 @@ This module provides the chat prompt widget for the AI Runner LLM interface, inc
 ## Local Network Access (LNA) Support
 
 ### Overview
-This module's local HTTP server (`local_http_server.py`) is LNA-compliant for Chromium-based clients (e.g., QWebEngineView in PySide6). It automatically responds to preflight OPTIONS requests and all actual requests with the required headers for Local Network Access (LNA) and CORS.
+This module's local HTTP server (`local_http_server.py`) is LNA-compliant for Chromium-based clients (e.g., QWebEngineView in PySide6) when LNA mode is enabled. It automatically responds to preflight OPTIONS requests and all actual requests with the required headers for Local Network Access (LNA) and CORS.
 
-### LNA/CORS Headers
+### Enabling LNA Mode
+- To enable LNA/CORS headers for local network access (for development or diagnostics), set the environment variable:
+  ```bash
+  export AIRUNNER_LNA_ENABLED=1
+  ```
+- By default, the server runs in strict/hardened mode (no LNA, no permissive CORS).
+
+### LNA/CORS Headers (LNA mode)
 - `Access-Control-Allow-Private-Network: true`
 - `Access-Control-Allow-Origin: *` (or specific origin if needed)
 - `Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE`
@@ -50,8 +57,9 @@ This module's local HTTP server (`local_http_server.py`) is LNA-compliant for Ch
 
 ### Security Notes
 - The server is strict about directory traversal and dangerous file types.
-- LNA headers are always sent for both preflight and actual requests.
+- LNA headers are always sent for both preflight and actual requests when LNA mode is enabled.
 - For production, consider restricting `Access-Control-Allow-Origin` to a specific origin.
+- In strict mode (default), the server never sends LNA or permissive CORS headers, and blocks OPTIONS requests.
 
 ### Testing LNA
 - Use the PySide6 app's QWebEngineView to load local network resources.
