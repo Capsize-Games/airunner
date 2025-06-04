@@ -54,20 +54,16 @@ def register_component_settings():
             continue
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        print(f"[DEBUG] Processing module: {module.__name__}")
         for attr in dir(module):
-            print(f"[DEBUG] Found attribute: {attr}")
             obj = getattr(module, attr)
             if (
                 isinstance(obj, type)
                 and hasattr(obj, "__fields__")
                 and "name" in obj.__fields__
             ):
-                print(f"[DEBUG] Processing settings class: {obj.__name__}")
                 try:
                     instance = obj()
                     name = getattr(instance, "name", None)
-                    print(f"[DEBUG] Settings instance name: {name}")
                     if not name:
                         continue
                     found_count += 1
@@ -92,20 +88,11 @@ def register_component_settings():
                             if isinstance(existing, list) and existing
                             else existing.data
                         )
-                        print(
-                            f"\n[DEBUG] Existing data for {name}:\n{current}"
-                        )
-                        print(
-                            f"[DEBUG] Expected (defaults) data for {name}:\n{defaults}\n"
-                        )
                         merged = deep_merge(defaults, current)
                         for key in ("name", "id"):
                             if key in current:
                                 merged[key] = current[key]
                         if merged != current:
-                            print(
-                                f"[DEBUG] Updating DB for {name} with merged data:\n{merged}\n"
-                            )
                             AIRunnerSettings.objects.update_by(
                                 {"name": name}, data=merged
                             )
