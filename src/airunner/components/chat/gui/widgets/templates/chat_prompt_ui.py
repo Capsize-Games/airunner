@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout
     QSizePolicy, QSpacerItem, QSplitter, QWidget)
 
 from airunner.components.chat.gui.widgets.conversation_widget import ConversationWidget
+from airunner.gui.widgets.llm.llm_history_widget import LLMHistoryWidget
 import airunner.feather_rc
 
 class Ui_chat_prompt(object):
@@ -30,49 +31,12 @@ class Ui_chat_prompt(object):
         self.gridLayout_2 = QGridLayout(chat_prompt)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_2.addItem(self.horizontalSpacer)
-
-        self.clear_conversation_button = QPushButton(chat_prompt)
-        self.clear_conversation_button.setObjectName(u"clear_conversation_button")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.clear_conversation_button.sizePolicy().hasHeightForWidth())
-        self.clear_conversation_button.setSizePolicy(sizePolicy)
-        self.clear_conversation_button.setMinimumSize(QSize(25, 25))
-        self.clear_conversation_button.setMaximumSize(QSize(25, 25))
-        icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.clear_conversation_button.setIcon(icon)
-
-        self.horizontalLayout_2.addWidget(self.clear_conversation_button)
-
-        self.history_button = QPushButton(chat_prompt)
-        self.history_button.setObjectName(u"history_button")
-        sizePolicy.setHeightForWidth(self.history_button.sizePolicy().hasHeightForWidth())
-        self.history_button.setSizePolicy(sizePolicy)
-        self.history_button.setMinimumSize(QSize(25, 25))
-        self.history_button.setMaximumSize(QSize(25, 25))
-        icon1 = QIcon()
-        icon1.addFile(u":/light/icons/feather/light/clock.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.history_button.setIcon(icon1)
-        self.history_button.setCheckable(True)
-
-        self.horizontalLayout_2.addWidget(self.history_button)
-
-
-        self.gridLayout_2.addLayout(self.horizontalLayout_2, 0, 0, 1, 1)
-
         self.scrollArea = QScrollArea(chat_prompt)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 595, 618))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 595, 602))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -87,11 +51,11 @@ class Ui_chat_prompt(object):
         self.chat_prompt_splitter.addWidget(self.conversation)
         self.prompt = QPlainTextEdit(self.chat_prompt_splitter)
         self.prompt.setObjectName(u"prompt")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.prompt.sizePolicy().hasHeightForWidth())
-        self.prompt.setSizePolicy(sizePolicy1)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.prompt.sizePolicy().hasHeightForWidth())
+        self.prompt.setSizePolicy(sizePolicy)
         self.prompt.setMinimumSize(QSize(0, 150))
         self.prompt.setMaximumSize(QSize(16777215, 16777215))
         self.chat_prompt_splitter.addWidget(self.prompt)
@@ -100,7 +64,44 @@ class Ui_chat_prompt(object):
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
 
-        self.gridLayout_2.addWidget(self.scrollArea, 1, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.scrollArea, 2, 0, 1, 1)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer)
+
+        self.clear_conversation_button = QPushButton(chat_prompt)
+        self.clear_conversation_button.setObjectName(u"clear_conversation_button")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.clear_conversation_button.sizePolicy().hasHeightForWidth())
+        self.clear_conversation_button.setSizePolicy(sizePolicy1)
+        self.clear_conversation_button.setMinimumSize(QSize(25, 25))
+        self.clear_conversation_button.setMaximumSize(QSize(25, 25))
+        icon = QIcon()
+        icon.addFile(u":/light/icons/feather/light/plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.clear_conversation_button.setIcon(icon)
+
+        self.horizontalLayout_2.addWidget(self.clear_conversation_button)
+
+        self.history_button = QPushButton(chat_prompt)
+        self.history_button.setObjectName(u"history_button")
+        sizePolicy1.setHeightForWidth(self.history_button.sizePolicy().hasHeightForWidth())
+        self.history_button.setSizePolicy(sizePolicy1)
+        self.history_button.setMinimumSize(QSize(25, 25))
+        self.history_button.setMaximumSize(QSize(25, 25))
+        icon1 = QIcon()
+        icon1.addFile(u":/light/icons/feather/light/clock.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.history_button.setIcon(icon1)
+        self.history_button.setCheckable(True)
+
+        self.horizontalLayout_2.addWidget(self.history_button)
+
+
+        self.gridLayout_2.addLayout(self.horizontalLayout_2, 0, 0, 1, 1)
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setSpacing(5)
@@ -158,7 +159,12 @@ class Ui_chat_prompt(object):
         self.horizontalLayout.addWidget(self.pushButton)
 
 
-        self.gridLayout_2.addLayout(self.horizontalLayout, 2, 0, 1, 1)
+        self.gridLayout_2.addLayout(self.horizontalLayout, 3, 0, 1, 1)
+
+        self.chat_history_widget = LLMHistoryWidget(chat_prompt)
+        self.chat_history_widget.setObjectName(u"chat_history_widget")
+
+        self.gridLayout_2.addWidget(self.chat_history_widget, 1, 0, 1, 1)
 
 
         self.retranslateUi(chat_prompt)
