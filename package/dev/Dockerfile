@@ -129,8 +129,51 @@ RUN apt-get update && apt-get install -y software-properties-common && \
     gnupg \
     mecab \
     libmecab-dev \
-    mecab-ipadic-utf8 && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    mecab-ipadic-utf8 \
+    # mkcert dependencies
+    libnss3-tools \
+    make \
+    build-essential \
+    libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    wget \
+    curl \
+    llvm \
+    libncurses5-dev \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libffi-dev \
+    liblzma-dev \
+    python3-openssl \
+    git \
+    nvidia-cuda-toolkit \
+    pipewire \
+    libportaudio2 \
+    libxcb-cursor0 \
+    gnupg \
+    gpg-agent \
+    pinentry-curses \
+    espeak \
+    xclip \
+    cmake \
+    qt6-qpa-plugins \
+    qt6-wayland \
+    qt6-gtk-platformtheme \
+    mecab \
+    libmecab-dev \
+    mecab-ipadic-utf8 \
+    libxslt-dev \
+    mkcert \
+    espeak-ng-espeak \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Install mkcert for trusted local HTTPS certificates
+RUN wget -O /usr/local/bin/mkcert https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-linux-amd64 \
+    && chmod +x /usr/local/bin/mkcert
 
 # Install Python 3.13.3 from source
 RUN cd /tmp && \
