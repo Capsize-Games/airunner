@@ -148,7 +148,7 @@ class BrowserControlMixin:
 
         # Load initial URL if provided
         if url:
-            new_tab.navigate_to_url(url)
+            new_tab.load_url(url)
 
         # Focus the URL bar for immediate typing
         QTimer.singleShot(100, lambda: self._focus_url_bar(new_tab))
@@ -451,7 +451,7 @@ class BrowserControlMixin:
     def navigate_to_url(self, url: str):
         """Navigate current tab to URL."""
         if self._current_browser_tab:
-            self._current_browser_tab.navigate_to_url(url)
+            self._current_browser_tab.load_url(url)
         else:
             # Create new tab if none exists
             self.new_browser_tab(url)
