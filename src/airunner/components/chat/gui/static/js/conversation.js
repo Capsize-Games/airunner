@@ -18,10 +18,42 @@ window.chatReady = new Promise((resolve) => {
     window.chatReadyResolve = resolve;
 });
 
+// Auto-scroll state: true = auto-scroll to bottom on new messages
+window.autoScrollEnabled = true;
+
+function enableAutoScroll() {
+    window.autoScrollEnabled = true;
+}
+
+function disableAutoScroll() {
+    window.autoScrollEnabled = false;
+}
+
+function isScrolledToBottom(container, tolerance = 8) {
+    // Returns true if the user is at the bottom (within tolerance px)
+    return (
+        Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) <= tolerance
+    );
+}
+
+function attachScrollListener(container) {
+    if (!container._scrollListenerAttached) {
+        container.addEventListener('scroll', () => {
+            if (isScrolledToBottom(container)) {
+                enableAutoScroll();
+            } else {
+                disableAutoScroll();
+            }
+        });
+        container._scrollListenerAttached = true;
+    }
+}
+
 function initializeChatView() {
     console.log('[ConversationWidget] DOMContentLoaded');
     const container = document.getElementById('conversation-container');
     if (container) {
+        attachScrollListener(container);
         console.log('[ConversationWidget] Container found:', container.offsetHeight, 'height,', container.scrollHeight, 'scrollHeight');
     } else {
         console.error('[ConversationWidget] No container found on DOMContentLoaded!');
@@ -41,15 +73,19 @@ function initializeChatView() {
         chatBridge.clearMessages.connect(clearMessages);
         chatBridge.setMessages.connect(function (msgs) {
             clearMessages();
+            // Always enable auto-scroll when loading a new conversation
+            enableAutoScroll();
             const renderPromises = [];
             for (let i = 0; i < msgs.length; ++i) {
                 renderPromises.push(appendMessage(msgs[i], false));
             }
             Promise.all(renderPromises).then(() => {
-                console.log('[ConversationWidget] setMessages: rendered', msgs.length, 'messages, attempting scroll...');
-                setTimeout(smoothScrollToBottom, 0);
-                setTimeout(smoothScrollToBottom, 100);
-                setTimeout(smoothScrollToBottom, 300);
+                if (window.autoScrollEnabled) {
+                    console.log('[ConversationWidget] setMessages: rendered', msgs.length, 'messages, attempting scroll...');
+                    setTimeout(smoothScrollToBottom, 0);
+                    setTimeout(smoothScrollToBottom, 100);
+                    setTimeout(smoothScrollToBottom, 300);
+                }
             });
         });
 
@@ -149,7 +185,7 @@ async function appendMessage(msg, scroll = true) {
         // console.warn('[ConversationWidget] MathJax not available or typesetPromise is not a function.');
     }
 
-    if (scroll) {
+    if (scroll && window.autoScrollEnabled) {
         setTimeout(smoothScrollToBottom, 0);
     }
 }
@@ -167,19 +203,28 @@ function clearMessages() {
 function smoothScrollToBottom() {
     const container = document.getElementById('conversation-container');
     if (container) {
-        const contentHeight = container.scrollHeight;
-
-        if (window.isChatReady && window.chatBridge && typeof window.chatBridge.update_content_height === 'function') {
-            window.chatBridge.update_content_height(contentHeight);
-        } else if (!window.isChatReady) {
-            console.debug('[ConversationWidget] QWebChannel not ready yet (isChatReady:', window.isChatReady, '), retrying scroll in 100ms');
-            setTimeout(smoothScrollToBottom, 100);
-        } else if (!window.chatBridge) {
-            console.warn('[ConversationWidget] chatBridge object not available (isChatReady:', window.isChatReady, ')');
-            setTimeout(smoothScrollToBottom, 100);
-        } else {
-            console.warn('[ConversationWidget] smoothScrollToBottom: chatBridge available but could not proceed.');
-        }
+        // Try both scrollTop and scrollIntoView for last message
+        requestAnimationFrame(() => {
+            // Scroll to the last message if it exists
+            const lastMsg = container.lastElementChild;
+            if (lastMsg) {
+                lastMsg.scrollIntoView({ behavior: 'auto', block: 'end' });
+            } else {
+                container.scrollTop = container.scrollHeight;
+            }
+            // After setting scroll, check if we're at the bottom and re-enable auto-scroll
+            if (isScrolledToBottom(container)) {
+                enableAutoScroll();
+            }
+            const contentHeight = container.scrollHeight;
+            if (window.isChatReady && window.chatBridge && typeof window.chatBridge.update_content_height === 'function') {
+                window.chatBridge.update_content_height(contentHeight);
+            } else if (!window.isChatReady) {
+                setTimeout(smoothScrollToBottom, 100);
+            } else if (!window.chatBridge) {
+                setTimeout(smoothScrollToBottom, 100);
+            }
+        });
     } else {
         console.warn('[ConversationWidget] smoothScrollToBottom - No container found');
     }
