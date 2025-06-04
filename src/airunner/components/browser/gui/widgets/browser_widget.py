@@ -1,5 +1,4 @@
 import json
-from airunner.components.browser.gui.enums import BrowserOS, BrowserType
 from airunner.components.browser.gui.widgets.templates.browser_ui import (
     Ui_browser,
 )
@@ -8,17 +7,31 @@ from airunner.enums import SignalCode
 from PySide6.QtCore import Slot
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.data.models.airunner_settings import AIRunnerSettings
-from PySide6.QtWidgets import QVBoxLayout
-from airunner.components.browser.gui.widgets.items_widget import ItemsWidget
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QTimer
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QIcon
 
-from .mixins.session_persistence_mixin import SessionPersistenceMixin
-from .mixins.privacy_mixin import PrivacyMixin
-from .mixins.panel_mixin import PanelMixin
-from .mixins.navigation_mixin import NavigationMixin
-from .mixins.summarization_mixin import SummarizationMixin
-from .mixins.cache_mixin import CacheMixin
-from .mixins.ui_setup_mixin import UISetupMixin
+from airunner.components.browser.gui.widgets.mixins.session_persistence_mixin import (
+    SessionPersistenceMixin,
+)
+from airunner.components.browser.gui.widgets.mixins.privacy_mixin import (
+    PrivacyMixin,
+)
+from airunner.components.browser.gui.widgets.mixins.panel_mixin import (
+    PanelMixin,
+)
+from airunner.components.browser.gui.widgets.mixins.navigation_mixin import (
+    NavigationMixin,
+)
+from airunner.components.browser.gui.widgets.mixins.summarization_mixin import (
+    SummarizationMixin,
+)
+from airunner.components.browser.gui.widgets.mixins.cache_mixin import (
+    CacheMixin,
+)
+from airunner.components.browser.gui.widgets.mixins.ui_setup_mixin import (
+    UISetupMixin,
+)
 
 
 class BrowserWidget(
@@ -35,9 +48,6 @@ class BrowserWidget(
 
     Inherits mixins for modular browser logic.
     """
-
-    from PySide6.QtCore import Signal
-    from PySide6.QtGui import QIcon, QPixmap
 
     titleChanged = Signal(str)
     urlChanged = Signal(str, str)  # url, title
@@ -149,8 +159,6 @@ class BrowserWidget(
 
     def clear(self):
         """Reset the browser tab to a blank state (blank page, clear address bar, clear cache)."""
-        from PySide6.QtWebEngineWidgets import QWebEngineView
-
         if hasattr(self, "ui") and hasattr(self.ui, "stage"):
             try:
                 self.ui.stage.stop()
@@ -177,3 +185,35 @@ class BrowserWidget(
         # Reset bookmark/star button
         if hasattr(self.ui, "bookmark_page_button"):
             self.ui.bookmark_page_button.setChecked(False)
+
+    def closeEvent(self, event):
+        """Override removed: tab close safety is now handled at the tab manager level."""
+        event.accept()
+
+    def safe_close(self, on_safe: callable = None):
+        """Ensure QWebEngineView is safely unloaded before widget deletion. Calls on_safe() when safe to delete."""
+        if hasattr(self.ui, "stage"):
+            stage = self.ui.stage
+            if stage.url().toString() == "about:blank":
+                if on_safe:
+                    QTimer.singleShot(0, on_safe)
+                return
+
+            def on_blank_loaded(ok):
+                try:
+                    stage.loadFinished.disconnect(on_blank_loaded)
+                except Exception:
+                    pass
+                if on_safe:
+                    QTimer.singleShot(0, on_safe)
+
+            try:
+                stage.stop()
+                stage.loadFinished.connect(on_blank_loaded)
+                stage.setUrl("about:blank")
+            except Exception:
+                if on_safe:
+                    on_safe()
+        else:
+            if on_safe:
+                on_safe()
