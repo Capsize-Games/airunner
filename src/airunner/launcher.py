@@ -203,7 +203,10 @@ def generate_local_certs_if_needed(base_path):
 def main():
     # Build UI files first
     try:
-        build_ui.main()
+        # Always run airunner-build-ui as a subprocess to ensure .ui files are up to date
+        import subprocess
+
+        subprocess.run([sys.executable, "-m", "airunner_build_ui"], check=True)
     except Exception as e:
         logging.warning(f"UI build step failed: {e}")
 
