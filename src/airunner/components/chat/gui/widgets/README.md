@@ -2,6 +2,23 @@
 
 This module contains widgets for the chat UI, including the main chat prompt and conversation display, and manages frontend-backend communication via QWebChannel.
 
+## 2025 Redesign
+
+### Visual Goals
+- Professional, robust, and "bulletproof" look
+- Dark, high-contrast palette (#181C20, #23272B, #007ACC)
+- Square, engineered widget shapes (border-radius: 6px)
+- Flat, utilitarian buttons with strong focus/hover states
+- Clear separation of chat bubbles, robust input area
+- Minimal, no-gloss, no gradients
+- Font: 'Fira Mono', 'Consolas', 'Segoe UI', Arial, sans-serif
+
+### How to Modify UI
+- Edit `.ui` files for layout/structure changes
+- Edit `conversation.css` for chat bubble and web content styling
+- Run `airunner-build-ui` after any `.ui` change
+- Do **not** edit `*_ui.py` files directly
+
 ## Components
 
 - `chat_prompt_widget.py`: Parent chat prompt widget. Handles user input, send/clear/history actions, and delegates all conversation state management to `ConversationWidget`.

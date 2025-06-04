@@ -13,6 +13,19 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">
+    QWidget#conversation {
+     background: #181C20;
+     border: 1.5px solid #23272B;
+     border-radius: 6px;
+    }
+    QWebEngineView {
+     background: #181C20;
+     border: none;
+    }
+   </string>
+  </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="leftMargin">
     <number>0</number>

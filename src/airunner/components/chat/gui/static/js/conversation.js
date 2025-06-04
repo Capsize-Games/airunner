@@ -96,21 +96,29 @@ function createMessageElement(msg) {
     contentDiv.innerHTML = sanitizeContent(msg.content);
     messageDiv.appendChild(contentDiv);
     if (!msg.is_bot) {
-        const deleteLink = document.createElement('a');
-        deleteLink.className = 'delete-link';
-        deleteLink.textContent = 'Delete';
-        deleteLink.href = '#';
-        deleteLink.style.marginLeft = '12px';
-        deleteLink.onclick = function (e) {
+        // Create actions container if not present
+        let headerDiv = messageDiv.querySelector('.header');
+        if (!headerDiv) {
+            headerDiv = document.createElement('div');
+            headerDiv.className = 'header';
+            headerDiv.appendChild(senderDiv);
+            messageDiv.insertBefore(headerDiv, contentDiv);
+        }
+        let actionsDiv = document.createElement('div');
+        actionsDiv.className = 'actions';
+        // Create delete button with inline SVG
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'delete-button';
+        deleteButton.title = 'Delete';
+        deleteButton.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+        deleteButton.onclick = function (e) {
             e.preventDefault();
-            console.log('[conversation.js] Delete link clicked for msg.id:', msg.id, 'window.chatBridge:', window.chatBridge);
             if (window.chatBridge && typeof window.chatBridge.deleteMessage === 'function') {
                 window.chatBridge.deleteMessage(msg.id);
-            } else {
-                console.error('[conversation.js] chatBridge.deleteMessage is not a function or chatBridge is missing.');
             }
         };
-        senderDiv.appendChild(deleteLink);
+        actionsDiv.appendChild(deleteButton);
+        headerDiv.appendChild(actionsDiv);
     }
     if (msg.timestamp) {
         const timestampDiv = document.createElement('div');
