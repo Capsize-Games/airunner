@@ -23,6 +23,17 @@ class Ui_conversation(object):
         if not conversation.objectName():
             conversation.setObjectName(u"conversation")
         conversation.resize(400, 300)
+        conversation.setStyleSheet(u"\n"
+"    QWidget#conversation {\n"
+"     background: #181C20;\n"
+"     border: 1.5px solid #23272B;\n"
+"     border-radius: 6px;\n"
+"    }\n"
+"    QWebEngineView {\n"
+"     background: #181C20;\n"
+"     border: none;\n"
+"    }\n"
+"   ")
         self.gridLayout = QGridLayout(conversation)
         self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName(u"gridLayout")
