@@ -6,8 +6,8 @@ conversation.jinja2.html: Jinja2 template for ConversationWidget
 <head>
     <meta charset="UTF-8">
     <title>Conversation</title>
-    <link rel="stylesheet" href="../css/conversation.css">
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <link rel="stylesheet" href="http://localhost:5005/static/css/conversation.css">
     <!-- MathJax Configuration -->
     <script>
         window.MathJax = {
@@ -27,13 +27,13 @@ conversation.jinja2.html: Jinja2 template for ConversationWidget
             }
         };
     </script>
-    <!-- MathJax Library -->
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- MathJax Library (local) -->
+    <script id="MathJax-script" async src="http://localhost:5005/static/mathjax/MathJax-3.2.2/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
     <div id="conversation-container">
         <!-- Messages will be rendered here by conversation.js -->
     </div>
-    <script src="../js/conversation.js"></script>
+    <script src="http://localhost:5005/static/js/conversation.js"></script>
 </body>
 </html>
