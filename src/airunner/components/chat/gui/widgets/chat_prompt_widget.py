@@ -289,6 +289,7 @@ class ChatPromptWidget(BaseWidget):
             return
         self.conversation_id = conversation_id
         from airunner.data.models import Conversation
+
         conversation = Conversation.objects.filter_by_first(id=conversation_id)
         self.conversation = conversation
         if hasattr(self.api, "llm") and hasattr(self.api.llm, "clear_history"):
