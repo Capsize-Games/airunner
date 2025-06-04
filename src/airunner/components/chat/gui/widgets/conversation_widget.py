@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Slot
 from PySide6.QtWidgets import QApplication
 from PySide6.QtWebChannel import QWebChannel
 
@@ -69,6 +69,7 @@ class ConversationWidget(BaseWidget):
         # self._chat_bridge.contentHeightChanged.connect(
         #     self._handle_content_height_changed
         # )
+        self._chat_bridge.deleteMessageRequested.connect(self.deleteMessage)
         self._web_channel.registerObject("chatBridge", self._chat_bridge)
         self.ui.stage.page().setWebChannel(self._web_channel)
 
@@ -124,41 +125,36 @@ class ConversationWidget(BaseWidget):
         conversation_id = data.get("index")
         self.load_conversation(conversation_id=conversation_id)
 
-    def load_conversation(self, conversation_id: Optional[int] = None):
-        """Loads and displays a conversation."""
-        self.logger.debug(
-            f"ChatPromptWidget.load_conversation called with conversation_id: {conversation_id}"
-        )
-        conversation = (
-            self._conversation_history_manager.get_current_conversation()
-        )
-
-        if conversation is None:
-            self.logger.info(
-                "No conversation found, clearing conversation display."
+    def load_conversation(self, conversation_id: Optional[int] = None) -> None:
+        """Load a conversation by ID, update state and UI."""
+        if conversation_id is None:
+            conversation = (
+                self._conversation_history_manager.get_current_conversation()
             )
-            self._clear_conversation()
-            self.conversation = None
+        else:
+            conversation = Conversation.objects.filter_by_first(
+                id=conversation_id
+            )
+        if conversation is None:
+            self.clear_conversation()
             return
-
-        self._conversation_id = conversation.id
         self._conversation = conversation
-
+        self._conversation_id = conversation.id
         messages = (
             self._conversation_history_manager.load_conversation_history(
                 conversation=conversation, max_messages=50
             )
         )
-
-        self.logger.debug(
-            f"ChatPromptWidget: Loaded {len(messages)} messages from conversation {conversation.id}"
-        )
-
-        if self.api and hasattr(self.api, "llm"):
-            self.api.llm.clear_history(conversation_id=self._conversation_id)
-
-        self._clear_conversation(skip_update=True)
         self._set_conversation_widgets(messages, skip_scroll=True)
+
+    def clear_conversation(self) -> None:
+        """Clear all conversation state and UI."""
+        self._conversation = None
+        self._conversation_id = None
+        self.conversation_history = []
+        self._streamed_messages = []
+        self.set_conversation([])
+        self._clear_conversation_widgets()
 
     def on_add_bot_message_to_conversation(self, data: Dict):
         self.hide_status_indicator()
@@ -196,6 +192,9 @@ class ConversationWidget(BaseWidget):
                         "is_bot": True,
                     }
                 )
+        self._streamed_messages = self._assign_message_ids(
+            self._streamed_messages
+        )
         self.set_conversation(self._streamed_messages)
 
         if llm_response.is_end_of_message:
@@ -326,6 +325,10 @@ class ConversationWidget(BaseWidget):
             f"set_conversation: sending messages: {simplified_messages}"
         )
 
+        # Ensure _conversation_id is set if possible
+        if self._conversation_id is None and self._conversation is not None:
+            self._conversation_id = getattr(self._conversation, "id", None)
+
         def send():
             self.logger.debug(
                 f"Sending {len(simplified_messages)} messages to chat bridge"
@@ -391,9 +394,24 @@ class ConversationWidget(BaseWidget):
     #
     #     QApplication.processEvents()
 
+    def _assign_message_ids(self, messages: list[dict]) -> list[dict]:
+        """Assign unique, consecutive integer 'id' to every message."""
+        for idx, msg in enumerate(messages):
+            msg["id"] = idx
+        return messages
+
     def _set_conversation_widgets(self, messages, skip_scroll: bool = False):
         """Replace per-message widgets with a single HTML conversation view."""
+        # Ensure every message has a unique integer 'id' and correct role/is_bot
+        messages = self._assign_message_ids(messages)
+        for msg in messages:
+            if "role" not in msg:
+                msg["role"] = "assistant" if msg.get("is_bot") else "user"
+            if "is_bot" not in msg:
+                msg["is_bot"] = msg.get("role") == "assistant"
         self._streamed_messages = list(messages)
+        if self._conversation is not None:
+            self._conversation.value = self._streamed_messages
         self.set_conversation(self._streamed_messages)
 
     def _clear_conversation(self, skip_update: bool = False):
@@ -504,6 +522,9 @@ class ConversationWidget(BaseWidget):
                         "is_bot": True,
                     }
                 )
+            self._streamed_messages = self._assign_message_ids(
+                self._streamed_messages
+            )
             self.set_conversation(self._streamed_messages)
 
     def on_llm_request_text_generate_signal(self, data):
@@ -520,6 +541,9 @@ class ConversationWidget(BaseWidget):
                 "is_bot": False,
             }
         )
+        self._streamed_messages = self._assign_message_ids(
+            self._streamed_messages
+        )
         self.set_conversation(self._streamed_messages)
 
     def _get_view(self):
@@ -530,3 +554,31 @@ class ConversationWidget(BaseWidget):
     def _view(self):
         """Compat property for tests expecting a _view attribute (QWebEngineView)."""
         return self._get_view()
+
+    @Slot(int)
+    @Slot(str)
+    def deleteMessage(self, message_id):
+        """Delete a message and all subsequent messages from the conversation."""
+        conversation = self._conversation
+        if not conversation or not hasattr(conversation, "value"):
+            return
+        try:
+            message_id = int(message_id)
+        except Exception:
+            return
+        messages = conversation.value or []
+        idx = next(
+            (
+                i
+                for i, m in enumerate(messages)
+                if int(m.get("id", -1)) == message_id
+            ),
+            None,
+        )
+        if idx is None:
+            return
+        new_messages = messages[:idx]
+        new_messages = self._assign_message_ids(new_messages)
+        Conversation.objects.update(pk=conversation.id, value=new_messages)
+        self._conversation.value = new_messages
+        self._set_conversation_widgets(new_messages)
