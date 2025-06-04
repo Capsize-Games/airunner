@@ -5,7 +5,6 @@ import urllib
 import webbrowser
 from functools import partial
 from typing import Dict, Optional
-import time
 
 from airunner.gui.windows.main.worker_manager import WorkerManager
 from airunner.gui.windows.wayland_helper import (
@@ -19,7 +18,6 @@ from PySide6.QtCore import (
     Signal,
     QProcess,
     QTimer,
-    QCoreApplication,
 )
 from PySide6.QtGui import QGuiApplication, QKeySequence, QAction, QCursor
 from PySide6.QtWidgets import (
@@ -28,7 +26,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QCheckBox,
     QInputDialog,
-    QSystemTrayIcon,
     QMenu,
 )
 from PySide6.QtGui import QIcon
@@ -45,10 +42,6 @@ from airunner.settings import (
     AIRUNNER_BUG_REPORT_LINK,
     AIRUNNER_VULNERABILITY_REPORT_LINK,
     AIRUNNER_ART_ENABLED,
-    AIRUNNER_MEM_SD_DEVICE,
-    AIRUNNER_MEM_LLM_DEVICE,
-    AIRUNNER_MEM_TTS_DEVICE,
-    AIRUNNER_MEM_STT_DEVICE,
 )
 from airunner.utils.settings import get_qsettings
 from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
@@ -70,7 +63,6 @@ from airunner.enums import (
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application.get_version import get_version
-from airunner.utils.application.create_worker import create_worker
 from airunner.utils.widgets import (
     save_splitter_settings,
     load_splitter_settings,
@@ -82,6 +74,7 @@ from airunner.gui.widgets.status.status_widget import StatusWidget
 from airunner.gui.windows.about.about import AboutWindow
 from airunner.gui.windows.filter_window import FilterWindow
 from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
+from airunner.gui.windows.main.browser_control_mixin import BrowserControlMixin
 from airunner.gui.windows.main.pipeline_mixin import PipelineMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.windows.main.templates.main_window_ui import Ui_MainWindow
@@ -90,28 +83,11 @@ from airunner.gui.windows.settings.airunner_settings import SettingsWindow
 from airunner.gui.windows.update.update_window import UpdateWindow
 from airunner.gui.managers.icon_manager import IconManager
 from airunner.plugin_loader import PluginLoader
-from airunner.workers.llm_generate_worker import LLMGenerateWorker
-from airunner.workers.mask_generator_worker import MaskGeneratorWorker
-from airunner.workers.sd_worker import SDWorker
-
-try:
-    from airunner.workers.audio_capture_worker import AudioCaptureWorker
-    from airunner.workers.audio_processor_worker import AudioProcessorWorker
-    from airunner.workers.tts_generator_worker import TTSGeneratorWorker
-    from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
-except OSError as e:
-    print("Error loading audio workers:", e)
-    AudioCaptureWorker = None
-    AudioProcessorWorker = None
-    TTSGeneratorWorker = None
-    TTSVocalizerWorker = None
 
 from .model_load_balancer import ModelLoadBalancer
 from airunner.gui.widgets.llm.contentwidgets.conversation_widget import (
     ConversationWidget,
 )
-import threading
-import socket
 
 
 class MainWindow(
@@ -120,6 +96,7 @@ class MainWindow(
     StylesMixin,
     PipelineMixin,
     AIModelMixin,
+    BrowserControlMixin,
     QMainWindow,
 ):
     show_grid_toggled = Signal(bool)
@@ -1094,6 +1071,7 @@ class MainWindow(
         self.api.application_error(AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE)
 
     def closeEvent(self, event):
+        self.browser_cleanup()
         event.ignore()
         self.handle_close()
 
@@ -1450,6 +1428,10 @@ class MainWindow(
         self._initialize_window()
         self._initialize_default_buttons()
         self._initialize_filter_actions()
+
+        # Initialize browser controls
+        self.initialize_browser_controls()
+
         self.initialized = True
         self.update_icons()
         self.logger.debug("Showing window")
