@@ -73,6 +73,20 @@ function initializeChatView() {
     observer.observe(container, { childList: true, subtree: true, characterData: true });
 }
 
+function sanitizeContent(html) {
+    // If DOMPurify is available, use it
+    if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+        return window.DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+    }
+    // Fallback: escape HTML (minimal, disables MathJax)
+    return String(html)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function createMessageElement(msg) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message ' + (msg.is_bot ? 'assistant' : 'user');
@@ -83,7 +97,7 @@ function createMessageElement(msg) {
     messageDiv.appendChild(senderDiv);
     const contentDiv = document.createElement('div');
     contentDiv.className = 'content';
-    contentDiv.innerHTML = msg.content;
+    contentDiv.innerHTML = sanitizeContent(msg.content);
     messageDiv.appendChild(contentDiv);
     if (msg.timestamp) {
         const timestampDiv = document.createElement('div');
