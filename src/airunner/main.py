@@ -155,6 +155,11 @@ def main():
     parser.add_argument(
         "--chatbot-only", action="store_true", help="Run LLM only"
     )
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Watch .ui files and live-reload the app on changes (development only)",
+    )
     args = parser.parse_args()
 
     if args.clear_window_settings:
@@ -172,6 +177,11 @@ def main():
 
     if args.chatbot_only:
         os.environ["AIRUNNER_ART_ENABLED"] = "0"
+
+    if args.watch:
+        # Handled in launcher.py, but keep for help output and future use
+        pass
+
     setup_database()
 
     # Start the main application

@@ -44,6 +44,7 @@ from airunner.data.models.workflow_node import WorkflowNode
 from airunner.data.models.workflow_connection import WorkflowConnection
 from airunner.data.models.rag_settings import RAGSettings
 from airunner.data.models.language_settings import LanguageSettings
+from airunner.data.models.airunner_settings import AIRunnerSettings
 from airunner.data.models.base import Base
 
 
@@ -95,6 +96,7 @@ classes = [
     WorkflowConnection,
     RAGSettings,
     LanguageSettings,
+    AIRunnerSettings,
     Base,
 ]
 
