@@ -70,7 +70,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         self._ensure_mathjax()
 
-        # Start HTTP server for static assets (MathJax and content widgets)
+        # Start HTTPS server for static assets (MathJax and content widgets)
         static_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "static")
         )
@@ -94,6 +94,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
             static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
         )
         if self.initialize_gui and os.path.isdir(mathjax_dir):
+            import logging
+
+            logging.info("Starting local HTTPS server for static assets.")
             self.http_server_thread = LocalHttpServerThread(
                 directory=static_dir,
                 additional_directories=static_search_dirs[1:],
