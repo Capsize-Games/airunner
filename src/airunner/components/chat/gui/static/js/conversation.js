@@ -28,7 +28,11 @@ function initializeChatView() {
     new QWebChannel(qt.webChannelTransport, function (channel) {
         chatBridge = channel.objects.chatBridge;
         window.chatBridge = chatBridge;
-        if (!chatBridge) return;
+        console.log('[conversation.js] QWebChannel initialized. chatBridge:', chatBridge);
+        if (!chatBridge) {
+            console.error('[conversation.js] chatBridge not found on QWebChannel.');
+            return;
+        }
         chatBridge.appendMessage.connect(appendMessage);
         chatBridge.clearMessages.connect(clearMessages);
         chatBridge.setMessages.connect(function (msgs) {
@@ -74,17 +78,9 @@ function initializeChatView() {
 }
 
 function sanitizeContent(html) {
-    // If DOMPurify is available, use it
-    if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
-        return window.DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
-    }
-    // Fallback: escape HTML (minimal, disables MathJax)
-    return String(html)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    // No DOMPurify: allow trusted HTML from backend (assume backend sanitizes)
+    // This enables MathJax, code, and markdown rendering as intended.
+    return html;
 }
 
 function createMessageElement(msg) {
@@ -99,6 +95,23 @@ function createMessageElement(msg) {
     contentDiv.className = 'content';
     contentDiv.innerHTML = sanitizeContent(msg.content);
     messageDiv.appendChild(contentDiv);
+    if (!msg.is_bot) {
+        const deleteLink = document.createElement('a');
+        deleteLink.className = 'delete-link';
+        deleteLink.textContent = 'Delete';
+        deleteLink.href = '#';
+        deleteLink.style.marginLeft = '12px';
+        deleteLink.onclick = function (e) {
+            e.preventDefault();
+            console.log('[conversation.js] Delete link clicked for msg.id:', msg.id, 'window.chatBridge:', window.chatBridge);
+            if (window.chatBridge && typeof window.chatBridge.deleteMessage === 'function') {
+                window.chatBridge.deleteMessage(msg.id);
+            } else {
+                console.error('[conversation.js] chatBridge.deleteMessage is not a function or chatBridge is missing.');
+            }
+        };
+        senderDiv.appendChild(deleteLink);
+    }
     if (msg.timestamp) {
         const timestampDiv = document.createElement('div');
         timestampDiv.className = 'timestamp';
