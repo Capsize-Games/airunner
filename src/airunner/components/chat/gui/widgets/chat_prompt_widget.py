@@ -1,7 +1,9 @@
+import logging
 from typing import Dict
 
-from PySide6.QtCore import Slot, Qt
+from PySide6.QtCore import Slot, Qt, QObject
 from PySide6.QtWidgets import QApplication
+from PySide6.QtWebChannel import QWebChannel
 
 from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
     Ui_chat_prompt,
@@ -28,6 +30,7 @@ class ChatPromptWidget(BaseWidget):
         ("clock", "history_button"),
         ("x", "pushButton"),
     ]
+    logger = logging.getLogger(__name__)
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
@@ -78,14 +81,10 @@ class ChatPromptWidget(BaseWidget):
             LLMResponseWorker, sleep_time_in_ms=1
         )
         self.loading = True
-        self.conversation_id: int = None  # For test compatibility
-        self.conversation = None  # For test compatibility
+        self.conversation_id: int = None
+        self.conversation = None
 
     def _apply_default_splitter_settings(self):
-        """
-        Applies default splitter sizes. Called via QTimer.singleShot to ensure
-        widget geometry is more likely to be initialized.
-        """
         if hasattr(self, "ui") and self.ui is not None:
             QApplication.processEvents()
             default_chat_splitter_config = {
@@ -115,9 +114,6 @@ class ChatPromptWidget(BaseWidget):
 
     @Slot(bool)
     def history_button_toggled(self, checked: bool):
-        """
-        Toggle the history button. Minimal implementation for test compatibility.
-        """
         pass
 
     @property
@@ -161,7 +157,6 @@ class ChatPromptWidget(BaseWidget):
             self.logger.warning("Prompt is empty")
             return
 
-        # Unload art model if art model is loaded and LLM is not loaded
         model_load_balancer = getattr(self.api, "model_load_balancer", None)
         art_model_loaded = (
             model_load_balancer
@@ -204,16 +199,9 @@ class ChatPromptWidget(BaseWidget):
         if not self.chat_loaded:
             self.disable_send_button()
 
-        # try:
-        #     self.ui.conversation.hide()
-        # except RuntimeError as e:
-        #     self.logger.warning(f"Error hiding conversation: {e}")
+        if not self.loading and hasattr(self.ui, "conversation"):
+            self.load_conversation()
 
-        # try:
-        #     self.ui.chat_container.show()
-        # except RuntimeError as e:
-        #     if AIRUNNER_ART_ENABLED:
-        #         self.logger.warning(f"Error setting SD status text: {e}")
         self.loading = False
 
     def llm_action_changed(self, val: str):
@@ -288,53 +276,51 @@ class ChatPromptWidget(BaseWidget):
             self.enable_generate()
 
     def load_conversation(self, conversation_id: int = None):
-        """Loads and displays a conversation. Minimal implementation for test compatibility."""
+        """Load a conversation and synchronize with ConversationWidget."""
         if conversation_id is None:
             conversation_id = (
                 self._conversation_history_manager.get_most_recent_conversation_id()
             )
         if conversation_id is None:
-            self._clear_conversation()
+            if hasattr(self.ui, "conversation"):
+                self.ui.conversation.clear_conversation()
+            self.conversation = None
+            self.conversation_id = None
             return
         self.conversation_id = conversation_id
-        # Get the conversation object (mocked in tests)
         from airunner.data.models import Conversation
-
         conversation = Conversation.objects.filter_by_first(id=conversation_id)
         self.conversation = conversation
         if hasattr(self.api, "llm") and hasattr(self.api.llm, "clear_history"):
             self.api.llm.clear_history(conversation_id=conversation_id)
-        self._clear_conversation(skip_update=True)
         messages = (
             self._conversation_history_manager.load_conversation_history(
                 conversation_id=conversation_id, max_messages=50
             )
         )
-        self._set_conversation_widgets(messages)
+        if hasattr(self.ui, "conversation"):
+            self.ui.conversation.conversation = conversation
+            self.ui.conversation._set_conversation_widgets(messages)
 
     def on_queue_load_conversation(self, data):
-        """Handles queue load conversation event. Minimal implementation for test compatibility."""
         conversation_id = data.get("index")
         self.load_conversation(conversation_id=conversation_id)
 
     def on_delete_conversation(self, data):
-        """Clear conversation if the deleted conversation is current."""
         deleted_id = data.get("conversation_id")
         if self.conversation_id == deleted_id:
-            self._clear_conversation_widgets()
+            if hasattr(self.ui, "conversation"):
+                self.ui.conversation.clear_conversation()
             self.conversation = None
             self.conversation_id = None
 
     def _clear_conversation(self, skip_update: bool = False):
-        """Clear the conversation display. (Stub for test compatibility)"""
         pass
 
     def _set_conversation_widgets(self, messages, skip_scroll: bool = False):
-        """Set conversation widgets. (Stub for test compatibility)"""
         pass
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
-        """Clear conversation widgets. (Stub for test compatibility)"""
         pass
 
     def add_message_to_conversation(self, *args, **kwargs):
@@ -344,4 +330,7 @@ class ChatPromptWidget(BaseWidget):
         pass
 
     def _handle_mood_summary_update_started(self, *args, **kwargs):
+        pass
+
+    def register_web_channel(self, channel):
         pass
