@@ -7,6 +7,7 @@ import jinja2
 import mimetypes
 import json
 import ssl
+import logging
 
 from airunner.settings import LOCAL_SERVER_PORT, LOCAL_SERVER_HOST
 
@@ -17,6 +18,42 @@ class ReusableTCPServer(ThreadingTCPServer):
 
 class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
     """Request handler with CORS, Jinja2 template rendering, and multiple directory support."""
+
+    DANGEROUS_EXTENSIONS = {
+        ".py",
+        ".sh",
+        ".exe",
+        ".bat",
+        ".env",
+        ".ini",
+        ".json",
+        ".sqlite",
+        ".db",
+        ".pkl",
+        ".so",
+        ".dll",
+        ".pem",
+        ".crt",
+        ".key",
+        ".cfg",
+        ".yaml",
+        ".yml",
+        ".md",
+        ".rst",
+        ".log",
+        ".git",
+        ".htpasswd",
+        ".htaccess",
+    }
+    ALLOWED_MIME_PREFIXES = (
+        "text/",
+        "image/",
+        "application/javascript",
+        "application/json",
+        "application/pdf",
+        "application/font-woff",
+        "font/",
+    )
 
     def __init__(self, *args, directories=None, **kwargs):
         self.directories = directories or []
@@ -34,15 +71,35 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("X-XSS-Protection", "1; mode=block")
         super().end_headers()
 
+    def send_error(self, code, message=None, explain=None):
+        # Minimal error info: no file paths, no stack traces
+        short_messages = {
+            403: "Forbidden",
+            404: "Not Found",
+            405: "Method Not Allowed",
+            500: "Internal Server Error",
+        }
+        msg = short_messages.get(code, "Error")
+        super().send_error(code, msg)
+
     def do_GET(self):
         import os
         import urllib.parse
+        import mimetypes
 
         path = self.path
         if path.startswith("/static/"):
             rel_path = path[len("/static/") :]
         else:
             rel_path = path.lstrip("/")
+        # Directory traversal detection
+        if ".." in rel_path or rel_path.startswith("/"):
+            logging.warning(
+                f"[SECURITY] Directory traversal attempt: {self.path}"
+            )
+            self.send_error(403)
+            return
+        # Jinja2 template rendering
         if rel_path.endswith(".jinja2.html"):
             for directory in self.directories:
                 normalized_rel_path = os.path.normpath(rel_path)
@@ -86,25 +143,46 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(rendered.encode("utf-8"))
                     return
+        # Strict MIME type enforcement
+        abs_path = self.translate_path(self.path)
+        ext = os.path.splitext(abs_path)[1].lower()
+        if ext in self.DANGEROUS_EXTENSIONS:
+            logging.warning(
+                f"[SECURITY] Refused to serve dangerous file type: {abs_path}"
+            )
+            self.send_error(403)
+            return
+        mime, _ = mimetypes.guess_type(abs_path)
+        if not mime or not mime.startswith(self.ALLOWED_MIME_PREFIXES):
+            logging.warning(
+                f"[SECURITY] Refused to serve file with MIME type: {mime} ({abs_path})"
+            )
+            self.send_error(403)
+            return
         return super().do_GET()
 
     def do_HEAD(self):
         return self.do_GET()
 
     def do_POST(self):
-        self.send_error(405, "Method Not Allowed")
+        logging.warning(f"[SECURITY] Blocked POST request: {self.path}")
+        self.send_error(405)
 
     def do_PUT(self):
-        self.send_error(405, "Method Not Allowed")
+        logging.warning(f"[SECURITY] Blocked PUT request: {self.path}")
+        self.send_error(405)
 
     def do_DELETE(self):
-        self.send_error(405, "Method Not Allowed")
+        logging.warning(f"[SECURITY] Blocked DELETE request: {self.path}")
+        self.send_error(405)
 
     def do_OPTIONS(self):
-        self.send_error(405, "Method Not Allowed")
+        logging.warning(f"[SECURITY] Blocked OPTIONS request: {self.path}")
+        self.send_error(405)
 
     def list_directory(self, path):
-        self.send_error(403, "Directory listing not allowed")
+        logging.warning(f"[SECURITY] Directory listing attempt: {path}")
+        self.send_error(403)
         return None
 
     def translate_path(self, path):
