@@ -9,7 +9,6 @@ import logging
 import importlib.util
 import os
 
-from airunner.bin.process_qss import build_ui
 from airunner.data.models.airunner_settings import AIRunnerSettings
 from airunner.data.models.path_settings import PathSettings
 from airunner.settings import AIRUNNER_BASE_PATH
@@ -37,6 +36,26 @@ def deep_merge(defaults, current):
     return merged
 
 
+def build_ui_if_needed():
+    """Build UI files only if necessary."""
+    ui_build_marker = os.path.join(COMPONENTS_PATH, "ui_build_marker")
+    if not os.path.exists(ui_build_marker):
+        try:
+            import subprocess
+
+            subprocess.run(
+                [sys.executable, "-m", "airunner_build_ui"], check=True
+            )
+            with open(ui_build_marker, "w") as marker:
+                marker.write("UI files built successfully.")
+        except Exception as e:
+            logging.warning(f"UI build step failed: {e}")
+
+
+# Optimize component settings registration by caching results
+cached_settings = {}
+
+
 def register_component_settings():
     """Register settings for each component with a data/settings.py Pydantic dataclass."""
     import traceback
@@ -50,6 +69,8 @@ def register_component_settings():
         settings_path = os.path.join(entry.path, "data", "settings.py")
         if not os.path.isfile(settings_path):
             continue
+        if settings_path in cached_settings:
+            continue
         spec = importlib.util.spec_from_file_location(
             f"airunner.components.{entry.name}.data.settings", settings_path
         )
@@ -57,11 +78,15 @@ def register_component_settings():
             continue
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
+        cached_settings[settings_path] = module
         for attr in dir(module):
             obj = getattr(module, attr)
             if (
                 isinstance(obj, type)
                 and hasattr(obj, "__fields__")
+                and isinstance(
+                    obj.__fields__, dict
+                )  # Ensure __fields__ is a dictionary
                 and "name" in obj.__fields__
             ):
                 try:
@@ -80,7 +105,6 @@ def register_component_settings():
                         AIRunnerSettings.objects.create(name=name, data=data)
                         created_count += 1
                     else:
-                        # Deep merge: update all fields to match dataclass, preserve user data where possible
                         defaults = (
                             instance.dict()
                             if hasattr(instance, "dict")
@@ -202,13 +226,7 @@ def generate_local_certs_if_needed(base_path):
 
 def main():
     # Build UI files first
-    try:
-        # Always run airunner-build-ui as a subprocess to ensure .ui files are up to date
-        import subprocess
-
-        subprocess.run([sys.executable, "-m", "airunner_build_ui"], check=True)
-    except Exception as e:
-        logging.warning(f"UI build step failed: {e}")
+    build_ui_if_needed()
 
     # Register component settings after UI build but before main app starts
     try:
