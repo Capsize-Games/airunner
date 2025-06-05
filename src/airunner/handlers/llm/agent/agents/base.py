@@ -4,7 +4,6 @@ from typing import (
     Optional,
     Union,
     Dict,
-    Type,
 )
 import datetime
 import platform
@@ -178,7 +177,28 @@ class BaseAgent(
             }
         )
         self.context_manager = ContextManager()
+        self._slash_commands = {
+            "a": "art",
+            "b": "browser",
+            "c": "code",
+            "s": "search",
+            "w": "workflow",
+        }
         super().__init__(*args, **kwargs)
+
+    @property
+    def command(self) -> Optional[str]:
+        """
+        Get the command associated with the agent.
+        Returns:
+            Optional[str]: The command string, or None if not set.
+        """
+        command = None
+        if self.prompt.startswith("/"):
+            candidate = self.prompt[1:].split(" ")[0]
+            if candidate in self._slash_commands:
+                command = candidate
+        return command
 
     @property
     def latest_extra_context(self) -> str:

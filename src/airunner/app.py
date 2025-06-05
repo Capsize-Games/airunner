@@ -25,7 +25,8 @@ from airunner.data.models.application_settings import ApplicationSettings
 from airunner.settings import (
     AIRUNNER_DISABLE_SETUP_WIZARD,
     AIRUNNER_DISCORD_URL,
-    MATHJAX_VERSION,  # Add this import
+    MATHJAX_VERSION,
+    QTWEBENGINE_REMOTE_DEBUGGING,  # Add this import
 )
 from airunner.gui.widgets.llm.local_http_server import LocalHttpServerThread
 import os
@@ -36,7 +37,7 @@ from airunner.settings import LOCAL_SERVER_PORT
 # Enable LNA mode for local server if AIRUNNER_LNA_ENABLED=1
 LNA_ENABLED = os.environ.get("AIRUNNER_LNA_ENABLED", "0") == "1"
 
-os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9223"
+os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = QTWEBENGINE_REMOTE_DEBUGGING
 
 from PySide6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -406,10 +407,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
                         )
                         settings.setAttribute(
                             QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls,
-                            True,
-                        )
-                        settings.setAttribute(
-                            QWebEngineSettings.WebAttribute.DeveloperExtrasEnabled,
                             True,
                         )
                         widget.setPage(CapturingWebEnginePage(widget))

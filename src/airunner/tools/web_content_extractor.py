@@ -93,6 +93,67 @@ class WebContentExtractor:
         return None
 
     @staticmethod
+    def extract(content: str) -> Optional[str]:
+        """Extract main content from HTML using trafilatura."""
+        try:
+            downloaded = trafilatura.extract(
+                content, include_comments=False, include_tables=False
+            )
+            if downloaded:
+                return downloaded
+        except Exception as e:
+            logger.error(f"Trafilatura extraction failed: {e}")
+        return None
+
+    @staticmethod
+    def extract_markdown(content: str) -> Optional[str]:
+        """Extract main content from HTML as Markdown using trafilatura."""
+        try:
+            return trafilatura.extract(
+                content,
+                output_format="markdown",
+                include_comments=False,
+                include_tables=True,
+                include_links=True,
+                include_formatting=True,
+            )
+        except Exception as e:
+            logger.error(f"Trafilatura Markdown extraction failed: {e}")
+        return None
+
+    @staticmethod
+    def extract_json(content: str) -> Optional[Dict]:
+        """Extract structured content from HTML as JSON using trafilatura."""
+        try:
+            import json
+
+            result = trafilatura.extract(
+                content,
+                output_format="json",
+                include_comments=False,
+                include_tables=True,
+                include_links=True,
+                include_formatting=True,
+            )
+            return json.loads(result) if result else None
+        except Exception as e:
+            logger.error(f"Trafilatura JSON extraction failed: {e}")
+        return None
+
+    @staticmethod
+    def fetch_and_extract_markdown(
+        url: str, use_cache: bool = True
+    ) -> Optional[str]:
+        """Fetch and extract content as Markdown from a URL."""
+        try:
+            downloaded = trafilatura.fetch_url(url)
+            if downloaded:
+                return WebContentExtractor.extract_markdown(downloaded)
+        except Exception as e:
+            logger.error(f"Trafilatura Markdown fetch failed for {url}: {e}")
+        return None
+
+    @staticmethod
     def _fetch_with_trafilatura(url: str) -> Optional[str]:
         """Fetch content using trafilatura."""
         try:
