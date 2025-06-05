@@ -215,6 +215,7 @@ setup(
             "airunner-docker=airunner.bin.docker_wrapper:main",
             "airunner-generate-migration=airunner.bin.generate_migration:main",
             "airunner-generate-cert=airunner.bin.generate_cert:main",
+            "airunner-mypy=airunner.bin.mypy_shortcut:main",
         ],
     },
 )

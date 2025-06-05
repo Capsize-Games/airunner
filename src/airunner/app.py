@@ -33,6 +33,9 @@ import subprocess
 import sys
 from airunner.settings import LOCAL_SERVER_PORT
 
+# Enable LNA mode for local server if AIRUNNER_LNA_ENABLED=1
+LNA_ENABLED = os.environ.get("AIRUNNER_LNA_ENABLED", "0") == "1"
+
 os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9223"
 
 from PySide6.QtWebEngineCore import QWebEngineSettings, QWebEnginePage
@@ -116,6 +119,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 directory=static_dir,
                 additional_directories=static_search_dirs[1:],
                 port=LOCAL_SERVER_PORT,
+                lna_enabled=LNA_ENABLED,  # Pass LNA mode to server
             )
             self.http_server_thread.start()
             self.start()

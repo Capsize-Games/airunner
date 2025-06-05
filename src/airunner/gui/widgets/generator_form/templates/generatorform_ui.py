@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QTabWidge
     QWidget)
 
 from airunner.components.chat.gui.widgets.chat_prompt_widget import ChatPromptWidget
+from airunner.gui.widgets.llm.llm_settings_widget import LLMSettingsWidget
+
 class Ui_generator_form(object):
     def setupUi(self, generator_form):
         if not generator_form.objectName():
@@ -53,6 +55,16 @@ class Ui_generator_form(object):
         self.gridLayout_5.addLayout(self.gridLayout_7, 0, 0, 1, 1)
 
         self.generator_form_tabs.addTab(self.tab_2, "")
+        self.tab = QWidget()
+        self.tab.setObjectName(u"tab")
+        self.gridLayout = QGridLayout(self.tab)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.llm_settings = LLMSettingsWidget(self.tab)
+        self.llm_settings.setObjectName(u"llm_settings")
+
+        self.gridLayout.addWidget(self.llm_settings, 0, 0, 1, 1)
+
+        self.generator_form_tabs.addTab(self.tab, "")
 
         self.gridLayout_4.addWidget(self.generator_form_tabs, 0, 0, 1, 1)
 
@@ -68,5 +80,6 @@ class Ui_generator_form(object):
     def retranslateUi(self, generator_form):
         generator_form.setWindowTitle(QCoreApplication.translate("generator_form", u"Form", None))
         self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.tab_2), QCoreApplication.translate("generator_form", u"Chat", None))
+        self.generator_form_tabs.setTabText(self.generator_form_tabs.indexOf(self.tab), QCoreApplication.translate("generator_form", u"Settings", None))
     # retranslateUi
 
