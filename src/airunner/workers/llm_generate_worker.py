@@ -9,6 +9,7 @@ from airunner.handlers.llm.llm_model_manager import LLMModelManager
 from airunner.handlers.llm.openrouter_model_manager import (
     OpenRouterModelManager,
 )
+from airunner.context.context_manager import ContextManager
 
 # from airunner.handlers.llm.gemma3_model_manager import Gemma3Manager
 from airunner.enums import ModelService
@@ -34,7 +35,7 @@ class LLMGenerateWorker(Worker):
             SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
             SignalCode.BROWSER_EXTRA_CONTEXT: self.on_browser_extra_context,
         }
-        self.extra_context: list[str] = []
+        self.context_manager = ContextManager()
         self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
         self._ollama_model_manager: Optional[OllamaModelManager] = None
         self._local_model_manager: Optional[LLMModelManager] = None
@@ -110,23 +111,12 @@ class LLMGenerateWorker(Worker):
         """
         Handle extra context sent from the browser widget.
         Args:
-            data (dict): Dictionary with 'plaintext' and 'url'.
+            data (dict): Dictionary with 'plaintext', 'url', etc.
         """
-        context = data.get("plaintext", "")
-        if context:
-            self.add_extra_context(context)
-            self.logger.info(
-                "Added browser context to extra_context knowledge base."
-            )
-
-    def add_extra_context(self, context: str) -> None:
-        """
-        Add a new context string to the extra_context knowledge base.
-        Args:
-            context (str): The context string to add.
-        """
-        if context:
-            self.extra_context.append(context)
+        url = data.get("url")
+        if url and data.get("plaintext"):
+            self.context_manager.set_context(url, data)
+            self.logger.info(f"Set browser context for {url}")
 
     def on_conversation_deleted_signal(self, data):
         self.model_manager.on_conversation_deleted(data)
@@ -216,7 +206,9 @@ class LLMGenerateWorker(Worker):
 
     def handle_message(self, message):
         if self.model_manager:
-            self.model_manager.handle_request(message, self.extra_context)
+            self.model_manager.handle_request(
+                message, self.context_manager.all_contexts()
+            )
 
     def _load_llm_thread(self, data=None):
         self._llm_thread = threading.Thread(

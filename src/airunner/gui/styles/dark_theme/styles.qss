@@ -816,3 +816,15 @@ QWizardPage QPushButton:hover {
 QWizardPage QPushButton:pressed {
     background-color: rgba(0, 132, 185, 100);
 }
+
+#actionsidebar {
+    border-right: 1px solid #1f1f1f;
+}
+
+#actionsidebar QPushButton {
+    border: 1px solid transparent;
+}
+
+#actionsidebar QPushButton:checked {
+    border: 1px solid rgba(0, 132, 185, 255);
+}
