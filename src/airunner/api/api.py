@@ -4,7 +4,9 @@ from typing import Optional, Dict, Any
 from PySide6.QtWidgets import QDialog, QVBoxLayout
 from PySide6.QtCore import QObject
 from airunner.app import App
-from airunner.handlers.stablediffusion.image_request import ImageRequest
+from airunner.components.art.managers.stablediffusion.image_request import (
+    ImageRequest,
+)
 from airunner.enums import (
     EngineResponseCode,
     ModelStatus,
@@ -21,10 +23,10 @@ from airunner.utils.application.ui_loader import (
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
 from airunner.api.nodegraph_services import NodegraphAPIService
-from airunner.api.video_services import VideoAPIService
+from airunner.components.art.api.video_services import VideoAPIService
 from airunner.api.stt_services import STTAPIService
 from airunner.api.tts_services import TTSAPIService
-from airunner.api.art_services import ARTAPIService
+from airunner.components.art.api.art_services import ARTAPIService
 from airunner.api.llm_services import LLMAPIService
 from airunner.api import api as api_module
 

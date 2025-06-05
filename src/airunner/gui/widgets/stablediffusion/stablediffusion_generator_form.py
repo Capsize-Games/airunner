@@ -28,7 +28,9 @@ from airunner.gui.widgets.stablediffusion.prompt_container_widget import (
 )
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.handlers.llm.llm_response import LLMResponse
-from airunner.handlers.stablediffusion.image_request import ImageRequest
+from airunner.components.art.managers.stablediffusion.image_request import (
+    ImageRequest,
+)
 from airunner.utils.widgets import load_splitter_settings
 
 

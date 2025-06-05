@@ -2,11 +2,10 @@ import importlib
 
 
 from airunner.data.models import ImageFilter
-from airunner.data.models.image_filter_value import ImageFilterValue
+from airunner.components.art.data.image_filter_value import ImageFilterValue
 from airunner.gui.widgets.slider.filter_slider_widget import FilterSliderWidget
 from airunner.gui.windows.base_window import BaseWindow
 from airunner.gui.windows.filter_window_ui import Ui_filter_window
-from airunner.data.session_manager import session_scope
 from PySide6.QtCore import QTimer
 
 
@@ -42,11 +41,14 @@ class FilterWindow(BaseWindow):
 
         # Convert filter values to dicts to avoid ORM detachment issues
         self._filter_values = []
-        for fv in self.image_filter.image_filter_values:
+        filter_values = ImageFilterValue.objects.filter_by(
+            image_filter_id=image_filter_id
+        )
+        for fv in filter_values:
             self._filter_values.append(
                 self.FilterValueData(
                     {
-                        "id": fv.id,  # Store the ORM id for persistence
+                        "id": fv.id,
                         "name": fv.name,
                         "value": fv.value,
                         "value_type": fv.value_type,
@@ -118,21 +120,26 @@ class FilterWindow(BaseWindow):
 
     def filter_object(self):
         filter_name = self.image_filter.name
-        module = importlib.import_module(f"airunner.filters.{filter_name}")
+        module = importlib.import_module(
+            f"airunner.components.art.filters.{filter_name}"
+        )
         class_ = getattr(module, self.image_filter.filter_class)
         kwargs = {}
-        with session_scope() as session:
-            for image_filter_value in self.image_filter.image_filter_values:
-                session.add(image_filter_value)
-                val_type = image_filter_value.value_type
-                val = image_filter_value.value
-                if val_type == "int":
-                    val = int(val)
-                elif val_type == "float":
-                    val = float(val)
-                elif val_type == "bool":
-                    val = val == "True"
-                kwargs[image_filter_value.name] = val
+
+        filter_values = ImageFilterValue.objects.filter_by(
+            image_filter_id=self.image_filter.id
+        )
+
+        for image_filter_value in filter_values:
+            val_type = image_filter_value.value_type
+            val = image_filter_value.value
+            if val_type == "int":
+                val = int(val)
+            elif val_type == "float":
+                val = float(val)
+            elif val_type == "bool":
+                val = val == "True"
+            kwargs[image_filter_value.name] = val
         self._filter = class_(**kwargs)
         return self._filter
 
