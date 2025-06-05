@@ -7,7 +7,9 @@ from airunner.vendor.nodegraphqt import NodeBaseWidget
 from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
     BaseArtNode,
 )
-from airunner.handlers.stablediffusion.image_response import ImageResponse
+from airunner.components.art.managers.stablediffusion.image_response import (
+    ImageResponse,
+)
 
 
 class ImageDisplayWidget(NodeBaseWidget):

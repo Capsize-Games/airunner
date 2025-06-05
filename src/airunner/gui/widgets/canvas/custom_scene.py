@@ -40,8 +40,10 @@ from airunner.gui.widgets.canvas.draggables.draggable_pixmap import (
     DraggablePixmap,
 )
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.handlers.stablediffusion.rect import Rect
-from airunner.handlers.stablediffusion.image_response import ImageResponse
+from airunner.components.art.managers.stablediffusion.rect import Rect
+from airunner.components.art.managers.stablediffusion.image_response import (
+    ImageResponse,
+)
 from airunner.utils.settings.get_qsettings import get_qsettings
 
 

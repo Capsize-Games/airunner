@@ -319,9 +319,6 @@ class ConversationWidget(BaseWidget):
                     "is_bot": msg.get("is_bot", False),
                 }
             )
-        self.logger.debug(
-            f"set_conversation: sending messages: {simplified_messages}"
-        )
 
         # Ensure _conversation_id is set if possible
         if self._conversation_id is None and self._conversation is not None:
