@@ -18,7 +18,6 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QTabWidget,
     QWidget)
 
-from airunner.gui.widgets.llm.llm_history_widget import LLMHistoryWidget
 from airunner.gui.widgets.llm.llm_settings_widget import LLMSettingsWidget
 
 class Ui_tool_tab_widget(object):
@@ -53,18 +52,6 @@ class Ui_tool_tab_widget(object):
         self.gridLayout_2.addWidget(self.llm_settings, 0, 0, 1, 1)
 
         self.tool_tab_widget_container.addTab(self.tab, "")
-        self.tab_2 = QWidget()
-        self.tab_2.setObjectName(u"tab_2")
-        self.gridLayout = QGridLayout(self.tab_2)
-        self.gridLayout.setSpacing(0)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.llm_history_widget = LLMHistoryWidget(self.tab_2)
-        self.llm_history_widget.setObjectName(u"llm_history_widget")
-
-        self.gridLayout.addWidget(self.llm_history_widget, 0, 0, 1, 1)
-
-        self.tool_tab_widget_container.addTab(self.tab_2, "")
 
         self.gridLayout_3.addWidget(self.tool_tab_widget_container, 0, 0, 1, 1)
 
@@ -80,6 +67,5 @@ class Ui_tool_tab_widget(object):
     def retranslateUi(self, tool_tab_widget):
         tool_tab_widget.setWindowTitle(QCoreApplication.translate("tool_tab_widget", u"Form", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab), QCoreApplication.translate("tool_tab_widget", u"LLM", None))
-        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("tool_tab_widget", u"Chat History", None))
     # retranslateUi
 

@@ -68,11 +68,27 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>Settings</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <widget class="LLMSettingsWidget" name="llm_settings" native="true"/>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>LLMSettingsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/llm/llm_settings_widget</header>
+   <container>1</container>
+  </customwidget>
   <customwidget>
    <class>ChatPromptWidget</class>
    <extends>QWidget</extends>
@@ -83,6 +99,7 @@
  <tabstops>
   <tabstop>generator_form_tabs</tabstop>
  </tabstops>
+ <resources/>
  <connections/>
  <slots>
   <slot>handle_prompt_changed()</slot>

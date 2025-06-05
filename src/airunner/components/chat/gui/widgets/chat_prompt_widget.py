@@ -20,7 +20,6 @@ from airunner.utils.widgets import load_splitter_settings
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.workers.llm_response_worker import LLMResponseWorker
 from airunner.settings import AIRUNNER_ART_ENABLED
-from airunner.gui.widgets.llm.llm_history_widget import LLMHistoryWidget
 
 
 class ChatPromptWidget(BaseWidget):
@@ -87,6 +86,7 @@ class ChatPromptWidget(BaseWidget):
         self._llm_history_tab_index = None
         self._llm_history_widget = None
         self.ui.chat_history_widget.setVisible(False)
+        self.ui.tabWidget.tabBar().hide()
 
     def _apply_default_splitter_settings(self):
         if hasattr(self, "ui") and self.ui is not None:
@@ -118,8 +118,7 @@ class ChatPromptWidget(BaseWidget):
 
     @Slot(bool)
     def on_history_button_toggled(self, checked: bool):
-        self.ui.chat_history_widget.setVisible(checked)
-        self.ui.scrollArea.setVisible(not checked)
+        self.ui.tabWidget.setCurrentIndex(3)
 
     def _find_parent_tab_widget(self):
         """Find the parent QTabWidget containing this widget."""
