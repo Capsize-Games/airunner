@@ -75,20 +75,29 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # Initialize the logger
 import logging
 
-logging.getLogger("torio._extension.utils").setLevel(logging.WARNING)
-logging.getLogger("google.cloud.storage._opentelemetry_tracing").setLevel(
-    logging.WARNING
-)
-logging.getLogger("numba").setLevel(logging.WARNING)
-logging.getLogger("h5py._conv").setLevel(logging.WARNING)
-logging.getLogger("matplotlib").setLevel(logging.WARNING)
-logging.getLogger("datasets").setLevel(logging.WARNING)
-logging.getLogger("bitsandbytes").setLevel(logging.WARNING)
-logging.getLogger("trafilatura").setLevel(logging.WARNING)
-logging.getLogger("scrapy").setLevel(logging.WARNING)
-logging.getLogger("rquest").setLevel(logging.WARNING)
-logging.getLogger("primp").setLevel(logging.WARNING)
-logging.getLogger("cookie_store").setLevel(logging.WARNING)
+
+# Optimize logger initialization by consolidating configurations
+def initialize_loggers():
+    loggers_to_silence = [
+        "torio._extension.utils",
+        "google.cloud.storage._opentelemetry_tracing",
+        "numba",
+        "h5py._conv",
+        "matplotlib",
+        "datasets",
+        "bitsandbytes",
+        "trafilatura",
+        "scrapy",
+        "rquest",
+        "primp",
+        "cookie_store",
+    ]
+    for logger_name in loggers_to_silence:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+
+# Call the consolidated logger initialization
+initialize_loggers()
 
 import sys
 from airunner.settings import AIRUNNER_LOG_FILE, AIRUNNER_SAVE_LOG_TO_FILE
@@ -120,7 +129,10 @@ import torch
 
 torch.hub.set_dir(
     os.environ.get(
-        "TORCH_HOME", "/home/appuser/.local/share/airunner/torch/hub"
+        "TORCH_HOME",
+        os.path.join(
+            os.path.expanduser("~"), ".local/share/airunner/torch/hub"
+        ),
     )
 )
 
