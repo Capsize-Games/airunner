@@ -28,6 +28,11 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         PipelineMixin.__init__(self)
         self.model_scanner_worker = create_worker(ModelScannerWorker)
 
+        self.load_versions()
+        self._load_pipelines()
+        self.load_models()
+        self.load_schedulers_dropdown()
+
     def showEvent(self, event):
         super().showEvent(event)
         self.update_form()
