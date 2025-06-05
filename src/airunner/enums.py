@@ -344,6 +344,10 @@ class LLMActionType(Enum):
     SEARCH = "search"
     DECISION = "decision"
 
+    BROWSER = "browser"
+    CODE = "code"
+    WORKFLOW = "workflow"
+
 
 class CanvasToolName(Enum):
     ACTIVE_GRID_AREA = "active_grid_area"
