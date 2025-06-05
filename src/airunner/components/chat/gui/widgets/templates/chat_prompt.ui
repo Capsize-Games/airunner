@@ -252,6 +252,9 @@
         <iconset resource="../../../../../gui/resources/feather.qrc">
          <normaloff>:/light/icons/feather/light/settings.svg</normaloff>:/light/icons/feather/light/settings.svg</iconset>
        </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
     </layout>
