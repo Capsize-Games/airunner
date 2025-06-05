@@ -247,6 +247,9 @@ class SignalCode(Enum):
     MOOD_SUMMARY_UPDATE_STARTED = "mood_summary_update_started_signal"
     BROWSER_EXTRA_CONTEXT = "browser_extra_context_signal"
 
+    # file explorer
+    FILE_EXPLORER_OPEN_FILE = "open_file_signal"
+
 
 class EngineResponseCode(Enum):
     NONE = 0

@@ -16,11 +16,13 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
-    QMenuBar, QSizePolicy, QSplitter, QStatusBar,
-    QTabWidget, QToolBar, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QMainWindow,
+    QMenu, QMenuBar, QPushButton, QSizePolicy,
+    QSpacerItem, QSplitter, QStatusBar, QTabWidget,
+    QToolBar, QVBoxLayout, QWidget)
 
 from airunner.components.browser.gui.widgets.browser_widget import BrowserWidget
+from airunner.components.document_editor.gui.widgets.document_editor_container_widget import DocumentEditorContainerWidget
 from airunner.gui.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.gui.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
@@ -279,10 +281,93 @@ class Ui_MainWindow(object):
         self.mode_tab_widget.setObjectName(u"mode_tab_widget")
         self.mode_tab_widget.setAutoFillBackground(False)
         self.mode_tab_widget.setStyleSheet(u"QTabWidget#mode_tab_widget::pane { border: 0; background: transparent; }")
-        self.gridLayout = QGridLayout(self.mode_tab_widget)
-        self.gridLayout.setSpacing(0)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 1, 0, 0)
+        self.horizontalLayout = QHBoxLayout(self.mode_tab_widget)
+        self.horizontalLayout.setSpacing(0)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(0, 1, 0, 0)
+        self.actionsidebar = QWidget(self.mode_tab_widget)
+        self.actionsidebar.setObjectName(u"actionsidebar")
+        self.action_sidebar = QVBoxLayout(self.actionsidebar)
+        self.action_sidebar.setSpacing(5)
+        self.action_sidebar.setObjectName(u"action_sidebar")
+        self.action_sidebar.setContentsMargins(5, 5, 5, 5)
+        self.art_editor_button = QPushButton(self.actionsidebar)
+        self.art_editor_button.setObjectName(u"art_editor_button")
+        self.art_editor_button.setMinimumSize(QSize(35, 35))
+        self.art_editor_button.setMaximumSize(QSize(35, 35))
+        self.art_editor_button.setBaseSize(QSize(0, 0))
+        self.art_editor_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.art_editor_button.setIcon(icon19)
+        self.art_editor_button.setIconSize(QSize(20, 20))
+        self.art_editor_button.setCheckable(True)
+        self.art_editor_button.setChecked(True)
+        self.art_editor_button.setFlat(True)
+
+        self.action_sidebar.addWidget(self.art_editor_button)
+
+        self.document_editor_button = QPushButton(self.actionsidebar)
+        self.document_editor_button.setObjectName(u"document_editor_button")
+        self.document_editor_button.setMinimumSize(QSize(35, 35))
+        self.document_editor_button.setMaximumSize(QSize(35, 35))
+        self.document_editor_button.setBaseSize(QSize(0, 0))
+        self.document_editor_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon37 = QIcon()
+        icon37.addFile(u":/light/icons/feather/light/file-text.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.document_editor_button.setIcon(icon37)
+        self.document_editor_button.setIconSize(QSize(20, 20))
+        self.document_editor_button.setCheckable(True)
+        self.document_editor_button.setFlat(True)
+
+        self.action_sidebar.addWidget(self.document_editor_button)
+
+        self.browser_button = QPushButton(self.actionsidebar)
+        self.browser_button.setObjectName(u"browser_button")
+        self.browser_button.setMinimumSize(QSize(35, 35))
+        self.browser_button.setMaximumSize(QSize(35, 35))
+        self.browser_button.setBaseSize(QSize(0, 0))
+        self.browser_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon38 = QIcon()
+        icon38.addFile(u":/light/icons/feather/light/chrome.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.browser_button.setIcon(icon38)
+        self.browser_button.setIconSize(QSize(20, 20))
+        self.browser_button.setCheckable(True)
+        self.browser_button.setFlat(True)
+
+        self.action_sidebar.addWidget(self.browser_button)
+
+        self.workflow_editor_button = QPushButton(self.actionsidebar)
+        self.workflow_editor_button.setObjectName(u"workflow_editor_button")
+        self.workflow_editor_button.setMinimumSize(QSize(35, 35))
+        self.workflow_editor_button.setMaximumSize(QSize(35, 35))
+        self.workflow_editor_button.setBaseSize(QSize(0, 0))
+        self.workflow_editor_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon39 = QIcon()
+        icon39.addFile(u":/light/icons/feather/light/codesandbox.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.workflow_editor_button.setIcon(icon39)
+        self.workflow_editor_button.setIconSize(QSize(20, 20))
+        self.workflow_editor_button.setCheckable(True)
+        self.workflow_editor_button.setFlat(True)
+
+        self.action_sidebar.addWidget(self.workflow_editor_button)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.action_sidebar.addItem(self.verticalSpacer)
+
+        self.settings_button = QPushButton(self.actionsidebar)
+        self.settings_button.setObjectName(u"settings_button")
+        self.settings_button.setMinimumSize(QSize(35, 35))
+        self.settings_button.setMaximumSize(QSize(35, 35))
+        self.settings_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.settings_button.setIcon(icon15)
+        self.settings_button.setIconSize(QSize(20, 20))
+        self.settings_button.setFlat(True)
+
+        self.action_sidebar.addWidget(self.settings_button)
+
+
+        self.horizontalLayout.addWidget(self.actionsidebar)
+
         self.main_window_splitter = QSplitter(self.mode_tab_widget)
         self.main_window_splitter.setObjectName(u"main_window_splitter")
         self.main_window_splitter.setOrientation(Qt.Orientation.Horizontal)
@@ -344,12 +429,12 @@ class Ui_MainWindow(object):
         self.gridLayout_5.addWidget(self.graph, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.agent_workflow_tab, "")
-        self.tab = QWidget()
-        self.tab.setObjectName(u"tab")
-        self.gridLayout_7 = QGridLayout(self.tab)
+        self.browser_tab = QWidget()
+        self.browser_tab.setObjectName(u"browser_tab")
+        self.gridLayout_7 = QGridLayout(self.browser_tab)
         self.gridLayout_7.setObjectName(u"gridLayout_7")
         self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
-        self.browser = QTabWidget(self.tab)
+        self.browser = QTabWidget(self.browser_tab)
         self.browser.setObjectName(u"browser")
         self.browser.setMovable(True)
         self.browser_page = BrowserWidget()
@@ -358,7 +443,18 @@ class Ui_MainWindow(object):
 
         self.gridLayout_7.addWidget(self.browser, 0, 0, 1, 1)
 
-        self.center_tab_container.addTab(self.tab, "")
+        self.center_tab_container.addTab(self.browser_tab, "")
+        self.document_editor_tab = QWidget()
+        self.document_editor_tab.setObjectName(u"document_editor_tab")
+        self.gridLayout = QGridLayout(self.document_editor_tab)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.widget = DocumentEditorContainerWidget(self.document_editor_tab)
+        self.widget.setObjectName(u"widget")
+
+        self.gridLayout.addWidget(self.widget, 0, 0, 1, 1)
+
+        self.center_tab_container.addTab(self.document_editor_tab, "")
 
         self.gridLayout_4.addWidget(self.center_tab_container, 0, 0, 1, 1)
 
@@ -387,7 +483,7 @@ class Ui_MainWindow(object):
 
         self.main_window_splitter.addWidget(self.panel_container)
 
-        self.gridLayout.addWidget(self.main_window_splitter, 0, 0, 1, 1)
+        self.horizontalLayout.addWidget(self.main_window_splitter)
 
 
         self.gridLayout_3.addWidget(self.mode_tab_widget, 0, 0, 1, 1)
@@ -411,9 +507,7 @@ class Ui_MainWindow(object):
         self.menuChat.setIcon(icon28)
         self.menuWorkflow = QMenu(self.menuFile)
         self.menuWorkflow.setObjectName(u"menuWorkflow")
-        icon37 = QIcon()
-        icon37.addFile(u":/light/icons/feather/light/codesandbox.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.menuWorkflow.setIcon(icon37)
+        self.menuWorkflow.setIcon(icon39)
         self.menuEdit = QMenu(self.menubar)
         self.menuEdit.setObjectName(u"menuEdit")
         self.menuFilters = QMenu(self.menubar)
@@ -529,7 +623,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.center_tab_container.setCurrentIndex(2)
+        self.center_tab_container.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -611,10 +705,31 @@ class Ui_MainWindow(object):
         self.actionUndo.setText(QCoreApplication.translate("MainWindow", u"Undo", None))
         self.actionRedo.setText(QCoreApplication.translate("MainWindow", u"Redo", None))
         self.actionRecenter.setText(QCoreApplication.translate("MainWindow", u"Recenter", None))
+#if QT_CONFIG(tooltip)
+        self.art_editor_button.setToolTip(QCoreApplication.translate("MainWindow", u"Art Editor", None))
+#endif // QT_CONFIG(tooltip)
+        self.art_editor_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.document_editor_button.setToolTip(QCoreApplication.translate("MainWindow", u"Document Editor", None))
+#endif // QT_CONFIG(tooltip)
+        self.document_editor_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.browser_button.setToolTip(QCoreApplication.translate("MainWindow", u"Browser", None))
+#endif // QT_CONFIG(tooltip)
+        self.browser_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.workflow_editor_button.setToolTip(QCoreApplication.translate("MainWindow", u"Workflow Editor", None))
+#endif // QT_CONFIG(tooltip)
+        self.workflow_editor_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.settings_button.setToolTip(QCoreApplication.translate("MainWindow", u"Settings", None))
+#endif // QT_CONFIG(tooltip)
+        self.settings_button.setText("")
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.art_tab), QCoreApplication.translate("MainWindow", u"Art", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.agent_workflow_tab), QCoreApplication.translate("MainWindow", u"Agent Workflow", None))
         self.browser.setTabText(self.browser.indexOf(self.browser_page), "")
-        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.tab), QCoreApplication.translate("MainWindow", u"Browser", None))
+        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.browser_tab), QCoreApplication.translate("MainWindow", u"Browser", None))
+        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.document_editor_tab), QCoreApplication.translate("MainWindow", u"Document Editor", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
         self.menuChat.setTitle(QCoreApplication.translate("MainWindow", u"Chat", None))

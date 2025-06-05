@@ -81,7 +81,10 @@
       <property name="styleSheet">
        <string notr="true">QTabWidget#mode_tab_widget::pane { border: 0; background: transparent; }</string>
       </property>
-      <layout class="QGridLayout" name="gridLayout">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
        <property name="leftMargin">
         <number>0</number>
        </property>
@@ -94,10 +97,270 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <property name="spacing">
-        <number>0</number>
-       </property>
-       <item row="0" column="0">
+       <item>
+        <widget class="QWidget" name="actionsidebar" native="true">
+         <layout class="QVBoxLayout" name="action_sidebar">
+          <property name="spacing">
+           <number>5</number>
+          </property>
+          <property name="leftMargin">
+           <number>5</number>
+          </property>
+          <property name="topMargin">
+           <number>5</number>
+          </property>
+          <property name="rightMargin">
+           <number>5</number>
+          </property>
+          <property name="bottomMargin">
+           <number>5</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="art_editor_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Art Editor</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="document_editor_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Document Editor</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/file-text.svg</normaloff>:/light/icons/feather/light/file-text.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="browser_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Browser</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/chrome.svg</normaloff>:/light/icons/feather/light/chrome.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="workflow_editor_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Workflow Editor</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/codesandbox.svg</normaloff>:/light/icons/feather/light/codesandbox.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="settings_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Settings</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/settings.svg</normaloff>:/light/icons/feather/light/settings.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QSplitter" name="main_window_splitter">
          <property name="orientation">
           <enum>Qt::Orientation::Horizontal</enum>
@@ -173,7 +436,7 @@
               </size>
              </property>
              <property name="currentIndex">
-              <number>2</number>
+              <number>0</number>
              </property>
              <property name="documentMode">
               <bool>false</bool>
@@ -253,7 +516,7 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="tab">
+             <widget class="QWidget" name="browser_tab">
               <attribute name="title">
                <string>Browser</string>
               </attribute>
@@ -275,12 +538,34 @@
                  <property name="movable">
                   <bool>true</bool>
                  </property>
-                 <widget class="BrowserWidget" name="browser_page" native="true">
+                 <widget class="BrowserWidget" name="browser_page">
                   <attribute name="title">
                    <string/>
                   </attribute>
                  </widget>
                 </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="document_editor_tab">
+              <attribute name="title">
+               <string>Document Editor</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="DocumentEditorContainerWidget" name="widget" native="true"/>
                </item>
               </layout>
              </widget>
@@ -1053,6 +1338,12 @@
    <class>BrowserWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/browser/gui/widgets/browser_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DocumentEditorContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/document_editor/gui/widgets/document_editor_container_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

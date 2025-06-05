@@ -40,7 +40,7 @@
         <height>602</height>
        </rect>
       </property>
-      <layout class="QGridLayout" name="gridLayout">
+      <layout class="QGridLayout" name="gridLayout_4">
        <property name="leftMargin">
         <number>0</number>
        </property>
@@ -53,40 +53,104 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <property name="horizontalSpacing">
-        <number>0</number>
-       </property>
-       <property name="verticalSpacing">
-        <number>10</number>
-       </property>
        <item row="0" column="0">
-        <widget class="QSplitter" name="chat_prompt_splitter">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
+        <widget class="QTabWidget" name="tabWidget">
+         <property name="currentIndex">
+          <number>0</number>
          </property>
-         <property name="childrenCollapsible">
-          <bool>false</bool>
-         </property>
-         <widget class="ConversationWidget" name="conversation" native="true"/>
-         <widget class="QPlainTextEdit" name="prompt">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>150</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>16777215</height>
-           </size>
-          </property>
+         <widget class="QWidget" name="tab">
+          <attribute name="title">
+           <string>Tab 1</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QSplitter" name="chat_prompt_splitter">
+             <property name="orientation">
+              <enum>Qt::Orientation::Vertical</enum>
+             </property>
+             <property name="childrenCollapsible">
+              <bool>false</bool>
+             </property>
+             <widget class="ConversationWidget" name="conversation" native="true"/>
+             <widget class="QPlainTextEdit" name="prompt">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>150</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_2">
+          <attribute name="title">
+           <string>Tab 2</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_3">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="LLMSettingsWidget" name="llm_settings" native="true"/>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tab_3">
+          <attribute name="title">
+           <string>Page</string>
+          </attribute>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="LLMHistoryWidget" name="widget" native="true"/>
+           </item>
+          </layout>
          </widget>
         </widget>
        </item>
@@ -161,6 +225,9 @@
          <height>25</height>
         </size>
        </property>
+       <property name="toolTip">
+        <string>Chat history</string>
+       </property>
        <property name="text">
         <string/>
        </property>
@@ -170,6 +237,20 @@
        </property>
        <property name="checkable">
         <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="settings_button">
+       <property name="toolTip">
+        <string>Settings</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="../../../../../gui/resources/feather.qrc">
+         <normaloff>:/light/icons/feather/light/settings.svg</normaloff>:/light/icons/feather/light/settings.svg</iconset>
        </property>
       </widget>
      </item>
@@ -303,9 +384,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ConversationWidget</class>
+   <class>LLMSettingsWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/components/chat/gui/widgets/conversation_widget</header>
+   <header>airunner/gui/widgets/llm/llm_settings_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -314,27 +395,17 @@
    <header>airunner/gui/widgets/llm/llm_history_widget</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>ConversationWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/chat/gui/widgets/conversation_widget</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources>
   <include location="../../../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
-  <connection>
-   <sender>prompt</sender>
-   <signal>textChanged()</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>prompt_text_changed()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>464</x>
-     <y>647</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>161</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>action</sender>
    <signal>currentTextChanged(QString)</signal>
@@ -395,6 +466,22 @@
     </hint>
     <hint type="destinationlabel">
      <x>473</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>chat_prompt</receiver>
+   <slot>prompt_text_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>464</x>
+     <y>647</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>161</x>
      <y>0</y>
     </hint>
    </hints>

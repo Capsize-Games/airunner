@@ -17,10 +17,12 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout,
     QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QSplitter, QWidget)
+    QSizePolicy, QSpacerItem, QSplitter, QTabWidget,
+    QWidget)
 
 from airunner.components.chat.gui.widgets.conversation_widget import ConversationWidget
 from airunner.gui.widgets.llm.llm_history_widget import LLMHistoryWidget
+from airunner.gui.widgets.llm.llm_settings_widget import LLMSettingsWidget
 import airunner.feather_rc
 
 class Ui_chat_prompt(object):
@@ -37,12 +39,17 @@ class Ui_chat_prompt(object):
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
         self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 595, 602))
-        self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
+        self.gridLayout_4 = QGridLayout(self.scrollAreaWidgetContents_2)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.tabWidget = QTabWidget(self.scrollAreaWidgetContents_2)
+        self.tabWidget.setObjectName(u"tabWidget")
+        self.tab = QWidget()
+        self.tab.setObjectName(u"tab")
+        self.gridLayout = QGridLayout(self.tab)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setHorizontalSpacing(0)
-        self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.chat_prompt_splitter = QSplitter(self.scrollAreaWidgetContents_2)
+        self.chat_prompt_splitter = QSplitter(self.tab)
         self.chat_prompt_splitter.setObjectName(u"chat_prompt_splitter")
         self.chat_prompt_splitter.setOrientation(Qt.Orientation.Vertical)
         self.chat_prompt_splitter.setChildrenCollapsible(False)
@@ -61,6 +68,32 @@ class Ui_chat_prompt(object):
         self.chat_prompt_splitter.addWidget(self.prompt)
 
         self.gridLayout.addWidget(self.chat_prompt_splitter, 0, 0, 1, 1)
+
+        self.tabWidget.addTab(self.tab, "")
+        self.tab_2 = QWidget()
+        self.tab_2.setObjectName(u"tab_2")
+        self.gridLayout_3 = QGridLayout(self.tab_2)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.llm_settings = LLMSettingsWidget(self.tab_2)
+        self.llm_settings.setObjectName(u"llm_settings")
+
+        self.gridLayout_3.addWidget(self.llm_settings, 0, 0, 1, 1)
+
+        self.tabWidget.addTab(self.tab_2, "")
+        self.tab_3 = QWidget()
+        self.tab_3.setObjectName(u"tab_3")
+        self.gridLayout_5 = QGridLayout(self.tab_3)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.widget = LLMHistoryWidget(self.tab_3)
+        self.widget.setObjectName(u"widget")
+
+        self.gridLayout_5.addWidget(self.widget, 0, 0, 1, 1)
+
+        self.tabWidget.addTab(self.tab_3, "")
+
+        self.gridLayout_4.addWidget(self.tabWidget, 0, 0, 1, 1)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
 
@@ -99,6 +132,14 @@ class Ui_chat_prompt(object):
         self.history_button.setCheckable(True)
 
         self.horizontalLayout_2.addWidget(self.history_button)
+
+        self.settings_button = QPushButton(chat_prompt)
+        self.settings_button.setObjectName(u"settings_button")
+        icon2 = QIcon()
+        icon2.addFile(u":/light/icons/feather/light/settings.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.settings_button.setIcon(icon2)
+
+        self.horizontalLayout_2.addWidget(self.settings_button)
 
 
         self.gridLayout_2.addLayout(self.horizontalLayout_2, 0, 0, 1, 1)
@@ -140,9 +181,9 @@ class Ui_chat_prompt(object):
         self.send_button.setSizePolicy(sizePolicy4)
         self.send_button.setMinimumSize(QSize(30, 30))
         self.send_button.setMaximumSize(QSize(30, 30))
-        icon2 = QIcon()
-        icon2.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.send_button.setIcon(icon2)
+        icon3 = QIcon()
+        icon3.addFile(u":/light/icons/feather/light/chevron-up.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.send_button.setIcon(icon3)
 
         self.horizontalLayout.addWidget(self.send_button)
 
@@ -152,9 +193,9 @@ class Ui_chat_prompt(object):
         self.pushButton.setSizePolicy(sizePolicy4)
         self.pushButton.setMinimumSize(QSize(30, 30))
         self.pushButton.setMaximumSize(QSize(30, 30))
-        icon3 = QIcon()
-        icon3.addFile(u":/light/icons/feather/light/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pushButton.setIcon(icon3)
+        icon4 = QIcon()
+        icon4.addFile(u":/light/icons/feather/light/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.pushButton.setIcon(icon4)
 
         self.horizontalLayout.addWidget(self.pushButton)
 
@@ -168,22 +209,35 @@ class Ui_chat_prompt(object):
 
 
         self.retranslateUi(chat_prompt)
-        self.prompt.textChanged.connect(chat_prompt.prompt_text_changed)
         self.action.currentTextChanged.connect(chat_prompt.llm_action_changed)
         self.send_button.clicked.connect(chat_prompt.action_button_clicked_send)
         self.clear_conversation_button.clicked.connect(chat_prompt.action_button_clicked_clear_conversation)
         self.pushButton.clicked.connect(chat_prompt.interrupt_button_clicked)
+        self.prompt.textChanged.connect(chat_prompt.prompt_text_changed)
+
+        self.tabWidget.setCurrentIndex(0)
+
 
         QMetaObject.connectSlotsByName(chat_prompt)
     # setupUi
 
     def retranslateUi(self, chat_prompt):
         chat_prompt.setWindowTitle(QCoreApplication.translate("chat_prompt", u"Form", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("chat_prompt", u"Tab 1", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("chat_prompt", u"Tab 2", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), QCoreApplication.translate("chat_prompt", u"Page", None))
 #if QT_CONFIG(tooltip)
         self.clear_conversation_button.setToolTip(QCoreApplication.translate("chat_prompt", u"New converation", None))
 #endif // QT_CONFIG(tooltip)
         self.clear_conversation_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.history_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Chat history", None))
+#endif // QT_CONFIG(tooltip)
         self.history_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.settings_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Settings", None))
+#endif // QT_CONFIG(tooltip)
+        self.settings_button.setText("")
 #if QT_CONFIG(tooltip)
         self.send_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Send message", None))
 #endif // QT_CONFIG(tooltip)
