@@ -159,6 +159,11 @@ class MainWindow(
         ("corner-up-left", "actionUndo"),
         ("save", "actionSave_As"),
         ("target", "actionRecenter"),
+        ("image", "art_editor_button"),
+        ("file-text", "document_editor_button"),
+        ("chrome", "browser_button"),
+        ("codesandbox", "workflow_editor_button"),
+        ("settings", "settings_button"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0
@@ -554,14 +559,7 @@ class MainWindow(
 
     @Slot()
     def on_actionSettings_triggered(self):
-        if self.settings_window is None:
-            self.settings_window = SettingsWindow(
-                prevent_always_on_top=False, exec=False
-            )
-            self.settings_window.show()
-        elif not self.settings_window.isVisible():
-            self.settings_window.show()
-        self.settings_window.raise_()
+        self._show_settings_window()
 
     @Slot()
     def on_actionBrowse_Images_Path_2_triggered(self):
@@ -702,6 +700,76 @@ class MainWindow(
             return
         current_conversation = self.llm_generator_settings.current_conversation
         self.api.llm.converation_deleted(current_conversation.id)
+
+    @Slot(bool)
+    def on_art_editor_button_toggled(self, val: bool):
+        self.ui.center_tab_container.setCurrentIndex(
+            self.ui.center_tab_container.indexOf(self.ui.art_tab)
+        )
+        for btn in [
+            "document_editor_button",
+            "browser_button",
+            "workflow_editor_button",
+        ]:
+            getattr(self.ui, btn).blockSignals(True)
+            getattr(self.ui, btn).setChecked(False)
+            getattr(self.ui, btn).blockSignals(False)
+
+    @Slot(bool)
+    def on_document_editor_button_toggled(self, val: bool):
+        self.ui.center_tab_container.setCurrentIndex(
+            self.ui.center_tab_container.indexOf(self.ui.document_editor_tab)
+        )
+        for btn in [
+            "art_editor_button",
+            "browser_button",
+            "workflow_editor_button",
+        ]:
+            getattr(self.ui, btn).blockSignals(True)
+            getattr(self.ui, btn).setChecked(False)
+            getattr(self.ui, btn).blockSignals(False)
+
+    @Slot(bool)
+    def on_browser_button_toggled(self, val: bool):
+        self.ui.center_tab_container.setCurrentIndex(
+            self.ui.center_tab_container.indexOf(self.ui.browser_tab)
+        )
+        for btn in [
+            "art_editor_button",
+            "document_editor_button",
+            "workflow_editor_button",
+        ]:
+            getattr(self.ui, btn).blockSignals(True)
+            getattr(self.ui, btn).setChecked(False)
+            getattr(self.ui, btn).blockSignals(False)
+
+    @Slot(bool)
+    def on_workflow_editor_button_toggled(self, val: bool):
+        self.ui.center_tab_container.setCurrentIndex(
+            self.ui.center_tab_container.indexOf(self.ui.agent_workflow_tab)
+        )
+        for btn in [
+            "art_editor_button",
+            "document_editor_button",
+            "browser_button",
+        ]:
+            getattr(self.ui, btn).blockSignals(True)
+            getattr(self.ui, btn).setChecked(False)
+            getattr(self.ui, btn).blockSignals(False)
+
+    @Slot(bool)
+    def on_settings_button_clicked(self, val: bool):
+        self._show_settings_window()
+
+    def _show_settings_window(self):
+        if self.settings_window is None:
+            self.settings_window = SettingsWindow(
+                prevent_always_on_top=False, exec=False
+            )
+            self.settings_window.show()
+        elif not self.settings_window.isVisible():
+            self.settings_window.show()
+        self.settings_window.raise_()
 
     def _action_reset_settings(self):
         reply = QMessageBox.question(
@@ -952,6 +1020,7 @@ class MainWindow(
         self.initialize_widget_elements()
         self.last_tray_click_time = 0
         self.settings_window = None
+        self.hide_center_tab_header()
 
     def update_tab_index(self, section: str, index: int):
         Tab.objects.update_by(filter=dict(section=section), active=False)
@@ -1638,3 +1707,10 @@ class MainWindow(
         msg_box.setWindowTitle(data.get("title", "Error"))
         msg_box.setText(data.get("message", "Something went wrong"))
         msg_box.exec()
+
+    def hide_center_tab_header(self):
+        """Hide the tab bar for center_tab_container so tabs are not visible."""
+        if hasattr(self.ui, "center_tab_container"):
+            tab_widget = self.ui.center_tab_container
+            tab_bar = tab_widget.tabBar()
+            tab_bar.hide()

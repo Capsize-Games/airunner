@@ -1,7 +1,7 @@
 import random
 import os
 import torch
-from typing import Optional, Dict, List, Union, Type
+from typing import Optional, Dict, Any, Union, Type, List
 
 from peft import PeftModel
 from transformers.utils.quantization_config import (
@@ -293,7 +293,11 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
         self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
-    def handle_request(self, data: Dict, extra_context: Optional[List[str]]) -> AgentChatResponse:
+    def handle_request(
+        self,
+        data: Dict,
+        extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
+    ) -> AgentChatResponse:
         """
         Handle an incoming request for LLM generation.
 
@@ -302,6 +306,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 - request_data.prompt: The text prompt to process
                 - request_data.action: The type of action to perform
                 - request_data.llm_request: Configuration for the request
+            extra_context: Dictionary of context keyed by unique identifier (e.g., URL, file path).
 
         Returns:
             AgentChatResponse: The generated response from the LLM.
@@ -593,12 +598,12 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
     def _do_generate(
         self,
         prompt: str,
-        action: LLMActionType,
+        action: str,
         system_prompt: Optional[str] = None,
         rag_system_prompt: Optional[str] = None,
-        llm_request: Optional[LLMRequest] = None,
+        llm_request: Optional[Any] = None,
         do_tts_reply: bool = True,
-        extra_context: Optional[List[str]] = None,
+        extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> AgentChatResponse:
         """
         Generate a response using the loaded LLM.
@@ -615,6 +620,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             rag_system_prompt: Optional system prompt for RAG operations.
             llm_request: Optional request configuration.
             do_tts_reply: Whether to convert the reply to speech.
+            extra_context: Dictionary of context keyed by unique identifier (e.g., URL, file path).
 
         Returns:
             AgentChatResponse: The generated response.

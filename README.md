@@ -340,6 +340,61 @@ See the [SSL/TLS section](#🔒-enabling-https-for-the-local-http-server) for fu
 
 ---
 
+## 🛠️ Command Line Tools
+
+AI Runner provides several CLI commands for development, testing, and maintenance. Below is a summary of all available commands:
+
+| Command | Description |
+|---------|-------------|
+| `airunner` | Launch the AI Runner application GUI. |
+| `airunner-setup` | Download and set up required models and data. |
+| `airunner-build-ui` | Regenerate Python UI files from `.ui` templates. Run after editing any `.ui` file. |
+| `airunner-compile-translations` | Compile translation files for internationalization. |
+| `airunner-tests` | Run the full test suite using pytest. |
+| `airunner-test-coverage-report` | Generate a test coverage report. |
+| `airunner-docker` | Run Docker-related build and management commands for AI Runner. |
+| `airunner-generate-migration` | Generate a new Alembic database migration. |
+| `airunner-generate-cert` | Generate a self-signed SSL certificate for local HTTPS. |
+| `airunner-mypy <filename>` | Run mypy type checking on a file with project-recommended flags. |
+
+**Usage Examples:**
+
+```bash
+# Launch the app
+airunner
+
+# Download models and set up data
+airunner-setup
+
+# Build UI Python files from .ui templates
+airunner-build-ui
+
+# Compile translation files
+airunner-compile-translations
+
+# Run all tests
+airunner-tests
+
+# Generate a test coverage report
+airunner-test-coverage-report
+
+# Run Docker build or management tasks
+airunner-docker
+
+# Generate a new Alembic migration
+airunner-generate-migration
+
+# Generate a self-signed SSL certificate
+airunner-generate-cert
+
+# Run mypy type checking on a file
+airunner-mypy src/airunner/components/document_editor/gui/widgets/document_editor_widget.py
+```
+
+For more details on each command, see the [Wiki](https://github.com/Capsize-Games/airunner/wiki) or run the command with `--help` if supported.
+
+---
+
 ## Contributing
 
 We welcome pull requests for new features, bug fixes, or documentation improvements. You can also build and share **extensions** to expand AI Runner’s functionality. For details, see the [Extensions Wiki](https://github.com/Capsize-Games/airunner/wiki/Extensions).

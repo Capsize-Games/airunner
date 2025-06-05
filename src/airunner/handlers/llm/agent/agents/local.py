@@ -65,9 +65,11 @@ class LocalAgent(BaseAgent):
         rag_system_prompt: Optional[str] = None,
         llm_request: Optional[LLMRequest] = None,
         decision_mode: Optional[bool] = None,
-        extra_context: Optional[list[str]] = None,
+        extra_context: Optional[dict[str, dict]] = None,
     ) -> AgentChatResponse:
-        self.extra_context = extra_context or self.extra_context
+        if extra_context:
+            for k, v in extra_context.items():
+                self.context_manager.set_context(k, v)
         decision_mode = (
             decision_mode if decision_mode is not None else self.decision_mode
         )
@@ -79,6 +81,7 @@ class LocalAgent(BaseAgent):
                 system_prompt=system_prompt,
                 rag_system_prompt=rag_system_prompt,
                 llm_request=llm_request,
+                extra_context=extra_context,
             )
         self.make_decision(
             message=message,
