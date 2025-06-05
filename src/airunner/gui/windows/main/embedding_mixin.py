@@ -1,7 +1,6 @@
 from typing import List, Type
 import os
-from airunner.enums import SignalCode
-from airunner.utils.art.embeddings import get_embeddings_by_version
+from airunner.components.art.utils.embeddings import get_embeddings_by_version
 from airunner.utils.models import scan_path_for_embeddings
 from airunner.data.models import Embedding
 

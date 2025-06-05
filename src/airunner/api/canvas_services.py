@@ -1,7 +1,9 @@
 from .api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 from PySide6.QtCore import QPoint
-from airunner.handlers.stablediffusion.image_response import ImageResponse
+from airunner.components.art.managers.stablediffusion.image_response import (
+    ImageResponse,
+)
 
 
 class CanvasAPIService(APIServiceBase):

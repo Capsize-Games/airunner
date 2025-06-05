@@ -7,8 +7,8 @@ Create Date: 2025-05-10 05:41:39.672153
 """
 
 from typing import Sequence, Union
-from airunner.data.models.image_filter import ImageFilter
-from airunner.data.models.image_filter_value import ImageFilterValue
+from airunner.components.art.data.image_filter import ImageFilter
+from airunner.components.art.data.image_filter_value import ImageFilterValue
 from alembic import op
 import sqlalchemy as sa
 

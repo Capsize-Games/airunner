@@ -8,7 +8,7 @@ Create Date: 2025-04-29 05:26:19.241280
 
 from typing import Sequence, Union
 
-from airunner.data.models.generator_settings import GeneratorSettings
+from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.utils.db import add_column, drop_column
 
 
