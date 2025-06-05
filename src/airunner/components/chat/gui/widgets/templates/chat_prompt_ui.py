@@ -101,10 +101,6 @@ class Ui_chat_prompt(object):
 
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_2.addItem(self.horizontalSpacer)
-
         self.clear_conversation_button = QPushButton(chat_prompt)
         self.clear_conversation_button.setObjectName(u"clear_conversation_button")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
@@ -119,6 +115,10 @@ class Ui_chat_prompt(object):
         self.clear_conversation_button.setIcon(icon)
 
         self.horizontalLayout_2.addWidget(self.clear_conversation_button)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer)
 
         self.history_button = QPushButton(chat_prompt)
         self.history_button.setObjectName(u"history_button")
