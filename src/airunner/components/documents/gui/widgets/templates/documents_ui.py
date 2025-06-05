@@ -15,20 +15,28 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QSizePolicy, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QListView, QSizePolicy,
+    QWidget)
 
-class Ui_Form(object):
-    def setupUi(self, Form):
-        if not Form.objectName():
-            Form.setObjectName(u"Form")
-        Form.resize(400, 300)
+class Ui_documents(object):
+    def setupUi(self, documents):
+        if not documents.objectName():
+            documents.setObjectName(u"documents")
+        documents.resize(597, 524)
+        self.gridLayout = QGridLayout(documents)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.document_list = QListView(documents)
+        self.document_list.setObjectName(u"document_list")
 
-        self.retranslateUi(Form)
+        self.gridLayout.addWidget(self.document_list, 0, 0, 1, 1)
 
-        QMetaObject.connectSlotsByName(Form)
+
+        self.retranslateUi(documents)
+
+        QMetaObject.connectSlotsByName(documents)
     # setupUi
 
-    def retranslateUi(self, Form):
-        Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+    def retranslateUi(self, documents):
+        documents.setWindowTitle(QCoreApplication.translate("documents", u"Form", None))
     # retranslateUi
 

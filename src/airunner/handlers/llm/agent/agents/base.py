@@ -10,7 +10,6 @@ import platform
 
 from llama_index.core.tools import BaseTool
 from llama_index.core.chat_engine.types import AgentChatResponse
-from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.memory import BaseMemory
 from llama_index.core.llms.llm import LLM
 from llama_index.core.storage.chat_store import SimpleChatStore
@@ -23,7 +22,7 @@ from airunner.enums import (
     LLMActionType,
     SignalCode,
 )
-from airunner.data.models import Conversation, User, Tab
+from airunner.data.models import User, Tab
 from airunner.handlers.llm.agent.agents.prompt_builder import PromptBuilder
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
@@ -178,11 +177,11 @@ class BaseAgent(
         )
         self.context_manager = ContextManager()
         self._slash_commands = {
-            "a": "art",
-            "b": "browser",
-            "c": "code",
-            "s": "search",
-            "w": "workflow",
+            "a": LLMActionType.GENERATE_IMAGE,
+            "s": LLMActionType.SEARCH,
+            "b": LLMActionType.BROWSER,
+            "c": LLMActionType.CODE,
+            "w": LLMActionType.WORKFLOW,
         }
         super().__init__(*args, **kwargs)
 
@@ -1418,6 +1417,9 @@ class BaseAgent(
         """
         Handle a chat message and generate a response.
         """
+        if self.command is not None:
+            message = message[len(self.command) + 1 :].strip()
+            action = self._slash_commands[self.command]
         self.prompt = message
         self.action = action
         system_prompt = self.system_prompt
@@ -1426,7 +1428,7 @@ class BaseAgent(
         self.do_interrupt = False
         self._update_memory(action)
         kwargs = kwargs or {}
-        kwargs["input"] = f"{self.username}: {message}"
+        kwargs["input"] = f"{message}"
         self._update_system_prompt(system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._update_memory_settings()
