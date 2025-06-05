@@ -21,6 +21,7 @@ class LLMAPIService(APIServiceBase):
     def send_request(
         self,
         prompt,
+        command: Optional[str] = None,
         llm_request: Optional[LLMRequest] = None,
         action: LLMActionType = LLMActionType.CHAT,
         do_tts_reply: bool = True,
@@ -33,6 +34,7 @@ class LLMAPIService(APIServiceBase):
             "request_data": {
                 "action": action,
                 "prompt": prompt,
+                "command": command,
                 "llm_request": llm_request,
                 "do_tts_reply": do_tts_reply,
             },

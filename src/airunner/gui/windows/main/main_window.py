@@ -164,6 +164,8 @@ class MainWindow(
         ("chrome", "browser_button"),
         ("codesandbox", "workflow_editor_button"),
         ("settings", "settings_button"),
+        ("message-square", "chat_button"),
+        ("home", "home_button"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0
@@ -273,6 +275,21 @@ class MainWindow(
         self.last_tray_click_time = 0
         self.settings_window = None
 
+        # get the current tab
+        current_tab = self.ui.center_tab_container.currentWidget()
+
+        # Initialize action buttons based on current_tab
+        if current_tab is self.ui.home_tab:
+            self.ui.home_button.setChecked(True)
+        elif current_tab is self.ui.art_tab:
+            self.ui.art_editor_button.setChecked(True)
+        elif current_tab is self.ui.document_editor_tab:
+            self.ui.document_editor_button.setChecked(True)
+        elif current_tab is self.ui.browser_tab:
+            self.ui.browser_button.setChecked(True)
+        elif current_tab is self.ui.agent_workflow_tab:
+            self.ui.workflow_editor_button.setChecked(True)
+
     @property
     def generator_tab_widget(self):
         return self.ui.generator_widget
@@ -305,6 +322,26 @@ class MainWindow(
     The following functions are defined in and connected to the appropriate
     signals in the corresponding ui file.
     """
+
+    @Slot(bool)
+    def on_chat_button_toggled(self, val: bool):
+        if val:
+            self.ui.center_tab_container.setCurrentIndex(
+                self.ui.center_tab_container.indexOf(self.ui.generator_widget)
+            )
+            # Expand the first panel of main_window_splitter to its minimum size
+            splitter = self.ui.main_window_splitter
+            if splitter.count() >= 2:
+                min_size = splitter.widget(0).minimumSizeHint().width()
+                total = splitter.size().width()
+                # Assign minimum to first, rest to second
+                splitter.setSizes([min_size, max(0, total - min_size)])
+        else:
+            # collapse the panel
+            splitter = self.ui.main_window_splitter
+            if splitter.count() >= 2:
+                # Set the first panel to a minimum size, effectively hiding it
+                splitter.setSizes([0, splitter.size().width()])
 
     @Slot()
     def on_actionQuit_triggered(self):
@@ -702,11 +739,27 @@ class MainWindow(
         self.api.llm.converation_deleted(current_conversation.id)
 
     @Slot(bool)
+    def on_home_button_toggled(self, active: bool):
+        self.ui.center_tab_container.setCurrentIndex(
+            self.ui.center_tab_container.indexOf(self.ui.home_tab)
+        )
+        for btn in [
+            "art_editor_button",
+            "document_editor_button",
+            "browser_button",
+            "workflow_editor_button",
+        ]:
+            getattr(self.ui, btn).blockSignals(True)
+            getattr(self.ui, btn).setChecked(False)
+            getattr(self.ui, btn).blockSignals(False)
+
+    @Slot(bool)
     def on_art_editor_button_toggled(self, val: bool):
         self.ui.center_tab_container.setCurrentIndex(
             self.ui.center_tab_container.indexOf(self.ui.art_tab)
         )
         for btn in [
+            "home_button",
             "document_editor_button",
             "browser_button",
             "workflow_editor_button",
@@ -721,6 +774,7 @@ class MainWindow(
             self.ui.center_tab_container.indexOf(self.ui.document_editor_tab)
         )
         for btn in [
+            "home_button",
             "art_editor_button",
             "browser_button",
             "workflow_editor_button",
@@ -735,6 +789,7 @@ class MainWindow(
             self.ui.center_tab_container.indexOf(self.ui.browser_tab)
         )
         for btn in [
+            "home_button",
             "art_editor_button",
             "document_editor_button",
             "workflow_editor_button",
@@ -749,6 +804,7 @@ class MainWindow(
             self.ui.center_tab_container.indexOf(self.ui.agent_workflow_tab)
         )
         for btn in [
+            "home_button",
             "art_editor_button",
             "document_editor_button",
             "browser_button",

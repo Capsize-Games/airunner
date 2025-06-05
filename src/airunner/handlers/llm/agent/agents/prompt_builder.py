@@ -106,5 +106,4 @@ class PromptBuilder:
         prompt = prompt.replace("{{ botname }}", botname)
         prompt = prompt.replace("{{ speaker_name }}", username)
         prompt = prompt.replace("{{ listener_name }}", botname)
-        print("PROMPT", prompt)
         return prompt

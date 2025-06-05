@@ -13,8 +13,8 @@ from PySide6.QtWidgets import (
     QGraphicsView,
     QGraphicsItemGroup,
     QGraphicsScene,
-    QGraphicsTextItem,  # <-- add
-    QInputDialog,  # <-- add
+    QGraphicsTextItem,
+    QInputDialog,
 )
 
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
@@ -252,7 +252,7 @@ class CustomGraphicsView(
         if (self.drawing or not self.initialized) and not force_draw:
             return
         self.drawing = True
-        self.set_scene_rect()  # Set scene rect based on viewport
+        self.set_scene_rect()
 
         # Remove old grid item if it exists
         if self.grid_item is not None:
@@ -264,7 +264,7 @@ class CustomGraphicsView(
             self.grid_item = GridGraphicsItem(self)
             self.scene.addItem(self.grid_item)
 
-        self.show_active_grid_area()  # Ensure active grid is shown/positioned correctly
+        self.show_active_grid_area()
         self.update_scene()
         self.drawing = False
 
@@ -276,16 +276,6 @@ class CustomGraphicsView(
         if self.grid_item is not None:
             self.scene.removeItem(self.grid_item)
             self.grid_item = None
-
-    def register_line_data(self, lines_data):
-        for line_data in lines_data:
-            try:
-                line = self.scene.addLine(*line_data)
-                self.line_group.addToGroup(line)
-            except TypeError as e:
-                self.logger.error(f"TypeError: {e}")
-            except AttributeError as e:
-                self.logger.error(f"AttributeError: {e}")
 
     def set_scene_rect(self):
         if not self.scene:
