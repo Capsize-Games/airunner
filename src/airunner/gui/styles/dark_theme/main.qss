@@ -600,7 +600,6 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::ta
     border: 1px solid @darkerprimary-color;
 }
 
-
 QTableWidget {
     background-color: #ff0000;  /* Set the background color to match the dark theme */
     alternate-background-color: #222222;  /* Set the alternate background color */
@@ -617,7 +616,6 @@ QTableWidget::item:selected {
     background-color: #444444;  /* Set the background color for selected items */
     color: #ffffff;
 }
-
 
 #standard_image_widget QPushButton,
 #image_widget QPushButton {

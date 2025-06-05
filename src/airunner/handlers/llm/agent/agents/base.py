@@ -65,6 +65,7 @@ from airunner.handlers.llm.agent.agents.tool_mixins import (
     MoodToolsMixin,
     AnalysisToolsMixin,
 )
+from airunner.context.context_manager import ContextManager
 from .prompt_config import PromptConfig
 
 
@@ -176,7 +177,7 @@ class BaseAgent(
                 SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id,
             }
         )
-        self.extra_context: list[str] = []
+        self.context_manager = ContextManager()
         super().__init__(*args, **kwargs)
 
     @property
@@ -186,7 +187,12 @@ class BaseAgent(
         Returns:
             str: The latest context string, or empty string if none.
         """
-        return self.extra_context[-1] if self.extra_context else ""
+        # Return the most recent context value from context_manager, or empty string if none
+        if not self.context_manager.all_contexts():
+            return ""
+        # Get the last inserted context dict and return its 'plaintext' or first value
+        last_ctx = list(self.context_manager.all_contexts().values())[-1]
+        return last_ctx.get("plaintext", next(iter(last_ctx.values()), ""))
 
     @property
     def logger(self):
