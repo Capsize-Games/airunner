@@ -138,6 +138,7 @@ class Ui_chat_prompt(object):
         icon2 = QIcon()
         icon2.addFile(u":/light/icons/feather/light/settings.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.settings_button.setIcon(icon2)
+        self.settings_button.setCheckable(True)
 
         self.horizontalLayout_2.addWidget(self.settings_button)
 
