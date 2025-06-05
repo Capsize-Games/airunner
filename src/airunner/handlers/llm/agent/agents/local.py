@@ -145,8 +145,6 @@ class LocalAgent(BaseAgent):
             return
         self._complete_response += response
         selection = self._parse_menu_selection(self._complete_response)
-        print("*" * 40)
-        print("SELECTION:", selection, self._complete_response)
         if selection is not None or is_last_message:
             if selection is None:
                 selection = self.action_map.keys()[
@@ -156,7 +154,6 @@ class LocalAgent(BaseAgent):
             if not is_last_message:
                 self.interrupt = True
             self._complete_response = ""
-            print("PARSED SELECTION:", selection, action)
             # --- Fix infinite loop: temporarily disable decision_mode ---
             prev_decision_mode = self.decision_mode
             self.decision_mode = False

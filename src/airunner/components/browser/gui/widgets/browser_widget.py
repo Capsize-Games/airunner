@@ -3,6 +3,7 @@ from airunner.components.browser.gui.widgets.templates.browser_ui import (
     Ui_browser,
 )
 from airunner.enums import SignalCode
+from airunner.tools.web_content_extractor import WebContentExtractor
 
 from PySide6.QtCore import Slot
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -68,6 +69,29 @@ class BrowserWidget(
         }
         super().__init__(*args, **kwargs)
         self._setup_ui()
+        self.ui.stage.loadFinished.connect(self._on_page_load_finished)
+
+    @Slot(bool)
+    def _on_page_load_finished(self, success: bool):
+        if not success:
+            return
+        self.ui.stage.page().toHtml(self._on_html_ready)
+
+    def _on_html_ready(self, html: str):
+        """Handle HTML content when ready from QWebEnginePage."""
+        content = WebContentExtractor.extract_markdown(html)
+        if content:
+            markdown = "# URL: " + self.ui.stage.url().toString() + "\n\n"
+            markdown += "## Title: " + self.ui.stage.title() + "\n\n"
+            markdown += "## Content:\n\n"
+            markdown += content
+            self.emit_signal(
+                SignalCode.BROWSER_EXTRA_CONTEXT,
+                {
+                    "plaintext": markdown,
+                    "url": self.ui.stage.url().toString(),
+                },
+            )
 
     def _save_splitter_settings(self):
         sizes = self.ui.splitter.sizes()
