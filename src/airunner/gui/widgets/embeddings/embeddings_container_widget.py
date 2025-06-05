@@ -4,7 +4,7 @@ from PySide6.QtCore import Slot, QThread, QSize, QTimer
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.utils.art.embeddings import get_embeddings_by_version
+from airunner.components.art.utils.embeddings import get_embeddings_by_version
 from airunner.utils.models import scan_path_for_embeddings
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.embeddings.embedding_widget import EmbeddingWidget

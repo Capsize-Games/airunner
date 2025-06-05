@@ -21,8 +21,12 @@ from airunner.api import API
 from airunner.gui.windows.pygame_window import PygameWindow
 from airunner.gui.windows.pygame_window import PygameAdapter
 from airunner.handlers.llm.llm_response import LLMResponse
-from airunner.handlers.stablediffusion.image_request import ImageRequest
-from airunner.handlers.stablediffusion.image_response import ImageResponse
+from airunner.components.art.managers.stablediffusion.image_request import (
+    ImageRequest,
+)
+from airunner.components.art.managers.stablediffusion.image_response import (
+    ImageResponse,
+)
 from airunner.examples.pygame.pygame_agent import PygameAgent
 from airunner.settings import (
     AIRUNNER_ART_MODEL_VERSION,

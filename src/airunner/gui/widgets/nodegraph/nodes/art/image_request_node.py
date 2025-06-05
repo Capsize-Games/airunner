@@ -6,7 +6,9 @@ from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 from airunner.gui.widgets.nodegraph.nodes.art.base_art_node import (
     BaseArtNode,
 )
-from airunner.handlers.stablediffusion.image_request import ImageRequest
+from airunner.components.art.managers.stablediffusion.image_request import (
+    ImageRequest,
+)
 from airunner.enums import (
     ImagePreset,
     QualityEffects,

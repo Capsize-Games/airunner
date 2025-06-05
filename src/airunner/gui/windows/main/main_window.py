@@ -49,8 +49,8 @@ from airunner.handlers.llm.agent.actions.show_path import show_path
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.data.models.shortcut_keys import ShortcutKeys
 from airunner.data.models.application_settings import ApplicationSettings
-from airunner.data.models.image_filter import ImageFilter
-from airunner.data.models.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.image_filter import ImageFilter
+from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.data.models.tab import Tab
 from airunner.app_installer import AppInstaller
 from airunner.enums import (
