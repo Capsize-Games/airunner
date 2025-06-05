@@ -11,7 +11,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from airunner.utils.db import alter_column
-from airunner.data.models.outpaint_settings import OutpaintSettings
+from airunner.components.art.data.outpaint_settings import OutpaintSettings
 
 # revision identifiers, used by Alembic.
 revision: str = "f54532589efa"

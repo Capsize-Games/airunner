@@ -2,14 +2,12 @@ import os
 from typing import Dict, Optional
 
 import torch
-from airunner.handlers.stablediffusion.stable_diffusion_model_manager import (
+from airunner.components.art.managers.flux.flux_model_manager import FluxModelManager
+from airunner.components.art.managers.stablediffusion.stable_diffusion_model_manager import (
     StableDiffusionModelManager,
 )
-from airunner.handlers.stablediffusion.sdxl_model_manager import (
+from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
     SDXLModelManager,
-)
-from airunner.handlers.flux.flux_model_manager import (
-    FluxModelManager,
 )
 
 from airunner.enums import (
@@ -19,7 +17,9 @@ from airunner.enums import (
     ModelAction,
 )
 from airunner.workers.worker import Worker
-from airunner.handlers.stablediffusion.image_request import ImageRequest
+from airunner.components.art.managers.stablediffusion.image_request import (
+    ImageRequest,
+)
 from airunner.data.models.ai_models import AIModels
 from airunner.enums import StableDiffusionVersion
 from airunner.exceptions import PipeNotLoadedException
