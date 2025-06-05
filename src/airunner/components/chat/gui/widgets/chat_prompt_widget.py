@@ -113,12 +113,22 @@ class ChatPromptWidget(BaseWidget):
         self.api.llm.clear_history()
 
     @Slot(bool)
-    def action_button_clicked_send(self):
-        self.do_generate()
+    def on_history_button_toggled(self, checked: bool):
+        self.ui.settings_button.blockSignals(True)
+        self.ui.settings_button.setChecked(False)
+        self.ui.settings_button.blockSignals(False)
+        self.ui.tabWidget.setCurrentIndex(2 if checked else 0)
 
     @Slot(bool)
-    def on_history_button_toggled(self, checked: bool):
-        self.ui.tabWidget.setCurrentIndex(3)
+    def on_settings_button_toggled(self, checked: bool):
+        self.ui.history_button.blockSignals(True)
+        self.ui.history_button.setChecked(False)
+        self.ui.history_button.blockSignals(False)
+        self.ui.tabWidget.setCurrentIndex(1 if checked else 0)
+
+    @Slot(bool)
+    def action_button_clicked_send(self):
+        self.do_generate()
 
     def _find_parent_tab_widget(self):
         """Find the parent QTabWidget containing this widget."""
