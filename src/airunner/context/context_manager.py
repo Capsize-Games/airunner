@@ -8,7 +8,18 @@ Google Python Style Guide applies.
 from typing import Dict, Any, Optional
 
 
-class ContextManager:
+class SingletonMeta(type):
+    """Metaclass for implementing singleton pattern."""
+
+    _instances: Dict[type, Any] = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super().__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+class ContextManager(metaclass=SingletonMeta):
     """Manages contextual information for the LLM, including browser tabs, code files, and other sources.
 
     Context is stored as a dictionary keyed by a unique identifier (e.g., URL, file path).

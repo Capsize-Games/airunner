@@ -1,9 +1,9 @@
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
-from PySide6.QtCore import Slot, Qt, QObject
+from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QApplication
-from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtGui import QTextCursor
 
 from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
     Ui_chat_prompt,
@@ -28,6 +28,7 @@ class ChatPromptWidget(BaseWidget):
         ("chevron-up", "send_button"),
         ("plus", "clear_conversation_button"),
         ("clock", "history_button"),
+        ("settings", "settings_button"),
         ("x", "pushButton"),
     ]
     logger = logging.getLogger(__name__)
@@ -41,6 +42,14 @@ class ChatPromptWidget(BaseWidget):
         self._splitters = ["chat_prompt_splitter"]
         self._default_splitter_settings_applied = False
         super().__init__()
+        self._highlighted = False
+        self._slash_commands = {
+            "a": "art",
+            "b": "browser",
+            "c": "code",
+            "s": "search",
+            "w": "workflow",
+        }
         self.registered: bool = False
         self.scroll_bar = None
         self.is_modal = True
@@ -242,8 +251,57 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.APPLICATION_COMMAND
         self.update_llm_generator_settings("action", llm_action_value.name)
 
-    def prompt_text_changed(self):
-        self.prompt = self.ui.prompt.toPlainText()
+    def prompt_text_changed(self) -> None:
+        """Handle changes to the prompt text and highlight slash commands if present."""
+        prompt = self.ui.prompt.toPlainText()
+        self.prompt = prompt.strip()
+        self.highlight_slash_command(prompt)
+
+    def highlight_slash_command(self, prompt: str) -> None:
+        """Highlight the slash command in the prompt.
+
+        Args:
+            command (str): The slash command to highlight.
+        """
+        command = None
+        if prompt.startswith("/"):
+            candidate = prompt[1:].split(" ")[0]
+            if candidate in self._slash_commands:
+                command = candidate
+        highlight = command is not None
+        prompt_widget = self.ui.prompt
+        text = prompt_widget.toPlainText()
+        prompt_widget.blockSignals(True)
+        cursor = QTextCursor(prompt_widget.document())
+        cursor.setPosition(0)
+
+        if command is not None:
+            length = len(command) + 1  # +1 for the leading slash
+        else:
+            length = len(text)
+
+        cursor.setPosition(length, QTextCursor.MoveMode.KeepAnchor)
+        fmt = cursor.charFormat()
+        fmt.setFontWeight(500 if highlight else 400)
+        fmt.setForeground(
+            Qt.GlobalColor.black if highlight else Qt.GlobalColor.white
+        )
+        fmt.setBackground(
+            Qt.GlobalColor.yellow if highlight else Qt.GlobalColor.transparent
+        )
+        cursor.setCharFormat(fmt)
+
+        if command is not None:
+            # Move the cursor to the end of the command for further typing
+            cursor.setPosition(length)
+            cursor.setPosition(len(text), QTextCursor.MoveMode.KeepAnchor)
+            fmt = cursor.charFormat()
+            fmt.setFontWeight(400)
+            fmt.setForeground(Qt.GlobalColor.white)
+            fmt.setBackground(Qt.GlobalColor.transparent)
+            cursor.setCharFormat(fmt)
+
+        prompt_widget.blockSignals(False)
 
     def clear_prompt(self):
         self.ui.prompt.setPlainText("")
