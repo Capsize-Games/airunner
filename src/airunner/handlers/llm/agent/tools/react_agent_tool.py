@@ -110,12 +110,6 @@ class ReActAgentTool(BaseConversationEngine):
             chat_history = []
         tool_choice = kwargs.get("tool_choice", None)
         try:
-            print("*" * 100)
-            print(
-                "CALLING STREAMING RESPONSE self.chat_engine.stream_chat",
-                query_str,
-                tool_choice,
-            )
             streaming_response = self.chat_engine.stream_chat(
                 query_str,
                 chat_history=chat_history if chat_history else [],
