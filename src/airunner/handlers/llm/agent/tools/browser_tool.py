@@ -95,15 +95,29 @@ class BrowserTool(BaseConversationEngine):
         """Format the web page content for the LLM prompt."""
         return f"Content from {url}:\n{page_content[:2000]}\n..."
 
+    def _normalize_url(self, url: str) -> str:
+        """Normalize a URL or domain string to a full https:// URL."""
+        if not url:
+            return url
+        url = url.strip()
+        if not url.lower().startswith("http"):
+            url = "https://" + url
+        return url
+
     def call(
         self, *args: Any, tool_call: bool = False, **kwargs: Any
     ) -> ToolOutput:
         self.logger.info(
             "Running BrowserTool with args: %s, kwargs: %s", args, kwargs
         )
-        url = kwargs.get("url") or (args[0] if args else None)
+        url = (
+            kwargs.get("url")
+            or kwargs.get("input")
+            or (args[0] if args else None)
+        )
         if not url:
             raise ValueError("A 'url' argument is required for BrowserTool.")
+        url = self._normalize_url(url)
         # --- EMIT NAVIGATION SIGNAL THROUGH AGENT API ---
         try:
             if hasattr(self.agent, "api") and hasattr(
