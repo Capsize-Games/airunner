@@ -121,25 +121,12 @@ class BrowserTool(BaseConversationEngine):
             self.logger.warning(
                 f"Failed to emit browser navigation signal: {e}"
             )
-        # Simulate fetching page content (replace with real fetch in production)
-        page_content = self._fetch_page_content(url)
-        formatted_content = self._format_page_content(page_content, url)
-        synthesis_prompt = (
-            f"You are an AI assistant. The user has navigated to the following web page: {url}. "
-            f"Here is the content:\n{formatted_content}\n\n"
-            "Summarize the main points, extract any relevant information, and answer any user questions about this page."
-        )
-        response = self._get_synthesis_engine().chat(synthesis_prompt)
-        self._do_interrupt = False
+        # Return navigation message (no is_end_of_message here)
         return ToolOutput(
-            content=str(
-                response.response
-                if hasattr(response, "response")
-                else response
-            ),
+            content=f"Ok, I've navigated to {url}",
             tool_name=self.metadata.name,
             raw_input={"url": url},
-            raw_output=response,
+            raw_output=None,
         )
 
     def _fetch_page_content(self, url: str) -> str:
