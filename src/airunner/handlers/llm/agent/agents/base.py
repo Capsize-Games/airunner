@@ -1212,7 +1212,6 @@ class BaseAgent(
             return self.react_tool_agent.call(**kwargs)
 
         def use_browser_handler(**kwargs: Any) -> Any:
-            print("CALLING USE_BROWSER_HANDLER")
             url = (
                 kwargs.get("url")
                 or kwargs.get("input")
@@ -1227,16 +1226,21 @@ class BaseAgent(
                     "A 'url' argument is required for browser tool."
                 )
             if hasattr(self, "browser_tool"):
-                # Use the FunctionTool interface
-                return self.browser_tool(url)
+                tool_output = self.browser_tool(url)
             else:
-                # Fallback: call BrowserTool directly
                 from airunner.handlers.llm.agent.tools.browser_tool import (
                     BrowserTool,
                 )
 
                 tool = BrowserTool.from_defaults(llm=self.llm, agent=self)
-                return tool.call(url=url)
+                tool_output = tool.call(url=url)
+            # Always emit the navigation message as an LLMResponse
+            content = getattr(tool_output, "content", str(tool_output))
+            self.handle_response(
+                content, is_first_message=True, is_last_message=True
+            )
+            self._complete_response = content
+            return tool_output
 
         def search_tool_handler(**kwargs: Any) -> Any:
             if "chat_history" not in kwargs:
