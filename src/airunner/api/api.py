@@ -28,6 +28,7 @@ from airunner.api.stt_services import STTAPIService
 from airunner.api.tts_services import TTSAPIService
 from airunner.components.art.api.art_services import ARTAPIService
 from airunner.api.llm_services import LLMAPIService
+from airunner.api.browser_services import BrowserAPIService
 from airunner.api import api as api_module
 
 
@@ -144,6 +145,7 @@ class API(App):
         }
         self._initialized = True
         self.llm = LLMAPIService(emit_signal=self.emit_signal)
+        self.browser = BrowserAPIService(emit_signal=self.emit_signal)
         self.art = ARTAPIService(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
         self.stt = STTAPIService(emit_signal=self.emit_signal)
