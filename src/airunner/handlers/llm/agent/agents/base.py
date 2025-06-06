@@ -167,14 +167,6 @@ class BaseAgent(
         self._chatbot = None
         self._api = None
         self.verbose_react_tool_agent = verbose_react_tool_agent
-        self._logger = kwargs.pop("logger", None)
-        if self._logger is None:
-            from airunner.utils.application.get_logger import get_logger
-            from airunner.settings import AIRUNNER_LOG_LEVEL
-
-            self._logger = get_logger(
-                self.__class__.__name__, AIRUNNER_LOG_LEVEL
-            )
         self.signal_handlers.update(
             {
                 SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id,
@@ -224,10 +216,6 @@ class BaseAgent(
         # Get the last inserted context dict and return its 'plaintext' or first value
         last_ctx = list(self.context_manager.all_contexts().values())[-1]
         return last_ctx.get("plaintext", next(iter(last_ctx.values()), ""))
-
-    @property
-    def logger(self):
-        return self._logger
 
     @property
     def language(self) -> str:
@@ -490,13 +478,6 @@ class BaseAgent(
         """
         if not self._react_tool_agent:
             tools = self.tools
-            print(
-                f"[DEBUG] BaseAgent.react_tool_agent creating with {len(tools)} tools:"
-            )
-            for i, tool in enumerate(tools):
-                print(
-                    f"[DEBUG]   {i}: {type(tool).__name__} - {getattr(getattr(tool, 'metadata', None), 'name', 'NO_NAME')}"
-                )
             self._react_tool_agent = ReActAgentTool.from_tools(
                 tools,
                 agent=self,
@@ -1424,20 +1405,7 @@ class BaseAgent(
         **kwargs: Any,
     ) -> AgentChatResponse:
         """Chat with the agent, handling slash commands and tool routing."""
-        # --- DEBUG LOGGING: Entry ---
-        if self._logger is not None:
-            self._logger.info(
-                f"[DEBUG] BaseAgent.chat() called. message={message!r}, action={action}, kwargs={kwargs}"
-            )
         # Ensure logger is initialized
-        if self._logger is None:
-            from airunner.utils.application.get_logger import get_logger
-            from airunner.settings import AIRUNNER_LOG_LEVEL
-
-            self._logger = get_logger(
-                self.__class__.__name__, AIRUNNER_LOG_LEVEL
-            )
-
         self.prompt = message
         command = self.command
         if command is not None:
@@ -1486,11 +1454,6 @@ class BaseAgent(
             ):
                 self._update_mood()
         self._perform_analysis(action)
-        # --- DEBUG LOGGING: Exit ---
-        if self._logger is not None:
-            self._logger.info(
-                f"[DEBUG] BaseAgent.chat() returning AgentChatResponse: {self._complete_response!r}"
-            )
         return AgentChatResponse(response=self._complete_response)
 
     def handle_response(
@@ -1510,29 +1473,22 @@ class BaseAgent(
             do_not_display (bool): If True, do not emit the signal to display the message.
             do_tts_reply (bool): If True, perform TTS reply.
         """
-        # --- DEBUG LOGGING: Entry ---
-        if self._logger is not None:
-            self._logger.info(
-                f"[DEBUG] handle_response called. response={response!r}, is_first_message={is_first_message}, is_last_message={is_last_message}, do_not_display={do_not_display}, do_tts_reply={do_tts_reply}"
-            )
-        # Defensive: Only process non-empty responses
         if not response and not do_not_display:
             return
 
         # The 'full_message' variable as defined in the diff caused duplication when sent.
         # We should send the individual 'response' (token/chunk) and then accumulate.
 
-        if not do_not_display:
-            self.api.llm.send_llm_text_streamed_signal(
-                LLMResponse(
-                    message=response,
-                    is_first_message=is_first_message,
-                    is_end_of_message=is_last_message,
-                    name=self.botname,
-                    node_id=self.llm_request.node_id,
-                )
+        self.api.llm.send_llm_text_streamed_signal(
+            LLMResponse(
+                message=response,
+                is_first_message=is_first_message,
+                is_end_of_message=is_last_message,
+                name=self.botname,
+                node_id=self.llm_request.node_id,
             )
-            self._complete_response += response
+        )
+        self._complete_response += response
 
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """
