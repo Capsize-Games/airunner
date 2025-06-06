@@ -44,6 +44,7 @@ from airunner.data.models import Conversation
 from airunner.settings import (
     AIRUNNER_ART_ENABLED,
     AIRUNNER_MOOD_PROMPT_OVERRIDE,
+    SLASH_COMMANDS,
     VERBOSE_REACT_TOOL_AGENT,
 )
 from airunner.utils.llm.language import detect_language
@@ -65,6 +66,9 @@ from airunner.handlers.llm.agent.agents.tool_mixins import (
 )
 from airunner.context.context_manager import ContextManager
 from .prompt_config import PromptConfig
+from airunner.handlers.llm.agent.agents.tool_mixins.browser_tools_mixin import (
+    BrowserToolsMixin,
+)
 
 
 class BaseAgent(
@@ -73,6 +77,7 @@ class BaseAgent(
     RAGMixin,
     WeatherMixin,
     ImageToolsMixin,
+    BrowserToolsMixin,
     ConversationToolsMixin,
     SystemToolsMixin,
     UserToolsMixin,
@@ -176,13 +181,6 @@ class BaseAgent(
             }
         )
         self.context_manager = ContextManager()
-        self._slash_commands = {
-            "a": LLMActionType.GENERATE_IMAGE,
-            "s": LLMActionType.SEARCH,
-            "b": LLMActionType.BROWSER,
-            "c": LLMActionType.CODE,
-            "w": LLMActionType.WORKFLOW,
-        }
         super().__init__(*args, **kwargs)
 
     @property
@@ -195,7 +193,7 @@ class BaseAgent(
         command = None
         if self.prompt.startswith("/"):
             candidate = self.prompt[1:].split(" ")[0]
-            if candidate in self._slash_commands:
+            if candidate in SLASH_COMMANDS:
                 command = candidate
         return command
 
@@ -438,7 +436,8 @@ class BaseAgent(
             self.toggle_text_to_speech_tool,
             self.list_files_in_directory_tool,
             self.open_image_from_path_tool,
-            self.search_engine_tool,  # Use new SearchEngineTool instead of search_tool
+            self.search_engine_tool,
+            self.use_browser_tool,
         ]
         if AIRUNNER_ART_ENABLED:
             tools.extend(
@@ -1212,12 +1211,44 @@ class BaseAgent(
                 )
             return self.react_tool_agent.call(**kwargs)
 
+        def use_browser_handler(**kwargs: Any) -> Any:
+            url = (
+                kwargs.get("url")
+                or kwargs.get("input")
+                or (
+                    kwargs["args"][0]
+                    if "args" in kwargs and kwargs["args"]
+                    else None
+                )
+            )
+            if not url:
+                raise ValueError(
+                    "A 'url' argument is required for browser tool."
+                )
+            if hasattr(self, "browser_tool"):
+                tool_output = self.browser_tool(url)
+            else:
+                from airunner.handlers.llm.agent.tools.browser_tool import (
+                    BrowserTool,
+                )
+
+                tool = BrowserTool.from_defaults(llm=self.llm, agent=self)
+                tool_output = tool.call(url=url)
+            # Always emit the navigation message as an LLMResponse
+            content = getattr(tool_output, "content", str(tool_output))
+            self.handle_response(
+                content, is_first_message=True, is_last_message=True
+            )
+            self._complete_response = content
+            return tool_output
+
         def search_tool_handler(**kwargs: Any) -> Any:
             if "chat_history" not in kwargs:
                 kwargs["chat_history"] = (
                     self.chat_memory.get() if self.chat_memory else []
                 )
             # Only call the search tool; it will invoke the chat engine tool as needed
+            print("CALLING SEARCH ENGINE TOOL")
             return self.search_engine_tool.call(**kwargs)
 
         tool_handlers = {
@@ -1227,6 +1258,7 @@ class BaseAgent(
             LLMActionType.STORE_DATA: store_data_handler,
             LLMActionType.APPLICATION_COMMAND: application_command_handler,
             LLMActionType.GENERATE_IMAGE: generate_image_handler,
+            LLMActionType.BROWSER: use_browser_handler,
             LLMActionType.SEARCH: search_tool_handler,
         }
 
@@ -1236,6 +1268,7 @@ class BaseAgent(
             return None
 
         self.logger.info(f"Performing tool call for action: {action}")
+        print("handler", handler)
         response = handler(**kwargs)
         self.logger.info(f"Tool call for action {action} completed.")
         return response
@@ -1419,7 +1452,7 @@ class BaseAgent(
         """
         if self.command is not None:
             message = message[len(self.command) + 1 :].strip()
-            action = self._slash_commands[self.command]
+            action = SLASH_COMMANDS[self.command]
         self.prompt = message
         self.action = action
         system_prompt = self.system_prompt
