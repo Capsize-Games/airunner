@@ -20,7 +20,7 @@ import os
 import sys
 import logging
 
-from airunner.enums import Scheduler
+from airunner.enums import LLMActionType, Scheduler
 
 if os.environ.get("DEV_ENV", "1") == "1":
     load_dotenv(override=True)
@@ -406,3 +406,10 @@ VERBOSE_REACT_TOOL_AGENT = (
 QTWEBENGINE_REMOTE_DEBUGGING = os.environ.get(
     "QTWEBENGINE_REMOTE_DEBUGGING", ""
 )  # set to port "9223" to enable remote debugging
+SLASH_COMMANDS = {
+    "a": LLMActionType.GENERATE_IMAGE,
+    "b": LLMActionType.BROWSER,
+    "c": LLMActionType.CODE,
+    "s": LLMActionType.SEARCH,
+    "w": LLMActionType.WORKFLOW,
+}
