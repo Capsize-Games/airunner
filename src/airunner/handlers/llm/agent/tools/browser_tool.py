@@ -304,13 +304,7 @@ class SearchEngineTool(BaseConversationEngine):
         )
         queries = self.prepare_queries(*args, **kwargs)
         llm_request = kwargs.get("llm_request", LLMRequest.from_default())
-
-        try:
-            self.llm.llm_request = llm_request
-        except AttributeError:
-            self.logger.warning(
-                "LLM does not exist or does not have `llm_request` attribute. "
-            )
+        self.llm.llm_request = llm_request
 
         try:
             chat_history = kwargs.get("chat_history", self.agent.chat_memory)
