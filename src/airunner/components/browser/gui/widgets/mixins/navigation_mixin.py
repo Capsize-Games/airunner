@@ -10,6 +10,7 @@ import os
 import hashlib
 from PySide6.QtCore import QUrl, Slot
 from airunner.enums import SignalCode
+from airunner.components.browser.utils import normalize_url
 
 
 class NavigationMixin:

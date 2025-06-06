@@ -11,9 +11,9 @@ from airunner.handlers.llm.agent.engines.base_conversation_engine import (
 
 
 class RAGEngineTool(BaseConversationEngine):
-    """RAG tool.
+    """Retrieval-Augmented Generation (RAG) tool.
 
-    A tool for querying data with RAG.
+    Fetches relevant documents from a vector database or corpus and synthesizes an answer using the LLM.
     """
 
     def __init__(

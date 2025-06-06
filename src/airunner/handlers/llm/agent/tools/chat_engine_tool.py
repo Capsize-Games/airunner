@@ -31,9 +31,9 @@ from airunner.handlers.llm.agent.engines.base_conversation_engine import (
 class ChatEngineTool(
     BaseConversationEngine, AsyncBaseTool, SettingsMixin, MediatorMixin
 ):
-    """Chat tool.
+    """Conversational agent tool using the chat engine.
 
-    A tool for chatting with the LLM.
+    Provides context-aware Q&A and conversation capabilities for LLM agents, leveraging chat history and memory.
     """
 
     def __init__(
