@@ -10,27 +10,23 @@ class BrowserToolsMixin(ToolSingletonMixin):
 
     @property
     def use_browser_tool(self):
-        if not hasattr(self, "_use_browser_tool"):
+        """
+        Return a singleton instance of the real BrowserTool (not a FunctionTool) for agent toolchains.
+        Ensures the ReAct agent can call the actual BrowserTool implementation.
+        """
+        if not hasattr(self, "_use_browser_tool_instance"):
+            from airunner.handlers.llm.agent.tools.browser_tool import (
+                BrowserTool,
+            )
 
-            def use_browser_tool(
-                url: Annotated[
-                    str,
-                    ("The URL of the website you want to navigate to. "),
-                ],
-            ) -> str:
-                print(
-                    "CALLING USE_BROWSER_TOOL FROM BROWSERTOOLSMIXIN WITH URL:",
-                    url,
-                )
-                self.api.browser.navigate_to_url(url)
-                return "Navigating to URL..."
-
-            # Make the description very explicit for the LLM
-            self._use_browser_tool = FunctionTool.from_defaults(
-                use_browser_tool,
+            self._use_browser_tool_instance = BrowserTool.from_defaults(
+                llm=getattr(self, "llm", None),
+                agent=self,
+                name="use_browser_tool",
+                description="Navigate to a URL and extract/summarize web page content.",
                 return_direct=True,
             )
-        return self._use_browser_tool
+        return self._use_browser_tool_instance
 
     @property
     def browser_tool(self):
