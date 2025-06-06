@@ -13,6 +13,7 @@ This directory contains all LLM agent tool wrappers for the AI Runner project. E
 | `rag_engine_tool`        | `RAGEngineTool`             | Retrieval-augmented generation          | str             | Knowledge retrieval  |
 | `chat_engine_tool`       | `ChatEngineTool`            | Conversational Q&A                      | str             | Chat agent           |
 | `react_agent_tool`       | `ReActAgentTool`            | Reasoning + acting (multi-tool)         | varies          | ReAct agent          |
+| `weather_tool`           | `WeatherTool`               | Current weather info for a location     | str             | Weather queries      |
 
 ## Tool Descriptions
 
@@ -33,8 +34,9 @@ This directory contains all LLM agent tool wrappers for the AI Runner project. E
 - **Usage:** Used for direct search queries, returns raw results.
 
 ### 5. BrowserTool
-- **Purpose:** Allows agents to browse/scrape web pages.
-- **Usage:** Used for tasks requiring web navigation or scraping.
+- **Purpose:** Allows agents to browse/scrape web pages and trigger browser navigation in the GUI.
+- **Usage:** Used for tasks requiring web navigation or scraping. Accepts both `url` and `input` as arguments (e.g., `{"input": "reddit.com"}` or `{"url": "https://reddit.com"}`), and normalizes to a full `https://` URL automatically. Robust to LLM and user input.
+- **Integration:** Emits browser navigation signals via the agent API for GUI/browser integration. See `BrowserToolsMixin` for singleton access pattern.
 
 ### 6. SearchEngineTool
 - **Purpose:** High-level tool: performs search and synthesizes a conversational answer.
@@ -44,17 +46,9 @@ This directory contains all LLM agent tool wrappers for the AI Runner project. E
 - **Purpose:** Retrieval-Augmented Generation; fetches docs from a knowledge base, then answers.
 - **Usage:** Used for knowledge retrieval from internal/external corpora.
 
-## Design & Refactor Plan
-
-- **Consolidate search tools:**
-  - Prefer `SearchTool` for raw search, `SearchEngineTool` for search+answer.
-  - Consider merging `RespondToSearchQueryTool` into `SearchEngineTool` as a helper or utility if not needed separately.
-- **Standardize registration:**
-  - All tools must be registered in `ToolRegistry` with unique, descriptive names.
-- **Centralize formatting/synthesis logic:**
-  - Move result formatting and synthesis prompt logic to a shared utility or base class to avoid duplication.
-- **Document all tools:**
-  - Update this README when adding, removing, or modifying tools.
+### 8. WeatherTool
+- **Purpose:** Provides current weather information for a given location.
+- **Usage:** Used for weather queries via slash command or agent workflow.
 
 ## How to Add a New Tool
 
@@ -65,5 +59,4 @@ This directory contains all LLM agent tool wrappers for the AI Runner project. E
 5. Update this README.
 
 ## See Also
-- [REFACTOR_TOOLS.md](../../../REFACTOR_TOOLS.md) for ongoing refactor plans and rationale.
 - [AggregatedSearchTool](../../../tools/search_tool.py) for the core search backend.
