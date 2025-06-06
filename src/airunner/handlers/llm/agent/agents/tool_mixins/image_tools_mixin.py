@@ -89,6 +89,8 @@ class ImageToolsMixin(ToolSingletonMixin):
                     width = (width // 64) * 64
                 if height % 64 != 0:
                     height = (height // 64) * 64
+                print("x" * 100)
+                print("Executing generate_image with params:")
                 self.api.art.llm_image_generated(
                     prompt, second_prompt, image_type, width, height
                 )

@@ -632,27 +632,22 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             self.unload()
             self.load()
 
-        # Generate response using chat agent
         llm_request = llm_request or LLMRequest.from_default()
 
-        # Call the appropriate chat agent method
-        if not self._chat_agent:
-            self.logger.error("Chat agent not loaded")
-            resp = AgentChatResponse(response="", metadata=None)
-            resp.error = "Chat agent not loaded"
-            resp.is_end_of_message = True
-            return resp
+        # Always pass the raw prompt and action to the agent; let the agent handle slash commands/tool routing
         response = self._chat_agent.chat(
             prompt,
             action=action,
             system_prompt=system_prompt,
             rag_system_prompt=rag_system_prompt,
-            llm_request=llm_request,  # Pass the object directly
+            llm_request=llm_request,
             extra_context=extra_context,
         )
 
         # Handle the response
         # Send end-of-message signal for chat actions
+        from airunner.enums import LLMActionType
+
         if action is LLMActionType.CHAT:
             self._send_final_message(llm_request)
 

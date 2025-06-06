@@ -186,16 +186,30 @@ class BaseAgent(
     @property
     def command(self) -> Optional[str]:
         """
-        Get the command associated with the agent.
+        Detect and return the slash command (without the leading '/') if present in the current prompt.
         Returns:
-            Optional[str]: The command string, or None if not set.
+            Optional[str]: The command string if present, else None.
         """
-        command = None
+        if not self.prompt:
+            return None
         if self.prompt.startswith("/"):
-            candidate = self.prompt[1:].split(" ")[0]
-            if candidate in SLASH_COMMANDS:
-                command = candidate
-        return command
+            # Extract command up to first space or end of string
+            command = self.prompt[1:].split(" ", 1)[0].strip()
+            # Accept both single-letter and full command (e.g. 'b' or 'browser')
+            if command in SLASH_COMMANDS:
+                return command
+            # Fallback: try to match full action name (e.g. 'browser')
+            for k, v in SLASH_COMMANDS.items():
+                if (
+                    command.lower() == v.name.lower()
+                    or command.lower() == v.value.lower()
+                ):
+                    return k
+            # Additional fallback: if command is a known alias (e.g. 'browser'), map to single-letter
+            browser_aliases = ["browser", "browse", "web", "site"]
+            if command.lower() in browser_aliases:
+                return "b"
+        return None
 
     @property
     def latest_extra_context(self) -> str:
@@ -438,6 +452,7 @@ class BaseAgent(
             self.open_image_from_path_tool,
             self.search_engine_tool,
             self.use_browser_tool,
+            self.generate_image_tool,
         ]
         if AIRUNNER_ART_ENABLED:
             tools.extend(
@@ -474,8 +489,16 @@ class BaseAgent(
             ReActAgentTool: The ReActAgentTool instance.
         """
         if not self._react_tool_agent:
+            tools = self.tools
+            print(
+                f"[DEBUG] BaseAgent.react_tool_agent creating with {len(tools)} tools:"
+            )
+            for i, tool in enumerate(tools):
+                print(
+                    f"[DEBUG]   {i}: {type(tool).__name__} - {getattr(getattr(tool, 'metadata', None), 'name', 'NO_NAME')}"
+                )
             self._react_tool_agent = ReActAgentTool.from_tools(
-                self.tools,
+                tools,
                 agent=self,
                 memory=self.chat_memory,
                 llm=self.llm,
@@ -1144,48 +1167,16 @@ class BaseAgent(
                 kwargs["chat_history"] = (
                     self.chat_memory.get() if self.chat_memory else []
                 )
-            return self.chat_engine_tool.call(**kwargs)
+            kwargs["tool_choice"] = "chat_engine_react_tool"
+            return self.react_tool_agent.call(**kwargs)
 
         def rag_tool_handler(**kwargs: Any) -> Any:
-            # Ensure the query is always forwarded as 'query' (and 'input' for compatibility)
             if "chat_history" not in kwargs:
                 kwargs["chat_history"] = (
                     self.chat_memory.get() if self.chat_memory else []
                 )
-            # Defensive: ensure chat_memory and rag_engine.memory are set up with correct chat_store_key
-            if hasattr(self, "chat_memory") and self.chat_memory is not None:
-                self.chat_memory.chat_store_key = str(self.conversation_id)
-            if hasattr(self, "rag_engine") and self.rag_engine is not None:
-                self.rag_engine.memory = self.chat_memory
-            # Patch: Forward 'prompt' or 'input' as 'query' if 'query' is missing
-            query_arg = None
-            if "query" in kwargs:
-                query_arg = kwargs["query"]
-            elif "input" in kwargs:
-                query_arg = kwargs["input"]
-            elif "prompt" in kwargs:
-                query_arg = kwargs["prompt"]
-            # Remove 'query', 'input', and 'prompt' from kwargs to avoid TypeError
-            for k in ["query", "input", "prompt"]:
-                if k in kwargs:
-                    del kwargs[k]
-            if query_arg is not None:
-                response = self.rag_engine_tool.call(query_arg, **kwargs)
-            else:
-                response = self.rag_engine_tool.call(**kwargs)
-            # Handle/display the response as with other tools
-            if response is not None:
-                # If response is a ToolOutput, AgentChatResponse, or similar, extract string content
-                content = getattr(response, "content", None)
-                if content is None and hasattr(response, "response"):
-                    content = response.response
-                if content is None:
-                    content = str(response)
-                self.handle_response(
-                    content, is_first_message=True, is_last_message=True
-                )
-                self._complete_response = content
-            return response
+            kwargs["tool_choice"] = "rag_engine_tool"
+            return self.react_tool_agent.call(**kwargs)
 
         def store_data_handler(**kwargs: Any) -> Any:
             kwargs["tool_choice"] = "store_user_tool"
@@ -1209,7 +1200,6 @@ class BaseAgent(
                 kwargs["chat_history"] = (
                     self.chat_memory.get() if self.chat_memory else []
                 )
-            # Emit confirmation message to the user
             confirmation = "Ok, generating your image..."
             self.handle_response(
                 confirmation, is_first_message=True, is_last_message=True
@@ -1218,44 +1208,24 @@ class BaseAgent(
             return self.react_tool_agent.call(**kwargs)
 
         def use_browser_handler(**kwargs: Any) -> Any:
-            url = (
-                kwargs.get("url")
-                or kwargs.get("input")
-                or (
-                    kwargs["args"][0]
-                    if "args" in kwargs and kwargs["args"]
-                    else None
-                )
-            )
-            if not url:
-                raise ValueError(
-                    "A 'url' argument is required for browser tool."
-                )
-            if hasattr(self, "browser_tool"):
-                tool_output = self.browser_tool(url)
-            else:
-                from airunner.handlers.llm.agent.tools.browser_tool import (
-                    BrowserTool,
-                )
-
-                tool = BrowserTool.from_defaults(llm=self.llm, agent=self)
-                tool_output = tool.call(url=url)
-            # Always emit the navigation message as an LLMResponse
-            content = getattr(tool_output, "content", str(tool_output))
-            self.handle_response(
-                content, is_first_message=True, is_last_message=True
-            )
-            self._complete_response = content
-            return tool_output
-
-        def search_tool_handler(**kwargs: Any) -> Any:
+            kwargs["tool_choice"] = "use_browser_tool"
             if "chat_history" not in kwargs:
                 kwargs["chat_history"] = (
                     self.chat_memory.get() if self.chat_memory else []
                 )
-            # Only call the search tool; it will invoke the chat engine tool as needed
-            print("CALLING SEARCH ENGINE TOOL")
-            return self.search_engine_tool.call(**kwargs)
+            result = self.react_tool_agent.call(**kwargs)
+            self._complete_response = (
+                result.content if hasattr(result, "content") else str(result)
+            )
+            return result
+
+        def search_tool_handler(**kwargs: Any) -> Any:
+            kwargs["tool_choice"] = "search_engine_tool"
+            if "chat_history" not in kwargs:
+                kwargs["chat_history"] = (
+                    self.chat_memory.get() if self.chat_memory else []
+                )
+            return self.react_tool_agent.call(**kwargs)
 
         tool_handlers = {
             LLMActionType.CHAT: chat_tool_handler,
@@ -1453,13 +1423,46 @@ class BaseAgent(
         llm_request: Optional[LLMRequest] = None,
         **kwargs: Any,
     ) -> AgentChatResponse:
-        """
-        Handle a chat message and generate a response.
-        """
-        if self.command is not None:
-            message = message[len(self.command) + 1 :].strip()
-            action = SLASH_COMMANDS[self.command]
+        """Chat with the agent, handling slash commands and tool routing."""
+        # --- DEBUG LOGGING: Entry ---
+        if self._logger is not None:
+            self._logger.info(
+                f"[DEBUG] BaseAgent.chat() called. message={message!r}, action={action}, kwargs={kwargs}"
+            )
+        # Ensure logger is initialized
+        if self._logger is None:
+            from airunner.utils.application.get_logger import get_logger
+            from airunner.settings import AIRUNNER_LOG_LEVEL
+
+            self._logger = get_logger(
+                self.__class__.__name__, AIRUNNER_LOG_LEVEL
+            )
+
         self.prompt = message
+        command = self.command
+        if command is not None:
+            action = SLASH_COMMANDS[command]
+            stripped_message = message[len(command) + 1 :].strip()
+            if action == LLMActionType.BROWSER:
+                message = (
+                    f"Please navigate to {stripped_message}"
+                    if stripped_message
+                    else "Please open the browser"
+                )
+            elif action == LLMActionType.SEARCH:
+                message = (
+                    f"Please search for {stripped_message}"
+                    if stripped_message
+                    else "Please search"
+                )
+            elif action in [
+                LLMActionType.GENERATE_IMAGE,
+                LLMActionType.CODE,
+                LLMActionType.WORKFLOW,
+            ]:
+                message = stripped_message
+            else:
+                message = stripped_message
         self.action = action
         system_prompt = self.system_prompt
         self._chat_prompt = message
@@ -1483,58 +1486,12 @@ class BaseAgent(
             ):
                 self._update_mood()
         self._perform_analysis(action)
+        # --- DEBUG LOGGING: Exit ---
+        if self._logger is not None:
+            self._logger.info(
+                f"[DEBUG] BaseAgent.chat() returning AgentChatResponse: {self._complete_response!r}"
+            )
         return AgentChatResponse(response=self._complete_response)
-
-    def clear_history(self, data: Optional[Dict] = None) -> None:
-        """
-        Clear the conversation history.
-        Args:
-            data (Optional[Dict]): The conversation data.
-        """
-        data = data or {}
-        conversation_id = data.get("conversation_id", None)
-
-        self.conversation_id = conversation_id
-
-        try:
-            _ = self.chat_engine
-        except Exception as e:
-            self.logger.warning(
-                f"clear_history: chat_engine not available, skipping reset_memory and continuing UI: {e}"
-            )
-            return
-        if self.chat_engine is None:
-            self.logger.warning(
-                "clear_history: chat_engine is None after property, skipping reset_memory and continuing UI."
-            )
-            return
-        self._sync_memory_to_all_engines()
-
-    def save_chat_history(self) -> None:
-        """
-        Save the chat history.
-        """
-        pass
-
-    def interrupt_process(self) -> None:
-        """
-        Interrupt the current process.
-        """
-        self.do_interrupt = True
-
-    def do_interrupt_process(self) -> bool:
-        """
-        Check if the process should be interrupted.
-        Returns:
-            bool: True if the process should be interrupted.
-        """
-        if self.do_interrupt:
-            self.api.llm.send_llm_text_streamed_signal(
-                LLMResponse(
-                    name=self.botname,
-                )
-            )
-        return self.do_interrupt
 
     def handle_response(
         self,
@@ -1553,6 +1510,11 @@ class BaseAgent(
             do_not_display (bool): If True, do not emit the signal to display the message.
             do_tts_reply (bool): If True, perform TTS reply.
         """
+        # --- DEBUG LOGGING: Entry ---
+        if self._logger is not None:
+            self._logger.info(
+                f"[DEBUG] handle_response called. response={response!r}, is_first_message={is_first_message}, is_last_message={is_last_message}, do_not_display={do_not_display}, do_tts_reply={do_tts_reply}"
+            )
         # Defensive: Only process non-empty responses
         if not response and not do_not_display:
             return

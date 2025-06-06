@@ -17,7 +17,13 @@ class AnalysisToolsMixin(ToolSingletonMixin):
             analysis: Annotated[
                 str,
                 (
-                    "A summary or analysis of the conversation. Should be concise and relevant."
+                    "Provide a concise, relevant summary or analysis of the conversation. "
+                    "When analyzing, pay special attention to the use of ALL CAPS: "
+                    "single all-caps words may indicate emphasis, while entire all-caps sentences "
+                    "can suggest frustration, anger, or yelling. Always consider the context and "
+                    "specific words used to determine the intent behind all-caps. "
+                    "Additionally, consider the overall sentiment, tone, and flow of the conversation "
+                    "to provide a more nuanced analysis."
                 ),
             ],
         ) -> str:
@@ -77,21 +83,6 @@ class AnalysisToolsMixin(ToolSingletonMixin):
                         return val.strip()
         return None
 
-    @staticmethod
-    def _is_meaningless_magicmock(analysis):
-        from unittest.mock import MagicMock
-
-        if not isinstance(analysis, MagicMock):
-            return False
-        attrs = [
-            getattr(analysis, a, None)
-            for a in ("content", "message", "analysis", "data", "response")
-        ]
-        return all(
-            (a is None or (isinstance(a, str) and not a.strip()))
-            for a in attrs
-        )
-
     def _fallback_update_user_data(self, conversation_context):
         tool = getattr(self, "update_user_data_tool", None)
         if tool is not None:
@@ -122,9 +113,7 @@ class AnalysisToolsMixin(ToolSingletonMixin):
                     f"update_user_data_engine.chat failed: {e}. Trying update_user_data_tool.call as fallback."
                 )
                 analysis = self._fallback_update_user_data(context)
-            if not (
-                analysis and str(analysis).strip()
-            ) or self._is_meaningless_magicmock(analysis):
+            if not (analysis and str(analysis).strip()):
                 return
             analysis_str = (
                 analysis.strip()
