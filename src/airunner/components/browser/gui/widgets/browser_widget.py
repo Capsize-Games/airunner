@@ -81,7 +81,6 @@ class BrowserWidget(
 
     def on_browser_navigate(self, data: Dict):
         """Handle browser navigation requests."""
-        print("ON BROWSER NAVIGATE", data)
         url = data.get("url")
         url = normalize_url(url) if url else url
         if hasattr(self.ui, "stage"):
