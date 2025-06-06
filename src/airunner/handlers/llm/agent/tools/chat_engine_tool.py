@@ -144,7 +144,7 @@ class ChatEngineTool(
                 )
 
             is_first_message = True
-            for token in streaming_response.response_gen:
+            for token in streaming_response:
                 if self._do_interrupt:
                     break
                 if not token:
