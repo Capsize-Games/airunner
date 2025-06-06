@@ -81,25 +81,10 @@ class ReActAgentTool(BaseConversationEngine):
             "do_handle_response", False
         )  # Default to False for orchestrator
 
-        print(
-            f"[DEBUG] ReActAgentTool.from_tools called with {len(args)} tool args"
-        )
         if len(args) > 0:
             tools_list = args[0] if len(args) == 1 else args
-            if isinstance(tools_list, (list, tuple)):
-                print(f"[DEBUG]   Tools list has {len(tools_list)} items:")
-                for i, tool in enumerate(tools_list):
-                    print(
-                        f"[DEBUG]     {i}: {type(tool).__name__} - {getattr(getattr(tool, 'metadata', None), 'name', 'NO_NAME')}"
-                    )
-            else:
-                print(f"[DEBUG]   Args[0] is not a list: {type(tools_list)}")
 
         chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
-        print(f"[DEBUG] Created ReactAgentEngine, checking tools...")
-        print(
-            f"[DEBUG] ReactAgentEngine.tools: {getattr(chat_engine, 'tools', 'NO_TOOLS_ATTR')}"
-        )
 
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
@@ -116,14 +101,7 @@ class ReActAgentTool(BaseConversationEngine):
         return self.call(*args, **kwargs)
 
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
-        print(
-            "[DEBUG] ReActAgentTool.call invoked with args:",
-            args,
-            "kwargs:",
-            kwargs,
-        )
         query_str = self._get_query_str(*args, **kwargs)
-        print(f"[DEBUG] ReActAgentTool.call query_str: {query_str}")
         chat_history = kwargs.get("chat_history", None)
         if (
             chat_history is None
@@ -136,14 +114,12 @@ class ReActAgentTool(BaseConversationEngine):
         if chat_history is None:
             chat_history = []
         tool_choice = kwargs.get("tool_choice", None)
-        print(f"[DEBUG] ReActAgentTool.call tool_choice: {tool_choice}")
         try:
             streaming_response = self.chat_engine.stream_chat(
                 query_str,
                 chat_history=chat_history if chat_history else [],
                 tool_choice=tool_choice,
             )
-            print("[DEBUG] streaming_response received:", streaming_response)
         except Exception as e:
             import logging
 
@@ -162,25 +138,17 @@ class ReActAgentTool(BaseConversationEngine):
         response = ""
         is_first_message = True
         for token in streaming_response:
-            print(f"[DEBUG] ReActAgentTool.call streaming token: {token!r}")
             if not token:
                 continue
             response += token
-            if self.agent is not None and self.do_handle_response:
-                print(
-                    f"[DEBUG] ReActAgentTool.call handle_response: {token!r}"
-                )
+            if self.agent is not None:
                 self.agent.handle_response(
-                    token,
-                    is_first_message,
+                    token, is_first_message, decision_mode=False
                 )
             is_first_message = False
 
         self.chat_engine.chat_history.append(
             ChatMessage(content=response, role=MessageRole.ASSISTANT)
-        )
-        print(
-            f"[DEBUG] ReActAgentTool.call returning ToolOutput with content: {response}"
         )
         return ToolOutput(
             content=str(response),
