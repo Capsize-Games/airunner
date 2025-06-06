@@ -19,7 +19,7 @@ from airunner.utils.application import create_worker
 from airunner.utils.widgets import load_splitter_settings
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.workers.llm_response_worker import LLMResponseWorker
-from airunner.settings import AIRUNNER_ART_ENABLED
+from airunner.settings import AIRUNNER_ART_ENABLED, SLASH_COMMANDS
 
 
 class ChatPromptWidget(BaseWidget):
@@ -43,13 +43,6 @@ class ChatPromptWidget(BaseWidget):
         self._default_splitter_settings_applied = False
         super().__init__()
         self._highlighted = False
-        self._slash_commands = {
-            "a": "art",
-            "b": "browser",
-            "c": "code",
-            "s": "search",
-            "w": "workflow",
-        }
         self.registered: bool = False
         self.scroll_bar = None
         self.is_modal = True
@@ -266,7 +259,7 @@ class ChatPromptWidget(BaseWidget):
         command = None
         if prompt.startswith("/"):
             candidate = prompt[1:].split(" ")[0]
-            if candidate in self._slash_commands:
+            if candidate in SLASH_COMMANDS:
                 command = candidate
         highlight = command is not None
         prompt_widget = self.ui.prompt

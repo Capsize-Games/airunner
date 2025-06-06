@@ -10,6 +10,9 @@ from airunner.handlers.llm.agent.agents.tool_mixins.conversation_tools_mixin imp
 from airunner.handlers.llm.agent.agents.tool_mixins.image_tools_mixin import (
     ImageToolsMixin,
 )
+from airunner.handlers.llm.agent.agents.tool_mixins.browser_tools_mixin import (
+    BrowserToolsMixin,
+)
 from airunner.handlers.llm.agent.agents.tool_mixins.llm_manager_mixin import (
     LLMManagerMixin,
 )
@@ -48,4 +51,5 @@ __all__ = [
     "UserManagerMixin",
     "UserToolsMixin",
     "SearchToolsMixin",
+    "BrowserToolsMixin",
 ]
