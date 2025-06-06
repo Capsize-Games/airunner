@@ -6,6 +6,7 @@ from airunner.handlers.llm.agent.chat_engine import ReactAgentEngine
 from airunner.handlers.llm.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
 )
+from airunner.handlers.llm.llm_request import LLMRequest
 
 
 class ReActAgentTool(BaseConversationEngine):
@@ -101,6 +102,8 @@ class ReActAgentTool(BaseConversationEngine):
         return self.call(*args, **kwargs)
 
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
+        llm_request = kwargs.get("llm_request", LLMRequest.from_default())
+        self.agent.llm.llm_request = llm_request
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
         if (
