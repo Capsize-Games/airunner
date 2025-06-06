@@ -4,10 +4,16 @@ from llama_index.core.agent import ReActAgent
 from llama_index.core.memory import BaseMemory
 from llama_index.core.agent.react.formatter import ReActChatFormatter
 
+from airunner.utils.application import get_logger
+
 ReActAgentMeta = type(ReActAgent)
 
 
 class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.logger = get_logger(__name__)
+
     @classmethod
     def from_tools(cls, *args, formatter=None, **kwargs):
         """Create a ReactAgentEngine with the correct formatter (from_tools)."""
@@ -43,21 +49,10 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
         import re
         import json
 
-        print(
-            f"[DEBUG] ReactAgentEngine.stream_chat called with tool_choice={tool_choice}"
-        )
-        print(
-            f"[DEBUG] Available tools: {[getattr(getattr(t, 'metadata', None), 'name', 'NO_NAME') for t in getattr(self, 'tools', [])]}"
-        )
-
         # Store original tools for restoration later
         original_tools = getattr(self, "tools", [])
 
         if tool_choice:
-            print(
-                f"[DEBUG] Tool choice '{tool_choice}' specified - will constrain ReAct agent to only this tool"
-            )
-
             # Find the target tool
             target_tool = None
             for tool in original_tools:
@@ -69,15 +64,8 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                     break
 
             if target_tool:
-                print(
-                    f"[DEBUG] Found target tool: {tool_choice}, constraining to only this tool"
-                )
                 # Temporarily limit tools to only the target tool
                 self.tools = [target_tool]
-                print(
-                    f"[DEBUG] Constrained tools list to: {[getattr(getattr(t, 'metadata', None), 'name', 'NO_NAME') for t in self.tools]}"
-                )
-
                 # Update the internal ReAct agent's tools as well
                 if hasattr(self, "_tools"):
                     self._tools = [target_tool]
@@ -90,13 +78,8 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                 )
                 enhanced_query = f"{query_str}\n\nUse the {tool_choice} tool to fulfill this request. Think carefully about the correct parameters."
                 query_str = enhanced_query
-            else:
-                print(
-                    f"[DEBUG] Tool '{tool_choice}' not found, proceeding with normal ReAct reasoning"
-                )
 
         try:
-            print(f"[DEBUG] Using ReAct reasoning for query: {query_str}")
             if hasattr(super(), "stream_chat"):
                 result = super().stream_chat(
                     query_str, chat_history=chat_history, **kwargs
@@ -143,9 +126,6 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                             )
                             if tool_name_match:
                                 tool_name = tool_name_match.group(0)
-                        print(
-                            f"[DEBUG] Parsed tool call: name={tool_name}, args={tool_args}"
-                        )
                         # Find the tool
                         tool = None
                         for t in self.tools:
@@ -156,14 +136,6 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                                 tool = t
                                 break
                         if tool:
-                            print(
-                                f"[DEBUG] Executing tool: {tool_name} with args: {tool_args}"
-                            )
-                            import logging
-
-                            logging.getLogger(__name__).info(
-                                f"[INFO] Executing tool: {tool_name} with args: {tool_args}"
-                            )
                             tool_result = tool(**tool_args)
                             # If the tool result is a generator, stream it
                             if isinstance(tool_result, types.GeneratorType):
@@ -176,12 +148,10 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                                     yield str(content)
                                 else:
                                     yield str(tool_result)
-                        else:
-                            print(
-                                f"[DEBUG] Tool {tool_name} not found in available tools."
-                            )
                     except Exception as e:
-                        print(f"[DEBUG] Exception during tool execution: {e}")
+                        self.logger.error(
+                            f"Failed to execute tool: {e}. Tool JSON: {tool_json}"
+                        )
                 return
             else:
                 raise NotImplementedError(
@@ -190,9 +160,6 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
         finally:
             # Always restore original tools list
             if tool_choice and original_tools:
-                print(
-                    f"[DEBUG] Restoring original tools list ({len(original_tools)} tools)"
-                )
                 self.tools = original_tools
                 if hasattr(self, "_tools"):
                     self._tools = original_tools

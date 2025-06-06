@@ -100,8 +100,12 @@ class LocalAgent(BaseAgent):
         is_last_message: bool = False,
         do_not_display: bool = False,
         do_tts_reply: bool = True,
+        decision_mode: Optional[bool] = None,
     ) -> None:
-        if not self.decision_mode:
+        decision_mode = (
+            decision_mode if decision_mode is not None else self.decision_mode
+        )
+        if not decision_mode:
             super().handle_response(
                 response=response,
                 is_first_message=is_first_message,
