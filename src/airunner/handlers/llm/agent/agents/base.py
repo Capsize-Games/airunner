@@ -1209,6 +1209,12 @@ class BaseAgent(
                 kwargs["chat_history"] = (
                     self.chat_memory.get() if self.chat_memory else []
                 )
+            # Emit confirmation message to the user
+            confirmation = "Ok, generating your image..."
+            self.handle_response(
+                confirmation, is_first_message=True, is_last_message=True
+            )
+            self._complete_response = confirmation
             return self.react_tool_agent.call(**kwargs)
 
         def use_browser_handler(**kwargs: Any) -> Any:
