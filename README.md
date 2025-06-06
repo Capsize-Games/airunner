@@ -395,6 +395,33 @@ For more details on each command, see the [Wiki](https://github.com/Capsize-Game
 
 ---
 
+## 🚀 Slash Tools (Chat Slash Commands)
+
+AI Runner supports a set of powerful chat slash commands, known as **Slash Tools**, that let you quickly trigger special actions, tools, or workflows directly from the chat prompt. These commands start with a `/` and can be used in any chat conversation.
+
+### How to Use
+- Type `/` in the chat prompt to see available commands (autocomplete is supported in the UI).
+- Each slash command maps to a specific tool, agent action, or workflow.
+- The set of available commands is extensible and may include custom or extension-provided tools.
+
+### Current Slash Commands
+| Slash | Command         | Action Type                | Description                                 |
+|-------|-----------------|---------------------------|---------------------------------------------|
+| `/a`  | Image           | GENERATE_IMAGE            | Generate an image from a prompt             |
+| `/b`  | Browser         | BROWSER                   | Open/navigate to a web page                 |
+| `/c`  | Code            | CODE                      | Run or generate code (if supported)         |
+| `/s`  | Search          | SEARCH                    | Search the web or knowledge base            |
+| `/w`  | Workflow        | WORKFLOW                  | Run a custom workflow (if supported)        |
+
+**Note:**
+- Some slash tools (like `/b` for browser and `/a` for image) return an immediate confirmation message (e.g., "Ok, I've navigated to ...", "Ok, generating your image...").
+- Others (like `/s` for search or `/w` for workflow) do not return a direct message, but instead show a loading indicator until the result is ready.
+- The set of available slash commands is defined in `SLASH_COMMANDS` in `src/airunner/settings.py` and may be extended in the future.
+
+For a full list of supported slash commands, type `/help` in the chat prompt or see the [copilot-instructions.md](.github/copilot-instructions.md).
+
+---
+
 ## Contributing
 
 We welcome pull requests for new features, bug fixes, or documentation improvements. You can also build and share **extensions** to expand AI Runner’s functionality. For details, see the [Extensions Wiki](https://github.com/Capsize-Games/airunner/wiki/Extensions).
