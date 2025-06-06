@@ -12,19 +12,140 @@ from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
 )
+from airunner.handlers.llm.agent.tools.search_engine_tool import (
+    SearchEngineTool,
+)
+
+
+class BrowserTool(BaseConversationEngine):
+    """Tool for browsing and scraping web pages.
+
+    Allows LLM agents to interact with web pages, extract content, and perform browser-like actions.
+    """
+
+    def __init__(
+        self,
+        agent: Any,
+        llm: Any,
+        metadata: ToolMetadata,
+        resolve_input_errors: bool = True,
+        do_handle_response: bool = True,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        super().__init__(agent)
+        self.do_handle_response: bool = do_handle_response
+        self.llm = llm
+        if not llm:
+            raise ValueError("BrowserTool requires an LLM instance.")
+        self._metadata = metadata
+        self._resolve_input_errors = resolve_input_errors
+        self.agent = agent
+        self._do_interrupt: bool = False
+        self._synthesis_engine: Optional[RefreshSimpleChatEngine] = None
+        self._logger = kwargs.pop("logger", None)
+        if self._logger is None:
+            import logging
+
+            self._logger = logging.getLogger(__name__)
+
+    @property
+    def logger(self):
+        return self._logger
+
+    @classmethod
+    def from_defaults(
+        cls,
+        llm: Any,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        return_direct: bool = True,
+        resolve_input_errors: bool = True,
+        agent: Any = None,
+        do_handle_response: bool = True,
+    ) -> "BrowserTool":
+        metadata = ToolMetadata(
+            name=name or "browser_tool",
+            description=description
+            or "Tool for browsing and extracting content from web pages.",
+            return_direct=return_direct,
+        )
+        return cls(
+            agent=agent,
+            llm=llm,
+            metadata=metadata,
+            resolve_input_errors=resolve_input_errors,
+            do_handle_response=do_handle_response,
+        )
+
+    @property
+    def metadata(self) -> ToolMetadata:
+        return self._metadata
+
+    def _get_synthesis_engine(self) -> RefreshSimpleChatEngine:
+        """Lazy-load the synthesis engine for generating responses from web content."""
+        if self._synthesis_engine is None:
+            self._synthesis_engine = RefreshSimpleChatEngine.from_defaults(
+                llm=self.llm,
+                memory=None,
+            )
+        return self._synthesis_engine
+
+    def _format_page_content(self, page_content: str, url: str) -> str:
+        """Format the web page content for the LLM prompt."""
+        return f"Content from {url}:\n{page_content[:2000]}\n..."
+
+    def call(
+        self, *args: Any, tool_call: bool = False, **kwargs: Any
+    ) -> ToolOutput:
+        self.logger.info(
+            "Running BrowserTool with args: %s, kwargs: %s", args, kwargs
+        )
+        url = kwargs.get("url") or (args[0] if args else None)
+        if not url:
+            raise ValueError("A 'url' argument is required for BrowserTool.")
+        # --- EMIT NAVIGATION SIGNAL THROUGH AGENT API ---
+        try:
+            if hasattr(self.agent, "api") and hasattr(
+                self.agent.api, "browser"
+            ):
+                self.agent.api.browser.navigate_to_url(url)
+                self.logger.info(
+                    f"Emitted BROWSER_NAVIGATE_SIGNAL for URL: {url}"
+                )
+            else:
+                self.logger.warning(
+                    "Agent does not have an API service for browser navigation."
+                )
+        except Exception as e:
+            self.logger.warning(
+                f"Failed to emit browser navigation signal: {e}"
+            )
+        # Return navigation message (no is_end_of_message here)
+        return ToolOutput(
+            content=f"Ok, I've navigated to {url}",
+            tool_name=self.metadata.name,
+            raw_input={"url": url},
+            raw_output=None,
+        )
+
+    def _fetch_page_content(self, url: str) -> str:
+        """Fetch the content of the web page at the given URL. Placeholder for real browser/scraper logic."""
+        # TODO: Integrate with real browser or HTTP client for production use
+        return f"[Simulated content for {url}]"
+
+    async def acall(self, *args, **kwargs):
+        # Async version of call (for future use)
+        import asyncio
+
+        return await asyncio.to_thread(self.call, *args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        return self.call(*args, **kwargs)
 
 
 class SearchEngineTool(BaseConversationEngine):
-    """Search tool.
-
-    A tool for performing internet searches and synthesizing natural language responses.
-    This tool is context-aware: it uses and updates the ongoing chat history/memory, enabling follow-up queries to be answered in a conversational, contextually relevant way (like ChatEngineTool).
-    This tool internally handles the two-step process:
-    1. Perform search using AggregatedSearchTool
-    2. Synthesize response using an LLM, with full conversational context
-
-    Also provides a static method for synthesizing a response from search results and an original query (formerly RespondToSearchQueryTool).
-    """
+    """Tool for performing internet searches and synthesizing responses."""
 
     def __init__(
         self,
@@ -326,64 +447,3 @@ class SearchEngineTool(BaseConversationEngine):
 
     def __call__(self, *args, **kwargs):
         return self.call(*args, **kwargs)
-
-    @staticmethod
-    def synthesize_from_search_results(
-        agent: Any,
-        search_results: dict,
-        original_query: str,
-    ) -> str:
-        """Synthesize a natural language answer from search results and an original query.
-
-        Args:
-            agent (Any): The agent with a configured LLM for synthesis.
-            search_results (dict): Raw search results.
-            original_query (str): The original user query.
-
-        Returns:
-            str: Synthesized answer.
-        """
-        if not agent or not hasattr(agent, "llm") or not agent.llm:
-            raise ValueError("Agent with LLM required for synthesis.")
-        system_prompt = (
-            "You are an AI assistant. Based on the following search results and the user's original query, "
-            "provide a comprehensive and informative answer to the user's query. "
-            "Cite information from the search results where appropriate, but present the answer in your own words. "
-            "If the search results are not relevant or sufficient, state that you couldn't find a good answer. "
-            "Do not refer to 'the search results' directly in your answer, just use the information they contain."
-        )
-        from airunner.handlers.llm.agent.chat_engine import (
-            RefreshSimpleChatEngine,
-        )
-
-        engine = RefreshSimpleChatEngine.from_defaults(
-            system_prompt=system_prompt,
-            llm=agent.llm,
-            memory=None,
-        )
-        formatted_results_str = ""
-        if isinstance(search_results, dict):
-            for service, items in search_results.items():
-                if isinstance(items, list):
-                    formatted_results_str += f"Results from {service}:\n"
-                    for item in items[:5]:
-                        title = item.get("title", "N/A")
-                        snippet = item.get("snippet", "No snippet available.")
-                        link = item.get("link", "")
-                        formatted_results_str += f"- Title: {title}\n  Snippet: {snippet}\n  Source: {link}\n"
-                    formatted_results_str += "\n"
-        elif isinstance(search_results, str):
-            formatted_results_str = search_results
-        else:
-            formatted_results_str = "No usable search results provided."
-        synthesis_prompt = (
-            f"User's original query: '{original_query}'\n\n"
-            f"Relevant information found:\n{formatted_results_str}\n\n"
-            "Please provide a comprehensive answer to the user's original query based on this information:"
-        )
-        response = engine.chat(synthesis_prompt)
-        return (
-            response.response
-            if hasattr(response, "response")
-            else str(response)
-        )

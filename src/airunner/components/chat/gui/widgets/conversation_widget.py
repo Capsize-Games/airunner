@@ -119,7 +119,6 @@ class ConversationWidget(BaseWidget):
         self._clear_conversation()
 
     def on_queue_load_conversation(self, data):
-        print("LOAD CONVERSATION")
         conversation_id = data.get("index")
         self.load_conversation(conversation_id=conversation_id)
 
@@ -325,9 +324,6 @@ class ConversationWidget(BaseWidget):
             self._conversation_id = getattr(self._conversation, "id", None)
 
         def send():
-            self.logger.debug(
-                f"Sending {len(simplified_messages)} messages to chat bridge"
-            )
             self._chat_bridge.set_messages(simplified_messages)
 
         self.wait_for_js_ready(send)

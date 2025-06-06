@@ -17,13 +17,14 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QMainWindow,
-    QMenu, QMenuBar, QPushButton, QSizePolicy,
-    QSpacerItem, QSplitter, QStatusBar, QTabWidget,
-    QToolBar, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
+    QMenuBar, QPushButton, QSizePolicy, QSpacerItem,
+    QSplitter, QStatusBar, QTabWidget, QToolBar,
+    QVBoxLayout, QWidget)
 
 from airunner.components.browser.gui.widgets.browser_widget import BrowserWidget
 from airunner.components.document_editor.gui.widgets.document_editor_container_widget import DocumentEditorContainerWidget
+from airunner.components.documents.gui.widgets.documents import DocumentsWidget
 from airunner.gui.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.gui.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
@@ -281,10 +282,9 @@ class Ui_MainWindow(object):
         self.mode_tab_widget.setObjectName(u"mode_tab_widget")
         self.mode_tab_widget.setAutoFillBackground(False)
         self.mode_tab_widget.setStyleSheet(u"QTabWidget#mode_tab_widget::pane { border: 0; background: transparent; }")
-        self.horizontalLayout = QHBoxLayout(self.mode_tab_widget)
-        self.horizontalLayout.setSpacing(0)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(0, 1, 0, 0)
+        self.gridLayout_9 = QGridLayout(self.mode_tab_widget)
+        self.gridLayout_9.setObjectName(u"gridLayout_9")
+        self.gridLayout_9.setContentsMargins(0, -1, -1, -1)
         self.actionsidebar = QWidget(self.mode_tab_widget)
         self.actionsidebar.setObjectName(u"actionsidebar")
         self.action_sidebar = QVBoxLayout(self.actionsidebar)
@@ -392,7 +392,7 @@ class Ui_MainWindow(object):
         self.action_sidebar.addWidget(self.settings_button)
 
 
-        self.horizontalLayout.addWidget(self.actionsidebar)
+        self.gridLayout_9.addWidget(self.actionsidebar, 0, 0, 1, 1)
 
         self.main_window_splitter = QSplitter(self.mode_tab_widget)
         self.main_window_splitter.setObjectName(u"main_window_splitter")
@@ -497,8 +497,32 @@ class Ui_MainWindow(object):
         self.gridLayout_4.addWidget(self.center_tab_container, 0, 0, 1, 1)
 
         self.main_window_splitter.addWidget(self.center_widget)
+        self.knowledgebase = QWidget(self.main_window_splitter)
+        self.knowledgebase.setObjectName(u"knowledgebase")
+        self.gridLayout_10 = QGridLayout(self.knowledgebase)
+        self.gridLayout_10.setObjectName(u"gridLayout_10")
+        self.splitter_2 = QSplitter(self.knowledgebase)
+        self.splitter_2.setObjectName(u"splitter_2")
+        self.splitter_2.setOrientation(Qt.Orientation.Vertical)
+        self.documents_container = QWidget(self.splitter_2)
+        self.documents_container.setObjectName(u"documents_container")
+        self.gridLayout_11 = QGridLayout(self.documents_container)
+        self.gridLayout_11.setObjectName(u"gridLayout_11")
+        self.documents = DocumentsWidget(self.documents_container)
+        self.documents.setObjectName(u"documents")
 
-        self.horizontalLayout.addWidget(self.main_window_splitter)
+        self.gridLayout_11.addWidget(self.documents, 0, 0, 1, 1)
+
+        self.splitter_2.addWidget(self.documents_container)
+        self.widget_3 = QWidget(self.splitter_2)
+        self.widget_3.setObjectName(u"widget_3")
+        self.splitter_2.addWidget(self.widget_3)
+
+        self.gridLayout_10.addWidget(self.splitter_2, 0, 0, 1, 1)
+
+        self.main_window_splitter.addWidget(self.knowledgebase)
+
+        self.gridLayout_9.addWidget(self.main_window_splitter, 0, 1, 1, 1)
 
 
         self.gridLayout_3.addWidget(self.mode_tab_widget, 0, 0, 1, 1)

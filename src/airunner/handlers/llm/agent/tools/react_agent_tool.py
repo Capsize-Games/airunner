@@ -7,13 +7,11 @@ from airunner.handlers.llm.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
 )
 
-import logging
-
 
 class ReActAgentTool(BaseConversationEngine):
-    """ReActAgentTool.
+    """ReAct agent tool for reasoning and acting.
 
-    A tool for determining which actions to take.
+    Implements the ReAct pattern, enabling multi-step reasoning and tool use for complex agent workflows.
     """
 
     def __init__(
@@ -85,19 +83,6 @@ class ReActAgentTool(BaseConversationEngine):
         chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
-        if hasattr(chat_engine, "tools"):
-            tool_names = [
-                getattr(
-                    t,
-                    "name",
-                    getattr(
-                        getattr(t, "metadata", None),
-                        "name",
-                        t.__class__.__name__,
-                    ),
-                )
-                for t in getattr(chat_engine, "tools", [])
-            ]
         return cls.from_defaults(
             chat_engine=chat_engine,
             name=name,
@@ -124,19 +109,6 @@ class ReActAgentTool(BaseConversationEngine):
         if chat_history is None:
             chat_history = []
         tool_choice = kwargs.get("tool_choice", None)
-        if hasattr(self.chat_engine, "tools"):
-            tool_names = [
-                getattr(
-                    t,
-                    "name",
-                    getattr(
-                        getattr(t, "metadata", None),
-                        "name",
-                        t.__class__.__name__,
-                    ),
-                )
-                for t in getattr(self.chat_engine, "tools", [])
-            ]
         try:
             streaming_response = self.chat_engine.stream_chat(
                 query_str,
@@ -164,6 +136,7 @@ class ReActAgentTool(BaseConversationEngine):
             if not token:
                 continue
             response += token
+            print(token + " ", self.agent, self.do_handle_response)
             if self.agent is not None and self.do_handle_response:
                 self.agent.handle_response(
                     token,

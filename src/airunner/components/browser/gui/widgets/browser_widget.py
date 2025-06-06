@@ -1,4 +1,5 @@
 import json
+from typing import Dict
 from airunner.components.browser.gui.widgets.templates.browser_ui import (
     Ui_browser,
 )
@@ -33,6 +34,7 @@ from airunner.components.browser.gui.widgets.mixins.cache_mixin import (
 from airunner.components.browser.gui.widgets.mixins.ui_setup_mixin import (
     UISetupMixin,
 )
+from airunner.components.browser.utils import normalize_url
 
 
 class BrowserWidget(
@@ -76,6 +78,17 @@ class BrowserWidget(
         if not success:
             return
         self.ui.stage.page().toHtml(self._on_html_ready)
+
+    def on_browser_navigate(self, data: Dict):
+        """Handle browser navigation requests."""
+        url = data.get("url")
+        url = normalize_url(url) if url else url
+        if hasattr(self.ui, "stage"):
+            self.ui.stage.setUrl(url)
+        else:
+            self.logger.warning(
+                "Browser stage not initialized for navigation."
+            )
 
     def _on_html_ready(self, html: str):
         """Handle HTML content when ready from QWebEnginePage."""
