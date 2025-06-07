@@ -1,3 +1,4 @@
+import sys
 from PySide6.QtCore import (
     QObject,
     QPropertyAnimation,
@@ -138,8 +139,6 @@ class SwitchWidget(QAbstractButton):
 
 
 if __name__ == "__main__":
-    import sys
-
     app = QApplication(sys.argv)
     w = SwitchWidget()
     w.setProperty("backgroundColor", QColor("blue"))

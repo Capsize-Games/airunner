@@ -194,9 +194,6 @@ class ConversationWidget(BaseWidget):
         )
         self.set_conversation(self._streamed_messages)
 
-        if llm_response.is_end_of_message:
-            self.enable_generate()
-
     def hide_status_indicator(self):
         """Hide the loading spinner."""
         self.loading_widget.hide()

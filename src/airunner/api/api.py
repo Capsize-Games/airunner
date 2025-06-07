@@ -20,6 +20,8 @@ from airunner.utils.application.ui_loader import (
     load_ui_file,
     load_ui_from_string,
 )
+from airunner.workers.model_scanner_worker import ModelScannerWorker
+)
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
 from airunner.api.nodegraph_services import NodegraphAPIService
@@ -171,10 +173,6 @@ class API(App):
         return super().emit_signal
 
     def _initialize_model_scanner(self):
-        from airunner.workers.model_scanner_worker import (
-            ModelScannerWorker,
-        )
-
         if self._initialize_app:
             setup_database()
             self.model_scanner_worker = create_worker(ModelScannerWorker)

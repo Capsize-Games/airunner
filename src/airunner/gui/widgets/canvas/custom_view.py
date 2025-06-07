@@ -8,7 +8,7 @@ from PySide6.QtCore import (
     QSize,
     QTimer,
 )
-from PySide6.QtGui import QMouseEvent, QColor, QBrush
+from PySide6.QtGui import QMouseEvent, QColor, QBrush, QFont
 from PySide6.QtWidgets import (
     QGraphicsView,
     QGraphicsItemGroup,
@@ -29,6 +29,7 @@ from airunner.gui.widgets.canvas.draggables.active_grid_area import (
 )
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.widgets.canvas.zoom_handler import ZoomHandler
+from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.utils.settings import get_qsettings
 
 
@@ -705,8 +706,6 @@ class CustomGraphicsView(
     def get_cached_cursor(self, tool, size):
         key = (tool, size)
         if key not in self._cursor_cache:
-            from airunner.gui.cursors.circle_brush import circle_cursor
-
             if tool in (CanvasToolName.BRUSH, CanvasToolName.ERASER):
                 # You may want to use different colors for eraser
                 cursor = circle_cursor(
@@ -838,8 +837,6 @@ class CustomGraphicsView(
         return handler
 
     def _get_default_text_font(self):
-        from PySide6.QtGui import QFont
-
         font = QFont()
         font.setPointSize(18)
         font.setFamily("Arial")
@@ -865,8 +862,6 @@ class CustomGraphicsView(
         # Restore text items from the database (via application_settings or similar)
         self._clear_text_items()
         text_items_data = getattr(self.drawing_pad_settings, "text_items", [])
-        from PySide6.QtGui import QFont
-
         for data in text_items_data:
             text = data.get("text", "")
             x = data.get("x", 0)

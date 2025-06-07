@@ -1,3 +1,4 @@
+import os
 from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -43,8 +44,6 @@ class DocumentWidget(QWidget):
 
     def document_title(self):
         # Use filename as title
-        import os
-
         return os.path.basename(self.document.path)
 
     def document_summary(self):

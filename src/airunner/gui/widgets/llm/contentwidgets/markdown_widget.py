@@ -10,6 +10,7 @@ from airunner.gui.widgets.llm.contentwidgets.base_content_widget import (
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 import os
 from airunner.settings import CONTENT_WIDGETS_BASE_PATH, STATIC_BASE_PATH
+from airunner.utils.text.formatter_extended import FormatterExtended
 
 
 class MarkdownWidget(BaseContentWidget):
@@ -67,10 +68,6 @@ class MarkdownWidget(BaseContentWidget):
         self._allow_shrink = not streaming
         # Detect if content is raw markdown (not HTML)
         if not content.strip().lower().startswith("<"):
-            from airunner.utils.text.formatter_extended import (
-                FormatterExtended,
-            )
-
             html_content = FormatterExtended._render_markdown_to_html(content)
         else:
             html_content = content

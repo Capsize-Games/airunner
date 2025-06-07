@@ -9,6 +9,10 @@ from PySide6.QtWidgets import (
     QComboBox,
     QListWidgetItem,
     QMessageBox,
+    QSpinBox,
+    QDoubleSpinBox,
+    QCheckBox,
+    QTextEdit,
 )
 from PySide6.QtCore import Qt, Slot
 
@@ -458,16 +462,6 @@ class VariablesPanelWidget(BaseWidget):
 
     def _set_variable_value(self, variable: Variable):
         """Handles setting a variable's value via a dialog."""
-        from PySide6.QtWidgets import (
-            QDialog,
-            QFormLayout,
-            QDialogButtonBox,
-            QLineEdit,
-            QSpinBox,
-            QDoubleSpinBox,
-            QCheckBox,
-        )
-
         dialog = QDialog(self)
         dialog.setWindowTitle(f"Set Value for '{variable.name}'")
         layout = QFormLayout(dialog)

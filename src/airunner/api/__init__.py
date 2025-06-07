@@ -1,2 +1,2 @@
 # This file marks the api directory as a Python package.
-from .api import API
+from airunner.api import API
