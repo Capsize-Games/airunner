@@ -1,6 +1,6 @@
 from PySide6 import QtCore
 from airunner.vendor.nodegraphqt.widgets.viewer import NodeViewer
-from airunner.api import API
+from airunner.api.api import API
 
 
 class DebouncedNodeViewer(NodeViewer):

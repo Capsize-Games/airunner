@@ -14,7 +14,7 @@ from airunner.vendor.melo.split_utils import split_sentence
 from airunner.vendor.melo.text.cleaner import Cleaner
 from airunner.vendor.melo import commons
 from airunner.vendor.melo.text import cleaned_text_to_sequence
-from airunner.api import API
+from airunner.api.api import API
 from airunner.enums import AvailableLanguage
 
 

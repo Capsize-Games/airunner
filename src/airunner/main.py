@@ -139,7 +139,7 @@ torch.hub.set_dir(
 ################################################################
 # Import the main application class for AI Runner.
 ################################################################
-from airunner.api import API
+from airunner.api.api import API
 
 ###############################################################
 # Import Alembic modules to run migrations.
