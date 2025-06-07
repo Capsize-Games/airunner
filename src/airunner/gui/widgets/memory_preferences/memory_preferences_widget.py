@@ -1,4 +1,10 @@
 from PySide6.QtCore import Slot
+
+try:
+    import torch
+except ImportError:
+    torch = None
+
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.memory_preferences.templates.memory_preferences_ui import (
     Ui_memory_preferences,
@@ -30,12 +36,13 @@ class MemoryPreferencesWidget(BaseWidget):
             getattr(self.ui, ui_element).setChecked(val is True)
             getattr(self.ui, ui_element).blockSignals(False)
 
-        import torch
-
-        device_count = torch.cuda.device_count()
-        available_devices = [
-            f"{torch.cuda.get_device_name(i)}" for i in range(device_count)
-        ]
+        if torch is not None:
+            device_count = torch.cuda.device_count()
+            available_devices = [
+                f"{torch.cuda.get_device_name(i)}" for i in range(device_count)
+            ]
+        else:
+            available_devices = []
         self.available_devices = available_devices
         self.ui.sd_combobox.blockSignals(True)
         self.ui.llm_combobox.blockSignals(True)

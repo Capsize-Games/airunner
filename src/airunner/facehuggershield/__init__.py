@@ -1,1 +1,1 @@
-from . import huggingface
+from airunner.facehuggershield import huggingface

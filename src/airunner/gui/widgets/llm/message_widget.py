@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QSizePolicy,
+    QGraphicsOpacityEffect,
 )
 from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer
 from PySide6.QtCore import Signal, QPropertyAnimation, QEasingCurve
@@ -139,8 +140,6 @@ class MessageWidget(BaseWidget):
         )
 
         # Create opacity effects for smooth transitions
-        from PySide6.QtWidgets import QGraphicsOpacityEffect
-
         # Create opacity effects for each button
         self.copy_opacity = QGraphicsOpacityEffect()
         self.delete_opacity = QGraphicsOpacityEffect()

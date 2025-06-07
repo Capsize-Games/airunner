@@ -24,6 +24,7 @@ from airunner.enums import (
 )
 from airunner.data.models import User, Tab
 from airunner.handlers.llm.agent.agents.prompt_builder import PromptBuilder
+from airunner.handlers.llm.agent.agents.prompt_config import PromptConfig
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.handlers.llm.agent import (
@@ -65,7 +66,6 @@ from airunner.handlers.llm.agent.agents.tool_mixins import (
     AnalysisToolsMixin,
 )
 from airunner.context.context_manager import ContextManager
-from .prompt_config import PromptConfig
 from airunner.handlers.llm.agent.agents.tool_mixins.browser_tools_mixin import (
     BrowserToolsMixin,
 )

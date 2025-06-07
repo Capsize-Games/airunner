@@ -1,4 +1,5 @@
 from typing import ClassVar, Dict
+import random
 
 from airunner.enums import SignalCode
 from airunner.gui.widgets.nodegraph.nodes.art.image_request_node import (
@@ -7,9 +8,6 @@ from airunner.gui.widgets.nodegraph.nodes.art.image_request_node import (
 from airunner.gui.widgets.nodegraph.nodes.core.base_workflow_node import (
     BaseWorkflowNode,
 )
-
-from airunner.utils.application.get_logger import get_logger
-from airunner.settings import AIRUNNER_LOG_LEVEL
 
 
 def register_nodes(registry):
@@ -151,8 +149,6 @@ class FramePackNode(BaseWorkflowNode):
 
         # Generate a random seed if requested
         if use_random_seed:
-            import random
-
             seed = random.randint(0, 2147483647)
 
         # Mark as pending
