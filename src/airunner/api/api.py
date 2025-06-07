@@ -21,7 +21,6 @@ from airunner.utils.application.ui_loader import (
     load_ui_from_string,
 )
 from airunner.workers.model_scanner_worker import ModelScannerWorker
-)
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
 from airunner.api.nodegraph_services import NodegraphAPIService
