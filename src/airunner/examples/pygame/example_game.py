@@ -17,7 +17,7 @@ from pygame.locals import (
     K_RIGHT,
 )
 
-from airunner.api import API
+from airunner.api.api import API
 from airunner.gui.windows.pygame_window import PygameWindow
 from airunner.gui.windows.pygame_window import PygameAdapter
 from airunner.handlers.llm.llm_response import LLMResponse

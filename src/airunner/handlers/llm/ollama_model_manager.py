@@ -91,7 +91,7 @@ class OllamaEnhanced(Ollama):
                     import subprocess
                     import sys
                     import re
-                    from airunner.api import API
+                    from airunner.api.api import API
 
                     model_name = getattr(self, "model", None) or kwargs.get(
                         "model"

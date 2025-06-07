@@ -27,7 +27,7 @@ Each service module provides a class for interacting with a specific domain via 
 
 - **For full application integration:**
   ```python
-  from airunner.api import API
+  from airunner.api.api import API
   api = API()
   api.llm.send_request(prompt="Hello!")
   ```
