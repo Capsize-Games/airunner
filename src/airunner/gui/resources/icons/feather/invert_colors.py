@@ -2,6 +2,7 @@
 import sys
 import os
 import re
+import traceback
 from xml.dom import minidom
 
 
@@ -135,8 +136,6 @@ def process_svg(input_path, output_path):
 
     except Exception as e:
         print(f"ERROR processing file: {e}")
-        import traceback
-
         traceback.print_exc()
         return False
 

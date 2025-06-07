@@ -1,4 +1,7 @@
 from abc import ABC
+import json
+import re
+import types
 
 from llama_index.core.agent import ReActAgent
 from llama_index.core.memory import BaseMemory
@@ -46,9 +49,6 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
     def stream_chat(
         self, query_str, chat_history=None, tool_choice=None, **kwargs
     ):
-        import re
-        import json
-
         # Store original tools for restoration later
         original_tools = getattr(self, "tools", [])
 
@@ -84,7 +84,7 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                 result = super().stream_chat(
                     query_str, chat_history=chat_history, **kwargs
                 )
-                # --- Patch: Parse for tool call and execute tool ---
+                # Parse for tool call and execute tool
                 output = ""
                 if hasattr(result, "response_gen"):
                     for token in result.response_gen:
@@ -94,7 +94,6 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                     output = str(result)
                     yield output
                 # Now, after streaming, check for tool call
-                import types
 
                 tool_call_match = re.search(
                     r"Action:\s*```json\s*({[\s\S]+?})\s*```", output
@@ -103,7 +102,7 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                     tool_call_match = re.search(
                         r"Action:\s*({[\s\S]+?})", output
                     )
-                # PATCH: Also match any JSON block if only one tool is available
+                # Also match any JSON block if only one tool is available
                 tool_name = tool_choice
                 if not tool_call_match and len(self.tools) == 1:
                     tool_call_match = re.search(

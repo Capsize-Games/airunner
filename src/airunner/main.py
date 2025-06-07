@@ -12,6 +12,7 @@ Do not change the order of the imports.
 ################################################################
 from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 import os
+import sys
 
 # Prevent Qt WebEngine from crashing
 os.environ["QT_QUICK_BACKEND"] = "software"
@@ -24,7 +25,6 @@ on windows at this time so we disable it.
 """
 if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
     from airunner.facehuggershield.huggingface import activate
-    import sys  # Import sys to access executable path
 
     airunner_path = os.path.join(
         os.path.expanduser("~"), ".local", "share", "airunner"

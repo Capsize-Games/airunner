@@ -1,9 +1,9 @@
 import os
 import datetime
 import re
-from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QPushButton
-from PySide6.QtGui import QPixmap, Qt
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QPushButton, QWidget
+from PySide6.QtGui import QPixmap, Qt, QDrag
+from PySide6.QtCore import QMimeData, QUrl
 from typing import Dict
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.canvas.templates.batch_container_ui import (
@@ -329,9 +329,6 @@ class ImageLayerItemWidget(QWidget):
             self._drag_start_pos is not None
             and (event.pos() - self._drag_start_pos).manhattanLength() > 10
         ):
-            from PySide6.QtGui import QDrag, QPixmap
-            from PySide6.QtCore import QMimeData, QUrl
-
             drag = QDrag(self)
             mime_data = QMimeData()
             if self.image_path:

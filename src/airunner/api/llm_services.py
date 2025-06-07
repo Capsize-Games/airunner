@@ -1,4 +1,4 @@
-from .api_service_base import APIServiceBase
+from airunner.api.api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.enums import LLMActionType

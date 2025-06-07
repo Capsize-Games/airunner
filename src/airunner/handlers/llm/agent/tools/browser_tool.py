@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import Any, Optional, Dict, List
 
@@ -150,8 +151,6 @@ class BrowserTool(BaseConversationEngine):
 
     async def acall(self, *args, **kwargs):
         # Async version of call (for future use)
-        import asyncio
-
         return await asyncio.to_thread(self.call, *args, **kwargs)
 
     def __call__(self, *args, **kwargs):

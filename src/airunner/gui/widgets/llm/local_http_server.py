@@ -1,4 +1,6 @@
 import os
+import urllib.parse
+import posixpath
 from http.server import SimpleHTTPRequestHandler
 from socketserver import ThreadingTCPServer
 from PySide6.QtCore import QThread
@@ -105,10 +107,6 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         super().send_error(code, msg)
 
     def do_GET(self):
-        import os
-        import urllib.parse
-        import mimetypes
-
         path = self.path
         if path.startswith("/static/"):
             rel_path = path[len("/static/") :]
@@ -215,8 +213,6 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
     def translate_path(self, path):
         if path.startswith("/static/"):
             path = path[len("/static/") :]
-        import urllib.parse
-        import posixpath
 
         # Remove query and fragment
         safe_path = path.split("?", 1)[0]

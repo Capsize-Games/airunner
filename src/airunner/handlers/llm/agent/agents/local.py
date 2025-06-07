@@ -1,4 +1,5 @@
 from typing import Any, Optional
+import re
 
 from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.tools.types import ToolOutput
@@ -141,8 +142,6 @@ class LocalAgent(BaseAgent):
             return
 
     def _parse_menu_selection(self, text: str) -> Optional[int]:
-        import re
-
         match = re.match(r"\s*(\d+)[\.|\s]", text)
         if match:
             return int(match.group(1))
