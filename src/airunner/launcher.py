@@ -8,6 +8,9 @@ import sys
 import logging
 import importlib.util
 import os
+import subprocess
+import traceback
+import shutil
 
 from airunner.data.models.airunner_settings import AIRunnerSettings
 from airunner.data.models.path_settings import PathSettings
@@ -41,8 +44,6 @@ def build_ui_if_needed():
     ui_build_marker = os.path.join(COMPONENTS_PATH, "ui_build_marker")
     if not os.path.exists(ui_build_marker):
         try:
-            import subprocess
-
             subprocess.run(
                 [sys.executable, "-m", "airunner_build_ui"], check=True
             )
@@ -58,8 +59,6 @@ cached_settings = {}
 
 def register_component_settings():
     """Register settings for each component with a data/settings.py Pydantic dataclass."""
-    import traceback
-
     created_count = 0
     found_count = 0
 
@@ -137,9 +136,6 @@ def generate_local_certs_if_needed(base_path):
     Generate a trusted local certificate using mkcert if available, otherwise fall back to OpenSSL self-signed.
     Certs are always generated in base_path/certs.
     """
-    import shutil
-    import subprocess
-
     cert_dir = os.path.join(base_path, "certs")
     cert_file = os.path.join(cert_dir, "cert.pem")
     key_file = os.path.join(cert_dir, "key.pem")
@@ -233,8 +229,6 @@ def main():
         register_component_settings()
     except Exception as e:
         logging.error(f"Failed to register component settings: {e}")
-        import traceback
-
         traceback.print_exc()
 
     # --- SSL certificate auto-generation ---

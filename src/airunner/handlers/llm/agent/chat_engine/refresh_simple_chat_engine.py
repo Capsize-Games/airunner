@@ -1,4 +1,5 @@
 from typing import Type, Optional
+import datetime
 
 from llama_index.core.chat_engine.simple import SimpleChatEngine
 from llama_index.core.base.llms.types import ChatMessage
@@ -63,8 +64,6 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
         Append user and assistant messages to the conversation value.
         Always store with both 'content' and 'blocks' fields for compatibility and persistence.
         """
-        import datetime
-
         now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         # Use fallback values if self.agent is not set
         username = getattr(getattr(self, "agent", None), "username", "User")

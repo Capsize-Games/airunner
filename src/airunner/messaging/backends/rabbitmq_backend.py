@@ -6,6 +6,12 @@ This requires the pika library to be installed.
 """
 
 from typing import Callable, Dict
+
+try:
+    import pika
+except ImportError:
+    pika = None
+
 from airunner.enums import SignalCode
 
 
@@ -15,7 +21,8 @@ class RabbitMQBackend:
     """
 
     def __init__(self, username: str, password: str, url: str, port: int):
-        import pika
+        if pika is None:
+            raise ImportError("pika library is required for RabbitMQ backend")
 
         rabbitmq_url = f"amqp://{username}:{password}@{url}:{port}/"
         self.rabbitmq_url = rabbitmq_url

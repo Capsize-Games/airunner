@@ -1,4 +1,5 @@
 import os
+import re
 from PySide6.QtWidgets import (
     QSizePolicy,
 )
@@ -141,8 +142,6 @@ class MixedContentWidget(BaseContentWidget):
 
     def _wrap_latex_debug(self, html_body: str) -> str:
         """Wrap LaTeX content in a debug span for border visibility."""
-        import re
-
         # This is a simple regex to wrap LaTeX blocks (very basic, for debug only)
         # It will wrap $$...$$ and $...$ blocks
         html_body = re.sub(

@@ -1,4 +1,4 @@
-from .api_service_base import APIServiceBase
+from airunner.api.api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 from PySide6.QtCore import QPoint
 from airunner.components.art.managers.stablediffusion.image_response import (

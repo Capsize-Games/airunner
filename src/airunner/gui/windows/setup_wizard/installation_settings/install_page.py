@@ -1,6 +1,18 @@
 from typing import List, Dict
+import importlib.util
 import os.path
+import sys
 import zipfile
+
+try:
+    import requests
+except ImportError:
+    requests = None
+
+try:
+    import nltk
+except ImportError:
+    nltk = None
 
 from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
 from PySide6.QtWidgets import QWizard
@@ -426,7 +438,10 @@ class InstallWorker(
         """
         Download a file from a direct URL with progress reporting.
         """
-        import requests
+        if requests is None:
+            raise ImportError(
+                "requests library is required for downloading files"
+            )
 
         chunk_size = 8192
         try:
@@ -475,8 +490,6 @@ class InstallWorker(
         If the unidic and openvoice folders already exist and are non-empty, skip download and extraction.
         For unidic, extract to the unidic package directory as per `python -m unidic download`.
         """
-        import importlib.util
-
         # Set state flag to track this step has been attempted
         self._openvoice_unidic_download_attempted = True
 
@@ -1036,12 +1049,14 @@ class InstallWorker(
         )
         nltk_data = ["averaged_perceptron_tagger_eng", "punkt", "punkt_tab"]
 
+        if nltk is None:
+            self.logger.error(
+                "NLTK not available, skipping NLTK data download"
+            )
+            return
+
         try:
-            import nltk
-
             # Use a maximum recursion limiter to prevent potential recursion errors
-            import sys
-
             original_limit = sys.getrecursionlimit()
             sys.setrecursionlimit(1500)  # Set a reasonable limit
 
