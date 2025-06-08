@@ -142,7 +142,7 @@ class ConversationWidget(BaseWidget):
                 conversation=conversation, max_messages=50
             )
         )
-        self._set_conversation_widgets(messages, skip_scroll=True)
+        self.set_conversation_widgets(messages, skip_scroll=True)
 
     def clear_conversation(self) -> None:
         """Clear all conversation state and UI."""
@@ -385,7 +385,7 @@ class ConversationWidget(BaseWidget):
             msg["id"] = idx
         return messages
 
-    def _set_conversation_widgets(self, messages, skip_scroll: bool = False):
+    def set_conversation_widgets(self, messages, skip_scroll: bool = False):
         """Replace per-message widgets with a single HTML conversation view."""
         # Ensure every message has a unique integer 'id' and correct role/is_bot
         messages = self._assign_message_ids(messages)
@@ -566,4 +566,4 @@ class ConversationWidget(BaseWidget):
         new_messages = self._assign_message_ids(new_messages)
         Conversation.objects.update(pk=conversation.id, value=new_messages)
         self._conversation.value = new_messages
-        self._set_conversation_widgets(new_messages)
+        self.set_conversation_widgets(new_messages)

@@ -87,7 +87,7 @@ class VariableGetterNode(BaseCoreNode):
 
         # Get the variable object to set up the property widget and initial value
         if self.graph and hasattr(self.graph, "widget_ref"):
-            variable = self.graph.widget_ref._find_variable_by_name(name)
+            variable = self.graph.widget_ref.find_variable_by_name(name)
             if variable:
                 self._setup_property_widget(variable)
                 self.set_property(
@@ -154,7 +154,7 @@ class VariableGetterNode(BaseCoreNode):
             and hasattr(self.graph, "widget_ref")
             and self.variable_name
         ):
-            variable = self.graph.widget_ref._find_variable_by_name(
+            variable = self.graph.widget_ref.find_variable_by_name(
                 self.variable_name
             )
             if variable:
@@ -190,7 +190,7 @@ class VariableGetterNode(BaseCoreNode):
         """
         # The connection itself represents the data flow.
         # Get the current value from the variable
-        variable = self.graph.widget_ref._find_variable_by_name(
+        variable = self.graph.widget_ref.find_variable_by_name(
             self.variable_name
         )  # Access via widget ref
         if variable:

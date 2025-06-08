@@ -68,7 +68,7 @@ class MarkdownWidget(BaseContentWidget):
         self._allow_shrink = not streaming
         # Detect if content is raw markdown (not HTML)
         if not content.strip().lower().startswith("<"):
-            html_content = FormatterExtended._render_markdown_to_html(content)
+            html_content = FormatterExtended.render_markdown_to_html(content)
         else:
             html_content = content
         self.webView.setHtml(

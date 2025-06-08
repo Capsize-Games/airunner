@@ -185,7 +185,7 @@ class DatabaseChatStore(BaseChatStore):
     ) -> None:
         """Update a message in a conversation."""
         try:
-            conversation = conversation.objects.filter_by(current=True)[0]
+            conversation = Conversation.objects.filter_by(current=True)[0]
         except IndexError:
             conversation = None
         if conversation:

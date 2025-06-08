@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import torch
 import einops
@@ -19,7 +19,6 @@ from diffusers.models.embeddings import (
 from diffusers.models.modeling_outputs import Transformer2DModelOutput
 from diffusers.models.modeling_utils import ModelMixin
 from airunner.vendor.framepack.diffusers_helper.dit_common import LayerNorm
-from airunner.vendor.framepack.diffusers_helper.utils import zero_module
 
 
 enabled_backends = []
