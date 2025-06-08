@@ -15,6 +15,7 @@ import shutil
 from airunner.data.models.airunner_settings import AIRunnerSettings
 from airunner.data.models.path_settings import PathSettings
 from airunner.settings import AIRUNNER_BASE_PATH
+from airunner.setup_database import setup_database
 
 COMPONENTS_PATH = os.path.join(os.path.dirname(__file__), "components")
 
@@ -223,6 +224,9 @@ def generate_local_certs_if_needed(base_path):
 def main():
     # Build UI files first
     build_ui_if_needed()
+
+    # --- Ensure database and tables are created before any DB access ---
+    setup_database()
 
     # Register component settings after UI build but before main app starts
     try:
