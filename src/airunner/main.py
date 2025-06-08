@@ -56,6 +56,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             "/usr/share/zoneinfo/",
             airunner_src_path,
             "/tmp/",
+            "/etc/",
         ],
         nullscream_whitelist=[
             "huggingface_hub.file_download",
@@ -63,10 +64,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             "transformers.utils.hub.PushToHubMixin",
             "transformers",
         ],
-        nullscream_blacklist=[
-            "httpx",
-            "httpx-sse",
-        ],
+        nullscream_blacklist=[],
     )
 #################################################################
 
