@@ -171,6 +171,7 @@ setup(
     packages=find_packages("src"),
     python_requires=">=3.13.3",
     install_requires=[
+        "pip==25.1.1",
         "torch",
         "torchvision",
         "torchaudio",

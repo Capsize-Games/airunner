@@ -6,6 +6,7 @@ from airunner.handlers.llm.agent.chat_engine import ReactAgentEngine
 from airunner.handlers.llm.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
 )
+from airunner.handlers.llm.llm_request import LLMRequest
 
 
 class ReActAgentTool(BaseConversationEngine):
@@ -80,7 +81,12 @@ class ReActAgentTool(BaseConversationEngine):
         do_handle_response = kwargs.pop(
             "do_handle_response", False
         )  # Default to False for orchestrator
+
+        if len(args) > 0:
+            tools_list = args[0] if len(args) == 1 else args
+
         chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
+
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
         return cls.from_defaults(
@@ -96,6 +102,8 @@ class ReActAgentTool(BaseConversationEngine):
         return self.call(*args, **kwargs)
 
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
+        llm_request = kwargs.get("llm_request", LLMRequest.from_default())
+        self.agent.llm.llm_request = llm_request
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
         if (
@@ -132,15 +140,13 @@ class ReActAgentTool(BaseConversationEngine):
         )
         response = ""
         is_first_message = True
-        for token in streaming_response.response_gen:
+        for token in streaming_response:
             if not token:
                 continue
             response += token
-            print(token + " ", self.agent, self.do_handle_response)
-            if self.agent is not None and self.do_handle_response:
+            if self.agent is not None:
                 self.agent.handle_response(
-                    token,
-                    is_first_message,
+                    token, is_first_message, decision_mode=False
                 )
             is_first_message = False
 

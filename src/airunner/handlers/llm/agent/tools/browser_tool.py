@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import Any, Optional, Dict, List
 
@@ -95,15 +96,29 @@ class BrowserTool(BaseConversationEngine):
         """Format the web page content for the LLM prompt."""
         return f"Content from {url}:\n{page_content[:2000]}\n..."
 
+    def _normalize_url(self, url: str) -> str:
+        """Normalize a URL or domain string to a full https:// URL."""
+        if not url:
+            return url
+        url = url.strip()
+        if not url.lower().startswith("http"):
+            url = "https://" + url
+        return url
+
     def call(
         self, *args: Any, tool_call: bool = False, **kwargs: Any
     ) -> ToolOutput:
         self.logger.info(
             "Running BrowserTool with args: %s, kwargs: %s", args, kwargs
         )
-        url = kwargs.get("url") or (args[0] if args else None)
+        url = (
+            kwargs.get("url")
+            or kwargs.get("input")
+            or (args[0] if args else None)
+        )
         if not url:
             raise ValueError("A 'url' argument is required for BrowserTool.")
+        url = self._normalize_url(url)
         # --- EMIT NAVIGATION SIGNAL THROUGH AGENT API ---
         try:
             if hasattr(self.agent, "api") and hasattr(
@@ -136,8 +151,6 @@ class BrowserTool(BaseConversationEngine):
 
     async def acall(self, *args, **kwargs):
         # Async version of call (for future use)
-        import asyncio
-
         return await asyncio.to_thread(self.call, *args, **kwargs)
 
     def __call__(self, *args, **kwargs):
@@ -290,13 +303,7 @@ class SearchEngineTool(BaseConversationEngine):
         )
         queries = self.prepare_queries(*args, **kwargs)
         llm_request = kwargs.get("llm_request", LLMRequest.from_default())
-
-        try:
-            self.llm.llm_request = llm_request
-        except AttributeError:
-            self.logger.warning(
-                "LLM does not exist or does not have `llm_request` attribute. "
-            )
+        self.llm.llm_request = llm_request
 
         try:
             chat_history = kwargs.get("chat_history", self.agent.chat_memory)

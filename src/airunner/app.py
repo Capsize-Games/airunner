@@ -1,4 +1,6 @@
 from typing import Optional, Dict
+import glob
+import logging
 import os.path
 import sys
 import signal
@@ -94,8 +96,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
             os.path.join(os.path.dirname(__file__), "static")
         )
         # Find all components/**/gui/static directories
-        import glob
-
         components_static_dirs = glob.glob(
             os.path.join(
                 os.path.dirname(__file__), "components", "**", "gui", "static"
@@ -113,8 +113,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
             static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
         )
         if self.initialize_gui and os.path.isdir(mathjax_dir):
-            import logging
-
             logging.info("Starting local HTTPS server for static assets.")
             self.http_server_thread = LocalHttpServerThread(
                 directory=static_dir,

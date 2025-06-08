@@ -12,6 +12,7 @@ Do not change the order of the imports.
 ################################################################
 from airunner.settings import AIRUNNER_DISABLE_FACEHUGGERSHIELD
 import os
+import sys
 
 # Prevent Qt WebEngine from crashing
 os.environ["QT_QUICK_BACKEND"] = "software"
@@ -24,7 +25,6 @@ on windows at this time so we disable it.
 """
 if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
     from airunner.facehuggershield.huggingface import activate
-    import sys  # Import sys to access executable path
 
     airunner_path = os.path.join(
         os.path.expanduser("~"), ".local", "share", "airunner"
@@ -56,6 +56,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             "/usr/share/zoneinfo/",
             airunner_src_path,
             "/tmp/",
+            "/etc/",
         ],
         nullscream_whitelist=[
             "huggingface_hub.file_download",
@@ -63,10 +64,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             "transformers.utils.hub.PushToHubMixin",
             "transformers",
         ],
-        nullscream_blacklist=[
-            "httpx",
-            "httpx-sse",
-        ],
+        nullscream_blacklist=[],
     )
 #################################################################
 
@@ -139,7 +137,7 @@ torch.hub.set_dir(
 ################################################################
 # Import the main application class for AI Runner.
 ################################################################
-from airunner.api import API
+from airunner.api.api import API
 
 ###############################################################
 # Import Alembic modules to run migrations.

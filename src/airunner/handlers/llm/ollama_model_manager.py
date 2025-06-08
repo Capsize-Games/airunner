@@ -7,27 +7,12 @@ from llama_index.core.base.llms.types import (
     ChatResponseAsyncGen,
 )
 from llama_index.core.chat_engine.types import AgentChatResponse
-import openai
-from airunner.handlers.llm.agent.agents import OpenRouterQObject
 from airunner.handlers.llm.agent.agents.local import LocalAgent
 from airunner.handlers.llm.llm_model_manager import LLMModelManager
 from airunner.enums import LLMActionType, ModelType, ModelStatus
 from airunner.handlers.llm.llm_request import OpenrouterMistralRequest
 from airunner.utils.settings.get_qsettings import get_qsettings
 from llama_index.llms.ollama import Ollama
-import ollama
-
-try:
-    from PyQt5.QtCore import QMetaObject, Qt
-except ImportError:
-    try:
-        from PyQt6.QtCore import QMetaObject, Qt
-    except ImportError:
-        try:
-            from PySide2.QtCore import QMetaObject, Qt
-        except ImportError:
-            QMetaObject = None
-            Qt = None
 
 
 class OllamaEnhanced(Ollama):
@@ -91,7 +76,7 @@ class OllamaEnhanced(Ollama):
                     import subprocess
                     import sys
                     import re
-                    from airunner.api import API
+                    from airunner.api.api import API
 
                     model_name = getattr(self, "model", None) or kwargs.get(
                         "model"
@@ -155,7 +140,7 @@ class OllamaQObject(LocalAgent):
                     api_key=api_key,
                     **llm_request.to_dict(),
                 )
-            except openai.APIError as e:
+            except Exception as e:
                 print(f"Failed to initialize OpenRouterEnhanced: {e}")
 
         return self._llm

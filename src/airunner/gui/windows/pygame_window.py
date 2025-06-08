@@ -32,7 +32,7 @@ from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.handlers.llm.llm_response import LLMResponse
-from airunner.api import API
+from airunner.api.api import API
 from airunner.handlers.llm.agent.agents import LocalAgent
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,

@@ -101,8 +101,6 @@ class BaseConversationEngine:
             name: The name to use (username, botname, or tool name).
             tool_call: If True, treat as a tool message.
         """
-        import datetime
-
         now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         if name is None:
             if role == "user":

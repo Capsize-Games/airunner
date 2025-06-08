@@ -1,4 +1,5 @@
 from typing import Any, Optional
+import re
 
 from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.tools.types import ToolOutput
@@ -83,48 +84,15 @@ class LocalAgent(BaseAgent):
                 llm_request=llm_request,
                 extra_context=extra_context,
             )
-        self.make_decision(
+        # In decision mode, call super().chat() with action=LLMActionType.DECISION
+        return super().chat(
             message=message,
+            action=LLMActionType.DECISION,
+            system_prompt=system_prompt,
             rag_system_prompt=rag_system_prompt,
             llm_request=llm_request,
+            extra_context=extra_context,
         )
-
-    def make_decision(
-        self,
-        message: str,
-        action: LLMActionType = LLMActionType.CHAT,
-        system_prompt: Optional[str] = None,
-        rag_system_prompt: Optional[str] = None,
-        llm_request: Optional[LLMRequest] = None,
-        **kwargs: Any,
-    ) -> AgentChatResponse:
-        """
-        Handle a chat message and generate a response.
-        """
-        self.prompt = message
-        self.action = LLMActionType.DECISION
-        system_prompt = self.system_prompt
-        self._chat_prompt = message
-        self._complete_response = ""
-        self.do_interrupt = False
-        self._update_memory(action)
-        kwargs = kwargs or {}
-        kwargs["input"] = f"{self.username}: {message}"
-        self._update_system_prompt(system_prompt, rag_system_prompt)
-        self._update_llm_request(llm_request)
-        self._update_memory_settings()
-        self._perform_tool_call(action, **kwargs)
-
-    def _parse_menu_selection(self, text: str) -> Optional[int]:
-        import re
-
-        match = re.match(r"\s*(\d+)[\.|\s]", text)
-        if match:
-            return int(match.group(1))
-        match = re.match(r"\s*(\d+)", text)
-        if match:
-            return int(match.group(1))
-        return None
 
     def handle_response(
         self,
@@ -133,8 +101,12 @@ class LocalAgent(BaseAgent):
         is_last_message: bool = False,
         do_not_display: bool = False,
         do_tts_reply: bool = True,
+        decision_mode: Optional[bool] = None,
     ) -> None:
-        if not self.decision_mode:
+        decision_mode = (
+            decision_mode if decision_mode is not None else self.decision_mode
+        )
+        if not decision_mode:
             super().handle_response(
                 response=response,
                 is_first_message=is_first_message,
@@ -147,7 +119,7 @@ class LocalAgent(BaseAgent):
         selection = self._parse_menu_selection(self._complete_response)
         if selection is not None or is_last_message:
             if selection is None:
-                selection = self.action_map.keys()[
+                selection = list(self.action_map.keys())[
                     0
                 ]  # Default to first action
             action = self.action_map.get(selection)
@@ -157,13 +129,23 @@ class LocalAgent(BaseAgent):
             # --- Fix infinite loop: temporarily disable decision_mode ---
             prev_decision_mode = self.decision_mode
             self.decision_mode = False
-            self.chat(
+            # Call super().chat() with the selected action
+            super().chat(
                 message=self._chat_prompt,
                 action=action,
                 system_prompt=None,
                 rag_system_prompt=None,
                 llm_request=self.llm_request,
-                decision_mode=False,
+                extra_context=None,
             )
             self.decision_mode = prev_decision_mode
             return
+
+    def _parse_menu_selection(self, text: str) -> Optional[int]:
+        match = re.match(r"\s*(\d+)[\.|\s]", text)
+        if match:
+            return int(match.group(1))
+        match = re.match(r"\s*(\d+)", text)
+        if match:
+            return int(match.group(1))
+        return None

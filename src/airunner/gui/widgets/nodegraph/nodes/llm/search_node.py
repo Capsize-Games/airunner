@@ -4,9 +4,8 @@ SearchNode: NodeGraphQt node for performing aggregated search queries.
 This node interfaces with AggregatedSearchTool to provide search results as node outputs.
 """
 
+from airunner.gui.widgets.nodegraph.nodes.llm.base_llm_node import BaseLLMNode
 from airunner.tools.search_tool import AggregatedSearchTool
-from .base_llm_node import BaseLLMNode
-from typing import Any
 import asyncio
 
 

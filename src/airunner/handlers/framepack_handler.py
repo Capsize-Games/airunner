@@ -1,9 +1,11 @@
 import os
+import threading
+import traceback
+import uuid
 import torch
 import numpy as np
 from PIL import Image
 from typing import Optional, Dict, Any, List
-import threading
 
 # --- Use the correct imports based on FramePack implementation ---
 from transformers import (
@@ -355,9 +357,6 @@ class FramePackHandler(BaseModelManager):
         Returns:
             str: Path to the generated video file
         """
-        import uuid
-        import traceback
-
         self.logger.info("generate_video called")
 
         if self.model_status.get(ModelType.VIDEO) != ModelStatus.READY:

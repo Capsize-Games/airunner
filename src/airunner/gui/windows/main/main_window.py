@@ -6,6 +6,7 @@ import webbrowser
 from functools import partial
 from typing import Dict, Optional
 
+from airunner.gui.windows.main.model_load_balancer import ModelLoadBalancer
 from airunner.gui.windows.main.worker_manager import WorkerManager
 from airunner.gui.windows.wayland_helper import (
     enable_wayland_window_decorations,
@@ -84,7 +85,6 @@ from airunner.gui.windows.update.update_window import UpdateWindow
 from airunner.gui.managers.icon_manager import IconManager
 from airunner.plugin_loader import PluginLoader
 
-from .model_load_balancer import ModelLoadBalancer
 from airunner.components.chat.gui.widgets.conversation_widget import (
     ConversationWidget,
 )

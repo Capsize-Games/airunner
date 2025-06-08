@@ -1,4 +1,6 @@
 import os
+import json
+import logging
 from typing import Dict, Tuple, Optional, List
 from airunner.data.models.application_settings import ApplicationSettings
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
@@ -124,8 +126,6 @@ class NodeGraphWidget(BaseWidget):
     @property
     def logger(self):
         if not hasattr(self, "_logger") or self._logger is None:
-            import logging
-
             self._logger = logging.getLogger(
                 f"{self.__class__.__module__}.{self.__class__.__name__}"
             )
@@ -865,8 +865,6 @@ class NodeGraphWidget(BaseWidget):
                 # Try to filter out other non-serializable values
                 try:
                     # Quick test for JSON serializability
-                    import json
-
                     json.dumps(value)
                     properties_to_save[key] = value
                 except (TypeError, OverflowError):
