@@ -2,7 +2,7 @@ from typing import Type, Optional
 import datetime
 
 from llama_index.core.chat_engine.simple import SimpleChatEngine
-from llama_index.core.base.llms.types import ChatMessage
+from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from llama_index.core.memory import BaseMemory
 from llama_index.core.llms.llm import LLM
 
@@ -40,9 +40,7 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
         self._memory = memory
 
     def update_system_prompt(self, system_prompt: str):
-        message = ChatMessage(
-            content=system_prompt, role=self._llm.metadata.system_role
-        )
+        message = ChatMessage(content=system_prompt, role=MessageRole.SYSTEM)
         if len(self._prefix_messages) == 0:
             self._prefix_messages = [message]
         else:

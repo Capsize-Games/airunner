@@ -1520,7 +1520,6 @@ class BaseAgent(
         return None
 
     def _handle_decision_response(self, response, is_last_message=False):
-        self._complete_response += response
         selection = self._parse_menu_selection(self._complete_response)
         if selection is not None or is_last_message:
             if selection is None:
@@ -1567,16 +1566,17 @@ class BaseAgent(
         # The 'full_message' variable as defined in the diff caused duplication when sent.
         # We should send the individual 'response' (token/chunk) and then accumulate.
 
-        self.api.llm.send_llm_text_streamed_signal(
-            LLMResponse(
-                message=response,
-                is_first_message=is_first_message,
-                is_end_of_message=is_last_message,
-                name=self.botname,
-                node_id=self.llm_request.node_id,
+        if self.action is not LLMActionType.DECISION:
+            self.api.llm.send_llm_text_streamed_signal(
+                LLMResponse(
+                    message=response,
+                    is_first_message=is_first_message,
+                    is_end_of_message=is_last_message,
+                    name=self.botname,
+                    node_id=self.llm_request.node_id,
+                )
             )
-        )
-        self._complete_response += response
+            self._complete_response += response
 
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """
