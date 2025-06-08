@@ -120,13 +120,9 @@ class ChatEngineTool(
         if not self._do_interrupt:
             do_not_display = kwargs.get("do_not_display", False)
             chat_history = kwargs.get("chat_history", [])
-            params = (
-                {"chat_history": chat_history} if len(chat_history) > 0 else {}
-            )
-
             try:
                 streaming_response = self.chat_engine.stream_chat(
-                    query_str, **params
+                    query_str  # Only pass the prompt as a positional argument
                 )
             except jinja2.exceptions.TemplateError as e:
                 self.logger.error(
