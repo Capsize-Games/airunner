@@ -30,6 +30,7 @@ class LLMManagerMixin:
             ):
                 self.logger.info("Loading HuggingFaceLLM")
                 self._llm = HuggingFaceLLM(
+                    agent=self,
                     model=self.model,
                     tokenizer=self.tokenizer,
                     streaming_stopping_criteria=getattr(

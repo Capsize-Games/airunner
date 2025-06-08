@@ -7,6 +7,8 @@ Provides standardized message appending, conversation state updating, and memory
 import datetime
 from typing import Any, Optional
 
+from airunner.enums import LLMActionType
+
 
 class BaseConversationEngine:
     """
@@ -128,10 +130,11 @@ class BaseConversationEngine:
                 "assistant": MessageRole.ASSISTANT,
                 "tool": MessageRole.TOOL,
             }
-            chat_msg = ChatMessage(
-                content=content, role=role_map.get(role, MessageRole.USER)
-            )
-            self.agent.chat_memory.put(chat_msg)
+            if self.agent.action is not LLMActionType.DECISION:
+                chat_msg = ChatMessage(
+                    content=content, role=role_map.get(role, MessageRole.USER)
+                )
+                self.agent.chat_memory.put(chat_msg)
         # Persist conversation state
         self.agent.update_conversation_state(conversation)
         if self._logger:
