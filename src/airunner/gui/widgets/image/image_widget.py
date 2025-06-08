@@ -1,12 +1,17 @@
 import os
 import json
 
-from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QLabel
-from PySide6.QtCore import Qt
-from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QMenu
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtGui import QPixmap, QDrag, QPainter
+from PySide6.QtWidgets import (
+    QLabel,
+    QMenu,
+    QMessageBox,
+    QGraphicsView,
+    QGraphicsScene,
+    QDialog,
+    QVBoxLayout,
+)
+from PySide6.QtCore import Qt, Signal, QMimeData, QByteArray
 from PIL import Image
 from PIL.ImageQt import ImageQt
 from airunner.enums import SignalCode, CanvasToolName
@@ -15,9 +20,6 @@ from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.image.templates.image_widget_ui import (
     Ui_image_widget,
 )
-from PySide6.QtGui import QDrag
-from PySide6.QtCore import QMimeData
-from PySide6.QtCore import QByteArray
 
 
 class ImageWidget(BaseWidget):
@@ -155,16 +157,6 @@ class ImageWidget(BaseWidget):
         self.api.art.canvas.image_from_path(self.image_path)
 
     def view_image(self):
-        from PySide6.QtWidgets import (
-            QGraphicsView,
-            QGraphicsScene,
-            QDialog,
-            QVBoxLayout,
-        )
-        from PySide6.QtGui import QPixmap
-        from PySide6.QtCore import Qt
-        from PySide6.QtGui import QPainter
-
         # Open the image
         image = QPixmap(self.image_path)
 

@@ -1,4 +1,6 @@
 from typing import Dict, Type
+from PySide6.QtGui import QColor, QPen, QFont
+from PySide6.QtCore import Qt
 
 from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
@@ -214,9 +216,6 @@ class VariableGetterNode(BaseCoreNode):
 
         # Add label to display the current value
         if hasattr(self, "view") and self.view:
-            from PySide6.QtGui import QColor, QPen, QFont
-            from PySide6.QtCore import Qt
-
             value = self.get_property(self.value_property_name)
             if value is not None:
                 # Format the value for display

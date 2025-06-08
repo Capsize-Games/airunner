@@ -1,6 +1,7 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 
+from airunner.data.models.chatbot import Chatbot
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.llm.templates.llm_settings_ui import (
     Ui_llm_settings_widget,
@@ -195,7 +196,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         except TypeError:
             self.logger.error(f"Attribute {key} does not exist in Chatbot")
             return
-        chatbot.save()
+        Chatbot.objects.update(pk=chatbot.id, **{key: val})
 
     def on_llm_model_download_progress(self, data):
         percent = data.get("percent", 0)

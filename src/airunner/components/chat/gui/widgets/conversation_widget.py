@@ -194,9 +194,6 @@ class ConversationWidget(BaseWidget):
         )
         self.set_conversation(self._streamed_messages)
 
-        if llm_response.is_end_of_message:
-            self.enable_generate()
-
     def hide_status_indicator(self):
         """Hide the loading spinner."""
         self.loading_widget.hide()
@@ -239,9 +236,6 @@ class ConversationWidget(BaseWidget):
             elif attempt_count < max_attempts:
                 QTimer.singleShot(50, check_ready)
             else:
-                logger.warning(
-                    f"ConversationWidget: JavaScript initialization timeout after {max_attempts} attempts"
-                )
                 callback()
 
         check_ready()

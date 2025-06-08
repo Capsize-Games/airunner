@@ -8,7 +8,6 @@ from airunner.enums import QueueType, SignalCode, WorkerState
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.api import API
 
 
 QObjectMeta = type(QObject)
@@ -38,7 +37,6 @@ class Worker(
         self.items = {}
         self.current_index = 0
         self.paused = False
-        self.api = API(initialize_gui=initialize_gui)
         self.register(SignalCode.QUIT_APPLICATION, self.stop)
 
         # Remove thread creation and management from here

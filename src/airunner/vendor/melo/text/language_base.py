@@ -3,7 +3,7 @@ import torch
 import os
 from g2p_en import G2p
 
-from airunner.api import API
+from airunner.api.api import API
 
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 
