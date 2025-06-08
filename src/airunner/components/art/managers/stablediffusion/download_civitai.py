@@ -2,12 +2,10 @@ import os
 import requests
 from json.decoder import JSONDecodeError
 from PySide6.QtCore import QThread
-from airunner.components.art.managers.stablediffusion.civit_ai_download_worker import (
-    CivitAIDownloadWorker,
-)
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.workers.civit_ai_download_worker import CivitAIDownloadWorker
 
 
 class DownloadCivitAI(MediatorMixin, SettingsMixin):
@@ -21,7 +19,9 @@ class DownloadCivitAI(MediatorMixin, SettingsMixin):
         # if model_id == id/name split and get the id
         if "/" in model_id:
             model_id = model_id.split("/")[0]
-        url = f"https://civitai.com/api/v1/models/{model_id}?token={self.application_settings.civit_ai_api_key}"
+        url = f"https://civitai.com/api/v1/models/{model_id}"
+        if self.application_settings.civit_ai_api_key:
+            url = f"{url}?token={self.application_settings.civit_ai_api_key}"
         headers = {
             "Content-Type": "application/json",
             # "Authorization": f"Bearer {api_token}"
