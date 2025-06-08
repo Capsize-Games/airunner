@@ -153,10 +153,10 @@ class LayerImageItem(DraggablePixmap):
                     try:
                         scene = self.scene()
                         if scene and hasattr(
-                            scene, "_original_item_positions"
+                            scene, "original_item_positions"
                         ):
                             # Update the scene's tracked position for this item
-                            scene._original_item_positions[self] = QPointF(
+                            scene.original_item_positions[self] = QPointF(
                                 int(self._current_snapped_pos[0]),
                                 int(self._current_snapped_pos[1]),
                             )

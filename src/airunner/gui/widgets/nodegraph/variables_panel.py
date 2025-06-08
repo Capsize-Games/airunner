@@ -141,7 +141,7 @@ class VariablesPanelWidget(BaseWidget):
             return
 
         var_name = item.data(Qt.UserRole)
-        variable = self._find_variable_by_name(var_name)
+        variable = self.find_variable_by_name(var_name)
         if not variable:
             return
 
@@ -168,7 +168,7 @@ class VariablesPanelWidget(BaseWidget):
     def _edit_variable_item(self, item: QListWidgetItem):
         """Handles double-clicking a variable item (currently renames)."""
         var_name = item.data(Qt.UserRole)
-        variable = self._find_variable_by_name(var_name)
+        variable = self.find_variable_by_name(var_name)
         if variable:
             self._rename_variable(variable)  # Reuse rename logic for now
 
@@ -202,7 +202,7 @@ class VariablesPanelWidget(BaseWidget):
             item.setForeground(color)
             self.ui.variables_list_widget.addItem(item)
 
-    def _find_variable_by_name(self, name: str) -> Variable | None:
+    def find_variable_by_name(self, name: str) -> Variable | None:
         """Finds a variable object by its name."""
         for var in self.variables:
             if var.name == name:
