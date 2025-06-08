@@ -122,7 +122,7 @@ class ChatEngineTool(
             chat_history = kwargs.get("chat_history", [])
             try:
                 streaming_response = self.chat_engine.stream_chat(
-                    query_str  # Only pass the prompt as a positional argument
+                    query_str, **kwargs
                 )
             except jinja2.exceptions.TemplateError as e:
                 self.logger.error(
