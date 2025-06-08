@@ -120,32 +120,33 @@ class MoodToolsMixin(ToolSingletonMixin):
                     break
 
     def _update_mood(self) -> None:
-        try:
-            conversation = self.conversation
-            if not (conversation and conversation.value):
-                self.logger.warning("Conversation is missing or invalid.")
-                return
-            context = getattr(conversation, "formatted_messages", None)
-            if not (context and context.strip()):
-                self.logger.warning("Formatted messages are missing or empty.")
-                return
-            mood_data = self.mood_engine.chat(context)
-            if mood_data is None:
-                mood_description, emoji = "neutral", "🙂"
-            else:
-                mood_description, emoji = self._parse_mood_data(mood_data)
-            if hasattr(self, "mood_tool"):
-                self.mood_tool(mood_description, emoji)
-            else:
-                self.logger.error("Mood tool is not available.")
-            if hasattr(self, "_emit_mood_signal"):
-                self._emit_mood_signal(mood_description, emoji)
-            else:
-                self.logger.error("Mood signal emitter is not available.")
-        except Exception as e:
-            self.logger.error(f"Error updating mood: {e}")
-            if hasattr(self, "mood_tool"):
-                self.mood_tool("neutral", "🙂")
+        # try:
+        #     conversation = self.conversation
+        #     if not (conversation and conversation.value):
+        #         self.logger.warning("Conversation is missing or invalid.")
+        #         return
+        #     context = getattr(conversation, "formatted_messages", None)
+        #     if not (context and context.strip()):
+        #         self.logger.warning("Formatted messages are missing or empty.")
+        #         return
+        #     mood_data = self.mood_engine.chat(context)
+        #     if mood_data is None:
+        #         mood_description, emoji = "neutral", "🙂"
+        #     else:
+        #         mood_description, emoji = self._parse_mood_data(mood_data)
+        #     if hasattr(self, "mood_tool"):
+        #         self.mood_tool(mood_description, emoji)
+        #     else:
+        #         self.logger.error("Mood tool is not available.")
+        #     if hasattr(self, "_emit_mood_signal"):
+        #         self._emit_mood_signal(mood_description, emoji)
+        #     else:
+        #         self.logger.error("Mood signal emitter is not available.")
+        # except Exception as e:
+        #     self.logger.error(f"Error updating mood: {e}")
+        #     if hasattr(self, "mood_tool"):
+        #         self.mood_tool("neutral", "🙂")
+        print("++++++++++++++++++++++ TODO: fix mood tools")
 
     def update_mood(self, mood_description: str, emoji: str) -> str:
         return self.mood_tool(mood_description, emoji)

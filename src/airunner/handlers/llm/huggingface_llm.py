@@ -2,6 +2,7 @@ from typing import Any, Callable, List, Optional, Sequence, Union, Dict
 import torch
 from llama_index.core.base.llms.types import (
     ChatMessage,
+    MessageRole,
     ChatResponse,
     ChatResponseGen,
     CompletionResponse,
@@ -100,8 +101,17 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         default_factory=dict,
         description="The kwargs to pass to the model during initialization.",
     )
+    _agent: Any = PrivateAttr(default=None)
 
     _llm_request: Optional[LLMRequest] = None
+
+    @property
+    def agent(self):
+        if self._agent is None:
+            raise AttributeError(
+                "HuggingFaceLLM.agent is None. The agent reference must be set at instantiation or via set_agent(agent) after deserialization."
+            )
+        return self._agent
 
     @property
     def generate_kwargs(self) -> Dict:
@@ -153,6 +163,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
 
     def __init__(
         self,
+        agent=None,
         context_window: int = DEFAULT_CONTEXT_WINDOW,
         max_new_tokens: int = DEFAULT_NUM_OUTPUTS,
         query_wrapper_prompt: Union[str, PromptTemplate] = "{query_str}",
@@ -203,6 +214,18 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             output_parser: Parser for model outputs.
             streaming_stopping_criteria: Criteria for stopping streaming.
         """
+        if agent is None:
+            import warnings
+
+            warnings.warn(
+                "HuggingFaceLLM instantiated without agent. "
+                "If this is not intentional, call set_agent(agent) after instantiation."
+            )
+        self._agent = agent
+        if hasattr(self, "logger"):
+            self.logger.debug(
+                f"HuggingFaceLLM initialized with agent: {repr(agent)}"
+            )
         model_kwargs = model_kwargs or {}
         model = model or AutoModelForCausalLM.from_pretrained(
             model_name, device_map=device_map, **model_kwargs
@@ -287,6 +310,16 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             )
         else:
             self._streaming_stopping_criteria = stopping_criteria
+
+    def set_agent(self, agent):
+        """
+        Set the agent reference after instantiation (for deserialization/external instantiation).
+        """
+        self._agent = agent
+        if hasattr(self, "logger"):
+            self.logger.debug(
+                f"HuggingFaceLLM agent set via set_agent: {repr(agent)}"
+            )
 
     @property
     def model(self):
@@ -483,7 +516,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
 
     @llm_chat_callback()
     def chat(
-        self, messages: Sequence[ChatMessage], **kwargs: Any
+        self, query_str: str, messages: Sequence[ChatMessage], **kwargs: Any
     ) -> ChatResponse:
         """
         Generate a chat response for the given messages.
@@ -495,13 +528,16 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         Returns:
             ChatResponse: The model's generated chat response.
         """
-        prompt = self.messages_to_prompt(messages)
+        prompt = query_str  # self.messages_to_prompt(messages)
         completion_response = self.complete(prompt, formatted=True, **kwargs)
         return completion_response_to_chat_response(completion_response)
 
     @llm_chat_callback()
     def stream_chat(
-        self, messages: Sequence[ChatMessage], **kwargs: Any
+        self,
+        query_str: Any,
+        messages: Optional[Sequence[ChatMessage]] = None,
+        **kwargs: Any,
     ) -> ChatResponseGen:
         """
         Stream a chat response for the given messages.
@@ -513,7 +549,14 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         Returns:
             ChatResponseGen: Generator yielding parts of the chat response as they're generated.
         """
-        prompt = self.messages_to_prompt(messages)
+        if type(query_str) is str:
+            prompt = query_str  # self.messages_to_prompt(messages)
+        else:
+            query_str[0] = ChatMessage(
+                role=MessageRole.SYSTEM, content=self.agent.system_prompt
+            )
+            prompt = self.messages_to_prompt(query_str)
+
         completion_response = self.stream_complete(
             prompt, formatted=True, **kwargs
         )
