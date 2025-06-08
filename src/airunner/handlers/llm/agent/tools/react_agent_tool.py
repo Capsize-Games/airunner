@@ -144,9 +144,10 @@ class ReActAgentTool(BaseConversationEngine):
                 raw_input={"input": query_str},
                 raw_output="",
             )
-        self.chat_engine.chat_history.append(
-            ChatMessage(content=query_str, role=MessageRole.USER)
-        )
+        if not action is LLMActionType.DECISION:
+            self.chat_engine.chat_history.append(
+                ChatMessage(content=query_str, role=MessageRole.USER)
+            )
         response = ""
         is_first_message = True
         for token in streaming_response:
