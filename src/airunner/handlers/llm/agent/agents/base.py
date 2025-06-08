@@ -189,15 +189,15 @@ class BaseAgent(
                 "description": "Respond to the user conversationally: Choose this when you have all the context you need to respond to the user's request in a conversational manner.",
             },
             2: {
-                "action": LLMActionType.PERFORM_RAG_SEARCH,
-                "description": "Browse the internet: Choose this when you want to get more information from the web to better respond to the user's request.",
+                "action": LLMActionType.SEARCH,
+                "description": "Browse / Search the internet: Choose this when you want to get more information from the web to better respond to the user's request.",
             },
             3: {
                 "action": LLMActionType.GENERATE_IMAGE,
                 "description": "Generate image: Use this if the user is asking for an image or visual content.",
             },
             4: {
-                "action": LLMActionType.SEARCH,
+                "action": LLMActionType.PERFORM_RAG_SEARCH,
                 "description": "Use documents: Choose this when you want to search through documents or files to find relevant information to respond to the user's request.",
             },
             5: {
@@ -973,7 +973,9 @@ class BaseAgent(
         Returns:
             str: The system prompt.
         """
-        return PromptBuilder.system_prompt(agent=self)
+        return PromptBuilder.system_prompt(
+            agent=self, menu_choices=self.menu_choices
+        )
 
     @property
     def _update_user_data_prompt(self) -> str:
