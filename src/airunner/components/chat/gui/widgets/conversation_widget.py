@@ -236,9 +236,6 @@ class ConversationWidget(BaseWidget):
             elif attempt_count < max_attempts:
                 QTimer.singleShot(50, check_ready)
             else:
-                logger.warning(
-                    f"ConversationWidget: JavaScript initialization timeout after {max_attempts} attempts"
-                )
                 callback()
 
         check_ready()
