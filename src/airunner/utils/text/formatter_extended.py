@@ -102,7 +102,7 @@ class FormatterExtended:
         return False
 
     @staticmethod
-    def _render_markdown_to_html(markdown_string: str) -> str:
+    def render_markdown_to_html(markdown_string: str) -> str:
         """
         Converts a Markdown string to HTML with syntax highlighting for code blocks.
         For code blocks with language 'markdown', always use the TextLexer to preserve newlines and formatting.
@@ -221,7 +221,7 @@ class FormatterExtended:
         """
         # Always treat triple-backtick code blocks as markdown, even if mixed
         if re.search(r"```.*```", content_string, re.DOTALL):
-            html_content = FormatterExtended._render_markdown_to_html(
+            html_content = FormatterExtended.render_markdown_to_html(
                 content_string
             )
             return {
@@ -261,7 +261,7 @@ class FormatterExtended:
             }
         # Markdown content
         elif FormatterExtended._is_markdown(content_string):
-            html_content = FormatterExtended._render_markdown_to_html(
+            html_content = FormatterExtended.render_markdown_to_html(
                 content_string
             )
             return {

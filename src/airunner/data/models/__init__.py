@@ -1,10 +1,14 @@
 from airunner.data.models.voice_settings import VoiceSettings
 from airunner.data.models.sound_settings import SoundSettings
 from airunner.data.models.openvoice_settings import OpenVoiceSettings
-from airunner.components.art.data.active_grid_settings import ActiveGridSettings
+from airunner.components.art.data.active_grid_settings import (
+    ActiveGridSettings,
+)
 from airunner.data.models.application_settings import ApplicationSettings
 from airunner.components.art.data.controlnet_settings import ControlnetSettings
-from airunner.components.art.data.image_to_image_settings import ImageToImageSettings
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.data.models.chatstore import Chatstore
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
@@ -97,6 +101,7 @@ classes = [
     RAGSettings,
     LanguageSettings,
     AIRunnerSettings,
+    SoundSettings,
     Base,
 ]
 

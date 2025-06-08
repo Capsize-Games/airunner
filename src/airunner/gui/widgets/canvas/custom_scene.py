@@ -151,6 +151,11 @@ class CustomScene(
             self.register(signal, handler)
 
     @property
+    def original_item_positions(self) -> Dict[str, QPointF]:
+        """Returns the original positions of items in the scene."""
+        return self._original_item_positions
+
+    @property
     def current_tool(self):
         return (
             None
@@ -629,10 +634,10 @@ class CustomScene(
                 if self.item.scene() is None:
                     self.addItem(self.item)
                     self.item.setPos(x, y)
-                    self._original_item_positions[self.item] = self.item.pos()
+                    self.original_item_positions[self.item] = self.item.pos()
             else:
                 self.item.setPos(x, y)
-                self._original_item_positions[self.item] = self.item.pos()
+                self.original_item_positions[self.item] = self.item.pos()
                 self.item.updateImage(image)
             self.item.setZValue(z_index)
 
@@ -822,7 +827,7 @@ class CustomScene(
         if self.item:
             # Store the absolute position without any adjustments
             absolute_pos = QPointF(root_point.x(), root_point.y())
-            self._original_item_positions[self.item] = absolute_pos
+            self.original_item_positions[self.item] = absolute_pos
 
             # Calculate display position by subtracting current canvas offset
             visible_pos_x = absolute_pos.x() - canvas_offset.x()
@@ -1059,7 +1064,7 @@ class CustomScene(
             return
 
         # Store the original position if we haven't already
-        if self.item not in self._original_item_positions:
+        if self.item not in self.original_item_positions:
             # Use the drawing_pad_settings values for position
             abs_x = self.drawing_pad_settings.x_pos
             abs_y = self.drawing_pad_settings.y_pos
@@ -1069,10 +1074,10 @@ class CustomScene(
                 abs_x = self.item.pos().x() + canvas_offset.x()
                 abs_y = self.item.pos().y() + canvas_offset.y()
 
-            self._original_item_positions[self.item] = QPointF(abs_x, abs_y)
+            self.original_item_positions[self.item] = QPointF(abs_x, abs_y)
 
         # Get the original absolute position
-        original_pos = self._original_item_positions[self.item]
+        original_pos = self.original_item_positions[self.item]
 
         # Calculate new position based on current canvas_offset
         new_x = original_pos.x() - canvas_offset.x()

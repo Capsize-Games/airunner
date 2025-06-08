@@ -13,7 +13,10 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.memory import BaseMemory
 from llama_index.core.llms.llm import LLM
 from llama_index.core.storage.chat_store import SimpleChatStore
-from llama_index.core.base.llms.types import ChatMessage
+from llama_index.core.base.llms.types import (
+    ChatMessage,
+    MessageRole,
+)
 from llama_index.core.base.llms.types import TextBlock
 
 from airunner.enums import (
@@ -522,7 +525,7 @@ class BaseAgent(
                         [
                             ChatMessage(
                                 content=self.system_prompt,
-                                role=self.llm.metadata.system_role,
+                                role=MessageRole.SYSTEM,
                             )
                         ]
                         if self.system_prompt
@@ -552,7 +555,7 @@ class BaseAgent(
                     [
                         ChatMessage(
                             content=self._update_user_data_prompt,
-                            role=self.llm.metadata.system_role,
+                            role=MessageRole.SYSTEM,
                         )
                     ]
                     if hasattr(self, "_update_user_data_prompt")
@@ -582,7 +585,7 @@ class BaseAgent(
                     [
                         ChatMessage(
                             content=self._mood_update_prompt,
-                            role=self.llm.metadata.system_role,
+                            role=MessageRole.SYSTEM,
                         )
                     ]
                     if hasattr(self, "_mood_update_prompt")
@@ -610,7 +613,7 @@ class BaseAgent(
                     [
                         ChatMessage(
                             content=self._summarize_conversation_prompt,
-                            role=self.llm.metadata.system_role,
+                            role=MessageRole.SYSTEM,
                         )
                     ]
                     if hasattr(self, "_summarize_conversation_prompt")
@@ -638,7 +641,7 @@ class BaseAgent(
                     [
                         ChatMessage(
                             content=self._information_scraper_prompt,
-                            role=self.llm.metadata.system_role,
+                            role=MessageRole.SYSTEM,
                         )
                     ]
                     if hasattr(self, "_information_scraper_prompt")
@@ -1094,7 +1097,7 @@ class BaseAgent(
         self.chat_engine._memory = self.chat_memory
         self.chat_engine_tool.chat_engine = self.chat_engine
 
-    def _sync_memory_to_all_engines(self) -> None:
+    def sync_memory_to_all_engines(self) -> None:
         """
         Ensure all engine instances share the same memory instance for full context.
         """
@@ -1129,7 +1132,7 @@ class BaseAgent(
             self._memory = None
 
         # Ensure all chat engines share the same memory instance for consistency
-        self._sync_memory_to_all_engines()
+        self.sync_memory_to_all_engines()
 
     def _perform_tool_call(
         self, action: LLMActionType, **kwargs: Any
@@ -1272,7 +1275,7 @@ class BaseAgent(
                 }
             )
 
-    def _update_conversation_state(self, conversation):
+    def update_conversation_state(self, conversation):
         """
         Update conversation state and chat memory after a turn using the unified engine logic.
         Ensures all messages are converted to ChatMessage objects with blocks for memory buffer compatibility.
@@ -1294,9 +1297,9 @@ class BaseAgent(
                         chat_messages.append(msg)
                     elif isinstance(msg, dict):
                         content = msg.get("content", "")
-                        role = msg.get("role", "user")
+                        role = msg.get("role", MessageRole.USER)
                         if role == "bot":
-                            role = "assistant"
+                            role = MessageRole.ASSISTANT
                         chat_messages.append(
                             ChatMessage(
                                 role=role,
@@ -1311,7 +1314,7 @@ class BaseAgent(
                             )
                         )
                 self.chat_memory.set(chat_messages)
-            self._sync_memory_to_all_engines()
+            self.sync_memory_to_all_engines()
 
     def _remove_last_message_from_conversation(self, conversation) -> None:
         """
@@ -1335,7 +1338,7 @@ class BaseAgent(
                     messages.append(msg)
             self.chat_memory.set(messages)
 
-    def _make_chat_message(self, role: str, content: str) -> ChatMessage:
+    def make_chat_message(self, role: str, content: str) -> ChatMessage:
         """
         Helper to create a ChatMessage for unified engine logic.
         """
@@ -1378,7 +1381,7 @@ class BaseAgent(
                 self.chat_memory
             )  # property will re-initialize with correct key
             self.chat_memory.set(messages)
-            self._sync_memory_to_all_engines()
+            self.sync_memory_to_all_engines()
 
     def on_conversation_deleted(self, data: Optional[Dict] = None) -> None:
         """
@@ -1446,7 +1449,7 @@ class BaseAgent(
         conversation = self.conversation
         if conversation is not None:
             self._append_conversation_messages(conversation, message)
-            self._update_conversation_state(conversation)
+            self.update_conversation_state(conversation)
             if (
                 self.llm_settings.use_chatbot_mood
                 and getattr(self, "chatbot", None)

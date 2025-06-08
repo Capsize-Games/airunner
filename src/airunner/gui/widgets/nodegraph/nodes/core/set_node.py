@@ -332,7 +332,7 @@ class SetNode(BaseCoreNode):
             return False
 
         if self.graph and hasattr(self.graph, "widget_ref"):
-            variable = self.graph.widget_ref._find_variable_by_name(
+            variable = self.graph.widget_ref.find_variable_by_name(
                 self.variable_name
             )
             if variable:
@@ -486,7 +486,7 @@ class SetNode(BaseCoreNode):
                 )
                 # Find the actual variable object
                 if self.graph and hasattr(self.graph, "widget_ref"):
-                    variable = self.graph.widget_ref._find_variable_by_name(
+                    variable = self.graph.widget_ref.find_variable_by_name(
                         connected_node.variable_name
                     )
                     if variable:
