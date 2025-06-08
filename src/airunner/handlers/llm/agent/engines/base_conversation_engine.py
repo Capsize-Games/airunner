@@ -75,14 +75,13 @@ class BaseConversationEngine:
                 else:
                     content = msg.get("content", "")
                     chat_messages.append(
-                        self.agent._make_chat_message(
+                        self.agent.make_chat_message(
                             role=msg.get("role", "user"),
                             content=content,
                         )
                     )
             self.agent.chat_memory.set(chat_messages)
-        if hasattr(self.agent, "_sync_memory_to_all_engines"):
-            self.agent._sync_memory_to_all_engines()
+        self.agent.sync_memory_to_all_engines()
 
     def append_message_and_persist(
         self,
@@ -134,8 +133,7 @@ class BaseConversationEngine:
             )
             self.agent.chat_memory.put(chat_msg)
         # Persist conversation state
-        if hasattr(self.agent, "_update_conversation_state"):
-            self.agent._update_conversation_state(conversation)
+        self.agent.update_conversation_state(conversation)
         if self._logger:
             self._logger.debug(
                 f"[BaseConversationEngine] Appended and persisted message: role='{role}', content='{content[:40]}', tool_call={tool_call}"

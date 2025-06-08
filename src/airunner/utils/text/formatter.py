@@ -89,7 +89,7 @@ class Formatter:
         return False
 
     @staticmethod
-    def _render_markdown_to_html(markdown_string: str) -> str:
+    def render_markdown_to_html(markdown_string: str) -> str:
         """
         Converts a Markdown string to HTML.
         """
@@ -161,7 +161,7 @@ class Formatter:
         os.makedirs(output_dir, exist_ok=True)
         # Only treat as LaTeX if the whole string is a LaTeX formula
         if Formatter._is_markdown(content_string):
-            html_output = Formatter._render_markdown_to_html(content_string)
+            html_output = Formatter.render_markdown_to_html(content_string)
             return {
                 "type": Formatter._FORMAT_MARKDOWN,
                 "output": html_output,  # HTML string

@@ -14,18 +14,23 @@ class ImageToolsMixin(ToolSingletonMixin):
     def set_working_width_and_height(self):
         if not hasattr(self, "_set_working_width_and_height"):
 
+            width_label = f"The width of the image. Currently: {self.application_settings.working_width}. "
+            height_label = (
+                f"The height of the image. Currently: {self.application_settings.working_height}. "
+            )
+
             def set_working_width_and_height(
                 width: Annotated[
                     Optional[int],
                     (
-                        f"The width of the image. Currently: {self.application_settings.working_width}. "
+                        f"{width_label}"
                         "Min: 64, max: 2048. Must be a multiple of 64."
                     ),
                 ],
                 height: Annotated[
                     Optional[int],
                     (
-                        f"The height of the image. Currently: {self.application_settings.working_height}. "
+                        f"{height_label}. "
                         "Min: 64, max: 2048. Must be a multiple of 64."
                     ),
                 ],

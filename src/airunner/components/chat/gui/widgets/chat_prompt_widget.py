@@ -377,7 +377,7 @@ class ChatPromptWidget(BaseWidget):
         )
         if hasattr(self.ui, "conversation"):
             self.ui.conversation.conversation = conversation
-            self.ui.conversation._set_conversation_widgets(messages)
+            self.ui.conversation.set_conversation_widgets(messages)
 
     def on_queue_load_conversation(self, data):
         conversation_id = data.get("index")

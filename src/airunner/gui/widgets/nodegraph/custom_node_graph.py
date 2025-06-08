@@ -51,7 +51,7 @@ class CustomNodeGraph(MediatorMixin, SettingsMixin, NodeGraph):
                 and self.widget_ref
                 and hasattr(var_node, "variable_name")
             ):
-                variable = self.widget_ref._find_variable_by_name(
+                variable = self.widget_ref.find_variable_by_name(
                     var_node.variable_name
                 )
 
@@ -100,7 +100,7 @@ class CustomNodeGraph(MediatorMixin, SettingsMixin, NodeGraph):
             if self.widget_ref and hasattr(
                 self.widget_ref, "_find_variable_by_name"
             ):
-                variable = self.widget_ref._find_variable_by_name(
+                variable = self.widget_ref.find_variable_by_name(
                     variable_name
                 )
                 if variable:
