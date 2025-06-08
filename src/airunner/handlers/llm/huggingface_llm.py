@@ -353,8 +353,19 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
                 {"role": message.role.value, "content": message.content}
                 for message in messages
             ]
+            fixed_messages = []
+            previous_role = None
+            for message in messages_dict:
+                role = message["role"]
+                if previous_role == role:
+                    previous_message = fixed_messages.pop()
+                    message["content"] = (
+                        previous_message["content"] + " " + message["content"]
+                    )
+                previous_role = role
+                fixed_messages.append(message)
             return self._tokenizer.apply_chat_template(
-                messages_dict, tokenize=False, add_generation_prompt=True
+                fixed_messages, tokenize=False, add_generation_prompt=True
             )
         return generic_messages_to_prompt(messages)
 
