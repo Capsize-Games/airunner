@@ -129,6 +129,13 @@ class BaseAgent(
         self.default_tool_choice: Optional[Union[str, dict]] = (
             default_tool_choice
         )
+        self.action_map = {
+            1: LLMActionType.CHAT,
+            2: LLMActionType.SEARCH,
+            3: LLMActionType.GENERATE_IMAGE,
+            4: LLMActionType.PERFORM_RAG_SEARCH,
+            5: LLMActionType.APPLICATION_COMMAND,
+        }
         self.prompt: Optional[str] = None
         self.webpage_html: str = ""
         self.current_tab: Optional[Tab] = None
@@ -176,6 +183,28 @@ class BaseAgent(
             }
         )
         self.context_manager = ContextManager()
+        self.menu_choices = {
+            1: {
+                "action": LLMActionType.CHAT,
+                "description": "Respond to the user conversationally: Choose this when you have all the context you need to respond to the user's request in a conversational manner.",
+            },
+            2: {
+                "action": LLMActionType.PERFORM_RAG_SEARCH,
+                "description": "Browse the internet: Choose this when you want to get more information from the web to better respond to the user's request.",
+            },
+            3: {
+                "action": LLMActionType.GENERATE_IMAGE,
+                "description": "Generate image: Use this if the user is asking for an image or visual content.",
+            },
+            4: {
+                "action": LLMActionType.SEARCH,
+                "description": "Use documents: Choose this when you want to search through documents or files to find relevant information to respond to the user's request.",
+            },
+            5: {
+                "action": LLMActionType.APPLICATION_COMMAND,
+                "description": "Not sure what to do: Reason about the user's request and choose from a list of available tools in order to fulfill the request.",
+            },
+        }
         super().__init__(*args, **kwargs)
 
     @property
@@ -397,8 +426,6 @@ class BaseAgent(
             f"{metadata_prompt}"
             "Chatbot information:\n"
             f"- Chatbot name: {self.botname}\n"
-            f"- Chatbot mood: {self.bot_mood}\n"
-            f"- Chatbot personality: {self.bot_personality}\n"
         )
 
     def unload(self) -> None:
@@ -946,7 +973,7 @@ class BaseAgent(
         Returns:
             str: The system prompt.
         """
-        return PromptBuilder(self).build()
+        return PromptBuilder.system_prompt(agent=self)
 
     @property
     def _update_user_data_prompt(self) -> str:
@@ -1134,6 +1161,72 @@ class BaseAgent(
         # Ensure all chat engines share the same memory instance for consistency
         self.sync_memory_to_all_engines()
 
+    def chat_tool_handler(self, **kwargs: Any) -> Any:
+        kwargs["chat_history"] = (
+            self.chat_memory.get() if self.chat_memory else []
+        )
+        kwargs["tool_choice"] = "chat_engine_react_tool"
+        return self.react_tool_agent.call(**kwargs)
+
+    def decision_tool_handler(self, **kwargs: Any) -> Any:
+        kwargs["chat_history"] = (
+            self.chat_memory.get() if self.chat_memory else []
+        )
+        kwargs["tool_choice"] = "chat_engine_react_tool"
+        return self.react_tool_agent.call(**kwargs)
+
+    def rag_tool_handler(self, **kwargs: Any) -> Any:
+        kwargs["chat_history"] = (
+            self.chat_memory.get() if self.chat_memory else []
+        )
+        kwargs["tool_choice"] = "rag_engine_tool"
+        return self.react_tool_agent.call(**kwargs)
+
+    def store_data_handler(self, **kwargs: Any) -> Any:
+        kwargs["tool_choice"] = "store_user_tool"
+        kwargs["chat_history"] = (
+            self.chat_memory.get() if self.chat_memory else []
+        )
+        return self.react_tool_agent.call(**kwargs)
+
+    def application_command_handler(self, **kwargs: Any) -> Any:
+        kwargs["tool_choice"] = "application_command_tool"
+        kwargs["chat_history"] = (
+            self.chat_memory.get() if self.chat_memory else []
+        )
+        return self.react_tool_agent.call(**kwargs)
+
+    def generate_image_handler(self, **kwargs: Any) -> Any:
+        kwargs["tool_choice"] = "generate_image_tool"
+        kwargs["chat_history"] = (
+            self.chat_memory.get() if self.chat_memory else []
+        )
+        confirmation = "Ok, generating your image..."
+        self.handle_response(
+            confirmation, is_first_message=True, is_last_message=True
+        )
+        self._complete_response = confirmation
+        return self.react_tool_agent.call(**kwargs)
+
+    def use_browser_handler(self, **kwargs: Any) -> Any:
+        kwargs["tool_choice"] = "use_browser_tool"
+        kwargs["chat_history"] = (
+            self.chat_memory.get() if self.chat_memory else []
+        )
+        result = self.react_tool_agent.call(**kwargs)
+        self._complete_response = (
+            result.content if hasattr(result, "content") else str(result)
+        )
+        return result
+
+    def search_tool_handler(self, **kwargs: Any) -> Any:
+        kwargs["tool_choice"] = "search_engine_tool"
+        if "chat_history" not in kwargs:
+            kwargs["chat_history"] = (
+                self.chat_memory.get() if self.chat_memory else []
+            )
+        return self.react_tool_agent.call(**kwargs)
+
     def _perform_tool_call(
         self, action: LLMActionType, **kwargs: Any
     ) -> Optional[Any]:
@@ -1145,81 +1238,15 @@ class BaseAgent(
         Returns:
             Optional[Any]: The result of the tool call, if any.
         """
-
-        def chat_tool_handler(**kwargs: Any) -> Any:
-            if "chat_history" not in kwargs:
-                kwargs["chat_history"] = (
-                    self.chat_memory.get() if self.chat_memory else []
-                )
-            kwargs["tool_choice"] = "chat_engine_react_tool"
-            return self.react_tool_agent.call(**kwargs)
-
-        def rag_tool_handler(**kwargs: Any) -> Any:
-            if "chat_history" not in kwargs:
-                kwargs["chat_history"] = (
-                    self.chat_memory.get() if self.chat_memory else []
-                )
-            kwargs["tool_choice"] = "rag_engine_tool"
-            return self.react_tool_agent.call(**kwargs)
-
-        def store_data_handler(**kwargs: Any) -> Any:
-            kwargs["tool_choice"] = "store_user_tool"
-            if "chat_history" not in kwargs:
-                kwargs["chat_history"] = (
-                    self.chat_memory.get() if self.chat_memory else []
-                )
-            return self.react_tool_agent.call(**kwargs)
-
-        def application_command_handler(**kwargs: Any) -> Any:
-            kwargs["tool_choice"] = "application_command_tool"
-            if "chat_history" not in kwargs:
-                kwargs["chat_history"] = (
-                    self.chat_memory.get() if self.chat_memory else []
-                )
-            return self.react_tool_agent.call(**kwargs)
-
-        def generate_image_handler(**kwargs: Any) -> Any:
-            kwargs["tool_choice"] = "generate_image_tool"
-            if "chat_history" not in kwargs:
-                kwargs["chat_history"] = (
-                    self.chat_memory.get() if self.chat_memory else []
-                )
-            confirmation = "Ok, generating your image..."
-            self.handle_response(
-                confirmation, is_first_message=True, is_last_message=True
-            )
-            self._complete_response = confirmation
-            return self.react_tool_agent.call(**kwargs)
-
-        def use_browser_handler(**kwargs: Any) -> Any:
-            kwargs["tool_choice"] = "use_browser_tool"
-            if "chat_history" not in kwargs:
-                kwargs["chat_history"] = (
-                    self.chat_memory.get() if self.chat_memory else []
-                )
-            result = self.react_tool_agent.call(**kwargs)
-            self._complete_response = (
-                result.content if hasattr(result, "content") else str(result)
-            )
-            return result
-
-        def search_tool_handler(**kwargs: Any) -> Any:
-            kwargs["tool_choice"] = "search_engine_tool"
-            if "chat_history" not in kwargs:
-                kwargs["chat_history"] = (
-                    self.chat_memory.get() if self.chat_memory else []
-                )
-            return self.react_tool_agent.call(**kwargs)
-
         tool_handlers = {
-            LLMActionType.CHAT: chat_tool_handler,
-            LLMActionType.DECISION: chat_tool_handler,
-            LLMActionType.PERFORM_RAG_SEARCH: rag_tool_handler,
-            LLMActionType.STORE_DATA: store_data_handler,
-            LLMActionType.APPLICATION_COMMAND: application_command_handler,
-            LLMActionType.GENERATE_IMAGE: generate_image_handler,
-            LLMActionType.BROWSER: use_browser_handler,
-            LLMActionType.SEARCH: search_tool_handler,
+            LLMActionType.CHAT: self.chat_tool_handler,
+            LLMActionType.DECISION: self.chat_tool_handler,
+            LLMActionType.PERFORM_RAG_SEARCH: self.rag_tool_handler,
+            LLMActionType.STORE_DATA: self.store_data_handler,
+            LLMActionType.APPLICATION_COMMAND: self.application_command_handler,
+            LLMActionType.GENERATE_IMAGE: self.generate_image_handler,
+            LLMActionType.BROWSER: self.use_browser_handler,
+            LLMActionType.SEARCH: self.search_tool_handler,
         }
 
         handler = tool_handlers.get(action)
@@ -1228,8 +1255,19 @@ class BaseAgent(
             return None
 
         self.logger.info(f"Performing tool call for action: {action}")
-        print("handler", handler)
         response = handler(**kwargs)
+
+        if action is LLMActionType.DECISION:
+            index = int(response.content)
+            if index in self.menu_choices:
+                new_action = self.menu_choices[index]["action"]
+                self.action = new_action
+                handler = tool_handlers.get(new_action)
+                self.logger.info(
+                    f"Performing tool call for action: {new_action}"
+                )
+                response = handler(**kwargs)
+
         self.logger.info(f"Tool call for action {action} completed.")
         return response
 
@@ -1300,12 +1338,13 @@ class BaseAgent(
                         role = msg.get("role", MessageRole.USER)
                         if role == "bot":
                             role = MessageRole.ASSISTANT
-                        chat_messages.append(
-                            ChatMessage(
-                                role=role,
-                                blocks=[TextBlock(text=content)],
+                        if self.action is not LLMActionType.DECISION:
+                            chat_messages.append(
+                                ChatMessage(
+                                    role=role,
+                                    blocks=[TextBlock(text=content)],
+                                )
                             )
-                        )
                     else:
                         # Fallback: treat as plain text
                         chat_messages.append(
@@ -1405,10 +1444,15 @@ class BaseAgent(
         system_prompt: Optional[str] = None,
         rag_system_prompt: Optional[str] = None,
         llm_request: Optional[LLMRequest] = None,
+        extra_context: Optional[dict[str, dict]] = None,
         **kwargs: Any,
     ) -> AgentChatResponse:
         """Chat with the agent, handling slash commands and tool routing."""
+        self.interrupt = False
         # Ensure logger is initialized
+        if extra_context:
+            for k, v in extra_context.items():
+                self.context_manager.set_context(k, v)
         self.prompt = message
         command = self.command
         if command is not None:
@@ -1435,29 +1479,64 @@ class BaseAgent(
             else:
                 message = stripped_message
         self.action = action
-        system_prompt = self.system_prompt
         self._chat_prompt = message
         self._complete_response = ""
+        if action is LLMActionType.CHAT:
+            self._complete_response = f"{self.botname}: "
         self.do_interrupt = False
         self._update_memory(action)
         kwargs = kwargs or {}
-        kwargs["input"] = f"{message}"
-        self._update_system_prompt(system_prompt, rag_system_prompt)
+        kwargs["input"] = f'{self.username}: "{message}"'
+        self._update_system_prompt(self.system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._update_memory_settings()
+
         self._perform_tool_call(action, **kwargs)
+
         conversation = self.conversation
         if conversation is not None:
             self._append_conversation_messages(conversation, message)
             self.update_conversation_state(conversation)
-            if (
-                self.llm_settings.use_chatbot_mood
-                and getattr(self, "chatbot", None)
-                and getattr(self.chatbot, "use_mood", False)
-            ):
-                self._update_mood()
-        self._perform_analysis(action)
+
+        # if action is LLMActionType.CHAT:
+        #     if (
+        #         self.llm_settings.use_chatbot_mood
+        #         and getattr(self, "chatbot", None)
+        #         and getattr(self.chatbot, "use_mood", False)
+        #     ):
+        #         self._update_mood()
+
+        #     self._perform_analysis(action)
+
         return AgentChatResponse(response=self._complete_response)
+
+    def _parse_menu_selection(self, text: str) -> Optional[int]:
+        match = re.match(r"\s*(\d+)[\.|\s]", text)
+        if match:
+            return int(match.group(1))
+        match = re.match(r"\s*(\d+)", text)
+        if match:
+            return int(match.group(1))
+        return None
+
+    def _handle_decision_response(self, response, is_last_message=False):
+        self._complete_response += response
+        selection = self._parse_menu_selection(self._complete_response)
+        if selection is not None or is_last_message:
+            if selection is None:
+                selection = list(self.action_map.keys())[
+                    0
+                ]  # Default to first action
+            action = self.action_map.get(selection)
+            self.interrupt = True
+            # self.chat(
+            #     message=self._chat_prompt,
+            #     action=action,
+            #     system_prompt=None,
+            #     rag_system_prompt=None,
+            #     llm_request=self.llm_request,
+            #     extra_context=None,
+            # )
 
     def handle_response(
         self,
@@ -1476,6 +1555,12 @@ class BaseAgent(
             do_not_display (bool): If True, do not emit the signal to display the message.
             do_tts_reply (bool): If True, perform TTS reply.
         """
+        if self.action is LLMActionType.DECISION:
+            return self._handle_decision_response(
+                response,
+                is_last_message=is_last_message,
+            )
+
         if not response and not do_not_display:
             return
 

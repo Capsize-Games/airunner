@@ -2,6 +2,7 @@ from typing import Any
 from llama_index.core.tools.types import ToolOutput, ToolMetadata
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
+from airunner.enums import LLMActionType
 from airunner.handlers.llm.agent.chat_engine import ReactAgentEngine
 from airunner.handlers.llm.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
@@ -86,6 +87,13 @@ class ReActAgentTool(BaseConversationEngine):
             tools_list = args[0] if len(args) == 1 else args
 
         chat_engine = ReactAgentEngine.from_tools(*args, **kwargs)
+        # Patch: ensure the LLM's agent is set to the correct agent
+        if (
+            hasattr(chat_engine._llm, "set_agent")
+            and getattr(chat_engine._llm, "_agent", None) is None
+            and agent is not None
+        ):
+            chat_engine._llm.set_agent(agent)
 
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
@@ -102,26 +110,27 @@ class ReActAgentTool(BaseConversationEngine):
         return self.call(*args, **kwargs)
 
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
+        tool_choice = kwargs.get("tool_choice", None)
         llm_request = kwargs.get("llm_request", LLMRequest.from_default())
         self.agent.llm.llm_request = llm_request
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
-        if (
-            chat_history is None
-            and self.agent is not None
-            and hasattr(self.agent, "chat_memory")
-        ):
-            chat_history = (
-                self.agent.chat_memory.get() if self.agent.chat_memory else []
+
+        action = self.agent.action
+
+        chat_history = (
+            (self.agent.chat_memory.get() if self.agent.chat_memory else [])
+            if (
+                chat_history is None
+                and self.agent is not None
+                and hasattr(self.agent, "chat_memory")
             )
-        if chat_history is None:
-            chat_history = []
-        tool_choice = kwargs.get("tool_choice", None)
+            else (chat_history or [])
+        )
+
         try:
             streaming_response = self.chat_engine.stream_chat(
-                query_str,
-                chat_history=chat_history if chat_history else [],
-                tool_choice=tool_choice,
+                query_str=query_str
             )
         except Exception as e:
             import logging
@@ -145,14 +154,13 @@ class ReActAgentTool(BaseConversationEngine):
                 continue
             response += token
             if self.agent is not None:
-                self.agent.handle_response(
-                    token, is_first_message, decision_mode=False
-                )
+                self.agent.handle_response(token, is_first_message)
             is_first_message = False
 
-        self.chat_engine.chat_history.append(
-            ChatMessage(content=response, role=MessageRole.ASSISTANT)
-        )
+        if not action is LLMActionType.DECISION:
+            self.chat_engine.chat_history.append(
+                ChatMessage(content=response, role=MessageRole.ASSISTANT)
+            )
         return ToolOutput(
             content=str(response),
             tool_name=self.metadata.name,

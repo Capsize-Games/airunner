@@ -598,7 +598,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
     def _do_generate(
         self,
         prompt: str,
-        action: str,
+        action: LLMActionType,
         system_prompt: Optional[str] = None,
         rag_system_prompt: Optional[str] = None,
         llm_request: Optional[Any] = None,
