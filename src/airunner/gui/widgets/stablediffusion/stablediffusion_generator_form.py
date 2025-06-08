@@ -197,14 +197,19 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     def on_application_settings_changed(self, data: Dict):
         if data.get("setting_name") == "generator_settings":
-            if data.get("column_name") in ("use_compel",):
-                self._toggle_compel_form_elements(data.get("value", True))
+            self.on_widget_element_changed(data)
+            # if data.get("column_name") in ("use_compel",):
+            #     self._toggle_compel_form_elements(data.get("value", True))
 
     def on_widget_element_changed(self, data: Dict):
-        self._toggle_compel_form_elements(self.generator_settings.use_compel)
+        # self._toggle_compel_form_elements(self.generator_settings.use_compel)
+        column = data.get("element", None) or data.get("column_name", None)
+        val = data.get("value", None)
 
-        if data.get("element") in ("sd_version",):
-            self._sd_version = data.get("version")
+        if column in ("use_compel",):
+            self._toggle_compel_form_elements(val)
+        elif column in ("sd_version", "version"):
+            self._sd_version = val
             self._toggle_sdxl_form_elements()
 
     def _toggle_compel_form_elements(self, value: bool):
