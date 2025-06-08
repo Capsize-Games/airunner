@@ -145,7 +145,8 @@ class ChatPromptWidget(BaseWidget):
 
     @property
     def action(self) -> LLMActionType:
-        return LLMActionType[self.llm_generator_settings.action]
+        #return LLMActionType[self.llm_generator_settings.action]
+        return LLMActionType.DECISION
 
     def on_model_status_changed_signal(self, data):
         if data["model"] == ModelType.LLM:
