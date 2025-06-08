@@ -235,14 +235,6 @@ class PromptBuilder:
             include_browser_content=True,
             include_language_instruction=False,
         )
-
-        menu_choices = menu_choices or {
-            1: "Respond to the user conversationally: Choose this when you have all the context you need to respond to the user's request in a conversational manner.",
-            2: "Browse the internet: Choose this when you want to get more information from the web to better respond to the user's request.",
-            3: "Generate image: Use this if the user is asking for an image or visual content.",
-            4: "Use documents: Choose this when you want to search through documents or files to find relevant information to respond to the user's request.",
-            5: "Not sure what to do: Reason about the user's request and choose from a list of available tools in order to fulfill the request.",
-        }
         menu_text = "\n".join(
             f"{i}. {desc}" for i, desc in menu_choices.items()
         )
@@ -255,7 +247,7 @@ class PromptBuilder:
         )
 
     @classmethod
-    def system_prompt(cls, agent) -> str:
+    def system_prompt(cls, agent, menu_choices) -> str:
         """
         Return the system prompt for the agent.
         Args:
@@ -263,10 +255,16 @@ class PromptBuilder:
         Returns:
             str: The system prompt.
         """
+        menu = {}
+        for i, choice in menu_choices.items():
+            menu[i] = choice["description"]
+
         action = agent.action
         if action is LLMActionType.DECISION:
-            return cls.decision_system_prompt(agent)
+            return cls.decision_system_prompt(agent, menu)
         elif action is LLMActionType.CHAT:
+            return cls.chat_system_prompt(agent)
+        elif action is LLMActionType.SEARCH:
             return cls.chat_system_prompt(agent)
         else:
             raise ValueError(
