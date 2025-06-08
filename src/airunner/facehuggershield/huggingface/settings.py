@@ -38,6 +38,7 @@ cache folder.
 See README.md for more information.
 
 """
+import os
 
 ####################################################################
 # This is the default mode to prevent HF from accessing the internet
@@ -75,7 +76,9 @@ HF_HUB_OFFLINE = "1"
 # If you would like to use the default directory (in order to use
 # your existing cache), set it to "~/.cache/huggingface"
 ####################################################################
-HF_CACHE_DIR = "~/.airunner/huggingface"
+HF_CACHE_DIR = os.path.join(
+    os.path.expanduser("~"), "/.local/share/airunner/cache/huggingface"
+)
 
 ####################################################################
 # HF_HOME is the directory where huggingface models are stored.
