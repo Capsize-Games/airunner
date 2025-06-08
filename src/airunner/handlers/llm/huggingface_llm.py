@@ -38,6 +38,7 @@ from transformers import (
     StoppingCriteriaList,
 )
 
+from airunner.enums import LLMActionType
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.handlers.llm.llm_request import LLMRequest
@@ -114,6 +115,10 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         return self._agent
 
     @property
+    def deterministic(self) -> bool:
+        return self.agent.action is LLMActionType.DECISION
+
+    @property
     def generate_kwargs(self) -> Dict:
         """
         Get generation parameters from the LLM request.
@@ -123,6 +128,13 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         """
         if self.llm_request:
             data = self.llm_request.to_dict()
+
+            if self.deterministic:
+                del data["temperature"]
+                del data["top_p"]
+                data["do_sample"] = False
+            else:
+                data["do_sample"] = True
 
             # Remove unused keys
             del data["do_tts_reply"]
