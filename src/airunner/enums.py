@@ -304,12 +304,6 @@ class Mode(Enum):
     MODEL_MANAGER = "Model Manager"
 
 
-class LLMChatRole(Enum):
-    ASSISTANT = "assistant"
-    HUMAN = "user"
-    SYSTEM = "system"
-
-
 class LLMActionType(Enum):
     """
     The following action types are used by the LLM to process various user
@@ -565,3 +559,9 @@ class QualityEffects(enum.Enum):
     SUPER_SAMPLE_X2 = "Super Sample x2"
     SUPER_SAMPLE_X4 = "Super Sample x4"
     SUPER_SAMPLE_X8 = "Super Sample x8"
+
+
+class Quantize(enum.Enum):
+    NONE = "None"
+    EIGHT_BIT = "8-bit"
+    FOUR_BIT = "4-bit"

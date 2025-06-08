@@ -1,4 +1,6 @@
 import math
+
+from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from packaging.version import parse as LooseVersion
 
 from PySide6 import QtCore, QtWidgets, QtGui
@@ -1787,8 +1789,6 @@ class NodeViewer(QtWidgets.QGraphicsView):
         """
         Use QOpenGLWidget as the viewer.
         """
-        from PySide6.QtWidgets import QOpenGLWidget
-
         self.setViewport(QOpenGLWidget())
 
     def set_scene_center(self, x, y):

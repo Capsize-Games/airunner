@@ -95,4 +95,4 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
         if hasattr(self, "agent") and hasattr(
             self.agent, "_update_conversation_state"
         ):
-            self.agent._update_conversation_state(conversation)
+            self.agent.update_conversation_state(conversation)

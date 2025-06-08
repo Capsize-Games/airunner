@@ -32,6 +32,7 @@ class ActiveGridArea(DraggablePixmap):
         self.initial_mouse_scene_pos = None
         self.initial_item_abs_pos = None
         self.mouse_press_pos = None
+        self._current_snapped_pos: tuple[int, int] = (0, 0)
 
         super().__init__(QPixmap())
         self.render_fill()
