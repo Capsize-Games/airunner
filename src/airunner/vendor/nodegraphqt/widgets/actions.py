@@ -1,4 +1,4 @@
-from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtWidgets
 from PySide6.QtGui import QAction
 
 from airunner.vendor.nodegraphqt.constants import ViewerEnum
@@ -8,7 +8,6 @@ class BaseMenu(QtWidgets.QMenu):
 
     def __init__(self, *args, **kwargs):
         super(BaseMenu, self).__init__(*args, **kwargs)
-        # text_color = self.palette().text().color().getRgb()
         text_color = tuple(
             map(
                 lambda i, j: i - j,

@@ -1,32 +1,21 @@
 import torch
-from abc import ABC, abstractmethod, ABCMeta
-from typing import Dict, Optional, List
+from abc import ABCMeta
+from typing import Dict, Optional
 
 from airunner.utils.memory import is_ampere_or_newer
+from PySide6.QtCore import QObject
 
 """
 The following code ensures that we only use PySide6 if it is available.
 If it is not available, we use a placeholder class instead.
 """
-try:
-    from PySide6.QtCore import QObject
 
-    class OptionalQObject(QObject):
-        pass
-
-except ImportError:
-
-    class OptionalQObject:
-        """
-        A placeholder class to avoid hard dependency on PySide6.
-        """
-
-        pass
+class OptionalQObject(QObject):
+    pass
 
 
 from airunner.enums import (
     HandlerType,
-    SignalCode,
     ModelType,
     ModelStatus,
     ModelAction,
@@ -34,14 +23,14 @@ from airunner.enums import (
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import get_torch_device
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.settings import (
-    AIRUNNER_MEM_LLM_DEVICE,
-    AIRUNNER_MEM_SD_DEVICE,
-    AIRUNNER_MEM_TTS_DEVICE,
-    AIRUNNER_MEM_STT_DEVICE,
-)
 from airunner.handlers.model_device_manager import DeviceManagerMixin
 from airunner.handlers.model_status_manager import StatusManagerMixin
+
+try:
+    from flash_attn import flash_attn_varlen_func, flash_attn_func
+except ImportError:
+    flass_attn_varlen_func = None
+    flash_attn_func = None
 
 QObjectMeta = type(OptionalQObject)
 
@@ -135,16 +124,11 @@ class BaseModelManager(
 
     @property
     def attn_implementation(self) -> str:
-        try:
-            # raise NotImplementedError
-            from flash_attn import flash_attn_varlen_func, flash_attn_func
-
+        if flash_attn_func:
             if "flash" in self.enabled_backends and is_ampere_or_newer(
                 self.device_index
             ):
                 return "flash_attention_2"
-        except:
-            pass
         return "sdpa"
 
     @property

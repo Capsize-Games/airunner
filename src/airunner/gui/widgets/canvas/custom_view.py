@@ -208,7 +208,7 @@ class CustomGraphicsView(
         # 5. If there's an image in the scene, update its position to match the active grid area
         if self.scene and hasattr(self.scene, "item") and self.scene.item:
             # Store the same absolute position for the image as we did for the active grid area
-            self.scene._original_item_positions[self.scene.item] = QPointF(
+            self.scene.original_item_positions[self.scene.item] = QPointF(
                 pos_x, pos_y
             )
 
@@ -648,11 +648,11 @@ class CustomGraphicsView(
         item.setVisible(True)
 
         # Store original position if needed
-        if item not in self.scene._original_item_positions:
-            self.scene._original_item_positions[item] = item.pos()
+        if item not in self.scene.original_item_positions:
+            self.scene.original_item_positions[item] = item.pos()
 
         # Get original position
-        original_pos = self.scene._original_item_positions[item]
+        original_pos = self.scene.original_item_positions[item]
 
         # Calculate new position
         new_x = original_pos.x() - self.canvas_offset.x()

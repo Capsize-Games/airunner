@@ -1,8 +1,8 @@
-from typing import Annotated
 from llama_index.core.tools import FunctionTool
 from airunner.handlers.llm.agent.agents.tool_mixins.tool_singleton_mixin import (
     ToolSingletonMixin,
 )
+from airunner.handlers.llm.agent.tools.browser_tool import BrowserTool
 
 
 class BrowserToolsMixin(ToolSingletonMixin):
@@ -15,10 +15,6 @@ class BrowserToolsMixin(ToolSingletonMixin):
         Ensures the ReAct agent can call the actual BrowserTool implementation.
         """
         if not hasattr(self, "_use_browser_tool_instance"):
-            from airunner.handlers.llm.agent.tools.browser_tool import (
-                BrowserTool,
-            )
-
             self._use_browser_tool_instance = BrowserTool.from_defaults(
                 llm=getattr(self, "llm", None),
                 agent=self,
@@ -31,7 +27,6 @@ class BrowserToolsMixin(ToolSingletonMixin):
     @property
     def browser_tool(self):
         """Expose the BrowserTool as a FunctionTool for agent toolchains."""
-        from airunner.handlers.llm.agent.tools.browser_tool import BrowserTool
 
         def browser_tool_func(url: str) -> str:
             # This will call the BrowserTool directly
