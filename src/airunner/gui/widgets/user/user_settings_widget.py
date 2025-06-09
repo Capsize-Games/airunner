@@ -25,26 +25,31 @@ class UserSettingsWidget(BaseWidget):
     @Slot(str)
     def username_changed(self, val):
         user = User.objects.first()
-        user.username = val
-        user.save()
+        User.objects.update(
+            pk=user.id,
+            username=val,
+        )
 
     @Slot(str)
     def zipcode_changed(self, val):
         # only do zipcode lookup if zipcode is 5 digits
         if len(val) == 5:
             user = User.objects.first()
+            data = {}
             if user.zipcode != val:
-                user.zipcode = val
+                data["zipcode"] = val
                 result = get_lat_lon(val)
                 if result:
                     lat, lon, display_name = result
-                    user.latitude = lat
-                    user.longitude = lon
-                    user.location_display_name = display_name
-                user.save()
+                    data["latitude"] = lat
+                    data["longitude"] = lon
+                    data["location_display_name"] = display_name
+                User.objects.update(pk=user.id, **data)
 
     @Slot(str)
     def unit_system_changed(self, val):
         user = User.objects.first()
-        user.unit_system = val
-        user.save()
+        User.objects.update(
+            pk=user.id,
+            unit_system=val,
+        )
