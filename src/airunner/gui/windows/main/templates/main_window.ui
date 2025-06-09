@@ -535,13 +535,7 @@
                 <number>0</number>
                </property>
                <item row="0" column="0">
-                <widget class="QWebEngineView" name="home_stage">
-                 <property name="url">
-                  <url>
-                   <string>about:blank</string>
-                  </url>
-                 </property>
-                </widget>
+                <widget class="HomeStageWidget" name="home_stage" native="true"/>
                </item>
               </layout>
              </widget>
@@ -1369,11 +1363,6 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>QWebEngineView</class>
-   <extends>QWidget</extends>
-   <header location="global">QtWebEngineWidgets/QWebEngineView</header>
-  </customwidget>
-  <customwidget>
    <class>GeneratorForm</class>
    <extends>QWidget</extends>
    <header>airunner/gui/widgets/generator_form/generator_form_widget</header>
@@ -1388,7 +1377,7 @@
   <customwidget>
    <class>NodeGraphWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/nodegraph/node_graph_widget</header>
+   <header>airunner/components/nodegraph/gui/widgets/node_graph_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -1407,6 +1396,12 @@
    <class>DocumentsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/documents/gui/widgets/documents</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>HomeStageWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/home_stage/gui/widgets/home_stage_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
