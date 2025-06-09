@@ -565,3 +565,13 @@ class Quantize(enum.Enum):
     NONE = "None"
     EIGHT_BIT = "8-bit"
     FOUR_BIT = "4-bit"
+
+
+class TemplateName(enum.Enum):
+    DARK = "Dark"
+    LIGHT = "Light"
+    CYBERPUNK = "Cyberpunk"
+    MINT = "Mint"
+    RAINBOW = "Rainbow"
+    GITHUB = "GitHub"
+    SYSTEM_DEFAULT = "System Default"
