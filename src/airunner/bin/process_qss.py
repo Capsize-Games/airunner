@@ -165,6 +165,7 @@ def parse_qss_variables(qss_path):
         line = line.strip()
         if line.startswith("@") and ":" in line:
             name, value = line.split(":", 1)
+            # Always use the value from the current file, do not override if already present
             variables[qss_var_to_css_var(name.strip())] = value.strip(" ;")
     return variables
 
@@ -224,6 +225,9 @@ def build_all_theme_css():
                     )
                     f.write(
                         "#home-top, #home-bottom {\n    background: var(--dark-color);\n}\n"
+                    )
+                    f.write(
+                        ".font-color, .text, .content, .main-content, .sidebar, .header, .footer {\n    color: var(--light-color);\n}\n"
                     )
 
 

@@ -10,3 +10,6 @@ body {
 #home-top, #home-bottom {
     background: var(--dark-color);
 }
+.font-color, .text, .content, .main-content, .sidebar, .header, .footer {
+    color: var(--light-color);
+}
