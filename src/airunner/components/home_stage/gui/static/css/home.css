@@ -28,6 +28,29 @@ body {
     color: var(--light-color);
 }
 
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    background: var(--dark-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--dim-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dark-color);
+}
+
+/* For Firefox */
+html {
+    scrollbar-color: var(--dim-color) var(--dark-color);
+    scrollbar-width: thin;
+}
+
 #home-container {
     display: flex;
     flex-direction: column;

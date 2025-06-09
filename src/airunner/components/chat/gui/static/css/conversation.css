@@ -2,6 +2,8 @@
 
 html {
     background-color: #2a2a2a;
+    scrollbar-color: var(--dim-color) var(--dark-color);
+    scrollbar-width: thin;
 }
 
 html,
@@ -234,4 +236,21 @@ mjx-container {
 
 mjx-container[display="true"] {
     margin: 1em 0 !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    background: var(--dark-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--dim-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dark-color);
 }
