@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>AI Runner Home</title>
     <link rel="stylesheet" href="../css/home.css">
+    <link id="theme-vars" rel="stylesheet" href="../css/variables-dark.css">
+    <link id="theme-style" rel="stylesheet" href="../css/theme-dark.css">
 </head>
 <body>
     <div id="home-top">
@@ -26,5 +28,13 @@
         </div>
     </div>
     <script src="../js/home.js"></script>
+    <script>
+    // Theme switching logic for webEngineView
+    function setTheme(theme) {
+        document.getElementById('theme-vars').href = `../css/variables-${theme}.css`;
+        document.getElementById('theme-style').href = `../css/theme-${theme}.css`;
+    }
+    window.setTheme = setTheme;
+    </script>
 </body>
 </html>

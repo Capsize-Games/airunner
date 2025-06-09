@@ -22,3 +22,13 @@ class HomeStageWidget(BaseWidget):
                 self.logger.error(f"Failed to render home template: {e}")
             else:
                 print(f"Failed to render home template: {e}")
+
+    def set_theme(self, theme_name: str):
+        """
+        Set the theme for the home widget by updating the CSS in the webEngineView.
+        This will call the setTheme JS function in the loaded HTML.
+        """
+        if hasattr(self.ui, "webEngineView"):
+            # This will call the JS function in the webEngineView
+            js = f"window.setTheme && window.setTheme('{theme_name}');"
+            self.ui.webEngineView.page().runJavaScript(js)

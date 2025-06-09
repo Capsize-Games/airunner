@@ -1,0 +1,17 @@
+/* VARIABLES */
+@primary-color: #39ff14;              /* Neon green */
+@darkprimary-color: #0affef;          /* Neon cyan */
+@darkerprimary-color: #ff00ff;        /* Neon magenta */
+@secondary-color: #faff00;            /* Neon yellow */
+@darksecondary-color: #ff0099;        /* Neon pink */
+@darkersecondary-color: #00e7ff;      /* Neon blue */
+@success-color: #39ff14;              /* Neon green (success) */
+@danger-color: #ff073a;               /* Neon red (danger) */
+@warning-color: #ffe700;              /* Neon yellow (warning) */
+@info-color: #00fff7;                 /* Neon aqua (info) */
+@light-color: #222831;                /* Dark gray (light) */
+@dim-color: #393e46;                  /* Dim gray */
+@dark-color: #0f0f0f;                 /* Almost black (background) */
+@line-color-light: #393e46;           /* Dim gray (lines) */
+@line-color-dark: #00fff7;            /* Neon aqua (lines) */
+/* END_VARIABLES */
