@@ -1,3 +1,10 @@
+/*
+ MASTER QSS FILE
+ This file contains all shared style rules for both dark and light themes.
+ All color and theme-specific values must use @variable syntax.
+ Each theme's variables.qss will override the variables for that theme.
+*/
+
 QWidget {
     background-color: #000;
     color: #C8C8C8;
@@ -25,25 +32,20 @@ QComboBox::drop-down {
     background-color: #000;
 }
 
-/* hover combobox */
 QComboBox:hover {
     background-color: rgba(0, 132, 185, 50);
 }
 
-/* hovering over items in the QComboBox should change the background color of those items */
 QComboBox QAbstractItemView {
-    background-color: #333333;  /* dark gray background */
-    color: #C8C8C8;  /* light gray text */
+    background-color: #333;
+    color: #C8C8C8;
 }
 
-/* hover over individual combobox items */
 QComboBox::item:hover {
     background-color: rgba(0, 132, 185, 50);
 }
 
-/* arrow */
-QComboBox::down-arrow {
-}
+QComboBox::down-arrow {}
 
 #mode_tab_widget {
     border-top: 1px solid #222;
@@ -116,6 +118,7 @@ QPushButton:hover {
 
 QPushButton:checked {
     border: 1px solid rgba(0, 132, 185, 255);
+    background-color: rgba(0, 132, 185, 100);
 }
 
 QProgressBar {
@@ -126,10 +129,6 @@ QProgressBar {
 QPushButton:disabled {
     background-color: #000;
     color: #666666;
-}
-
-QPushButton:checked {
-    background-color: rgba(0, 132, 185, 100);
 }
 
 QPushButton:pressed {
@@ -154,27 +153,24 @@ QFrame[frameShape="5"] {
 }
 
 QTabBar::tab {
-    background-color: #000; /* Darker background when not highlighted */
-    padding: 5px 5px; /* Adjust padding as needed */
-    margin: 0; /* Remove margin to make tabs square */
-    border-radius: 0; /* Make tabs square */
+    background-color: #000;
+    padding: 5px 5px;
+    margin: 0;
+    border-radius: 0;
     font-size: 11px;
 }
 
 QTabBar::tab:selected, QTabBar::tab:selected:hover {
-    background-color: rgba(0, 132, 185, 255); /* Same background color as the border when highlighted */
+    background-color: rgba(0, 132, 185, 255);
 }
 
 QTabBar::tab:hover {
-    background-color: rgba(0, 132, 185, 50); /* Lighter background when hovered */
+    background-color: rgba(0, 132, 185, 50);
 }
 
-GeneratorTabWidget#generator_widget QTabWidget QWidget#tab_stablediffusion {
-}
-GeneratorTabWidget#generator_widget GeneratorForm QWidget#scrollAreaWidgetContents {
-}
-QFrame#button_menu {
-}
+GeneratorTabWidget#generator_widget QTabWidget QWidget#tab_stablediffusion {}
+GeneratorTabWidget#generator_widget GeneratorForm QWidget#scrollAreaWidgetContents {}
+QFrame#button_menu {}
 GeneratorTabWidget#generator_widget QTabWidget QTabBar::tab {
     border-radius: 0px;
     margin: 0px;
@@ -223,13 +219,12 @@ QWidget#scrollAreaWidgetContents {
 }
 
 QStatusBar {
-    border-top: 1px solid #111;
-    border-bottom: 1px solid #111;
-    border-left: 1px solid #111;
+    border-top: 1px solid #333;
+    border-bottom: 1px solid #333;
+    border-left: 1px solid #333;
 }
 
-QStatusBar QLabel {
-}
+QStatusBar QLabel {}
 
 #header_widget QPushButton {
     border-radius: 0px;
@@ -267,8 +262,7 @@ QStatusBar QLabel {
     border-right: 1px solid #333;
 }
 
-#button_menu QPushButton {
-}
+#button_menu QPushButton {}
 
 QMenuBar {
     border-bottom: 1px solid #333;
@@ -397,8 +391,7 @@ QRadioButton::indicator:checked {
     height: 12px;
 }
 
-#button_menu QPushButton {
-}
+#button_menu QPushButton {}
 
 QGroupBox {
     margin-top: 14px;
@@ -436,10 +429,6 @@ QWidget:disabled {
     border-color: #222;
 }
 
-QWidget:disabled {
-    border-color: #222;
-}
-
 QTabWidget {
     border: 1px solid rgba(0, 132, 185, 50);
 }
@@ -454,7 +443,6 @@ QTextEdit {
     background-color: #000;
 }
 
-/* styles for QStandardItemModel */
 QTreeView {
     border: 1px solid rgba(0, 132, 185, 50);
     background-color: #000;
@@ -472,7 +460,6 @@ QTreeView::item:selected {
     background-color: rgba(0, 132, 185, 50);
 }
 
-/* item checkbox */
 QTreeView::indicator {
     border-radius: 0;
     border: 1px solid rgba(0, 132, 185, 255);
@@ -537,7 +524,6 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::ta
     color: #C8C8C8;
 }
 
-/* table styles */
 #standard_image_widget QTableWidget {
     border: 1px solid rgba(0, 132, 185, 50);
 }
@@ -607,34 +593,34 @@ QGroupBox {
 
 QDoubleSpinBox {
     margin-left: 5px;
-    background-color: #333; /* Set the desired background color */
-    border: 1px solid rgba(0, 132, 185, 50); /* Add a border */
-    padding: 2px 5px; /* Adjust padding as needed */
-    color: #C8C8C8; /* Set text color */
-    max-width: 55px; /* Set the minimum width */
+    background-color: #333;
+    border: 1px solid rgba(0, 132, 185, 50);
+    padding: 2px 5px;
+    color: #C8C8C8;
+    max-width: 55px;
 }
 
 QDoubleSpinBox::up-button {
     subcontrol-origin: border;
-    subcontrol-position: top right; /* Position the up arrow */
-    border-left: 1px solid rgba(0, 132, 185, 50); /* Add a vertical line */
-    border-bottom: 1px solid rgba(0, 132, 185, 50); /* Add a horizontal line */
-    background-color: #111; /* Ensure the button inherits the background color */
+    subcontrol-position: top right;
+    border-left: 1px solid rgba(0, 132, 185, 50);
+    border-bottom: 1px solid rgba(0, 132, 185, 50);
+    background-color: #222;
 }
 
 QDoubleSpinBox::down-button {
     subcontrol-origin: border;
-    subcontrol-position: bottom right; /* Position the down arrow */
-    border-left: 1px solid rgba(0, 132, 185, 50); /* Add a vertical line */
-    background-color: #111; /* Ensure the button inherits the background color */
+    subcontrol-position: bottom right;
+    border-left: 1px solid rgba(0, 132, 185, 50);
+    background-color: #222;
 }
 
 #slider_widget QDoubleSpinBox::up-arrow {
-    image: url(:/icons/up-arrow.svg); /* Ensure the up arrow is visible */
+    image: url(:/icons/up-arrow.svg);
 }
 
 #slider_widget QDoubleSpinBox::down-arrow {
-    image: url(:/icons/down-arrow.svg); /* Ensure the down arrow is visible */
+    image: url(:/icons/down-arrow.svg);
 }
 
 #slider_widget QSlider {
@@ -643,39 +629,39 @@ QDoubleSpinBox::down-button {
 }
 
 QSlider::groove:horizontal {
-    background: #333; /* Set the desired gutter background color */
-    height: 6px; /* Adjust the height as needed */
+    background: #333;
+    height: 6px;
 }
 
 QSlider::groove:vertical {
-    background: #333; /* Set the desired gutter background color */
-    width: 6px; /* Adjust the width as needed */
+    background: #333;
+    width: 6px;
 }
 
 QSlider::handle:horizontal {
-    background: #C8C8C8; /* Set the desired handle color */
-    border: 1px solid rgba(0, 132, 185, 255); /* Optional: add a border */
-    width: 10px; /* Adjust the width as needed */
-    height: 20px; /* Adjust the height as needed */
-    margin: -7px 0; /* Center the handle */
-    border-radius: 3px; /* Optional: round the corners */
+    background: #C8C8C8;
+    border: 1px solid rgba(0, 132, 185, 255);
+    width: 10px;
+    height: 20px;
+    margin: -7px 0;
+    border-radius: 3px;
 }
 
 QSlider::handle:vertical {
-    background: #C8C8C8; /* Set the desired handle color */
-    border: 1px solid rgba(0, 132, 185, 255); /* Optional: add a border */
-    width: 20px; /* Adjust the width as needed */
-    height: 10px; /* Adjust the height as needed */
-    margin: 0 -7px; /* Center the handle */
-    border-radius: 3px; /* Optional: round the corners */
+    background: #C8C8C8;
+    border: 1px solid rgba(0, 132, 185, 255);
+    width: 20px;
+    height: 10px;
+    margin: 0 -7px;
+    border-radius: 3px;
 }
 
 QSlider::sub-page:horizontal {
-    background: rgba(0, 132, 185, 255); /* Set the desired color for the left side of the gutter */
+    background: rgba(0, 132, 185, 255);
 }
 
 QSlider::sub-page:vertical {
-    background: rgba(0, 132, 185, 255); /* Set the desired color for the top side of the gutter */
+    background: rgba(0, 132, 185, 255);
 }
 
 #border_choose_color_button,
@@ -692,7 +678,7 @@ QWidget QWidget#header {
 }
 
 #canvas_control_bar QPushButton {
-    border: none; /* Remove borders for buttons inside */
+    border: none;
     margin: 1px 0;
 }
 
@@ -701,8 +687,8 @@ QWidget QWidget#header {
 }
 
 QSizeGrip {
-    border: 2px solid #333; /* Light grey border */
-    background-color: #000; /* Ensure the handle inherits the background color */
+    border: 2px solid #333;
+    background-color: #000;
     border-left: 0;
     border-top: 0;
 }
@@ -738,7 +724,7 @@ QGraphicsView#image_container {
 }
 
 QMenu, QToolBar, QMenuBar {
-    border: 1px solid #111;
+    border: 1px solid #333;
 }
 QMenu {
     padding: 10px;
@@ -749,7 +735,7 @@ SwitchWidget:enabled[checked="true"] {
 }
 
 QScrollArea#chat_container #message_container {
-    background-color: #1f1f1f;
+    background-color: #666666;
 }
 
 QScrollArea#chat_container #message_container[class="alternate"] {
@@ -770,11 +756,11 @@ QScrollArea#chat_container #message_container QPushButton {
 
 QScrollArea#chat_container #message_container QPushButton:hover {
     background-color: #000;
-    border: 1px solid #1f1f1f;
+    border: 1px solid #666666;
 }
 
 #image {
-    border: 1px solid #1f1f1f;
+    border: 1px solid #666666;
 }
 
 QWizard {
@@ -798,7 +784,7 @@ QWizardPage QLabel {
 QWizardPage QLineEdit {
     border: 1px solid #333;
     padding: 5px;
-    background-color: #111;
+    background-color: #222;
     color: #C8C8C8;
 }
 
@@ -819,7 +805,7 @@ QWizardPage QPushButton:pressed {
 }
 
 #actionsidebar {
-    border-right: 1px solid #1f1f1f;
+    border-right: 1px solid #666666;
 }
 
 #actionsidebar QPushButton {
