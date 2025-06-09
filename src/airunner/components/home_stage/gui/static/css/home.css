@@ -1,0 +1,22 @@
+/* home.css - Basic styles for AI Runner Home */
+* {
+    margin: 0;
+    padding: 0;
+}
+
+#home-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #000;
+}
+
+h1 {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 3rem;
+    color: #22223b;
+    margin: 0;
+    letter-spacing: 2px;
+}

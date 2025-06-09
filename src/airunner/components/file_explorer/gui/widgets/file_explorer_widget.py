@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
-from airunner.components.document_editor.gui.templates.file_explorer_ui import (
+from airunner.components.file_explorer.gui.templates.file_explorer_ui import (
     Ui_file_explorer,
 )
 from airunner.enums import SignalCode
@@ -114,3 +114,19 @@ class FileExplorerWidget(BaseWidget):
                 self.model.rmdir(index)
             else:
                 self.model.remove(index)
+
+    def connect_signal(self, signal_code, slot):
+        # Only supports FILE_EXPLORER_OPEN_FILE for now
+        if signal_code == SignalCode.FILE_EXPLORER_OPEN_FILE:
+            self._file_open_slot = slot
+
+            # Patch emit_signal to call the slot directly for this code
+            def emit_signal(code, data):
+                if code == SignalCode.FILE_EXPLORER_OPEN_FILE:
+                    slot(data)
+
+            self.emit_signal = emit_signal
+        else:
+            raise NotImplementedError(
+                "Only FILE_EXPLORER_OPEN_FILE is supported in connect_signal."
+            )

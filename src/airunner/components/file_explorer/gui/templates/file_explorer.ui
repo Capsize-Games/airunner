@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>home_stage_widget</class>
- <widget class="QWidget" name="home_stage_widget">
+ <class>file_explorer</class>
+ <widget class="QWidget" name="file_explorer">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>690</width>
-    <height>623</height>
+    <width>400</width>
+    <height>300</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,27 +26,24 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <property name="spacing">
-    <number>0</number>
-   </property>
    <item row="0" column="0">
-    <widget class="QWebEngineView" name="webEngineView">
-     <property name="url">
-      <url>
-       <string>about:blank</string>
-      </url>
-     </property>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Explorer</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QTreeView" name="treeView"/>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebEngineView</class>
-   <extends>QWidget</extends>
-   <header location="global">QtWebEngineWidgets/QWebEngineView</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

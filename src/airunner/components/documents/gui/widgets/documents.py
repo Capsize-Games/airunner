@@ -6,14 +6,10 @@ from airunner.gui.widgets.base_widget import BaseWidget
 from PySide6.QtCore import Signal, Qt, Slot, QFileSystemWatcher, QFile
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileDialog
-from PySide6.QtWidgets import (
-    QListWidgetItem,
-    QAbstractItemView,
+from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
+    FileExplorerWidget,
 )
-from airunner.components.documents.data.models.document import Document
-from airunner.components.documents.gui.widgets.document_widget import (
-    DocumentWidget,
-)
+from airunner.enums import SignalCode
 import os
 
 from airunner.components.browser.gui.widgets.mixins.session_persistence_mixin import (
@@ -50,10 +46,7 @@ class DocumentsWidget(
     CacheMixin,
     BaseWidget,
 ):
-    """Widget that displays a single browser instance (address bar, navigation, webview, etc.).
-
-    Inherits mixins for modular browser logic.
-    """
+    """Widget that displays a file explorer for documents, reusing FileExplorerWidget."""
 
     titleChanged = Signal(str)
     urlChanged = Signal(str, str)  # url, title
@@ -73,48 +66,51 @@ class DocumentsWidget(
             "epub",
         ]
         super().__init__(*args, **kwargs)
-        self.setup_documents_list()
-        self._setup_filesystem_watcher()
-        self.load_documents()
+        self.setup_file_explorer()
 
-    @Slot()
-    def on_add_files_clicked(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.ReadOnly
-        filter_str = f"Documents ({' '.join(['*.' + ext for ext in self.file_extensions])})"
-        files, _ = QFileDialog.getOpenFileNames(
-            self,
-            "Add Files",
-            "",
-            filter_str,
-            options=options,
+    def setup_file_explorer(self):
+        # Remove any old widgets/layouts if present
+        for i in reversed(range(self.ui.gridLayout.count())):
+            widget = self.ui.gridLayout.itemAt(i).widget()
+            if widget is not None:
+                widget.setParent(None)
+        # Create and add the FileExplorerWidget
+        self.file_explorer = FileExplorerWidget(
+            path_to_display=self.documents_path, parent=self
         )
-        if files:
-            self._add_files(files)
-
-    def _add_files(self, files):
-        for file_path in files:
-            base_name = os.path.basename(file_path)
-            dest_path = os.path.join(self.documents_path, base_name)
-            name, ext = os.path.splitext(base_name)
-            n = 1
-            # Find a unique filename if needed
-            while os.path.exists(dest_path):
-                dest_path = os.path.join(
-                    self.documents_path, f"{name}_{n}{ext}"
-                )
-                n += 1
-            QFile.copy(file_path, dest_path)
-
-    def _setup_filesystem_watcher(self):
-        self.fs_watcher = QFileSystemWatcher(self)
-        self.fs_watcher.addPath(self.documents_path)
-        self.fs_watcher.directoryChanged.connect(
-            self._on_documents_dir_changed
+        self.file_explorer.setObjectName("fileExplorer")
+        self.file_explorer.setMinimumSize(200, 200)
+        self.ui.gridLayout.addWidget(self.file_explorer, 0, 0, 1, 1)
+        self.file_explorer.ui.label.setText("Knowledge Base Documents")
+        # Connect open signal
+        self.file_explorer.connect_signal(
+            SignalCode.FILE_EXPLORER_OPEN_FILE, self.on_file_open_requested
         )
+        # Optionally filter extensions
+        self._filter_file_explorer_extensions()
 
-    def _on_documents_dir_changed(self, path):
-        self.load_documents()
+    def _filter_file_explorer_extensions(self):
+        # Hide files that do not match allowed extensions
+        model = self.file_explorer.model
+        orig_filterAcceptsRow = (
+            model.filterAcceptsRow
+            if hasattr(model, "filterAcceptsRow")
+            else None
+        )
+        allowed_exts = set(self.file_extensions)
+
+        def filterAcceptsRow(row, parent):
+            index = model.index(row, 0, parent)
+            if not index.isValid():
+                return False
+            file_info = model.fileInfo(index)
+            if file_info.isDir():
+                return True
+            ext = file_info.suffix().lower()
+            return ext in allowed_exts
+
+        model.filterAcceptsRow = filterAcceptsRow
+        # If using QSortFilterProxyModel, set a filter here instead
 
     @property
     def documents_path(self) -> str:
@@ -127,112 +123,12 @@ class DocumentsWidget(
     def documents_path(self, value: str):
         settings = get_qsettings()
         settings.setValue("documents_path", value)
-        # Update watcher if path changes
-        if hasattr(self, "fs_watcher"):
-            self.fs_watcher.removePaths(self.fs_watcher.directories())
-            self.fs_watcher.addPath(value)
+        if hasattr(self, "file_explorer"):
+            self.file_explorer.set_root_directory(value)
 
-    def setup_documents_list(self):
-        # Use the QListWidget from the template, not a new one
-        self.list_widget = self.ui.document_list
-        self.list_widget.setSelectionMode(
-            QAbstractItemView.SelectionMode.NoSelection
-        )
-        self.list_widget.setAcceptDrops(True)
-        self.list_widget.setDragDropMode(
-            QAbstractItemView.DragDropMode.DropOnly
-        )
-        self.list_widget.viewport().setAcceptDrops(True)
-        self.list_widget.setDefaultDropAction(Qt.DropAction.CopyAction)
-        self.list_widget.dragEnterEvent = self.dragEnterEvent
-        self.list_widget.dropEvent = self.dropEvent
-
-    def clear_documents(self):
-        """Clear the document list widget."""
-        self.list_widget.clear()
-        # Optionally clear the database or cache if needed
-        # Document.objects.clear(private=self._private)
-
-    def load_documents(self):
-        self.list_widget.clear()
-
-        # Clean up database: remove documents whose paths no longer exist
-        for document in Document.objects.all():
-            if not os.path.exists(document.path):
-                Document.objects.delete(document.id)
-
-        # List files in the documents directory with allowed extensions
-        file_paths = []
-        for root, dirs, files in os.walk(self.documents_path):
-            for file in files:
-                ext = os.path.splitext(file)[1][1:].lower()
-                if ext in self.file_extensions:
-                    file_paths.append(os.path.join(root, file))
-        self._add_document_widgets_from_files(file_paths)
-
-    @Slot(list)
-    def _add_document_widgets_from_files(self, file_paths):
-        for path in file_paths:
-            self._add_document_widget(path)
-
-    def _add_document_widget(self, path):
-        # Create a simple document object with .path and .active attributes
-        class Doc:
-            def __init__(self, path):
-                self.path = path
-                self.active = False
-
-        doc = Doc(path)
-        widget = DocumentWidget(
-            doc,
-            on_active_changed=self.on_active_changed,
-            parent=self.list_widget,
-        )
-        # Do NOT set window flags here; let QWidget default flags apply
-        if widget.parent() is not self.list_widget:
-            widget.setParent(self.list_widget)
-        widget.delete_requested.connect(self.on_delete_document)
-        item = QListWidgetItem(self.list_widget)
-        item.setSizeHint(widget.sizeHint())
-        self.list_widget.addItem(item)
-        self.list_widget.setItemWidget(item, widget)
-
-    def add_document_item(self, document):
-        widget = DocumentWidget(
-            document,
-            on_active_changed=self.on_active_changed,
-            parent=self.list_widget,
-        )
-        if widget.parent() is not self.list_widget:
-            widget.setParent(self.list_widget)
-        widget.delete_requested.connect(self.on_delete_document)
-        item = QListWidgetItem(self.list_widget)
-        item.setSizeHint(widget.sizeHint())
-        self.list_widget.addItem(item)
-        self.list_widget.setItemWidget(item, widget)
-
-    def on_delete_document(self, document):
-        # No longer needed: file/database deletion is handled in DocumentWidget, and UI updates via directory watcher
-        pass
-
-    def on_active_changed(self, document, active):
-        Document.objects.update(
-            document.id, active=active, private=self._private
-        )
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-        else:
-            event.ignore()
-
-    def dropEvent(self, event):
-        for url in event.mimeData().urls():
-            path = url.toLocalFile()
-            if not path or not os.path.isfile(path):
-                continue
-            exists = Document.objects.filter_by(path=path)
-            if not exists:
-                doc = Document.objects.create(path=path, active=True)
-                self.add_document_item(doc)
-        event.acceptProposedAction()
+    @Slot(dict)
+    def on_file_open_requested(self, data):
+        file_path = data.get("file_path")
+        if file_path:
+            # Implement your document open logic here
+            print(f"Open document: {file_path}")
