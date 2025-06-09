@@ -83,10 +83,17 @@ def process_qss(_path=None):
         output_path = os.path.join(output_dir, "styles.qss")
         variables = {}
         qss_files = []
+        # Support ../master.qss as a manifest entry
         for filename in contents.splitlines():
             file_path = os.path.abspath(
                 os.path.join(os.path.dirname(manifest_path), filename.strip())
             )
+            # If manifest entry is ../master.qss and file exists, use it
+            if filename.strip() == "../master.qss" and os.path.isfile(
+                file_path
+            ):
+                qss_files.append(file_path)
+                continue
             if os.path.isfile(file_path) and filename.endswith(".qss"):
                 with open(file_path, "r") as input_file:
                     input_contents = input_file.read()
@@ -134,6 +141,82 @@ def process_qss(_path=None):
         os.path.join(script_dir, "..", "gui", "styles")
     )
     process_directory(styles_dir)
+
+
+def qss_var_to_css_var(qss_var):
+    # Converts @primary-color to --primary-color
+    return qss_var.replace("@", "--")
+
+
+def parse_qss_variables(qss_path):
+    # Extracts variables from a QSS variable file
+    with open(qss_path, "r") as f:
+        content = f.read()
+    var_block = re.search(
+        r"/\*\s*VARIABLES\s*\*/(.+?)/\*\s*END_VARIABLES\s*\*/",
+        content,
+        re.DOTALL,
+    )
+    if not var_block:
+        return {}
+    var_lines = var_block.group(1).splitlines()
+    variables = {}
+    for line in var_lines:
+        line = line.strip()
+        if line.startswith("@") and ":" in line:
+            name, value = line.split(":", 1)
+            variables[qss_var_to_css_var(name.strip())] = value.strip(" ;")
+    return variables
+
+
+def write_css_variables(variables, out_path):
+    with open(out_path, "w") as f:
+        f.write(
+            f"/* {os.path.basename(out_path)} - auto-generated from QSS */\n:root {{\n"
+        )
+        for k, v in variables.items():
+            f.write(f"    {k}: {v};\n")
+        f.write("}\n")
+
+
+def build_all_theme_css():
+    styles_dir = Path(__file__).parent.parent / "gui" / "styles"
+    home_css_dir = (
+        Path(__file__).parent.parent
+        / "components"
+        / "home_stage"
+        / "gui"
+        / "static"
+        / "css"
+    )
+    for theme_dir in styles_dir.iterdir():
+        if not theme_dir.is_dir():
+            continue
+        var_file = theme_dir / "variables.qss"
+        if var_file.exists():
+            theme_name = theme_dir.name.replace("_theme", "")
+            variables = parse_qss_variables(var_file)
+            out_var = home_css_dir / f"variables-{theme_name}.css"
+            write_css_variables(variables, out_var)
+            # Optionally, generate a theme css file (placeholder)
+            out_theme = home_css_dir / f"theme-{theme_name}.css"
+            with open(out_theme, "w") as f:
+                f.write(
+                    f"/* theme-{theme_name}.css - auto-generated placeholder */\n"
+                )
+                f.write(
+                    "body {\n    background: var(--dark-color);\n    color: var(--light-color);\n}\n"
+                )
+                f.write(
+                    ".grid-item {\n    color: var(--light-color);\n    background: var(--dark-color);\n}\n"
+                )
+                f.write(
+                    "#home-top, #home-bottom {\n    background: var(--dark-color);\n}\n"
+                )
+
+
+if __name__ == "__main__":
+    build_all_theme_css()
 
 
 class SignalEmitter(QObject):

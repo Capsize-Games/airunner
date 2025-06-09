@@ -1,6 +1,7 @@
 import enum
 from enum import Enum, auto
 from PySide6.QtCore import QLocale
+import os
 
 
 class WorkerState(Enum):
@@ -567,11 +568,21 @@ class Quantize(enum.Enum):
     FOUR_BIT = "4-bit"
 
 
-class TemplateName(enum.Enum):
-    DARK = "Dark"
-    LIGHT = "Light"
-    CYBERPUNK = "Cyberpunk"
-    MINT = "Mint"
-    RAINBOW = "Rainbow"
-    GITHUB = "GitHub"
-    SYSTEM_DEFAULT = "System Default"
+def _get_available_templates():
+    """
+    Dynamically scan the styles directory for available themes and return a dict for Enum creation.
+    """
+    styles_dir = os.path.join(os.path.dirname(__file__), "gui", "styles")
+    templates = {"SYSTEM_DEFAULT": "System Default"}
+    if os.path.isdir(styles_dir):
+        for entry in os.listdir(styles_dir):
+            if entry.endswith("_theme") and os.path.isdir(
+                os.path.join(styles_dir, entry)
+            ):
+                key = entry.replace("_theme", "").upper()
+                display = entry.replace("_theme", "").capitalize()
+                templates[key] = display
+    return templates
+
+
+TemplateName = enum.Enum("TemplateName", _get_available_templates())

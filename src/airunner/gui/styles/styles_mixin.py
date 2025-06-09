@@ -3,10 +3,6 @@ from pathlib import Path
 from typing import Optional
 
 from airunner.enums import TemplateName
-from airunner.settings import (
-    AIRUNNER_DARK_THEME_NAME,
-    AIRUNNER_LIGHT_THEME_NAME,
-)
 from airunner.utils.settings import get_qsettings
 
 
@@ -35,15 +31,12 @@ class StylesMixin:
             )
             template = TemplateName(template_val)
 
-        theme_map = {
-            TemplateName.SYSTEM_DEFAULT: None,
-            TemplateName.DARK: AIRUNNER_DARK_THEME_NAME,
-            TemplateName.LIGHT: AIRUNNER_LIGHT_THEME_NAME,
-            TemplateName.MINT: "mint_theme",
-            TemplateName.RAINBOW: "rainbow_theme",
-            TemplateName.GITHUB: "github_theme",
-            TemplateName.CYBERPUNK: "cyberpunk_theme",
-        }
+        # Dynamically build the theme map from TemplateName
+        theme_map = {TemplateName.SYSTEM_DEFAULT: None}
+        for t in TemplateName:
+            if t == TemplateName.SYSTEM_DEFAULT:
+                continue
+            theme_map[t] = f"{t.name.lower()}_theme"
 
         theme_name = theme_map.get(template, None)
 
