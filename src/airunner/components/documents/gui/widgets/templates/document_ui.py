@@ -35,6 +35,7 @@ class Ui_document_widget(object):
         self.delete_button.setObjectName(u"delete_button")
         self.delete_button.setMinimumSize(QSize(30, 30))
         self.delete_button.setMaximumSize(QSize(30, 30))
+        self.delete_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon = QIcon()
         icon.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.delete_button.setIcon(icon)

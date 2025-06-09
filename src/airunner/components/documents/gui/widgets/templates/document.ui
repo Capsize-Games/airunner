@@ -35,6 +35,9 @@
        <height>30</height>
       </size>
      </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
      <property name="text">
       <string/>
      </property>

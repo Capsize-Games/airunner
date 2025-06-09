@@ -45,6 +45,7 @@ class Ui_documents(object):
 
         self.browse_button = QPushButton(self.documents_header_container)
         self.browse_button.setObjectName(u"browse_button")
+        self.browse_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         self.horizontalLayout_2.addWidget(self.browse_button)
 
