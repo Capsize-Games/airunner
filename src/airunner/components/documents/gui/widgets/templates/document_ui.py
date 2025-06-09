@@ -26,11 +26,6 @@ class Ui_document_widget(object):
         document_widget.resize(400, 170)
         self.gridLayout = QGridLayout(document_widget)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.checkBox = QCheckBox(document_widget)
-        self.checkBox.setObjectName(u"checkBox")
-
-        self.gridLayout.addWidget(self.checkBox, 0, 0, 1, 1)
-
         self.delete_button = QPushButton(document_widget)
         self.delete_button.setObjectName(u"delete_button")
         self.delete_button.setMinimumSize(QSize(30, 30))
@@ -42,6 +37,11 @@ class Ui_document_widget(object):
 
         self.gridLayout.addWidget(self.delete_button, 0, 1, 1, 1)
 
+        self.checkBox = QCheckBox(document_widget)
+        self.checkBox.setObjectName(u"checkBox")
+
+        self.gridLayout.addWidget(self.checkBox, 0, 0, 1, 1)
+
 
         self.retranslateUi(document_widget)
 
@@ -50,7 +50,7 @@ class Ui_document_widget(object):
 
     def retranslateUi(self, document_widget):
         document_widget.setWindowTitle(QCoreApplication.translate("document_widget", u"Form", None))
-        self.checkBox.setText(QCoreApplication.translate("document_widget", u"CheckBox", None))
         self.delete_button.setText("")
+        self.checkBox.setText(QCoreApplication.translate("document_widget", u"CheckBox", None))
     # retranslateUi
 
