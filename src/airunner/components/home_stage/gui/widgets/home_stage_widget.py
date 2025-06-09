@@ -5,6 +5,13 @@ from airunner.components.home_stage.gui.widgets.templates.home_stage_ui import (
 from airunner.enums import SignalCode, TemplateName
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.utils.settings import get_qsettings
+import os
+import re
+
+try:
+    from importlib.metadata import version as pkg_version
+except ImportError:
+    from importlib_metadata import version as pkg_version  # type: ignore
 
 
 class HomeStageWidget(BaseWidget):
@@ -22,10 +29,18 @@ class HomeStageWidget(BaseWidget):
         # Render the home page template in the webEngineView
         settings = get_qsettings()
         theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
+        # Get version from installed airunner package
+        try:
+            version = pkg_version("airunner")
+        except Exception:
+            version = None
         try:
             # Pass theme variable to Jinja2 template for correct CSS links
             self.render_template(
-                self.ui.webEngineView, "home.jinja2.html", theme=theme.lower()
+                self.ui.webEngineView,
+                "home.jinja2.html",
+                theme=theme.lower(),
+                version=version,
             )
             # Also set window.currentTheme for JS
             js = f"window.currentTheme = '{theme.lower()}';"
