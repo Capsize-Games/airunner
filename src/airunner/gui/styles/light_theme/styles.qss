@@ -694,7 +694,7 @@ QSizeGrip {
 }
 
 QTabWidget::pane {
-    border-top: 1px solid #007acc;
+    border-top: 0px solid #007acc;
 }
 
 QToolButton {
@@ -814,4 +814,16 @@ QWizardPage QPushButton:pressed {
 
 #actionsidebar QPushButton:checked {
     border: 1px solid #007acc;
+}
+
+#documents_header {
+    border-bottom: 1px solid #005fa3 !important;
+}
+
+#chat_prompt_action_bar {
+    border-bottom: 1px solid #005fa3 !important;
+}
+
+#footer_container {
+    border-top: 1px solid #005fa3 !important;
 }

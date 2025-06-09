@@ -31,15 +31,15 @@ class Ui_document_widget(object):
 
         self.gridLayout.addWidget(self.checkBox, 0, 0, 1, 1)
 
-        self.pushButton = QPushButton(document_widget)
-        self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setMinimumSize(QSize(30, 30))
-        self.pushButton.setMaximumSize(QSize(30, 30))
+        self.delete_button = QPushButton(document_widget)
+        self.delete_button.setObjectName(u"delete_button")
+        self.delete_button.setMinimumSize(QSize(30, 30))
+        self.delete_button.setMaximumSize(QSize(30, 30))
         icon = QIcon()
         icon.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pushButton.setIcon(icon)
+        self.delete_button.setIcon(icon)
 
-        self.gridLayout.addWidget(self.pushButton, 0, 1, 1, 1)
+        self.gridLayout.addWidget(self.delete_button, 0, 1, 1, 1)
 
 
         self.retranslateUi(document_widget)
@@ -50,6 +50,6 @@ class Ui_document_widget(object):
     def retranslateUi(self, document_widget):
         document_widget.setWindowTitle(QCoreApplication.translate("document_widget", u"Form", None))
         self.checkBox.setText(QCoreApplication.translate("document_widget", u"CheckBox", None))
-        self.pushButton.setText("")
+        self.delete_button.setText("")
     # retranslateUi
 
