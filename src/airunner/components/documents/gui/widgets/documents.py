@@ -37,7 +37,6 @@ from airunner.components.browser.gui.widgets.mixins.cache_mixin import (
 from airunner.components.browser.gui.widgets.mixins.ui_setup_mixin import (
     UISetupMixin,
 )
-from airunner.utils.os.find_files import find_files
 from airunner.utils.settings import get_qsettings
 
 
@@ -60,7 +59,6 @@ class DocumentsWidget(
     urlChanged = Signal(str, str)  # url, title
     faviconChanged = Signal(QIcon)
     widget_class_ = Ui_documents
-    files_found = Signal(list)
 
     def __init__(self, *args, private: bool = False, **kwargs):
         self._favicon = None
@@ -78,7 +76,6 @@ class DocumentsWidget(
         self.ui.path.blockSignals(True)
         self.ui.path.setText(self.documents_path)
         self.ui.path.blockSignals(False)
-        self.files_found.connect(self._add_document_widgets_from_files)
         self.setup_documents_list()
         self._setup_filesystem_watcher()
         self.load_documents()
@@ -162,19 +159,14 @@ class DocumentsWidget(
             if not os.path.exists(document.path):
                 Document.objects.delete(document.id)
 
-        def handle_files(file_paths):
-            print(
-                f"handle_files called with {len(file_paths)} files: {file_paths[:5]} ..."
-            )
-            self.files_found.emit(file_paths)
-
-        # Use filesystem instead of database
-        find_files(
-            path=self.documents_path,
-            file_extension=self.file_extensions,
-            recursive=True,
-            callback=handle_files,
-        )
+        # List files in the documents directory with allowed extensions
+        file_paths = []
+        for root, dirs, files in os.walk(self.documents_path):
+            for file in files:
+                ext = os.path.splitext(file)[1][1:].lower()
+                if ext in self.file_extensions:
+                    file_paths.append(os.path.join(root, file))
+        self._add_document_widgets_from_files(file_paths)
 
     @Slot(list)
     def _add_document_widgets_from_files(self, file_paths):
