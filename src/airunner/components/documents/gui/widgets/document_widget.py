@@ -1,13 +1,8 @@
 import os
-from PySide6.QtWidgets import (
-    QHBoxLayout,
-    QVBoxLayout,
-    QLabel,
-    QCheckBox,
-    QPushButton,
-)
+from PySide6.QtCore import Slot
 from PySide6.QtCore import Qt, Signal
 
+from airunner.components.documents.data.models.document import Document
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.components.documents.gui.widgets.templates.document_ui import (
     Ui_document_widget,
@@ -24,32 +19,26 @@ class DocumentWidget(BaseWidget):
         self.setWindowFlags(Qt.WindowType.Widget)
         self.document = document
         self.on_active_changed = on_active_changed
-        self.init_ui()
         self.setMinimumHeight(60)  # Ensure widget is visible
         self.setMinimumWidth(200)
+        documents = Document.objects.filter_by(path=document.path)
+        if not documents or len(documents) == 0:
+            Document.objects.create(path=document.path, active=False)
+        else:
+            doc = documents[0]
+            self.ui.checkBox.setChecked(doc.active)
+        self.ui.checkBox.setText(self.document_title())
 
-    def init_ui(self):
-        layout = QHBoxLayout(self)
-        self.checkbox = QCheckBox()
-        self.checkbox.setChecked(self.document.active)
-        self.checkbox.stateChanged.connect(self.handle_checkbox)
-        layout.addWidget(self.checkbox)
+    @Slot(bool)
+    def on_checkBox_toggled(self, val: bool):
+        documents = Document.objects.filter_by(path=self.document.path)
+        if len(documents) > 0:
+            document = documents[0]
+            Document.objects.update(pk=document.id, active=val)
 
-        vbox = QVBoxLayout()
-        self.title_label = QLabel(self.document_title())
-        self.summary_label = QLabel(self.document_summary())
-        self.summary_label.setWordWrap(True)
-        vbox.addWidget(self.title_label)
-        vbox.addWidget(self.summary_label)
-        layout.addLayout(vbox)
-
-        self.delete_button = QPushButton("🗑")
-        self.delete_button.setToolTip("Delete document")
-        self.delete_button.setFixedWidth(28)
-        self.delete_button.clicked.connect(self.handle_delete)
-        layout.addWidget(self.delete_button)
-
-        self.setLayout(layout)
+    @Slot()
+    def on_delete_button_clicked(self):
+        self.handle_delete()
 
     def document_title(self):
         # Use filename as title
@@ -63,10 +52,6 @@ class DocumentWidget(BaseWidget):
             return " ".join(lines)
         except Exception:
             return "(No preview available)"
-
-    def handle_checkbox(self, state):
-        if self.on_active_changed:
-            self.on_active_changed(self.document, state == Qt.Checked)
 
     def handle_delete(self):
         self.delete_requested.emit(self.document)

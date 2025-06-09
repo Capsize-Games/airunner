@@ -15,13 +15,32 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QSizePolicy, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QGridLayout, QPushButton,
+    QSizePolicy, QWidget)
+import airunner.feather_rc
 
 class Ui_document_widget(object):
     def setupUi(self, document_widget):
         if not document_widget.objectName():
             document_widget.setObjectName(u"document_widget")
-        document_widget.resize(400, 300)
+        document_widget.resize(400, 83)
+        self.gridLayout = QGridLayout(document_widget)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.checkBox = QCheckBox(document_widget)
+        self.checkBox.setObjectName(u"checkBox")
+
+        self.gridLayout.addWidget(self.checkBox, 0, 0, 1, 1)
+
+        self.pushButton = QPushButton(document_widget)
+        self.pushButton.setObjectName(u"pushButton")
+        self.pushButton.setMinimumSize(QSize(30, 30))
+        self.pushButton.setMaximumSize(QSize(30, 30))
+        icon = QIcon()
+        icon.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.pushButton.setIcon(icon)
+
+        self.gridLayout.addWidget(self.pushButton, 0, 1, 1, 1)
+
 
         self.retranslateUi(document_widget)
 
@@ -30,5 +49,7 @@ class Ui_document_widget(object):
 
     def retranslateUi(self, document_widget):
         document_widget.setWindowTitle(QCoreApplication.translate("document_widget", u"Form", None))
+        self.checkBox.setText(QCoreApplication.translate("document_widget", u"CheckBox", None))
+        self.pushButton.setText("")
     # retranslateUi
 
