@@ -285,7 +285,7 @@ class Ui_MainWindow(object):
         self.gridLayout_9 = QGridLayout(self.mode_tab_widget)
         self.gridLayout_9.setSpacing(0)
         self.gridLayout_9.setObjectName(u"gridLayout_9")
-        self.gridLayout_9.setContentsMargins(0, 0, -1, 0)
+        self.gridLayout_9.setContentsMargins(0, 0, 0, 0)
         self.actionsidebar = QWidget(self.mode_tab_widget)
         self.actionsidebar.setObjectName(u"actionsidebar")
         self.action_sidebar = QVBoxLayout(self.actionsidebar)

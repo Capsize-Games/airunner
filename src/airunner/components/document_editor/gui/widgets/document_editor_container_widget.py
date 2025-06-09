@@ -20,6 +20,12 @@ import os
 from airunner.components.browser.gui.widgets.mixins.tab_manager_mixin import (
     TabManagerMixin,
 )
+from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
+    FileExplorerWidget,
+)
+from airunner.components.file_explorer.gui.templates.file_explorer_ui import (
+    Ui_file_explorer,
+)
 
 
 class DocumentEditorContainerWidget(TabManagerMixin, BaseWidget):
