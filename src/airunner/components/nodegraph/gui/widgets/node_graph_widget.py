@@ -429,6 +429,7 @@ class NodeGraphWidget(BaseWidget):
             parent=None,
             node_graph=self.graph,
         )
+        self._nodes_palette.layout().setContentsMargins(0, 0, 0, 0)
         for node_cls in [
             AgentActionNode,
             TextboxNode,

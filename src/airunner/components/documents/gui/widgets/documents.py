@@ -1,11 +1,12 @@
+from typing import Dict
+from airunner.components.documents.data.models.document import Document
 from airunner.components.documents.gui.widgets.templates.documents_ui import (
     Ui_documents,
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
-from PySide6.QtCore import Signal, Qt, Slot, QFileSystemWatcher, QFile
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QFileDialog
 from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
     FileExplorerWidget,
 )
@@ -65,15 +66,14 @@ class DocumentsWidget(
             "pdf",
             "epub",
         ]
+        self.signal_handlers = {
+            SignalCode.DOCUMENT_INDEXED: self.on_document_indexed
+        }
         super().__init__(*args, **kwargs)
         self.setup_file_explorer()
 
     def setup_file_explorer(self):
-        # Remove any old widgets/layouts if present
-        for i in reversed(range(self.ui.gridLayout.count())):
-            widget = self.ui.gridLayout.itemAt(i).widget()
-            if widget is not None:
-                widget.setParent(None)
+        widget = self.ui.treeView
         # Create and add the FileExplorerWidget
         self.file_explorer = FileExplorerWidget(
             path_to_display=self.documents_path, parent=self
@@ -132,3 +132,76 @@ class DocumentsWidget(
         if file_path:
             # Implement your document open logic here
             print(f"Open document: {file_path}")
+
+    def on_document_indexed(self, data: Dict):
+        print("ON DOCUMENT INDEXED", data)
+        self._current_indexing += 1
+        self._index_next_document()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._sync_documents_with_directory()
+        self._request_index_for_unindexed_documents()
+
+    def _sync_documents_with_directory(self):
+        print("*" * 100)
+        print("syncing")
+        # Ensure every file in the watched directory and subdirectories has a Document entry
+        doc_dir = self.documents_path
+        if not os.path.exists(doc_dir):
+            self.logger.error(f"Document directory does not exist: {doc_dir}")
+            return
+        print("directory exists", doc_dir)
+        for root, dirs, files in os.walk(doc_dir):
+            for fname in files:
+                fpath = os.path.join(root, fname)
+                print("checking file", fpath)
+                ext = os.path.splitext(fname)[1][1:].lower()
+                if ext in self.file_extensions:
+                    print("ext matches", ext)
+                    exists = Document.objects.filter_by(path=fpath)
+                    if not exists or len(exists) == 0:
+                        print("Creating new Document entry for:", fpath)
+                        Document.objects.create(path=fpath, active=True)
+                    else:
+                        print("Document already exists:", fpath)
+
+    def _request_index_for_unindexed_documents(self):
+        # Query all documents that are not indexed
+        self._unindexed_docs = [
+            doc.path
+            for doc in Document.objects.filter(Document.indexed == False)
+            if hasattr(doc, "path") and doc.path
+        ]
+        print("UNINDEX", self._unindexed_docs)
+        self._total_to_index = len(self._unindexed_docs)
+        self._current_indexing = 0
+        if self._total_to_index == 0:
+            self._clear_progress_bar()
+            return
+        self._index_next_document()
+
+    def _index_next_document(self):
+        if self._current_indexing < self._total_to_index:
+            doc = self._unindexed_docs[self._current_indexing]
+            percent = int(
+                (self._current_indexing / self._total_to_index) * 100
+            )
+            filename = os.path.basename(getattr(doc, "path", str(doc)))
+            truncated = (
+                (filename[:32] + "...") if len(filename) > 35 else filename
+            )
+            self.ui.progressBar.setValue(percent)
+            self.ui.progressBar.setFormat(
+                f"Indexing {percent}% ({self._current_indexing+1} of {self._total_to_index} files) {truncated}"
+            )
+            self.ui.progressBar.setVisible(True)
+            print("EMITTING SIGNAL CODE INDEX_DOCUMENT", doc)
+            self.emit_signal(SignalCode.INDEX_DOCUMENT, {"path": doc})
+        else:
+            self._clear_progress_bar()
+
+    def _clear_progress_bar(self):
+        self.ui.progressBar.setValue(0)
+        self.ui.progressBar.setFormat("")
+        self.ui.progressBar.setVisible(False)

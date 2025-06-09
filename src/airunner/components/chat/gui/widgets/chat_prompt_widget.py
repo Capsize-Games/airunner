@@ -74,8 +74,8 @@ class ChatPromptWidget(BaseWidget):
                 self.ui.action.setCurrentIndex(idx)
                 break
         self.ui.action.blockSignals(False)
-        self.originalKeyPressEvent = None
         self.originalKeyPressEvent = self.ui.prompt.keyPressEvent
+        self.ui.prompt.keyPressEvent = self.handle_key_press
         self.held_message = None
         self._disabled = False
         self.scroll_animation = None
@@ -145,7 +145,7 @@ class ChatPromptWidget(BaseWidget):
 
     @property
     def action(self) -> LLMActionType:
-        #return LLMActionType[self.llm_generator_settings.action]
+        # return LLMActionType[self.llm_generator_settings.action]
         return LLMActionType.DECISION
 
     def on_model_status_changed_signal(self, data):
@@ -317,12 +317,13 @@ class ChatPromptWidget(BaseWidget):
         self._disabled = False
 
     def handle_key_press(self, event):
-        if event.key() == Qt.Key.Key_Return:
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             if (
                 not self._disabled
                 and event.modifiers() != Qt.KeyboardModifier.ShiftModifier
             ):
                 self.do_generate()
+                event.accept()
                 return
         if (
             self.originalKeyPressEvent is not None
