@@ -250,6 +250,8 @@ class SignalCode(Enum):
 
     # file explorer
     FILE_EXPLORER_OPEN_FILE = "open_file_signal"
+    INDEX_DOCUMENT = "index_document_signal"
+    DOCUMENT_INDEXED = "document_indexed_signal"
 
 
 class EngineResponseCode(Enum):

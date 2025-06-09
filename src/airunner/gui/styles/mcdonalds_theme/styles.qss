@@ -55,6 +55,13 @@ QComboBox::down-arrow {}
     font-size: 10pt;
 }
 
+#nodegraph_toolbar {
+    border-bottom: 1px solid #b21807;
+}
+#nodegraph_footer {
+    border-top: 1px solid #b21807;
+}
+
 QFrame {
     border: none;
     background-color: none;
@@ -885,6 +892,13 @@ QComboBox::down-arrow {}
 
 #mode_tab_widget QWidget {
     font-size: 10pt;
+}
+
+#nodegraph_toolbar {
+    border-bottom: 1px solid #b21807;
+}
+#nodegraph_footer {
+    border-top: 1px solid #b21807;
 }
 
 QFrame {

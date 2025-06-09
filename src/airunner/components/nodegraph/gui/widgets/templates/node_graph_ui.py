@@ -29,21 +29,21 @@ class Ui_node_graph_widget(object):
         self.gridLayout_5 = QGridLayout(node_graph_widget)
         self.gridLayout_5.setSpacing(0)
         self.gridLayout_5.setObjectName(u"gridLayout_5")
-        self.gridLayout_5.setContentsMargins(10, 10, 10, 10)
-        self.widget = QWidget(node_graph_widget)
-        self.widget.setObjectName(u"widget")
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.nodegraph_toolbar = QWidget(node_graph_widget)
+        self.nodegraph_toolbar.setObjectName(u"nodegraph_toolbar")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Maximum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
-        self.widget.setSizePolicy(sizePolicy)
-        self.widget.setMinimumSize(QSize(260, 0))
-        self.gridLayout_3 = QGridLayout(self.widget)
+        sizePolicy.setHeightForWidth(self.nodegraph_toolbar.sizePolicy().hasHeightForWidth())
+        self.nodegraph_toolbar.setSizePolicy(sizePolicy)
+        self.nodegraph_toolbar.setMinimumSize(QSize(260, 0))
+        self.gridLayout_3 = QGridLayout(self.nodegraph_toolbar)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setHorizontalSpacing(5)
         self.gridLayout_3.setVerticalSpacing(0)
-        self.gridLayout_3.setContentsMargins(0, 0, 0, 10)
-        self.new_button = QPushButton(self.widget)
+        self.gridLayout_3.setContentsMargins(10, 10, 10, 10)
+        self.new_button = QPushButton(self.nodegraph_toolbar)
         self.new_button.setObjectName(u"new_button")
         icon = QIcon()
         icon.addFile(u":/dark/icons/feather/dark/file-plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
@@ -51,7 +51,7 @@ class Ui_node_graph_widget(object):
 
         self.gridLayout_3.addWidget(self.new_button, 0, 4, 1, 1)
 
-        self.delete_button = QPushButton(self.widget)
+        self.delete_button = QPushButton(self.nodegraph_toolbar)
         self.delete_button.setObjectName(u"delete_button")
         self.delete_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon1 = QIcon()
@@ -60,7 +60,7 @@ class Ui_node_graph_widget(object):
 
         self.gridLayout_3.addWidget(self.delete_button, 0, 8, 1, 1)
 
-        self.stop_button = QPushButton(self.widget)
+        self.stop_button = QPushButton(self.nodegraph_toolbar)
         self.stop_button.setObjectName(u"stop_button")
         self.stop_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon2 = QIcon()
@@ -69,7 +69,7 @@ class Ui_node_graph_widget(object):
 
         self.gridLayout_3.addWidget(self.stop_button, 0, 2, 1, 1)
 
-        self.clear_button = QPushButton(self.widget)
+        self.clear_button = QPushButton(self.nodegraph_toolbar)
         self.clear_button.setObjectName(u"clear_button")
         icon3 = QIcon()
         icon3.addFile(u":/dark/icons/feather/dark/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
@@ -77,7 +77,7 @@ class Ui_node_graph_widget(object):
 
         self.gridLayout_3.addWidget(self.clear_button, 0, 6, 1, 1)
 
-        self.play_button = QPushButton(self.widget)
+        self.play_button = QPushButton(self.nodegraph_toolbar)
         self.play_button.setObjectName(u"play_button")
         self.play_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon4 = QIcon()
@@ -86,7 +86,7 @@ class Ui_node_graph_widget(object):
 
         self.gridLayout_3.addWidget(self.play_button, 0, 0, 1, 1)
 
-        self.load_button = QPushButton(self.widget)
+        self.load_button = QPushButton(self.nodegraph_toolbar)
         self.load_button.setObjectName(u"load_button")
         self.load_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon5 = QIcon()
@@ -95,7 +95,7 @@ class Ui_node_graph_widget(object):
 
         self.gridLayout_3.addWidget(self.load_button, 0, 7, 1, 1)
 
-        self.save_button = QPushButton(self.widget)
+        self.save_button = QPushButton(self.nodegraph_toolbar)
         self.save_button.setObjectName(u"save_button")
         self.save_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon6 = QIcon()
@@ -108,7 +108,7 @@ class Ui_node_graph_widget(object):
 
         self.gridLayout_3.addItem(self.horizontalSpacer, 0, 3, 1, 1)
 
-        self.pause_button = QPushButton(self.widget)
+        self.pause_button = QPushButton(self.nodegraph_toolbar)
         self.pause_button.setObjectName(u"pause_button")
         self.pause_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon7 = QIcon()
@@ -118,7 +118,26 @@ class Ui_node_graph_widget(object):
         self.gridLayout_3.addWidget(self.pause_button, 0, 1, 1, 1)
 
 
-        self.gridLayout_5.addWidget(self.widget, 0, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.nodegraph_toolbar, 0, 0, 1, 1)
+
+        self.nodegraph_footer = QWidget(node_graph_widget)
+        self.nodegraph_footer.setObjectName(u"nodegraph_footer")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.nodegraph_footer.sizePolicy().hasHeightForWidth())
+        self.nodegraph_footer.setSizePolicy(sizePolicy1)
+        self.gridLayout_4 = QGridLayout(self.nodegraph_footer)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.gridLayout_4.setContentsMargins(10, 10, 10, 10)
+        self.progressBar = QProgressBar(self.nodegraph_footer)
+        self.progressBar.setObjectName(u"progressBar")
+        self.progressBar.setValue(24)
+
+        self.gridLayout_4.addWidget(self.progressBar, 0, 0, 1, 1)
+
+
+        self.gridLayout_5.addWidget(self.nodegraph_footer, 2, 0, 1, 1)
 
         self.splitter = QSplitter(node_graph_widget)
         self.splitter.setObjectName(u"splitter")
@@ -131,7 +150,7 @@ class Ui_node_graph_widget(object):
         self.gridLayout_2 = QGridLayout(self.graph)
         self.gridLayout_2.setSpacing(0)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setContentsMargins(10, 0, 10, 0)
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.splitter.addWidget(self.graph)
         self.palette = QWidget(self.splitter)
         self.palette.setObjectName(u"palette")
@@ -142,12 +161,6 @@ class Ui_node_graph_widget(object):
         self.splitter.addWidget(self.palette)
 
         self.gridLayout_5.addWidget(self.splitter, 1, 0, 1, 1)
-
-        self.progressBar = QProgressBar(node_graph_widget)
-        self.progressBar.setObjectName(u"progressBar")
-        self.progressBar.setValue(24)
-
-        self.gridLayout_5.addWidget(self.progressBar, 2, 0, 1, 1)
 
 
         self.retranslateUi(node_graph_widget)
