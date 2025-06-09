@@ -13,12 +13,19 @@ class DocumentWidget(BaseWidget):
     delete_requested = Signal(object)  # emits the document object
     widget_class_ = Ui_document_widget
 
-    def __init__(self, document, on_active_changed=None, parent=None):
+    def __init__(
+        self,
+        document,
+        on_active_changed=None,
+        parent=None,
+        title_truncate_length=50,
+    ):
         # Force Qt.Widget flag and never Qt.Window
         super().__init__(parent)
         self.setWindowFlags(Qt.WindowType.Widget)
         self.document = document
         self.on_active_changed = on_active_changed
+        self.title_truncate_length = title_truncate_length
         self.setMinimumHeight(60)  # Ensure widget is visible
         self.setMinimumWidth(200)
         documents = Document.objects.filter_by(path=document.path)
@@ -28,6 +35,7 @@ class DocumentWidget(BaseWidget):
             doc = documents[0]
             self.ui.checkBox.setChecked(doc.active)
         self.ui.checkBox.setText(self.document_title())
+        self.ui.checkBox.setToolTip(os.path.basename(self.document.path))
 
     @Slot(bool)
     def on_checkBox_toggled(self, val: bool):
@@ -41,8 +49,12 @@ class DocumentWidget(BaseWidget):
         self.handle_delete()
 
     def document_title(self):
-        # Use filename as title
-        return os.path.basename(self.document.path)
+        # Use filename as title, truncated to self.title_truncate_length chars
+        filename = os.path.basename(self.document.path)
+        max_length = self.title_truncate_length
+        if len(filename) > max_length:
+            return filename[: max_length - 3] + "..."
+        return filename
 
     def document_summary(self):
         # Try to read first 2 lines as summary

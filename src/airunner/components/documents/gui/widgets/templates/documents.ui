@@ -64,6 +64,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="browse_button">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
            <property name="toolTip">
             <string>Browse</string>
            </property>
