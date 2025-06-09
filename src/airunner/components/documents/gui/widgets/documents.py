@@ -38,6 +38,7 @@ from airunner.components.browser.gui.widgets.mixins.ui_setup_mixin import (
     UISetupMixin,
 )
 from airunner.utils.os.find_files import find_files
+from airunner.utils.settings import get_qsettings
 
 
 class DocumentsWidget(
@@ -64,10 +65,38 @@ class DocumentsWidget(
     def __init__(self, *args, private: bool = False, **kwargs):
         self._favicon = None
         self._private = private
+        self.file_extensions = [
+            "md",
+            "txt",
+            "docx",
+            "doc",
+            "odt",
+            "pdf",
+            "epub",
+        ]
         super().__init__(*args, **kwargs)
+        self.ui.path.blockSignals(True)
+        self.ui.path.setText(self.documents_path)
+        self.ui.path.blockSignals(False)
         self.files_found.connect(self._add_document_widgets_from_files)
         self.setup_documents_list()
         self.load_documents()
+
+    @property
+    def documents_path(self) -> str:
+        settings = get_qsettings()
+        return settings.value(
+            "documents_path",
+            os.path.join(
+                os.path.expanduser(self.path_settings.base_path),
+                "text/other/documents",
+            ),
+        )
+
+    @documents_path.setter
+    def documents_path(self, value: str):
+        settings = get_qsettings()
+        settings.setValue("documents_path", value)
 
     @Slot()
     def on_browse_button_clicked(self):
@@ -84,6 +113,7 @@ class DocumentsWidget(
     def on_path_textChanged(self, text: str):
         self.clear_documents()
         if os.path.exists(text):
+            self.documents_path = text
             self.load_documents()
 
     def setup_documents_list(self):
@@ -118,8 +148,8 @@ class DocumentsWidget(
 
         # Use filesystem instead of database
         find_files(
-            path=self.ui.path.text() or "~/Documents",
-            file_extension=["md", "txt", "docx", "doc", "odt", "pdf"],
+            path=self.documents_path,
+            file_extension=self.file_extensions,
             recursive=True,
             callback=handle_files,
         )
