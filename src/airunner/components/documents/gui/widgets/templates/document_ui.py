@@ -23,7 +23,7 @@ class Ui_document_widget(object):
     def setupUi(self, document_widget):
         if not document_widget.objectName():
             document_widget.setObjectName(u"document_widget")
-        document_widget.resize(400, 83)
+        document_widget.resize(400, 170)
         self.gridLayout = QGridLayout(document_widget)
         self.gridLayout.setObjectName(u"gridLayout")
         self.checkBox = QCheckBox(document_widget)
