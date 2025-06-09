@@ -8,7 +8,7 @@ from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
 from airunner.data.models import Conversation
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, TemplateName
 from airunner.gui.widgets.llm.contentwidgets.chat_bridge import ChatBridge
 from airunner.gui.widgets.llm.loading_widget import LoadingWidget
 from airunner.components.chat.gui.widgets.templates.conversation_ui import (
@@ -18,6 +18,7 @@ import logging
 
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.utils.llm import strip_names_from_message
+from airunner.utils.settings import get_qsettings
 from airunner.utils.text.formatter_extended import FormatterExtended
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ class ConversationWidget(BaseWidget):
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated_signal,
             SignalCode.CHATBOT_CHANGED: self.on_chatbot_changed,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_text_generate_signal,
+            SignalCode.REFRESH_STYLESHEET_SIGNAL: self.set_theme,
         }
         self.ui_update_timer = QTimer(self)
         self.ui_update_timer.setInterval(50)
@@ -101,9 +103,19 @@ class ConversationWidget(BaseWidget):
         if not self.registered:
             self.logger.debug("Rendering conversation template in showEvent")
             try:
-                self.render_template(
-                    self.ui.stage, "conversation.jinja2.html", messages=[]
+                settings = get_qsettings()
+                theme = settings.value(
+                    "theme", TemplateName.SYSTEM_DEFAULT.value
                 )
+                self.render_template(
+                    self.ui.stage,
+                    "conversation.jinja2.html",
+                    messages=[],
+                    theme=theme.lower(),
+                )
+                # Set window.currentTheme in JS
+                js = f"window.currentTheme = '{theme.lower()}';"
+                self.ui.stage.page().runJavaScript(js)
                 self.logger.debug("Template rendered successfully.")
             except Exception as e:
                 self.logger.error(f"Failed to render template: {e}")
@@ -567,3 +579,16 @@ class ConversationWidget(BaseWidget):
         Conversation.objects.update(pk=conversation.id, value=new_messages)
         self._conversation.value = new_messages
         self.set_conversation_widgets(new_messages)
+
+    def set_theme(self, data: Dict):
+        """
+        Set the theme for the conversation widget by updating the CSS in the webEngineView.
+        This will call the setTheme JS function in the loaded HTML.
+        """
+        theme_name = data.get(
+            "template", TemplateName.SYSTEM_DEFAULT
+        ).value.lower()
+        if hasattr(self.ui, "stage"):
+            # Set window.currentTheme before calling setTheme
+            js = f"window.currentTheme = '{theme_name}'; window.setTheme && window.setTheme('{theme_name}');"
+            self.ui.stage.page().runJavaScript(js)

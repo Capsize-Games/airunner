@@ -120,18 +120,19 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             self.send_error(403)
             return
         # Jinja2 template rendering
-        if rel_path.endswith(".jinja2.html"):
+        rel_path_no_query = rel_path.split("?", 1)[0]
+        if rel_path_no_query.endswith(".jinja2.html"):
             for directory in self.directories:
-                normalized_rel_path = os.path.normpath(rel_path)
+                normalized_rel_path = os.path.normpath(rel_path_no_query)
+                abs_directory = os.path.abspath(directory)
+                abs_target = os.path.abspath(
+                    os.path.join(abs_directory, normalized_rel_path)
+                )
                 # Prevent directory traversal: reject paths with '..' after normalization
                 if normalized_rel_path.startswith("..") or os.path.isabs(
                     normalized_rel_path
                 ):
                     continue
-                abs_directory = os.path.abspath(directory)
-                abs_target = os.path.abspath(
-                    os.path.join(abs_directory, normalized_rel_path)
-                )
                 try:
                     if (
                         os.path.commonpath([abs_directory, abs_target])
@@ -156,13 +157,16 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                         loader=loader,
                         autoescape=jinja2.select_autoescape(["html", "xml"]),
                     )
-                    template = env.get_template(rel_path)
+                    template = env.get_template(rel_path_no_query)
                     rendered = template.render(**context)
                     self.send_response(200)
                     self.send_header("Content-type", "text/html")
                     self.end_headers()
                     self.wfile.write(rendered.encode("utf-8"))
                     return
+            # If we reach here, template was not found in any directory
+            self.send_error(404)
+            return
         # Strict MIME type enforcement
         abs_path = self.translate_path(self.path)
         ext = os.path.splitext(abs_path)[1].lower()
@@ -216,7 +220,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
 
         # Remove query and fragment
         safe_path = path.split("?", 1)[0]
-        safe_path = safe_path.split("#", 1)[0]
+        safe_path = path.split("#", 1)[0]
         safe_path = urllib.parse.unquote(safe_path, errors="surrogatepass")
         safe_path = posixpath.normpath(safe_path)
         # Prevent absolute paths and directory traversal
@@ -228,6 +232,9 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             logging.warning(
                 f"[SECURITY] Attempted directory traversal or absolute path: {path}"
             )
+            return ""
+        # Prevent static serving of jinja2 templates
+        if safe_path.endswith(".jinja2.html"):
             return ""
         # Use only safe, sanitized path
         for directory in self.directories:
@@ -347,7 +354,14 @@ class LocalHttpServerThread(QThread):
                     "../../../components/chat/gui/static",
                 )
             ),
+            os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "../../../components/home_stage/gui/static",
+                )
+            ),
         ]
+        print("[DEBUG] static_dirs at server startup:", static_dirs)
         if self.additional_directories:
             static_dirs.extend(self.additional_directories)
         static_dirs = list(dict.fromkeys(static_dirs))

@@ -1,8 +1,6 @@
-// home.js - Placeholder for AI Runner Home interactivity
+// conversation_theme.js - Dynamic theme switching for conversation widget
 function setTheme(themeName) {
-    // Remove existing theme/variable CSS links
     document.querySelectorAll('link[data-theme-css]').forEach(link => link.remove());
-    // Add variables CSS
     const variablesHref = `static/css/variables-${themeName}.css`;
     const themeHref = `static/css/theme-${themeName}.css`;
     [variablesHref, themeHref].forEach(href => {
@@ -13,12 +11,19 @@ function setTheme(themeName) {
         document.head.appendChild(link);
     });
 }
-
 window.setTheme = setTheme;
+// Optionally, set initial theme on load if available
+if (window.currentTheme) {
+    setTheme(window.currentTheme);
+}
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Prefer theme from meta tag if available
-    let theme = document.querySelector('meta[name="airunner-theme"]')?.content || window.currentTheme || 'light';
+    let theme = 'dark';
+    const themeVars = document.getElementById('theme-vars');
+    if (themeVars && themeVars.href) {
+        const match = themeVars.href.match(/variables-([a-zA-Z0-9_-]+)\.css/);
+        if (match) theme = match[1];
+    }
     setTheme(theme);
-    console.log('AI Runner Home loaded, theme:', theme);
+    console.log('Conversation widget loaded, theme:', theme);
 });

@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <title>AI Runner Home</title>
     <link rel="stylesheet" href="../css/home.css">
-    <link id="theme-vars" rel="stylesheet" href="../css/variables-dark.css">
-    <link id="theme-style" rel="stylesheet" href="../css/theme-dark.css">
+    <link id="theme-vars" rel="stylesheet" href="../css/variables-{{ theme }}.css">
+    <link id="theme-style" rel="stylesheet" href="../css/theme-{{ theme }}.css">
+    <meta name="airunner-theme" content="{{ theme }}">
 </head>
 <body>
     <div id="home-top">
         <header>
-            <h1>AI Runner</h1>
+            <h1>AI Runner {{ theme }}</h1>
             <p class="intro">Welcome to AI Runner! Your workspace for AI-powered productivity and creativity.</p>
         </header>
     </div>
@@ -33,8 +34,14 @@
     function setTheme(theme) {
         document.getElementById('theme-vars').href = `../css/variables-${theme}.css`;
         document.getElementById('theme-style').href = `../css/theme-${theme}.css`;
+        window.currentTheme = theme;
     }
     window.setTheme = setTheme;
+    document.addEventListener('DOMContentLoaded', function () {
+        let theme = document.querySelector('meta[name="airunner-theme"]')?.content || window.currentTheme || 'light';
+        setTheme(theme);
+        console.log('AI Runner Home loaded, theme:', theme);
+    });
     </script>
 </body>
 </html>
