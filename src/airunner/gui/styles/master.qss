@@ -69,6 +69,10 @@ QWidget#section_header {
     font-size: 14pt;
 }
 
+QListWidget {
+    background-color: @dark-color;
+}
+
 QLineEdit {
     border-radius: 0;
     padding: 5px;
