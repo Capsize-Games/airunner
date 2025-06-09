@@ -3,10 +3,10 @@ from airunner.components.documents.gui.widgets.templates.documents_ui import (
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal, Qt, Slot
 from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QFileDialog
 from PySide6.QtWidgets import (
-    QListWidget,
     QListWidgetItem,
     QAbstractItemView,
 )
@@ -37,6 +37,7 @@ from airunner.components.browser.gui.widgets.mixins.cache_mixin import (
 from airunner.components.browser.gui.widgets.mixins.ui_setup_mixin import (
     UISetupMixin,
 )
+from airunner.utils.os.find_files import find_files
 
 
 class DocumentsWidget(
@@ -58,16 +59,36 @@ class DocumentsWidget(
     urlChanged = Signal(str, str)  # url, title
     faviconChanged = Signal(QIcon)
     widget_class_ = Ui_documents
+    files_found = Signal(list)
 
     def __init__(self, *args, private: bool = False, **kwargs):
         self._favicon = None
         self._private = private
         super().__init__(*args, **kwargs)
+        self.files_found.connect(self._add_document_widgets_from_files)
         self.setup_documents_list()
         self.load_documents()
 
+    @Slot()
+    def on_browse_button_clicked(self):
+        # open a directory browser
+        dir_path = QFileDialog.getExistingDirectory(
+            self,
+            "Select Document Folder",
+            os.path.expanduser("~/Documents"),
+        )
+        if dir_path:
+            self.ui.path.setText(dir_path)
+
+    @Slot(str)
+    def on_path_textChanged(self, text: str):
+        self.clear_documents()
+        if os.path.exists(text):
+            self.load_documents()
+
     def setup_documents_list(self):
-        self.list_widget = QListWidget(self)
+        # Use the QListWidget from the template, not a new one
+        self.list_widget = self.ui.document_list
         self.list_widget.setSelectionMode(
             QAbstractItemView.SelectionMode.NoSelection
         )
@@ -77,20 +98,70 @@ class DocumentsWidget(
         )
         self.list_widget.viewport().setAcceptDrops(True)
         self.list_widget.setDefaultDropAction(Qt.DropAction.CopyAction)
-        self.ui.gridLayout.addWidget(self.list_widget, 0, 0)
         self.list_widget.dragEnterEvent = self.dragEnterEvent
         self.list_widget.dropEvent = self.dropEvent
 
+    def clear_documents(self):
+        """Clear the document list widget."""
+        self.list_widget.clear()
+        # Optionally clear the database or cache if needed
+        # Document.objects.clear(private=self._private)
+
     def load_documents(self):
         self.list_widget.clear()
-        documents = Document.objects.all()
-        for doc in documents:
-            self.add_document_item(doc)
+
+        def handle_files(file_paths):
+            print(
+                f"handle_files called with {len(file_paths)} files: {file_paths[:5]} ..."
+            )
+            self.files_found.emit(file_paths)
+
+        # Use filesystem instead of database
+        find_files(
+            path=self.ui.path.text() or "~/Documents",
+            file_extension=["md", "txt", "docx", "doc", "odt", "pdf"],
+            recursive=True,
+            callback=handle_files,
+        )
+
+    @Slot(list)
+    def _add_document_widgets_from_files(self, file_paths):
+        print("_add_document_widgets_from_files called")
+        for path in file_paths:
+            print(f"add_document_widget called for: {path}")
+            self._add_document_widget(path)
+
+    def _add_document_widget(self, path):
+        # Create a simple document object with .path and .active attributes
+        class Doc:
+            def __init__(self, path):
+                self.path = path
+                self.active = False
+
+        doc = Doc(path)
+        widget = DocumentWidget(
+            doc,
+            on_active_changed=self.on_active_changed,
+            parent=self.list_widget,
+        )
+        # Do NOT set window flags here; let QWidget default flags apply
+        if widget.parent() is not self.list_widget:
+            widget.setParent(self.list_widget)
+        widget.delete_requested.connect(self.on_delete_document)
+        item = QListWidgetItem(self.list_widget)
+        item.setSizeHint(widget.sizeHint())
+        self.list_widget.addItem(item)
+        self.list_widget.setItemWidget(item, widget)
 
     def add_document_item(self, document):
+        # Ensure DocumentWidget has no parent so it embeds in the list, not as a window
         widget = DocumentWidget(
-            document, on_active_changed=self.on_active_changed
+            document,
+            on_active_changed=self.on_active_changed,
+            parent=self.list_widget,
         )
+        if widget.parent() is not self.list_widget:
+            widget.setParent(self.list_widget)
         widget.delete_requested.connect(self.on_delete_document)
         item = QListWidgetItem(self.list_widget)
         item.setSizeHint(widget.sizeHint())
