@@ -27,7 +27,7 @@
   </td>
   <td>
     
-**🛡️ [Report Vulnerability](https://github.com/Capsize-Games/airunner/security/policy)**
+**🛡️ [Report Vulnerability](https://github.com/Capsize-Games/airunner/issues/new?template=vulnerability_report.md)**
     
 </td>
 <td>

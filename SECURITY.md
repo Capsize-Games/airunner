@@ -12,8 +12,7 @@ currently being supported with security updates.
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Vulnerabilities can be reported at the following link:
+https://github.com/Capsize-Games/airunner/issues/new?template=vulnerability_report.md
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+You can expect an initial response within 7 days. We will keep you updated on the status of your report and notify you of the outcome once the vulnerability has been addressed or declined.
