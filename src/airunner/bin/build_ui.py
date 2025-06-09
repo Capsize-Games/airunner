@@ -6,6 +6,7 @@ This is a stand alone function which:
 1. Recursively finds all *.ui files under src/airunner/
 2. Runs `pyside6-uic -o <file_name>_ui.py <file_name>.ui` on each *.ui file, only if the .ui file is newer than the corresponding _ui.py file or the _ui.py file does not exist
 3. Runs `pyside6-rcc -o resources.py resources.qrc`
+4. Runs process_qss to build styles.qss for each theme from variables.qss + master.qss
 
 The function will run using the venv python interpreter
 """
@@ -15,7 +16,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from airunner.bin.process_qss import generate_resources
+from airunner.bin.process_qss import generate_resources, process_qss
 
 
 def adjust_resource_imports(input_file, output_file):
@@ -52,5 +53,8 @@ def build_ui():
 
 
 def main():
+    print("main() called in build_ui.py")
     build_ui()
     generate_resources()
+    # Build QSS for both themes
+    process_qss()
