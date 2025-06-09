@@ -1,6 +1,5 @@
 import os
 from PySide6.QtWidgets import (
-    QWidget,
     QHBoxLayout,
     QVBoxLayout,
     QLabel,
@@ -10,16 +9,24 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 
 from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.documents.gui.widgets.templates.document_ui import (
+    Ui_document_widget,
+)
 
 
 class DocumentWidget(BaseWidget):
     delete_requested = Signal(object)  # emits the document object
+    widget_class_ = Ui_document_widget
 
     def __init__(self, document, on_active_changed=None, parent=None):
+        # Force Qt.Widget flag and never Qt.Window
         super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.Widget)
         self.document = document
         self.on_active_changed = on_active_changed
         self.init_ui()
+        self.setMinimumHeight(60)  # Ensure widget is visible
+        self.setMinimumWidth(200)
 
     def init_ui(self):
         layout = QHBoxLayout(self)
@@ -63,3 +70,6 @@ class DocumentWidget(BaseWidget):
 
     def handle_delete(self):
         self.delete_requested.emit(self.document)
+
+    def sizeHint(self):
+        return self.minimumSizeHint()
