@@ -126,9 +126,7 @@ class DocumentsWidget(
 
     @Slot(list)
     def _add_document_widgets_from_files(self, file_paths):
-        print("_add_document_widgets_from_files called")
         for path in file_paths:
-            print(f"add_document_widget called for: {path}")
             self._add_document_widget(path)
 
     def _add_document_widget(self, path):
