@@ -3,7 +3,7 @@ from airunner.components.documents.gui.widgets.templates.documents_ui import (
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
-from PySide6.QtCore import Signal, Qt, Slot
+from PySide6.QtCore import Signal, Qt, Slot, QFileSystemWatcher
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtWidgets import (
@@ -80,6 +80,19 @@ class DocumentsWidget(
         self.ui.path.blockSignals(False)
         self.files_found.connect(self._add_document_widgets_from_files)
         self.setup_documents_list()
+        self._setup_filesystem_watcher()
+        self.load_documents()
+
+    def _setup_filesystem_watcher(self):
+        self.fs_watcher = QFileSystemWatcher(self)
+        self.fs_watcher.addPath(self.documents_path)
+        self.fs_watcher.directoryChanged.connect(
+            self._on_documents_dir_changed
+        )
+        # Optionally: self.fs_watcher.fileChanged.connect(self._on_documents_dir_changed)
+
+    def _on_documents_dir_changed(self, path):
+        # Reload documents when the directory changes
         self.load_documents()
 
     @property
@@ -97,6 +110,10 @@ class DocumentsWidget(
     def documents_path(self, value: str):
         settings = get_qsettings()
         settings.setValue("documents_path", value)
+        # Update watcher if path changes
+        if hasattr(self, "fs_watcher"):
+            self.fs_watcher.removePaths(self.fs_watcher.directories())
+            self.fs_watcher.addPath(value)
 
     @Slot()
     def on_browse_button_clicked(self):
@@ -139,6 +156,11 @@ class DocumentsWidget(
 
     def load_documents(self):
         self.list_widget.clear()
+
+        # Clean up database: remove documents whose paths no longer exist
+        for document in Document.objects.all():
+            if not os.path.exists(document.path):
+                Document.objects.delete(document.id)
 
         def handle_files(file_paths):
             print(
