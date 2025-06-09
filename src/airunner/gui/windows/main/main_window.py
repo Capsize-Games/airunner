@@ -61,6 +61,7 @@ from airunner.enums import (
     LLMActionType,
     ModelType,
     ModelStatus,
+    TemplateName,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application.get_version import get_version
@@ -1010,9 +1011,9 @@ class MainWindow(
         return bash_execute(args[0])
 
     def on_theme_changed_signal(self, data: Dict):
+        template = data.get("template", TemplateName.SYSTEM_DEFAULT)
         self.set_stylesheet(
-            data.get("dark_mode", False),
-            data.get("override_system_theme", False),
+            template=template,
         )
         self.update_icons()
 

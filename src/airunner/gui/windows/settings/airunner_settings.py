@@ -42,6 +42,9 @@ from airunner.gui.widgets.rag_settings.rag_settings_widget import (
 from airunner.gui.widgets.openrouter_settings.openrouter_settings_widget import (
     OpenrouterSettingsWidget,
 )
+from airunner.gui.widgets.theme_settings.theme_settings_widget import (
+    ThemeSettingsWidget,
+)
 from airunner.gui.windows.settings.templates.airunner_settings_ui import (
     Ui_airunner_settings,
 )
@@ -134,6 +137,8 @@ class SettingsWindow(BaseWindow):
             return RAGSettingsWidget
         elif name == "openrouter_settings":
             return OpenrouterSettingsWidget
+        elif name == "theme_settings":
+            return ThemeSettingsWidget
         elif name == "language_settings":
             return LanguageSettingsWidget
         # elif name == "stt_preferences":
@@ -213,16 +218,10 @@ class SettingsWindow(BaseWindow):
                 "section": "Miscellaneous Preferences",
                 "files": [
                     {
-                        "name": "dark_mode",
-                        "display_name": "Dark Mode",
-                        "checkable": True,
-                        "description": "If enabled, AI Runner will use a dark theme.",
-                    },
-                    {
-                        "name": "override_system_theme",
-                        "display_name": "Override System Theme",
-                        "checkable": True,
-                        "description": "If enabled, override the system theme with the selected theme.",
+                        "name": "theme_settings",
+                        "display_name": "Theme Settings",
+                        "checkable": False,
+                        "description": "Change the appearance of AI Runner.",
                     },
                     {
                         "name": "check_for_updates",
@@ -329,10 +328,6 @@ class SettingsWindow(BaseWindow):
                 checked = self.application_settings.resize_on_paste
             elif name == "image_to_new_layer":
                 checked = self.application_settings.image_to_new_layer is True
-            elif name == "dark_mode":
-                checked = self.application_settings.dark_mode_enabled
-            elif name == "override_system_theme":
-                checked = self.application_settings.override_system_theme
             elif name == "check_for_updates":
                 checked = self.application_settings.latest_version_check
             elif name == "enable_workflows":
@@ -380,14 +375,6 @@ class SettingsWindow(BaseWindow):
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("image_to_new_layer", checked)
-        elif name == "dark_mode":
-            checked = item.checkState() == Qt.CheckState.Checked
-            self.update_application_settings("dark_mode_enabled", checked)
-            self.api.refresh_stylesheet(dark_mode=checked)
-        elif name == "override_system_theme":
-            checked = item.checkState() == Qt.CheckState.Checked
-            self.update_application_settings("override_system_theme", checked)
-            self.api.refresh_stylesheet(override_system_theme=checked)
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("latest_version_check", checked)
