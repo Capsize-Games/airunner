@@ -1,5 +1,9 @@
 /* conversation.css: Dedicated layout/styles for conversation widget (no colors, no backgrounds, no font colors) */
 
+html {
+    background-color: #2a2a2a;
+}
+
 html,
 body {
     margin: 0;
@@ -13,6 +17,7 @@ body {
 
 * {
     box-sizing: border-box;
+    color: #ffffff;
 }
 
 #conversation-container {

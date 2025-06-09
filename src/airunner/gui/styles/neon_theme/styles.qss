@@ -7,8 +7,8 @@
 
 QWidget {
     background-color: #0f0f0f;
-    color: #222831;
-    border-color: #222831;
+    color: #ffffff;
+    border-color: #ffffff;
     margin: 0px;
     padding: 0px;
 }
@@ -23,7 +23,7 @@ QComboBox {
     border-radius: None;
     padding: 5px;
     border: 1px solid #393e46;
-    color: #222831;
+    color: #ffffff;
     background-color: #0f0f0f;
 }
 
@@ -38,7 +38,7 @@ QComboBox:hover {
 
 QComboBox QAbstractItemView {
     background-color: #393e46;
-    color: #222831;
+    color: #ffffff;
 }
 
 QComboBox::item:hover {
@@ -61,7 +61,7 @@ QFrame {
 }
 
 QLabel {
-    color: #222831;
+    color: #ffffff;
     font-weight: bold;
 }
 
@@ -84,7 +84,7 @@ QLineEdit:disabled {
 }
 
 QCheckBox {
-    color: #222831;
+    color: #ffffff;
 }
 
 QCheckBox:indicator {
@@ -140,8 +140,8 @@ QPushButton:pressed {
 }
 
 QWidget#qt_scrollarea_viewport {
-    background-color: #222831;
-    color: #222831;
+    background-color: #ffffff;
+    color: #ffffff;
 }
 
 QFrame[frameShape="4"] {
@@ -219,7 +219,7 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabBar::tab::first {
 
 QWidget#scrollAreaWidgetContents {
     background-color: #0f0f0f;
-    color: #222831;
+    color: #ffffff;
 }
 
 QStatusBar {
@@ -259,7 +259,7 @@ QStatusBar QLabel {}
 #conversation {
     border: 1px solid #0affef;
     background-color: #0f0f0f;
-    color: #222831;
+    color: #ffffff;
 }
 
 #button_menu {
@@ -379,7 +379,7 @@ QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal {
 }
 
 QRadioButton {
-    color: #222831;
+    color: #ffffff;
 }
 
 QRadioButton::indicator {
@@ -525,7 +525,7 @@ GeneratorTabWidget#generator_widget QTabWidget QTabWidget QTabWidget QTabBar::ta
 
 #tableWidget {
     background-color: #0f0f0f;
-    color: #222831;
+    color: #ffffff;
 }
 
 #standard_image_widget QTableWidget {
@@ -600,7 +600,7 @@ QDoubleSpinBox {
     background-color: #393e46;
     border: 1px solid #ff00ff;
     padding: 2px 5px;
-    color: #222831;
+    color: #ffffff;
     max-width: 55px;
 }
 
@@ -643,7 +643,7 @@ QSlider::groove:vertical {
 }
 
 QSlider::handle:horizontal {
-    background: #222831;
+    background: #ffffff;
     border: 1px solid #39ff14;
     width: 10px;
     height: 20px;
@@ -652,7 +652,7 @@ QSlider::handle:horizontal {
 }
 
 QSlider::handle:vertical {
-    background: #222831;
+    background: #ffffff;
     border: 1px solid #39ff14;
     width: 20px;
     height: 10px;
@@ -769,19 +769,19 @@ QScrollArea#chat_container #message_container QPushButton:hover {
 
 QWizard {
     background-color: #0f0f0f;
-    color: #222831;
+    color: #ffffff;
     border: 1px solid #39ff14;
 }
 
 QWizardPage {
     background-color: #0f0f0f !important;
-    color: #222831;
+    color: #ffffff;
     border: 1px solid #39ff14;
     padding: 10px;
 }
 
 QWizardPage QLabel {
-    color: #222831;
+    color: #ffffff;
     font-weight: bold;
 }
 
@@ -789,7 +789,7 @@ QWizardPage QLineEdit {
     border: 1px solid #393e46;
     padding: 5px;
     background-color: #00fff7;
-    color: #222831;
+    color: #ffffff;
 }
 
 QWizardPage QPushButton {

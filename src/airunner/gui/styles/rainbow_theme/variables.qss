@@ -9,7 +9,7 @@
 @danger-color: #ef4444;               /* Red (danger) */
 @warning-color: #f59e42;              /* Orange (warning) */
 @info-color: #38bdf8;                 /* Sky blue (info) */
-@light-color: #1e293b;                /* Very dark blue-gray (light) */
+@light-color: #ffffff;                /* White (light) */
 @dim-color: #334155;                  /* Dim blue-gray */
 @dark-color: #0f172a;                 /* Almost black (background) */
 @line-color-light: #334155;           /* Dim blue-gray (lines) */
