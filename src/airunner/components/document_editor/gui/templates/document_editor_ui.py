@@ -25,6 +25,7 @@ class Ui_Form(object):
         Form.resize(400, 300)
         self.gridLayout = QGridLayout(Form)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.lines = QWidget(Form)
         self.lines.setObjectName(u"lines")
         self.line_numbers = QVBoxLayout(self.lines)

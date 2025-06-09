@@ -2,6 +2,27 @@
 * {
     margin: 0;
     padding: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+div {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    background: #000;
 }
 
 #home-container {
@@ -14,9 +35,80 @@
 }
 
 h1 {
-    font-family: 'Segoe UI', Arial, sans-serif;
-    font-size: 3rem;
-    color: #22223b;
+    font-size: 2rem;
+    color: #f2f2f2;
     margin: 0;
-    letter-spacing: 2px;
+}
+
+#home-top {
+    background: #000;
+    color: #f2f2f2;
+    padding: 2rem 0 1rem 0;
+    text-align: left;
+    width: 100%;
+    padding: 10px;
+}
+
+#home-top h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+#home-top .intro {
+    font-size: 1.25rem;
+    color: #fff;
+    margin: 0 auto 0.5rem auto;
+}
+
+#home-middle {
+    flex: 1 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+    width: 100%;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    /* Use full available width */
+    grid-gap: 0.5rem;
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+}
+
+.grid-item {
+    background: #101010;
+    box-shadow: 0 2px 8px rgba(34, 34, 59, 0.08);
+    padding: 2rem 1.5rem;
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: #f2f2f2;
+    font-weight: 500;
+    transition: box-shadow 0.2s;
+    width: 100%;
+    height: 100%;
+}
+
+.grid-item:hover {
+    box-shadow: 0 4px 16px rgba(34, 34, 59, 0.16);
+}
+
+#home-bottom {
+    background: #000;
+    padding: 1.2rem 0 1.2rem 0;
+    text-align: left;
+    width: 100%;
+    padding: 10px;
+}
+
+.content-footer {
+    color: #6c6c8a;
+    font-size: 1rem;
+    letter-spacing: 1px;
 }
