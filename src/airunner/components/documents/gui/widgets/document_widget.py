@@ -9,8 +9,10 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 
+from airunner.gui.widgets.base_widget import BaseWidget
 
-class DocumentWidget(QWidget):
+
+class DocumentWidget(BaseWidget):
     delete_requested = Signal(object)  # emits the document object
 
     def __init__(self, document, on_active_changed=None, parent=None):
