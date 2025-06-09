@@ -217,6 +217,7 @@ QLabel#slider_label {
 
 #slider_widget QSlider {
     border: 1px solid rgba(0, 132, 185, 100);
+    padding-right: 10px;
     background-color: #f0f0f0;
 }
 

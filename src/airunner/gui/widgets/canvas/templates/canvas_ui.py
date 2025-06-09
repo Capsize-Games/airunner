@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
     QVBoxLayout, QWidget)
 
 from airunner.gui.widgets.canvas.custom_view import CustomGraphicsView
+from airunner.gui.widgets.slider.slider_widget import SliderWidget
 from airunner.gui.widgets.stablediffusion.stablediffusion_generator_form import StableDiffusionGeneratorForm
 from airunner.gui.widgets.stablediffusion.stablediffusion_tool_tab_widget import StablediffusionToolTabWidget
 import airunner.feather_rc
@@ -28,7 +29,7 @@ class Ui_canvas(object):
     def setupUi(self, canvas):
         if not canvas.objectName():
             canvas.setObjectName(u"canvas")
-        canvas.resize(1020, 570)
+        canvas.resize(716, 570)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -75,7 +76,7 @@ class Ui_canvas(object):
         self.horizontalLayout_2 = QHBoxLayout(self.widget1)
         self.horizontalLayout_2.setSpacing(5)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(5, 0, 0, 1)
+        self.horizontalLayout_2.setContentsMargins(5, 0, 5, 1)
         self.new_button = QPushButton(self.widget1)
         self.new_button.setObjectName(u"new_button")
         self.new_button.setMinimumSize(QSize(30, 30))
@@ -229,6 +230,32 @@ class Ui_canvas(object):
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer)
 
+        self.brush_size_slider = SliderWidget(self.widget1)
+        self.brush_size_slider.setObjectName(u"brush_size_slider")
+        self.brush_size_slider.setMinimumSize(QSize(100, 40))
+        self.brush_size_slider.setMaximumSize(QSize(16777215, 40))
+        self.brush_size_slider.setProperty(u"slider_minimum", 1)
+        self.brush_size_slider.setProperty(u"slider_maximum", 100)
+        self.brush_size_slider.setProperty(u"spinbox_minimum", 1)
+        self.brush_size_slider.setProperty(u"spinbox_maximum", 100)
+        self.brush_size_slider.setProperty(u"slider_tick_interval", 1)
+        self.brush_size_slider.setProperty(u"slider_single_step", 1)
+        self.brush_size_slider.setProperty(u"slider_page_step", 10)
+        self.brush_size_slider.setProperty(u"spinbox_single_step", 1)
+        self.brush_size_slider.setProperty(u"spinbox_page_step", 10)
+        self.brush_size_slider.setProperty(u"settings_property", u"brush_settings.size")
+        self.brush_size_slider.setProperty(u"display_as_float", False)
+
+        self.horizontalLayout_2.addWidget(self.brush_size_slider)
+
+        self.brush_color_button = QPushButton(self.widget1)
+        self.brush_color_button.setObjectName(u"brush_color_button")
+        self.brush_color_button.setMinimumSize(QSize(30, 30))
+        self.brush_color_button.setMaximumSize(QSize(30, 30))
+        self.brush_color_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+
+        self.horizontalLayout_2.addWidget(self.brush_color_button)
+
 
         self.verticalLayout.addWidget(self.widget1)
 
@@ -320,6 +347,14 @@ class Ui_canvas(object):
         self.grid_button.setText("")
         self.undo_button.setText("")
         self.redo_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.brush_size_slider.setToolTip(QCoreApplication.translate("canvas", u"Brush Size", None))
+#endif // QT_CONFIG(tooltip)
+        self.brush_size_slider.setProperty(u"label_text", "")
+#if QT_CONFIG(tooltip)
+        self.brush_color_button.setToolTip(QCoreApplication.translate("canvas", u"Brush Color", None))
+#endif // QT_CONFIG(tooltip)
+        self.brush_color_button.setText("")
         self.canvas_container.setProperty(u"canvas_type", QCoreApplication.translate("canvas", u"brush", None))
     # retranslateUi
 

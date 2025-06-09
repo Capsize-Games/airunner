@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QScrollArea, QSizePoli
     QSpacerItem, QTabWidget, QWidget)
 
 from airunner.gui.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
-from airunner.gui.widgets.brush.brush_container_widget import BrushContainerWidget
 from airunner.gui.widgets.canvas.batch_container import BatchContainer
 from airunner.gui.widgets.canvas.input_image_container import InputImageContainer
 from airunner.gui.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
@@ -138,19 +137,6 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_8.addWidget(self.embeddings_container_widget, 0, 0, 1, 1)
 
         self.tool_tab_widget_container.addTab(self.tab_7, "")
-        self.tab_2 = QWidget()
-        self.tab_2.setObjectName(u"tab_2")
-        self.gridLayout_5 = QGridLayout(self.tab_2)
-        self.gridLayout_5.setObjectName(u"gridLayout_5")
-        self.gridLayout_5.setHorizontalSpacing(0)
-        self.gridLayout_5.setVerticalSpacing(10)
-        self.gridLayout_5.setContentsMargins(10, 10, 0, 0)
-        self.brush_container_widget = BrushContainerWidget(self.tab_2)
-        self.brush_container_widget.setObjectName(u"brush_container_widget")
-
-        self.gridLayout_5.addWidget(self.brush_container_widget, 0, 0, 1, 1)
-
-        self.tool_tab_widget_container.addTab(self.tab_2, "")
         self.tab_4 = QWidget()
         self.tab_4.setObjectName(u"tab_4")
         self.gridLayout_2 = QGridLayout(self.tab_4)
@@ -206,7 +192,6 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_9), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Inpaint", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"LoRA", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Embeddings", None))
-        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Brush", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_4), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Grid", None))
     # retranslateUi
 
