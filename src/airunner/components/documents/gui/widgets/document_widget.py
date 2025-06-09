@@ -1,6 +1,7 @@
 import os
 from PySide6.QtCore import Slot
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QMessageBox
 
 from airunner.components.documents.data.models.document import Document
 from airunner.gui.widgets.base_widget import BaseWidget
@@ -10,8 +11,10 @@ from airunner.components.documents.gui.widgets.templates.document_ui import (
 
 
 class DocumentWidget(BaseWidget):
-    delete_requested = Signal(object)  # emits the document object
     widget_class_ = Ui_document_widget
+    delete_requested = Signal(
+        object
+    )  # Emitted with the document to be deleted
 
     def __init__(
         self,
@@ -66,7 +69,28 @@ class DocumentWidget(BaseWidget):
             return "(No preview available)"
 
     def handle_delete(self):
-        self.delete_requested.emit(self.document)
+        reply = QMessageBox.question(
+            self,
+            "Delete Document",
+            f"Are you sure you want to delete '{os.path.basename(self.document.path)}'? This cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            # Remove file from disk if it exists
+            if os.path.exists(self.document.path):
+                try:
+                    os.remove(self.document.path)
+                except Exception as e:
+                    QMessageBox.warning(
+                        self, "Error", f"Failed to delete file: {e}"
+                    )
+                    return
+            # Remove from database using filter_by(path=...)
+            docs = Document.objects.filter_by(path=self.document.path)
+            for doc in docs:
+                Document.objects.delete(doc.id)
+        # No need to emit delete_requested; directory watcher will update the UI
 
     def sizeHint(self):
         return self.minimumSizeHint()

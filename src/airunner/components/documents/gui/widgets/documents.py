@@ -3,7 +3,7 @@ from airunner.components.documents.gui.widgets.templates.documents_ui import (
 )
 
 from airunner.gui.widgets.base_widget import BaseWidget
-from PySide6.QtCore import Signal, Qt, Slot, QFileSystemWatcher
+from PySide6.QtCore import Signal, Qt, Slot, QFileSystemWatcher, QFile
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtWidgets import (
@@ -73,12 +73,38 @@ class DocumentsWidget(
             "epub",
         ]
         super().__init__(*args, **kwargs)
-        self.ui.path.blockSignals(True)
-        self.ui.path.setText(self.documents_path)
-        self.ui.path.blockSignals(False)
         self.setup_documents_list()
         self._setup_filesystem_watcher()
         self.load_documents()
+
+    @Slot()
+    def on_add_files_clicked(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.ReadOnly
+        filter_str = f"Documents ({' '.join(['*.' + ext for ext in self.file_extensions])})"
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Add Files",
+            "",
+            filter_str,
+            options=options,
+        )
+        if files:
+            self._add_files(files)
+
+    def _add_files(self, files):
+        for file_path in files:
+            base_name = os.path.basename(file_path)
+            dest_path = os.path.join(self.documents_path, base_name)
+            name, ext = os.path.splitext(base_name)
+            n = 1
+            # Find a unique filename if needed
+            while os.path.exists(dest_path):
+                dest_path = os.path.join(
+                    self.documents_path, f"{name}_{n}{ext}"
+                )
+                n += 1
+            QFile.copy(file_path, dest_path)
 
     def _setup_filesystem_watcher(self):
         self.fs_watcher = QFileSystemWatcher(self)
@@ -86,21 +112,15 @@ class DocumentsWidget(
         self.fs_watcher.directoryChanged.connect(
             self._on_documents_dir_changed
         )
-        # Optionally: self.fs_watcher.fileChanged.connect(self._on_documents_dir_changed)
 
     def _on_documents_dir_changed(self, path):
-        # Reload documents when the directory changes
         self.load_documents()
 
     @property
     def documents_path(self) -> str:
-        settings = get_qsettings()
-        return settings.value(
-            "documents_path",
-            os.path.join(
-                os.path.expanduser(self.path_settings.base_path),
-                "text/other/documents",
-            ),
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "text/other/documents",
         )
 
     @documents_path.setter
@@ -111,24 +131,6 @@ class DocumentsWidget(
         if hasattr(self, "fs_watcher"):
             self.fs_watcher.removePaths(self.fs_watcher.directories())
             self.fs_watcher.addPath(value)
-
-    @Slot()
-    def on_browse_button_clicked(self):
-        # open a directory browser
-        dir_path = QFileDialog.getExistingDirectory(
-            self,
-            "Select Document Folder",
-            os.path.expanduser("~/Documents"),
-        )
-        if dir_path:
-            self.ui.path.setText(dir_path)
-
-    @Slot(str)
-    def on_path_textChanged(self, text: str):
-        self.clear_documents()
-        if os.path.exists(text):
-            self.documents_path = text
-            self.load_documents()
 
     def setup_documents_list(self):
         # Use the QListWidget from the template, not a new one
@@ -196,7 +198,6 @@ class DocumentsWidget(
         self.list_widget.setItemWidget(item, widget)
 
     def add_document_item(self, document):
-        # Ensure DocumentWidget has no parent so it embeds in the list, not as a window
         widget = DocumentWidget(
             document,
             on_active_changed=self.on_active_changed,
@@ -211,19 +212,8 @@ class DocumentsWidget(
         self.list_widget.setItemWidget(item, widget)
 
     def on_delete_document(self, document):
-        doc = Document.objects.get(id=document.id)
-        if doc:
-            Document.objects.delete(doc.id, private=self._private)
-        # Remove from list_widget (only from UI, not from disk)
-        for i in range(self.list_widget.count()):
-            item = self.list_widget.item(i)
-            widget = self.list_widget.itemWidget(item)
-            if (
-                hasattr(widget, "document")
-                and widget.document.id == document.id
-            ):
-                self.list_widget.takeItem(i)
-                break
+        # No longer needed: file/database deletion is handled in DocumentWidget, and UI updates via directory watcher
+        pass
 
     def on_active_changed(self, document, active):
         Document.objects.update(
