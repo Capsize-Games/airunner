@@ -2,7 +2,9 @@ from PySide6.QtCore import Slot
 from typing import Dict
 
 from airunner.workers.worker import Worker
-from airunner.gui.widgets.nodegraph.nodes.core.start_node import StartNode
+from airunner.components.nodegraph.gui.widgets.nodes.core.start_node import (
+    StartNode,
+)
 from airunner.enums import SignalCode
 
 

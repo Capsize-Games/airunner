@@ -4,7 +4,7 @@ from PySide6.QtCore import QTimer, Slot, Qt
 from PySide6.QtWidgets import QApplication
 from PySide6.QtWebChannel import QWebChannel
 
-from airunner.conversations.conversation_history_manager import (
+from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
 from airunner.data.models import Conversation

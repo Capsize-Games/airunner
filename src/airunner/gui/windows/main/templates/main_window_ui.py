@@ -27,7 +27,7 @@ from airunner.components.document_editor.gui.widgets.document_editor_container_w
 from airunner.components.documents.gui.widgets.documents import DocumentsWidget
 from airunner.gui.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.gui.widgets.generator_form.generator_form_widget import GeneratorForm
-from airunner.gui.widgets.nodegraph.node_graph_widget import NodeGraphWidget
+from airunner.components.nodegraph.gui.widgets.node_graph_widget import NodeGraphWidget
 import airunner.feather_rc
 
 class Ui_MainWindow(object):

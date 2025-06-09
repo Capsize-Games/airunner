@@ -12,6 +12,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
 from llama_index.core.chat_engine.types import AgentChatResponse
 
+from airunner.components.conversations.conversation_history_manager import ConversationHistoryManager
 from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.enums import (
     ModelType,
@@ -29,9 +30,6 @@ from airunner.handlers.llm.training_mixin import TrainingMixin
 from airunner.handlers.llm.llm_request import LLMRequest
 from airunner.handlers.llm.llm_response import LLMResponse
 from airunner.handlers.llm.llm_settings import LLMSettings
-from airunner.conversations.conversation_history_manager import (
-    ConversationHistoryManager,
-)
 
 
 class LLMModelManager(BaseModelManager, TrainingMixin):

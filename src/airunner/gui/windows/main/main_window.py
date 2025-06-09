@@ -83,7 +83,7 @@ from airunner.gui.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.gui.windows.settings.airunner_settings import SettingsWindow
 from airunner.gui.windows.update.update_window import UpdateWindow
 from airunner.gui.managers.icon_manager import IconManager
-from airunner.plugin_loader import PluginLoader
+from airunner.components.plugins.plugin_loader import PluginLoader
 
 from airunner.components.chat.gui.widgets.conversation_widget import (
     ConversationWidget,
@@ -1077,6 +1077,7 @@ class MainWindow(
         self.last_tray_click_time = 0
         self.settings_window = None
         self.hide_center_tab_header()
+        self._load_plugins()
 
     def update_tab_index(self, section: str, index: int):
         Tab.objects.update_by(filter=dict(section=section), active=False)
