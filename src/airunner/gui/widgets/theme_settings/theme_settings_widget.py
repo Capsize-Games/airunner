@@ -12,9 +12,14 @@ class ThemeSettingsWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.ui.theme_combobox.blockSignals(True)
         self.ui.theme_combobox.addItems([e.value for e in TemplateName])
-        qsettings = get_qsettings()
-        theme = qsettings.value("theme", "System Default")
+        self.ui.theme_combobox.blockSignals(False)
+        settings = get_qsettings()
+        theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
         self.ui.theme_combobox.setCurrentText(theme)
 
     @Slot(str)

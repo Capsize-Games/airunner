@@ -181,14 +181,22 @@ def write_css_variables(variables, out_path):
 
 def build_all_theme_css():
     styles_dir = Path(__file__).parent.parent / "gui" / "styles"
-    home_css_dir = (
+    # Output directories for both home_stage and conversations
+    output_targets = [
         Path(__file__).parent.parent
         / "components"
         / "home_stage"
         / "gui"
         / "static"
-        / "css"
-    )
+        / "css",
+        Path(__file__).parent.parent
+        / "components"
+        / "conversations"
+        / "gui"
+        / "static"
+        / "css",
+    ]
+    print(f"[DEBUG] Output targets: {output_targets}")
     for theme_dir in styles_dir.iterdir():
         if not theme_dir.is_dir():
             continue
@@ -196,23 +204,27 @@ def build_all_theme_css():
         if var_file.exists():
             theme_name = theme_dir.name.replace("_theme", "")
             variables = parse_qss_variables(var_file)
-            out_var = home_css_dir / f"variables-{theme_name}.css"
-            write_css_variables(variables, out_var)
-            # Optionally, generate a theme css file (placeholder)
-            out_theme = home_css_dir / f"theme-{theme_name}.css"
-            with open(out_theme, "w") as f:
-                f.write(
-                    f"/* theme-{theme_name}.css - auto-generated placeholder */\n"
-                )
-                f.write(
-                    "body {\n    background: var(--dark-color);\n    color: var(--light-color);\n}\n"
-                )
-                f.write(
-                    ".grid-item {\n    color: var(--light-color);\n    background: var(--dark-color);\n}\n"
-                )
-                f.write(
-                    "#home-top, #home-bottom {\n    background: var(--dark-color);\n}\n"
-                )
+            for out_dir in output_targets:
+                out_dir.mkdir(parents=True, exist_ok=True)
+                out_var = out_dir / f"variables-{theme_name}.css"
+                print(f"[DEBUG] Writing variables to {out_var}")
+                write_css_variables(variables, out_var)
+                # Optionally, generate a theme css file (placeholder)
+                out_theme = out_dir / f"theme-{theme_name}.css"
+                print(f"[DEBUG] Writing theme to {out_theme}")
+                with open(out_theme, "w") as f:
+                    f.write(
+                        f"/* theme-{theme_name}.css - auto-generated placeholder */\n"
+                    )
+                    f.write(
+                        "body {\n    background: var(--dark-color);\n    color: var(--light-color);\n}\n"
+                    )
+                    f.write(
+                        ".grid-item {\n    color: var(--light-color);\n    background: var(--dark-color);\n}\n"
+                    )
+                    f.write(
+                        "#home-top, #home-bottom {\n    background: var(--dark-color);\n}\n"
+                    )
 
 
 if __name__ == "__main__":

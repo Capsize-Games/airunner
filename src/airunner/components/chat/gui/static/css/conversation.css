@@ -1,12 +1,10 @@
-/* conversation.css: Dedicated styles for conversation widget */
+/* conversation.css: Dedicated layout/styles for conversation widget (no colors, no backgrounds, no font colors) */
 
 html,
 body {
     margin: 0;
     padding: 0;
     font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-    background: #000;
-    color: #fff;
     box-sizing: border-box;
     width: 100%;
     min-height: 100%;
@@ -23,19 +21,16 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
     box-sizing: border-box;
-    color: #E0E0E0;
     display: flex;
     flex-direction: column;
     padding: 0;
     scrollbar-width: thin;
-    scrollbar-color: #444 #222;
-    background: transparent;
+    gap: 0;
     border: none;
     border-radius: 0;
     font-family: 'Fira Mono', 'Consolas', 'Segoe UI', Arial, sans-serif;
     font-size: 1.1em;
     box-shadow: none;
-    gap: 0;
 }
 
 #conversation-container::-webkit-scrollbar {
@@ -53,43 +48,39 @@ body {
     flex-direction: column;
     flex-shrink: 0;
     border-radius: 0px;
-    background: #000;
     position: relative;
     transition: background 0.2s;
-    color: #E0E0E0;
     font-size: 1em;
     font-family: 'Fira Mono', 'Consolas', 'Segoe UI', Arial, sans-serif;
-    border-left: 3px solid #23272B;
+    border-left: 3px solid var(--line-color-light);
 }
 
 .message.user {
-    background: #101010;
     align-self: flex-end;
     border-radius: 0px;
     box-shadow: 0 2px 12px rgba(0, 64, 255, 0.10);
-    border-left: 3px solid #23272B;
+    border-left: 3px solid var(--line-color-light);
     border-right: 3px solid transparent;
     transition: border-color 0.2s;
 }
 
 .message.user:hover {
-    border-left: 3px solid #007ACC;
-    border-right: 3px solid #007ACC;
+    border-left: 3px solid var(--primary-color);
+    border-right: 3px solid var(--primary-color);
 }
 
 .message.assistant {
-    background: #000000;
     align-self: flex-start;
     border-radius: 0px;
     box-shadow: 0 2px 12px rgba(0, 255, 128, 0.08);
-    border-left: 3px solid #23272B;
+    border-left: 3px solid var(--line-color-light);
     border-right: 3px solid transparent;
     transition: border-color 0.2s;
 }
 
 .message.assistant:hover {
-    border-left: 3px solid #007ACC;
-    border-right: 3px solid #007ACC;
+    border-left: 3px solid var(--primary-color);
+    border-right: 3px solid var(--primary-color);
 }
 
 #conversation-container>.message:nth-child(even) {
@@ -108,7 +99,7 @@ body {
 .message .sender {
     font-weight: 600;
     margin-bottom: 0;
-    color: #B0B0B0;
+    color: var(--dim-color);
     font-size: 0.75em;
     margin-right: 8px;
     display: inline-block;
@@ -116,7 +107,7 @@ body {
 }
 
 .message.assistant .sender {
-    color: #B0B0B0;
+    color: var(--dim-color);
 }
 
 .message .actions {
@@ -138,14 +129,14 @@ body {
 .message .content {
     line-height: 1.25em;
     font-size: 0.92em;
-    color: #E0E0E0;
+    color: var(--light-color);
     margin: 0;
     padding: 10px 12px 0 12px;
 }
 
 .message .timestamp {
     font-size: 0.85em;
-    color: #B0B0B0;
+    color: var(--dim-color);
     margin-top: 2px;
     text-align: right;
     opacity: 0.7;
@@ -169,7 +160,7 @@ body {
 
 .message .delete-button:hover {
     opacity: 1;
-    background: #181C20;
+    background: var(--line-color-light);
 }
 
 .message .delete-button svg {
@@ -177,32 +168,31 @@ body {
     height: 18px;
     display: block;
     pointer-events: none;
-    fill: #D32F2F;
+    fill: var(--danger-color);
     transition: fill 0.15s;
 }
 
 .message .delete-button:hover svg {
-    fill: #FF5555;
+    fill: var(--danger-color);
 }
 
 .message .content a {
-    color: #7ecfff;
+    color: var(--primary-color);
     text-decoration: none;
-    border-bottom: 1px dotted #7ecfff;
+    border-bottom: 1px dotted var(--primary-color);
     transition: color 0.15s, border-bottom 0.15s;
     word-break: break-all;
 }
 
 .message .content a:hover {
-    color: #fff;
-    border-bottom: 1px solid #fff;
+    color: var(--light-color);
+    border-bottom: 1px solid var(--light-color);
     text-decoration: underline;
 }
 
-/* Code and pre-formatted text styling */
 pre,
 code {
-    color: #7ECFFF !important;
+    color: var(--primary-color) !important;
     font-size: 0.98em;
     line-height: 1.5;
     padding: 8px 12px;
@@ -210,7 +200,7 @@ code {
     max-width: 100%;
     box-sizing: border-box;
     font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', 'monospace';
-    background-color: #181C20 !important;
+    background-color: var(--darksecondary-color) !important;
     border-radius: 2px;
 }
 
@@ -222,21 +212,19 @@ pre {
 code:not(pre code) {
     padding: 2px 5px;
     white-space: pre-wrap;
-    background-color: #333;
+    background-color: var(--line-color-light);
 }
 
-/* MathJax styling */
 .MathJax {
-    color: #fff !important;
+    color: var(--light-color) !important;
 }
 
 .MathJax_Display {
     margin: 1em 0 !important;
 }
 
-/* Ensure math content is properly styled */
 mjx-container {
-    color: #fff !important;
+    color: var(--light-color) !important;
 }
 
 mjx-container[display="true"] {

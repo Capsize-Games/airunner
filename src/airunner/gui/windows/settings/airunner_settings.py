@@ -1,3 +1,4 @@
+from typing import Dict
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import (
     QStandardItemModel,
@@ -15,7 +16,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
 )
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, TemplateName
 from airunner.gui.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.gui.widgets.export_preferences.export_preferences_widget import (
     ExportPreferencesWidget,
@@ -101,6 +102,10 @@ class SettingsWindow(BaseWindow):
         self.register(
             SignalCode.RETRANSLATE_UI_SIGNAL, self.on_retranslate_ui_signal
         )
+        self.register(
+            SignalCode.REFRESH_STYLESHEET_SIGNAL,
+            self.on_theme_changed_signal,
+        )
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -108,6 +113,13 @@ class SettingsWindow(BaseWindow):
 
     def on_retranslate_ui_signal(self):
         self.ui.retranslateUi(self)
+
+    def on_theme_changed_signal(self, data: Dict):
+        template = data.get("template", TemplateName.SYSTEM_DEFAULT)
+        self.set_stylesheet(
+            template=template,
+        )
+        self.update_icons()
 
     @staticmethod
     def available_widgets(name):

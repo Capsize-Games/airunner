@@ -22,7 +22,8 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: stretch;
-    background: #000;
+    background: var(--dark-color);
+    color: var(--light-color);
 }
 
 #home-container {
@@ -31,18 +32,18 @@ body {
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background: #000;
+    background: var(--dark-color);
 }
 
 h1 {
     font-size: 2rem;
-    color: #f2f2f2;
+    color: var(--light-color);
     margin: 0;
 }
 
 #home-top {
-    background: #000;
-    color: #f2f2f2;
+    background: var(--dark-color);
+    color: var(--light-color);
     padding: 2rem 0 1rem 0;
     text-align: left;
     width: 100%;
@@ -56,7 +57,7 @@ h1 {
 
 #home-top .intro {
     font-size: 1.25rem;
-    color: #fff;
+    color: var(--light-color);
     margin: 0 auto 0.5rem auto;
 }
 
@@ -65,7 +66,7 @@ h1 {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: #000;
+    background: var(--dark-color);
     width: 100%;
 }
 
@@ -80,7 +81,7 @@ h1 {
 }
 
 .grid-item {
-    background: #101010;
+    background: var(--dim-color);
     box-shadow: 0 2px 8px rgba(34, 34, 59, 0.08);
     padding: 2rem 1.5rem;
     min-height: 180px;
@@ -88,7 +89,7 @@ h1 {
     align-items: center;
     justify-content: center;
     font-size: 1.1rem;
-    color: #f2f2f2;
+    color: var(--light-color);
     font-weight: 500;
     transition: box-shadow 0.2s;
     width: 100%;
@@ -100,7 +101,7 @@ h1 {
 }
 
 #home-bottom {
-    background: #000;
+    background: var(--dark-color);
     padding: 1.2rem 0 1.2rem 0;
     text-align: left;
     width: 100%;
@@ -108,7 +109,7 @@ h1 {
 }
 
 .content-footer {
-    color: #6c6c8a;
+    color: var(--dim-color);
     font-size: 1rem;
     letter-spacing: 1px;
 }
