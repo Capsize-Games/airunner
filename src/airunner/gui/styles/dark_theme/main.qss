@@ -164,7 +164,6 @@ QGroupBox QTabWidget QWidget {
 
 QSlider {
     border: 1px solid @primary-color;
-    padding-right: 0px;
     background-color: @darkerprimary-color;
 }
 

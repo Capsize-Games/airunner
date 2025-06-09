@@ -1,3 +1,4 @@
+from PySide6.QtWidgets import QColorDialog
 from typing import Optional, Dict
 
 from PySide6.QtCore import Qt, QPoint
@@ -101,6 +102,8 @@ class CanvasWidget(BaseWidget):
         )
         set_widget_state(self.ui.grid_button, show_grid is True)
 
+        self.set_button_color()
+
     @property
     def current_tool(self):
         return (
@@ -125,6 +128,10 @@ class CanvasWidget(BaseWidget):
         settings.pivot_point_y = value.y()
         self.update_application_settings("pivot_point_x", value.x())
         self.update_application_settings("pivot_point_y", value.y())
+
+    @Slot()
+    def on_brush_color_button_clicked(self):
+        self.color_button_clicked()
 
     @Slot(bool)
     def on_text_button_toggled(self, val: bool):
@@ -182,6 +189,20 @@ class CanvasWidget(BaseWidget):
 
     def on_toggle_grid_signal(self, message: Dict):
         self.ui.grid_button.setChecked(message.get("show_grid", True))
+
+    def color_button_clicked(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.brush_settings.primary_color = color.name()
+            self.update_brush_settings("primary_color", color.name())
+            self.set_button_color()
+            self.api.art.canvas.brush_color_changed(color.name())
+
+    def set_button_color(self):
+        color = self.brush_settings.primary_color
+        self.ui.brush_color_button.setStyleSheet(
+            f"background-color: {color};"
+        )
 
     def _update_action_buttons(self, tool, active):
         self.ui.active_grid_area_button.blockSignals(True)
