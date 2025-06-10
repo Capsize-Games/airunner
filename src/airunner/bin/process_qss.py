@@ -192,7 +192,7 @@ def build_all_theme_css():
         / "css",
         Path(__file__).parent.parent
         / "components"
-        / "conversations"
+        / "chat"
         / "gui"
         / "static"
         / "css",

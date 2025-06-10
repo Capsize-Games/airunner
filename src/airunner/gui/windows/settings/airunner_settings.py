@@ -119,7 +119,7 @@ class SettingsWindow(BaseWindow):
         self.set_stylesheet(
             template=template,
         )
-        self.update_icons()
+        self.icon_manager.set_icons()
 
     @staticmethod
     def available_widgets(name):

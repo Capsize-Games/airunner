@@ -9,9 +9,9 @@
 @danger-color: #FF5555;
 @warning-color: #FFAA00;
 @info-color: #00A8D8;
-@light-color: #222;
-@dim-color: #bbb;
-@dark-color: #fff;
+@light-color: #222222;
+@dim-color: #bbbbbb;
+@dark-color: #ffffff;
 @line-color-light: #e0e0e0;
 @line-color-dark: #bdbdbd;
 /* END_VARIABLES */

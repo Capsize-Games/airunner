@@ -1015,13 +1015,6 @@ class MainWindow(
         self.set_stylesheet(
             template=template,
         )
-        self.update_icons()
-
-    def update_icons(self):
-        theme = (
-            "dark" if self.application_settings.dark_mode_enabled else "light"
-        )
-        self.icon_manager.update_icons(theme)
 
     def initialize_ui(self):
         self.logger.debug("Loading UI")
@@ -1045,6 +1038,7 @@ class MainWindow(
         )
 
         self.set_stylesheet()
+        self.icon_manager.set_icons()
         self.restore_state()
         # Configure default splitter sizes to maximize the canvas area (index 1)
         default_splitter_config = {
@@ -1224,19 +1218,6 @@ class MainWindow(
     def show_settings_path(self, name, default_path=None):
         path = getattr(self.path_settings, name)
         show_path(default_path if default_path and path == "" else path)
-
-    def set_icons(self, icon_name, widget_name, theme):
-        if not self.initialized:
-            return
-
-        icon = QtGui.QIcon()
-        icon.addPixmap(
-            QtGui.QPixmap(f":/{theme}/icons/feather/{theme}/{icon_name}.svg"),
-            QtGui.QIcon.Mode.Normal,
-            QtGui.QIcon.State.Off,
-        )
-        getattr(self.ui, widget_name).setIcon(icon)
-        self.update()
 
     def toggle_nsfw_filter(self):
         self.set_nsfw_filter_tooltip()
@@ -1560,7 +1541,6 @@ class MainWindow(
         self.initialize_browser_controls()
 
         self.initialized = True
-        self.update_icons()
         self.logger.debug("Showing window")
         self._set_keyboard_shortcuts()
 
