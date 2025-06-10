@@ -380,22 +380,35 @@ class CustomGraphicsView(
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        size: QSize = event.size()
+        width = size.width()
+        height = size.height()
+        canvas_container_size = self.viewport().size()
+        screen_size = self.screen().availableGeometry().size()
+        screen_width = screen_size.width() - 64
+        screen_height = screen_size.height() - 160
+        self.scene.setSceneRect(
+            (screen_width - width) / 2,
+            (screen_height - height) / 2,
+            canvas_container_size.width(),
+            canvas_container_size.height(),
+        )
 
-        # Store resize data
-        self._resize_data = {
-            "new_size": self.viewport().size(),
-            "old_size": event.oldSize(),
-        }
+        # # Store resize data
+        # self._resize_data = {
+        #     "new_size": self.viewport().size(),
+        #     "old_size": event.oldSize(),
+        # }
 
-        # Start or reset the throttling timer - wait for resize to finish
-        if not self._resize_timer.isActive():
-            self._resize_timer.start(
-                150
-            )  # 150ms delay before processing resize
-        else:
-            # Reset the timer if already running
-            self._resize_timer.stop()
-            self._resize_timer.start(150)
+        # # Start or reset the throttling timer - wait for resize to finish
+        # if not self._resize_timer.isActive():
+        #     self._resize_timer.start(
+        #         150
+        #     )  # 150ms delay before processing resize
+        # else:
+        #     # Reset the timer if already running
+        #     self._resize_timer.stop()
+        #     self._resize_timer.start(150)
 
     def _handle_deferred_resize(self):
         """Start a background thread to handle resize operations"""
