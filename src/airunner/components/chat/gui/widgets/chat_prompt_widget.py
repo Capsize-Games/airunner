@@ -111,7 +111,7 @@ class ChatPromptWidget(BaseWidget):
             )
 
     @Slot()
-    def action_button_clicked_clear_conversation(self):
+    def on_clear_conversation_button_clicked(self):
         self.api.llm.clear_history()
 
     @Slot(bool)
