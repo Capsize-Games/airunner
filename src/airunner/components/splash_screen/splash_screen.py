@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QSplashScreen
-from PySide6.QtGui import QPixmap, QPainter, Qt
+from PySide6.QtGui import QPixmap, QPainter, Qt, QGuiApplication
 from PySide6.QtCore import Qt as QtCoreQt
 
 
@@ -10,6 +10,10 @@ class SplashScreen(QSplashScreen):
     """
 
     def __init__(self, screen, image_path, *args, **kwargs):
+        # Always use the second screen if available (by index from QGuiApplication)
+        screens = QGuiApplication.screens()
+        if len(screens) > 1:
+            screen = screens[1]
         # Load the splash image
         original_pixmap = QPixmap(str(image_path))
         screen_size = screen.geometry().size()
@@ -23,13 +27,7 @@ class SplashScreen(QSplashScreen):
         painter.end()
         super().__init__(screen, centered_pixmap, *args, **kwargs)
         self.setMask(centered_pixmap.mask())
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setGeometry(
-            screen.geometry().x(),
-            screen.geometry().y(),
-            screen.geometry().width(),
-            screen.geometry().height() - original_pixmap.height(),
-        )
+        self.setGeometry(screen.geometry())
         self.setWindowFlags(
             QtCoreQt.WindowType.FramelessWindowHint
             | QtCoreQt.WindowType.WindowStaysOnTopHint
