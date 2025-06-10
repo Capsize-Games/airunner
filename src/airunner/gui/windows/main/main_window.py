@@ -1055,13 +1055,6 @@ class MainWindow(
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
-        # --- ConversationWidget integration ---
-        self.conversation_widget = ConversationWidget(self)
-        # TODO: Replace/add to the appropriate layout or tab in the UI
-        # Example: self.ui.chat_area_layout.addWidget(self.conversation_widget)
-        # Or: self.ui.center_tab_container.addTab(self.conversation_widget, "Chat")
-        # You may need to adjust this depending on your UI structure
-        # --- End ConversationWidget integration ---
         if not self.api:
             self.logger.warning(
                 "MainWindow: self.api is missing. Cannot clear status message."
@@ -1340,10 +1333,12 @@ class MainWindow(
         self.qsettings.beginGroup("window_settings")
         self.qsettings.setValue("is_maximized", self.isMaximized())
         self.qsettings.setValue("is_fullscreen", self.isFullScreen())
-        self.qsettings.setValue("width", self.width())
-        self.qsettings.setValue("height", self.height())
-        self.qsettings.setValue("x_pos", self.pos().x())
-        self.qsettings.setValue("y_pos", self.pos().y())
+        # Only save geometry if not maximized or fullscreen
+        if not self.isMaximized() and not self.isFullScreen():
+            self.qsettings.setValue("width", self.width())
+            self.qsettings.setValue("height", self.height())
+            self.qsettings.setValue("x_pos", self.pos().x())
+            self.qsettings.setValue("y_pos", self.pos().y())
         self.qsettings.setValue(
             "mode_tab_widget_index",
             self.ui.generator_widget.ui.generator_form_tabs.currentIndex(),
@@ -1360,27 +1355,32 @@ class MainWindow(
         # Get the window settings
         settings = self.window_settings
 
-        # Resize the window
-        self.setMinimumSize(512, 512)
-        width = int(settings["width"])
-        height = int(settings["height"])
-        self.resize(width, height)
+        # Determine window state
+        is_maximized = (
+            settings.get("is_maximized", False) if settings else False
+        )
+        is_fullscreen = (
+            settings.get("is_fullscreen", False) if settings else False
+        )
 
-        # Move the window
-        x_pos = int(settings["x_pos"])
-        y_pos = int(settings["y_pos"])
-        self.move(x_pos, y_pos)
-
-        # Show the window
-        if settings is not None and settings.get("is_maximized", False):
+        if is_maximized:
             self.logger.info("Restoring window to maximized state")
             self.showMaximized()
-        elif settings is not None and settings.get("is_fullscreen", False):
+        elif is_fullscreen:
             self.logger.info("Restoring window to fullscreen state")
             self.showFullScreen()
         else:
             self.logger.info("Restoring window to normal state")
             self.showNormal()
+            if settings is not None:
+                width = int(settings.get("width", 1024))
+                height = int(settings.get("height", 768))
+                x_pos = int(settings.get("x_pos", 100))
+                y_pos = int(settings.get("y_pos", 100))
+                self.resize(width, height)
+                self.move(x_pos, y_pos)
+            else:
+                self.setMinimumSize(512, 512)
 
         # Raise the window to the top of the stack
         self.raise_()
