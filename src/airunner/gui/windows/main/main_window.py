@@ -1094,7 +1094,7 @@ class MainWindow(
         self.ui.actionCopy.deleteLater()
         self.ui.actionPaste.deleteLater()
         self.ui.actionRotate_90_clockwise.deleteLater()
-        self.ui.actionRotate_90_counterclockwise.deleteLater()
+        self.ui.actionRotate_90_counter_clockwise.deleteLater()
         self.ui.actionPrompt_Browser.deleteLater()
 
     def _load_plugins(self):
@@ -1331,14 +1331,28 @@ class MainWindow(
         self.logger.debug("Saving window state")
 
         self.qsettings.beginGroup("window_settings")
-        self.qsettings.setValue("is_maximized", self.isMaximized())
-        self.qsettings.setValue("is_fullscreen", self.isFullScreen())
-        # Only save geometry if not maximized or fullscreen
-        if not self.isMaximized() and not self.isFullScreen():
-            self.qsettings.setValue("width", self.width())
-            self.qsettings.setValue("height", self.height())
-            self.qsettings.setValue("x_pos", self.pos().x())
-            self.qsettings.setValue("y_pos", self.pos().y())
+        is_maximized = self.isMaximized()
+        is_fullscreen = self.isFullScreen()
+        self.logger.debug(
+            f"Saving state - maximized: {is_maximized}, fullscreen: {is_fullscreen}"
+        )
+        self.qsettings.setValue("is_maximized", is_maximized)
+        self.qsettings.setValue("is_fullscreen", is_fullscreen)
+
+        # Only save normal geometry if not maximized/fullscreen
+        if not is_maximized and not is_fullscreen:
+            width = self.width()
+            height = self.height()
+            x_pos = self.pos().x()
+            y_pos = self.pos().y()
+            self.logger.debug(
+                f"Saving normal geometry - width: {width}, height: {height}, x: {x_pos}, y: {y_pos}"
+            )
+            self.qsettings.setValue("width", width)
+            self.qsettings.setValue("height", height)
+            self.qsettings.setValue("x_pos", x_pos)
+            self.qsettings.setValue("y_pos", y_pos)
+
         self.qsettings.setValue(
             "mode_tab_widget_index",
             self.ui.generator_widget.ui.generator_form_tabs.currentIndex(),
@@ -1348,39 +1362,37 @@ class MainWindow(
 
     def restore_state(self):
         """
-        Restore the window based on the previous state.
+        Restore the window based on the previous state using QSettings.
         """
-        self.logger.debug("Restoring state")
+        self.qsettings.beginGroup("window_settings")
+        is_maximized = self.qsettings.value("is_maximized", False, type=bool)
+        is_fullscreen = self.qsettings.value("is_fullscreen", False, type=bool)
+        width = self.qsettings.value("width", 1024, type=int)
+        height = self.qsettings.value("height", 768, type=int)
+        x_pos = self.qsettings.value("x_pos", 100, type=int)
+        y_pos = self.qsettings.value("y_pos", 100, type=int)
+        self.qsettings.endGroup()
 
-        # Get the window settings
-        settings = self.window_settings
+        # Force normal state first
+        self.showNormal()
 
-        # Determine window state
-        is_maximized = (
-            settings.get("is_maximized", False) if settings else False
-        )
-        is_fullscreen = (
-            settings.get("is_fullscreen", False) if settings else False
-        )
+        # Set geometry
+        self.resize(width, height)
+        self.move(x_pos, y_pos)
+        self.setMinimumSize(512, 512)
 
+        # Now apply special states if needed
         if is_maximized:
-            self.logger.info("Restoring window to maximized state")
+            self.logger.info("Applying maximized state")
             self.showMaximized()
         elif is_fullscreen:
-            self.logger.info("Restoring window to fullscreen state")
+            self.logger.info("Applying fullscreen state")
             self.showFullScreen()
         else:
-            self.logger.info("Restoring window to normal state")
-            self.showNormal()
-            if settings is not None:
-                width = int(settings.get("width", 1024))
-                height = int(settings.get("height", 768))
-                x_pos = int(settings.get("x_pos", 100))
-                y_pos = int(settings.get("y_pos", 100))
-                self.resize(width, height)
-                self.move(x_pos, y_pos)
-            else:
-                self.setMinimumSize(512, 512)
+            self.logger.info("Window restored to normal state")
+
+        # Mark that state has been restored to prevent _initialize_window from overriding
+        self._state_restored = True
 
         # Raise the window to the top of the stack
         self.raise_()
@@ -1544,6 +1556,19 @@ class MainWindow(
         self.logger.debug("Showing window")
         self._set_keyboard_shortcuts()
 
+    def move_to_second_screen(self):
+        print("x" * 100)
+        screens = QGuiApplication.screens()
+        if len(screens) > 1:
+            screen = screens[1]
+            screen_geometry = screen.availableGeometry()
+            self.move(screen_geometry.topLeft())
+            self.resize(screen_geometry.size())
+            self.setMinimumSize(512, 512)
+            max_width = max(screen_geometry.width(), self.minimumWidth())
+            max_height = max(screen_geometry.height(), self.minimumHeight())
+            self.setMaximumSize(max_width, max_height)
+
     def on_keyboard_shortcuts_updated(self):
         self._set_keyboard_shortcuts()
 
@@ -1613,6 +1638,21 @@ class MainWindow(
         self.ui.actionSafety_Checker.blockSignals(False)
 
     def _initialize_window(self):
+        # Don't override window geometry if it's already been restored
+        if hasattr(self, "_state_restored") and self._state_restored:
+            self.logger.debug(
+                "Skipping window initialization - state already restored"
+            )
+            self.setWindowIcon(
+                QIcon(
+                    os.path.join(
+                        self.path_settings.base_path, "images/icon.png"
+                    )
+                )
+            )
+            self.set_window_title()
+            return
+
         # self.center()
         screen = QGuiApplication.primaryScreen()  # Use primaryScreen
 
