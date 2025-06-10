@@ -191,16 +191,16 @@ class Ui_browser(object):
 
         self.horizontalLayout_3.addWidget(self.user_agent_browser)
 
-        self.pushButton = QPushButton(self.widget2)
-        self.pushButton.setObjectName(u"pushButton")
-        sizePolicy1.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
-        self.pushButton.setSizePolicy(sizePolicy1)
-        self.pushButton.setMinimumSize(QSize(0, 0))
+        self.random_button = QPushButton(self.widget2)
+        self.random_button.setObjectName(u"random_button")
+        sizePolicy1.setHeightForWidth(self.random_button.sizePolicy().hasHeightForWidth())
+        self.random_button.setSizePolicy(sizePolicy1)
+        self.random_button.setMinimumSize(QSize(0, 0))
         icon11 = QIcon()
         icon11.addFile(u":/dark/icons/feather/dark/dice-game-icon.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pushButton.setIcon(icon11)
+        self.random_button.setIcon(icon11)
 
-        self.horizontalLayout_3.addWidget(self.pushButton)
+        self.horizontalLayout_3.addWidget(self.random_button)
 
 
         self.gridLayout_2.addWidget(self.widget2, 1, 0, 1, 1)
@@ -280,8 +280,8 @@ class Ui_browser(object):
         self.user_agent_browser.setToolTip(QCoreApplication.translate("browser", u"Choose Browser", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        self.pushButton.setToolTip(QCoreApplication.translate("browser", u"Random", None))
+        self.random_button.setToolTip(QCoreApplication.translate("browser", u"Random", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton.setText("")
+        self.random_button.setText("")
     # retranslateUi
 

@@ -48,3 +48,4 @@ class StylesMixin:
             stylesheet = ""
 
         self.setStyleSheet(stylesheet)
+        self.icon_manager.set_icons()

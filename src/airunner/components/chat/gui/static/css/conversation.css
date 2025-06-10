@@ -1,7 +1,6 @@
 /* conversation.css: Dedicated layout/styles for conversation widget (no colors, no backgrounds, no font colors) */
 
 html {
-    background-color: #2a2a2a;
     scrollbar-color: var(--dim-color) var(--dark-color);
     scrollbar-width: thin;
 }
