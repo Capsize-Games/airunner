@@ -1005,8 +1005,8 @@ class CustomScene(
             abs_y = self.drawing_pad_settings.y_pos
 
             if abs_x is None or abs_y is None:
-                abs_x = self.item.pos().x() + canvas_offset.x()
-                abs_y = self.item.pos().y() + canvas_offset.y()
+                abs_x = self.item.pos().x()
+                abs_y = self.item.pos().y()
 
             self.original_item_positions[self.item] = QPointF(abs_x, abs_y)
 
