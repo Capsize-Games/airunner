@@ -8,9 +8,9 @@ conversation.jinja2.html: Jinja2 template for ConversationWidget
     <title>Conversation</title>
     <meta name="airunner-theme" content="{{ theme }}">
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-    <link id="theme-vars" rel="stylesheet" href="https://localhost:5005/static/css/variables-{{ theme }}.css">
-    <link id="theme-style" rel="stylesheet" href="https://localhost:5005/static/css/theme-{{ theme }}.css">
-    <link rel="stylesheet" href="https://localhost:5005/static/css/conversation.css">
+    <link id="theme-vars" rel="stylesheet" href="../css/variables-{{ theme }}.css">
+    <link id="theme-style" rel="stylesheet" href="../css/theme-{{ theme }}.css">
+    <link rel="stylesheet" href="../css/conversation.css">
     <!-- MathJax Configuration -->
     <script>
         window.MathJax = {
@@ -37,17 +37,18 @@ conversation.jinja2.html: Jinja2 template for ConversationWidget
     <div id="conversation-container">
         <!-- Messages will be rendered here by conversation.js -->
     </div>
-    <script src="https://localhost:5005/static/js/conversation.js"></script>
+    <script src="../js/conversation.js"></script>
     <script>
     // Theme switching logic for webEngineView
     function setTheme(theme) {
-        document.getElementById('theme-vars').href = `https://localhost:5005/static/css/variables-${theme}.css`;
-        document.getElementById('theme-style').href = `https://localhost:5005/static/css/theme-${theme}.css`;
+        document.getElementById('theme-vars').href = `../css/variables-${theme}.css`;
+        document.getElementById('theme-style').href = `../css/theme-${theme}.css`;
         window.currentTheme = theme;
     }
     window.setTheme = setTheme;
     document.addEventListener('DOMContentLoaded', function () {
         let theme = document.querySelector('meta[name="airunner-theme"]')?.content || window.currentTheme || 'light';
+        window.currentTheme = theme;
         setTheme(theme);
     });
     </script>
