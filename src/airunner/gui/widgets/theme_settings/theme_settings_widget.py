@@ -1,5 +1,5 @@
 from PySide6.QtCore import Slot
-from airunner.enums import SignalCode, TemplateName
+from airunner.enums import TemplateName
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.theme_settings.templates.theme_settings_ui import (
     Ui_theme_settings,
@@ -31,5 +31,3 @@ class ThemeSettingsWidget(BaseWidget):
         settings = get_qsettings()
         settings.setValue("theme", val)
         self.api.refresh_stylesheet(template)
-
-        # self.api.send_signal(SignalCode.THEME_CHANGED, {"template": template})
