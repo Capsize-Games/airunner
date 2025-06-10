@@ -31,6 +31,7 @@ from airunner.settings import (
     QTWEBENGINE_REMOTE_DEBUGGING,  # Add this import
 )
 from airunner.gui.widgets.llm.local_http_server import LocalHttpServerThread
+from airunner.components.splash_screen.splash_screen import SplashScreen
 import os
 import subprocess
 import sys
@@ -308,7 +309,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
     def display_splash_screen(self, app):
         """
-        Display a splash screen while the application is loading.
+        Display a splash screen while the application is loading using the SplashScreen class.
         :param app:
         :return:
         """
@@ -323,51 +324,22 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         base_dir = Path(os.path.dirname(os.path.realpath(__file__)))
         image_path = base_dir / "gui" / "images" / "splashscreen.png"
-        original_pixmap = QPixmap(image_path)
-
-        # Create a new transparent pixmap the size of the screen
-        screen_size = screen.geometry().size()
-        centered_pixmap = QPixmap(screen_size)
-        centered_pixmap.fill(Qt.transparent)
-
-        # Calculate center position for the original pixmap
-        x_pos = (screen_size.width() - original_pixmap.width()) // 2
-        y_pos = (screen_size.height() - original_pixmap.height()) // 2
-
-        # Draw the original pixmap onto the centered position of the full-screen pixmap
-        painter = QPainter(centered_pixmap)
-        painter.drawPixmap(x_pos, y_pos, original_pixmap)
-        painter.end()
-
-        splash = QSplashScreen(screen, centered_pixmap)
-        splash.setMask(centered_pixmap.mask())
-
-        # make splash screen transparent and full size
-        splash.setAttribute(Qt.WA_TranslucentBackground)
-        splash.setGeometry(
-            screen.geometry().x(),
-            screen.geometry().y(),
-            screen.geometry().width(),
-            screen.geometry().height() - original_pixmap.height(),
-        )
-        splash.setWindowFlags(
-            QtCore.Qt.WindowType.FramelessWindowHint
-            | QtCore.Qt.WindowType.WindowStaysOnTopHint
-            | QtCore.Qt.WindowType.SplashScreen
-        )
-        splash.show()
-        App.update_splash_message(splash, f"Loading AI Runner")
+        splash = SplashScreen(screen, image_path)
+        splash.show_message("Loading AI Runner")
         app.processEvents()
         return splash
 
     @staticmethod
     def update_splash_message(splash, message: str):
-        splash.showMessage(
-            message,
-            QtCore.Qt.AlignmentFlag.AlignBottom
-            | QtCore.Qt.AlignmentFlag.AlignCenter,
-            QtCore.Qt.GlobalColor.white,
-        )
+        if hasattr(splash, "show_message"):
+            splash.show_message(message)
+        else:
+            splash.showMessage(
+                message,
+                QtCore.Qt.AlignmentFlag.AlignBottom
+                | QtCore.Qt.AlignmentFlag.AlignCenter,
+                QtCore.Qt.GlobalColor.white,
+            )
 
     def show_main_application(self, app):
         """
