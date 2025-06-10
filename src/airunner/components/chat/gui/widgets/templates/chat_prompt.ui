@@ -74,14 +74,14 @@
           </property>
           <property name="minimumSize">
            <size>
-            <width>25</width>
-            <height>25</height>
+            <width>30</width>
+            <height>30</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>25</width>
-            <height>25</height>
+            <width>30</width>
+            <height>30</height>
            </size>
           </property>
           <property name="toolTip">
@@ -119,14 +119,14 @@
           </property>
           <property name="minimumSize">
            <size>
-            <width>25</width>
-            <height>25</height>
+            <width>30</width>
+            <height>30</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>25</width>
-            <height>25</height>
+            <width>30</width>
+            <height>30</height>
            </size>
           </property>
           <property name="toolTip">
@@ -146,6 +146,18 @@
         </item>
         <item>
          <widget class="QPushButton" name="settings_button">
+          <property name="minimumSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
           <property name="toolTip">
            <string>Settings</string>
           </property>
@@ -180,7 +192,7 @@
         <x>0</x>
         <y>0</y>
         <width>595</width>
-        <height>584</height>
+        <height>579</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_4">
