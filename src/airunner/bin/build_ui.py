@@ -16,7 +16,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from airunner.bin.process_qss import generate_resources, process_qss
+from airunner.bin.process_qss import build_all_theme_css, generate_resources, process_qss
 
 
 def adjust_resource_imports(input_file, output_file):
@@ -58,3 +58,4 @@ def main():
     generate_resources()
     # Build QSS for both themes
     process_qss()
+    build_all_theme_css()

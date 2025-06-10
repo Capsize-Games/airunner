@@ -13,6 +13,7 @@ from airunner.enums import (
     LLMActionType,
     ModelType,
     ModelStatus,
+    TemplateName,
 )
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.utils.application import create_worker

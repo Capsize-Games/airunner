@@ -84,6 +84,54 @@ class BaseWidget(AbstractBaseWidget):
         self.worker_class_map: Dict = {}
         self.initialize_ui()
         self._setup_splitters()
+        self.render_template()
+
+    @property
+    def web_engine_view(self) -> Optional[object]:
+        """
+        Set this to the QWebEngineView instance in your widget if you want to render templates.
+        """
+        return None
+
+    @property
+    def template(self) -> Optional[str]:
+        """
+        Override this property to return the name of the Jinja2 template to render.
+        The template should be located in the static HTML directory.
+        """
+        return None
+
+    @property
+    def template_context(self) -> Dict:
+        settings = get_qsettings()
+        theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
+        return {
+            "theme": theme.lower().replace(" ", "_"),
+        }
+
+    def render_template(self):
+        if not self.web_engine_view or not self.template:
+            return
+        settings = get_qsettings()
+        theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
+        theme_name = theme.lower().replace(" ", "_")
+        try:
+            # Pass theme variable to Jinja2 template for correct CSS links
+            self._render_template(
+                self.web_engine_view,
+                self.template,
+                **self.template_context,
+            )
+            # Also set window.currentTheme for JS
+            js = f"window.currentTheme = '{theme_name}';"
+            self.web_engine_view.page().runJavaScript(js)
+        except Exception as e:
+            if hasattr(self, "logger"):
+                self.logger.error(
+                    f"Failed to render template {self.template}: {e}"
+                )
+            else:
+                print(f"Failed to render template {self.template}: {e}")
 
     def on_theme_changed_signal(self, data: Dict):
         template = data.get("template", TemplateName.SYSTEM_DEFAULT)
@@ -279,7 +327,7 @@ class BaseWidget(AbstractBaseWidget):
     def _save_splitter_state(self):
         save_splitter_settings(self.ui, self.splitters)
 
-    def render_template(self, element, template_name: str, **kwargs):
+    def _render_template(self, element, template_name: str, **kwargs):
         """
         Load a Jinja2 template from the local HTTP server, passing kwargs as query parameters for server-side rendering.
         """
