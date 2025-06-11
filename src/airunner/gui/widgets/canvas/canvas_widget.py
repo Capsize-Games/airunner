@@ -5,7 +5,6 @@ from PySide6.QtCore import Qt, QPoint
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication
 
-from airunner.components.art.managers.stablediffusion.image_response import ImageResponse
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.gui.widgets.base_widget import BaseWidget
