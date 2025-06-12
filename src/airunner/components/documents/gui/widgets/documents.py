@@ -144,14 +144,11 @@ class DocumentsWidget(
         self._request_index_for_unindexed_documents()
 
     def _sync_documents_with_directory(self):
-        print("*" * 100)
-        print("syncing")
         # Ensure every file in the watched directory and subdirectories has a Document entry
         doc_dir = self.documents_path
         if not os.path.exists(doc_dir):
             self.logger.error(f"Document directory does not exist: {doc_dir}")
             return
-        print("directory exists", doc_dir)
         for root, dirs, files in os.walk(doc_dir):
             for fname in files:
                 fpath = os.path.join(root, fname)
