@@ -587,21 +587,20 @@ class CustomGraphicsView(
 
     def showEvent(self, event):
         super().showEvent(event)
-        # Load offset first
-        self.load_canvas_offset()
-
-        # Set up the scene (grid, etc.)
-        self.do_draw(True)
-        self.toggle_drag_mode()
-        self.set_canvas_color(self.scene)
-
-        # Show the active grid area using loaded offset
-        self.show_active_grid_area()
-        self.scene.initialize_image()
-        self.updateImagePositions()
-        self._restore_text_items_from_db()  # Restore text items on load
-
         if not self._initialized:
+            # Load offset first
+            self.load_canvas_offset()
+
+            # Set up the scene (grid, etc.)
+            self.do_draw(True)
+            self.toggle_drag_mode()
+            self.set_canvas_color(self.scene)
+
+            # Show the active grid area using loaded offset
+            self.show_active_grid_area()
+            self.scene.initialize_image()
+            self.updateImagePositions()
+            self._restore_text_items_from_db()  # Restore text items on load
             self._initialized = True
 
     def set_canvas_color(
