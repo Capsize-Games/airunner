@@ -9,7 +9,12 @@ from airunner.handlers.llm.llm_model_manager import LLMModelManager
 from airunner.handlers.llm.openrouter_model_manager import (
     OpenRouterModelManager,
 )
+from airunner.components.documents.data.models.document import Document
 from airunner.context.context_manager import ContextManager
+from airunner.components.documents.data.models.document import (
+    Document as DBDocument,
+)
+import uuid
 
 # from airunner.handlers.llm.gemma3_model_manager import Gemma3Manager
 from airunner.enums import ModelService
@@ -34,6 +39,7 @@ class LLMGenerateWorker(Worker):
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
             SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
             SignalCode.BROWSER_EXTRA_CONTEXT: self.on_browser_extra_context,
+            SignalCode.INDEX_DOCUMENT: self.on_index_document_signal,
         }
         self.context_manager = ContextManager()
         self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
@@ -199,6 +205,44 @@ class LLMGenerateWorker(Worker):
             self.model_manager.load_conversation(message)
         except Exception as e:
             self.logger.error(f"Error in on_load_conversation: {e}")
+
+    def on_index_document_signal(self, data: Dict):
+        """
+        Handle the INDEX_DOCUMENT signal: index the file by path, save the index, update DB, and release memory.
+        """
+        document_path = data.get("path", None)
+        if not isinstance(document_path, str) or not document_path:
+            return
+
+        if not self.model_manager or not self.model_manager.agent:
+            self.load()
+        if not self.model_manager or not self.model_manager.agent:
+            return
+        try:
+            agent = self.model_manager.agent
+            agent.document_reader = None
+            agent.target_files = [document_path]
+            agent._load_index_from_documents()
+            # Generate a UUID for this document's index
+            index_uuid = str(uuid.uuid4())
+            saved_uuid = agent._save_index_to_disc(
+                document_path=document_path, index_uuid=index_uuid
+            )
+            db_docs = DBDocument.objects.filter_by(path=document_path)
+            if db_docs and len(db_docs) > 0:
+                db_doc = db_docs[0]
+                db_doc.indexed = True
+                db_doc.index_uuid = saved_uuid
+                DBDocument.objects.update(
+                    pk=db_doc.id, indexed=True, index_uuid=saved_uuid
+                )
+            agent.document_reader = None
+            agent.index = None
+            self.emit_signal(
+                SignalCode.DOCUMENT_INDEXED, {"path": document_path}
+            )
+        except Exception as e:
+            pass
 
     def start_worker_thread(self):
         if self.application_settings.llm_enabled or AIRUNNER_LLM_ON:

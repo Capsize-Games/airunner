@@ -61,6 +61,7 @@ from airunner.enums import (
     LLMActionType,
     ModelType,
     ModelStatus,
+    TemplateName,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application.get_version import get_version
@@ -83,7 +84,7 @@ from airunner.gui.windows.prompt_browser.prompt_browser import PromptBrowser
 from airunner.gui.windows.settings.airunner_settings import SettingsWindow
 from airunner.gui.windows.update.update_window import UpdateWindow
 from airunner.gui.managers.icon_manager import IconManager
-from airunner.plugin_loader import PluginLoader
+from airunner.components.plugins.plugin_loader import PluginLoader
 
 from airunner.components.chat.gui.widgets.conversation_widget import (
     ConversationWidget,
@@ -1010,17 +1011,10 @@ class MainWindow(
         return bash_execute(args[0])
 
     def on_theme_changed_signal(self, data: Dict):
+        template = data.get("template", TemplateName.SYSTEM_DEFAULT)
         self.set_stylesheet(
-            data.get("dark_mode", False),
-            data.get("override_system_theme", False),
+            template=template,
         )
-        self.update_icons()
-
-    def update_icons(self):
-        theme = (
-            "dark" if self.application_settings.dark_mode_enabled else "light"
-        )
-        self.icon_manager.update_icons(theme)
 
     def initialize_ui(self):
         self.logger.debug("Loading UI")
@@ -1044,6 +1038,7 @@ class MainWindow(
         )
 
         self.set_stylesheet()
+        self.icon_manager.set_icons()
         self.restore_state()
         # Configure default splitter sizes to maximize the canvas area (index 1)
         default_splitter_config = {
@@ -1060,13 +1055,6 @@ class MainWindow(
 
         self.status_widget = StatusWidget()
         self.statusBar().addPermanentWidget(self.status_widget)
-        # --- ConversationWidget integration ---
-        self.conversation_widget = ConversationWidget(self)
-        # TODO: Replace/add to the appropriate layout or tab in the UI
-        # Example: self.ui.chat_area_layout.addWidget(self.conversation_widget)
-        # Or: self.ui.center_tab_container.addTab(self.conversation_widget, "Chat")
-        # You may need to adjust this depending on your UI structure
-        # --- End ConversationWidget integration ---
         if not self.api:
             self.logger.warning(
                 "MainWindow: self.api is missing. Cannot clear status message."
@@ -1077,6 +1065,7 @@ class MainWindow(
         self.last_tray_click_time = 0
         self.settings_window = None
         self.hide_center_tab_header()
+        self._load_plugins()
 
     def update_tab_index(self, section: str, index: int):
         Tab.objects.update_by(filter=dict(section=section), active=False)
@@ -1105,7 +1094,7 @@ class MainWindow(
         self.ui.actionCopy.deleteLater()
         self.ui.actionPaste.deleteLater()
         self.ui.actionRotate_90_clockwise.deleteLater()
-        self.ui.actionRotate_90_counterclockwise.deleteLater()
+        self.ui.actionRotate_90_counter_clockwise.deleteLater()
         self.ui.actionPrompt_Browser.deleteLater()
 
     def _load_plugins(self):
@@ -1222,19 +1211,6 @@ class MainWindow(
     def show_settings_path(self, name, default_path=None):
         path = getattr(self.path_settings, name)
         show_path(default_path if default_path and path == "" else path)
-
-    def set_icons(self, icon_name, widget_name, theme):
-        if not self.initialized:
-            return
-
-        icon = QtGui.QIcon()
-        icon.addPixmap(
-            QtGui.QPixmap(f":/{theme}/icons/feather/{theme}/{icon_name}.svg"),
-            QtGui.QIcon.Mode.Normal,
-            QtGui.QIcon.State.Off,
-        )
-        getattr(self.ui, widget_name).setIcon(icon)
-        self.update()
 
     def toggle_nsfw_filter(self):
         self.set_nsfw_filter_tooltip()
@@ -1355,12 +1331,28 @@ class MainWindow(
         self.logger.debug("Saving window state")
 
         self.qsettings.beginGroup("window_settings")
-        self.qsettings.setValue("is_maximized", self.isMaximized())
-        self.qsettings.setValue("is_fullscreen", self.isFullScreen())
-        self.qsettings.setValue("width", self.width())
-        self.qsettings.setValue("height", self.height())
-        self.qsettings.setValue("x_pos", self.pos().x())
-        self.qsettings.setValue("y_pos", self.pos().y())
+        is_maximized = self.isMaximized()
+        is_fullscreen = self.isFullScreen()
+        self.logger.debug(
+            f"Saving state - maximized: {is_maximized}, fullscreen: {is_fullscreen}"
+        )
+        self.qsettings.setValue("is_maximized", is_maximized)
+        self.qsettings.setValue("is_fullscreen", is_fullscreen)
+
+        # Only save normal geometry if not maximized/fullscreen
+        if not is_maximized and not is_fullscreen:
+            width = self.width()
+            height = self.height()
+            x_pos = self.pos().x()
+            y_pos = self.pos().y()
+            self.logger.debug(
+                f"Saving normal geometry - width: {width}, height: {height}, x: {x_pos}, y: {y_pos}"
+            )
+            self.qsettings.setValue("width", width)
+            self.qsettings.setValue("height", height)
+            self.qsettings.setValue("x_pos", x_pos)
+            self.qsettings.setValue("y_pos", y_pos)
+
         self.qsettings.setValue(
             "mode_tab_widget_index",
             self.ui.generator_widget.ui.generator_form_tabs.currentIndex(),
@@ -1370,34 +1362,37 @@ class MainWindow(
 
     def restore_state(self):
         """
-        Restore the window based on the previous state.
+        Restore the window based on the previous state using QSettings.
         """
-        self.logger.debug("Restoring state")
+        self.qsettings.beginGroup("window_settings")
+        is_maximized = self.qsettings.value("is_maximized", False, type=bool)
+        is_fullscreen = self.qsettings.value("is_fullscreen", False, type=bool)
+        width = self.qsettings.value("width", 1024, type=int)
+        height = self.qsettings.value("height", 768, type=int)
+        x_pos = self.qsettings.value("x_pos", 100, type=int)
+        y_pos = self.qsettings.value("y_pos", 100, type=int)
+        self.qsettings.endGroup()
 
-        # Get the window settings
-        settings = self.window_settings
+        # Force normal state first
+        self.showNormal()
 
-        # Resize the window
-        self.setMinimumSize(512, 512)
-        width = int(settings["width"])
-        height = int(settings["height"])
+        # Set geometry
         self.resize(width, height)
-
-        # Move the window
-        x_pos = int(settings["x_pos"])
-        y_pos = int(settings["y_pos"])
         self.move(x_pos, y_pos)
+        self.setMinimumSize(512, 512)
 
-        # Show the window
-        if settings is not None and settings.get("is_maximized", False):
-            self.logger.info("Restoring window to maximized state")
+        # Now apply special states if needed
+        if is_maximized:
+            self.logger.info("Applying maximized state")
             self.showMaximized()
-        elif settings is not None and settings.get("is_fullscreen", False):
-            self.logger.info("Restoring window to fullscreen state")
+        elif is_fullscreen:
+            self.logger.info("Applying fullscreen state")
             self.showFullScreen()
         else:
-            self.logger.info("Restoring window to normal state")
-            self.showNormal()
+            self.logger.info("Window restored to normal state")
+
+        # Mark that state has been restored to prevent _initialize_window from overriding
+        self._state_restored = True
 
         # Raise the window to the top of the stack
         self.raise_()
@@ -1558,9 +1553,21 @@ class MainWindow(
         self.initialize_browser_controls()
 
         self.initialized = True
-        self.update_icons()
         self.logger.debug("Showing window")
         self._set_keyboard_shortcuts()
+
+    def move_to_second_screen(self):
+        print("x" * 100)
+        screens = QGuiApplication.screens()
+        if len(screens) > 1:
+            screen = screens[1]
+            screen_geometry = screen.availableGeometry()
+            self.move(screen_geometry.topLeft())
+            self.resize(screen_geometry.size())
+            self.setMinimumSize(512, 512)
+            max_width = max(screen_geometry.width(), self.minimumWidth())
+            max_height = max(screen_geometry.height(), self.minimumHeight())
+            self.setMaximumSize(max_width, max_height)
 
     def on_keyboard_shortcuts_updated(self):
         self._set_keyboard_shortcuts()
@@ -1631,6 +1638,21 @@ class MainWindow(
         self.ui.actionSafety_Checker.blockSignals(False)
 
     def _initialize_window(self):
+        # Don't override window geometry if it's already been restored
+        if hasattr(self, "_state_restored") and self._state_restored:
+            self.logger.debug(
+                "Skipping window initialization - state already restored"
+            )
+            self.setWindowIcon(
+                QIcon(
+                    os.path.join(
+                        self.path_settings.base_path, "images/icon.png"
+                    )
+                )
+            )
+            self.set_window_title()
+            return
+
         # self.center()
         screen = QGuiApplication.primaryScreen()  # Use primaryScreen
 

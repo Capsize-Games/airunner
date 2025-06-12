@@ -135,6 +135,43 @@ class BaseAgent(
             3: LLMActionType.GENERATE_IMAGE,
             4: LLMActionType.PERFORM_RAG_SEARCH,
             5: LLMActionType.APPLICATION_COMMAND,
+            6: LLMActionType.BROWSER,
+        }
+        self.tool_handlers = {
+            LLMActionType.CHAT: self.chat_tool_handler,
+            LLMActionType.DECISION: self.chat_tool_handler,
+            LLMActionType.PERFORM_RAG_SEARCH: self.rag_tool_handler,
+            LLMActionType.STORE_DATA: self.store_data_handler,
+            LLMActionType.APPLICATION_COMMAND: self.application_command_handler,
+            LLMActionType.GENERATE_IMAGE: self.generate_image_handler,
+            LLMActionType.BROWSER: self.use_browser_handler,
+            LLMActionType.SEARCH: self.search_tool_handler,
+        }
+        self.menu_choices = {
+            1: {
+                "action": LLMActionType.CHAT,
+                "description": "Respond to the user conversationally: Choose this when you have all the context you need to respond to the user's request in a conversational manner.",
+            },
+            2: {
+                "action": LLMActionType.SEARCH,
+                "description": "Search the internet: Choose this when you want to get more information from the web to better respond to the user's request.",
+            },
+            3: {
+                "action": LLMActionType.GENERATE_IMAGE,
+                "description": "Generate image: Use this if the user is asking for an image or visual content.",
+            },
+            4: {
+                "action": LLMActionType.PERFORM_RAG_SEARCH,
+                "description": "Use documents: Choose this when you want to search through documents or files to find relevant information to respond to the user's request.",
+            },
+            5: {
+                "action": LLMActionType.BROWSER,
+                "description": "Use the browser: Choose this when you want to open a webpage in a browser tab to gather information or perform actions on the web.",
+            },
+            6: {
+                "action": LLMActionType.APPLICATION_COMMAND,
+                "description": "Not sure what to do: Reason about the user's request and choose from a list of available tools in order to fulfill the request.",
+            },
         }
         self.prompt: Optional[str] = None
         self.webpage_html: str = ""
@@ -183,28 +220,6 @@ class BaseAgent(
             }
         )
         self.context_manager = ContextManager()
-        self.menu_choices = {
-            1: {
-                "action": LLMActionType.CHAT,
-                "description": "Respond to the user conversationally: Choose this when you have all the context you need to respond to the user's request in a conversational manner.",
-            },
-            2: {
-                "action": LLMActionType.SEARCH,
-                "description": "Browse / Search the internet: Choose this when you want to get more information from the web to better respond to the user's request.",
-            },
-            3: {
-                "action": LLMActionType.GENERATE_IMAGE,
-                "description": "Generate image: Use this if the user is asking for an image or visual content.",
-            },
-            4: {
-                "action": LLMActionType.PERFORM_RAG_SEARCH,
-                "description": "Use documents: Choose this when you want to search through documents or files to find relevant information to respond to the user's request.",
-            },
-            5: {
-                "action": LLMActionType.APPLICATION_COMMAND,
-                "description": "Not sure what to do: Reason about the user's request and choose from a list of available tools in order to fulfill the request.",
-            },
-        }
         super().__init__(*args, **kwargs)
 
     @property
@@ -1240,18 +1255,7 @@ class BaseAgent(
         Returns:
             Optional[Any]: The result of the tool call, if any.
         """
-        tool_handlers = {
-            LLMActionType.CHAT: self.chat_tool_handler,
-            LLMActionType.DECISION: self.chat_tool_handler,
-            LLMActionType.PERFORM_RAG_SEARCH: self.rag_tool_handler,
-            LLMActionType.STORE_DATA: self.store_data_handler,
-            LLMActionType.APPLICATION_COMMAND: self.application_command_handler,
-            LLMActionType.GENERATE_IMAGE: self.generate_image_handler,
-            LLMActionType.BROWSER: self.use_browser_handler,
-            LLMActionType.SEARCH: self.search_tool_handler,
-        }
-
-        handler = tool_handlers.get(action)
+        handler = self.tool_handlers.get(action)
         if handler is None:
             self.logger.warning(f"No handler found for action: {action}")
             return None
@@ -1260,15 +1264,14 @@ class BaseAgent(
         response = handler(**kwargs)
 
         if action is LLMActionType.DECISION:
-            index = int(response.content)
-            if index in self.menu_choices:
-                new_action = self.menu_choices[index]["action"]
-                self.action = new_action
-                handler = tool_handlers.get(new_action)
-                self.logger.info(
-                    f"Performing tool call for action: {new_action}"
-                )
-                response = handler(**kwargs)
+            print("perform tool call menu choices", response.content)
+            selection = self._parse_menu_selection(response.content)
+            print("selection", selection)
+            new_action = self.action_map[selection]
+            self.action = new_action
+            handler = self.tool_handlers.get(new_action)
+            self.logger.info(f"Performing tool call for action: {new_action}")
+            response = handler(**kwargs)
 
         self.logger.info(f"Tool call for action {action} completed.")
         return response
@@ -1450,6 +1453,14 @@ class BaseAgent(
         **kwargs: Any,
     ) -> AgentChatResponse:
         """Chat with the agent, handling slash commands and tool routing."""
+        print("CHAT CALLED")
+        print("message", message)
+        print("action", action)
+        print("system_prompt", system_prompt)
+        print("rag_system_prompt", rag_system_prompt)
+        print("llm_request", llm_request)
+        print("extra_context", extra_context)
+        self.action = action
         self.interrupt = False
         # Ensure logger is initialized
         if extra_context:
@@ -1480,8 +1491,8 @@ class BaseAgent(
                 message = stripped_message
             else:
                 message = stripped_message
-        self.action = action
         self._chat_prompt = message
+        print("self.system_prompt", self.system_prompt)
         self._complete_response = ""
         if action is LLMActionType.CHAT:
             self._complete_response = f"{self.botname}: "
@@ -1522,6 +1533,7 @@ class BaseAgent(
         return None
 
     def _handle_decision_response(self, response, is_last_message=False):
+        print("HANDLING DECISION RESPONSE")
         selection = self._parse_menu_selection(self._complete_response)
         if selection is not None or is_last_message:
             if selection is None:

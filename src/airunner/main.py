@@ -57,6 +57,19 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             airunner_src_path,
             "/tmp/",
             "/etc/",
+            os.path.join(os.path.expanduser("~"), "nltk_data/"),
+            os.path.join(
+                os.path.expanduser("~"), "nltk_data/corpora/stopwords/english"
+            ),
+            os.path.join(
+                os.path.expanduser("~"), "nltk_data/corpora/stopwords/"
+            ),
+            os.path.join(os.path.expanduser("~"), "nltk_data/corpora/"),
+            os.path.join(
+                os.path.expanduser("~"), "nltk_data/corpora/stopwords"
+            ),
+            os.path.join(os.path.expanduser("~"), "nltk_data"),
+            os.path.join(os.path.expanduser("~"), "nltk_data/corpora"),
         ],
         nullscream_whitelist=[
             "huggingface_hub.file_download",

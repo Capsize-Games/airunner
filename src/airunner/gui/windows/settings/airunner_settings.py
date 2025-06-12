@@ -1,3 +1,4 @@
+from typing import Dict
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import (
     QStandardItemModel,
@@ -15,7 +16,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
 )
 
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, TemplateName
 from airunner.gui.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.gui.widgets.export_preferences.export_preferences_widget import (
     ExportPreferencesWidget,
@@ -41,6 +42,9 @@ from airunner.gui.widgets.rag_settings.rag_settings_widget import (
 )
 from airunner.gui.widgets.openrouter_settings.openrouter_settings_widget import (
     OpenrouterSettingsWidget,
+)
+from airunner.gui.widgets.theme_settings.theme_settings_widget import (
+    ThemeSettingsWidget,
 )
 from airunner.gui.windows.settings.templates.airunner_settings_ui import (
     Ui_airunner_settings,
@@ -98,6 +102,10 @@ class SettingsWindow(BaseWindow):
         self.register(
             SignalCode.RETRANSLATE_UI_SIGNAL, self.on_retranslate_ui_signal
         )
+        self.register(
+            SignalCode.REFRESH_STYLESHEET_SIGNAL,
+            self.on_theme_changed_signal,
+        )
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -105,6 +113,13 @@ class SettingsWindow(BaseWindow):
 
     def on_retranslate_ui_signal(self):
         self.ui.retranslateUi(self)
+
+    def on_theme_changed_signal(self, data: Dict):
+        template = data.get("template", TemplateName.SYSTEM_DEFAULT)
+        self.set_stylesheet(
+            template=template,
+        )
+        self.icon_manager.set_icons()
 
     @staticmethod
     def available_widgets(name):
@@ -134,6 +149,8 @@ class SettingsWindow(BaseWindow):
             return RAGSettingsWidget
         elif name == "openrouter_settings":
             return OpenrouterSettingsWidget
+        elif name == "theme_settings":
+            return ThemeSettingsWidget
         elif name == "language_settings":
             return LanguageSettingsWidget
         # elif name == "stt_preferences":
@@ -213,16 +230,10 @@ class SettingsWindow(BaseWindow):
                 "section": "Miscellaneous Preferences",
                 "files": [
                     {
-                        "name": "dark_mode",
-                        "display_name": "Dark Mode",
-                        "checkable": True,
-                        "description": "If enabled, AI Runner will use a dark theme.",
-                    },
-                    {
-                        "name": "override_system_theme",
-                        "display_name": "Override System Theme",
-                        "checkable": True,
-                        "description": "If enabled, override the system theme with the selected theme.",
+                        "name": "theme_settings",
+                        "display_name": "Theme Settings",
+                        "checkable": False,
+                        "description": "Change the appearance of AI Runner.",
                     },
                     {
                         "name": "check_for_updates",
@@ -329,10 +340,6 @@ class SettingsWindow(BaseWindow):
                 checked = self.application_settings.resize_on_paste
             elif name == "image_to_new_layer":
                 checked = self.application_settings.image_to_new_layer is True
-            elif name == "dark_mode":
-                checked = self.application_settings.dark_mode_enabled
-            elif name == "override_system_theme":
-                checked = self.application_settings.override_system_theme
             elif name == "check_for_updates":
                 checked = self.application_settings.latest_version_check
             elif name == "enable_workflows":
@@ -380,14 +387,6 @@ class SettingsWindow(BaseWindow):
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("image_to_new_layer", checked)
-        elif name == "dark_mode":
-            checked = item.checkState() == Qt.CheckState.Checked
-            self.update_application_settings("dark_mode_enabled", checked)
-            self.api.refresh_stylesheet(dark_mode=checked)
-        elif name == "override_system_theme":
-            checked = item.checkState() == Qt.CheckState.Checked
-            self.update_application_settings("override_system_theme", checked)
-            self.api.refresh_stylesheet(override_system_theme=checked)
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
             self.update_application_settings("latest_version_check", checked)
