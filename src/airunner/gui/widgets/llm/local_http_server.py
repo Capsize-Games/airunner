@@ -123,18 +123,18 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         if rel_path_no_query.endswith(".jinja2.html"):
             for directory in self.directories:
                 normalized_rel_path = os.path.normpath(rel_path_no_query)
-                # Sanitize directory to prevent directory traversal
                 abs_directory = os.path.abspath(os.path.normpath(directory))
-                # Sanitize normalized_rel_path to prevent path traversal
+                # Reject absolute paths or any path with '..' after normalization
                 if (
                     os.path.isabs(normalized_rel_path)
                     or normalized_rel_path.startswith("..")
-                    or ".." in normalized_rel_path
+                    or ".." in normalized_rel_path.split(os.sep)
                 ):
                     logging.warning(
                         f"[SECURITY] Attempted directory traversal in template path: {normalized_rel_path}"
                     )
-                    continue
+                    self.send_error(403)
+                    return
                 abs_target = os.path.abspath(
                     os.path.join(abs_directory, normalized_rel_path)
                 )
@@ -143,9 +143,14 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                         os.path.commonpath([abs_directory, abs_target])
                         != abs_directory
                     ):
-                        continue
+                        logging.warning(
+                            f"[SECURITY] Attempted escape from base directory: {abs_target} not in {abs_directory}"
+                        )
+                        self.send_error(403)
+                        return
                 except ValueError:
-                    continue
+                    self.send_error(403)
+                    return
                 jinja2_path = abs_target
                 if os.path.exists(jinja2_path):
                     parsed_url = urllib.parse.urlparse(self.path)
