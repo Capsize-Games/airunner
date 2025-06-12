@@ -378,9 +378,10 @@ class LocalHttpServerThread(QThread):
         self._server = ReusableTCPServer(
             (LOCAL_SERVER_HOST, self.port), handler_class
         )
-        # --- HTTPS support ---
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        # Disable insecure TLS versions
+        context.options |= ssl.OP_NO_TLSv1
+        context.options |= ssl.OP_NO_TLSv1_1
         context.load_cert_chain(certfile=cert_file, keyfile=key_file)
         self._server.socket = context.wrap_socket(
             self._server.socket, server_side=True
