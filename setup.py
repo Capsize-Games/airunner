@@ -17,7 +17,7 @@ extras_require = {
     ],
     "gui": [  # GUI dependencies
         "PySide6==6.9.0",
-        "PySide6_Addons==6.9.0",
+        "PySide6_Addons==6.9.1",
         "PySide6_Essentials==6.9.0",
     ],
     "linux": [  # Linux-specific dependencies
