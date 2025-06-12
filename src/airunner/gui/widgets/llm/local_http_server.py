@@ -124,15 +124,15 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         if rel_path_no_query.endswith(".jinja2.html"):
             for directory in self.directories:
                 normalized_rel_path = os.path.normpath(rel_path_no_query)
-                abs_directory = os.path.abspath(directory)
+                # Sanitize directory to prevent directory traversal
+                abs_directory = os.path.abspath(os.path.normpath(directory))
+                # Sanitize normalized_rel_path to prevent path traversal
+                if os.path.isabs(normalized_rel_path) or normalized_rel_path.startswith("..") or ".." in normalized_rel_path:
+                    logging.warning(f"[SECURITY] Attempted directory traversal in template path: {normalized_rel_path}")
+                    continue
                 abs_target = os.path.abspath(
                     os.path.join(abs_directory, normalized_rel_path)
                 )
-                # Prevent directory traversal: reject paths with '..' after normalization
-                if normalized_rel_path.startswith("..") or os.path.isabs(
-                    normalized_rel_path
-                ):
-                    continue
                 try:
                     if (
                         os.path.commonpath([abs_directory, abs_target])
@@ -379,9 +379,13 @@ class LocalHttpServerThread(QThread):
             (LOCAL_SERVER_HOST, self.port), handler_class
         )
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        # Disable insecure TLS versions
-        context.options |= ssl.OP_NO_TLSv1
-        context.options |= ssl.OP_NO_TLSv1_1
+        # Enforce minimum TLS version 1.2 for security
+        if hasattr(context, "minimum_version"):
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
+        else:
+            # Fallback for older Python: explicitly disable TLSv1 and TLSv1_1
+            context.options |= getattr(ssl, "OP_NO_TLSv1", 0)
+            context.options |= getattr(ssl, "OP_NO_TLSv1_1", 0)
         context.load_cert_chain(certfile=cert_file, keyfile=key_file)
         self._server.socket = context.wrap_socket(
             self._server.socket, server_side=True
