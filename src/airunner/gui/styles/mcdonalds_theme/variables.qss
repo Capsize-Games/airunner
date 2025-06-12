@@ -1,0 +1,17 @@
+/* VARIABLES */
+@primary-color: #ffbc0d;              /* McDonald's Yellow */
+@darkprimary-color: #ffc300;          /* Slightly darker yellow */
+@darkerprimary-color: #ff8800;        /* Orange */
+@secondary-color: #da291c;            /* McDonald's Red */
+@darksecondary-color: #b21807;        /* Darker Red */
+@darkersecondary-color: #7c1105;      /* Even Darker Red */
+@success-color: #4cd964;              /* Bright green (success) */
+@danger-color: #ff2d55;               /* Pinkish red (danger) */
+@warning-color: #ffd60a;              /* Bright yellow (warning) */
+@info-color: #5ac8fa;                 /* Light blue (info) */
+@light-color: #fff9e6;                /* Light background (off-white) */
+@dim-color: #cccccc;                  /* Light gray (dim) */
+@dark-color: #222222;                 /* Dark gray (background) */
+@line-color-light: #ffe599;           /* Light yellow for lines */
+@line-color-dark: #b21807;            /* Dark red for lines */
+/* END_VARIABLES */

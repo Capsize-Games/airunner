@@ -1,0 +1,15 @@
+/* theme-light.css - auto-generated placeholder */
+body {
+    background: var(--dark-color);
+    color: var(--light-color);
+}
+.grid-item {
+    color: var(--light-color);
+    background: var(--dark-color);
+}
+#home-top, #home-bottom {
+    background: var(--dark-color);
+}
+.font-color, .text, .content, .main-content, .sidebar, .header, .footer {
+    color: var(--light-color);
+}

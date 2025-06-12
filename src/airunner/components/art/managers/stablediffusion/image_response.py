@@ -18,9 +18,9 @@ class ImageResponse:
     """
 
     images: Optional[List[Image]]
-    data: Dict[str, Any]
+    data: Optional[Dict[str, Any]]
     nsfw_content_detected: bool
-    active_rect: Rect
+    active_rect: Optional[Rect]
     is_outpaint: bool
     node_id: Optional[str] = None
 

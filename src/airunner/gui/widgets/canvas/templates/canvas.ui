@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1020</width>
+    <width>716</width>
     <height>570</height>
    </rect>
   </property>
@@ -144,7 +144,7 @@
              <number>0</number>
             </property>
             <property name="rightMargin">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="bottomMargin">
              <number>1</number>
@@ -522,6 +522,86 @@
               </property>
              </spacer>
             </item>
+            <item>
+             <widget class="SliderWidget" name="brush_size_slider" native="true">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Brush Size</string>
+              </property>
+              <property name="slider_minimum" stdset="0">
+               <number>1</number>
+              </property>
+              <property name="slider_maximum" stdset="0">
+               <number>100</number>
+              </property>
+              <property name="spinbox_minimum" stdset="0">
+               <number>1</number>
+              </property>
+              <property name="spinbox_maximum" stdset="0">
+               <number>100</number>
+              </property>
+              <property name="slider_tick_interval" stdset="0">
+               <number>1</number>
+              </property>
+              <property name="slider_single_step" stdset="0">
+               <number>1</number>
+              </property>
+              <property name="slider_page_step" stdset="0">
+               <number>10</number>
+              </property>
+              <property name="spinbox_single_step" stdset="0">
+               <number>1</number>
+              </property>
+              <property name="spinbox_page_step" stdset="0">
+               <number>10</number>
+              </property>
+              <property name="label_text" stdset="0">
+               <string/>
+              </property>
+              <property name="settings_property" stdset="0">
+               <string notr="true">brush_settings.size</string>
+              </property>
+              <property name="display_as_float" stdset="0">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="brush_color_button">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
+              <property name="toolTip">
+               <string>Brush Color</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>
@@ -647,6 +727,12 @@
    <class>StablediffusionToolTabWidget</class>
    <extends>QWidget</extends>
    <header>airunner/gui/widgets/stablediffusion/stablediffusion_tool_tab_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/gui/widgets/slider/slider_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

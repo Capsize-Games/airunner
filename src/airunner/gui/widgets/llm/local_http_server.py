@@ -4,7 +4,6 @@ import posixpath
 from http.server import SimpleHTTPRequestHandler
 from socketserver import ThreadingTCPServer
 from PySide6.QtCore import QThread
-from typing import List
 import jinja2
 import mimetypes
 import json
@@ -113,22 +112,33 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         else:
             rel_path = path.lstrip("/")
         # Directory traversal detection
-        if ".." in rel_path or rel_path.startswith("/"):
+        if (
+            ".." in rel_path.split(os.sep)
+            or rel_path.startswith("/")
+            or os.path.isabs(rel_path)
+        ):
             logging.warning(
                 f"[SECURITY] Directory traversal attempt: {self.path}"
             )
             self.send_error(403)
             return
         # Jinja2 template rendering
-        if rel_path.endswith(".jinja2.html"):
+        rel_path_no_query = rel_path.split("?", 1)[0]
+        if rel_path_no_query.endswith(".jinja2.html"):
             for directory in self.directories:
-                normalized_rel_path = os.path.normpath(rel_path)
-                # Prevent directory traversal: reject paths with '..' after normalization
-                if normalized_rel_path.startswith("..") or os.path.isabs(
-                    normalized_rel_path
+                normalized_rel_path = os.path.normpath(rel_path_no_query)
+                abs_directory = os.path.abspath(os.path.normpath(directory))
+                # Reject absolute paths or any path with '..' after normalization
+                if (
+                    os.path.isabs(normalized_rel_path)
+                    or normalized_rel_path.startswith("..")
+                    or ".." in normalized_rel_path.split(os.sep)
                 ):
-                    continue
-                abs_directory = os.path.abspath(directory)
+                    logging.warning(
+                        f"[SECURITY] Attempted directory traversal in template path: {normalized_rel_path}"
+                    )
+                    self.send_error(403)
+                    return
                 abs_target = os.path.abspath(
                     os.path.join(abs_directory, normalized_rel_path)
                 )
@@ -137,9 +147,14 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                         os.path.commonpath([abs_directory, abs_target])
                         != abs_directory
                     ):
-                        continue
+                        logging.warning(
+                            f"[SECURITY] Attempted escape from base directory: {abs_target} not in {abs_directory}"
+                        )
+                        self.send_error(403)
+                        return
                 except ValueError:
-                    continue
+                    self.send_error(403)
+                    return
                 jinja2_path = abs_target
                 if os.path.exists(jinja2_path):
                     parsed_url = urllib.parse.urlparse(self.path)
@@ -156,13 +171,16 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                         loader=loader,
                         autoescape=jinja2.select_autoescape(["html", "xml"]),
                     )
-                    template = env.get_template(rel_path)
+                    template = env.get_template(rel_path_no_query)
                     rendered = template.render(**context)
                     self.send_response(200)
                     self.send_header("Content-type", "text/html")
                     self.end_headers()
                     self.wfile.write(rendered.encode("utf-8"))
                     return
+            # If we reach here, template was not found in any directory
+            self.send_error(404)
+            return
         # Strict MIME type enforcement
         abs_path = self.translate_path(self.path)
         ext = os.path.splitext(abs_path)[1].lower()
@@ -223,22 +241,40 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         if (
             safe_path.startswith(os.sep)
             or safe_path.startswith("..")
-            or ".." in safe_path
+            or ".." in safe_path.split(os.sep)
+            or os.path.isabs(safe_path)
         ):
             logging.warning(
                 f"[SECURITY] Attempted directory traversal or absolute path: {path}"
             )
             return ""
+        # Prevent static serving of jinja2 templates
+        if safe_path.endswith(".jinja2.html"):
+            return ""
         # Use only safe, sanitized path
         for directory in self.directories:
-            potential_path = os.path.join(directory, safe_path)
-            abs_directory = os.path.abspath(directory)
+            abs_directory = os.path.abspath(os.path.normpath(directory))
+            # Normalize and sanitize safe_path
+            normalized_safe_path = os.path.normpath(safe_path)
+            if (
+                os.path.isabs(normalized_safe_path)
+                or normalized_safe_path.startswith("..")
+                or ".." in normalized_safe_path.split(os.sep)
+            ):
+                logging.warning(
+                    f"[SECURITY] Attempted directory traversal in static path: {normalized_safe_path}"
+                )
+                continue
+            potential_path = os.path.join(abs_directory, normalized_safe_path)
             abs_potential = os.path.abspath(potential_path)
             try:
                 if (
                     os.path.commonpath([abs_directory, abs_potential])
                     != abs_directory
                 ):
+                    logging.warning(
+                        f"[SECURITY] Attempted escape from base directory: {abs_potential} not in {abs_directory}"
+                    )
                     continue
             except ValueError:
                 continue
@@ -347,7 +383,14 @@ class LocalHttpServerThread(QThread):
                     "../../../components/chat/gui/static",
                 )
             ),
+            os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "../../../components/home_stage/gui/static",
+                )
+            ),
         ]
+        print("[DEBUG] static_dirs at server startup:", static_dirs)
         if self.additional_directories:
             static_dirs.extend(self.additional_directories)
         static_dirs = list(dict.fromkeys(static_dirs))
@@ -364,8 +407,22 @@ class LocalHttpServerThread(QThread):
         self._server = ReusableTCPServer(
             (LOCAL_SERVER_HOST, self.port), handler_class
         )
-        # --- HTTPS support ---
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        # Enforce minimum TLS version 1.2 for security
+        if hasattr(context, "minimum_version"):
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
+        else:
+            # Fallback for older Python: explicitly disable TLSv1 and TLSv1_1
+            context.options |= getattr(ssl, "OP_NO_TLSv1", 0)
+            context.options |= getattr(ssl, "OP_NO_TLSv1_1", 0)
+            # If neither minimum_version nor options are available, raise error
+            if not (
+                getattr(ssl, "OP_NO_TLSv1", None)
+                and getattr(ssl, "OP_NO_TLSv1_1", None)
+            ):
+                raise RuntimeError(
+                    "Python SSLContext does not support disabling TLSv1/TLSv1_1. Upgrade your Python/SSL."
+                )
         context.load_cert_chain(certfile=cert_file, keyfile=key_file)
         self._server.socket = context.wrap_socket(
             self._server.socket, server_side=True

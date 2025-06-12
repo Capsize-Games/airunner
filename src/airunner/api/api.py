@@ -12,6 +12,7 @@ from airunner.enums import (
     ModelStatus,
     ModelType,
     SignalCode,
+    TemplateName,
 )
 from airunner.setup_database import setup_database
 from airunner.utils.application.create_worker import create_worker
@@ -358,15 +359,12 @@ class API(App):
         )
 
     def refresh_stylesheet(
-        self,
-        dark_mode: Optional[bool] = None,
-        override_system_theme: Optional[bool] = None,
+        self, template: TemplateName = TemplateName.SYSTEM_DEFAULT
     ):
         self.emit_signal(
             SignalCode.REFRESH_STYLESHEET_SIGNAL,
             {
-                "dark_mode": dark_mode,
-                "override_system_theme": override_system_theme,
+                "template": template,
             },
         )
 

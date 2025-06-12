@@ -259,9 +259,16 @@ class SliderWidget(BaseWidget):
         self.display_as_float = display_as_float
         self.divide_by = divide_by
 
-        self.ui.groupBox.setTitle(label_text)
+        if label_text != "":
+            self.ui.groupBox.setTitle(label_text)
+            self.ui.groupBox.setStyleSheet("")  # Reset to default
+        else:
+            # Hide border and remove padding if label_text is empty
+            self.ui.groupBox.setTitle("")
+            self.ui.groupBox.setStyleSheet(
+                "QGroupBox { border: none; padding: 0px; margin-top: 0px; }"
+            )
 
-        # add the label to the ui
         self.set_slider_and_spinbox_values(current_value)
         if not self.display_as_float:
             self.ui.slider_spinbox.setDecimals(0)

@@ -15,30 +15,30 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit,
-    QSizePolicy, QWidget)
+from PySide6.QtWidgets import (QApplication, QLabel, QLineEdit, QSizePolicy,
+    QVBoxLayout, QWidget)
 
 class Ui_keyboard_shortcut_widget(object):
     def setupUi(self, keyboard_shortcut_widget):
         if not keyboard_shortcut_widget.objectName():
             keyboard_shortcut_widget.setObjectName(u"keyboard_shortcut_widget")
-        keyboard_shortcut_widget.resize(400, 43)
-        self.horizontalLayout = QHBoxLayout(keyboard_shortcut_widget)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        keyboard_shortcut_widget.resize(400, 60)
+        self.verticalLayout = QVBoxLayout(keyboard_shortcut_widget)
+        self.verticalLayout.setObjectName(u"verticalLayout")
         self.label = QLabel(keyboard_shortcut_widget)
         self.label.setObjectName(u"label")
         font = QFont()
         font.setPointSize(8)
         self.label.setFont(font)
 
-        self.horizontalLayout.addWidget(self.label)
+        self.verticalLayout.addWidget(self.label)
 
         self.line_edit = QLineEdit(keyboard_shortcut_widget)
         self.line_edit.setObjectName(u"line_edit")
         self.line_edit.setFont(font)
         self.line_edit.setReadOnly(True)
 
-        self.horizontalLayout.addWidget(self.line_edit)
+        self.verticalLayout.addWidget(self.line_edit)
 
 
         self.retranslateUi(keyboard_shortcut_widget)

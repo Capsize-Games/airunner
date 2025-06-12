@@ -1,5 +1,7 @@
 import os
 import time
+import hashlib
+import uuid
 from typing import List, Optional, Dict, Set
 from functools import lru_cache
 
@@ -54,6 +56,7 @@ class RAGMixin:
         self.__keyword_cache = {}
         self.__last_index_refresh = 0
         self.__preloaded = False
+        self._target_files: Optional[List[str]] = None
 
         if self.rag_mode_enabled:
             self._load_settings()
@@ -382,7 +385,7 @@ class RAGMixin:
             conversations = conversations[:-1]
         for conversation in conversations:
             conversation.status = status
-            conversation.save()
+            Conversation.objects.update(pk=conversation.id, status=status)
 
     @index.setter
     def index(self, value: Optional[RAKEKeywordTableIndex]):
@@ -396,23 +399,26 @@ class RAGMixin:
         return set(simple_extract_keywords(text))
 
     def _load_index_from_documents(self):
-        """Load index from documents with performance optimizations."""
-        self.logger.debug("Loading index from documents...")
+        self.logger.debug("[RAGMixin] Entered _load_index_from_documents")
         start_time = time.time()
         try:
-            # Get documents with error handling
             documents = []
             try:
+                self.logger.debug(
+                    "[RAGMixin] Attempting to retrieve self.documents"
+                )
                 documents = self.documents
                 self.logger.debug(
-                    f"Retrieved {len(documents)} documents for indexing"
+                    f"[RAGMixin] Retrieved {len(documents)} documents for indexing"
                 )
             except Exception as e:
                 self.logger.error(
-                    f"Error getting documents for indexing: {str(e)}"
+                    f"[RAGMixin] Error getting documents for indexing: {str(e)}"
                 )
-                # Try to get documents without conversation documents
                 try:
+                    self.logger.debug(
+                        "[RAGMixin] Attempting fallback document retrieval"
+                    )
                     documents = (
                         self.document_reader.load_data()
                         if self.document_reader
@@ -420,50 +426,78 @@ class RAGMixin:
                     )
                     documents += self.news_articles
                     self.logger.debug(
-                        f"Retrieved {len(documents)} documents without conversation documents"
+                        f"[RAGMixin] Retrieved {len(documents)} documents without conversation documents"
                     )
                 except Exception as e2:
                     self.logger.error(
-                        f"Error getting fallback documents: {str(e2)}"
+                        f"[RAGMixin] Error getting fallback documents: {str(e2)}"
                     )
                     documents = []
 
             if not documents:
-                self.logger.warning("No documents available for indexing")
+                self.logger.warning(
+                    "[RAGMixin] No documents available for indexing"
+                )
                 return
 
-            # Batch process documents for better performance
+            self.logger.debug(
+                f"[RAGMixin] Indexing {len(documents)} documents..."
+            )
             self.__index = RAKEKeywordTableIndex.from_documents(
                 documents,
                 llm=self.llm,
-                show_progress=True,  # Show progress for better visibility during lengthy operations
+                show_progress=True,
             )
             elapsed = time.time() - start_time
             self.logger.debug(
-                f"Index loaded successfully in {elapsed:.2f} seconds."
+                f"[RAGMixin] Index loaded successfully in {elapsed:.2f} seconds."
             )
         except TypeError as e:
-            self.logger.error(f"Error loading index: {str(e)}")
+            self.logger.error(f"[RAGMixin] Error loading index: {str(e)}")
         except Exception as e:
-            self.logger.error(f"Unexpected error loading index: {str(e)}")
+            self.logger.error(
+                f"[RAGMixin] Unexpected error loading index: {str(e)}"
+            )
 
-    def _save_index_to_disc(self):
-        """Save index to disc with performance logging."""
-        self.logger.info("Saving index to disc...")
+    def _get_index_dir_for_path(
+        self, document_path: str, index_uuid: str = None
+    ) -> str:
+        # Use a UUID for uniqueness, optionally provided
+        if not index_uuid:
+            # Deterministic UUID based on path for repeatability, or use uuid4 for random
+            index_uuid = str(uuid.uuid4())
+        return os.path.join(self.storage_persist_dir, index_uuid), index_uuid
+
+    def _save_index_to_disc(
+        self, document_path: str = None, index_uuid: str = None
+    ):
+        """Save index to a unique directory per document."""
+        if self.__index is None:
+            self.logger.warning("[RAGMixin] No index to save to disc.")
+            return None
+        if document_path is not None:
+            index_dir, index_uuid = self._get_index_dir_for_path(
+                document_path, index_uuid
+            )
+        else:
+            index_dir = self.storage_persist_dir
+            index_uuid = None
+        os.makedirs(index_dir, exist_ok=True)
+        self.logger.info(f"Saving index to disc at {index_dir} ...")
         start_time = time.time()
         try:
-            self.__index.storage_context.persist(
-                persist_dir=self.storage_persist_dir
-            )
+            self.__index.storage_context.persist(persist_dir=index_dir)
             elapsed = time.time() - start_time
             self.logger.info(
-                f"Index saved successfully in {elapsed:.2f} seconds."
+                f"Index saved successfully in {elapsed:.2f} seconds at {index_dir}."
             )
             if self.llm_settings.perform_conversation_rag:
                 self.logger.info("Setting conversations status to indexed...")
                 self._update_conversations_status("indexed")
+            return index_uuid
         except ValueError:
             self.logger.error("Error saving index to disc.")
+            return None
 
     @property
     def retriever(self) -> Optional[KeywordTableSimpleRetriever]:
@@ -597,9 +631,19 @@ class RAGMixin:
 
     @property
     def target_files(self) -> Optional[List[str]]:
+        if self._target_files is not None:
+            return self._target_files
         return [
             target_file.file_path for target_file in self.chatbot.target_files
         ]
+
+    @target_files.setter
+    def target_files(self, value: Optional[List[str]]):
+        """Set target files for the document reader."""
+        if value is None or len(value) == 0:
+            self._target_files = None
+        else:
+            self._target_files = value
 
     @property
     def conversations(self) -> List[Conversation]:
