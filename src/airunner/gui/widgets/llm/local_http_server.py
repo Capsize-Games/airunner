@@ -112,7 +112,11 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         else:
             rel_path = path.lstrip("/")
         # Directory traversal detection
-        if ".." in rel_path or rel_path.startswith("/"):
+        if (
+            ".." in rel_path.split(os.sep)
+            or rel_path.startswith("/")
+            or os.path.isabs(rel_path)
+        ):
             logging.warning(
                 f"[SECURITY] Directory traversal attempt: {self.path}"
             )
@@ -230,14 +234,15 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
 
         # Remove query and fragment
         safe_path = path.split("?", 1)[0]
-        safe_path = path.split("#", 1)[0]
+        safe_path = safe_path.split("#", 1)[0]
         safe_path = urllib.parse.unquote(safe_path, errors="surrogatepass")
         safe_path = posixpath.normpath(safe_path)
         # Prevent absolute paths and directory traversal
         if (
             safe_path.startswith(os.sep)
             or safe_path.startswith("..")
-            or ".." in safe_path
+            or ".." in safe_path.split(os.sep)
+            or os.path.isabs(safe_path)
         ):
             logging.warning(
                 f"[SECURITY] Attempted directory traversal or absolute path: {path}"
@@ -410,6 +415,14 @@ class LocalHttpServerThread(QThread):
             # Fallback for older Python: explicitly disable TLSv1 and TLSv1_1
             context.options |= getattr(ssl, "OP_NO_TLSv1", 0)
             context.options |= getattr(ssl, "OP_NO_TLSv1_1", 0)
+            # If neither minimum_version nor options are available, raise error
+            if not (
+                getattr(ssl, "OP_NO_TLSv1", None)
+                and getattr(ssl, "OP_NO_TLSv1_1", None)
+            ):
+                raise RuntimeError(
+                    "Python SSLContext does not support disabling TLSv1/TLSv1_1. Upgrade your Python/SSL."
+                )
         context.load_cert_chain(certfile=cert_file, keyfile=key_file)
         self._server.socket = context.wrap_socket(
             self._server.socket, server_side=True
