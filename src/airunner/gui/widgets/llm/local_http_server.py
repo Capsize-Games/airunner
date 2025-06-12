@@ -380,6 +380,7 @@ class LocalHttpServerThread(QThread):
         )
         # --- HTTPS support ---
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(certfile=cert_file, keyfile=key_file)
         self._server.socket = context.wrap_socket(
             self._server.socket, server_side=True
