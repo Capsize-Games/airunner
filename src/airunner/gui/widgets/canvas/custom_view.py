@@ -387,28 +387,29 @@ class CustomGraphicsView(
         screen_size = self.screen().availableGeometry().size()
         screen_width = screen_size.width() - 64
         screen_height = screen_size.height() - 160
+        x = (screen_width - width) / 2
+        y = (screen_height - height) / 2
         self.scene.setSceneRect(
-            (screen_width - width) / 2,
-            (screen_height - height) / 2,
+            x,
+            y,
             canvas_container_size.width(),
             canvas_container_size.height(),
         )
 
-        # # Store resize data
-        # self._resize_data = {
-        #     "new_size": self.viewport().size(),
-        #     "old_size": event.oldSize(),
-        # }
+        # Store resize data
+        self._resize_data = {
+            "new_size": self.viewport().size(),
+            "old_size": canvas_container_size,
+        }
 
-        # # Start or reset the throttling timer - wait for resize to finish
-        # if not self._resize_timer.isActive():
-        #     self._resize_timer.start(
-        #         150
-        #     )  # 150ms delay before processing resize
-        # else:
-        #     # Reset the timer if already running
-        #     self._resize_timer.stop()
-        #     self._resize_timer.start(150)
+        # Center the grid in the viewport with the active grid area's CENTER at the grid origin.
+        viewport_size = self.viewport().size()
+        viewport_center_x = viewport_size.width() / 2
+        viewport_center_y = viewport_size.height() / 2
+        self.canvas_offset = QPointF(-viewport_center_x, -viewport_center_y)
+        self.save_canvas_offset()
+        self.updateImagePositions()
+        self.do_draw(force_draw=True)
 
     def _handle_deferred_resize(self):
         """Start a background thread to handle resize operations"""
