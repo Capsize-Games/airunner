@@ -19,8 +19,6 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
     QGroupBox, QHBoxLayout, QLabel, QScrollArea,
     QSizePolicy, QSpacerItem, QToolButton, QWidget)
 
-from airunner.gui.widgets.slider.slider_widget import SliderWidget
-
 class Ui_brush_widget(object):
     def setupUi(self, brush_widget):
         if not brush_widget.objectName():
@@ -36,7 +34,7 @@ class Ui_brush_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 1002, 580))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 1002, 579))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
@@ -49,22 +47,6 @@ class Ui_brush_widget(object):
         self.horizontalLayout_2 = QHBoxLayout(self.widget_2)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, -1)
-        self.brush_size_slider = SliderWidget(self.widget_2)
-        self.brush_size_slider.setObjectName(u"brush_size_slider")
-        self.brush_size_slider.setProperty(u"slider_minimum", 1)
-        self.brush_size_slider.setProperty(u"slider_maximum", 100)
-        self.brush_size_slider.setProperty(u"spinbox_minimum", 1)
-        self.brush_size_slider.setProperty(u"spinbox_maximum", 100)
-        self.brush_size_slider.setProperty(u"slider_tick_interval", 1)
-        self.brush_size_slider.setProperty(u"slider_single_step", 1)
-        self.brush_size_slider.setProperty(u"slider_page_step", 10)
-        self.brush_size_slider.setProperty(u"spinbox_single_step", 1)
-        self.brush_size_slider.setProperty(u"spinbox_page_step", 10)
-        self.brush_size_slider.setProperty(u"settings_property", u"brush_settings.size")
-        self.brush_size_slider.setProperty(u"display_as_float", False)
-
-        self.horizontalLayout_2.addWidget(self.brush_size_slider)
-
 
         self.gridLayout.addWidget(self.widget_2, 0, 0, 1, 1)
 
@@ -137,7 +119,6 @@ class Ui_brush_widget(object):
 
     def retranslateUi(self, brush_widget):
         brush_widget.setWindowTitle(QCoreApplication.translate("brush_widget", u"Form", None))
-        self.brush_size_slider.setProperty(u"label_text", QCoreApplication.translate("brush_widget", u"Brush Size", None))
         self.toggle_auto_generate_while_drawing.setText(QCoreApplication.translate("brush_widget", u"Auto-generate while drawing", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("brush_widget", u"Brush color", None))
         self.primary_color_button.setText("")

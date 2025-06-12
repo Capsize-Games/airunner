@@ -18,7 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QSplitter,
     QTabWidget, QWidget)
 
-from airunner.components.document_editor.gui.widgets.file_explorer_widget import FileExplorerWidget
+from airunner.components.file_explorer.gui.widgets.file_explorer_widget import FileExplorerWidget
 
 class Ui_document_editor_container(object):
     def setupUi(self, document_editor_container):
@@ -27,6 +27,7 @@ class Ui_document_editor_container(object):
         document_editor_container.resize(400, 300)
         self.gridLayout_2 = QGridLayout(document_editor_container)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.splitter = QSplitter(document_editor_container)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Orientation.Horizontal)

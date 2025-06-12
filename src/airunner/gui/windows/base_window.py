@@ -1,10 +1,14 @@
+import os
+from typing import Dict
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, TemplateName
+from airunner.gui.managers.icon_manager import IconManager
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.utils.settings import get_qsettings
 
 
 class BaseWindow(
@@ -19,16 +23,22 @@ class BaseWindow(
     is_modal: bool = False  # allow the window to be treated as a modal
     title: str = "Base Window"
     prevent_always_on_top: bool = False
+    icons = []
 
     def __init__(self, prevent_always_on_top: bool = False, **kwargs):
         self.prevent_always_on_top = prevent_always_on_top
         self.signal_handlers.update(
             {
                 SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
+                SignalCode.REFRESH_STYLESHEET_SIGNAL: self.on_theme_changed_signal,
             }
         )
         super().__init__()
         self.do_exec = kwargs.get("exec", True)
+        self.icon_manager = IconManager(
+            icons=self.icons,
+            ui=self,
+        )
 
         self.set_stylesheet()
 
@@ -42,6 +52,12 @@ class BaseWindow(
         self.initialize_window()
         if self.do_exec:
             self.exec()
+
+    def on_theme_changed_signal(self, data: Dict):
+        template = data.get("template", TemplateName.SYSTEM_DEFAULT)
+        self.set_stylesheet(
+            template=template,
+        )
 
     def initialize_window(self):
         """

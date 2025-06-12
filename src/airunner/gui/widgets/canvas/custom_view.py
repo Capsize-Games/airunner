@@ -380,22 +380,35 @@ class CustomGraphicsView(
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        size: QSize = event.size()
+        width = size.width()
+        height = size.height()
+        canvas_container_size = self.viewport().size()
+        screen_size = self.screen().availableGeometry().size()
+        screen_width = screen_size.width() - 64
+        screen_height = screen_size.height() - 160
+        self.scene.setSceneRect(
+            (screen_width - width) / 2,
+            (screen_height - height) / 2,
+            canvas_container_size.width(),
+            canvas_container_size.height(),
+        )
 
-        # Store resize data
-        self._resize_data = {
-            "new_size": self.viewport().size(),
-            "old_size": event.oldSize(),
-        }
+        # # Store resize data
+        # self._resize_data = {
+        #     "new_size": self.viewport().size(),
+        #     "old_size": event.oldSize(),
+        # }
 
-        # Start or reset the throttling timer - wait for resize to finish
-        if not self._resize_timer.isActive():
-            self._resize_timer.start(
-                150
-            )  # 150ms delay before processing resize
-        else:
-            # Reset the timer if already running
-            self._resize_timer.stop()
-            self._resize_timer.start(150)
+        # # Start or reset the throttling timer - wait for resize to finish
+        # if not self._resize_timer.isActive():
+        #     self._resize_timer.start(
+        #         150
+        #     )  # 150ms delay before processing resize
+        # else:
+        #     # Reset the timer if already running
+        #     self._resize_timer.stop()
+        #     self._resize_timer.start(150)
 
     def _handle_deferred_resize(self):
         """Start a background thread to handle resize operations"""
@@ -574,21 +587,20 @@ class CustomGraphicsView(
 
     def showEvent(self, event):
         super().showEvent(event)
-        # Load offset first
-        self.load_canvas_offset()
-
-        # Set up the scene (grid, etc.)
-        self.do_draw(True)
-        self.toggle_drag_mode()
-        self.set_canvas_color(self.scene)
-
-        # Show the active grid area using loaded offset
-        self.show_active_grid_area()
-        self.scene.initialize_image()
-        self.updateImagePositions()
-        self._restore_text_items_from_db()  # Restore text items on load
-
         if not self._initialized:
+            # Load offset first
+            self.load_canvas_offset()
+
+            # Set up the scene (grid, etc.)
+            self.do_draw(True)
+            self.toggle_drag_mode()
+            self.set_canvas_color(self.scene)
+
+            # Show the active grid area using loaded offset
+            self.show_active_grid_area()
+            self.scene.initialize_image()
+            self.updateImagePositions()
+            self._restore_text_items_from_db()  # Restore text items on load
             self._initialized = True
 
     def set_canvas_color(

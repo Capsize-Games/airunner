@@ -1,0 +1,17 @@
+/* VARIABLES */
+@primary-color: #00fff7;              /* Neon cyan */
+@darkprimary-color: #00bfae;          /* Dimmed neon cyan */
+@darkerprimary-color: #005e5a;        /* Even darker cyan */
+@secondary-color: #ff00ea;            /* Neon magenta */
+@darksecondary-color: #a800a8;        /* Dimmed magenta */
+@darkersecondary-color: #640046;      /* Deep purple */
+@success-color: #39ff14;              /* Neon green */
+@danger-color: #ff1744;               /* Neon red/pink */
+@warning-color: #ffe600;              /* Neon yellow */
+@info-color: #00baff;                 /* Neon blue */
+@light-color: #f8f8ff;                /* Very light, almost white */
+@dim-color: #6c6c6c;                  /* Dim gray */
+@dark-color: #0a0a1a;                 /* Deep blue-black */
+@line-color-light: #23233a;           /* Muted blue-gray */
+@line-color-dark: #181824;            /* Very dark blue-gray */
+/* END_VARIABLES */

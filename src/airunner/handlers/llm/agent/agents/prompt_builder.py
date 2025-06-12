@@ -178,6 +178,36 @@ class PromptBuilder:
         return prompt_str
 
     @classmethod
+    def browser_system_prompt(cls, agent) -> str:
+        """
+        Return the system prompt for the agent in browser mode.
+        Args:
+            agent (BaseAgent): The agent instance for which to build the prompt.
+        Returns:
+            str: The system prompt.
+        """
+        # Call _build with all relevant flags for a full browser prompt
+        return cls(agent)._build(
+            include_user_bot_intro=False,
+            include_rules=False,
+            include_backstory=False,
+            include_system_instructions=False,
+            include_guardrails=False,
+            include_context_header=False,
+            include_date_time=False,
+            include_personality=False,
+            include_mood=False,
+            include_operating_system=False,
+            include_speakers=False,
+            include_weather=False,
+            include_conversation_summary=False,
+            include_conversation_info_header=False,
+            include_conversation_timestamp=False,
+            include_browser_content=True,
+            include_language_instruction=False,  # Browser mode doesn't need this
+        )
+
+    @classmethod
     def chat_system_prompt(cls, agent) -> str:
         """
         Return the system prompt for the agent in chat mode.
@@ -243,7 +273,6 @@ class PromptBuilder:
             "You are an expert AI assistant. Your task is to analyze the user's request and, using only logic and context from the chat history, select the single best tool from a numbered menu to fulfill the request. "
             "Ignore mood and personality. Respond ONLY with the number of the tool that is the best choice.\n"
             "Here is the list of tools available:\n" + menu_text + "\n\n"
-            "Relevant context from the conversation:\n" + base_prompt
         )
 
     @classmethod
@@ -266,6 +295,8 @@ class PromptBuilder:
             return cls.chat_system_prompt(agent)
         elif action is LLMActionType.SEARCH:
             return cls.chat_system_prompt(agent)
+        elif action is LLMActionType.BROWSER:
+            return cls.browser_system_prompt(agent)
         else:
             raise ValueError(
                 f"Unsupported action type for system prompt: {action}"

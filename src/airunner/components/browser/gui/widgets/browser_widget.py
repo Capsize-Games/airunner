@@ -56,6 +56,20 @@ class BrowserWidget(
     urlChanged = Signal(str, str)  # url, title
     faviconChanged = Signal(QIcon)
     widget_class_ = Ui_browser
+    icons = [
+        ("star", "bookmark_page_button"),
+        ("eye-off", "private_browse_button"),
+        ("chevron-up", "submit_button"),
+        ("refresh-cw", "refresh_button"),
+        ("arrow-left-circle", "back_button"),
+        ("arrow-right-circle", "next_button"),
+        ("bookmark", "bookmark_button"),
+        ("clock", "history_button"),
+        ("align-justify", "plaintext_button"),
+        ("list", "summarize_button"),
+        ("trash-2", "clear_data_button"),
+        ("dice-game-icon", "random_button"),
+    ]
 
     def __init__(self, *args, private: bool = False, **kwargs):
         self._favicon = None

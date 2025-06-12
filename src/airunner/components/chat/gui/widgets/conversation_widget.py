@@ -4,11 +4,11 @@ from PySide6.QtCore import QTimer, Slot, Qt
 from PySide6.QtWidgets import QApplication
 from PySide6.QtWebChannel import QWebChannel
 
-from airunner.conversations.conversation_history_manager import (
+from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
 from airunner.data.models import Conversation
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, TemplateName
 from airunner.gui.widgets.llm.contentwidgets.chat_bridge import ChatBridge
 from airunner.gui.widgets.llm.loading_widget import LoadingWidget
 from airunner.components.chat.gui.widgets.templates.conversation_ui import (
@@ -18,6 +18,7 @@ import logging
 
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.utils.llm import strip_names_from_message
+from airunner.utils.settings import get_qsettings
 from airunner.utils.text.formatter_extended import FormatterExtended
 
 logger = logging.getLogger(__name__)
@@ -91,6 +92,20 @@ class ConversationWidget(BaseWidget):
     def conversation_id(self, val: Optional[int]):
         self._conversation_id = val
 
+    @property
+    def web_engine_view(self) -> Optional[object]:
+        return self.ui.stage
+
+    @property
+    def template(self) -> Optional[str]:
+        return "conversation.jinja2.html"
+
+    @property
+    def template_context(self) -> Dict:
+        context = super().template_context
+        context["messages"] = []
+        return context
+
     def on_delete_conversation(self, data):
         if self.conversation_id == data["conversation_id"]:
             self._clear_conversation_widgets()
@@ -99,14 +114,6 @@ class ConversationWidget(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         if not self.registered:
-            self.logger.debug("Rendering conversation template in showEvent")
-            try:
-                self.render_template(
-                    self.ui.stage, "conversation.jinja2.html", messages=[]
-                )
-                self.logger.debug("Template rendered successfully.")
-            except Exception as e:
-                self.logger.error(f"Failed to render template: {e}")
             self.registered = True
             self.logger.debug(
                 f"showEvent: self._conversation_id before load: {self._conversation_id}"
@@ -567,3 +574,17 @@ class ConversationWidget(BaseWidget):
         Conversation.objects.update(pk=conversation.id, value=new_messages)
         self._conversation.value = new_messages
         self.set_conversation_widgets(new_messages)
+
+    def on_theme_changed_signal(self, data: Dict):
+        """
+        Set the theme for the home widget by updating the CSS in the webEngineView.
+        This will call the setTheme JS function in the loaded HTML.
+        """
+        if hasattr(self.ui, "stage"):
+            theme_name = data.get(
+                "template", TemplateName.SYSTEM_DEFAULT
+            ).value.lower()
+            # Set window.currentTheme before calling setTheme
+            js = f"window.currentTheme = '{theme_name}'; window.setTheme && window.setTheme('{theme_name}');"
+            self.ui.stage.page().runJavaScript(js)
+        super().on_theme_changed_signal(data)

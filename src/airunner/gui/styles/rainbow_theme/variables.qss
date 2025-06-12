@@ -1,0 +1,17 @@
+/* VARIABLES */
+@primary-color: #7c3aed;              /* Purple (primary) */
+@darkprimary-color: #5b21b6;          /* Deep purple (dark primary) */
+@darkerprimary-color: #312e81;        /* Indigo (darker primary) */
+@secondary-color: #22d3ee;            /* Cyan (secondary) */
+@darksecondary-color: #0ea5e9;        /* Blue (dark secondary) */
+@darkersecondary-color: #06b6d4;      /* Teal (darker secondary) */
+@success-color: #10b981;              /* Emerald green (success) */
+@danger-color: #ef4444;               /* Red (danger) */
+@warning-color: #f59e42;              /* Orange (warning) */
+@info-color: #38bdf8;                 /* Sky blue (info) */
+@light-color: #ffffff;                /* White (light) */
+@dim-color: #334155;                  /* Dim blue-gray */
+@dark-color: #0f172a;                 /* Almost black (background) */
+@line-color-light: #334155;           /* Dim blue-gray (lines) */
+@line-color-dark: #64748b;            /* Medium blue-gray (lines) */
+/* END_VARIABLES */

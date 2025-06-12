@@ -1,0 +1,117 @@
+name: airunner
+base: core22
+version: '1.0.0'
+summary: AI-powered document runner
+description: |
+  Airunner is an AI-powered document runner and browser with modular plugin support.
+
+grade: stable
+confinement: strict
+
+apps:
+  airunner:
+    command: bin/airunner-launch
+    plugs:
+      - home           # Access to user's home directory (remove if not needed)
+      - network        # Enable if your app needs network access
+      - x11            # For X11 GUI support
+      - wayland        # For Wayland GUI support
+      - desktop        # For desktop integration
+      - desktop-legacy # For legacy desktop integration
+      - unity7         # For Unity7 desktop support
+      - gsettings      # For GNOME settings
+      - opengl         # For OpenGL rendering (if needed)
+      - removable-media # If you want to allow access to USB drives, etc. (optional)
+
+parts:
+  airunner:
+    plugin: python
+    source: .
+    python-packages:
+      - PySide6
+      - setuptools
+      # Add all your other dependencies here, e.g.:
+      # - numpy
+      # - requests
+      # - any other packages required by airunner
+    stage-packages:
+      - libglib2.0-0
+      - libnss3
+      - libxkbcommon0
+      - libxcomposite1
+      - libxcursor1
+      - libxdamage1
+      - libxrandr2
+      - libxss1
+      - libxtst6
+      - libxrender1
+      - libxi6
+      - libsm6
+      - libice6
+      - libfontconfig1
+      - libfreetype6
+      - libxext6
+      - libxfixes3
+      - libx11-6
+      - libxcb1
+      - libxau6
+      - libxdmcp6
+      - libdbus-1-3
+      - libatk1.0-0
+      - libgtk-3-0
+      - libgdk-pixbuf2.0-0
+      - libpango-1.0-0
+      - libpangocairo-1.0-0
+      - libatk-bridge2.0-0
+      - libepoxy0
+      - libwayland-client0
+      - libwayland-cursor0
+      - libwayland-egl1
+      - libegl1
+      - libdrm2
+      - libgbm1
+      - libasound2
+      - libpulse0
+      - libsndfile1
+      - libvorbis0a
+      - libvorbisenc2
+      - libogg0
+      - libflac8
+      - libexpat1
+      - zlib1g
+      # Add any other system libraries your app needs
+
+    override-build: |
+      snapcraftctl build
+      # Create a launcher script to set up environment variables if needed
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cat > $SNAPCRAFT_PART_INSTALL/bin/airunner-launch <<EOF
+      #!/bin/sh
+      export QT_QPA_PLATFORM=xcb
+      exec python3 $SNAP/src/airunner/main.py "\$@"
+      EOF
+      chmod +x $SNAPCRAFT_PART_INSTALL/bin/airunner-launch
+
+    build-packages:
+      - python3-dev
+      - python3-pip
+      - build-essential
+      - qtbase5-dev
+      - qtbase5-dev-tools
+      - qttools5-dev-tools
+      - qttools5-dev
+      - libgl1-mesa-dev
+      - libpulse-dev
+      # Add any other build dependencies
+
+layout:
+  /usr/share/fonts:
+    bind: $SNAP/usr/share/fonts
+  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/qt5:
+    bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/qt5
+
+environment:
+  QT_QPA_PLATFORM: xcb
+  QT_PLUGIN_PATH: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/qt5/plugins
+  XDG_DATA_DIRS: $SNAP/usr/share:$XDG_DATA_DIRS
+  XDG_CONFIG_HOME: $SNAP_USER_DATA/.config

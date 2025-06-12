@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Runner Home</title>
+    <link rel="stylesheet" href="../css/home.css">
+    <link id="theme-vars" rel="stylesheet" href="../css/variables-{{ theme }}.css">
+    <link id="theme-style" rel="stylesheet" href="../css/theme-{{ theme }}.css">
+    <meta name="airunner-theme" content="{{ theme }}">
+</head>
+<body>
+    <div id="home-top">
+        <header>
+            <h1>AI Runner</h1>
+            <p class="intro">Welcome to AI Runner! Your workspace for AI-powered productivity and creativity.</p>
+        </header>
+    </div>
+    <div id="home-middle">
+        <div class="grid-container">
+            <div class="grid-item">Section 1</div>
+            <div class="grid-item">Section 2</div>
+            <div class="grid-item">Section 3</div>
+            <div class="grid-item">Section 4</div>
+        </div>
+    </div>
+    <div id="home-bottom">
+        <div class="content-footer">
+            <span>AI Runner v{{ version }}</span>
+        </div>
+    </div>
+    <script src="../js/home.js"></script>
+    <script>
+    // Theme switching logic for webEngineView
+    function setTheme(theme) {
+        document.getElementById('theme-vars').href = `../css/variables-${theme}.css`;
+        document.getElementById('theme-style').href = `../css/theme-${theme}.css`;
+        window.currentTheme = theme;
+    }
+    window.setTheme = setTheme;
+    document.addEventListener('DOMContentLoaded', function () {
+        let theme = document.querySelector('meta[name="airunner-theme"]')?.content || window.currentTheme || 'light';
+        setTheme(theme);
+        console.log('AI Runner Home loaded, theme:', theme);
+    });
+    </script>
+</body>
+</html>

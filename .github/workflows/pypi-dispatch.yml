@@ -5,6 +5,10 @@ on:
     types: [ published ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   DOCKER_IMAGE: ghcr.io/capsize-games/airunner/airunner:linux_build_runtime
   CR_PAT: ${{ secrets.CR_PAT }}
