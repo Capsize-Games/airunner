@@ -158,7 +158,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="4.12.0",
+    version="5.0.0",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -217,6 +217,7 @@ setup(
             "airunner-generate-migration=airunner.bin.generate_migration:main",
             "airunner-generate-cert=airunner.bin.generate_cert:main",
             "airunner-mypy=airunner.bin.mypy_shortcut:main",
+            "airunner-create-theme=airunner.bin.airunner_create_theme:main",
         ],
     },
 )

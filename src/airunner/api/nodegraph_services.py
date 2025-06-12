@@ -1,7 +1,7 @@
 from airunner.api.api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 from airunner.data.models.workflow import Workflow
-from airunner.gui.widgets.nodegraph.custom_node_graph import CustomNodeGraph
+from airunner.components.nodegraph.gui.widgets.custom_node_graph import CustomNodeGraph
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
 import sys
 

@@ -8,3 +8,5 @@ class Document(BaseModel):
     id = Column(Integer, primary_key=True, autoincrement=True)
     path = Column(String, nullable=False, unique=True)
     active = Column(Boolean, default=True)
+    indexed = Column(Boolean, default=False)
+    index_uuid = Column(String, nullable=True, unique=True)

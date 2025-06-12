@@ -7,7 +7,8 @@ from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QTimer
 from urllib.parse import urlencode
-from airunner.enums import CanvasToolName
+from airunner.enums import CanvasToolName, TemplateName
+from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.settings import CONTENT_WIDGETS_BASE_PATH, LOCAL_SERVER_PORT
 from airunner.utils.application.mediator_mixin import MediatorMixin
@@ -26,7 +27,12 @@ class BaseABCMeta(type(QWidget), ABCMeta):
 
 
 class AbstractBaseWidget(
-    MediatorMixin, SettingsMixin, QWidget, ABC, metaclass=BaseABCMeta
+    MediatorMixin,
+    SettingsMixin,
+    StylesMixin,
+    QWidget,
+    ABC,
+    metaclass=BaseABCMeta,
 ):
     @abstractmethod
     def save_state(self):
@@ -60,6 +66,7 @@ class BaseWidget(AbstractBaseWidget):
             {
                 SignalCode.QUIT_APPLICATION: self.handle_close,
                 SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
+                SignalCode.REFRESH_STYLESHEET_SIGNAL: self.on_theme_changed_signal,
             }
         )
         self.settings = get_qsettings()
@@ -71,12 +78,66 @@ class BaseWidget(AbstractBaseWidget):
         if self.ui:
             self.ui.setupUi(self)
             self.icon_manager = IconManager(self.icons, self.ui)
-            self.set_icons()
+            self.icon_manager.set_icons()
 
         self.services: Dict = {}
         self.worker_class_map: Dict = {}
         self.initialize_ui()
         self._setup_splitters()
+        self.render_template()
+
+    @property
+    def web_engine_view(self) -> Optional[object]:
+        """
+        Set this to the QWebEngineView instance in your widget if you want to render templates.
+        """
+        return None
+
+    @property
+    def template(self) -> Optional[str]:
+        """
+        Override this property to return the name of the Jinja2 template to render.
+        The template should be located in the static HTML directory.
+        """
+        return None
+
+    @property
+    def template_context(self) -> Dict:
+        settings = get_qsettings()
+        theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
+        return {
+            "theme": theme.lower().replace(" ", "_"),
+        }
+
+    def render_template(self):
+        if not self.web_engine_view or not self.template:
+            return
+        settings = get_qsettings()
+        theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
+        theme_name = theme.lower().replace(" ", "_")
+        try:
+            # Pass theme variable to Jinja2 template for correct CSS links
+            self._render_template(
+                self.web_engine_view,
+                self.template,
+                **self.template_context,
+            )
+            # Also set window.currentTheme for JS
+            js = f"window.currentTheme = '{theme_name}';"
+            self.web_engine_view.page().runJavaScript(js)
+        except Exception as e:
+            if hasattr(self, "logger"):
+                self.logger.error(
+                    f"Failed to render template {self.template}: {e}"
+                )
+            else:
+                print(f"Failed to render template {self.template}: {e}")
+
+    def on_theme_changed_signal(self, data: Dict):
+        template = data.get("template", TemplateName.SYSTEM_DEFAULT)
+        self.set_stylesheet(
+            template=template,
+        )
 
     @property
     def static_html_dir(self) -> str:
@@ -174,15 +235,6 @@ class BaseWidget(AbstractBaseWidget):
         if self.ui:
             self.ui.retranslateUi(self)
 
-    def set_icons(self):
-        """
-        Set the icons for the widget which alternate between
-        light and dark mode.
-        """
-        theme = "dark" if self.is_dark else "light"
-        self.icon_manager.update_icons(theme)
-        self.update()
-
     def set_button_icon(self, is_dark, button_name, icon):
         try:
             getattr(self, button_name).setIcon(
@@ -275,7 +327,7 @@ class BaseWidget(AbstractBaseWidget):
     def _save_splitter_state(self):
         save_splitter_settings(self.ui, self.splitters)
 
-    def render_template(self, element, template_name: str, **kwargs):
+    def _render_template(self, element, template_name: str, **kwargs):
         """
         Load a Jinja2 template from the local HTTP server, passing kwargs as query parameters for server-side rendering.
         """

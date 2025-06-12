@@ -204,6 +204,8 @@ class CustomScene(
 
     @current_active_image.setter
     def current_active_image(self, image: Image):
+        if image is not None and not isinstance(image, Image.Image):
+            return
         if image is not None:
             image = convert_image_to_binary(image)
         self._update_current_settings("image", image)
@@ -227,14 +229,10 @@ class CustomScene(
     def on_export_image_signal(self):
         image = self.current_active_image
         if image:
-            # Set the parent window to the main application window
             parent_window = self.views()[0].window()
-
-            # Use the last export path if available
             initial_dir = (
                 self.last_export_path if self.last_export_path else ""
             )
-
             file_dialog = QFileDialog(
                 parent_window,
                 "Save Image",
@@ -246,14 +244,9 @@ class CustomScene(
                 file_path = file_dialog.selectedFiles()[0]
                 if file_path == "":
                     return
-
-                # Update the last export path
                 self.last_export_path = os.path.dirname(file_path)
-
-                # If missing file extension, add it
                 if not file_path.endswith(AIRUNNER_VALID_IMAGE_FILES):
                     file_path = f"{file_path}.png"
-
                 export_image(image, file_path)
 
     def on_import_image_signal(self):
@@ -278,13 +271,12 @@ class CustomScene(
         image = self._paste_image_from_clipboard()
         if image is None:
             return
+        if not isinstance(image, Image.Image):
+            return
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
-        if type(image) is not bytes:
-            binary_image = convert_image_to_binary(image)
-        self.current_active_image = binary_image
-        if type(image) is not bytes:
-            self.refresh_image(image)
+        self.current_active_image = image
+        self.refresh_image(image)
 
     def on_load_image_from_path(self, message):
         image_path = message["image_path"]
@@ -334,7 +326,7 @@ class CustomScene(
             self._handle_image_generated_signal(data)
         else:
             if self.settings_key == "drawing_pad_settings":
-                self.logger.error(f"Unhandled response code: {code}")
+                pass
 
         if self.settings_key == "drawing_pad_settings":
             self.api.art.stop_progress_bar()
@@ -344,11 +336,10 @@ class CustomScene(
     def _handle_image_generated_signal(self, data: Dict):
         image_response: Optional[ImageResponse] = data.get("message", None)
         if image_response is None:
-            self.logger.error("No message received from engine")
             return
         images = image_response.images
         if len(images) == 0:
-            self.logger.debug("No images received from engine")
+            pass
         elif image_response and not getattr(image_response, "node_id", None):
             outpaint_box_rect = image_response.active_rect
             self._create_image(
@@ -395,7 +386,6 @@ class CustomScene(
         table = data["setting_name"]
         column_name = data["column_name"]
         value = data["value"]
-        # if table == "controlnet_settings" and column_name == "generated_image":
 
     def on_canvas_copy_image_signal(self):
         self._copy_image(self.current_active_image)
@@ -457,7 +447,6 @@ class CustomScene(
         for url in event.mimeData().urls():
             path = url.toLocalFile()
             if path:
-                # Use the API to import the image from the dropped path
                 if (
                     hasattr(self, "api")
                     and hasattr(self.api, "art")
@@ -470,7 +459,6 @@ class CustomScene(
         if not hasattr(event, "delta"):
             return
 
-        # Check if the Ctrl key is pressed
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             zoom_in_factor = self.grid_settings.zoom_in_step
             zoom_out_factor = -self.grid_settings.zoom_out_step
@@ -480,7 +468,6 @@ class CustomScene(
             else:
                 zoom_factor = zoom_out_factor
 
-            # Update zoom level
             zoom_level = self.grid_settings.zoom_level
             zoom_level += zoom_factor
             if zoom_level < 0.1:
@@ -531,9 +518,7 @@ class CustomScene(
             view.setTransformationAnchor(view.ViewportAnchor.NoAnchor)
             view.setResizeAnchor(view.ViewportAnchor.NoAnchor)
             delta = event.scenePos() - self.last_pos
-            scale_factor = (
-                view.transform().m11()
-            )  # Get the current scale factor
+            scale_factor = view.transform().m11()
             view.translate(delta.x() / scale_factor, delta.y() / scale_factor)
             self.last_pos = event.scenePos()
         else:
@@ -549,17 +534,14 @@ class CustomScene(
         self._handle_cursor(event, False)
 
     def refresh_image(self, image: Image = None):
-        # Save the current viewport position
         view = self.views()[0]
         current_viewport_rect = view.mapToScene(
             view.viewport().rect()
         ).boundingRect()
 
-        # End the painter if it is active
         if self.painter and self.painter.isActive():
             self.painter.end()
 
-        # Update the pixmap item, image+painter and scene
         try:
             item_scene = self.item.scene()
         except AttributeError:
@@ -567,12 +549,9 @@ class CustomScene(
         if item_scene is not None:
             item_scene.removeItem(self.item)
         self.initialize_image(image)
-        # Restore the viewport position
-
         view.setSceneRect(current_viewport_rect)
 
     def delete_image(self):
-        self.logger.debug("Deleting image from canvas")
         item_scene = self.item.scene()
         if item_scene is not None:
             item_scene.removeItem(self.item)
@@ -595,7 +574,7 @@ class CustomScene(
                     "RGBA"
                 )
             except AttributeError:
-                self.logger.warning("Failed to convert base64 to image")
+                pil_image = None
             except PIL.UnidentifiedImageError:
                 pil_image = None
 
@@ -604,7 +583,7 @@ class CustomScene(
                 img = ImageQt.ImageQt(pil_image)
             except AttributeError as _e:
                 img = None
-            except IsADirectoryError:
+            except IsADirectoryError as _e:
                 img = None
             self.image = img
         else:
@@ -621,8 +600,7 @@ class CustomScene(
         z_index: int = 5,
         x: Optional[int] = None,
         y: Optional[int] = None,
-    ):  # Change default z_index to 5
-        # Instead of fixed scene rect, use extended viewport
+    ):
         self.setSceneRect(self._extended_viewport_rect)
 
         if image is not None:
@@ -641,7 +619,6 @@ class CustomScene(
                 self.item.updateImage(image)
             self.item.setZValue(z_index)
 
-            # Ensure item is visible and prepare its geometry
             self.item.setVisible(True)
 
     def clear_selection(self):
@@ -652,7 +629,6 @@ class CustomScene(
         self.selection_stop_pos = None
 
     def initialize_image(self, image: Image = None, generated: bool = False):
-        """Initialize the image in the scene."""
         self.stop_painter()
         self.set_image(image)
 
@@ -671,6 +647,11 @@ class CustomScene(
 
         self.set_item(self.image, x=x, y=y)
         self.set_painter(self.image)
+        self.update()
+        for view in self.views():
+            view.viewport().update()
+            view.update()
+        self.update_image_position(self.get_canvas_offset())
 
     def stop_painter(self):
         if self.painter is not None and self.painter.isActive():
@@ -682,9 +663,7 @@ class CustomScene(
         try:
             self.painter = QPainter(image)
         except TypeError as _e:
-            self.logger.error(
-                "Failed to initialize painter in initialize_image"
-            )
+            pass
 
     def _update_current_settings(self, key, value):
         if self.settings_key == "controlnet_settings":
@@ -700,27 +679,29 @@ class CustomScene(
         self._add_image_to_scene(is_outpaint=is_outpaint, image=image)
 
     def _paste_image_from_clipboard(self):
-        self.logger.debug("paste image from clipboard")
         image = self._get_image_from_clipboard()
 
         if not image:
-            self.logger.debug("No image in clipboard")
             return
         return image
 
     def _get_image_from_clipboard(self):
-        self.logger.debug("image_from_system_clipboard_linux")
+        try:
+            clipboard = QApplication.clipboard()
+            qt_image = clipboard.image()
+            if not qt_image.isNull():
+                pil_image = ImageQt.fromqimage(qt_image)
+                if isinstance(pil_image, Image.Image):
+                    return pil_image
+        except Exception:
+            pass
         try:
             image = ImageGrab.grabclipboard()
-            if not image:
-                self.logger.debug("No image in clipboard")
-                return None
-            # with transparency
-            image = image.convert("RGBA")
-            return image
-        except Exception as e:
-            self.logger.error(f"Failed to get image from clipboard: {e}")
-            return None
+            if isinstance(image, Image.Image):
+                return image
+        except Exception:
+            pass
+        return None
 
     def _copy_image(self, image: Image) -> Image:
         return self._move_pixmap_to_clipboard(image)
@@ -728,11 +709,10 @@ class CustomScene(
     def _move_pixmap_to_clipboard(self, image: Image) -> Image:
         if image is None:
             return None
+        if not isinstance(image, Image.Image):
+            return None
         data = io.BytesIO()
-
-        # Save PIL Image to BytesIO
         image.save(data, format="png")
-
         data = data.getvalue()
         try:
             subprocess.Popen(
@@ -740,9 +720,7 @@ class CustomScene(
                 stdin=subprocess.PIPE,
             ).communicate(data)
         except FileNotFoundError:
-            self.logger.error(
-                "xclip not found. Please install xclip to copy image to clipboard."
-            )
+            pass
         return image
 
     def _create_image(
@@ -762,7 +740,6 @@ class CustomScene(
             generated=generated,
         )
 
-        # Emit signal to notify the view to update image positions
         self.api.art.canvas.image_updated()
 
     def _resize_image(self, image: Image) -> Image:
@@ -783,21 +760,11 @@ class CustomScene(
         outpaint_box_rect: Optional[Rect] = None,
         generated: bool = False,
     ):
-        """
-        Adds a given image to the scene
-        :param image: Image object to add to the scene
-        :param is_outpaint: bool indicating if the image is an outpaint
-        :param outpaint_box_rect: Rect indicating the root point of the image
-        :return:
-        """
         if image is None:
-            self.logger.warning("Image is None, unable to add to scene")
             return
 
-        # Get the current canvas offset from the view
         canvas_offset = self.get_canvas_offset()
 
-        # Check for existing stored position in drawing_pad_settings
         settings_x = self.drawing_pad_settings.x_pos
         settings_y = self.drawing_pad_settings.y_pos
 
@@ -815,21 +782,16 @@ class CustomScene(
 
         q_image = ImageQt.ImageQt(image)
 
-        # Use updateImage method instead of setPixmap
         if self.item:
             self.item.updateImage(q_image)
             self.item.setZValue(0)
         else:
-            # If there's no item yet, create one first
             self.set_item(q_image, z_index=5)
 
-        # Always update the stored absolute position in the scene
         if self.item:
-            # Store the absolute position without any adjustments
             absolute_pos = QPointF(root_point.x(), root_point.y())
             self.original_item_positions[self.item] = absolute_pos
 
-            # Calculate display position by subtracting current canvas offset
             visible_pos_x = absolute_pos.x() - canvas_offset.x()
             visible_pos_y = absolute_pos.y() - canvas_offset.y()
             self.item.setPos(visible_pos_x, visible_pos_y)
@@ -845,7 +807,6 @@ class CustomScene(
             point = QPoint(outpaint_box_rect.x, outpaint_box_rect.y)
             return outpainted_image, QPoint(0, 0), point
 
-        # make a copy of the current canvas image
         existing_image_copy = self.current_active_image.copy()
         width = existing_image_copy.width
         height = existing_image_copy.height
@@ -898,12 +859,9 @@ class CustomScene(
             (current_image_position.x(), current_image_position.y()),
         )
 
-        # Convert mask to binary mask
         mask_image = self.drawing_pad_mask
         mask = mask_image.convert("L").point(lambda p: p > 128 and 255)
         inverted_mask = Image.eval(mask, lambda p: 255 - p)
-        # create a new mask with new_dimensions which is all white and
-        # paste the inverted mask into it.
         pos_x = outpaint_box_rect.x
         pos_y = outpaint_box_rect.y
         if pos_x < 0:
@@ -922,7 +880,6 @@ class CustomScene(
         return new_image, image_root_point, image_pivot_point
 
     def _set_current_active_image(self, image: Image):
-        self.logger.debug("Setting current active image")
         self.initialize_image(image)
 
     def _rotate_90_clockwise(self):
@@ -974,37 +931,23 @@ class CustomScene(
         try:
             self.start_pos = event.scenePos()
         except AttributeError:
-            self.logger.error("Failed to get scenePos from left click event")
+            pass
 
     def _handle_left_mouse_release(self, event):
         pass
 
     def _handle_cursor(self, event, apply_cursor: bool = True):
-        # Track the last cursor state to avoid redundant calls
         if hasattr(self, "_last_cursor_state"):
-            # Add position to the tracked state to debounce cursor updates during small movements
             current_state = (event.type(), apply_cursor)
-
-            # Only process if the event type or apply_cursor changed
-            # This significantly reduces cursor update processing
             if self._last_cursor_state == current_state:
                 return
-
-        # Update the tracked state
         self._last_cursor_state = (event.type(), apply_cursor)
-
-        # Instead of creating a complex message object, let's modify the event if needed
-        # This ensures compatibility with the API expecting (event, apply_cursor)
         evt = event
-
-        # If this is an enter/leave event that doesn't have .button() method,
-        # we need to create a simplified event object that works with the cursor logic
         if not hasattr(event, "button"):
-            # Create a simple object with the necessary properties
+
             class SimpleEvent:
                 def __init__(self, original_event):
                     self.type_value = original_event.type()
-                    # Add properties that _update_cursor will check
                     self.button_value = None
                     self.buttons_value = Qt.MouseButton.NoButton
 
@@ -1017,11 +960,7 @@ class CustomScene(
                 def buttons(self):
                     return self.buttons_value
 
-            # Create our simplified event
             evt = SimpleEvent(event)
-
-        # Call the API with the expected parameters
-        # Defensive check: ensure API is available (may be None in test environments)
         if self.api and hasattr(self.api, "art") and self.api.art:
             self.api.art.canvas.update_cursor(evt, apply_cursor)
 
@@ -1059,52 +998,36 @@ class CustomScene(
         return filtered_image
 
     def update_image_position(self, canvas_offset):
-        """Update the position of image items in the scene based on the canvas offset."""
         if not self.item:
             return
-
-        # Store the original position if we haven't already
         if self.item not in self.original_item_positions:
-            # Use the drawing_pad_settings values for position
             abs_x = self.drawing_pad_settings.x_pos
             abs_y = self.drawing_pad_settings.y_pos
 
             if abs_x is None or abs_y is None:
-                # Default to current position if settings aren't available
-                abs_x = self.item.pos().x() + canvas_offset.x()
-                abs_y = self.item.pos().y() + canvas_offset.y()
+                abs_x = self.item.pos().x()
+                abs_y = self.item.pos().y()
 
             self.original_item_positions[self.item] = QPointF(abs_x, abs_y)
 
-        # Get the original absolute position
         original_pos = self.original_item_positions[self.item]
 
-        # Calculate new position based on current canvas_offset
         new_x = original_pos.x() - canvas_offset.x()
         new_y = original_pos.y() - canvas_offset.y()
 
-        # Only update position if it has significantly changed to avoid constant redraws
         current_pos = self.item.pos()
         if (
             abs(current_pos.x() - new_x) > 1
             or abs(current_pos.y() - new_y) > 1
         ):
-            # Before changing position, prepare the item for geometry change
             self.item.prepareGeometryChange()
             self.item.setPos(new_x, new_y)
-
-            # Make sure the item is visible and in focus
             self.item.setVisible(True)
-
-            # Only update the specific area affected by the item
             rect = self.item.boundingRect().adjusted(-10, -10, 10, 10)
             scene_rect = self.item.mapRectToScene(rect)
             self.update(scene_rect)
 
-        # Avoid full scene invalidation - this is expensive during resize operations
-
     def get_canvas_offset(self):
-        """Get the current canvas offset from the parent view if available."""
         if self.views() and hasattr(self.views()[0], "canvas_offset"):
             return self.views()[0].canvas_offset
         return QPointF(0, 0)

@@ -1,2 +1,2 @@
 variables.qss
-main.qss
+../master.qss
