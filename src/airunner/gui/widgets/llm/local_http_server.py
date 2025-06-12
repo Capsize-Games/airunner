@@ -248,14 +248,28 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             return ""
         # Use only safe, sanitized path
         for directory in self.directories:
-            potential_path = os.path.join(directory, safe_path)
-            abs_directory = os.path.abspath(directory)
+            abs_directory = os.path.abspath(os.path.normpath(directory))
+            # Normalize and sanitize safe_path
+            normalized_safe_path = os.path.normpath(safe_path)
+            if (
+                os.path.isabs(normalized_safe_path)
+                or normalized_safe_path.startswith("..")
+                or ".." in normalized_safe_path.split(os.sep)
+            ):
+                logging.warning(
+                    f"[SECURITY] Attempted directory traversal in static path: {normalized_safe_path}"
+                )
+                continue
+            potential_path = os.path.join(abs_directory, normalized_safe_path)
             abs_potential = os.path.abspath(potential_path)
             try:
                 if (
                     os.path.commonpath([abs_directory, abs_potential])
                     != abs_directory
                 ):
+                    logging.warning(
+                        f"[SECURITY] Attempted escape from base directory: {abs_potential} not in {abs_directory}"
+                    )
                     continue
             except ValueError:
                 continue
