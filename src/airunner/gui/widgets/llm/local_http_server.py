@@ -4,7 +4,6 @@ import posixpath
 from http.server import SimpleHTTPRequestHandler
 from socketserver import ThreadingTCPServer
 from PySide6.QtCore import QThread
-from typing import List
 import jinja2
 import mimetypes
 import json
@@ -127,8 +126,14 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                 # Sanitize directory to prevent directory traversal
                 abs_directory = os.path.abspath(os.path.normpath(directory))
                 # Sanitize normalized_rel_path to prevent path traversal
-                if os.path.isabs(normalized_rel_path) or normalized_rel_path.startswith("..") or ".." in normalized_rel_path:
-                    logging.warning(f"[SECURITY] Attempted directory traversal in template path: {normalized_rel_path}")
+                if (
+                    os.path.isabs(normalized_rel_path)
+                    or normalized_rel_path.startswith("..")
+                    or ".." in normalized_rel_path
+                ):
+                    logging.warning(
+                        f"[SECURITY] Attempted directory traversal in template path: {normalized_rel_path}"
+                    )
                     continue
                 abs_target = os.path.abspath(
                     os.path.join(abs_directory, normalized_rel_path)
