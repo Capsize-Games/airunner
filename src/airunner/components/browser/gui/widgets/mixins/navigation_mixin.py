@@ -8,7 +8,6 @@ Google Python Style Guide applies.
 import re
 import os
 import hashlib
-import jinja2
 from PySide6.QtCore import QUrl, Slot
 from airunner.enums import SignalCode
 from airunner.settings import STATIC_BASE_PATH
@@ -23,61 +22,17 @@ class NavigationMixin:
             return
         original_url = url
         if url.startswith("local:"):
-            self.logger.info("Loading local file")
+            self.logger.info("Redirecting to local HTTP server for '%s'", url)
             local_name = url[len("local:") :].strip()
             if not local_name:
                 self.logger.warning(
                     "No local file specified after 'local:' scheme."
                 )
                 return
-            user_web_dir = os.path.expanduser(
-                os.path.join(self.path_settings.base_path, "web")
-            )
-            candidates = [
-                os.path.join(user_web_dir, "html", f"{local_name}.html"),
-                os.path.join(
-                    user_web_dir, "html", f"{local_name}.jinja2.html"
-                ),
-            ]
-            for file_path in candidates:
-                if os.path.exists(file_path):
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        html = f.read()
-                    base_href = None
-                    if file_path.endswith(".jinja2.html"):
-                        # Set base_href for <base> tag if using HTTP(S) static path
-                        if STATIC_BASE_PATH.startswith("http"):
-                            base_href = STATIC_BASE_PATH + "/static/html/"
-                        else:
-                            base_href = (
-                                QUrl.fromLocalFile(
-                                    os.path.dirname(file_path)
-                                ).toString()
-                                + "/"
-                            )
-                        template = jinja2.Template(html)
-                        html = template.render(
-                            static_base_path=STATIC_BASE_PATH,
-                            base_href=base_href,
-                        )
-                    # Set baseUrl for setHtml to help resolve relative resources
-                    if STATIC_BASE_PATH.startswith("http"):
-                        base_url = QUrl(STATIC_BASE_PATH + "/static/html/")
-                    else:
-                        base_url = QUrl.fromLocalFile(
-                            os.path.dirname(file_path)
-                        )
-                    self.ui.stage.setHtml(html, base_url)
-                    self.ui.url.setText(f"local:{local_name}")
-                    self._page_cache["html"] = html
-                    self._page_cache["url"] = f"local:{local_name}"
-                    self._page_cache["plaintext"] = None
-                    self._page_cache["summary"] = None
-                    return
-            self.logger.warning("Local file not found")
-            self.ui.url.setStyleSheet(
-                "QLineEdit { background: #331111; color: #ff9999; }"
-            )
+            # Redirect to the HTTP server
+            http_url = f"https://127.0.0.1:5005/{local_name}"
+            self.ui.stage.setUrl(QUrl(http_url))
+            self.ui.url.setText(http_url)
             return
         if not url.startswith("http://") and not url.startswith("https://"):
             url = f"https://{url}"

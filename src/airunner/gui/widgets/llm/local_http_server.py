@@ -3,7 +3,7 @@ import urllib.parse
 import posixpath
 from http.server import SimpleHTTPRequestHandler
 from socketserver import ThreadingTCPServer
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QThread, QFileSystemWatcher, QTimer
 import jinja2
 import mimetypes
 import json
@@ -92,6 +92,19 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("X-XSS-Protection", "1; mode=block")
+
+        # Add no-cache headers if flag is set
+        if (
+            hasattr(self, "_add_no_cache_headers")
+            and self._add_no_cache_headers
+        ):
+            self.send_header(
+                "Cache-Control", "no-cache, no-store, must-revalidate"
+            )
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+            self._add_no_cache_headers = False
+
         super().end_headers()
 
     def send_error(self, code, message=None, explain=None):
@@ -107,6 +120,131 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path
+        # --- BEGIN: Custom logic for /game -> game/html/index.jinja2.html or index.html ---
+        rel_path = path.lstrip("/")
+        rel_path_no_query = rel_path.split("?", 1)[0]
+        # If the path is a single segment (e.g. /game), try to serve game/html/index.jinja2.html or index.html
+        if (
+            rel_path_no_query
+            and "/" not in rel_path_no_query
+            and "." not in rel_path_no_query
+        ):
+            for directory in self.directories:
+                # Try Jinja2 template first
+                jinja2_index = os.path.join(
+                    directory, rel_path_no_query, "html", "index.jinja2.html"
+                )
+                if os.path.exists(jinja2_index):
+                    loader = jinja2.FileSystemLoader(self.directories)
+                    env = jinja2.Environment(
+                        loader=loader,
+                        autoescape=jinja2.select_autoescape(["html", "xml"]),
+                    )
+                    # Relative path for Jinja2 loader
+                    template_rel = os.path.relpath(jinja2_index, directory)
+                    template = env.get_template(template_rel)
+                    rendered = template.render()
+                    self.send_response(200)
+                    self.send_header("Content-type", "text/html")
+                    # Add cache-control headers to ensure fresh content on reload
+                    self.send_header(
+                        "Cache-Control", "no-cache, no-store, must-revalidate"
+                    )
+                    self.send_header("Pragma", "no-cache")
+                    self.send_header("Expires", "0")
+                    self.end_headers()
+                    self.wfile.write(rendered.encode("utf-8"))
+                    return
+                # Try static HTML fallback
+                html_index = os.path.join(
+                    directory, rel_path_no_query, "html", "index.html"
+                )
+                if os.path.exists(html_index):
+                    with open(html_index, "rb") as f:
+                        self.send_response(200)
+                        self.send_header("Content-type", "text/html")
+                        # Add cache-control headers to ensure fresh content on reload
+                        self.send_header(
+                            "Cache-Control",
+                            "no-cache, no-store, must-revalidate",
+                        )
+                        self.send_header("Pragma", "no-cache")
+                        self.send_header("Expires", "0")
+                        self.end_headers()
+                        self.wfile.write(f.read())
+                    return
+        # --- END: Custom logic ---        # --- BEGIN: Static files for project directories (e.g. /game/css/game.css) ---
+        rel_path = path.lstrip("/")
+        rel_path_no_query = rel_path.split("?", 1)[0]
+
+        # Check if this is a static file within a project directory (e.g. game/css/file.css, game/js/file.js)
+        path_parts = rel_path_no_query.split("/")
+        if len(path_parts) >= 3:  # e.g. ["game", "css", "file.css"]
+            project_name = path_parts[0]
+            static_type = path_parts[1]  # "css", "js", "images", etc.
+            if static_type in [
+                "css",
+                "js",
+                "images",
+                "img",
+                "fonts",
+                "static",
+            ]:
+                # Look for the file in project_name/static_type/filename
+                for directory in self.directories:
+                    static_file_path = os.path.join(directory, *path_parts)
+                    if os.path.exists(static_file_path):
+                        # Security check: ensure the file is within the allowed directory
+                        abs_directory = os.path.abspath(directory)
+                        abs_file_path = os.path.abspath(static_file_path)
+                        try:
+                            if (
+                                os.path.commonpath(
+                                    [abs_directory, abs_file_path]
+                                )
+                                != abs_directory
+                            ):
+                                logging.warning(
+                                    f"[SECURITY] Attempted escape from base directory: {abs_file_path} not in {abs_directory}"
+                                )
+                                self.send_error(403)
+                                return
+                        except ValueError:
+                            self.send_error(403)
+                            return
+
+                        # Check MIME type
+                        mime, _ = mimetypes.guess_type(static_file_path)
+                        if not mime or not mime.startswith(
+                            self.ALLOWED_MIME_PREFIXES
+                        ):
+                            logging.warning(
+                                f"[SECURITY] Refused to serve file with MIME type: {mime} ({static_file_path})"
+                            )
+                            self.send_error(403)
+                            return
+
+                        # Serve the file directly
+                        try:
+                            with open(static_file_path, "rb") as f:
+                                self.send_response(200)
+                                self.send_header("Content-type", mime)
+                                # Add no-cache headers for CSS files to ensure fresh content on reload
+                                if static_file_path.endswith(".css"):
+                                    self.send_header(
+                                        "Cache-Control",
+                                        "no-cache, no-store, must-revalidate",
+                                    )
+                                    self.send_header("Pragma", "no-cache")
+                                    self.send_header("Expires", "0")
+                                self.end_headers()
+                                self.wfile.write(f.read())
+                                return
+                        except IOError:
+                            self.send_error(404)
+                            return
+        # --- END: Static files for project directories ---
+
         if path.startswith("/static/"):
             rel_path = path[len("/static/") :]
         else:
@@ -175,6 +313,12 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                     rendered = template.render(**context)
                     self.send_response(200)
                     self.send_header("Content-type", "text/html")
+                    # Add cache-control headers to ensure fresh content on reload
+                    self.send_header(
+                        "Cache-Control", "no-cache, no-store, must-revalidate"
+                    )
+                    self.send_header("Pragma", "no-cache")
+                    self.send_header("Expires", "0")
                     self.end_headers()
                     self.wfile.write(rendered.encode("utf-8"))
                     return
@@ -197,6 +341,12 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             )
             self.send_error(403)
             return
+
+        # Add no-cache headers for CSS files to ensure fresh content on reload
+        if abs_path.endswith(".css"):
+            # We'll add the headers in the parent class call, but we need to set a flag
+            self._add_no_cache_headers = True
+
         return super().do_GET()
 
     def do_HEAD(self):
