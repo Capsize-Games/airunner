@@ -38,41 +38,44 @@ from airunner.components.browser.gui.widgets.mixins.ui_setup_mixin import (
 from airunner.components.browser.utils import normalize_url
 
 
-class GameHandler(QObject):
-    """Handles communication between JavaScript and the browser widget for game commands."""
+class BrowserWidgetHandler(QObject):
+    """Handles communication between JavaScript and the browser widget for generic widget commands."""
 
-    gameCommandReceived = Signal(str)
+    widgetCommandReceived = Signal(str)
 
     def __init__(self, browser_widget):
         super().__init__()
         self.browser_widget = browser_widget
 
     @Slot(str)
-    def handleGameCommand(self, command_json):
-        """Handle commands from JavaScript (supports both game_command and widget_command types)."""
+    def handleCommand(self, command_json):
+        """Handle commands from JavaScript (generic widget communication)."""
         try:
             command_data = json.loads(command_json)
             command = command_data.get("command", "")
             data = command_data.get("data", {})
             message_type = command_data.get(
-                "type", "game_command"
-            )  # Default to game_command for backward compatibility
+                "type", "widget_command"
+            )  # Use generic widget_command as default
 
-            print(f"Command received: {command} (type: {message_type})")
+            print(f"Widget command received: {command} (type: {message_type})")
 
-            if command == "new_game":
-                print("NEW GAME")  # The requested print statement
-                self.browser_widget.handle_new_game(data)
-            else:
-                print(f"Unknown command: {command}")
-
-            # Emit signal for other components
+            # Emit signal for other components to handle specific commands
             self.browser_widget.emit_signal(
-                SignalCode.GAME_COMMAND_SIGNAL,
+                SignalCode.WIDGET_COMMAND_SIGNAL,
                 {"command": command, "data": data, "type": message_type},
             )
+
+            # Send generic response back to JavaScript
+            self.browser_widget._send_response(
+                "command_received",
+                f"Command '{command}' processed successfully",
+            )
         except Exception as e:
-            print(f"Error handling command: {e}")
+            print(f"Error handling widget command: {e}")
+            self.browser_widget._send_response(
+                "command_error", f"Error processing command: {str(e)}"
+            )
 
 
 class BrowserWidget(
@@ -123,55 +126,50 @@ class BrowserWidget(
         }
         super().__init__(*args, **kwargs)
         self._setup_ui()
-        self._setup_game_communication()
+        self._setup_widget_communication()
         self.ui.stage.loadFinished.connect(self._on_page_load_finished)
 
-    def _setup_game_communication(self):
+    def _setup_widget_communication(self):
         """Set up WebChannel for JavaScript-Python communication."""
         try:
-            # Create game handler
-            self.game_handler = GameHandler(self)
+            # Create widget handler
+            self.widget_handler = BrowserWidgetHandler(self)
 
             # Create WebChannel
             self.channel = QWebChannel()
-            self.channel.registerObject("gameHandler", self.game_handler)
+            # Register the widget handler
+            self.channel.registerObject("widgetHandler", self.widget_handler)
 
             # Set WebChannel on the page
             self.ui.stage.page().setWebChannel(self.channel)
 
-            print("Game communication channel established")
+            print("Widget communication channel established")
         except Exception as e:
-            print(f"Error setting up game communication: {e}")
-
-    def handle_new_game(self, data):
-        """Handle new game command from JavaScript."""
-        print("Handling new game request...")
-        # Here you can add more game initialization logic
-        # For now, we'll just log the event
-
-        # Send response back to JavaScript
-        self._send_response(
-            "new_game_started", "New game initialized successfully!"
-        )
+            print(f"Error setting up widget communication: {e}")
 
     def _send_response(self, response_type, message):
         """Send a response back to JavaScript (generic response format)."""
         try:
+            # Properly escape the values using JSON
+            response_data = {
+                "type": "widget_response",
+                "response_type": response_type,
+                "message": message,
+                "timestamp": "Date.now()",  # This will be handled specially
+            }
+
+            # Create safe JavaScript code with proper JSON escaping
             script = f"""
             window.postMessage({{
-                type: 'widget_response',
-                response_type: '{response_type}',
-                message: '{message}',
+                type: {json.dumps(response_data["type"])},
+                response_type: {json.dumps(response_data["response_type"])},
+                message: {json.dumps(response_data["message"])},
                 timestamp: Date.now()
             }}, '*');
             """
             self.ui.stage.page().runJavaScript(script)
         except Exception as e:
             print(f"Error sending response: {e}")
-
-    def _send_game_response(self, response_type, message):
-        """Legacy method for backward compatibility."""
-        self._send_response(response_type, message)
 
     @Slot(bool)
     def _on_page_load_finished(self, success: bool):
