@@ -85,9 +85,6 @@ from airunner.gui.windows.update.update_window import UpdateWindow
 from airunner.gui.managers.icon_manager import IconManager
 from airunner.components.plugins.plugin_loader import PluginLoader
 
-from airunner.components.chat.gui.widgets.conversation_widget import (
-    ConversationWidget,
-)
 
 
 class MainWindow(
