@@ -45,8 +45,8 @@ class BrowserAPI {
     _initializeWebChannel() {
         if (typeof qt !== 'undefined' && qt.webChannelTransport && typeof QWebChannel !== 'undefined') {
             new QWebChannel(qt.webChannelTransport, (channel) => {
-                // Look for any available handler (gameHandler, widgetHandler, etc.)
-                this.handler = channel.objects.gameHandler || channel.objects.widgetHandler || channel.objects.handler;
+                // Look for widget handler
+                this.handler = channel.objects.widgetHandler || channel.objects.handler;
                 this.isInitialized = true;
                 console.log('BrowserAPI: WebChannel initialized, handler available');
 
@@ -106,17 +106,15 @@ class BrowserAPI {
         // Try WebChannel first
         if (this.handler) {
             try {
-                // Try different method names that might be available
-                if (this.handler.handleGameCommand) {
-                    this.handler.handleGameCommand(JSON.stringify(message));
-                } else if (this.handler.handleCommand) {
+                // Use the generic command handler
+                if (this.handler.handleCommand) {
                     this.handler.handleCommand(JSON.stringify(message));
-                } else if (this.handler.handleWidgetCommand) {
-                    this.handler.handleWidgetCommand(JSON.stringify(message));
+                    console.log('BrowserAPI: Command sent via WebChannel');
+                    commandSent = true;
+                    resolve({ success: true, method: 'webchannel' });
+                } else {
+                    console.warn('BrowserAPI: Handler found but no handleCommand method available');
                 }
-                console.log('BrowserAPI: Command sent via WebChannel');
-                commandSent = true;
-                resolve({ success: true, method: 'webchannel' });
             } catch (e) {
                 console.warn('BrowserAPI: WebChannel command failed:', e);
             }
