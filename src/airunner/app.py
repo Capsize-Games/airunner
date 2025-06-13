@@ -8,8 +8,8 @@ import traceback
 from pathlib import Path
 from PySide6 import QtCore
 from PySide6.QtCore import QObject, QTimer
-from PySide6.QtGui import QGuiApplication, QPixmap, Qt, QWindow, QPainter
-from PySide6.QtWidgets import QApplication, QSplashScreen
+from PySide6.QtGui import QGuiApplication, Qt, QWindow
+from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTranslator, QLocale
 
 from airunner.data.models.language_settings import LanguageSettings
