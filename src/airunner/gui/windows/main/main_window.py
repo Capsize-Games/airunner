@@ -127,18 +127,12 @@ class MainWindow(
         ("scissors", "actionCut"),
         ("copy", "actionCopy"),
         ("clipboard", "actionPaste"),
-        ("corner-right-down", "actionRotate_90_clockwise"),
-        ("corner-left-down", "actionRotate_90_counter_clockwise"),
         ("delete", "actionClear_all_prompts"),
         ("settings", "actionSettings"),
         ("book-open", "actionPrompt_Browser"),
         ("folder", "actionBrowse_AI_Runner_Path"),
         ("folder", "actionBrowse_Images_Path_2"),
         ("speaker", "actionToggle_Text_to_Speech"),
-        ("object-selected-icon", "actionToggle_Active_Grid_Area"),
-        ("pencil-icon", "actionToggle_Brush"),
-        ("eraser-icon", "actionToggle_Eraser"),
-        ("grid", "actionToggle_Grid"),
         ("image", "menuStable_Diffusion"),
         ("activity", "actionStats"),
         ("zap", "actionRun_setup_wizard_2"),
@@ -156,10 +150,7 @@ class MainWindow(
         ("play", "workflow_actionRun"),
         ("save", "workflow_actionSave"),
         ("stop-circle", "workflow_actionStop"),
-        ("corner-up-right", "actionRedo"),
-        ("corner-up-left", "actionUndo"),
         ("save", "actionSave_As"),
-        ("target", "actionRecenter"),
         ("image", "art_editor_button"),
         ("file-text", "document_editor_button"),
         ("chrome", "browser_button"),
@@ -353,19 +344,6 @@ class MainWindow(
         self.toggle_tool(CanvasToolName.ERASER, active)
 
     @Slot()
-    def on_actionRecenter_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot recenter grid."
-            )
-            return
-        self.api.art.canvas.recenter_grid()
-
-    @Slot()
     def on_actionReset_Settings_2_triggered(self):
         self._action_reset_settings()
 
@@ -425,97 +403,6 @@ class MainWindow(
         self.api.art.canvas.clear()
 
     @Slot()
-    def on_actionUndo_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot undo."
-            )
-            return
-        self.api.art.canvas.undo()
-
-    @Slot()
-    def on_actionRedo_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot redo."
-            )
-            return
-        self.api.art.canvas.redo()
-
-    @Slot()
-    def on_actionPaste_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot paste image."
-            )
-            return
-        self.api.art.canvas.paste_image()
-
-    @Slot()
-    def on_actionCopy_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot copy image."
-            )
-            return
-        self.api.art.canvas.copy_image()
-
-    @Slot()
-    def on_actionCut_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot cut image."
-            )
-            return
-        self.api.art.canvas.cut_image()
-
-    @Slot()
-    def on_actionRotate_90_clockwise_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 clockwise."
-            )
-            return
-        self.api.art.canvas.rotate_image_90_clockwise()
-
-    @Slot()
-    def on_actionRotate_90_counter_clockwise_triggered(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot rotate image 90 counterclockwise."
-            )
-            return
-        self.api.art.canvas.rotate_image_90_counterclockwise()
-
-    @Slot()
     def on_actionClear_all_prompts_triggered(self):
         self.clear_all_prompts()
 
@@ -560,22 +447,6 @@ class MainWindow(
             webbrowser.open(AIRUNNER_DISCORD_URL)
 
     @Slot(bool)
-    def action_toggle_mask_layer(self, val: bool):
-        if val is True and self.drawing_pad_mask is None:
-            self._generate_drawingpad_mask()
-        self.update_drawing_pad_settings("mask_layer_enabled", val)
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot toggle mask layer."
-            )
-            return
-        self.api.art.canvas.mask_layer_toggled()
-
-    @Slot(bool)
     def action_outpaint_toggled(self, val: bool):
         self.update_outpaint_settings("enabled", val)
 
@@ -612,32 +483,6 @@ class MainWindow(
         widget = StatsWidget()
         # display in a window
         widget.show()
-
-    @Slot(bool)
-    def on_actionToggle_Active_Grid_Area_toggled(self, val: bool):
-        self.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, val)
-
-    @Slot(bool)
-    def on_actionToggle_Brush_toggled(self, val: bool):
-        self.toggle_tool(CanvasToolName.BRUSH, val)
-
-    @Slot(bool)
-    def on_actionToggle_Eraser_toggled(self, val: bool):
-        self.toggle_tool(CanvasToolName.ERASER, val)
-
-    @Slot(bool)
-    def on_actionToggle_Grid_toggled(self, val: bool):
-        self.update_grid_settings("show_grid", val)
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot toggle grid."
-            )
-            return
-        self.api.art.canvas.toggle_grid(val)
 
     @Slot(bool)
     def on_actionToggle_LLM_toggled(self, val: bool):
@@ -919,19 +764,6 @@ class MainWindow(
                 llm_request=LLMRequest.from_default(),
             )
 
-    @Slot()
-    def show_layers(self):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot show layers."
-            )
-            return
-        self.api.art.canvas.show_layers()
-
     def on_reset_paths_signal(self):
         self.reset_path_settings()
 
@@ -1093,8 +925,6 @@ class MainWindow(
         self.ui.actionCut.deleteLater()
         self.ui.actionCopy.deleteLater()
         self.ui.actionPaste.deleteLater()
-        self.ui.actionRotate_90_clockwise.deleteLater()
-        self.ui.actionRotate_90_counter_clockwise.deleteLater()
         self.ui.actionPrompt_Browser.deleteLater()
 
     def _load_plugins(self):
@@ -1134,18 +964,6 @@ class MainWindow(
             item[0].setChecked(item[1] or False)
             item[0].blockSignals(False)
         self.initialized = True
-
-    def layer_opacity_changed(self, _attr_name, value=None, _widget=None):
-        if (
-            not self.api
-            or not hasattr(self.api, "art")
-            or not hasattr(self.api.art, "canvas")
-        ):
-            self.logger.warning(
-                "MainWindow: self.api.art.canvas is missing. Cannot change layer opacity."
-            )
-            return
-        self.api.art.canvas.layer_opacity_changed(value)
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -1574,42 +1392,11 @@ class MainWindow(
 
     def _set_keyboard_shortcuts(self):
         quit_key = ShortcutKeys.objects.filter_by_first(display_name="Quit")
-        brush_key = ShortcutKeys.objects.filter_by_first(display_name="Brush")
-        eraser_key = ShortcutKeys.objects.filter_by_first(
-            display_name="Eraser"
-        )
-        move_tool_key = ShortcutKeys.objects.filter_by_first(
-            display_name="Move Tool"
-        )
-
         if quit_key is not None:
             key_sequence = QKeySequence(quit_key.key | quit_key.modifiers)
             self.ui.actionQuit.setShortcut(key_sequence)
             self.ui.actionQuit.setToolTip(
                 f"{quit_key.display_name} ({quit_key.text})"
-            )
-
-        if brush_key is not None:
-            key_sequence = QKeySequence(brush_key.key | brush_key.modifiers)
-            self.ui.actionToggle_Brush.setShortcut(key_sequence)
-            self.ui.actionToggle_Brush.setToolTip(
-                f"{brush_key.display_name} ({brush_key.text})"
-            )
-
-        if eraser_key is not None:
-            key_sequence = QKeySequence(eraser_key.key | eraser_key.modifiers)
-            self.ui.actionToggle_Eraser.setShortcut(key_sequence)
-            self.ui.actionToggle_Eraser.setToolTip(
-                f"{eraser_key.display_name} ({eraser_key.text})"
-            )
-
-        if move_tool_key is not None:
-            key_sequence = QKeySequence(
-                move_tool_key.key | move_tool_key.modifiers
-            )
-            self.ui.actionToggle_Active_Grid_Area.setShortcut(key_sequence)
-            self.ui.actionToggle_Active_Grid_Area.setToolTip(
-                f"{move_tool_key.display_name} ({move_tool_key.text})"
             )
 
     def _initialize_filter_actions(self):

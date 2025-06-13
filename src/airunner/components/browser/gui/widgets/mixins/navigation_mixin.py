@@ -129,7 +129,7 @@ class NavigationMixin:
 
     @Slot()
     def on_refresh_button_clicked(self) -> None:
-        self.ui.stage.reload()
+        self.reload()
 
     def _update_security_indicators(self):
         if not hasattr(self.ui, "url"):
