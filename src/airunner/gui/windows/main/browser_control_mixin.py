@@ -44,6 +44,17 @@ class BrowserControlMixin:
         self._session_restore_timer.start(
             30000
         )  # Save session every 30 seconds
+        self.shortcuts = {
+            "Ctrl+T": self.new_browser_tab,
+            "Ctrl+W": self.close_current_browser_tab,
+            "Ctrl+Shift+T": self.restore_last_closed_tab,
+            "Ctrl+P": self.print_current_page,
+            "Shift+Ctrl+P": self.toggle_private_browsing,
+            "Alt+Left": self.navigate_back,
+            "Alt+Right": self.navigate_forward,
+            "F5": self.refresh_current_page,
+            "Ctrl+R": self.refresh_current_page,
+        }
 
     def initialize_browser_controls(self):
         """Initialize browser controls and shortcuts. Call this after UI setup."""
@@ -53,38 +64,9 @@ class BrowserControlMixin:
 
     def _setup_browser_shortcuts(self):
         """Setup keyboard shortcuts for browser control."""
-        # New tab: Ctrl+T
-        new_tab_shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        new_tab_shortcut.activated.connect(self.new_browser_tab)
-
-        # Close tab: Ctrl+W
-        close_tab_shortcut = QShortcut(QKeySequence("Ctrl+W"), self)
-        close_tab_shortcut.activated.connect(self.close_current_browser_tab)
-
-        # Print: Ctrl+P
-        print_shortcut = QShortcut(QKeySequence("Ctrl+P"), self)
-        print_shortcut.activated.connect(self.print_current_page)
-
-        # Toggle private browsing: Shift+Ctrl+P
-        private_shortcut = QShortcut(QKeySequence("Shift+Ctrl+P"), self)
-        private_shortcut.activated.connect(self.toggle_private_browsing)
-
-        # Navigation shortcuts
-        back_shortcut = QShortcut(QKeySequence("Alt+Left"), self)
-        back_shortcut.activated.connect(self.navigate_back)
-
-        forward_shortcut = QShortcut(QKeySequence("Alt+Right"), self)
-        forward_shortcut.activated.connect(self.navigate_forward)
-
-        refresh_shortcut = QShortcut(QKeySequence("F5"), self)
-        refresh_shortcut.activated.connect(self.refresh_current_page)
-
-        reload_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
-        reload_shortcut.activated.connect(self.refresh_current_page)
-
-        # Restore last closed tab: Ctrl+Shift+T (standard browser shortcut)
-        restore_tab_shortcut = QShortcut(QKeySequence("Ctrl+Shift+T"), self)
-        restore_tab_shortcut.activated.connect(self.restore_last_closed_tab)
+        for key, action in self.shortcuts.items():
+            shortcut = QShortcut(QKeySequence(key), self)
+            shortcut.activated.connect(action)
 
     def _setup_browser_events(self):
         """Setup browser tab widget events."""
@@ -445,9 +427,11 @@ class BrowserControlMixin:
 
     @Slot()
     def refresh_current_page(self):
-        """Refresh the current page."""
+        """Reload the current page."""
         if self._current_browser_tab:
-            self._current_browser_tab.refresh()
+            self._current_browser_tab.reload()
+        else:
+            self._show_browser_notification("No page to refresh")
 
     def navigate_to_url(self, url: str):
         """Navigate current tab to URL."""
