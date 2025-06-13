@@ -153,7 +153,11 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                     # Relative path for Jinja2 loader
                     template_rel = os.path.relpath(jinja2_index, directory)
                     template = env.get_template(template_rel)
-                    rendered = template.render()
+                    # Provide static_base_path for template rendering
+                    context = {
+                        "static_base_path": f"https://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}"
+                    }
+                    rendered = template.render(**context)
                     self.send_response(200)
                     self.send_header("Content-type", "text/html")
                     # Add cache-control headers to ensure fresh content on reload
@@ -335,6 +339,9 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             return
         # Strict MIME type enforcement
         abs_path = self.translate_path(self.path)
+        print(
+            f"[DEBUG] MIME check: abs_path = {abs_path} for request path {self.path}"
+        )
         ext = os.path.splitext(abs_path)[1].lower()
         if ext in self.DANGEROUS_EXTENSIONS:
             logging.warning(
@@ -343,6 +350,9 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             self.send_error(403)
             return
         mime, _ = mimetypes.guess_type(abs_path)
+        print(
+            f"[DEBUG] MIME check: detected MIME type = {mime} for {abs_path}"
+        )
         if not mime or not mime.startswith(self.ALLOWED_MIME_PREFIXES):
             logging.warning(
                 f"[SECURITY] Refused to serve file with MIME type: {mime} ({abs_path})"
@@ -395,10 +405,14 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         safe_path = safe_path.split("#", 1)[0]
         safe_path = urllib.parse.unquote(safe_path, errors="surrogatepass")
         safe_path = posixpath.normpath(safe_path)
+
+        # Strip leading slash to make it relative
+        if safe_path.startswith("/"):
+            safe_path = safe_path[1:]
+
         # Prevent absolute paths and directory traversal
         if (
-            safe_path.startswith(os.sep)
-            or safe_path.startswith("..")
+            safe_path.startswith("..")
             or ".." in safe_path.split(os.sep)
             or os.path.isabs(safe_path)
         ):
@@ -425,6 +439,9 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                 continue
             potential_path = os.path.join(abs_directory, normalized_safe_path)
             abs_potential = os.path.abspath(potential_path)
+            print(
+                f"[DEBUG] translate_path: Checking {abs_potential} for path {path}"
+            )
             try:
                 if (
                     os.path.commonpath([abs_directory, abs_potential])
@@ -437,8 +454,10 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             except ValueError:
                 continue
             if os.path.exists(abs_potential):
+                print(f"[DEBUG] translate_path: Found file at {abs_potential}")
                 return abs_potential
         # Fallback to default handler, but only with sanitized path
+        print(f"[DEBUG] translate_path: Using fallback for {safe_path}")
         return super().translate_path(safe_path)
 
 
@@ -545,6 +564,12 @@ class LocalHttpServerThread(QThread):
                 os.path.join(
                     os.path.dirname(__file__),
                     "../../../components/home_stage/gui/static",
+                )
+            ),
+            os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "../../../components/browser/gui/static",
                 )
             ),
         ]
