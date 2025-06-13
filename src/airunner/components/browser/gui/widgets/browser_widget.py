@@ -6,7 +6,7 @@ from airunner.components.browser.gui.widgets.templates.browser_ui import (
 from airunner.enums import SignalCode
 from airunner.tools.web_content_extractor import WebContentExtractor
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, QUrl
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.data.models.airunner_settings import AIRunnerSettings
 from PySide6.QtCore import QTimer
@@ -208,6 +208,7 @@ class BrowserWidget(
             )
 
     def reload(self):
+        # Default reload behavior - let the HTTP server handle template rendering
         self.ui.stage.reload()
 
     def clear(self):
@@ -224,6 +225,7 @@ class BrowserWidget(
             k: None for k in ("html", "plaintext", "summary", "url")
         }
         self._current_display_mode = "html"
+
         if hasattr(self, "_show_panel"):
             self._show_panel(None)
         # Reset tab title
