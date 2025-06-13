@@ -418,12 +418,11 @@ class CustomGraphicsView(
 
         # Create a thread worker to handle the resize processing
         self._resize_worker = BackgroundWorker(
-            task_function=self._process_resize,
-            callback_data={"resize_data": self._resize_data},
+            task_function=self.finalize_resize
         )
 
         # Connect the finished signal
-        self._resize_worker.taskFinished.connect(self._on_resize_processed)
+        # self._resize_worker.taskFinished.connect(self._on_resize_processed)
 
         # Clear resize data early to prevent double processing
         resize_data = self._resize_data
