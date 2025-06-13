@@ -13,7 +13,6 @@ from airunner.gui.windows.wayland_helper import (
 )
 import requests
 from PIL import Image
-from PySide6 import QtGui
 from PySide6.QtCore import (
     Slot,
     Signal,

@@ -1,4 +1,5 @@
 from typing import Optional, Dict
+import time
 
 from PySide6.QtCore import (
     QPointF,
@@ -102,9 +103,11 @@ class CustomGraphicsView(
         self._pending_pan_event = False
 
         # Improved resize throttling
+        self._time_since_last_resize = 0
         self._resize_timer = QTimer()
-        self._resize_timer.setSingleShot(True)
+        self._resize_timer.setSingleShot(False)
         self._resize_timer.timeout.connect(self._handle_deferred_resize)
+        self._resize_timer.setInterval(1)
         self._resize_data = None
         self._is_resizing = False
 
@@ -379,8 +382,20 @@ class CustomGraphicsView(
         self.do_draw()
 
     def resizeEvent(self, event):
+        self._time_since_last_resize = time.time()
+        self._recent_event_size = event.size()
         super().resizeEvent(event)
-        size: QSize = event.size()
+        # start the resize timer if it is not already running
+        if not self._resize_timer.isActive():
+            self._resize_timer.start()
+
+    def _handle_deferred_resize(self):
+        if self._recent_event_size is None:
+            if time.time() - self._time_since_last_resize >= 1:
+                self._resize_timer.stop()
+            return
+        size = self._recent_event_size
+        self._recent_event_size = None
         width = size.width()
         height = size.height()
         canvas_container_size = self.viewport().size()
@@ -395,13 +410,11 @@ class CustomGraphicsView(
             canvas_container_size.width(),
             canvas_container_size.height(),
         )
-
         # Store resize data
         self._resize_data = {
             "new_size": self.viewport().size(),
             "old_size": canvas_container_size,
         }
-
         # Center the grid in the viewport with the active grid area's CENTER at the grid origin.
         viewport_size = self.viewport().size()
         viewport_center_x = viewport_size.width() / 2
@@ -410,105 +423,6 @@ class CustomGraphicsView(
         self.save_canvas_offset()
         self.updateImagePositions()
         self.do_draw(force_draw=True)
-
-    def _handle_deferred_resize(self):
-        """Start a background thread to handle resize operations"""
-        if not self._resize_data:
-            return
-
-        # Create a thread worker to handle the resize processing
-        self._resize_worker = BackgroundWorker(
-            task_function=self.finalize_resize
-        )
-
-        # Connect the finished signal
-        # self._resize_worker.taskFinished.connect(self._on_resize_processed)
-
-        # Clear resize data early to prevent double processing
-        resize_data = self._resize_data
-        self._resize_data = None
-
-        # Start the background thread
-        self._resize_worker.start()
-
-    def _process_resize(self, worker=None):
-        """Process resize in a background thread to prevent UI freezing
-
-        Args:
-            worker: The BackgroundWorker instance running this task (automatically provided)
-        """
-        # Get resize data from the worker's callback_data
-        resize_data = (
-            worker.callback_data.get("resize_data") if worker else None
-        )
-
-        if not resize_data:
-            return None
-
-        new_size = resize_data["new_size"]
-        old_size = resize_data["old_size"]
-
-        # Only proceed if we have valid sizes
-        if (
-            old_size.width() <= 0
-            or old_size.height() <= 0
-            or new_size.width() <= 0
-            or new_size.height() <= 0
-        ):
-            return None
-
-        # Calculate central reference point
-        canvas_center_point = QPointF(
-            new_size.width() / 2, new_size.height() / 2
-        )
-
-        # Calculate size differences
-        delta_width = new_size.width() - old_size.width()
-        delta_height = new_size.height() - old_size.height()
-
-        # If only width changes and height is nearly the same, treat as splitter resize (no offset change)
-        if abs(delta_height) < 5 and abs(delta_width) > 0:
-            new_offset = self.canvas_offset  # Do not change offset
-        else:
-            # For window resize, keep center fixed
-            new_offset = QPointF(
-                self.canvas_offset.x() - delta_width / 2,
-                self.canvas_offset.y() - delta_height / 2,
-            )
-
-        # Return the calculated values
-        return {
-            "canvas_offset": new_offset,
-            "new_size": new_size,
-            "canvas_center_point": canvas_center_point,
-        }
-
-    def _on_resize_processed(self, data):
-        """Handle the completion of resize processing"""
-        if "error" in data:
-            self.logger.error(
-                f"Error during resize processing: {data['error']}"
-            )
-            return
-
-        if "result" not in data:
-            return
-
-        result = data["result"]
-        if not result:
-            return
-
-        # Update canvas offset with the thread-calculated value
-        self.canvas_offset = result["canvas_offset"]
-        self._canvas_center_point = result["canvas_center_point"]
-        self._last_viewport_size = result["new_size"]
-
-        # Update positions on UI thread
-        self.update_active_grid_area_position()
-        self.updateImagePositions()
-
-        # Redraw grid
-        self.draw_grid()
 
     def wheelEvent(self, event):
         # Only allow zooming with Ctrl, otherwise ignore scrolling

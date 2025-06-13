@@ -73,7 +73,7 @@ class BrowserWidget(
 
     def __init__(self, *args, private: bool = False, **kwargs):
         self._favicon = None
-        self._private = False
+        self._private = private
         self.registered = False
         self._profile = None
         self._profile_page = None
@@ -101,7 +101,6 @@ class BrowserWidget(
     @Slot(bool)
     def on_bookmark_button_toggled(self, checked: bool):
         if checked:
-            self.ui.history_button.setChecked(False)
             self._show_panel("bookmarks")
         else:
             self._show_panel(None)
