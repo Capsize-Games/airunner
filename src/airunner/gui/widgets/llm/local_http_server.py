@@ -130,9 +130,19 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             and "." not in rel_path_no_query
         ):
             for directory in self.directories:
+                # Normalize and validate the path to prevent directory traversal
+                normalized_rel_path = os.path.normpath(rel_path_no_query)
+                abs_directory = os.path.abspath(directory)
+                abs_target_dir = os.path.abspath(
+                    os.path.join(abs_directory, normalized_rel_path, "html")
+                )
+                # Ensure the target is within the allowed directory
+                if not abs_target_dir.startswith(abs_directory):
+                    self.send_error(403, "Forbidden")
+                    return
                 # Try Jinja2 template first
                 jinja2_index = os.path.join(
-                    directory, rel_path_no_query, "html", "index.jinja2.html"
+                    abs_target_dir, "index.jinja2.html"
                 )
                 if os.path.exists(jinja2_index):
                     loader = jinja2.FileSystemLoader(self.directories)
@@ -156,9 +166,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                     self.wfile.write(rendered.encode("utf-8"))
                     return
                 # Try static HTML fallback
-                html_index = os.path.join(
-                    directory, rel_path_no_query, "html", "index.html"
-                )
+                html_index = os.path.join(abs_target_dir, "index.html")
                 if os.path.exists(html_index):
                     with open(html_index, "rb") as f:
                         self.send_response(200)
