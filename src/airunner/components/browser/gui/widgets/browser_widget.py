@@ -6,7 +6,8 @@ from airunner.components.browser.gui.widgets.templates.browser_ui import (
 from airunner.enums import SignalCode
 from airunner.tools.web_content_extractor import WebContentExtractor
 
-from PySide6.QtCore import Slot, QUrl
+from PySide6.QtCore import Slot, QUrl, QObject
+from PySide6.QtWebChannel import QWebChannel
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.data.models.airunner_settings import AIRunnerSettings
 from PySide6.QtCore import QTimer
@@ -35,6 +36,43 @@ from airunner.components.browser.gui.widgets.mixins.ui_setup_mixin import (
     UISetupMixin,
 )
 from airunner.components.browser.utils import normalize_url
+
+
+class GameHandler(QObject):
+    """Handles communication between JavaScript and the browser widget for game commands."""
+
+    gameCommandReceived = Signal(str)
+
+    def __init__(self, browser_widget):
+        super().__init__()
+        self.browser_widget = browser_widget
+
+    @Slot(str)
+    def handleGameCommand(self, command_json):
+        """Handle commands from JavaScript (supports both game_command and widget_command types)."""
+        try:
+            command_data = json.loads(command_json)
+            command = command_data.get("command", "")
+            data = command_data.get("data", {})
+            message_type = command_data.get(
+                "type", "game_command"
+            )  # Default to game_command for backward compatibility
+
+            print(f"Command received: {command} (type: {message_type})")
+
+            if command == "new_game":
+                print("NEW GAME")  # The requested print statement
+                self.browser_widget.handle_new_game(data)
+            else:
+                print(f"Unknown command: {command}")
+
+            # Emit signal for other components
+            self.browser_widget.emit_signal(
+                SignalCode.GAME_COMMAND_SIGNAL,
+                {"command": command, "data": data, "type": message_type},
+            )
+        except Exception as e:
+            print(f"Error handling command: {e}")
 
 
 class BrowserWidget(
@@ -85,13 +123,93 @@ class BrowserWidget(
         }
         super().__init__(*args, **kwargs)
         self._setup_ui()
+        self._setup_game_communication()
         self.ui.stage.loadFinished.connect(self._on_page_load_finished)
+
+    def _setup_game_communication(self):
+        """Set up WebChannel for JavaScript-Python communication."""
+        try:
+            # Create game handler
+            self.game_handler = GameHandler(self)
+
+            # Create WebChannel
+            self.channel = QWebChannel()
+            self.channel.registerObject("gameHandler", self.game_handler)
+
+            # Set WebChannel on the page
+            self.ui.stage.page().setWebChannel(self.channel)
+
+            print("Game communication channel established")
+        except Exception as e:
+            print(f"Error setting up game communication: {e}")
+
+    def handle_new_game(self, data):
+        """Handle new game command from JavaScript."""
+        print("Handling new game request...")
+        # Here you can add more game initialization logic
+        # For now, we'll just log the event
+
+        # Send response back to JavaScript
+        self._send_response(
+            "new_game_started", "New game initialized successfully!"
+        )
+
+    def _send_response(self, response_type, message):
+        """Send a response back to JavaScript (generic response format)."""
+        try:
+            script = f"""
+            window.postMessage({{
+                type: 'widget_response',
+                response_type: '{response_type}',
+                message: '{message}',
+                timestamp: Date.now()
+            }}, '*');
+            """
+            self.ui.stage.page().runJavaScript(script)
+        except Exception as e:
+            print(f"Error sending response: {e}")
+
+    def _send_game_response(self, response_type, message):
+        """Legacy method for backward compatibility."""
+        self._send_response(response_type, message)
 
     @Slot(bool)
     def _on_page_load_finished(self, success: bool):
         if not success:
             return
+
+        # Inject QWebChannel script for JavaScript communication
+        self._inject_webchannel_script()
+
         self.ui.stage.page().toHtml(self._on_html_ready)
+
+    def _inject_webchannel_script(self):
+        """Inject QWebChannel JavaScript for communication."""
+        try:
+            # Inject the QWebChannel script
+            webchannel_script = """
+            (function() {
+                if (typeof QWebChannel === 'undefined') {
+                    // Load QWebChannel from Qt resources
+                    var script = document.createElement('script');
+                    script.src = 'qrc:///qtwebchannel/qwebchannel.js';
+                    script.onload = function() {
+                        console.log('QWebChannel script loaded');
+                        // Trigger custom event to notify our game script
+                        window.dispatchEvent(new Event('qwebchannelready'));
+                    };
+                    script.onerror = function() {
+                        console.log('QWebChannel script failed to load, using fallback');
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    console.log('QWebChannel already available');
+                }
+            })();
+            """
+            self.ui.stage.page().runJavaScript(webchannel_script)
+        except Exception as e:
+            print(f"Error injecting WebChannel script: {e}")
 
     @Slot(bool)
     def on_private_browse_button_toggled(self, checked: bool) -> None:
