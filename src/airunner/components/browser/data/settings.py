@@ -42,6 +42,14 @@ class BrowserSettings(BaseModel):
     history: List[HistoryEntry] = Field(default_factory=list)
     plaintext: Optional[str] = None
     page_summary: Optional[str] = None
+    browser_type: str = Field(
+        default="chrome",
+        description="Type of browser, e.g., 'default', 'firefox', 'chrome', etc.",
+    )
+    browser_os: str = Field(
+        default="linux",
+        description="Operating system for the browser, e.g., 'windows', 'macos', 'linux', etc.",
+    )
 
     class Config:
         title = "BrowserSettings"

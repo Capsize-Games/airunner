@@ -93,6 +93,27 @@ class BrowserWidget(
             return
         self.ui.stage.page().toHtml(self._on_html_ready)
 
+    @Slot(bool)
+    def on_private_browse_button_toggled(self, checked: bool) -> None:
+        self._set_private_browsing(checked)
+        self._save_browser_settings()
+
+    @Slot(bool)
+    def on_bookmark_button_toggled(self, checked: bool):
+        if checked:
+            self.ui.history_button.setChecked(False)
+            self._show_panel("bookmarks")
+        else:
+            self._show_panel(None)
+
+    @Slot(bool)
+    def on_history_button_toggled(self, checked: bool):
+        if checked:
+            self.ui.bookmark_button.setChecked(False)
+            self._show_panel("history")
+        else:
+            self._show_panel(None)
+
     def on_browser_navigate(self, data: Dict):
         """Handle browser navigation requests."""
         url = data.get("url")
@@ -147,27 +168,6 @@ class BrowserWidget(
             center = total - left
             self.ui.splitter.setSizes([left, center, 0])
 
-    @Slot(bool)
-    def on_private_browse_button_toggled(self, checked: bool) -> None:
-        self._set_private_browsing(checked)
-        self._save_browser_settings()
-
-    @Slot(bool)
-    def on_bookmark_button_toggled(self, checked: bool):
-        if checked:
-            self.ui.history_button.setChecked(False)
-            self._show_panel("bookmarks")
-        else:
-            self._show_panel(None)
-
-    @Slot(bool)
-    def on_history_button_toggled(self, checked: bool):
-        if checked:
-            self.ui.bookmark_button.setChecked(False)
-            self._show_panel("history")
-        else:
-            self._show_panel(None)
-
     def _save_browser_settings(self):
         settings_obj = AIRunnerSettings.objects.filter_by_first(name="browser")
         if settings_obj:
@@ -207,6 +207,9 @@ class BrowserWidget(
             self.ui.browser_tab_widget.setTabText(
                 self.ui.browser_tab_widget.indexOf(self.ui.tab), title
             )
+
+    def reload(self):
+        self.ui.stage.reload()
 
     def clear(self):
         """Reset the browser tab to a blank state (blank page, clear address bar, clear cache)."""
