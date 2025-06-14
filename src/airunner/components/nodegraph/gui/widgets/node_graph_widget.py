@@ -2,6 +2,10 @@ import os
 import json
 import logging
 from typing import Dict, Tuple, Optional, List
+from airunner.components.nodegraph.gui.widgets.nodes.core.variable_getter_node import (
+    VariableGetterNode,
+)
+from airunner.components.nodegraph.gui.widgets.nodes.io.print import PrintNode
 from airunner.data.models.application_settings import ApplicationSettings
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
 from PySide6.QtWidgets import (
@@ -324,8 +328,10 @@ class NodeGraphWidget(BaseWidget):
                         self,
                         "Workflow Exists",
                         f"A workflow named '{name}' already exists (ID: {workflow_map[name].id}). Do you want to overwrite it?",
-                        QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
-                        QMessageBox.Cancel,
+                        QMessageBox.StandardButton.Yes
+                        | QMessageBox.StandardButton.No
+                        | QMessageBox.StandardButton.Cancel,
+                        QMessageBox.StandardButton.Cancel,
                     )
                     if reply == QMessageBox.Yes:
                         # Overwrite existing
@@ -397,7 +403,9 @@ class NodeGraphWidget(BaseWidget):
         layout.addRow("Workflow:", combo)
 
         buttons = QDialogButtonBox(
-            QDialogButtonBox.Open | QDialogButtonBox.Cancel, dialog
+            QDialogButtonBox.StandardButton.Open
+            | QDialogButtonBox.StandardButton.Cancel,
+            dialog,
         )
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
@@ -455,6 +463,8 @@ class NodeGraphWidget(BaseWidget):
             # Gemma3Node,
             PromptBuilderNode,
             SchedulerNode,
+            PrintNode,
+            VariableGetterNode,
         ]:
             self.graph.register_node(node_cls)
 
@@ -523,7 +533,9 @@ class NodeGraphWidget(BaseWidget):
         layout.addRow("Node Name:", name_input)
 
         buttons = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, dialog
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel,
+            dialog,
         )
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
@@ -910,21 +922,17 @@ class NodeGraphWidget(BaseWidget):
 
         return properties_to_save
 
-    def _save_connections(self, workflow_or_id, nodes_map):
+    def _save_connections(self, workflow_id: int, nodes_map: dict):
         """
         Save connections in the graph to the database using CRUD operations.
         Updates existing connections, creates new ones, and removes obsolete ones.
         Accepts either a workflow object (with .id) or an int workflow_id.
         """
-        # Accept either workflow object or id, avoid isinstance to prevent DetachedInstanceError in tests
-        if type(workflow_or_id) is int:
-            workflow_id = workflow_or_id
-        else:
-            try:
-                workflow_id = getattr(workflow_or_id, "id", None)
-            except Exception:
-                workflow_id = None
-
+        if not workflow_id:
+            raise ValueError(
+                "Workflow ID must be provided to save connections."
+            )
+        self.logger.info(f"[DEBUG] nodes_map at connection save: {nodes_map}")
         # Collect all current connections in the graph
         current_connections = []
         all_graph_nodes = self.graph.all_nodes()
@@ -939,6 +947,10 @@ class NodeGraphWidget(BaseWidget):
                             "in_port_name": in_port.name(),
                         }
                     )
+        # DEBUG: Log all connections being saved
+        self.logger.info(
+            f"[DEBUG] Connections to be saved: {json.dumps(current_connections, indent=2)}"
+        )
 
         self.logger.info(
             f"Processing {len(current_connections)} connections for saving..."
@@ -1013,6 +1025,9 @@ class NodeGraphWidget(BaseWidget):
                             input_node_id=input_node_db_id,
                             input_port_name=conn["in_port_name"],
                         )
+                        self.logger.info(
+                            f"[DEBUG] Created connection in DB: output_node_id={output_node_db_id}, output_port_name={conn['out_port_name']}, input_node_id={input_node_db_id}, input_port_name={conn['in_port_name']}, db_conn={db_conn}"
+                        )
                         if db_conn:
                             self.logger.info(
                                 f"Created new connection: {conn['out_port_name']} -> {conn['in_port_name']}"
@@ -1026,7 +1041,7 @@ class NodeGraphWidget(BaseWidget):
                         )
             else:
                 self.logger.warning(
-                    f"Skipping connection due to missing node DB ID mapping: {conn['out_port_name']} -> {conn['in_port_name']}"
+                    f"[DEBUG] Skipping connection due to missing node DB ID mapping: out_node_id={conn['out_node_id']} in_node_id={conn['in_node_id']} out_port={conn['out_port_name']} in_port={conn['in_port_name']}"
                 )
 
         # Delete connections that are no longer in the graph
@@ -1194,11 +1209,18 @@ class NodeGraphWidget(BaseWidget):
     def _load_workflow_connections(self, db_connections, node_map):
         """Load connections from database records into the graph."""
         self.logger.info(f"Loading {len(db_connections)} connections...")
+        self.logger.info(
+            f"[DEBUG] Connections loaded from DB: {[{'output_node_id': c.output_node_id, 'output_port_name': c.output_port_name, 'input_node_id': c.input_node_id, 'input_port_name': c.input_port_name} for c in db_connections]}"
+        )
         connections_loaded = 0
         for db_conn in db_connections:
             try:
                 output_node = node_map.get(db_conn.output_node_id)
                 input_node = node_map.get(db_conn.input_node_id)
+
+                self.logger.info(
+                    f"[DEBUG] Attempting to connect: {getattr(output_node, 'name', lambda: '?')()} ({db_conn.output_node_id}).{db_conn.output_port_name} -> {getattr(input_node, 'name', lambda: '?')()} ({db_conn.input_node_id}).{db_conn.input_port_name}"
+                )
 
                 if output_node and input_node:
                     # Find the port objects on the nodes
@@ -1218,7 +1240,7 @@ class NodeGraphWidget(BaseWidget):
                         )
                     else:
                         self.logger.warning(
-                            f"  Skipping connection: Port not found. Output: '{db_conn.output_port_name}' on {output_node.name()}, Input: '{db_conn.input_port_name}' on {input_node.name()}"
+                            f"  Skipping connection: Port not found. Output: '{db_conn.output_port_name}' on {output_node.name() if output_node else '?'}; Input: '{db_conn.input_port_name}' on {input_node.name() if input_node else '?'}"
                         )
                 else:
                     self.logger.warning(
@@ -1318,6 +1340,10 @@ class NodeGraphWidget(BaseWidget):
 
         for db_node in db_nodes:
             try:
+                # Restore widget_type enums in properties before restoring them
+                properties = self._restore_widget_type_enums(
+                    db_node.properties or {}
+                )
                 # Create the node instance using its identifier and saved position
                 node_instance = self.graph.create_node(
                     db_node.node_identifier,
@@ -1327,10 +1353,8 @@ class NodeGraphWidget(BaseWidget):
                 )
                 if node_instance:
                     node_map[db_node.id] = node_instance
-                    # Restore properties
-                    self._restore_node_properties(
-                        node_instance, db_node.properties or {}
-                    )
+                    # Restore properties (for any additional/late properties)
+                    self._restore_node_properties(node_instance, properties)
                 else:
                     self.logger.warning(
                         f"Failed to create node for identifier {db_node.node_identifier}"
@@ -1395,6 +1419,19 @@ class NodeGraphWidget(BaseWidget):
                 )
 
     def _set_property_on_node(self, node_instance, prop_name, prop_value):
+        # Handle widget_type Enum restoration
+        if prop_name == "widget_type" and isinstance(prop_value, int):
+            try:
+                from airunner.vendor.nodegraphqt.constants import (
+                    NodePropWidgetEnum,
+                )
+
+                prop_value = NodePropWidgetEnum(prop_value)
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to restore NodePropWidgetEnum for value {prop_value}: {e}"
+                )
+
         # Skip ignored properties and dynamic port lists (handled in _load_workflow_nodes)
         if prop_name in IGNORED_NODE_PROPERTIES or prop_name in [
             "id",
@@ -1446,6 +1483,24 @@ class NodeGraphWidget(BaseWidget):
             self.logger.error(
                 f"    Error restoring property '{prop_name}' for node {node_instance.name()}: {e}"
             )
+
+    def _restore_widget_type_enums(self, properties):
+        """Recursively convert all 'widget_type' int values to NodePropWidgetEnum in a dict or list."""
+        from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
+
+        if isinstance(properties, dict):
+            for k, v in properties.items():
+                if k == "widget_type" and isinstance(v, int):
+                    properties[k] = NodePropWidgetEnum(v)
+                else:
+                    properties[k] = self._restore_widget_type_enums(v)
+            return properties
+        elif isinstance(properties, list):
+            return [
+                self._restore_widget_type_enums(item) for item in properties
+            ]
+        else:
+            return properties
 
     # --- End Database Interaction ---
 
@@ -1569,13 +1624,3 @@ class NodeGraphWidget(BaseWidget):
                 self.logger.warning(
                     f"Failed to restore nodegraph zoom/center: {e}"
                 )
-
-    def _save_state(self):
-        zoom = self.graph._viewer.get_zoom()
-        center = self.graph._viewer.scene_center()
-        ApplicationSettings.objects.update(
-            self.application_settings.id,
-            nodegraph_zoom=zoom,
-            nodegraph_center_x=int(center[0]),
-            nodegraph_center_y=int(center[1]),
-        )
