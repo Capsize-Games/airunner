@@ -8,12 +8,11 @@ Implements a QPlainTextEdit-based code editor with a custom line number area and
 Follows project conventions for widget structure and documentation.
 """
 
-from typing import Dict, Optional
+from typing import Optional
 from PySide6.QtCore import (
     Qt,
     QRect,
     QSize,
-    QEvent,
     QRegularExpression,
     QFile,
     QTextStream,
@@ -24,12 +23,10 @@ from PySide6.QtGui import (
     QPainter,
     QFont,
     QFontMetrics,
-    QTextFormat,
     QSyntaxHighlighter,
     QTextCharFormat,
 )
 from PySide6.QtWidgets import QWidget, QPlainTextEdit, QMessageBox
-from airunner.enums import SignalCode
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.components.document_editor.gui.templates.document_editor_ui import (
     Ui_Form,

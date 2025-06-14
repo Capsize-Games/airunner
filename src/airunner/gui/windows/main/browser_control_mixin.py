@@ -304,46 +304,36 @@ class BrowserControlMixin:
 
         # Save tab info for restore functionality before closing
         if isinstance(tab_widget, BrowserWidget):
-            tab_info = {
-                "url": (
-                    tab_widget.get_current_url()
-                    if hasattr(tab_widget, "get_current_url")
-                    else ""
-                ),
-                "title": (
-                    tab_widget.get_current_title()
-                    if hasattr(tab_widget, "get_current_title")
-                    else "New Tab"
-                ),
-                "private": getattr(tab_widget, "_private", False),
-            }
+            url = ""
+            title = "New Tab"
+            private = getattr(tab_widget, "_private", False)
+            try:
+                if hasattr(tab_widget, "ui") and hasattr(
+                    tab_widget.ui, "stage"
+                ):
+                    url = tab_widget.ui.stage.url().toString()
+                    title = tab_widget.ui.stage.title()
+            except Exception:
+                pass
+            tab_info = {"url": url, "title": title, "private": private}
             self._closed_tabs_history.append(tab_info)
-            # Keep only last 10 closed tabs to prevent memory issues
-            if len(self._closed_tabs_history) > 10:
-                self._closed_tabs_history.pop(0)
+            print(f"TAB INFO SAVED TO HISTORY {tab_info}")
 
-        def really_close():
-            # Remove from tracking
+        # Remove from tab widget and internal tracking
+        def on_safe():
+            browser_widget.removeTab(index)
             if tab_widget in self._browser_tabs:
                 self._browser_tabs.remove(tab_widget)
-            # Remove from tab widget
-            browser_widget.removeTab(index)
-            # Clean up the widget
-            if tab_widget:
-                tab_widget.deleteLater()
-            # Update current tab reference
-            current_widget = browser_widget.currentWidget()
-            self._current_browser_tab = (
-                current_widget
-                if isinstance(current_widget, BrowserWidget)
-                else None
-            )
+            if self._current_browser_tab == tab_widget:
+                self._current_browser_tab = (
+                    self._browser_tabs[-1] if self._browser_tabs else None
+                )
+            tab_widget.deleteLater()
 
-        # Use safe_close if available
         if hasattr(tab_widget, "safe_close"):
-            tab_widget.safe_close(really_close)
+            tab_widget.safe_close(on_safe)
         else:
-            really_close()
+            on_safe()
 
     @Slot()
     def close_current_browser_tab(self):
@@ -363,21 +353,20 @@ class BrowserControlMixin:
     def restore_last_closed_tab(self):
         """Restore the most recently closed tab."""
         if not self._closed_tabs_history:
-            self._show_browser_notification("No closed tabs to restore")
-            return
-
-        # Get the most recent closed tab info
-        tab_info = self._closed_tabs_history.pop()
-
-        # Create a new tab with the restored information
-        restored_tab = self.new_browser_tab(
-            url=tab_info.get("url", ""), private=tab_info.get("private", False)
-        )
-
-        if restored_tab:
             self._show_browser_notification(
-                f"Restored tab: {tab_info.get('title', 'Unknown')}"
+                "No recently closed tabs to restore."
             )
+            return
+        tab_info = self._closed_tabs_history.pop()
+        print(f"TAB INFO FROM HISTORY {tab_info}")
+        url = tab_info.get("url", "")
+        private = tab_info.get("private", False)
+        restored_tab = self.new_browser_tab(url=url, private=private)
+        # Optionally set the tab title if needed (title is usually set by page load)
+        # restored_tab.setWindowTitle(tab_info.get("title", "New Tab"))
+        self._show_browser_notification(
+            f"Restored tab: {tab_info.get('title', 'New Tab')}"
+        )
 
     @Slot(int)
     def _on_browser_tab_changed(self, index: int):
