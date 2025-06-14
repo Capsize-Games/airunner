@@ -104,12 +104,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
             recursive=True,
         )
         # Add user web dir if it exists
-        user_web_dir = os.path.join(
-            os.path.expanduser(self.path_settings.base_path), "web"
-        )
         static_search_dirs = [static_dir] + components_static_dirs
-        if os.path.isdir(user_web_dir):
-            static_search_dirs.append(user_web_dir)
+        if os.path.isdir(self.user_web_dir):
+            static_search_dirs.append(self.user_web_dir)
         mathjax_dir = os.path.join(
             static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
         )

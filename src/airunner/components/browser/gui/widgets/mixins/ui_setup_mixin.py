@@ -166,7 +166,7 @@ class UISetupMixin:
                 ),
                 (
                     self.ui.user_agent_os.setCurrentText,
-                    browser_settings.os_type,
+                    browser_settings.browser_os,
                 ),
                 (
                     lambda v: setattr(self, "_random_user_agent", v),
