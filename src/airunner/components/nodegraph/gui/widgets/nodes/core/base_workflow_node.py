@@ -69,7 +69,7 @@ class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
         if self.has_exec_in_port:
             self.add_input(
                 self.EXEC_IN_PORT_NAME,
-                multi_input=False,  # Only one connection allowed to exec_in
+                multi_input=True,  # Allow multiple connections to exec_in
                 display_name=False,
                 painter_func=self._draw_exec_port,
             )
@@ -97,20 +97,22 @@ class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
                 **port
             )
         for prop in self._properties:
+            # Ensure widget_type is always an Enum before accessing .value
+            if isinstance(prop["widget_type"], int):
+                from airunner.vendor.nodegraphqt.constants import (
+                    NodePropWidgetEnum,
+                )
+
+                prop["widget_type"] = NodePropWidgetEnum(prop["widget_type"])
             prop["widget_type"] = prop["widget_type"].value
             self.create_property(**prop)
 
     def on_input_connected(self, in_port, out_port):
         """
         Override method called when a connection is made to an input port.
-        Ensures exec_in port only maintains one connection.
+        Allows exec_in port to maintain multiple connections (no forced disconnect).
         """
         super().on_input_connected(in_port, out_port)
-        if in_port and in_port.name() == self.EXEC_IN_PORT_NAME:
-            # Disconnect any other connections to this exec_in port except the new one
-            for connected_port in in_port.connected_ports():
-                if connected_port != out_port:
-                    in_port.disconnect_from(connected_port)
 
     def on_output_connected(self, out_port, in_port):
         """
@@ -132,6 +134,7 @@ class BaseWorkflowNode(MediatorMixin, SettingsMixin, BaseNode):
         """
         if not connected:
             return
+        # No forced disconnect for exec_in; allow multiple connections
 
         # For each new connection, check if it involves our exec ports
         for src_port, tgt_port in connected:

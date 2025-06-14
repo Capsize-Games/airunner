@@ -19,18 +19,14 @@ class WhileLoopNode(BaseLogicNode):
         dict(name="Condition", display_name="Condition"),
     ]
     _output_ports = [
-        dict(name="Loop Body", display_name="Loop Body"),
         dict(name="Completed", display_name="Completed"),
     ]
+    has_exec_in_port = True
+    has_exec_out_port = True
 
     def execute(self, input_data):
         """
         Executes the While loop based on the input condition.
-
-        In a real implementation, this would need to handle execution flow differently
-        to actually iterate based on condition. This implementation simulates
-        the concept but doesn't actually perform the iteration as that would
-        require more changes to the execution engine.
 
         Returns:
             dict: Output data with triggered execution port
@@ -48,8 +44,8 @@ class WhileLoopNode(BaseLogicNode):
                 condition = False
 
         if condition:
-            # Trigger the loop body output
-            return {"_exec_triggered": self.LOOP_BODY_PORT_NAME}
+            # Trigger the standard exec_out port
+            return {"_exec_triggered": self.EXEC_OUT_PORT_NAME}
         else:
             # If condition is false, trigger completed
             return {"_exec_triggered": self.COMPLETED_PORT_NAME}

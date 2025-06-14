@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QDoubleSpinBox,
     QCheckBox,
-    QTextEdit,
 )
 from PySide6.QtCore import Qt, Slot
 
