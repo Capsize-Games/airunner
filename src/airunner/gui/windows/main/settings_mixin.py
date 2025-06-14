@@ -1,3 +1,4 @@
+import os
 from typing import List, Type, Optional, Dict, Any
 
 from sqlalchemy.orm import joinedload
@@ -82,6 +83,13 @@ class SettingsMixin:
         app = QApplication.instance()
         if app:
             self.api = getattr(app, "api", None)
+
+    @property
+    def user_web_dir(self) -> str:
+        """Return the user web directory."""
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path), "web"
+        )
 
     @property
     def session_manager(self):

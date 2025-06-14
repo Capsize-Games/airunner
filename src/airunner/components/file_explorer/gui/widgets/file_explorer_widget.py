@@ -36,10 +36,11 @@ class FileExplorerWidget(BaseWidget):
             path_to_display = None
         super().__init__(parent)
         self.model = QFileSystemModel(self)
+        # Use path_to_display if provided, else self.user_web_dir, else current path
         root_path = (
             path_to_display
-            if isinstance(path_to_display, str)
-            else QDir.currentPath()
+            if isinstance(path_to_display, str) and path_to_display
+            else getattr(self, "user_web_dir", None) or QDir.currentPath()
         )
         self.model.setRootPath(root_path)
         self.model.setFilter(
@@ -49,7 +50,7 @@ class FileExplorerWidget(BaseWidget):
         )
         self.tree_view = self.ui.treeView
         self.tree_view.setModel(self.model)
-        self.tree_view.setRootIndex(self.model.index(self.model.rootPath()))
+        self.tree_view.setRootIndex(self.model.index(root_path))
         self.tree_view.setAnimated(False)
         self.tree_view.setIndentation(20)
         self.tree_view.setSortingEnabled(True)
