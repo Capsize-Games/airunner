@@ -53,7 +53,7 @@ class BrowserControlMixin:
             "Alt+Left": self.navigate_back,
             "Alt+Right": self.navigate_forward,
             "Alt+Tab": self.cycle_browser_tabs,
-            "SHIFT+Alt+Tab": self.cycle_browser_tabs_reverse,
+            "Shift+Alt+Tab": self.cycle_browser_tabs_reverse,
             "F5": self.refresh_current_page,
             "Ctrl+R": self.refresh_current_page,
         }
