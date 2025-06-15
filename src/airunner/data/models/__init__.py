@@ -17,7 +17,7 @@ from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
 from airunner.data.models.speech_t5_settings import SpeechT5Settings
 from airunner.data.models.espeak_settings import EspeakSettings
-from airunner.data.models.stt_settings import STTSettings
+from airunner.components.stt.data.stt_settings import STTSettings
 from airunner.data.models.schedulers import Schedulers
 from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.grid_settings import GridSettings
@@ -40,7 +40,7 @@ from airunner.components.llm.data.conversation import Conversation
 from airunner.data.models.summary import Summary
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.data.image_filter_value import ImageFilterValue
-from airunner.data.models.whisper_settings import WhisperSettings
+from airunner.components.stt.data.whisper_settings import WhisperSettings
 from airunner.data.models.news import RSSFeed, Category, Article
 from airunner.data.models.tab import Tab
 from airunner.data.models.workflow import Workflow
