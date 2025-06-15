@@ -1,8 +1,7 @@
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.tts.templates.speecht5_preferences_ui import (
+from airunner.components.tts.gui.widgets.templates.speecht5_preferences_ui import (
     Ui_speecht5_preferences,
 )
-from airunner.data.models import SpeechT5Settings
 
 
 class SpeechT5PreferencesWidget(BaseWidget):

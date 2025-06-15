@@ -4,9 +4,7 @@ from queue import Queue
 from typing import Optional, Union, ClassVar, Type, Dict, Any
 
 import torch
-import datasets
 from datasets import (
-    load_dataset,
     DatasetDict,
     Dataset,
     IterableDatasetDict,
@@ -21,9 +19,9 @@ from transformers import (
     SpeechT5HifiGan,
 )
 
-from airunner.handlers.tts.tts_model_manager import TTSModelManager
+from airunner.components.tts.managers.tts_model_manager import TTSModelManager
 from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
-from airunner.handlers.tts.tts_request import TTSRequest
+from airunner.components.tts.managers.tts_request import TTSRequest
 from airunner.utils.memory import clear_memory
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 

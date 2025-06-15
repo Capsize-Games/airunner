@@ -32,7 +32,7 @@ from airunner.gui.widgets.memory_preferences.memory_preferences_widget import (
     MemoryPreferencesWidget,
 )
 from airunner.gui.widgets.paths.paths_widget import PathsWidget
-from airunner.gui.widgets.tts.voice_settings_widget import VoiceSettingsWidget
+from airunner.components.tts.gui.widgets.voice_settings_widget import VoiceSettingsWidget
 from airunner.gui.widgets.user.user_settings_widget import UserSettingsWidget
 from airunner.gui.widgets.huggingface_settings.huggingface_settings_widget import (
     HuggingfaceSettingsWidget,

@@ -2,7 +2,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
 
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.widgets.tts.templates.open_voice_preferences_ui import (
+from airunner.components.tts.gui.widgets.templates.open_voice_preferences_ui import (
     Ui_open_voice_preferences,
 )
 from airunner.data.models.openvoice_settings import OpenVoiceSettings

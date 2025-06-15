@@ -5,8 +5,8 @@ from airunner.workers.sd_worker import SDWorker
 try:
     from airunner.components.stt.workers.audio_capture_worker import AudioCaptureWorker
     from airunner.components.stt.workers.audio_processor_worker import AudioProcessorWorker
-    from airunner.workers.tts_generator_worker import TTSGeneratorWorker
-    from airunner.workers.tts_vocalizer_worker import TTSVocalizerWorker
+    from airunner.components.tts.workers.tts_generator_worker import TTSGeneratorWorker
+    from airunner.components.tts.workers.tts_vocalizer_worker import TTSVocalizerWorker
 except OSError:
     AudioCaptureWorker = None
     AudioProcessorWorker = None
