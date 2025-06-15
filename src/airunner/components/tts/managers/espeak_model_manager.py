@@ -2,9 +2,9 @@ from typing import Optional
 from abc import ABCMeta
 import pyttsx3
 
-from airunner.handlers.tts.tts_model_manager import TTSModelManager
+from airunner.components.tts.managers.tts_model_manager import TTSModelManager
 from airunner.enums import ModelType, ModelStatus, Gender, AvailableLanguage
-from airunner.handlers.tts.tts_request import TTSRequest
+from airunner.components.tts.managers.tts_request import TTSRequest
 from airunner.data.models import EspeakSettings
 
 

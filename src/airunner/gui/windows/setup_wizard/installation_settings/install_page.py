@@ -32,7 +32,7 @@ from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
 from airunner.components.stt.data.bootstrap.whisper import WHISPER_FILES
-from airunner.data.bootstrap.speech_t5 import SPEECH_T5_FILES
+from airunner.components.tts.data.bootstrap.speech_t5 import SPEECH_T5_FILES
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.network import HuggingfaceDownloader

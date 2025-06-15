@@ -4,7 +4,7 @@ import os
 import torch
 
 from airunner.components.llm.utils.language import detect_language
-from airunner.handlers.tts.exceptions import FileMissing, OpenVoiceError
+from airunner.components.tts.managers.exceptions import FileMissing, OpenVoiceError
 from airunner.settings import AIRUNNER_BASE_PATH
 
 torch.hub.set_dir(
@@ -29,8 +29,8 @@ from airunner.enums import (
     ModelStatus,
     AvailableLanguage,
 )
-from airunner.handlers.tts.tts_model_manager import TTSModelManager
-from airunner.handlers.tts.tts_request import TTSRequest
+from airunner.components.tts.managers.tts_model_manager import TTSModelManager
+from airunner.components.tts.managers.tts_request import TTSRequest
 from airunner.utils.application.get_logger import get_logger
 
 

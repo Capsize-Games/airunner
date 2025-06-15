@@ -1,6 +1,6 @@
 from airunner.components.llm.api.llm_services import LLMAPIService
 from airunner.components.art.api.art_services import ARTAPIService
-from airunner.api.tts_services import TTSAPIService
+from airunner.components.tts.api.tts_services import TTSAPIService
 from airunner.components.stt.api.stt_services import STTAPIService
 from airunner.components.art.api.video_services import VideoAPIService
 from airunner.api.nodegraph_services import NodegraphAPIService

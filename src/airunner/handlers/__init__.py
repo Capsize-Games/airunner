@@ -23,19 +23,19 @@ def __getattr__(name):
 
         return LLMModelManager
     elif name == "TTSModelManager":
-        from .tts.tts_model_manager import TTSModelManager
+        from airunner.handlers.tts import TTSModelManager
 
         return TTSModelManager
     elif name == "SpeechT5ModelManager":
-        from .tts.speecht5_model_manager import SpeechT5ModelManager
+        from airunner.handlers.tts import SpeechT5ModelManager
 
         return SpeechT5ModelManager
     elif name == "OpenVoiceModelManager":
-        from .tts.openvoice_model_manager import OpenVoiceModelManager
+        from airunner.components.tts.managers.openvoice_model_manager import OpenVoiceModelManager
 
         return OpenVoiceModelManager
     elif name == "EspeakModelManager":
-        from .tts.espeak_model_manager import EspeakModelManager
+        from airunner.components.tts.managers.espeak_model_manager import EspeakModelManager
 
         return EspeakModelManager
     elif name == "WhisperModelManager":

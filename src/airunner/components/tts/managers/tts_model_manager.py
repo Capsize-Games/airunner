@@ -6,7 +6,7 @@ from transformers import PreTrainedModel, ProcessorMixin
 from airunner.handlers.base_model_manager import BaseModelManager
 from airunner.enums import ModelType, ModelStatus
 from airunner.utils import prepare_text_for_tts
-from airunner.handlers.tts.tts_request import TTSRequest
+from airunner.components.tts.managers.tts_request import TTSRequest
 
 BaseModelManagerMeta = type(BaseModelManager)
 
