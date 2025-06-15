@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGridLayout,
     QScrollArea, QSizePolicy, QSpacerItem, QVBoxLayout,
     QWidget)
 
-from airunner.gui.widgets.llm.loading_widget import LoadingWidget
+from airunner.components.llm.gui.widgets.loading_widget import LoadingWidget
 from airunner.gui.widgets.slider.slider_widget import SliderWidget
 
 class Ui_lora_container(object):

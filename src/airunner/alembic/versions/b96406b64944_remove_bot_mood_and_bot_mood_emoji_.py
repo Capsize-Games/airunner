@@ -8,7 +8,7 @@ Create Date: 2025-05-27 08:05:17.434637
 
 from typing import Sequence, Union
 
-from airunner.data.models.conversation import Conversation
+from airunner.components.llm.data.conversation import Conversation
 from airunner.utils.db import drop_column
 
 

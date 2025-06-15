@@ -43,11 +43,11 @@ from airunner.data.models import (
 )
 from airunner.data.models import table_to_class
 from airunner.data.models.language_settings import LanguageSettings
-from airunner.data.models.rag_settings import RAGSettings
+from airunner.components.llm.data.rag_settings import RAGSettings
 from airunner.enums import ModelService, TTSModel
 from airunner.utils.image import convert_binary_to_image
 from airunner.data.session_manager import session_scope
-from airunner.utils.llm import get_chatbot
+from airunner.components.llm.utils import get_chatbot
 from airunner.utils.settings import get_qsettings
 from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
@@ -680,7 +680,7 @@ class SettingsMixin:
     @staticmethod
     def create_chatbot(chatbot_name) -> Chatbot:
         # Check for existing chatbot with this name before creating
-        from airunner.data.models.chatbot import Chatbot
+        from airunner.components.llm.data.chatbot import Chatbot
 
         try:
             existing = Chatbot.objects.filter_by_first(name=chatbot_name)

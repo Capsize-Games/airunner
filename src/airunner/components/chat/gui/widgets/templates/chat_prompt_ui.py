@@ -21,8 +21,8 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout
     QWidget)
 
 from airunner.components.chat.gui.widgets.conversation_widget import ConversationWidget
-from airunner.gui.widgets.llm.llm_history_widget import LLMHistoryWidget
-from airunner.gui.widgets.llm.llm_settings_widget import LLMSettingsWidget
+from airunner.components.llm.gui.widgets.llm_history_widget import LLMHistoryWidget
+from airunner.components.llm.gui.widgets.llm_settings_widget import LLMSettingsWidget
 import airunner.feather_rc
 
 class Ui_chat_prompt(object):

@@ -1,4 +1,4 @@
-from airunner.handlers.llm.agent.agents import LocalAgent
+from airunner.components.llm.managers.agent import LocalAgent
 
 
 class PygameAgent(LocalAgent):
