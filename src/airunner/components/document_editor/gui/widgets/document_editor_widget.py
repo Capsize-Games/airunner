@@ -326,8 +326,6 @@ class DocumentEditorWidget(BaseWidget):
 
     @Slot()
     def on_run_button_clicked(self):
-        print("on run button clicked")
-        print("self.current_file_path", self.current_file_path)
         self.emit_signal(SignalCode.RUN_SCRIPT, {
             "document_path": self.current_file_path,
         })
