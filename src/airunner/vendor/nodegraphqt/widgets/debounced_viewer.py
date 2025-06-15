@@ -26,9 +26,34 @@ class DebouncedNodeViewer(NodeViewer):
         # Timer delays in milliseconds
         self._debounce_delay = 250  # 250ms debouncing
 
+        self.zooms = 0
+        self.pan = (0, 0)
+
+        # Ensure _zoom and _pan are initialized for property access
+        self._zoom = 1.0
+        self._pan = (0, 0)
+
+    @property
+    def zoom(self):
+        return self._zoom
+
+    @zoom.setter
+    def zoom(self, value):
+        self._zoom = value
+
+    @property
+    def pan(self):
+        return self._pan
+
+    @pan.setter
+    def pan(self, value):
+        self._pan = value
+
     def _set_viewer_zoom(self, value, sensitivity=None, pos=None):
         """Override the zoom method to add debouncing signal."""
         super()._set_viewer_zoom(value, sensitivity, pos)
+
+        self._zoom = value
 
         # Start or restart the debounce timer
         self._zoom_timer.start(self._debounce_delay)
@@ -36,6 +61,8 @@ class DebouncedNodeViewer(NodeViewer):
     def _set_viewer_pan(self, pos_x, pos_y):
         """Override the pan method to add debouncing signal."""
         super()._set_viewer_pan(pos_x, pos_y)
+
+        self._pan = (pos_x, pos_y)
 
         # Start or restart the debounce timer
         self._pan_timer.start(self._debounce_delay)

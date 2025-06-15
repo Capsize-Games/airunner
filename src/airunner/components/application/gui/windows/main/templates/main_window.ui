@@ -136,7 +136,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../resources/feather.qrc">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/home.svg</normaloff>:/light/icons/feather/light/home.svg</iconset>
             </property>
             <property name="iconSize">
@@ -186,7 +186,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../resources/feather.qrc">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
             </property>
             <property name="iconSize">
@@ -236,7 +236,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../resources/feather.qrc">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/file-text.svg</normaloff>:/light/icons/feather/light/file-text.svg</iconset>
             </property>
             <property name="iconSize">
@@ -283,7 +283,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../resources/feather.qrc">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/chrome.svg</normaloff>:/light/icons/feather/light/chrome.svg</iconset>
             </property>
             <property name="iconSize">
@@ -330,7 +330,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../resources/feather.qrc">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/codesandbox.svg</normaloff>:/light/icons/feather/light/codesandbox.svg</iconset>
             </property>
             <property name="iconSize">
@@ -381,7 +381,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../resources/feather.qrc">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/message-square.svg</normaloff>:/light/icons/feather/light/message-square.svg</iconset>
             </property>
             <property name="iconSize">
@@ -425,7 +425,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../resources/feather.qrc">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/settings.svg</normaloff>:/light/icons/feather/light/settings.svg</iconset>
             </property>
             <property name="iconSize">
@@ -769,7 +769,7 @@
       <string>Art</string>
      </property>
      <property name="icon">
-      <iconset resource="../../../resources/feather.qrc">
+      <iconset resource="../../../../../../gui/resources/feather.qrc">
        <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
      </property>
      <addaction name="artActionNew"/>
@@ -781,7 +781,7 @@
       <string>Chat</string>
      </property>
      <property name="icon">
-      <iconset resource="../../../resources/feather.qrc">
+      <iconset resource="../../../../../../gui/resources/feather.qrc">
        <normaloff>:/light/icons/feather/light/message-circle.svg</normaloff>:/light/icons/feather/light/message-circle.svg</iconset>
      </property>
      <addaction name="actionNew_Conversation"/>
@@ -792,7 +792,7 @@
       <string>Workflow</string>
      </property>
      <property name="icon">
-      <iconset resource="../../../resources/feather.qrc">
+      <iconset resource="../../../../../../gui/resources/feather.qrc">
        <normaloff>:/light/icons/feather/light/codesandbox.svg</normaloff>:/light/icons/feather/light/codesandbox.svg</iconset>
      </property>
      <addaction name="workflow_actionRun"/>
@@ -867,7 +867,7 @@
       <string>Stable Diffusion</string>
      </property>
      <property name="icon">
-      <iconset resource="../../../resources/feather.qrc">
+      <iconset resource="../../../../../../gui/resources/feather.qrc">
        <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
      </property>
      <addaction name="actionSafety_Checker"/>
@@ -940,7 +940,7 @@
   </widget>
   <action name="actionCopy">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/copy.svg</normaloff>:/light/icons/feather/light/copy.svg</iconset>
    </property>
    <property name="text">
@@ -952,7 +952,7 @@
   </action>
   <action name="actionPaste">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/clipboard.svg</normaloff>:/light/icons/feather/light/clipboard.svg</iconset>
    </property>
    <property name="text">
@@ -969,7 +969,7 @@
   </action>
   <action name="actionQuit">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/x-circle.svg</normaloff>:/light/icons/feather/light/x-circle.svg</iconset>
    </property>
    <property name="text">
@@ -981,7 +981,7 @@
   </action>
   <action name="actionBug_report">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/external-link.svg</normaloff>:/light/icons/feather/light/external-link.svg</iconset>
    </property>
    <property name="text">
@@ -990,7 +990,7 @@
   </action>
   <action name="actionReport_vulnerability">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/external-link.svg</normaloff>:/light/icons/feather/light/external-link.svg</iconset>
    </property>
    <property name="text">
@@ -999,7 +999,7 @@
   </action>
   <action name="actionPrompt_Browser">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/book-open.svg</normaloff>:/light/icons/feather/light/book-open.svg</iconset>
    </property>
    <property name="text">
@@ -1008,7 +1008,7 @@
   </action>
   <action name="actionClear_all_prompts">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/delete.svg</normaloff>:/light/icons/feather/light/delete.svg</iconset>
    </property>
    <property name="text">
@@ -1020,7 +1020,7 @@
   </action>
   <action name="actionCut">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/scissors.svg</normaloff>:/light/icons/feather/light/scissors.svg</iconset>
    </property>
    <property name="text">
@@ -1032,7 +1032,7 @@
   </action>
   <action name="actionBrowse_AI_Runner_Path">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
    </property>
    <property name="text">
@@ -1041,7 +1041,7 @@
   </action>
   <action name="actionBrowse_Images_Path_2">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
    </property>
    <property name="text">
@@ -1050,7 +1050,7 @@
   </action>
   <action name="actionReset_Settings_2">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/refresh-cw.svg</normaloff>:/light/icons/feather/light/refresh-cw.svg</iconset>
    </property>
    <property name="text">
@@ -1065,7 +1065,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/slash.svg</normaloff>:/light/icons/feather/light/slash.svg</iconset>
    </property>
    <property name="text">
@@ -1074,7 +1074,7 @@
   </action>
   <action name="actionRun_setup_wizard_2">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/zap.svg</normaloff>:/light/icons/feather/light/zap.svg</iconset>
    </property>
    <property name="text">
@@ -1083,7 +1083,7 @@
   </action>
   <action name="actionStats">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/activity.svg</normaloff>:/light/icons/feather/light/activity.svg</iconset>
    </property>
    <property name="text">
@@ -1092,7 +1092,7 @@
   </action>
   <action name="actionSettings">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/settings.svg</normaloff>:/light/icons/feather/light/settings.svg</iconset>
    </property>
    <property name="text">
@@ -1107,7 +1107,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/cpu.svg</normaloff>:/light/icons/feather/light/cpu.svg</iconset>
    </property>
    <property name="text">
@@ -1119,7 +1119,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/speaker.svg</normaloff>:/light/icons/feather/light/speaker.svg</iconset>
    </property>
    <property name="text">
@@ -1131,7 +1131,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/mic.svg</normaloff>:/light/icons/feather/light/mic.svg</iconset>
    </property>
    <property name="text">
@@ -1143,7 +1143,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
    </property>
    <property name="text">
@@ -1158,7 +1158,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/crosshair.svg</normaloff>:/light/icons/feather/light/crosshair.svg</iconset>
    </property>
    <property name="text">
@@ -1167,7 +1167,7 @@
   </action>
   <action name="artActionNew">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/plus-circle.svg</normaloff>:/light/icons/feather/light/plus-circle.svg</iconset>
    </property>
    <property name="text">
@@ -1179,7 +1179,7 @@
   </action>
   <action name="actionImport_image">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/download.svg</normaloff>:/light/icons/feather/light/download.svg</iconset>
    </property>
    <property name="text">
@@ -1191,7 +1191,7 @@
   </action>
   <action name="actionExport_image_button">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/upload.svg</normaloff>:/light/icons/feather/light/upload.svg</iconset>
    </property>
    <property name="text">
@@ -1203,7 +1203,7 @@
   </action>
   <action name="actionNew_Conversation">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/message-circle.svg</normaloff>:/light/icons/feather/light/message-circle.svg</iconset>
    </property>
    <property name="text">
@@ -1212,7 +1212,7 @@
   </action>
   <action name="actionDelete_conversation">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/trash-2.svg</normaloff>:/light/icons/feather/light/trash-2.svg</iconset>
    </property>
    <property name="text">
@@ -1221,7 +1221,7 @@
   </action>
   <action name="actionDiscord">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/message-square.svg</normaloff>:/light/icons/feather/light/message-square.svg</iconset>
    </property>
    <property name="text">
@@ -1230,7 +1230,7 @@
   </action>
   <action name="workflow_actionRun">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/play.svg</normaloff>:/light/icons/feather/light/play.svg</iconset>
    </property>
    <property name="text">
@@ -1239,7 +1239,7 @@
   </action>
   <action name="workflow_actionPause">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/pause-circle.svg</normaloff>:/light/icons/feather/light/pause-circle.svg</iconset>
    </property>
    <property name="text">
@@ -1248,7 +1248,7 @@
   </action>
   <action name="workflow_actionStop">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/stop-circle.svg</normaloff>:/light/icons/feather/light/stop-circle.svg</iconset>
    </property>
    <property name="text">
@@ -1257,7 +1257,7 @@
   </action>
   <action name="workflow_actionSave">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/save.svg</normaloff>:/light/icons/feather/light/save.svg</iconset>
    </property>
    <property name="text">
@@ -1266,7 +1266,7 @@
   </action>
   <action name="workflow_actionClear">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/trash-2.svg</normaloff>:/light/icons/feather/light/trash-2.svg</iconset>
    </property>
    <property name="text">
@@ -1275,7 +1275,7 @@
   </action>
   <action name="workflow_actionEdit">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/edit.svg</normaloff>:/light/icons/feather/light/edit.svg</iconset>
    </property>
    <property name="text">
@@ -1284,7 +1284,7 @@
   </action>
   <action name="workflow_actionOpen">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
    </property>
    <property name="text">
@@ -1293,7 +1293,7 @@
   </action>
   <action name="actionSave_As">
    <property name="icon">
-    <iconset resource="../../../resources/feather.qrc">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
      <normaloff>:/light/icons/feather/light/save.svg</normaloff>:/light/icons/feather/light/save.svg</iconset>
    </property>
    <property name="text">
@@ -1346,7 +1346,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources/feather.qrc"/>
+  <include location="../../../../../../gui/resources/feather.qrc"/>
  </resources>
  <connections/>
  <designerdata>
