@@ -2,10 +2,12 @@ import queue
 import re
 from typing import Optional, Type, Dict
 
-from airunner.handlers.tts.espeak_model_manager import EspeakModelManager
-from airunner.handlers.tts.exceptions import FileMissing, OpenVoiceError
-from airunner.handlers.tts.openvoice_model_manager import OpenVoiceModelManager
-from airunner.handlers.tts.speecht5_model_manager import SpeechT5ModelManager
+from airunner.components.tts.managers.espeak_model_manager import \
+    EspeakModelManager
+from airunner.components.tts.managers.exceptions import OpenVoiceError
+from airunner.components.tts.managers.openvoice_model_manager import \
+    OpenVoiceModelManager
+from airunner.components.tts.managers.speecht5_model_manager import SpeechT5ModelManager
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import (
     SignalCode,
@@ -16,7 +18,7 @@ from airunner.enums import (
 )
 from airunner.workers.worker import Worker
 from airunner.settings import AIRUNNER_TTS_ON
-from airunner.handlers.tts.tts_request import (
+from airunner.components.tts.managers.tts_request import (
     OpenVoiceTTSRequest,
     TTSRequest,
     EspeakTTSRequest,
