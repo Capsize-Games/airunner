@@ -27,7 +27,7 @@ from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
 from airunner.components.art.gui.widgets.canvas.draggables.active_grid_area import (
     ActiveGridArea,
 )
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.components.art.gui.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.utils.settings import get_qsettings

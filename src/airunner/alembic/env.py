@@ -25,7 +25,7 @@ if AIRUNNER_DB_URL.__contains__("sqlite"):
         print(f"Error checking DB path: {e}")
 
 # Import your models here
-from airunner.components.application.data.base import Base
+from airunner.components.data.models.base import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

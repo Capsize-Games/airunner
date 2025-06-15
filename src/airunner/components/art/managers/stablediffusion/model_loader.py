@@ -9,17 +9,15 @@ import logging
 from typing import Any, Dict, Optional, Type
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import CLIPFeatureExtractor
+
+from airunner.components.art.data.embedding import Embedding
+from airunner.components.art.data.lora import Lora
+from airunner.components.art.data.schedulers import Schedulers
 from airunner.enums import ModelType, ModelStatus
 from airunner.components.art.managers.stablediffusion.prompt_weight_bridge import (
     PromptWeightBridge,
 )
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
-from airunner.data.models import (
-    Schedulers,
-    Lora,
-    Embedding,
-    ControlnetModel as ControlnetDataModel,
-)
 from airunner.utils.application import get_torch_device
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,

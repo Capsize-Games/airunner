@@ -1,4 +1,4 @@
-from airunner.data.session_manager import Session
+from airunner.components.data.session_manager import Session
 from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
 from airunner.components.nodegraph.gui.widgets.nodes.core.base_core_node import (

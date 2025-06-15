@@ -39,7 +39,7 @@ from transformers import (
 )
 
 from airunner.enums import LLMActionType
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.components.llm.managers.llm_request import LLMRequest
 

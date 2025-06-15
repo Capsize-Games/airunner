@@ -1,5 +1,5 @@
-from airunner.api.api_service_base import APIServiceBase
-from airunner.api.canvas_services import CanvasAPIService
+from airunner.components.application.api.api_service_base import APIServiceBase
+from airunner.components.art.api.canvas_services import CanvasAPIService
 from airunner.components.art.api.embedding_services import EmbeddingAPIServices
 from airunner.components.art.api.image_filter_services import (
     ImageFilterAPIServices,

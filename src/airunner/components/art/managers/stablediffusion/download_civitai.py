@@ -2,10 +2,9 @@ import os
 import requests
 from json.decoder import JSONDecodeError
 from PySide6.QtCore import QThread
-from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.workers.civit_ai_download_worker import CivitAIDownloadWorker
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.workers.civit_ai_download_worker import CivitAIDownloadWorker
 
 
 class DownloadCivitAI(MediatorMixin, SettingsMixin):

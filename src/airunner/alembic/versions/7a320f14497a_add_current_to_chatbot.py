@@ -8,7 +8,7 @@ Create Date: 2025-05-27 14:21:23.661514
 
 from typing import Sequence, Union
 
-from airunner.data.models import Chatbot
+from airunner.components.llm.data.chatbot import Chatbot
 from airunner.utils.db import add_column, drop_column
 
 

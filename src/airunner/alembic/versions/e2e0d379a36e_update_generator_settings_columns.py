@@ -9,7 +9,9 @@ Create Date: 2025-03-23 05:22:59.970167
 from typing import Sequence, Union
 
 import sqlalchemy as sa
-from airunner.data.models import LLMGeneratorSettings
+
+from airunner.components.llm.data.llm_generator_settings import \
+    LLMGeneratorSettings
 from airunner.utils.db import safe_alter_column
 
 

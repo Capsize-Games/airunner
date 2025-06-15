@@ -1,4 +1,4 @@
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.settings.gui.widgets.export_preferences.templates.export_preferences_ui import (
     Ui_export_preferences,
 )

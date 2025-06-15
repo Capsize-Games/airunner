@@ -3,7 +3,7 @@ from PySide6.QtCore import Slot
 
 from airunner.components.llm.gui.widgets.templates.rag_settings_ui import \
     Ui_rag_settings
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.data.rag_settings import RAGSettings
 from airunner.enums import ModelService
 

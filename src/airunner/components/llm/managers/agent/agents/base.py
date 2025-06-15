@@ -19,17 +19,19 @@ from llama_index.core.base.llms.types import (
 )
 from llama_index.core.base.llms.types import TextBlock
 
+from airunner.components.application.data import Tab
+from airunner.components.llm.data.conversation import Conversation
+from airunner.components.user.data.user import User
 from airunner.enums import (
     LANGUAGE_DISPLAY_MAP,
     AvailableLanguage,
     LLMActionType,
     SignalCode,
 )
-from airunner.data.models import User, Tab
 from airunner.components.llm.managers.agent.agents.prompt_builder import PromptBuilder
 from airunner.components.llm.managers.agent.agents.prompt_config import PromptConfig
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.components.llm.managers.agent import (
     RAGMixin,
     ExternalConditionStoppingCriteria,
@@ -44,7 +46,6 @@ from airunner.components.llm.managers.storage.chat_store import DatabaseChatStor
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.managers.llm_settings import LLMSettings
-from airunner.data.models import Conversation
 from airunner.settings import (
     AIRUNNER_ART_ENABLED,
     AIRUNNER_MOOD_PROMPT_OVERRIDE,

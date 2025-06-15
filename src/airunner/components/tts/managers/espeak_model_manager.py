@@ -2,10 +2,10 @@ from typing import Optional
 from abc import ABCMeta
 import pyttsx3
 
+from airunner.components.tts.data.models.espeak_settings import EspeakSettings
 from airunner.components.tts.managers.tts_model_manager import TTSModelManager
 from airunner.enums import ModelType, ModelStatus, Gender, AvailableLanguage
 from airunner.components.tts.managers.tts_request import TTSRequest
-from airunner.data.models import EspeakSettings
 
 
 class EspeakModelManager(TTSModelManager, metaclass=ABCMeta):

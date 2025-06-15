@@ -1,7 +1,7 @@
 from PySide6.QtGui import QTransform
 
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 
 
 class ZoomHandler(

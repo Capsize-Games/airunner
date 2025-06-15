@@ -22,7 +22,7 @@ from airunner.enums import (
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import get_torch_device
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.components.application.managers.model_device_manager import DeviceManagerMixin
 from airunner.components.application.managers.model_status_manager import StatusManagerMixin
 

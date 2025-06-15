@@ -1,0 +1,1369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <author>Capsize LLC</author>
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1074</width>
+    <height>760</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="font">
+   <font>
+    <pointsize>8</pointsize>
+   </font>
+  </property>
+  <property name="windowTitle">
+   <string>AI Runner</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>:/icons/icon_256.png</normaloff>:/icons/icon_256.png</iconset>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>0</width>
+     <height>0</height>
+    </size>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LayoutDirection::LeftToRight</enum>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_3">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <item row="0" column="0">
+     <widget class="QWidget" name="mode_tab_widget" native="true">
+      <property name="autoFillBackground">
+       <bool>false</bool>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QTabWidget#mode_tab_widget::pane { border: 0; background: transparent; }</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_9">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QWidget" name="actionsidebar" native="true">
+         <layout class="QVBoxLayout" name="action_sidebar">
+          <property name="spacing">
+           <number>5</number>
+          </property>
+          <property name="leftMargin">
+           <number>5</number>
+          </property>
+          <property name="topMargin">
+           <number>5</number>
+          </property>
+          <property name="rightMargin">
+           <number>5</number>
+          </property>
+          <property name="bottomMargin">
+           <number>5</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="home_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Home</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/home.svg</normaloff>:/light/icons/feather/light/home.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="art_editor_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Art Editor</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="document_editor_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Document Editor</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/file-text.svg</normaloff>:/light/icons/feather/light/file-text.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="browser_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Browser</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/chrome.svg</normaloff>:/light/icons/feather/light/chrome.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="workflow_editor_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Workflow Editor</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/codesandbox.svg</normaloff>:/light/icons/feather/light/codesandbox.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="chat_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Chat</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/message-square.svg</normaloff>:/light/icons/feather/light/message-square.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="settings_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Settings</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/settings.svg</normaloff>:/light/icons/feather/light/settings.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QSplitter" name="main_window_splitter">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <widget class="GeneratorForm" name="generator_widget" native="true">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>250</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="baseSize">
+           <size>
+            <width>250</width>
+            <height>0</height>
+           </size>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_6">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="center_widget" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>64</width>
+            <height>0</height>
+           </size>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_4">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QTabWidget" name="center_tab_container">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="baseSize">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <property name="documentMode">
+              <bool>false</bool>
+             </property>
+             <property name="tabsClosable">
+              <bool>false</bool>
+             </property>
+             <property name="movable">
+              <bool>false</bool>
+             </property>
+             <widget class="QWidget" name="home_tab">
+              <attribute name="title">
+               <string>Home</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_8">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="HomeStageWidget" name="home_stage" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="art_tab">
+              <attribute name="title">
+               <string>Art</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_2">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="CanvasWidget" name="canvas" native="true">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="cursor">
+                  <cursorShape>ArrowCursor</cursorShape>
+                 </property>
+                 <property name="acceptDrops">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="agent_workflow_tab">
+              <attribute name="title">
+               <string>Agent Workflow</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_5">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="NodeGraphWidget" name="graph" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="browser_tab">
+              <attribute name="title">
+               <string>Browser</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_7">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="QTabWidget" name="browser">
+                 <property name="movable">
+                  <bool>true</bool>
+                 </property>
+                 <widget class="BrowserWidget" name="browser_page">
+                  <attribute name="title">
+                   <string/>
+                  </attribute>
+                 </widget>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="document_editor_tab">
+              <attribute name="title">
+               <string>Document Editor</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="DocumentEditorContainerWidget" name="widget" native="true"/>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="knowledgebase" native="true">
+          <layout class="QGridLayout" name="gridLayout_10">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QSplitter" name="splitter_2">
+             <property name="orientation">
+              <enum>Qt::Orientation::Vertical</enum>
+             </property>
+             <widget class="QWidget" name="documents_container" native="true">
+              <layout class="QGridLayout" name="gridLayout_11">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="DocumentsWidget" name="documents" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="widget_3" native="true"/>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1074</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>11</pointsize>
+    </font>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="tearOffEnabled">
+     <bool>false</bool>
+    </property>
+    <property name="title">
+     <string>File</string>
+    </property>
+    <property name="separatorsCollapsible">
+     <bool>false</bool>
+    </property>
+    <widget class="QMenu" name="menuArt">
+     <property name="title">
+      <string>Art</string>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources/feather.qrc">
+       <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
+     </property>
+     <addaction name="artActionNew"/>
+     <addaction name="actionImport_image"/>
+     <addaction name="actionExport_image_button"/>
+    </widget>
+    <widget class="QMenu" name="menuChat">
+     <property name="title">
+      <string>Chat</string>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources/feather.qrc">
+       <normaloff>:/light/icons/feather/light/message-circle.svg</normaloff>:/light/icons/feather/light/message-circle.svg</iconset>
+     </property>
+     <addaction name="actionNew_Conversation"/>
+     <addaction name="actionDelete_conversation"/>
+    </widget>
+    <widget class="QMenu" name="menuWorkflow">
+     <property name="title">
+      <string>Workflow</string>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources/feather.qrc">
+       <normaloff>:/light/icons/feather/light/codesandbox.svg</normaloff>:/light/icons/feather/light/codesandbox.svg</iconset>
+     </property>
+     <addaction name="workflow_actionRun"/>
+     <addaction name="workflow_actionPause"/>
+     <addaction name="workflow_actionStop"/>
+     <addaction name="separator"/>
+     <addaction name="workflow_actionSave"/>
+     <addaction name="actionSave_As"/>
+     <addaction name="workflow_actionClear"/>
+     <addaction name="workflow_actionEdit"/>
+     <addaction name="workflow_actionOpen"/>
+    </widget>
+    <addaction name="menuArt"/>
+    <addaction name="separator"/>
+    <addaction name="menuChat"/>
+    <addaction name="separator"/>
+    <addaction name="menuWorkflow"/>
+    <addaction name="separator"/>
+    <addaction name="actionReset_Settings_2"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="separator"/>
+    <addaction name="actionCut"/>
+    <addaction name="actionCopy"/>
+    <addaction name="actionPaste"/>
+    <addaction name="separator"/>
+    <addaction name="actionClear_all_prompts"/>
+    <addaction name="separator"/>
+    <addaction name="actionSettings"/>
+   </widget>
+   <widget class="QMenu" name="menuFilters">
+    <property name="title">
+     <string>Filters</string>
+    </property>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuAbout">
+    <property name="tearOffEnabled">
+     <bool>false</bool>
+    </property>
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+    <addaction name="actionBug_report"/>
+    <addaction name="actionReport_vulnerability"/>
+    <addaction name="separator"/>
+    <addaction name="actionDiscord"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionPrompt_Browser"/>
+    <addaction name="separator"/>
+    <addaction name="actionBrowse_AI_Runner_Path"/>
+    <addaction name="separator"/>
+    <addaction name="actionBrowse_Images_Path_2"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <widget class="QMenu" name="menuStable_Diffusion">
+     <property name="title">
+      <string>Stable Diffusion</string>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../resources/feather.qrc">
+       <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
+     </property>
+     <addaction name="actionSafety_Checker"/>
+     <addaction name="actionToggle_Stable_Diffusion"/>
+     <addaction name="actionToggle_Controlnet"/>
+    </widget>
+    <addaction name="menuStable_Diffusion"/>
+    <addaction name="separator"/>
+    <addaction name="actionToggle_LLM"/>
+    <addaction name="actionToggle_Text_to_Speech"/>
+    <addaction name="actionToggle_Speech_to_Text"/>
+    <addaction name="separator"/>
+    <addaction name="actionStats"/>
+    <addaction name="separator"/>
+    <addaction name="actionRun_setup_wizard_2"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuImage">
+    <property name="title">
+     <string>Canvas</string>
+    </property>
+    <addaction name="separator"/>
+    <addaction name="separator"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuView"/>
+   <addaction name="menuImage"/>
+   <addaction name="menuFilters"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuAbout"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QToolBar" name="model_toolbar">
+   <property name="windowTitle">
+    <string>toolBar_2</string>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LayoutDirection::RightToLeft</enum>
+   </property>
+   <property name="movable">
+    <bool>true</bool>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Orientation::Horizontal</enum>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>18</width>
+     <height>18</height>
+    </size>
+   </property>
+   <property name="floatable">
+    <bool>false</bool>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>BottomToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionSettings"/>
+   <addaction name="separator"/>
+   <addaction name="actionToggle_Speech_to_Text"/>
+   <addaction name="actionToggle_Text_to_Speech"/>
+   <addaction name="actionToggle_LLM"/>
+   <addaction name="separator"/>
+   <addaction name="actionToggle_Controlnet"/>
+   <addaction name="actionToggle_Stable_Diffusion"/>
+  </widget>
+  <action name="actionCopy">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/copy.svg</normaloff>:/light/icons/feather/light/copy.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Copy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="actionPaste">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/clipboard.svg</normaloff>:/light/icons/feather/light/clipboard.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Paste</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/x-circle.svg</normaloff>:/light/icons/feather/light/x-circle.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionBug_report">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/external-link.svg</normaloff>:/light/icons/feather/light/external-link.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Bug report</string>
+   </property>
+  </action>
+  <action name="actionReport_vulnerability">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/external-link.svg</normaloff>:/light/icons/feather/light/external-link.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Report vulnerability</string>
+   </property>
+  </action>
+  <action name="actionPrompt_Browser">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/book-open.svg</normaloff>:/light/icons/feather/light/book-open.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Prompt browser</string>
+   </property>
+  </action>
+  <action name="actionClear_all_prompts">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/delete.svg</normaloff>:/light/icons/feather/light/delete.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Clear all prompts</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove text from all prompts and negative prompts</string>
+   </property>
+  </action>
+  <action name="actionCut">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/scissors.svg</normaloff>:/light/icons/feather/light/scissors.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Cut</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+X</string>
+   </property>
+  </action>
+  <action name="actionBrowse_AI_Runner_Path">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Browse AI Runner Path</string>
+   </property>
+  </action>
+  <action name="actionBrowse_Images_Path_2">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Browse Images</string>
+   </property>
+  </action>
+  <action name="actionReset_Settings_2">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/refresh-cw.svg</normaloff>:/light/icons/feather/light/refresh-cw.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Reset Settings</string>
+   </property>
+  </action>
+  <action name="actionSafety_Checker">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/slash.svg</normaloff>:/light/icons/feather/light/slash.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Safety Checker</string>
+   </property>
+  </action>
+  <action name="actionRun_setup_wizard_2">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/zap.svg</normaloff>:/light/icons/feather/light/zap.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Run Setup Wizard</string>
+   </property>
+  </action>
+  <action name="actionStats">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/activity.svg</normaloff>:/light/icons/feather/light/activity.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Stats</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/settings.svg</normaloff>:/light/icons/feather/light/settings.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Preferences</string>
+   </property>
+  </action>
+  <action name="actionToggle_LLM">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/cpu.svg</normaloff>:/light/icons/feather/light/cpu.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle LLM</string>
+   </property>
+  </action>
+  <action name="actionToggle_Text_to_Speech">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/speaker.svg</normaloff>:/light/icons/feather/light/speaker.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Text to Speech</string>
+   </property>
+  </action>
+  <action name="actionToggle_Speech_to_Text">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/mic.svg</normaloff>:/light/icons/feather/light/mic.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Speech to Text</string>
+   </property>
+  </action>
+  <action name="actionToggle_Stable_Diffusion">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Stable Diffusion</string>
+   </property>
+  </action>
+  <action name="actionToggle_Controlnet">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/crosshair.svg</normaloff>:/light/icons/feather/light/crosshair.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Controlnet</string>
+   </property>
+  </action>
+  <action name="artActionNew">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/plus-circle.svg</normaloff>:/light/icons/feather/light/plus-circle.svg</iconset>
+   </property>
+   <property name="text">
+    <string>New</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionImport_image">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/download.svg</normaloff>:/light/icons/feather/light/download.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Import image</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="actionExport_image_button">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/upload.svg</normaloff>:/light/icons/feather/light/upload.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Export image</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="actionNew_Conversation">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/message-circle.svg</normaloff>:/light/icons/feather/light/message-circle.svg</iconset>
+   </property>
+   <property name="text">
+    <string>New Conversation</string>
+   </property>
+  </action>
+  <action name="actionDelete_conversation">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/trash-2.svg</normaloff>:/light/icons/feather/light/trash-2.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Delete conversation</string>
+   </property>
+  </action>
+  <action name="actionDiscord">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/message-square.svg</normaloff>:/light/icons/feather/light/message-square.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Discord</string>
+   </property>
+  </action>
+  <action name="workflow_actionRun">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/play.svg</normaloff>:/light/icons/feather/light/play.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Run</string>
+   </property>
+  </action>
+  <action name="workflow_actionPause">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/pause-circle.svg</normaloff>:/light/icons/feather/light/pause-circle.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Pause</string>
+   </property>
+  </action>
+  <action name="workflow_actionStop">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/stop-circle.svg</normaloff>:/light/icons/feather/light/stop-circle.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+  </action>
+  <action name="workflow_actionSave">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/save.svg</normaloff>:/light/icons/feather/light/save.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="workflow_actionClear">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/trash-2.svg</normaloff>:/light/icons/feather/light/trash-2.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Clear</string>
+   </property>
+  </action>
+  <action name="workflow_actionEdit">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/edit.svg</normaloff>:/light/icons/feather/light/edit.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Edit</string>
+   </property>
+  </action>
+  <action name="workflow_actionOpen">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Load</string>
+   </property>
+  </action>
+  <action name="actionSave_As">
+   <property name="icon">
+    <iconset resource="../../../resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/save.svg</normaloff>:/light/icons/feather/light/save.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Save As</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>GeneratorForm</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/art/gui/widgets/generator_form/generator_form_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CanvasWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/art/gui/widgets/canvas/canvas_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>NodeGraphWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/nodegraph/gui/widgets/node_graph_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>BrowserWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/browser/gui/widgets/browser_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DocumentEditorContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/document_editor/gui/widgets/document_editor_container_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DocumentsWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/documents/gui/widgets/documents</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>HomeStageWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/home_stage/gui/widgets/home_stage_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../../../resources/feather.qrc"/>
+ </resources>
+ <connections/>
+ <designerdata>
+  <property name="gridDeltaX">
+   <number>10</number>
+  </property>
+  <property name="gridDeltaY">
+   <number>10</number>
+  </property>
+  <property name="gridSnapX">
+   <bool>true</bool>
+  </property>
+  <property name="gridSnapY">
+   <bool>true</bool>
+  </property>
+  <property name="gridVisible">
+   <bool>true</bool>
+  </property>
+ </designerdata>
+</ui>

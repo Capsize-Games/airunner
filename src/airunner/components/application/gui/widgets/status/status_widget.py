@@ -3,7 +3,7 @@ import torch
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 from airunner.enums import SignalCode, ModelStatus, ModelType, StatusColors
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.status.templates.status_ui import Ui_status_widget
 from airunner.settings import AIRUNNER_ART_ENABLED
 from airunner.components.settings.data.voice_settings import VoiceSettings

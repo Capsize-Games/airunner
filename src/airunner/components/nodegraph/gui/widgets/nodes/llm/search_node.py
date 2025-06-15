@@ -7,8 +7,9 @@ This node interfaces with AggregatedSearchTool to provide search results as node
 from airunner.components.nodegraph.gui.widgets.nodes.llm.base_llm_node import (
     BaseLLMNode,
 )
-from airunner.tools.search_tool import AggregatedSearchTool
 import asyncio
+
+from airunner.components.tools.search_tool import AggregatedSearchTool
 
 
 class SearchNode(BaseLLMNode):

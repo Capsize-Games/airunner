@@ -1,8 +1,9 @@
 from typing import Annotated
 import json
 from llama_index.core.tools import FunctionTool
+
+from airunner.components.llm.data.conversation import Conversation
 from airunner.enums import SignalCode
-from airunner.data.models import Conversation
 from airunner.components.llm.managers.agent.agents.tool_mixins.tool_singleton_mixin import (
     ToolSingletonMixin,
 )

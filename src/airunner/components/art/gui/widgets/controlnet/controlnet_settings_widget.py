@@ -1,6 +1,6 @@
-from airunner.data.models import ControlnetModel
+from airunner.components.art.data.controlnet_model import ControlnetModel
 from airunner.enums import SignalCode
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.controlnet.templates.controlnet_settings_widget_ui import (
     Ui_controlnet_settings_widget,
 )

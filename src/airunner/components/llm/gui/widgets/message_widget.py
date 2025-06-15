@@ -10,8 +10,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QSize, Slot, QEvent, QTimer
 from PySide6.QtCore import Signal, QPropertyAnimation, QEasingCurve
 
+from airunner.components.llm.data.conversation import Conversation
 from airunner.enums import SignalCode
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.gui.widgets.contentwidgets.latex_widget import LatexWidget
 from airunner.components.llm.gui.widgets.contentwidgets.markdown_widget import (
     MarkdownWidget,
@@ -23,7 +24,6 @@ from airunner.components.llm.gui.widgets.contentwidgets.plain_text_widget import
     PlainTextWidget,
 )
 from airunner.components.llm.gui.widgets.templates.message_ui import Ui_message
-from airunner.data.models import Conversation
 from airunner.utils.application import get_logger
 from airunner.utils.text.formatter_extended import FormatterExtended
 

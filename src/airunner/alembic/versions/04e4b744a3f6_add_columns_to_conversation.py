@@ -8,8 +8,8 @@ Create Date: 2025-03-30 13:42:57.817433
 
 from typing import Sequence, Union
 
+from airunner.components.llm.data.conversation import Conversation
 from airunner.utils.db import add_column, drop_column
-from airunner.data.models import Conversation
 
 # revision identifiers, used by Alembic.
 revision: str = "04e4b744a3f6"

@@ -1,7 +1,7 @@
 from typing import Dict
 from PySide6.QtCore import Slot
 
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.stablediffusion.templates.prompt_container_ui import (
     Ui_prompt_container_widget,
 )

@@ -21,7 +21,7 @@ from airunner.enums import (
     SignalCode,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.components.settings.data.application_settings import ApplicationSettings
 from airunner.settings import (
     AIRUNNER_DISABLE_SETUP_WIZARD,
@@ -29,7 +29,7 @@ from airunner.settings import (
     MATHJAX_VERSION,
     QTWEBENGINE_REMOTE_DEBUGGING,  # Add this import
 )
-from airunner.components.llm.gui.widgets.local_http_server import LocalHttpServerThread
+from airunner.components.server.local_http_server import LocalHttpServerThread
 from airunner.components.splash_screen.splash_screen import SplashScreen
 import os
 import subprocess
@@ -349,7 +349,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         window_class = self.main_window_class_
         if not window_class:
-            from airunner.gui.windows.main.main_window import MainWindow
+            from airunner.components.application.gui.windows.main.main_window import MainWindow
 
             window_class = MainWindow
 

@@ -38,7 +38,7 @@ from airunner.utils.image import (
 from airunner.components.art.gui.widgets.canvas.draggables.draggable_pixmap import (
     DraggablePixmap,
 )
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.components.art.managers.stablediffusion.rect import Rect
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,

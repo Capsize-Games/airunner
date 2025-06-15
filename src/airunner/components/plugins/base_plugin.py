@@ -1,6 +1,6 @@
 from typing import Optional
 
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 
 
 class BasePlugin:

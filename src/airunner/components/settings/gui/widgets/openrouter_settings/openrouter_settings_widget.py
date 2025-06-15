@@ -1,5 +1,5 @@
 from PySide6.QtCore import Slot
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.settings.gui.widgets.openrouter_settings.templates.openrouter_settings_ui import (
     Ui_openrouter_settings_widget,
 )

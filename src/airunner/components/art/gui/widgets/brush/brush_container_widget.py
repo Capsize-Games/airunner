@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QColorDialog
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.brush.templates.brush_widget_ui import (
     Ui_brush_widget,
 )

@@ -8,7 +8,7 @@ Create Date: 2025-04-29 05:23:02.669468
 
 from typing import Sequence, Union
 
-from airunner.data.models import GeneratorSettings
+from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.utils.db import add_column, drop_column
 
 # revision identifiers, used by Alembic.

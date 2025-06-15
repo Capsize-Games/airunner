@@ -63,9 +63,9 @@ docs
 .cache/.webcache/*
 .cache/.webcache/**
 .cache/.webcache
-src/airunner/tools/.webcache/
-src/airunner/tools/.webcache/*
-src/airunner/tools/.webcache/**
+src/airunner/components/tools/.webcache/
+src/airunner/components/tools/.webcache/*
+src/airunner/components/tools/.webcache/**
 .cache
 .cache/**
 .cache/.webcache
