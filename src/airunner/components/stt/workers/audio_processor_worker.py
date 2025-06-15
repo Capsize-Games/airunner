@@ -1,5 +1,6 @@
+from airunner.components.stt.managers.whisper_model_manager import \
+    WhisperModelManager
 from airunner.enums import SignalCode
-from airunner.handlers.stt.whisper_model_manager import WhisperModelManager
 from airunner.workers.worker import Worker
 
 
