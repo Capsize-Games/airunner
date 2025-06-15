@@ -18,8 +18,8 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QVBoxLayout
 
 from airunner.enums import SignalCode
-from airunner.workers.audio_capture_worker import AudioCaptureWorker
-from airunner.workers.audio_processor_worker import AudioProcessorWorker
+from airunner.components.stt.workers.audio_capture_worker import AudioCaptureWorker
+from airunner.components.stt.workers.audio_processor_worker import AudioProcessorWorker
 from airunner.components.llm.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 from airunner.workers.sd_worker import SDWorker
