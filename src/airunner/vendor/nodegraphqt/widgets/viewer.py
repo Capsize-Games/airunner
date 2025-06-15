@@ -1670,7 +1670,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         if value == 0.0:
             self.reset_zoom()
             return
-        zoom = self.get_zoom()
+        zoom = value
         if zoom < 0.0:
             if not (ZOOM_MIN <= zoom <= ZOOM_MAX):
                 self.logger.debug(

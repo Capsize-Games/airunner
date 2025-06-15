@@ -64,13 +64,15 @@ def load_splitter_settings(
             # Determine a dimension to use for calculating proportional sizes.
             # If splitter has no size yet, use a nominal dimension.
             actual_dimension = 0
-            if current_orientation == Qt.Horizontal:
+            if current_orientation == Qt.Orientation.Horizontal:
                 actual_dimension = splitter.width()
             else:  # Qt.Vertical
                 actual_dimension = splitter.height()
 
             nominal_dimension_if_unknown = (
-                800 if current_orientation == Qt.Horizontal else 600
+                800
+                if current_orientation == Qt.Orientation.Horizontal
+                else 600
             )
             calc_dimension = (
                 actual_dimension
