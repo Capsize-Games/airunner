@@ -21,12 +21,12 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QMainWindow, QMenu,
     QSplitter, QStatusBar, QTabWidget, QToolBar,
     QVBoxLayout, QWidget)
 
+from airunner.components.art.gui.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.components.browser.gui.widgets.browser_widget import BrowserWidget
 from airunner.components.document_editor.gui.widgets.document_editor_container_widget import DocumentEditorContainerWidget
 from airunner.components.documents.gui.widgets.documents import DocumentsWidget
 from airunner.components.home_stage.gui.widgets.home_stage_widget import HomeStageWidget
 from airunner.components.nodegraph.gui.widgets.node_graph_widget import NodeGraphWidget
-from airunner.gui.widgets.canvas.canvas_widget import CanvasWidget
 from airunner.gui.widgets.generator_form.generator_form_widget import GeneratorForm
 import airunner.feather_rc
 

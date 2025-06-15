@@ -10,7 +10,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from airunner.data.models.base import BaseModel
+from airunner.components.application.data.base import BaseModel
 from airunner.settings import (
     AIRUNNER_SD_DEFAULT_VAE_PATH,
     AIRUNNER_DEFAULT_SCHEDULER,

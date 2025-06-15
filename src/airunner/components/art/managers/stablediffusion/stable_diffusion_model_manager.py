@@ -1,4 +1,3 @@
-import torch
 from typing import Dict, Any
 
 from diffusers import (
@@ -15,7 +14,7 @@ from airunner.components.art.managers.stablediffusion.base_diffusers_model_manag
 from airunner.components.art.managers.stablediffusion.prompt_weight_bridge import (
     PromptWeightBridge,
 )
-from airunner.handlers.base_model_manager import ModelManagerInterface
+from airunner.components.application.managers.base_model_manager import ModelManagerInterface
 
 # Patch for test compatibility: expose clear_memory for patching in tests
 try:

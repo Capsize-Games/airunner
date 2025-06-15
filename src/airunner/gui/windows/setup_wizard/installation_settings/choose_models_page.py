@@ -7,7 +7,7 @@ from airunner.gui.windows.setup_wizard.installation_settings.templates.choose_mo
     QSpacerItem,
     Ui_install_success_page,
 )
-from airunner.data.bootstrap.controlnet_bootstrap_data import (
+from airunner.components.art.data.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
 )
 

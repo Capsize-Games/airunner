@@ -14,7 +14,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, joinedload
 
-from airunner.data.models.base import BaseModel
+from airunner.components.application.data.base import BaseModel
 from airunner.data.models.summary import Summary
 from airunner.components.llm.data.chatbot import Chatbot
 from airunner.data.models.user import User

@@ -5,7 +5,7 @@ Handles session, history, and bookmarks persistence logic.
 Google Python Style Guide applies.
 """
 
-from airunner.data.models.airunner_settings import AIRunnerSettings
+from airunner.components.settings.data.airunner_settings import AIRunnerSettings
 import json
 import uuid
 from datetime import datetime

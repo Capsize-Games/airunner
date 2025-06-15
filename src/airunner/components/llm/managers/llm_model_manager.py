@@ -14,7 +14,7 @@ from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.components.conversations.conversation_history_manager import ConversationHistoryManager
 from airunner.components.llm.data.conversation import Conversation
-from airunner.handlers.base_model_manager import BaseModelManager
+from airunner.components.application.managers.base_model_manager import BaseModelManager
 from airunner.enums import (
     ModelType,
     ModelStatus,

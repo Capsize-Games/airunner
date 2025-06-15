@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, Boolean, LargeBinary
 
-from airunner.data.models.base import BaseModel
+from airunner.components.application.data.base import BaseModel
 
 
 class OutpaintSettings(BaseModel):

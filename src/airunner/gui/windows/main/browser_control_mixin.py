@@ -5,14 +5,14 @@ including tabbed browsing, keyboard shortcuts, session management, and all brows
 """
 
 from typing import List, Optional, Dict, Any
-from PySide6.QtCore import QTimer, Slot, QSettings
+from PySide6.QtCore import QTimer, Slot
 from PySide6.QtGui import QShortcut, QKeySequence, QIcon
-from PySide6.QtWidgets import QTabWidget, QMessageBox
+from PySide6.QtWidgets import QTabWidget
 from PySide6.QtPrintSupport import QPrintDialog, QPrinter
 from airunner.components.browser.gui.widgets.browser_widget import (
     BrowserWidget,
 )
-from airunner.data.models.airunner_settings import AIRunnerSettings
+from airunner.components.settings.data.airunner_settings import AIRunnerSettings
 import json
 
 

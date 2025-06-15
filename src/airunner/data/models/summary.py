@@ -2,7 +2,7 @@ import datetime
 from sqlalchemy import Column, Integer, DateTime, String, ForeignKey
 from sqlalchemy.orm import relationship
 
-from airunner.data.models.base import BaseModel
+from airunner.components.application.data.base import BaseModel
 
 
 class Summary(BaseModel):

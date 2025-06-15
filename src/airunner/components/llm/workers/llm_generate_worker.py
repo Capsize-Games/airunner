@@ -9,7 +9,7 @@ from airunner.components.llm.managers.llm_model_manager import LLMModelManager
 from airunner.components.llm.managers.openrouter_model_manager import (
     OpenRouterModelManager,
 )
-from airunner.context.context_manager import ContextManager
+from airunner.components.context.context_manager import ContextManager
 from airunner.components.documents.data.models.document import (
     Document as DBDocument,
 )

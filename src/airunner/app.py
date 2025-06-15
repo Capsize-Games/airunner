@@ -11,8 +11,8 @@ from PySide6.QtGui import QGuiApplication, Qt, QWindow
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTranslator, QLocale
 
-from airunner.data.models.language_settings import LanguageSettings
-from airunner.data.models.path_settings import PathSettings
+from airunner.components.settings.data.language_settings import LanguageSettings
+from airunner.components.settings.data.path_settings import PathSettings
 from airunner.enums import (
     LANGUAGE_TO_LOCALE_MAP,
     AVAILABLE_LANGUAGES,
@@ -22,7 +22,7 @@ from airunner.enums import (
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.data.models.application_settings import ApplicationSettings
+from airunner.components.settings.data.application_settings import ApplicationSettings
 from airunner.settings import (
     AIRUNNER_DISABLE_SETUP_WIZARD,
     AIRUNNER_DISCORD_URL,

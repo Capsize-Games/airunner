@@ -1,6 +1,4 @@
 import os
-import sounddevice as sd
-import librosa
 import queue
 
 import numpy as np
@@ -14,10 +12,9 @@ from transformers.models.whisper.feature_extraction_whisper import (
 )
 from PySide6.QtCore import QThread, QMutex, QObject, Signal
 
-from airunner.handlers.base_model_manager import BaseModelManager
+from airunner.components.application.managers.base_model_manager import BaseModelManager
 from airunner.enums import SignalCode, ModelType, ModelStatus
-from airunner.exceptions import NaNException
-from airunner.utils.memory import clear_memory
+from airunner.components.application.exceptions import NaNException
 from airunner.settings import (
     AIRUNNER_DEFAULT_STT_HF_PATH,
     AIRUNNER_LOCAL_FILES_ONLY,

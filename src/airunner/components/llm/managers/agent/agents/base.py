@@ -68,7 +68,7 @@ from airunner.components.llm.managers.agent.agents.tool_mixins import (
     MoodToolsMixin,
     AnalysisToolsMixin,
 )
-from airunner.context.context_manager import ContextManager
+from airunner.components.context.context_manager import ContextManager
 from airunner.components.llm.managers.agent.agents.tool_mixins.browser_tools_mixin import (
     BrowserToolsMixin,
 )

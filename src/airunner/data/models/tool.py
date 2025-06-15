@@ -1,6 +1,6 @@
 from sqlalchemy import JSON, Column, Integer, String
 
-from airunner.data.models.base import BaseModel
+from airunner.components.application.data.base import BaseModel
 
 
 class Tool(BaseModel):

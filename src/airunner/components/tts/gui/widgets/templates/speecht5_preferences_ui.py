@@ -18,7 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
     QLabel, QSizePolicy, QSpacerItem, QWidget)
 
-from airunner.gui.widgets.slider.slider_widget import SliderWidget
+from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
 
 class Ui_speecht5_preferences(object):
     def setupUi(self, speecht5_preferences):

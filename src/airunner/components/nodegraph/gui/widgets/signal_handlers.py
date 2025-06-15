@@ -18,7 +18,7 @@ def _on_nodegraph_zoom_changed(self, data: Dict):
         center_y = 0
 
     # Update the settings
-    from airunner.data.models.application_settings import ApplicationSettings
+    from airunner.components.settings.data.application_settings import ApplicationSettings
 
     ApplicationSettings.objects.update(
         self.application_settings.id,
@@ -42,7 +42,7 @@ def _on_nodegraph_pan_changed(self, data: Dict):
     zoom = getattr(settings, "nodegraph_zoom", 0)
 
     # Update the settings
-    from airunner.data.models.application_settings import ApplicationSettings
+    from airunner.components.settings.data.application_settings import ApplicationSettings
 
     ApplicationSettings.objects.update(
         self.application_settings.id,
