@@ -29,7 +29,7 @@ from airunner.components.art.api.video_services import VideoAPIService
 from airunner.api.stt_services import STTAPIService
 from airunner.api.tts_services import TTSAPIService
 from airunner.components.art.api.art_services import ARTAPIService
-from airunner.api.llm_services import LLMAPIService
+from airunner.components.llm.api.llm_services import LLMAPIService
 from airunner.api.browser_services import BrowserAPIService
 from airunner.api import api as api_module
 
