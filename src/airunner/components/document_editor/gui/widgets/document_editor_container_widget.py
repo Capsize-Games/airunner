@@ -20,6 +20,8 @@ import os
 from airunner.components.browser.gui.widgets.mixins.tab_manager_mixin import (
     TabManagerMixin,
 )
+import sys
+from PySide6.QtCore import QProcess
 
 
 class DocumentEditorContainerWidget(TabManagerMixin, BaseWidget):
@@ -28,9 +30,10 @@ class DocumentEditorContainerWidget(TabManagerMixin, BaseWidget):
     widget_class_ = Ui_document_editor_container
 
     def __init__(self, *args, **kwargs):
-        self._splitters = ["splitter"]
+        self.splitters = ["splitter", "vertical_splitter"]
         self.signal_handlers = {
             SignalCode.FILE_EXPLORER_OPEN_FILE: self.open_file_in_new_tab,
+            SignalCode.RUN_SCRIPT: self.run_script,
         }
         super().__init__(*args, **kwargs)
         self.setup_tab_manager(
@@ -50,6 +53,63 @@ class DocumentEditorContainerWidget(TabManagerMixin, BaseWidget):
         """Open a file in a new tab in the document editor tab widget."""
         file_path = data.get("file_path")
         self._open_file_tab(file_path)
+
+    def run_script(self, data: Dict) -> None:
+        document_path = data.get("document_path")
+        if os.path.exists(document_path) and os.path.isfile(document_path):
+            suffix = os.path.splitext(document_path)[1].lower()
+            if suffix in [".py"]:
+                # Ensure only one process at a time
+                if (
+                    hasattr(self, "_script_process")
+                    and self._script_process is not None
+                ):
+                    self._script_process.kill()
+                    self._script_process = None
+                self.ui.terminal.clear()
+                process = QProcess(self)
+                self._script_process = process
+                script_dir = os.path.dirname(document_path)
+                python_exe = sys.executable
+                process.setProgram(python_exe)
+                process.setArguments([document_path])
+                process.setWorkingDirectory(script_dir)
+                process.setProcessChannelMode(
+                    QProcess.ProcessChannelMode.MergedChannels
+                )
+                process.readyReadStandardOutput.connect(
+                    lambda: self._append_process_output(process)
+                )
+                process.readyReadStandardError.connect(
+                    lambda: self._append_process_output(process)
+                )
+                process.finished.connect(
+                    lambda code, status: self._on_process_finished(
+                        code, status
+                    )
+                )
+                process.errorOccurred.connect(
+                    lambda err: self._on_process_error(err)
+                )
+                process.start()
+
+    def _append_process_output(self, process: QProcess) -> None:
+        data = process.readAllStandardOutput().data().decode("utf-8")
+        if data:
+            self.ui.terminal.appendPlainText(data)
+        err = process.readAllStandardError().data().decode("utf-8")
+        if err:
+            self.ui.terminal.appendPlainText(err)
+
+    def _on_process_finished(self, exit_code: int, exit_status) -> None:
+        self.ui.terminal.appendPlainText(
+            f"\n[Process finished with exit code {exit_code}]"
+        )
+        self._script_process = None
+
+    def _on_process_error(self, error) -> None:
+        self.ui.terminal.appendPlainText(f"\n[Process error: {error}]")
+        self._script_process = None
 
     def _open_file_tab(self, file_path: str):
         editor = DocumentEditorWidget()

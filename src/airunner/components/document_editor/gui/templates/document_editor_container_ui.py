@@ -15,20 +15,29 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QSplitter,
-    QTabWidget, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QPlainTextEdit, QSizePolicy,
+    QSplitter, QTabWidget, QWidget)
 
 from airunner.components.file_explorer.gui.widgets.file_explorer_widget import FileExplorerWidget
+import airunner.feather_rc
 
 class Ui_document_editor_container(object):
     def setupUi(self, document_editor_container):
         if not document_editor_container.objectName():
             document_editor_container.setObjectName(u"document_editor_container")
-        document_editor_container.resize(400, 300)
-        self.gridLayout_2 = QGridLayout(document_editor_container)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.splitter = QSplitter(document_editor_container)
+        document_editor_container.resize(492, 300)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(document_editor_container.sizePolicy().hasHeightForWidth())
+        document_editor_container.setSizePolicy(sizePolicy)
+        self.gridLayout = QGridLayout(document_editor_container)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.vertical_splitter = QSplitter(document_editor_container)
+        self.vertical_splitter.setObjectName(u"vertical_splitter")
+        self.vertical_splitter.setOrientation(Qt.Orientation.Vertical)
+        self.splitter = QSplitter(self.vertical_splitter)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Orientation.Horizontal)
         self.documents = QTabWidget(self.splitter)
@@ -39,8 +48,13 @@ class Ui_document_editor_container(object):
         self.file_explorer = FileExplorerWidget(self.splitter)
         self.file_explorer.setObjectName(u"file_explorer")
         self.splitter.addWidget(self.file_explorer)
+        self.vertical_splitter.addWidget(self.splitter)
+        self.terminal = QPlainTextEdit(self.vertical_splitter)
+        self.terminal.setObjectName(u"terminal")
+        self.terminal.setReadOnly(True)
+        self.vertical_splitter.addWidget(self.terminal)
 
-        self.gridLayout_2.addWidget(self.splitter, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.vertical_splitter, 2, 0, 1, 2)
 
 
         self.retranslateUi(document_editor_container)
