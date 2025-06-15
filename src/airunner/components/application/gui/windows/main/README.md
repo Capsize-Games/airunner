@@ -1,3 +1,19 @@
+# Main Window Tab Persistence
+
+## Purpose
+
+The main window now persists the active tab across application restarts. When the user changes tabs, the active tab index is stored in application settings. On startup, the last active tab is restored automatically.
+
+## Implementation
+- The active tab index is stored in `QSettings` under the `window_settings` group with the key `active_main_tab_index`.
+- On tab change, the index is updated in settings.
+- On startup, the main window reads this value and restores the corresponding tab (if valid).
+
+## Usage
+No user action is required. The last active tab will be restored automatically when the application is launched again.
+
+---
+
 # ModelLoadBalancer
 
 ## Purpose
