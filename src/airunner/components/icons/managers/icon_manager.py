@@ -61,7 +61,7 @@ class IconManager:
         theme = theme.lower().replace(" ", "_") + "_theme"
         here = os.path.dirname(os.path.abspath(__file__))
         variables_qss_file_path = os.path.join(
-            here, "..", "styles", theme, "variables.qss"
+            here, "..", "..", "..", "gui", "styles", theme, "variables.qss"
         )
 
         dark_color_hex = None
