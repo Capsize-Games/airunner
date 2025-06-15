@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict
 import inspect
 
 from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
@@ -6,7 +6,7 @@ from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 from airunner.components.nodegraph.gui.widgets.nodes.llm.base_llm_node import (
     BaseLLMNode,
 )
-from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.components.llm.managers.llm_request import LLMRequest
 
 
 class LLMRequestNode(BaseLLMNode):

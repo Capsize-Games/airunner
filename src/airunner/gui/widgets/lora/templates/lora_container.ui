@@ -274,7 +274,7 @@
   <customwidget>
    <class>LoadingWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/llm/loading_widget</header>
+   <header>airunner/components/llm/gui/widgets/loading_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

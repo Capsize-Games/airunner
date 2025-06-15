@@ -8,7 +8,7 @@ Create Date: 2025-04-25 08:18:39.618669
 
 from typing import Sequence, Union
 
-from airunner.data.models.rag_settings import RAGSettings
+from airunner.components.llm.data.rag_settings import RAGSettings
 from airunner.utils.db import add_table, drop_table
 
 

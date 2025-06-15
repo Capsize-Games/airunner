@@ -2,9 +2,10 @@ from typing import Type, Optional
 from abc import ABCMeta
 import os
 import torch
+
+from airunner.components.llm.utils.language import detect_language
 from airunner.handlers.tts.exceptions import FileMissing, OpenVoiceError
 from airunner.settings import AIRUNNER_BASE_PATH
-from airunner.utils.llm.language import detect_language
 
 torch.hub.set_dir(
     os.environ.get("TORCH_HOME", os.path.join(AIRUNNER_BASE_PATH, "torch/hub"))

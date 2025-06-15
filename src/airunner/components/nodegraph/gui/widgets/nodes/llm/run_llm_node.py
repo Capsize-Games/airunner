@@ -7,8 +7,8 @@ from airunner.enums import LLMActionType, SignalCode
 from airunner.components.nodegraph.gui.widgets.nodes.llm.base_llm_node import (
     BaseLLMNode,
 )
-from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.components.llm.managers.llm_request import LLMRequest
+from airunner.components.llm.managers.llm_response import LLMResponse
 
 
 class RunLLMNode(BaseLLMNode):

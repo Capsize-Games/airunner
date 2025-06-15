@@ -18,7 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QTabWidget,
     QWidget)
 
-from airunner.gui.widgets.llm.llm_settings_widget import LLMSettingsWidget
+from airunner.components.llm.gui.widgets.llm_settings_widget import LLMSettingsWidget
 
 class Ui_tool_tab_widget(object):
     def setupUi(self, tool_tab_widget):

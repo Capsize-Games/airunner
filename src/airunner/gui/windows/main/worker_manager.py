@@ -1,4 +1,4 @@
-from airunner.workers.llm_generate_worker import LLMGenerateWorker
+from airunner.components.llm.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 from airunner.workers.sd_worker import SDWorker
 

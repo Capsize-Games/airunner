@@ -4,7 +4,7 @@ from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.gui.widgets.rag_settings.templates.rag_settings_ui import (
     Ui_rag_settings,
 )
-from airunner.data.models.rag_settings import RAGSettings
+from airunner.components.llm.data.rag_settings import RAGSettings
 from airunner.enums import ModelService
 
 

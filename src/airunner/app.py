@@ -2,7 +2,6 @@ from typing import Optional, Dict
 import glob
 import logging
 import os.path
-import sys
 import signal
 import traceback
 from pathlib import Path
@@ -30,7 +29,7 @@ from airunner.settings import (
     MATHJAX_VERSION,
     QTWEBENGINE_REMOTE_DEBUGGING,  # Add this import
 )
-from airunner.gui.widgets.llm.local_http_server import LocalHttpServerThread
+from airunner.components.llm.gui.widgets.local_http_server import LocalHttpServerThread
 from airunner.components.splash_screen.splash_screen import SplashScreen
 import os
 import subprocess
@@ -260,7 +259,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             self.app = QApplication([])
         self.app.api = self
         # Set global tooltip style ONCE at startup
-        from airunner.gui.widgets.llm.message_widget import (
+        from airunner.components.llm.gui.widgets.message_widget import (
             set_global_tooltip_style,
         )
 

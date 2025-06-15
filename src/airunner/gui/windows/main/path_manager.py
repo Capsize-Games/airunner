@@ -4,9 +4,9 @@ import sys
 import urllib
 import requests
 from bs4 import BeautifulSoup
-from PySide6.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtWidgets import QInputDialog
 from PySide6.QtCore import QProcess
-from airunner.handlers.llm.agent.actions.show_path import show_path
+from airunner.components.llm.managers.agent.actions.show_path import show_path
 
 
 class PathManager:
@@ -107,7 +107,7 @@ class PathManager:
                 "target_files", [os.path.join(filepath, filename)]
             )
             main_window.api.llm.reload_rag(main_window.chatbot.target_files)
-            from airunner.handlers.llm.llm_request import LLMRequest
+            from airunner.components.llm.managers.llm_request import LLMRequest
             from airunner.enums import LLMActionType
 
             main_window.api.llm.send_request(

@@ -45,7 +45,7 @@ def __getattr__(name):
 
         return open_file_path
     elif name == "parse_template":
-        from .llm.parse_template import parse_template
+        from airunner.components.llm.utils import parse_template
 
         return parse_template
     elif name == "get_platform_name":
@@ -81,31 +81,31 @@ def __getattr__(name):
 
         return snap_to_grid
     elif name == "strip_names_from_message":
-        from .llm.strip_names_from_message import strip_names_from_message
+        from airunner.components.llm.utils.strip_names_from_message import strip_names_from_message
 
         return strip_names_from_message
     elif name == "prepare_text_for_tts":
-        from .llm.text_preprocessing import prepare_text_for_tts
+        from airunner.components.llm.utils.text_preprocessing import prepare_text_for_tts
 
         return prepare_text_for_tts
     elif name == "replace_unspeakable_characters":
-        from .llm.text_preprocessing import replace_unspeakable_characters
+        from airunner.components.llm.utils.text_preprocessing import replace_unspeakable_characters
 
         return replace_unspeakable_characters
     elif name == "strip_emoji_characters":
-        from .llm.text_preprocessing import strip_emoji_characters
+        from airunner.components.llm.utils.text_preprocessing import strip_emoji_characters
 
         return strip_emoji_characters
     elif name == "replace_numbers_with_words":
-        from .llm.text_preprocessing import replace_numbers_with_words
+        from airunner.components.llm.utils.text_preprocessing import replace_numbers_with_words
 
         return replace_numbers_with_words
     elif name == "replace_misc_with_words":
-        from .llm.text_preprocessing import replace_misc_with_words
+        from airunner.components.llm.utils.text_preprocessing import replace_misc_with_words
 
         return replace_misc_with_words
     elif name == "roman_to_int":
-        from .llm.text_preprocessing import roman_to_int
+        from airunner.components.llm.utils.text_preprocessing import roman_to_int
 
         return roman_to_int
     raise AttributeError(f"module {__name__} has no attribute {name}")

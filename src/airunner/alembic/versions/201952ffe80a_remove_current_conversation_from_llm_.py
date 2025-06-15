@@ -8,14 +8,10 @@ Create Date: 2025-05-27 12:13:11.496860
 
 from typing import Sequence, Union
 
-from airunner.data.models.llm_generator_settings import LLMGeneratorSettings
-from airunner.data.models.chatbot import Chatbot
+from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
 from airunner.utils.db import (
-    add_column,
-    drop_column,
     add_column_with_fk,
     drop_column_with_fk,
-    drop_constraint,
 )
 
 import sqlalchemy as sa

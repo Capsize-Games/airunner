@@ -44,9 +44,9 @@ from airunner.settings import (
     AIRUNNER_ART_ENABLED,
 )
 from airunner.utils.settings import get_qsettings
-from airunner.handlers.llm.agent.actions.bash_execute import bash_execute
-from airunner.handlers.llm.agent.actions.show_path import show_path
-from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.components.llm.managers.agent.actions.bash_execute import bash_execute
+from airunner.components.llm.managers.agent.actions.show_path import show_path
+from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.data.models.shortcut_keys import ShortcutKeys
 from airunner.data.models.application_settings import ApplicationSettings
 from airunner.components.art.data.image_filter import ImageFilter
