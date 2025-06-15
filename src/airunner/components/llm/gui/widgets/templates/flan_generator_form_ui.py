@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGridLayout,
     QGroupBox, QHBoxLayout, QLineEdit, QSizePolicy,
     QWidget)
 
-from airunner.gui.widgets.slider.slider_widget import SliderWidget
+from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
 
 class Ui_flan_generator_form(object):
     def setupUi(self, flan_generator_form):

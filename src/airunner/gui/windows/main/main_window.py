@@ -6,6 +6,14 @@ import webbrowser
 from functools import partial
 from typing import Dict, Optional
 
+from airunner.components.application.gui.widgets.stats.stats_widget import \
+    StatsWidget
+from airunner.components.application.gui.widgets.status.status_widget import \
+    StatusWidget
+from airunner.components.art.gui.windows.prompt_browser.prompt_browser import \
+    PromptBrowser
+from airunner.components.settings.gui.windows.settings.airunner_settings import \
+    SettingsWindow
 from airunner.gui.windows.main.model_load_balancer import ModelLoadBalancer
 from airunner.gui.windows.main.worker_manager import WorkerManager
 from airunner.gui.windows.wayland_helper import (
@@ -48,7 +56,7 @@ from airunner.components.llm.managers.agent.actions.bash_execute import bash_exe
 from airunner.components.llm.managers.agent.actions.show_path import show_path
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.data.models.shortcut_keys import ShortcutKeys
-from airunner.data.models.application_settings import ApplicationSettings
+from airunner.components.settings.data.application_settings import ApplicationSettings
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.data.models.tab import Tab
@@ -70,19 +78,15 @@ from airunner.utils.widgets import (
 )
 from airunner.utils.image import convert_image_to_binary
 from airunner.gui.styles.styles_mixin import StylesMixin
-from airunner.gui.widgets.stats.stats_widget import StatsWidget
-from airunner.gui.widgets.status.status_widget import StatusWidget
 from airunner.gui.windows.about.about import AboutWindow
-from airunner.gui.windows.filter_window import FilterWindow
+from airunner.components.art.gui.windows.filter_window.filter_window import FilterWindow
 from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
 from airunner.gui.windows.main.browser_control_mixin import BrowserControlMixin
 from airunner.gui.windows.main.pipeline_mixin import PipelineMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.windows.main.templates.main_window_ui import Ui_MainWindow
-from airunner.gui.windows.prompt_browser.prompt_browser import PromptBrowser
-from airunner.gui.windows.settings.airunner_settings import SettingsWindow
 from airunner.gui.windows.update.update_window import UpdateWindow
-from airunner.gui.managers.icon_manager import IconManager
+from airunner.components.icons.managers.icon_manager import IconManager
 from airunner.components.plugins.plugin_loader import PluginLoader
 
 

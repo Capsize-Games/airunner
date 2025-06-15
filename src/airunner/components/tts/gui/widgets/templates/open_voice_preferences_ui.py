@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
     QHBoxLayout, QLineEdit, QPushButton, QSizePolicy,
     QSpacerItem, QVBoxLayout, QWidget)
 
-from airunner.gui.widgets.slider.slider_widget import SliderWidget
+from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
 
 class Ui_open_voice_preferences(object):
     def setupUi(self, open_voice_preferences):

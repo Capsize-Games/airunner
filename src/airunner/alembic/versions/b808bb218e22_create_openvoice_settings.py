@@ -8,7 +8,7 @@ Create Date: 2025-04-02 09:16:55.969998
 
 from typing import Sequence, Union
 
-from airunner.data.models.openvoice_settings import OpenVoiceSettings
+from airunner.components.tts.data.models.openvoice_settings import OpenVoiceSettings
 from airunner.utils.db import add_table, drop_table
 
 

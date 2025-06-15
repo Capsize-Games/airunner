@@ -42,7 +42,7 @@ from airunner.data.models import (
     User,
 )
 from airunner.data.models import table_to_class
-from airunner.data.models.language_settings import LanguageSettings
+from airunner.components.settings.data.language_settings import LanguageSettings
 from airunner.components.llm.data.rag_settings import RAGSettings
 from airunner.enums import ModelService, TTSModel
 from airunner.utils.image import convert_binary_to_image

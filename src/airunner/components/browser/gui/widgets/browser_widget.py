@@ -6,10 +6,10 @@ from airunner.components.browser.gui.widgets.templates.browser_ui import (
 from airunner.enums import SignalCode
 from airunner.tools.web_content_extractor import WebContentExtractor
 
-from PySide6.QtCore import Slot, QUrl, QObject
+from PySide6.QtCore import Slot, QObject
 from PySide6.QtWebChannel import QWebChannel
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.data.models.airunner_settings import AIRunnerSettings
+from airunner.components.settings.data.airunner_settings import AIRunnerSettings
 from PySide6.QtCore import QTimer
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QIcon

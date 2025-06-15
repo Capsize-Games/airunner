@@ -1,15 +1,13 @@
-import os
-from typing import Dict, Optional
+from typing import Dict
 
 from airunner.enums import (
     SignalCode,
     ModelAction,
     ModelType,
     ModelStatus,
-    HandlerState,
 )
 from airunner.workers.worker import Worker
-from airunner.handlers.framepack_handler import FramePackHandler
+from airunner.components.framepack.managers.framepack_handler import FramePackManager
 
 
 class FramePackWorker(Worker):
@@ -98,8 +96,8 @@ class FramePackWorker(Worker):
 
         try:
             if not self._framepack_handler:
-                self.logger.info("Creating new FramePackHandler instance")
-                self._framepack_handler = FramePackHandler()
+                self.logger.info("Creating new FramePackManager instance")
+                self._framepack_handler = FramePackManager()
 
                 # Immediately load the model and wait for completion
                 self.logger.info("Loading FramePack models")
@@ -254,7 +252,7 @@ class FramePackWorker(Worker):
             )
 
             # Generate video
-            self.logger.info("Calling FramePackHandler.generate_video()")
+            self.logger.info("Calling FramePackManager.generate_video()")
             job_id = self._framepack_handler.generate_video(
                 input_image=image,
                 prompt=prompt,

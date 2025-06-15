@@ -11,8 +11,7 @@ from PySide6.QtCore import Slot
 import json
 
 from airunner.components.browser.data.settings import BrowserSettings
-from airunner.data.models.airunner_settings import AIRunnerSettings
-from airunner.enums import SignalCode
+from airunner.components.settings.data.airunner_settings import AIRunnerSettings
 from airunner.components.browser.gui.enums import BrowserType, BrowserOS
 from airunner.components.browser.gui.widgets.items_widget import ItemsWidget
 

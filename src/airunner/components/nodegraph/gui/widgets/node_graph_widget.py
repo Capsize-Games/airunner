@@ -6,7 +6,6 @@ from airunner.components.nodegraph.gui.widgets.nodes.core.variable_getter_node i
     VariableGetterNode,
 )
 from airunner.components.nodegraph.gui.widgets.nodes.io.print import PrintNode
-from airunner.data.models.application_settings import ApplicationSettings
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
 from PySide6.QtWidgets import (
     QLineEdit,
@@ -62,9 +61,9 @@ from airunner.components.nodegraph.gui.widgets.templates.node_graph_ui import (
     Ui_node_graph_widget,
 )
 
-from airunner.data.models.workflow import Workflow
-from airunner.data.models.workflow_node import WorkflowNode
-from airunner.data.models.workflow_connection import WorkflowConnection
+from airunner.components.nodegraph.data.workflow import Workflow
+from airunner.components.nodegraph.data.workflow_node import WorkflowNode
+from airunner.components.nodegraph.data.workflow_connection import WorkflowConnection
 from airunner.utils.settings import get_qsettings
 
 from airunner.workers.node_graph_worker import NodeGraphWorker

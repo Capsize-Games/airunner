@@ -9,7 +9,7 @@ Create Date: 2025-05-18 16:02:59.334823
 
 from typing import Sequence, Union
 
-from airunner.data.models.application_settings import ApplicationSettings
+from airunner.components.settings.data.application_settings import ApplicationSettings
 from airunner.utils.db import add_column, drop_column
 
 

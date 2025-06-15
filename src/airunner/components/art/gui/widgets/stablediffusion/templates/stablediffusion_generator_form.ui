@@ -1,0 +1,867 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>stablediffusion_generator_form</class>
+ <widget class="QWidget" name="stablediffusion_generator_form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>597</width>
+    <height>825</height>
+   </rect>
+  </property>
+  <property name="font">
+   <font>
+    <pointsize>8</pointsize>
+   </font>
+  </property>
+  <property name="cursor">
+   <cursorShape>PointingHandCursor</cursorShape>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_4">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item row="0" column="0">
+    <widget class="QWidget" name="generator_form_tabs" native="true">
+     <layout class="QGridLayout" name="gridLayout_3">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QScrollArea" name="stable_diffusion_generator_form">
+        <property name="frameShape">
+         <enum>QFrame::Shape::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Shadow::Plain</enum>
+        </property>
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="scrollAreaWidgetContents">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>597</width>
+           <height>775</height>
+          </rect>
+         </property>
+         <layout class="QGridLayout" name="gridLayout">
+          <property name="leftMargin">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>10</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <property name="horizontalSpacing">
+           <number>0</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>10</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QSplitter" name="generator_form_splitter">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="childrenCollapsible">
+             <bool>false</bool>
+            </property>
+            <widget class="QWidget" name="layoutWidget">
+             <layout class="QGridLayout" name="prompt_container_layout">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>9</number>
+              </property>
+              <item row="3" column="0">
+               <widget class="QPushButton" name="add_prompt_button">
+                <property name="text">
+                 <string>Add Prompt</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0" colspan="2">
+               <layout class="QVBoxLayout" name="additional_prompts_container_layout"/>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label">
+                <property name="font">
+                 <font>
+                  <pointsize>8</pointsize>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Prompt</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0" colspan="2">
+               <layout class="QHBoxLayout" name="prompt_container">
+                <item>
+                 <widget class="QPlainTextEdit" name="prompt">
+                  <property name="placeholderText">
+                   <string>Prompt</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPlainTextEdit" name="secondary_prompt">
+                  <property name="placeholderText">
+                   <string>Second prompt</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="0" column="1">
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
+                <property name="topMargin">
+                 <number>10</number>
+                </property>
+                <item>
+                 <spacer name="horizontalSpacer">
+                  <property name="orientation">
+                   <enum>Qt::Orientation::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton">
+                  <property name="text">
+                   <string>Save Prompts</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="layoutWidget">
+             <layout class="QVBoxLayout" name="negative_prompt_container">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>5</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="negative_prompt_label">
+                <property name="font">
+                 <font>
+                  <pointsize>8</pointsize>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Negative Prompt</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_8">
+                <item>
+                 <widget class="QPlainTextEdit" name="negative_prompt">
+                  <property name="placeholderText">
+                   <string>Negative prompt</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPlainTextEdit" name="secondary_negative_prompt">
+                  <property name="placeholderText">
+                   <string>Second negative prompt</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QWidget" name="sdxl_settings_container" native="true">
+            <layout class="QVBoxLayout" name="sdxl_settings">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout">
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayout">
+                 <item>
+                  <widget class="QLabel" name="label_2">
+                   <property name="text">
+                    <string>Presets</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="image_presets"/>
+                 </item>
+                 <item>
+                  <widget class="Line" name="line_2">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QVBoxLayout" name="quality_effects_container">
+                 <item>
+                  <widget class="QLabel" name="label_3">
+                   <property name="text">
+                    <string>Quality Effects</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="quality_effects">
+                   <item>
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Normal</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Upscaled</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Downscaled</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="Line" name="line">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_5">
+               <item>
+                <widget class="QGroupBox" name="groupBox">
+                 <property name="title">
+                  <string>Original size</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_3">
+                  <item>
+                   <widget class="QLineEdit" name="original_size_width">
+                    <property name="placeholderText">
+                     <string>width</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="original_size_height">
+                    <property name="placeholderText">
+                     <string>height</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="groupBox_3">
+                 <property name="title">
+                  <string>Negative original size</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_9">
+                  <item>
+                   <widget class="QLineEdit" name="negative_original_size_width">
+                    <property name="placeholderText">
+                     <string>width</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="negative_original_size_height">
+                    <property name="placeholderText">
+                     <string>height</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_10">
+               <item>
+                <widget class="QGroupBox" name="groupBox_4">
+                 <property name="title">
+                  <string>Target size</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_11">
+                  <item>
+                   <widget class="QLineEdit" name="target_size_width">
+                    <property name="placeholderText">
+                     <string>width</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="target_size_height">
+                    <property name="placeholderText">
+                     <string>height</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="groupBox_2">
+                 <property name="title">
+                  <string>Negative target size</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_4">
+                  <item>
+                   <widget class="QLineEdit" name="negative_target_size_width">
+                    <property name="placeholderText">
+                     <string>width</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="negative_target_size_height">
+                    <property name="placeholderText">
+                     <string>height</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_12">
+               <item>
+                <widget class="QGroupBox" name="croops_coord_top_left_groupbox">
+                 <property name="title">
+                  <string>Crops top left</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_2">
+                  <property name="leftMargin">
+                   <number>9</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>9</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>9</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>9</number>
+                  </property>
+                  <item>
+                   <widget class="QLineEdit" name="crops_coords_top_left_x">
+                    <property name="placeholderText">
+                     <string>x position</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="crops_coords_top_left_y">
+                    <property name="placeholderText">
+                     <string>y position</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="groupBox_5">
+                 <property name="title">
+                  <string>Negative crops top left</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_13">
+                  <item>
+                   <widget class="QLineEdit" name="negative_crops_coord_top_left_x">
+                    <property name="placeholderText">
+                     <string>x position</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="negative_crops_coord_top_left_y">
+                    <property name="placeholderText">
+                     <string>y position</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="SliderWidget" name="n_samples" native="true">
+               <property name="label_text" stdset="0">
+                <string>Batches</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <number>1000</number>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <number>1000</number>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>false</bool>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_page_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="settings_property" stdset="0">
+                <string>generator_settings.n_samples</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_14">
+               <item>
+                <widget class="SliderWidget" name="images_per_batch" native="true">
+                 <property name="label_text" stdset="0">
+                  <string>Images Per Batch</string>
+                 </property>
+                 <property name="current_value" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_maximum" stdset="0">
+                  <number>6</number>
+                 </property>
+                 <property name="spinbox_maximum" stdset="0">
+                  <number>6</number>
+                 </property>
+                 <property name="display_as_float" stdset="0">
+                  <bool>false</bool>
+                 </property>
+                 <property name="spinbox_single_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="spinbox_page_step" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="spinbox_minimum" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="slider_minimum" stdset="0">
+                  <number>1</number>
+                 </property>
+                 <property name="settings_property" stdset="0">
+                  <string>generator_settings.images_per_batch</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="infinite_images_button">
+                 <property name="minimumSize">
+                  <size>
+                   <width>30</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>30</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>Toggle infinite image generation</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="../../../resources/feather.qrc">
+                   <normaloff>:/light/icons/feather/light/circle.svg</normaloff>:/light/icons/feather/light/circle.svg</iconset>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                 <property name="checked">
+                  <bool>false</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_7">
+        <property name="leftMargin">
+         <number>10</number>
+        </property>
+        <property name="topMargin">
+         <number>10</number>
+        </property>
+        <property name="rightMargin">
+         <number>10</number>
+        </property>
+        <property name="bottomMargin">
+         <number>10</number>
+        </property>
+        <item>
+         <widget class="QProgressBar" name="progress_bar">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="value">
+           <number>0</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="generate_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="toolTip">
+           <string>Generate image</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../resources/feather.qrc">
+            <normaloff>:/light/icons/feather/light/chevron-up.svg</normaloff>:/light/icons/feather/light/chevron-up.svg</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="interrupt_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="toolTip">
+           <string>Cancel image generation</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../resources/feather.qrc">
+            <normaloff>:/light/icons/feather/light/x.svg</normaloff>:/light/icons/feather/light/x.svg</iconset>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/application/gui/widgets/slider/slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>prompt</tabstop>
+  <tabstop>secondary_prompt</tabstop>
+  <tabstop>add_prompt_button</tabstop>
+  <tabstop>negative_prompt</tabstop>
+  <tabstop>secondary_negative_prompt</tabstop>
+  <tabstop>image_presets</tabstop>
+  <tabstop>quality_effects</tabstop>
+  <tabstop>original_size_width</tabstop>
+  <tabstop>original_size_height</tabstop>
+  <tabstop>negative_original_size_width</tabstop>
+  <tabstop>negative_original_size_height</tabstop>
+  <tabstop>target_size_width</tabstop>
+  <tabstop>target_size_height</tabstop>
+  <tabstop>negative_target_size_width</tabstop>
+  <tabstop>negative_target_size_height</tabstop>
+  <tabstop>crops_coords_top_left_x</tabstop>
+  <tabstop>crops_coords_top_left_y</tabstop>
+  <tabstop>negative_crops_coord_top_left_x</tabstop>
+  <tabstop>negative_crops_coord_top_left_y</tabstop>
+  <tabstop>generate_button</tabstop>
+  <tabstop>interrupt_button</tabstop>
+  <tabstop>pushButton</tabstop>
+  <tabstop>stable_diffusion_generator_form</tabstop>
+ </tabstops>
+ <resources>
+  <include location="../../../resources/feather.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>action_clicked_button_save_prompts()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>573</x>
+     <y>32</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>416</x>
+     <y>0</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>image_presets</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_image_presets_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>117</x>
+     <y>499</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>473</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>quality_effects</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_quality_effects_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>584</x>
+     <y>499</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>434</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>127</x>
+     <y>91</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>62</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>secondary_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_second_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>394</x>
+     <y>99</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-3</x>
+     <y>97</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>negative_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_negative_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>144</x>
+     <y>383</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-4</x>
+     <y>328</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>secondary_negative_prompt</sender>
+   <signal>textChanged()</signal>
+   <receiver>stablediffusion_generator_form</receiver>
+   <slot>handle_second_negative_prompt_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>503</x>
+     <y>381</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>589</x>
+     <y>294</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>handle_prompt_changed()</slot>
+  <slot>handle_negative_prompt_changed()</slot>
+  <slot>handle_model_changed(QString)</slot>
+  <slot>handle_scheduler_changed(QString)</slot>
+  <slot>toggle_variation(bool)</slot>
+  <slot>action_clicked_button_save_prompts()</slot>
+  <slot>save_settings()</slot>
+  <slot>handle_pipeline_changed(QString)</slot>
+  <slot>handle_version_changed(QString)</slot>
+  <slot>handle_image_presets_changed(QString)</slot>
+  <slot>handle_second_prompt_changed()</slot>
+  <slot>handle_second_negative_prompt_changed()</slot>
+  <slot>handle_quality_effects_changed(QString)</slot>
+  <slot>past_conversations_clicked()</slot>
+  <slot>on_use_refiner_checkbox_toggled(bool)</slot>
+ </slots>
+</ui>

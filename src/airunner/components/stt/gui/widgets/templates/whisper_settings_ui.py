@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGridLayout,
     QLabel, QPushButton, QSizePolicy, QVBoxLayout,
     QWidget)
 
-from airunner.gui.widgets.slider.slider_widget import SliderWidget
+from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
 
 class Ui_whisper_settings(object):
     def setupUi(self, whisper_settings):

@@ -24,7 +24,7 @@ Temporary fix for windows - Facehuggershield is not working correctly
 on windows at this time so we disable it.
 """
 if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
-    from airunner.facehuggershield.huggingface import activate
+    from airunner.vendor.facehuggershield.huggingface import activate
 
     airunner_path = os.path.join(
         os.path.expanduser("~"), ".local", "share", "airunner"

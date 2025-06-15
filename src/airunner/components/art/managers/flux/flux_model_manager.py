@@ -1,16 +1,6 @@
-import logging
-from typing import Any, Dict, Optional
-import os
-from diffusers import FluxPipeline
+from typing import Dict, Optional
 import torch
 
-from airunner.enums import (
-    EngineResponseCode,
-    ModelStatus,
-    ModelType,
-    SignalCode,
-    StableDiffusionVersion,
-)
 from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
 )
@@ -23,14 +13,13 @@ from diffusers import (
     FluxControlNetInpaintPipeline,
 )
 
-from airunner.settings import AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE, CUDA_ERROR
 from transformers import (
     CLIPTextModel,
     T5EncoderModel,
     CLIPTokenizer,
     T5TokenizerFast,
 )
-from airunner.handlers.base_model_manager import ModelManagerInterface
+from airunner.components.application.managers.base_model_manager import ModelManagerInterface
 
 
 class FluxModelManager(BaseDiffusersModelManager, ModelManagerInterface):
