@@ -1,8 +1,8 @@
 from airunner.api.api_service_base import APIServiceBase
 from airunner.enums import SignalCode
-from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.enums import LLMActionType
-from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.components.llm.managers.llm_response import LLMResponse
 from typing import Optional, List
 
 

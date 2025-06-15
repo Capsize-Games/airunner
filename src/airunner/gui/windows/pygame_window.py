@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QVBoxLayout
 from airunner.enums import SignalCode
 from airunner.workers.audio_capture_worker import AudioCaptureWorker
 from airunner.workers.audio_processor_worker import AudioProcessorWorker
-from airunner.workers.llm_generate_worker import LLMGenerateWorker
+from airunner.components.llm.workers.llm_generate_worker import LLMGenerateWorker
 from airunner.workers.mask_generator_worker import MaskGeneratorWorker
 from airunner.workers.sd_worker import SDWorker
 from airunner.workers.tts_generator_worker import TTSGeneratorWorker
@@ -31,9 +31,9 @@ from airunner.gui.windows.main.pipeline_mixin import PipelineMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.handlers.llm.llm_response import LLMResponse
+from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.api.api import API
-from airunner.handlers.llm.agent.agents import LocalAgent
+from airunner.components.llm.managers.agent import LocalAgent
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )

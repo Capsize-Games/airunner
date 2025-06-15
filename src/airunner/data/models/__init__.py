@@ -10,11 +10,11 @@ from airunner.components.art.data.image_to_image_settings import (
     ImageToImageSettings,
 )
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
-from airunner.data.models.chatstore import Chatstore
+from airunner.components.llm.data.chatstore import Chatstore
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.components.art.data.generator_settings import GeneratorSettings
-from airunner.data.models.llm_generator_settings import LLMGeneratorSettings
+from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
 from airunner.data.models.speech_t5_settings import SpeechT5Settings
 from airunner.data.models.espeak_settings import EspeakSettings
 from airunner.data.models.stt_settings import STTSettings
@@ -23,7 +23,7 @@ from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.grid_settings import GridSettings
 from airunner.data.models.path_settings import PathSettings
 from airunner.components.art.data.memory_settings import MemorySettings
-from airunner.data.models.chatbot import Chatbot
+from airunner.components.llm.data.chatbot import Chatbot
 from airunner.data.models.user import User
 from airunner.data.models.target_files import TargetFiles
 from airunner.data.models.target_directories import TargetDirectories
@@ -36,7 +36,7 @@ from airunner.data.models.prompt_template import PromptTemplate
 from airunner.components.art.data.controlnet_model import ControlnetModel
 from airunner.data.models.font_setting import FontSetting
 from airunner.data.models.pipeline_model import PipelineModel
-from airunner.data.models.conversation import Conversation
+from airunner.components.llm.data.conversation import Conversation
 from airunner.data.models.summary import Summary
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.data.image_filter_value import ImageFilterValue
@@ -46,7 +46,7 @@ from airunner.data.models.tab import Tab
 from airunner.data.models.workflow import Workflow
 from airunner.data.models.workflow_node import WorkflowNode
 from airunner.data.models.workflow_connection import WorkflowConnection
-from airunner.data.models.rag_settings import RAGSettings
+from airunner.components.llm.data.rag_settings import RAGSettings
 from airunner.data.models.language_settings import LanguageSettings
 from airunner.data.models.airunner_settings import AIRunnerSettings
 from airunner.components.documents.data.models.document import Document

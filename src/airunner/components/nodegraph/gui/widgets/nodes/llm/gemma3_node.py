@@ -3,9 +3,9 @@ from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 from airunner.components.nodegraph.gui.widgets.nodes.llm.base_llm_node import (
     BaseLLMNode,
 )
-from airunner.handlers.llm.gemma3_model_manager import Gemma3Manager
+from airunner.components.llm.managers.gemma3_model_manager import Gemma3Manager
 from airunner.enums import SignalCode, LLMActionType
-from airunner.handlers.llm.llm_request import LLMRequest
+from airunner.components.llm.managers.llm_request import LLMRequest
 from PIL import Image
 import base64
 import io

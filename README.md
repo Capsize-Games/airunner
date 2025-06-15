@@ -232,7 +232,7 @@ Organize them under your local AI Runner data directory:
 - The chatbot's mood and conversation summary system is always enabled by default. The bot's mood and emoji are shown with each bot message.
 - When the LLM is updating the bot's mood or summarizing the conversation, a loading spinner and status message are shown in the chat prompt widget. The indicator disappears as soon as a new message arrives.
 - This system is automatic and requires no user configuration.
-- For more details, see the [LLM Chat Prompt Widget README](src/airunner/gui/widgets/llm/README.md).
+- For more details, see the [LLM Chat Prompt Widget README](src/airunner/components/llm/gui/widgets/README.md).
 - The mood and summary engines are now fully integrated into the agent runtime. When the agent updates mood or summarizes the conversation, it emits a signal to the UI with a customizable loading message. The chat prompt widget displays this message as a loading indicator.
 - See `src/airunner/handlers/llm/agent/agents/base.py` for integration details and `src/airunner/api/chatbot_services.py` for the API function.
 

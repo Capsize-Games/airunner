@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional
+from typing import Dict
 
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QApplication
@@ -13,13 +13,12 @@ from airunner.enums import (
     LLMActionType,
     ModelType,
     ModelStatus,
-    TemplateName,
 )
 from airunner.gui.widgets.base_widget import BaseWidget
 from airunner.utils.application import create_worker
 from airunner.utils.widgets import load_splitter_settings
-from airunner.handlers.llm.llm_request import LLMRequest
-from airunner.workers.llm_response_worker import LLMResponseWorker
+from airunner.components.llm.managers.llm_request import LLMRequest
+from airunner.components.llm.workers.llm_response_worker import LLMResponseWorker
 from airunner.settings import AIRUNNER_ART_ENABLED, SLASH_COMMANDS
 
 

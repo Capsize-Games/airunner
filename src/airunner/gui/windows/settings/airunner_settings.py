@@ -16,6 +16,10 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
 )
 
+from airunner.components.llm.gui.widgets.bot_preferences import \
+    BotPreferencesWidget
+from airunner.components.llm.gui.widgets.prompt_templates_widget import \
+    PromptTemplatesWidget
 from airunner.enums import SignalCode, TemplateName
 from airunner.gui.widgets.api_token.api_token_widget import APITokenWidget
 from airunner.gui.widgets.export_preferences.export_preferences_widget import (
@@ -23,10 +27,6 @@ from airunner.gui.widgets.export_preferences.export_preferences_widget import (
 )
 from airunner.gui.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import (
     KeyboardShortcutsWidget,
-)
-from airunner.gui.widgets.llm.bot_preferences import BotPreferencesWidget
-from airunner.gui.widgets.llm.prompt_templates_widget import (
-    PromptTemplatesWidget,
 )
 from airunner.gui.widgets.memory_preferences.memory_preferences_widget import (
     MemoryPreferencesWidget,

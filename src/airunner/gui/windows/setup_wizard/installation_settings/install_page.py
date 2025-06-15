@@ -28,7 +28,7 @@ from airunner.data.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
 from airunner.data.bootstrap.flux_file_bootstrap_data import (
     FLUX_FILE_BOOTSTRAP_DATA,
 )
-from airunner.data.bootstrap.llm_file_bootstrap_data import (
+from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
 from airunner.data.bootstrap.whisper import WHISPER_FILES

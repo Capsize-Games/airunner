@@ -481,13 +481,13 @@
   <customwidget>
    <class>LLMSettingsWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/llm/llm_settings_widget</header>
+   <header>airunner/components/llm/gui/widgets/llm_settings_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>LLMHistoryWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/llm/llm_history_widget</header>
+   <header>airunner/components/llm/gui/widgets/llm_history_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>

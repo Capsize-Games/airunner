@@ -7,18 +7,17 @@ from PySide6.QtWebChannel import QWebChannel
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
+from airunner.components.llm.gui.widgets.loading_widget import LoadingWidget
 from airunner.data.models import Conversation
 from airunner.enums import SignalCode, TemplateName
-from airunner.gui.widgets.llm.contentwidgets.chat_bridge import ChatBridge
-from airunner.gui.widgets.llm.loading_widget import LoadingWidget
+from airunner.components.llm.gui.widgets.contentwidgets import ChatBridge
 from airunner.components.chat.gui.widgets.templates.conversation_ui import (
     Ui_conversation,
 )
 import logging
 
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.utils.llm import strip_names_from_message
-from airunner.utils.settings import get_qsettings
+from airunner.components.llm.utils import strip_names_from_message
 from airunner.utils.text.formatter_extended import FormatterExtended
 
 logger = logging.getLogger(__name__)
