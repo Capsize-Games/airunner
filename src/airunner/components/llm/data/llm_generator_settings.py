@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, Boolean, String, BigInteger, ForeignKey
+from sqlalchemy import Column, Integer, Boolean, String, BigInteger
 
-from airunner.data.models.base import BaseModel
+from airunner.components.application.data.base import BaseModel
 from airunner.settings import AIRUNNER_DEFAULT_LLM_HF_PATH
 from airunner.enums import ModelService
 

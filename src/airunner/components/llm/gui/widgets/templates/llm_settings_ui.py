@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
     QScrollArea, QSizePolicy, QSpacerItem, QVBoxLayout,
     QWidget)
 
-from airunner.gui.widgets.slider.slider_widget import SliderWidget
+from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
 
 class Ui_llm_settings_widget(object):
     def setupUi(self, llm_settings_widget):

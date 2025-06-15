@@ -14,7 +14,7 @@ from alembic import op
 from sqlalchemy.sql import text  # Add import for text()
 
 from airunner.settings import AIRUNNER_BASE_PATH
-from airunner.data.models.path_settings import PathSettings
+from airunner.components.settings.data.path_settings import PathSettings
 from airunner.utils.db import safe_alter_column
 
 revision: str = "7fb526dc074c"

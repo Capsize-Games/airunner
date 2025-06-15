@@ -18,7 +18,7 @@ from airunner.utils.widgets import (
     load_splitter_settings,
 )
 from airunner.enums import SignalCode
-from airunner.gui.managers.icon_manager import IconManager
+from airunner.components.icons.managers.icon_manager import IconManager
 from airunner.utils.settings.get_qsettings import get_qsettings
 
 

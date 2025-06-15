@@ -4,7 +4,7 @@ from airunner.gui.windows.setup_wizard.model_setup.stable_diffusion_setup.templa
     Ui_choose_model,
 )
 from airunner.enums import StableDiffusionVersion, ImageGenerator
-from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
+from airunner.components.application.data.bootstrap.model_bootstrap_data import model_bootstrap_data
 
 
 class ChooseModel(BaseWizard):

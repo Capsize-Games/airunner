@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Type, Any
+from typing import Dict, List, Any
 
 from diffusers import (
     StableDiffusionXLPipeline,
@@ -17,7 +17,7 @@ from airunner.components.art.managers.stablediffusion.stable_diffusion_model_man
     StableDiffusionModelManager,
 )
 from airunner.utils.memory import clear_memory
-from airunner.handlers.base_model_manager import ModelManagerInterface
+from airunner.components.application.managers.base_model_manager import ModelManagerInterface
 
 
 class BaseDiffusersModelManager:

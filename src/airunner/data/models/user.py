@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, JSON
 
-from airunner.data.models.base import BaseModel
+from airunner.components.application.data.base import BaseModel
 
 
 class User(BaseModel):

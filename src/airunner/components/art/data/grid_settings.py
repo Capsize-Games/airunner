@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, Float
 
-from airunner.data.models.base import BaseModel
+from airunner.components.application.data.base import BaseModel
 
 
 class GridSettings(BaseModel):
