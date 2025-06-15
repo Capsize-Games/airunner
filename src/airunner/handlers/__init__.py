@@ -39,7 +39,7 @@ def __getattr__(name):
 
         return EspeakModelManager
     elif name == "WhisperModelManager":
-        from .stt.whisper_model_manager import WhisperModelManager
+        from airunner.components.stt.managers.whisper_model_manager import WhisperModelManager
 
         return WhisperModelManager
     elif name == "StableDiffusionModelManager":
