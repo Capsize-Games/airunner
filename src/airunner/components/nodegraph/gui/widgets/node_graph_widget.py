@@ -2,10 +2,16 @@ import os
 import json
 import logging
 from typing import Dict, Tuple, Optional, List
+
+from networkx.classes import nodes
+
 from airunner.components.nodegraph.gui.widgets.nodes.core.variable_getter_node import (
     VariableGetterNode,
 )
 from airunner.components.nodegraph.gui.widgets.nodes.io.print import PrintNode
+from airunner.components.settings.data.application_settings import (
+    ApplicationSettings,
+)
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
 from PySide6.QtWidgets import (
     QLineEdit,
@@ -63,10 +69,14 @@ from airunner.components.nodegraph.gui.widgets.templates.node_graph_ui import (
 
 from airunner.components.nodegraph.data.workflow import Workflow
 from airunner.components.nodegraph.data.workflow_node import WorkflowNode
-from airunner.components.nodegraph.data.workflow_connection import WorkflowConnection
+from airunner.components.nodegraph.data.workflow_connection import (
+    WorkflowConnection,
+)
 from airunner.utils.settings import get_qsettings
 
-from airunner.components.nodegraph.workers.node_graph_worker import NodeGraphWorker
+from airunner.components.nodegraph.workers.node_graph_worker import (
+    NodeGraphWorker,
+)
 from airunner.utils.application.create_worker import create_worker
 
 IGNORED_NODE_PROPERTIES = {}
@@ -84,7 +94,7 @@ class NodeGraphWidget(BaseWidget):
             SignalCode.NODEGRAPH_PAN: self._on_nodegraph_pan_changed,
         }
         self.initialized = False
-        self._splitters = ["splitter"]
+        self.splitters = ["nodegraph_splitter"]
         super().__init__(*args, **kwargs)
         self.q_settings = get_qsettings()
         self.graph = CustomNodeGraph()
@@ -96,7 +106,9 @@ class NodeGraphWidget(BaseWidget):
         )
         # Copy over necessary properties from the original viewer
         original_viewer = self.graph._viewer
-        debounced_viewer.set_zoom(original_viewer.get_zoom())
+        debounced_viewer.set_zoom(
+            int(self.application_settings.nodegraph_zoom)
+        )
         debounced_viewer.set_pipe_layout(original_viewer.get_pipe_layout())
         debounced_viewer.set_layout_direction(
             original_viewer.get_layout_direction()
@@ -124,7 +136,9 @@ class NodeGraphWidget(BaseWidget):
         # Check if framepack is available
         here = os.path.dirname(__file__)
         if os.path.exists(os.path.join(here, "../../FramePack")):
-            from airunner.components.framepack.workers.framepack_worker import FramePackWorker
+            from airunner.components.framepack.workers.framepack_worker import (
+                FramePackWorker,
+            )
 
             self.framepack_worker = create_worker(FramePackWorker)
 
@@ -487,7 +501,7 @@ class NodeGraphWidget(BaseWidget):
         self._initialize_ui()
 
     def _initialize_ui(self):
-        self.ui.splitter.setSizes([200, 700, 200])
+        self.ui.nodegraph_splitter.setSizes([200, 700, 200])
         self.ui.graph.layout().addWidget(self.viewer)
         self.ui.palette.layout().addWidget(self._nodes_palette)
 
@@ -1540,9 +1554,8 @@ class NodeGraphWidget(BaseWidget):
             center_y = 0
 
         # Get current zoom since we're only updating center
-        settings = self.application_settings
         try:
-            zoom = int(getattr(settings, "nodegraph_zoom", 0) or 0)
+            zoom = int(self.application_settings.nodegraph_zoom)
         except (TypeError, ValueError):
             zoom = 0
 
@@ -1553,9 +1566,26 @@ class NodeGraphWidget(BaseWidget):
         super().closeEvent(event)
 
     def showEvent(self, event):
+        super().showEvent(event)
         if not self.initialized:
-            super().showEvent(event)
             self.initialized = True
+            # Delay restore_state to ensure UI is fully constructed and visible
+            QtCore.QTimer.singleShot(0, self.restore_state)
+
+    def _save_state(self):
+        viewer = getattr(self.graph, "_viewer", None)
+        # Save the actual scale (visual zoom) using get_zoom()
+        zoom_scale = viewer.get_zoom() if viewer else 1.0
+        canvas_offset = viewer.pan if viewer else (0, 0)
+        center_x = canvas_offset[0]
+        center_y = canvas_offset[1]
+        application_settings = self.application_settings
+        ApplicationSettings.objects.update(
+            pk=application_settings.id,
+            nodegraph_zoom=zoom_scale,
+            nodegraph_center_x=center_x,
+            nodegraph_center_y=center_y,
+        )
 
     def _restore_nodegraph_state(self):
         if self.initialized:
@@ -1592,7 +1622,6 @@ class NodeGraphWidget(BaseWidget):
             center_y = getattr(
                 self.application_settings, "nodegraph_center_y", None
             )
-        # Apply zoom and center if available
         viewer = getattr(self.graph, "_viewer", None)
         if viewer:
             try:
@@ -1605,20 +1634,32 @@ class NodeGraphWidget(BaseWidget):
                 if (
                     center_x is not None
                     and center_y is not None
-                    and hasattr(viewer, "set_scene_center")
+                    and hasattr(viewer, "centerOn")
                 ):
-                    viewer.set_scene_center(float(center_x), float(center_y))
+                    viewer.centerOn(float(center_x), float(center_y))
 
-                # Schedule a single delayed zoom reset to override any late resizeEvent zooming
+                # Schedule a delayed re-application to override late events
                 def force_zoom_final():
-                    # if hasattr(viewer, "reset_zoom"):
-                    #     viewer.reset_zoom()
-                    # if hasattr(viewer, "set_zoom_absolute"):
-                    #     viewer.set_zoom_absolute(float(zoom))
-                    pass
+                    try:
+                        if zoom is not None and hasattr(
+                            viewer, "set_zoom_absolute"
+                        ):
+                            viewer.set_zoom_absolute(float(zoom))
+                        if (
+                            center_x is not None
+                            and center_y is not None
+                            and hasattr(viewer, "centerOn")
+                        ):
+                            viewer.centerOn(float(center_x), float(center_y))
+                    except Exception as e:
+                        self.logger.warning(
+                            f"Delayed restore of nodegraph zoom/center failed: {e}"
+                        )
 
-                if zoom is not None and hasattr(viewer, "set_zoom_absolute"):
-                    QtCore.QTimer.singleShot(1200, force_zoom_final)
+                if zoom is not None or (
+                    center_x is not None and center_y is not None
+                ):
+                    QtCore.QTimer.singleShot(1000, force_zoom_final)
             except Exception as e:
                 self.logger.warning(
                     f"Failed to restore nodegraph zoom/center: {e}"

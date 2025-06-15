@@ -124,6 +124,7 @@ class BrowserWidget(
         self.signal_handlers = {
             SignalCode.BROWSER_NAVIGATE_SIGNAL: self.on_browser_navigate
         }
+        self.splitters = ["splitter"]
         super().__init__(*args, **kwargs)
         self._setup_ui()
         self._setup_widget_communication()
