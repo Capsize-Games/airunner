@@ -35,6 +35,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    RUN_SCRIPT = "run_script_signal"
     BROWSER_NAVIGATE_SIGNAL = "browser_navigate_signal"
     UPATE_LOCALE = "update_locale_signal"
     RETRANSLATE_UI_SIGNAL = "retranslate_ui_signal"

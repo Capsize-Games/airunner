@@ -16,7 +16,7 @@ from PySide6.QtCore import (
     QRegularExpression,
     QFile,
     QTextStream,
-    QFileInfo,
+    QFileInfo, Slot,
 )
 from PySide6.QtGui import (
     QColor,
@@ -31,6 +31,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.document_editor.gui.templates.document_editor_ui import (
     Ui_Form,
 )
+from airunner.enums import SignalCode
 
 
 class LineNumberArea(QWidget):
@@ -302,6 +303,10 @@ class DocumentEditorWidget(BaseWidget):
 
     widget_class_ = Ui_Form
 
+    icons = [
+        ("play", "run_button"),
+    ]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.editor = CodeEditor(self)
@@ -318,6 +323,12 @@ class DocumentEditorWidget(BaseWidget):
         self.ui.gridLayout.setColumnStretch(1, 1)
         self.ui.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.ui.gridLayout.setSpacing(0)
+
+    @Slot()
+    def on_run_button_clicked(self):
+        self.emit_signal(SignalCode.RUN_SCRIPT, {
+            "document_path": self.current_file_path,
+        })
 
     def load_file(self, file_path: str) -> bool:
         self.current_file_path = file_path

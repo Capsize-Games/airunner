@@ -237,27 +237,22 @@ class MainWindow(
             stt_enabled=False,
             controlnet_enabled=False,
         )
-
         self.single_click_timer = QTimer(self)
         self.single_click_timer.setSingleShot(True)
         self.single_click_timer.timeout.connect(self.handle_single_click)
-
-        # Add plugins directory to Python path
         plugins_path = os.path.join(self.path_settings.base_path, "plugins")
         if plugins_path not in sys.path:
             sys.path.append(plugins_path)
-
         self._updating_settings = True
         self._updating_settings = False
         self._worker_manager = None
-        # Add WorkerManager for test and app compatibility
         try:
             self.worker_manager = WorkerManager(
                 logger=getattr(self, "logger", None)
             )
             self.worker_manager.initialize_workers()
         except Exception as e:
-            self.worker_manager = None  # Fallback if import fails
+            self.worker_manager = None
         self.model_load_balancer = ModelLoadBalancer(
             self.worker_manager,
             logger=getattr(self, "logger", None),
@@ -267,20 +262,16 @@ class MainWindow(
         self.last_tray_click_time = 0
         self.settings_window = None
 
-        # get the current tab
-        current_tab = self.ui.center_tab_container.currentWidget()
+        # Restore last active tab index from QSettings
+        tab_count = self.ui.center_tab_container.count()
+        self.qsettings.beginGroup("window_settings")
+        active_tab_index = self.qsettings.value("active_main_tab_index", 0, type=int)
+        self.qsettings.endGroup()
+        if 0 <= active_tab_index < tab_count:
+            self.ui.center_tab_container.setCurrentIndex(active_tab_index)
 
-        # Initialize action buttons based on current_tab
-        if current_tab is self.ui.home_tab:
-            self.ui.home_button.setChecked(True)
-        elif current_tab is self.ui.art_tab:
-            self.ui.art_editor_button.setChecked(True)
-        elif current_tab is self.ui.document_editor_tab:
-            self.ui.document_editor_button.setChecked(True)
-        elif current_tab is self.ui.browser_tab:
-            self.ui.browser_button.setChecked(True)
-        elif current_tab is self.ui.agent_workflow_tab:
-            self.ui.workflow_editor_button.setChecked(True)
+        # Store active tab index on tab change
+        self.ui.center_tab_container.currentChanged.connect(self._store_active_tab_index)
 
     @property
     def generator_tab_widget(self):
@@ -1579,3 +1570,9 @@ class MainWindow(
             tab_widget = self.ui.center_tab_container
             tab_bar = tab_widget.tabBar()
             tab_bar.hide()
+
+    def _store_active_tab_index(self, index: int) -> None:
+        """Store the active main tab index in QSettings."""
+        self.qsettings.beginGroup("window_settings")
+        self.qsettings.setValue("active_main_tab_index", index)
+        self.qsettings.endGroup()
