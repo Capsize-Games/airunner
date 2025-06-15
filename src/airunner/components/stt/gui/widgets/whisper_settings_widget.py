@@ -1,7 +1,7 @@
 from PySide6.QtCore import Slot
 
 from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.components.stt.gui.templates.whisper_settings_ui import (
+from airunner.components.stt.gui.widgets.templates.whisper_settings_ui import (
     Ui_whisper_settings,
 )
 from airunner.settings import LANGUAGES

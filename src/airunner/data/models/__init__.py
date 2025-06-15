@@ -15,7 +15,7 @@ from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
-from airunner.data.models.speech_t5_settings import SpeechT5Settings
+from airunner.components.tts.data.models.speech_t5_settings import SpeechT5Settings
 from airunner.data.models.espeak_settings import EspeakSettings
 from airunner.components.stt.data.stt_settings import STTSettings
 from airunner.data.models.schedulers import Schedulers
