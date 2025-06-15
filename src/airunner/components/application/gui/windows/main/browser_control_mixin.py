@@ -53,6 +53,7 @@ class BrowserControlMixin:
             "Alt+Left": self.navigate_back,
             "Alt+Right": self.navigate_forward,
             "Alt+Tab": self.cycle_browser_tabs,
+            "SHIFT+Alt+Tab": self.cycle_browser_tabs_reverse,
             "F5": self.refresh_current_page,
             "Ctrl+R": self.refresh_current_page,
         }
@@ -428,6 +429,20 @@ class BrowserControlMixin:
 
         current_index = browser_widget.currentIndex()
         next_index = (current_index + 1) % browser_widget.count()
+        browser_widget.setCurrentIndex(next_index)
+
+        # Update current tab reference
+        self._current_browser_tab = browser_widget.widget(next_index)
+
+    @Slot()
+    def cycle_browser_tabs_reverse(self):
+        """Cycle through browser tabs in reverse order."""
+        browser_widget = self._get_browser_tab_widget()
+        if not browser_widget:
+            return
+
+        current_index = browser_widget.currentIndex()
+        next_index = (current_index - 1) % browser_widget.count()
         browser_widget.setCurrentIndex(next_index)
 
         # Update current tab reference
