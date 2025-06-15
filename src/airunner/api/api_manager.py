@@ -1,4 +1,4 @@
-from airunner.api.llm_services import LLMAPIService
+from airunner.components.llm.api.llm_services import LLMAPIService
 from airunner.components.art.api.art_services import ARTAPIService
 from airunner.api.tts_services import TTSAPIService
 from airunner.api.stt_services import STTAPIService
@@ -9,7 +9,7 @@ from airunner.components.art.api.image_filter_services import ImageFilterAPIServ
 from airunner.components.art.api.embedding_services import EmbeddingAPIServices
 from airunner.components.art.api.lora_services import LoraAPIServices
 from airunner.api.canvas_services import CanvasAPIService
-from airunner.api.chatbot_services import ChatbotAPIService
+from airunner.components.llm.api.chatbot_services import ChatbotAPIService
 
 
 class APIManager:
