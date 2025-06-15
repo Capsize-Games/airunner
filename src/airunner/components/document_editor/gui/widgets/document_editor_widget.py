@@ -27,7 +27,7 @@ from PySide6.QtGui import (
     QTextCharFormat,
 )
 from PySide6.QtWidgets import QWidget, QPlainTextEdit, QMessageBox
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.document_editor.gui.templates.document_editor_ui import (
     Ui_Form,
 )

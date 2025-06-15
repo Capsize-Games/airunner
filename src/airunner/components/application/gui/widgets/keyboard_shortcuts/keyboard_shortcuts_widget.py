@@ -2,8 +2,8 @@ from PySide6.QtCore import Qt
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QWidget
 
-from airunner.data.models import ShortcutKeys
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.data import ShortcutKeys
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.keyboard_shortcuts.templates.keyboard_shortcut_widget_ui import (
     Ui_keyboard_shortcut_widget,
 )

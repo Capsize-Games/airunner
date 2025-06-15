@@ -6,7 +6,7 @@ from PySide6.QtCore import QThread
 
 from airunner.enums import SignalCode, ModelStatus
 from airunner.settings import AIRUNNER_SLEEP_TIME_IN_MS
-from airunner.workers.worker import Worker
+from airunner.components.application.workers.worker import Worker
 
 
 class AudioCaptureWorker(Worker):

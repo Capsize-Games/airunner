@@ -5,7 +5,7 @@ try:
 except ImportError:
     torch = None
 
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.settings.gui.widgets.memory_preferences.templates.memory_preferences_ui import (
     Ui_memory_preferences,
 )

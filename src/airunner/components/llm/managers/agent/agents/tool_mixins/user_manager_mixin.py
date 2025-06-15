@@ -1,5 +1,6 @@
 from typing import Optional
-from airunner.data.models import User
+
+from airunner.components.user.data.user import User
 
 
 class UserManagerMixin:

@@ -24,6 +24,12 @@ from diffusers import (
     StableDiffusionControlNetInpaintPipeline,
     ControlNetModel,
 )
+
+from airunner.components.art.data.ai_models import AIModels
+from airunner.components.art.data.controlnet_model import ControlnetModel
+from airunner.components.art.data.embedding import Embedding
+from airunner.components.art.data.lora import Lora
+from airunner.components.art.data.schedulers import Schedulers
 from airunner.settings import (
     AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT,
     AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT,
@@ -38,13 +44,6 @@ from transformers import (
     CLIPFeatureExtractor,
 )
 from airunner.components.application.managers.base_model_manager import BaseModelManager
-from airunner.data.models import (
-    Schedulers,
-    Lora,
-    Embedding,
-    ControlnetModel as ControlnetDataModel,
-    AIModels,
-)
 from airunner.enums import (
     GeneratorSection,
     ModelStatus,
@@ -299,7 +298,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         return img
 
     @property
-    def controlnet_model(self) -> Optional[ControlnetDataModel]:
+    def controlnet_model(self) -> Optional[ControlnetModel]:
         if (
             self._controlnet_model is None
             or self._controlnet_model.version != self.version
@@ -310,7 +309,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 f"Loading controlnet model from database {self.controlnet_settings.controlnet} {self.version}"
             )
             self._controlnet_model = (
-                ControlnetDataModel.objects.filter_by_first(
+                ControlnetModel.objects.filter_by_first(
                     display_name=self.controlnet_settings.controlnet,
                     version=self.version,
                 )

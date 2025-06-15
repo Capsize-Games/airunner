@@ -7,9 +7,9 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QTableWidgetItem, QApplication
 from airunner.enums import SignalCode
 from airunner.gui.styles.styles_mixin import StylesMixin
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.stats.templates.stats_ui import Ui_stats_widget
-from airunner.gui.windows.main.pipeline_mixin import PipelineMixin
+from airunner.components.application.gui.windows.main.pipeline_mixin import PipelineMixin
 from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 
 

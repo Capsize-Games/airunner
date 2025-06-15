@@ -1,5 +1,6 @@
 from typing import Optional, Any
-from airunner.data.models import Conversation
+
+from airunner.components.llm.data.conversation import Conversation
 
 
 class ConversationManagerMixin:

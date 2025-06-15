@@ -9,7 +9,8 @@ Create Date: 2025-03-06 19:37:44.523586
 from typing import Sequence, Union
 
 from alembic import op
-from airunner.data import models
+
+from airunner.components.data.models.base import Base
 from airunner.utils.db.bootstrap import (
     set_default_ai_models,
     set_default_schedulers,
@@ -31,7 +32,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Create tables using models
-    models.Base.metadata.create_all(bind=op.get_bind())
+    Base.metadata.create_all(bind=op.get_bind())
     set_default_ai_models()
     set_default_schedulers()
     set_default_shortcut_keys()
@@ -44,4 +45,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Drop tables using models
-    models.Base.metadata.drop_all(bind=op.get_bind())
+    Base.metadata.drop_all(bind=op.get_bind())

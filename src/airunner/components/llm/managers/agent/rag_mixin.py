@@ -21,7 +21,8 @@ from llama_index.core import StorageContext, load_index_from_storage
 from llama_index.core.indices.keyword_table import KeywordTableSimpleRetriever
 from llama_index.core.tools import ToolOutput
 
-from airunner.data.models import Article, Conversation
+from airunner.components.llm.data.conversation import Conversation
+from airunner.components.news.data.news import Article
 from airunner.enums import EngineResponseCode
 from airunner.components.llm.managers.agent import HtmlFileReader
 from airunner.components.llm.managers.agent.chat_engine import RefreshContextChatEngine

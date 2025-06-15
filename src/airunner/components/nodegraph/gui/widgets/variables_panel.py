@@ -20,7 +20,7 @@ from airunner.components.nodegraph.gui.widgets.nodes.core.variable_getter_node i
     VariableGetterNode,
 )
 
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.nodegraph.gui.widgets.variable import Variable
 from airunner.components.nodegraph.gui.widgets.nodes.core.variable_types import (
     VariableType,

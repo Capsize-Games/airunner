@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from airunner.data.models import Conversation
+from airunner.components.llm.data.conversation import Conversation
 
 
 class ConversationHistoryManager:

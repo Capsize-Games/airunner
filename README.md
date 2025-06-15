@@ -267,7 +267,7 @@ AI Runner includes an Aggregated Search Tool for querying multiple online servic
 - Use the Aggregated Search node in NodeGraphQt for visual workflows.
 - Call the tool from LLM agents or Python code:
   ```python
-  from airunner.tools.search_tool import AggregatedSearchTool
+  from airunner.components.tools import AggregatedSearchTool
   results = await AggregatedSearchTool.aggregated_search("python", category="web")
   ```
 - See `src/airunner/tools/README.md` for more details.
@@ -476,11 +476,11 @@ AI Runner uses `pytest` for all automated testing. Test coverage is a priority, 
 
 ## Module Documentation
 
-- [API Service Layer](src/airunner/api/README.md)
-- [Main Window Model Load Balancer](src/airunner/gui/windows/main/README.md)
+- [API Service Layer](src/airunner/components/application/api/README.md)
+- [Main Window Model Load Balancer](src/airunner/components/application/gui/windows/main/README.md)
 - [Facehugger Shield Suite](src/airunner/vendor/facehuggershield/README.md)
 - [NodeGraphQt Vendor Module](src/airunner/vendor/nodegraphqt/README.md)
 - [Xvfb-Required Tests](src/airunner/utils/tests/xvfb_required/README.md)
-- [ORM Models](src/airunner/data/models/README.md)
+- [ORM Models](src/airunner/components/data/models/README.md)
 
 For additional details, see the [Wiki](https://github.com/Capsize-Games/airunner/wiki).

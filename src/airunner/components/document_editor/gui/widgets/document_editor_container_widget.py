@@ -11,20 +11,14 @@ from airunner.components.document_editor.gui.templates.document_editor_container
     Ui_document_editor_container,
 )
 from airunner.enums import SignalCode
-from airunner.gui.widgets.base_widget import BaseWidget
-from PySide6.QtWidgets import QWidget, QTabWidget, QFileDialog
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from PySide6.QtWidgets import QFileDialog
 from airunner.components.document_editor.gui.widgets.document_editor_widget import (
     DocumentEditorWidget,
 )
 import os
 from airunner.components.browser.gui.widgets.mixins.tab_manager_mixin import (
     TabManagerMixin,
-)
-from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
-    FileExplorerWidget,
-)
-from airunner.components.file_explorer.gui.templates.file_explorer_ui import (
-    Ui_file_explorer,
 )
 
 

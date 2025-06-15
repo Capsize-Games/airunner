@@ -15,7 +15,7 @@ from PySide6.QtCore import Qt, Signal, QMimeData, QByteArray
 from PIL import Image
 from PIL.ImageQt import ImageQt
 from airunner.utils.image import load_metadata_from_image, delete_image
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.image.templates.image_widget_ui import (
     Ui_image_widget,
 )

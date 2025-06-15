@@ -4,7 +4,7 @@ from sqlalchemy import (
     String,
     JSON,
 )
-from airunner.components.application.data.base import BaseModel
+from airunner.components.data.models.base import BaseModel
 
 
 class AIRunnerSettings(BaseModel):

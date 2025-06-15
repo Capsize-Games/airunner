@@ -1,9 +1,10 @@
 from PySide6.QtCore import Slot
-from airunner.gui.widgets.base_widget import BaseWidget
+
+from airunner.components.application.data import Tab
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.stablediffusion.templates.stablediffusion_tool_tab_ui import (
     Ui_stablediffusion_tool_tab_widget,
 )
-from airunner.data.models import Tab
 
 
 class StablediffusionToolTabWidget(BaseWidget):

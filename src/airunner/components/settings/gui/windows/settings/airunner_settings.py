@@ -16,6 +16,10 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
 )
 
+from airunner.components.application.gui.widgets.language.language_settings_widget import \
+    LanguageSettingsWidget
+from airunner.components.application.gui.widgets.paths.paths_widget import \
+    PathsWidget
 from airunner.components.llm.gui.widgets.bot_preferences import \
     BotPreferencesWidget
 from airunner.components.llm.gui.widgets.prompt_templates_widget import \
@@ -30,9 +34,8 @@ from airunner.components.application.gui.widgets.keyboard_shortcuts.keyboard_sho
 from airunner.components.settings.gui.widgets.memory_preferences.memory_preferences_widget import (
     MemoryPreferencesWidget,
 )
-from airunner.gui.widgets.paths.paths_widget import PathsWidget
 from airunner.components.tts.gui.widgets.voice_settings_widget import VoiceSettingsWidget
-from airunner.gui.widgets.user.user_settings_widget import UserSettingsWidget
+from airunner.components.application.gui.widgets.user.user_settings_widget import UserSettingsWidget
 from airunner.components.settings.gui.widgets.huggingface_settings.huggingface_settings_widget import (
     HuggingfaceSettingsWidget,
 )
@@ -48,10 +51,7 @@ from airunner.components.settings.gui.widgets.theme_settings.theme_settings_widg
 from airunner.components.settings.gui.windows.settings.templates.airunner_settings_ui import (
     Ui_airunner_settings,
 )
-from airunner.gui.widgets.language.language_settings_widget import (
-    LanguageSettingsWidget,
-)
-from airunner.gui.windows.base_window import BaseWindow
+from airunner.components.application.gui.windows.base_window import BaseWindow
 from airunner.utils.settings import get_qsettings
 
 try:

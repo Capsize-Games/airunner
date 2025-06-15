@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from airunner.enums import CanvasToolName
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import snap_to_grid
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.utils.settings import get_qsettings
 
 

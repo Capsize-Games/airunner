@@ -8,7 +8,8 @@ Create Date: 2025-03-18 14:29:00.483534
 
 from typing import Sequence, Union
 
-from airunner.data.models import LLMGeneratorSettings
+from airunner.components.llm.data.llm_generator_settings import \
+    LLMGeneratorSettings
 from airunner.utils.db import set_default
 
 

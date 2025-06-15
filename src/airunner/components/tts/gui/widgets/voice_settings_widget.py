@@ -16,7 +16,7 @@ from airunner.components.tts.data.models.speech_t5_settings import SpeechT5Setti
 from airunner.components.tts.gui.widgets.espeak_preferences_widget import (
     EspeakPreferencesWidget,
 )
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.tts.gui.widgets.speecht5_preferences_widget import (
     SpeechT5PreferencesWidget,
 )

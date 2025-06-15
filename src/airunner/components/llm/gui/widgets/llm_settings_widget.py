@@ -2,11 +2,11 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 
 from airunner.components.llm.data.chatbot import Chatbot
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.gui.widgets.templates.llm_settings_ui import (
     Ui_llm_settings_widget,
 )
-from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
+from airunner.components.application.gui.windows.main.ai_model_mixin import AIModelMixin
 from airunner.enums import ModelService, SignalCode
 
 

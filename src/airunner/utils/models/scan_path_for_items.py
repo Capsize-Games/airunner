@@ -1,6 +1,7 @@
 import os
 
-from airunner.data.models import Lora, Embedding
+from airunner.components.art.data.embedding import Embedding
+from airunner.components.art.data.lora import Lora
 
 
 # Dummy mixin for test patching

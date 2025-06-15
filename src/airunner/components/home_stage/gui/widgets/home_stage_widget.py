@@ -4,8 +4,7 @@ from airunner.components.home_stage.gui.widgets.templates.home_stage_ui import (
     Ui_home_stage_widget,
 )
 from airunner.enums import TemplateName
-from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.utils.settings import get_qsettings
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 
 try:
     from importlib.metadata import version as pkg_version
