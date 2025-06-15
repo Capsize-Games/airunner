@@ -52,6 +52,7 @@ class BrowserControlMixin:
             "Shift+Ctrl+P": self.toggle_private_browsing,
             "Alt+Left": self.navigate_back,
             "Alt+Right": self.navigate_forward,
+            "Alt+Tab": self.cycle_browser_tabs,
             "F5": self.refresh_current_page,
             "Ctrl+R": self.refresh_current_page,
         }
@@ -134,6 +135,11 @@ class BrowserControlMixin:
 
         # Focus the URL bar for immediate typing
         QTimer.singleShot(100, lambda: self._focus_url_bar(new_tab))
+
+        # Ensure Ctrl+Tab cycles tabs even when webview is focused
+        from PySide6.QtGui import QShortcut, QKeySequence
+        ctrl_tab_shortcut = QShortcut(QKeySequence("Ctrl+Tab"), new_tab.ui.stage)
+        ctrl_tab_shortcut.activated.connect(self.cycle_browser_tabs)
 
         return new_tab
 
@@ -317,7 +323,6 @@ class BrowserControlMixin:
                 pass
             tab_info = {"url": url, "title": title, "private": private}
             self._closed_tabs_history.append(tab_info)
-            print(f"TAB INFO SAVED TO HISTORY {tab_info}")
 
         # Remove from tab widget and internal tracking
         def on_safe():
@@ -413,6 +418,20 @@ class BrowserControlMixin:
         """Navigate forward in current browser tab."""
         if self._current_browser_tab:
             self._current_browser_tab.go_forward()
+
+    @Slot()
+    def cycle_browser_tabs(self):
+        """Cycle through browser tabs."""
+        browser_widget = self._get_browser_tab_widget()
+        if not browser_widget:
+            return
+
+        current_index = browser_widget.currentIndex()
+        next_index = (current_index + 1) % browser_widget.count()
+        browser_widget.setCurrentIndex(next_index)
+
+        # Update current tab reference
+        self._current_browser_tab = browser_widget.widget(next_index)
 
     @Slot()
     def refresh_current_page(self):
