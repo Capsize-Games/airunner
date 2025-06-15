@@ -17,7 +17,7 @@ from airunner.components.file_explorer.gui.templates.file_explorer_ui import (
     Ui_file_explorer,
 )
 from airunner.enums import SignalCode
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 
 
 class FileExplorerWidget(BaseWidget):

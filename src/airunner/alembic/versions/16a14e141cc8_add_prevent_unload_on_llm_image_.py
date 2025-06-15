@@ -8,7 +8,7 @@ Create Date: 2025-03-30 14:03:45.112475
 
 from typing import Sequence, Union
 
-from airunner.data.models import MemorySettings
+from airunner.components.art.data.memory_settings import MemorySettings
 from airunner.utils.db import add_column, drop_column
 
 

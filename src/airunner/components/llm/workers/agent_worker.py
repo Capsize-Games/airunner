@@ -2,7 +2,7 @@ import traceback
 import torch
 from typing import Dict
 
-from airunner.workers.worker import Worker
+from airunner.components.application.workers.worker import Worker
 from airunner.components.llm.managers.llm_response import LLMResponse
 
 

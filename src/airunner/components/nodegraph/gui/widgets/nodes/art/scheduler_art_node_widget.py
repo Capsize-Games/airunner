@@ -1,6 +1,6 @@
 from PySide6.QtCore import Slot
 
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.nodegraph.gui.widgets.nodes.art.templates.scheduler_ui import (
     Ui_scheduler_node,
 )

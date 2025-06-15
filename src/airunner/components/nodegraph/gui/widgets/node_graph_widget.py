@@ -50,7 +50,7 @@ from airunner.vendor.nodegraphqt.widgets.debounced_viewer import (
     DebouncedNodeViewer,
 )
 
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.nodegraph.gui.widgets.add_port_dialog import (
     AddPortDialog,
 )
@@ -66,7 +66,7 @@ from airunner.components.nodegraph.data.workflow_node import WorkflowNode
 from airunner.components.nodegraph.data.workflow_connection import WorkflowConnection
 from airunner.utils.settings import get_qsettings
 
-from airunner.workers.node_graph_worker import NodeGraphWorker
+from airunner.components.nodegraph.workers.node_graph_worker import NodeGraphWorker
 from airunner.utils.application.create_worker import create_worker
 
 IGNORED_NODE_PROPERTIES = {}
@@ -124,7 +124,7 @@ class NodeGraphWidget(BaseWidget):
         # Check if framepack is available
         here = os.path.dirname(__file__)
         if os.path.exists(os.path.join(here, "../../FramePack")):
-            from airunner.workers.framepack_worker import FramePackWorker
+            from airunner.components.framepack.workers.framepack_worker import FramePackWorker
 
             self.framepack_worker = create_worker(FramePackWorker)
 

@@ -1,5 +1,5 @@
 from PySide6.QtCore import Slot
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.settings.gui.widgets.huggingface_settings.templates.huggingface_settings_ui import (
     Ui_huggingface_settings_widget,
 )

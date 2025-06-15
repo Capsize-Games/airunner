@@ -7,11 +7,11 @@ from llama_index.core.tools.types import (
 )
 
 from airunner.components.llm.managers.agent.chat_engine import RefreshSimpleChatEngine
-from airunner.tools.search_tool import AggregatedSearchTool
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
 )
+from airunner.components.tools.search_tool import AggregatedSearchTool
 
 
 class SearchEngineTool(BaseConversationEngine):

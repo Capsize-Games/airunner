@@ -8,13 +8,14 @@ from PySide6.QtGui import QTextCursor
 from airunner.components.chat.gui.widgets.templates.chat_prompt_ui import (
     Ui_chat_prompt,
 )
+from airunner.components.llm.data.conversation import Conversation
 from airunner.enums import (
     SignalCode,
     LLMActionType,
     ModelType,
     ModelStatus,
 )
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.utils.application import create_worker
 from airunner.utils.widgets import load_splitter_settings
 from airunner.components.llm.managers.llm_request import LLMRequest
@@ -366,7 +367,6 @@ class ChatPromptWidget(BaseWidget):
             self.conversation_id = None
             return
         self.conversation_id = conversation_id
-        from airunner.data.models import Conversation
 
         conversation = Conversation.objects.filter_by_first(id=conversation_id)
         self.conversation = conversation

@@ -9,14 +9,14 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import Qt
 from PySide6.QtWidgets import QApplication
 
-from airunner.gui.windows.setup_wizard.setup_wizard_window import (
+from airunner.components.downloader.gui.windows.setup_wizard.setup_wizard_window import (
     SetupWizardWindow,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.gui.windows.download_wizard.download_wizard_window import (
+from airunner.components.downloader.gui.windows.download_wizard.download_wizard_window import (
     DownloadWizardWindow,
 )
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 
 
 class AppInstaller(QObject, SettingsMixin, MediatorMixin):

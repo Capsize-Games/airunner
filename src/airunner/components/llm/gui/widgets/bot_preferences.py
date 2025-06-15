@@ -1,11 +1,12 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
-from airunner.data.models import TargetFiles, Chatbot
+from airunner.components.llm.data.chatbot import Chatbot
+from airunner.components.llm.data.target_files import TargetFiles
 from airunner.components.settings.data.voice_settings import VoiceSettings
 from airunner.enums import Gender
 from airunner.utils.os.open_file_path import open_file_path
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.gui.widgets.document_widget import DocumentWidget
 from airunner.components.llm.gui.widgets.templates.bot_preferences_ui import (
     Ui_bot_preferences,

@@ -1,7 +1,7 @@
 from PySide6.QtCore import Slot
 
-from airunner.data.models import Embedding
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from airunner.components.art.data.embedding import Embedding
 from airunner.components.art.gui.widgets.embeddings.embedding_trigger_word_widget import (
     EmbeddingTriggerWordWidget,
 )

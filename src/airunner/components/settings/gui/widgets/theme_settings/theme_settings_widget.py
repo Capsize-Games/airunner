@@ -1,6 +1,6 @@
 from PySide6.QtCore import Slot
 from airunner.enums import TemplateName
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.settings.gui.widgets.theme_settings.templates.theme_settings_ui import (
     Ui_theme_settings,
 )

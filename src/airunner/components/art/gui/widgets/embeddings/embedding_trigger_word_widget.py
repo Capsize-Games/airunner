@@ -1,4 +1,4 @@
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.embeddings.templates.embedding_trigger_word_ui import (
     Ui_embedding_trigger_word,
 )

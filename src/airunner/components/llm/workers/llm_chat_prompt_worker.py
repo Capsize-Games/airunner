@@ -1,11 +1,10 @@
-import time
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
 from airunner.enums import (
     SignalCode,
 )
-from airunner.workers.worker import Worker
+from airunner.components.application.workers.worker import Worker
 
 
 class LLMChatPromptWorker(Worker):

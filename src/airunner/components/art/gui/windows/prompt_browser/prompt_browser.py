@@ -2,7 +2,7 @@ from airunner.components.art.gui.windows.prompt_browser.prompt_widget import Pro
 from airunner.components.art.gui.windows.prompt_browser.templates.prompt_browser_ui import (
     Ui_prompt_browser,
 )
-from airunner.gui.windows.base_window import BaseWindow
+from airunner.components.application.gui.windows.base_window import BaseWindow
 
 
 class PromptBrowser(BaseWindow):

@@ -20,8 +20,8 @@ from PySide6.QtWidgets import (QApplication, QGraphicsView, QGridLayout, QHBoxLa
     QWidget)
 
 from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
+from airunner.components.application.gui.widgets.switch_widget.switch_widget import SwitchWidget
 from airunner.components.art.gui.widgets.controlnet.controlnet_settings_widget import ControlnetSettingsWidget
-from airunner.gui.widgets.switch_widget.switch_widget import SwitchWidget
 import airunner.feather_rc
 
 class Ui_input_image(object):

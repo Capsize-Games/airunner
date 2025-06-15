@@ -4,8 +4,8 @@ from PySide6.QtCore import QPointF, Qt
 
 from airunner.vendor.nodegraphqt import BaseNode
 
-from airunner.gui.widgets.base_widget import BaseWidget
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.utils.application.mediator_mixin import MediatorMixin
 
 

@@ -8,7 +8,7 @@ Create Date: 2025-03-16 08:28:29.562179
 
 from typing import Union
 
-from airunner.data.models import Chatbot
+from airunner.components.llm.data.chatbot import Chatbot
 from airunner.utils.db import create_unique_constraint, drop_constraint
 
 

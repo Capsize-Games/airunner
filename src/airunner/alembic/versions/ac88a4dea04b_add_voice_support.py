@@ -12,6 +12,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import inspect
 
+from airunner.components.llm.data.chatbot import Chatbot
+from airunner.components.settings.data.voice_settings import VoiceSettings
 from airunner.utils.db import (
     add_table,
     add_column,
@@ -20,7 +22,6 @@ from airunner.utils.db import (
     create_unique_constraint,
     drop_constraint,
 )
-from airunner.data.models import VoiceSettings, Chatbot
 
 
 # revision identifiers, used by Alembic.

@@ -1,7 +1,7 @@
 from typing import Dict
 
 from airunner.enums import SignalCode
-from airunner.workers.worker import Worker
+from airunner.components.application.workers.worker import Worker
 
 
 class LLMResponseWorker(Worker):

@@ -328,7 +328,7 @@
   <customwidget>
    <class>SwitchWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/switch_widget/switch_widget</header>
+   <header>airunner/components/application/gui/widgets/switch_widget/switch_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -3,7 +3,7 @@ from typing import Dict, Optional, Type
 
 from airunner.enums import SignalCode
 from airunner.components.llm.managers.ollama_model_manager import OllamaModelManager
-from airunner.workers.worker import Worker
+from airunner.components.application.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
 from airunner.components.llm.managers.llm_model_manager import LLMModelManager
 from airunner.components.llm.managers.openrouter_model_manager import (

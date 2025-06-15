@@ -1,4 +1,4 @@
-from airunner.api.api_service_base import APIServiceBase
+from airunner.components.application.api.api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 
 

@@ -1,10 +1,9 @@
 import importlib
 
-
-from airunner.data.models import ImageFilter
+from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.data.image_filter_value import ImageFilterValue
 from airunner.components.application.gui.widgets.slider.filter_slider_widget import FilterSliderWidget
-from airunner.gui.windows.base_window import BaseWindow
+from airunner.components.application.gui.windows.base_window import BaseWindow
 from airunner.components.art.gui.windows.filter_window.filter_window_ui import Ui_filter_window
 from PySide6.QtCore import QTimer
 

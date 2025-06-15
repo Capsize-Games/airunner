@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, JSON
 from sqlalchemy.orm import relationship
-from airunner.components.application.data.base import BaseModel
-from airunner.components.application.data.base_manager import BaseManager
+from airunner.components.data.models.base import BaseModel
+from airunner.components.data.models.base_manager import BaseManager
 
 
 class Workflow(BaseModel):

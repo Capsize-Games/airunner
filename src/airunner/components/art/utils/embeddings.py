@@ -1,5 +1,6 @@
 from typing import List, Optional, Type
-from airunner.data.models import Embedding
+
+from airunner.components.art.data.embedding import Embedding
 
 
 def get_embeddings_by_version(version) -> Optional[List[Type[Embedding]]]:

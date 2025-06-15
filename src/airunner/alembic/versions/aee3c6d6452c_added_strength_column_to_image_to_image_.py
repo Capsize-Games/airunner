@@ -8,7 +8,8 @@ Create Date: 2025-04-29 14:12:10.904776
 
 from typing import Sequence, Union
 
-from airunner.data.models import ImageToImageSettings
+from airunner.components.art.data.image_to_image_settings import \
+    ImageToImageSettings
 from airunner.utils.db import add_column, drop_column
 
 

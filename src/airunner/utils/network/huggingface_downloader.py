@@ -1,9 +1,8 @@
 from typing import Callable
 from PySide6.QtCore import QObject, Signal
-from airunner.workers.download_worker import DownloadWorker
-from airunner.enums import SignalCode
+from airunner.components.application.workers.download_worker import DownloadWorker
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.utils.application.create_worker import create_worker
 
 

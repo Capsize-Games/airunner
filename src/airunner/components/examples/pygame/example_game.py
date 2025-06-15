@@ -17,9 +17,9 @@ from pygame.locals import (
     K_RIGHT,
 )
 
-from airunner.api.api import API
-from airunner.gui.windows.pygame_window import PygameWindow
-from airunner.gui.windows.pygame_window import PygameAdapter
+from airunner.components.application.api.api import API
+from airunner.components.examples.pygame.gui.windows.pygame_window import PygameWindow
+from airunner.components.examples.pygame.gui.windows.pygame_window import PygameAdapter
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,

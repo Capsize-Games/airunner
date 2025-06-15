@@ -225,7 +225,7 @@
   <customwidget>
    <class>WhisperSettingsWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/stt/whisper_settings_widget</header>
+   <header>airunner/components/stt/gui/widgets/stt/whisper_settings_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

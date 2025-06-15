@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QMessageBox
 
 from airunner.components.documents.data.models.document import Document
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.documents.gui.widgets.templates.document_ui import (
     Ui_document_widget,
 )

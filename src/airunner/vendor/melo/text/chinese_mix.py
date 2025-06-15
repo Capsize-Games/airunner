@@ -9,7 +9,6 @@ import jieba.posseg as psg
 
 from airunner.vendor.melo.text.symbols import language_tone_start_map
 from airunner.vendor.melo.text.tone_sandhi import ToneSandhi
-from airunner.api.api import API
 
 from airunner.vendor.melo.text.language_base import LanguageBase
 from airunner.vendor.melo.text.english import English

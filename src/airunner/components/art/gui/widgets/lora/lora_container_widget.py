@@ -3,16 +3,16 @@ from typing import List, Type
 from PySide6.QtCore import Slot, QSize, QThread, QTimer
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
+from airunner.components.art.data.lora import Lora
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.utils.models import scan_path_for_lora
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.lora.lora_widget import LoraWidget
 from airunner.components.art.gui.widgets.lora.templates.lora_container_ui import (
     Ui_lora_container,
 )
-from airunner.workers.directory_watcher import DirectoryWatcher
+from airunner.components.application.workers.directory_watcher import DirectoryWatcher
 
-from airunner.data.models import Lora
 
 
 class LoraContainerWidget(BaseWidget):

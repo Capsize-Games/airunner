@@ -7,9 +7,10 @@ Exposes a `search` method for use in agent toolchains.
 from airunner.components.llm.managers.agent.agents.tool_mixins.tool_singleton_mixin import (
     ToolSingletonMixin,
 )
-from airunner.tools.search_tool import AggregatedSearchTool
 from llama_index.core.tools import FunctionTool
 from typing import Dict, List
+
+from airunner.components.tools.search_tool import AggregatedSearchTool
 
 
 class SearchToolsMixin(ToolSingletonMixin):
