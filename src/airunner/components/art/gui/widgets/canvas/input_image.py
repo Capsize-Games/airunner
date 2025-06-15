@@ -12,7 +12,7 @@ from airunner.utils.image import (
     convert_binary_to_image,
     convert_image_to_binary,
 )
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.canvas.templates.input_image_ui import Ui_input_image
 from airunner.components.art.gui.widgets.canvas.input_image_scene import InputImageScene
 

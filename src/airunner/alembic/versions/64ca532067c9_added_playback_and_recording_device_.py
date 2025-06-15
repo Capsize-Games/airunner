@@ -8,7 +8,7 @@ Create Date: 2025-04-06 08:47:15.143515
 
 from typing import Sequence, Union
 
-from airunner.data.models import SoundSettings
+from airunner.components.settings.data.sound_settings import SoundSettings
 from airunner.utils.db import add_table, drop_table
 
 

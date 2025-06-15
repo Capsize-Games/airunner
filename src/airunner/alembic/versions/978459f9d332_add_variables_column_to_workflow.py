@@ -10,7 +10,9 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 
-from airunner.data.models import Workflow, WorkflowConnection
+from airunner.components.nodegraph.data.workflow import Workflow
+from airunner.components.nodegraph.data.workflow_connection import \
+    WorkflowConnection
 from airunner.utils.db import add_column, drop_column, alter_column
 
 

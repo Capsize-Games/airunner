@@ -1,4 +1,4 @@
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.tts.gui.widgets.templates.speecht5_preferences_ui import (
     Ui_speecht5_preferences,
 )

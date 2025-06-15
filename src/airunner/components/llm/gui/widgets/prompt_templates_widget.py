@@ -1,6 +1,6 @@
 from PySide6.QtCore import Slot
 
-from airunner.data.models import PromptTemplate
+from airunner.components.llm.data.prompt_template import PromptTemplate
 from airunner.settings import (
     AIRUNNER_DEFAULT_IMAGE_SYSTEM_PROMPT,
     AIRUNNER_DEFAULT_APPLICATION_COMMAND_SYSTEM_PROMPT,
@@ -11,7 +11,7 @@ from airunner.settings import (
     AIRUNNER_DEFAULT_IMAGE_LLM_GUARDRAILS,
     AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
 )
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.gui.widgets.templates.prompt_templates_ui import (
     Ui_prompt_templates_widget,
 )

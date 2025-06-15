@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QApplication
 
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import Ui_canvas
 from airunner.utils.application import set_widget_state
 from airunner.utils.widgets import load_splitter_settings

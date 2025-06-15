@@ -1,15 +1,16 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog
 
-from airunner.data.models import AIModels, GeneratorSettings
+from airunner.components.art.data.ai_models import AIModels
+from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.enums import SignalCode, GeneratorSection, ImageGenerator
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.stablediffusion.templates.stable_diffusion_settings_ui import (
     Ui_stable_diffusion_settings_widget,
 )
-from airunner.gui.windows.main.pipeline_mixin import PipelineMixin
+from airunner.components.application.gui.windows.main.pipeline_mixin import PipelineMixin
 from airunner.utils.application.create_worker import create_worker
-from airunner.workers.model_scanner_worker import ModelScannerWorker
+from airunner.components.application.workers.model_scanner_worker import ModelScannerWorker
 from airunner.settings import AIRUNNER_ART_ENABLED
 
 

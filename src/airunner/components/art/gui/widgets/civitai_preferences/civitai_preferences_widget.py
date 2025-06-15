@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QLineEdit
 
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.civitai_preferences.templates.civitai_preferences_widget_ui import (
     Ui_civitai_preferences,
 )

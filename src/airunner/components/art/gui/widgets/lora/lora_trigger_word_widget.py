@@ -1,4 +1,4 @@
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.lora.templates.lora_trigger_word_ui import (
     Ui_lora_trigger_word,
 )

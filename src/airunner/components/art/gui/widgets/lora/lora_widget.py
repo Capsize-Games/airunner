@@ -1,7 +1,7 @@
 from PySide6.QtCore import QTimer, Slot
 
-from airunner.data.models import Lora
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from airunner.components.art.data.lora import Lora
 from airunner.components.art.gui.widgets.lora.lora_trigger_word_widget import (
     LoraTriggerWordWidget,
 )

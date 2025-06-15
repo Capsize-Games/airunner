@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QLineEdit
 from airunner.components.application.gui.widgets.api_token.templates.api_token_ui import Ui_api_token
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 
 
 class APITokenWidget(BaseWidget):

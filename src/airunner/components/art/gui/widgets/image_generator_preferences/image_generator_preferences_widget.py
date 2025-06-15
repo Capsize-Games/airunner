@@ -1,5 +1,5 @@
 from airunner.enums import ImageGenerator, GeneratorSection
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.image_generator_preferences.templates.image_generator_preferences_ui import (
     Ui_image_generator_preferences,
 )

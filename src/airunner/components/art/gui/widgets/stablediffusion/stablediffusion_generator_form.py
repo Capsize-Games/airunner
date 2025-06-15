@@ -6,7 +6,8 @@ import time
 from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot, QSettings
 from PySide6.QtWidgets import QApplication, QWidget
 
-from airunner.data.models import ShortcutKeys, AIModels
+from airunner.components.application.data import ShortcutKeys
+from airunner.components.art.data.ai_models import AIModels
 from airunner.enums import (
     QualityEffects,
     SignalCode,
@@ -19,14 +20,14 @@ from airunner.enums import (
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import random_seed
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.stablediffusion.templates.stablediffusion_generator_form_ui import (
     Ui_stablediffusion_generator_form,
 )
 from airunner.components.art.gui.widgets.stablediffusion.prompt_container_widget import (
     PromptContainerWidget,
 )
-from airunner.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,

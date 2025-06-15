@@ -8,8 +8,11 @@ Create Date: 2025-04-19 16:48:15.515574
 
 from typing import Sequence, Union
 
+from airunner.components.nodegraph.data.workflow import Workflow
+from airunner.components.nodegraph.data.workflow_connection import \
+    WorkflowConnection
+from airunner.components.nodegraph.data.workflow_node import WorkflowNode
 from airunner.utils.db import add_table, drop_table
-from airunner.data.models import Workflow, WorkflowNode, WorkflowConnection
 
 
 # revision identifiers, used by Alembic.

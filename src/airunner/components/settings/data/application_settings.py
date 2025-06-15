@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean
 
-from airunner.components.application.data.base import BaseModel
+from airunner.components.data.models.base import BaseModel
 from airunner.enums import (
     ImageGenerator,
     GeneratorSection,

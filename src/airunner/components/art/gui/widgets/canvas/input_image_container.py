@@ -1,5 +1,5 @@
 from airunner.enums import SignalCode
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.canvas.templates.input_image_container_ui import (
     Ui_input_image_container,
 )

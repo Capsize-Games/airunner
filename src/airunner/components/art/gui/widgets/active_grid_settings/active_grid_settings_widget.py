@@ -3,7 +3,7 @@ from airunner.enums import SignalCode
 from airunner.components.art.gui.widgets.active_grid_settings.templates.active_grid_settings_ui import (
     Ui_active_grid_settings_widget,
 )
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from PySide6.QtCore import Slot
 
 

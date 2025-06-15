@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, JSON
 
 import datetime
 
-from airunner.components.application.data.base import BaseModel
+from airunner.components.data.models.base import BaseModel
 
 
 class Chatstore(BaseModel):

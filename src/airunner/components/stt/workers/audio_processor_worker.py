@@ -1,7 +1,7 @@
 from airunner.components.stt.managers.whisper_model_manager import \
     WhisperModelManager
 from airunner.enums import SignalCode
-from airunner.workers.worker import Worker
+from airunner.components.application.workers.worker import Worker
 
 
 class AudioProcessorWorker(Worker):

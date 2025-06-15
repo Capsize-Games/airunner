@@ -4,7 +4,7 @@ from airunner.components.documents.gui.widgets.templates.documents_ui import (
     Ui_documents,
 )
 
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QIcon
 from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (

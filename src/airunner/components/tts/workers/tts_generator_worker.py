@@ -16,7 +16,7 @@ from airunner.enums import (
     LLMActionType,
     QueueType,
 )
-from airunner.workers.worker import Worker
+from airunner.components.application.workers.worker import Worker
 from airunner.settings import AIRUNNER_TTS_ON
 from airunner.components.tts.managers.tts_request import (
     OpenVoiceTTSRequest,

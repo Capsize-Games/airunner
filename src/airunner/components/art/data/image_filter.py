@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
 
-from airunner.components.application.data.base import BaseModel
+from airunner.components.data.models.base import BaseModel
 from airunner.components.art.data.image_filter_value import ImageFilterValue
 
 

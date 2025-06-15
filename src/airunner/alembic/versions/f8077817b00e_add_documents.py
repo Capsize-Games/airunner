@@ -8,8 +8,7 @@ Create Date: 2025-06-08 22:04:00.677480
 
 from typing import Sequence, Union
 
-
-from airunner.data.models import Document
+from airunner.components.documents.data.models.document import Document
 from airunner.utils.db import add_table, drop_table
 
 

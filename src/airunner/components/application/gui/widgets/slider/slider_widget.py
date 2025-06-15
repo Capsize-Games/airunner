@@ -2,10 +2,10 @@ from typing import Any
 from PySide6.QtCore import Slot, QTimer
 from PySide6.QtWidgets import QDoubleSpinBox
 
-from airunner.data.models import Lora
-from airunner.gui.widgets.base_widget import BaseWidget
+from airunner.components.application.data import table_to_class
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.slider.templates.slider_ui import Ui_slider_widget
-from airunner.data.models import table_to_class
+from airunner.components.art.data.lora import Lora
 
 
 class SliderWidget(BaseWidget):

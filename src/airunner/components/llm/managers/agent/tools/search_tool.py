@@ -4,9 +4,9 @@ AggregatedSearchTool LLM Tool Integration
 This tool exposes the AggregatedSearchTool as an LLM-compatible tool for use in agent workflows.
 """
 
-from airunner.tools.search_tool import AggregatedSearchTool
 from typing import Dict, List
 from airunner.components.llm.managers.agent.agents.registry import ToolRegistry
+from airunner.components.tools.search_tool import AggregatedSearchTool
 
 
 @ToolRegistry.register("search")

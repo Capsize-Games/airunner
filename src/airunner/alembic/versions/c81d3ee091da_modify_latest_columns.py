@@ -11,18 +11,16 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import inspect
 
+from airunner.components.nodegraph.data.workflow import Workflow
+from airunner.components.nodegraph.data.workflow_connection import \
+    WorkflowConnection
+from airunner.components.nodegraph.data.workflow_node import WorkflowNode
 from airunner.utils.db import (
     drop_constraint,
     add_column_with_fk,
     add_column,
     drop_column,
     safe_alter_column,
-)
-from airunner.data.models import (
-    Chatbot,
-    WorkflowConnection,
-    WorkflowNode,
-    Workflow,
 )
 
 # revision identifiers, used by Alembic.
