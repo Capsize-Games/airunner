@@ -4,7 +4,7 @@ from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 from airunner.components.nodegraph.gui.widgets.nodes.core.base_core_node import (
     BaseCoreNode,
 )
-from airunner.data.models.workflow import Workflow
+from airunner.components.nodegraph.data.workflow import Workflow
 
 
 class SubWorkflowNode(BaseCoreNode):

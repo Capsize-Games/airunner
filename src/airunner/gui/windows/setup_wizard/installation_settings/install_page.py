@@ -17,15 +17,15 @@ except ImportError:
 from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
 from PySide6.QtWidgets import QWizard
 
-from airunner.data.bootstrap.model_bootstrap_data import model_bootstrap_data
-from airunner.data.bootstrap.controlnet_bootstrap_data import (
+from airunner.components.application.data.bootstrap.model_bootstrap_data import model_bootstrap_data
+from airunner.components.art.data.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
 )
-from airunner.data.bootstrap.sd_file_bootstrap_data import (
+from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
-from airunner.data.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
-from airunner.data.bootstrap.flux_file_bootstrap_data import (
+from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
+from airunner.components.art.data.bootstrap.flux_file_bootstrap_data import (
     FLUX_FILE_BOOTSTRAP_DATA,
 )
 from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (

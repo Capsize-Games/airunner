@@ -12,7 +12,7 @@ from sqlalchemy.orm import relationship
 
 import datetime
 
-from airunner.data.models.base import BaseModel, Base
+from airunner.components.application.data.base import BaseModel, Base
 
 
 article_category_association = Table(

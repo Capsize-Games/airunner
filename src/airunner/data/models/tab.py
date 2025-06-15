@@ -1,7 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean
-from PySide6.QtWidgets import QTabWidget
 
-from airunner.data.models.base import BaseModel
+from airunner.components.application.data.base import BaseModel
 from airunner.data.session_manager import session_scope
 
 

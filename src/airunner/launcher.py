@@ -12,8 +12,8 @@ import subprocess
 import traceback
 import shutil
 
-from airunner.data.models.airunner_settings import AIRunnerSettings
-from airunner.data.models.path_settings import PathSettings
+from airunner.components.settings.data.airunner_settings import AIRunnerSettings
+from airunner.components.settings.data.path_settings import PathSettings
 from airunner.settings import AIRUNNER_BASE_PATH
 from airunner.setup_database import setup_database
 

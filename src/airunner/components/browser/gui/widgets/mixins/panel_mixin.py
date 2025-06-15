@@ -6,7 +6,7 @@ Google Python Style Guide applies.
 """
 
 import json
-from airunner.data.models.airunner_settings import AIRunnerSettings
+from airunner.components.settings.data.airunner_settings import AIRunnerSettings
 from airunner.components.browser.data.settings import (
     BookmarkFolder,
     HistoryEntry,

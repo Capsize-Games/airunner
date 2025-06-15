@@ -22,7 +22,7 @@ from airunner.components.art.managers.stablediffusion.image_request import (
 )
 from airunner.data.models.ai_models import AIModels
 from airunner.enums import StableDiffusionVersion
-from airunner.exceptions import PipeNotLoadedException
+from airunner.components.application.exceptions import PipeNotLoadedException
 
 torch.backends.cuda.matmul.allow_tf32 = True
 

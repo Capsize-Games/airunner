@@ -1,4 +1,4 @@
-from airunner.data.bootstrap.pipeline_bootstrap_data import (
+from airunner.components.application.data.bootstrap.pipeline_bootstrap_data import (
     pipeline_bootstrap_data,
 )
 

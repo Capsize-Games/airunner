@@ -478,7 +478,7 @@ AI Runner uses `pytest` for all automated testing. Test coverage is a priority, 
 
 - [API Service Layer](src/airunner/api/README.md)
 - [Main Window Model Load Balancer](src/airunner/gui/windows/main/README.md)
-- [Facehugger Shield Suite](src/airunner/facehuggershield/README.md)
+- [Facehugger Shield Suite](src/airunner/vendor/facehuggershield/README.md)
 - [NodeGraphQt Vendor Module](src/airunner/vendor/nodegraphqt/README.md)
 - [Xvfb-Required Tests](src/airunner/utils/tests/xvfb_required/README.md)
 - [ORM Models](src/airunner/data/models/README.md)

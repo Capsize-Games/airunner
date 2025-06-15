@@ -8,7 +8,7 @@ Create Date: 2025-06-03 05:15:23.177996
 
 from typing import Sequence, Union
 
-from airunner.data.models.airunner_settings import AIRunnerSettings
+from airunner.components.settings.data.airunner_settings import AIRunnerSettings
 from airunner.components.llm.data.chatbot import Chatbot
 from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
 from airunner.utils.db import (

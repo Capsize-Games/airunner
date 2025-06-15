@@ -8,7 +8,7 @@ Create Date: 2025-05-19 15:39:54.457934
 
 from typing import Sequence, Union
 
-from airunner.data.models.openvoice_settings import OpenVoiceSettings
+from airunner.components.tts.data.models.openvoice_settings import OpenVoiceSettings
 from airunner.utils.db.column import safe_alter_column
 
 # revision identifiers, used by Alembic.

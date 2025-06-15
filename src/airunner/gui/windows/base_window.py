@@ -1,14 +1,12 @@
-import os
 from typing import Dict
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog
 from airunner.enums import SignalCode, TemplateName
-from airunner.gui.managers.icon_manager import IconManager
+from airunner.components.icons.managers.icon_manager import IconManager
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.gui.windows.main.ai_model_mixin import AIModelMixin
 from airunner.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.utils.settings import get_qsettings
 
 
 class BaseWindow(

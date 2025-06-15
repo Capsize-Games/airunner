@@ -1311,7 +1311,7 @@
   <customwidget>
    <class>CanvasWidget</class>
    <extends>QWidget</extends>
-   <header>airunner/gui/widgets/canvas/canvas_widget</header>
+   <header>airunner/components/art/gui/widgets/canvas/canvas_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>

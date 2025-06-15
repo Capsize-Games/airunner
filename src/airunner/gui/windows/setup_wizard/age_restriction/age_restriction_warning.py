@@ -1,5 +1,4 @@
 from PySide6.QtCore import Slot
-from airunner.data.models.application_settings import ApplicationSettings
 from airunner.gui.windows.setup_wizard.age_restriction.templates.age_restriction_ui import (
     Ui_age_restriction_warning,
 )

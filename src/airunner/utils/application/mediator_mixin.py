@@ -4,7 +4,7 @@ from typing import Callable, Dict, Optional
 
 from airunner.enums import SignalCode
 from airunner.utils.application.signal_mediator import SignalMediator
-from airunner.messaging.backends.rabbitmq_backend import RabbitMQBackend
+from airunner.components.messaging.backends.rabbitmq_backend import RabbitMQBackend
 from airunner.settings import AIRUNNER_MESSAGE_BACKEND
 
 

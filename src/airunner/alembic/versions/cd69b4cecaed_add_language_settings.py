@@ -8,7 +8,7 @@ Create Date: 2025-05-19 08:45:28.265195
 
 from typing import Sequence, Union
 
-from airunner.data.models.language_settings import LanguageSettings
+from airunner.components.settings.data.language_settings import LanguageSettings
 from airunner.utils.db import add_table, drop_table
 
 

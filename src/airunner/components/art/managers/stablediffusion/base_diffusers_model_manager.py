@@ -37,7 +37,7 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import (
     CLIPFeatureExtractor,
 )
-from airunner.handlers.base_model_manager import BaseModelManager
+from airunner.components.application.managers.base_model_manager import BaseModelManager
 from airunner.data.models import (
     Schedulers,
     Lora,
@@ -54,7 +54,7 @@ from airunner.enums import (
     ModelAction,
     ImagePreset,
 )
-from airunner.exceptions import PipeNotLoadedException, InterruptedException
+from airunner.components.application.exceptions import PipeNotLoadedException, InterruptedException
 from airunner.settings import (
     AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG,
     AIRUNNER_LOCAL_FILES_ONLY,
