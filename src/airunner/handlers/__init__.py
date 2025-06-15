@@ -19,7 +19,7 @@ def __getattr__(name):
 
         return BaseModelManager
     elif name == "LLMModelManager":
-        from .llm.llm_model_manager import LLMModelManager
+        from airunner.components.llm.managers.llm_model_manager import LLMModelManager
 
         return LLMModelManager
     elif name == "TTSModelManager":

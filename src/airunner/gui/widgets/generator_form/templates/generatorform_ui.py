@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QTabWidge
     QWidget)
 
 from airunner.components.chat.gui.widgets.chat_prompt_widget import ChatPromptWidget
-from airunner.gui.widgets.llm.llm_settings_widget import LLMSettingsWidget
+from airunner.components.llm.gui.widgets.llm_settings_widget import LLMSettingsWidget
 
 class Ui_generator_form(object):
     def setupUi(self, generator_form):
