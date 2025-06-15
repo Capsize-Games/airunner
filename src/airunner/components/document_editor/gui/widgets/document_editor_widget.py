@@ -135,7 +135,7 @@ class CodeEditor(QPlainTextEdit):
 
 
 class PythonSyntaxHighlighter(QSyntaxHighlighter):
-    """Basic Python syntax highlighter."""
+    """Basic syntax highlighter for Python and other common languages."""
 
     def __init__(self, document, language: str = "python"):
         super().__init__(document)
@@ -185,15 +185,16 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
                 "yield",
             ]
             for word in keywords:
-                pattern = QRegularExpression(rf"\b{word}\b")
+                pattern = QRegularExpression(rf"\\b{word}\\b")
                 self.highlighting_rules.append((pattern, keyword_format))
             string_format = QTextCharFormat()
             string_format.setForeground(QColor(163, 21, 21))
+            # Correct regex for single and double quoted strings
             self.highlighting_rules.append(
-                (QRegularExpression(r'".*?"'), string_format)
+                (QRegularExpression(r'"([^"\\]|\\.)*"'), string_format)
             )
             self.highlighting_rules.append(
-                (QRegularExpression(r"'.*?"), string_format)
+                (QRegularExpression(r"'([^'\\]|\\.)*'"), string_format)
             )
             comment_format = QTextCharFormat()
             comment_format.setForeground(QColor(0, 128, 0))
@@ -203,11 +204,87 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
             number_format = QTextCharFormat()
             number_format.setForeground(QColor(43, 145, 175))
             self.highlighting_rules.append(
-                (QRegularExpression(r"\b[0-9]+\b"), number_format)
+                (QRegularExpression(r"\\b[0-9]+\\b"), number_format)
+            )
+        elif language == "json":
+            key_format = QTextCharFormat()
+            key_format.setForeground(QColor(0, 0, 200))
+            self.highlighting_rules.append(
+                (QRegularExpression(r'"(\\w+)":'), key_format)
+            )
+            string_format = QTextCharFormat()
+            string_format.setForeground(QColor(163, 21, 21))
+            self.highlighting_rules.append(
+                (QRegularExpression(r'"([^"\\]|\\.)*"'), string_format)
+            )
+            number_format = QTextCharFormat()
+            number_format.setForeground(QColor(43, 145, 175))
+            self.highlighting_rules.append(
+                (QRegularExpression(r"\\b[0-9]+\\b"), number_format)
+            )
+        elif language == "javascript":
+            keyword_format = QTextCharFormat()
+            keyword_format.setForeground(QColor(0, 0, 200))
+            keyword_format.setFontWeight(QFont.Weight.Bold)
+            keywords = [
+                "function",
+                "var",
+                "let",
+                "const",
+                "if",
+                "else",
+                "for",
+                "while",
+                "return",
+                "true",
+                "false",
+                "null",
+            ]
+            for word in keywords:
+                pattern = QRegularExpression(rf"\\b{word}\\b")
+                self.highlighting_rules.append((pattern, keyword_format))
+            string_format = QTextCharFormat()
+            string_format.setForeground(QColor(163, 21, 21))
+            self.highlighting_rules.append(
+                (QRegularExpression(r'"([^"\\]|\\.)*"'), string_format)
+            )
+            self.highlighting_rules.append(
+                (QRegularExpression(r"'([^'\\]|\\.)*'"), string_format)
+            )
+            comment_format = QTextCharFormat()
+            comment_format.setForeground(QColor(0, 128, 0))
+            self.highlighting_rules.append(
+                (QRegularExpression(r"//.*"), comment_format)
+            )
+        elif language == "html":
+            tag_format = QTextCharFormat()
+            tag_format.setForeground(QColor(0, 0, 200))
+            self.highlighting_rules.append(
+                (QRegularExpression(r"<[^>]+>"), tag_format)
+            )
+        elif language == "css":
+            selector_format = QTextCharFormat()
+            selector_format.setForeground(QColor(0, 0, 200))
+            self.highlighting_rules.append(
+                (
+                    QRegularExpression(r"[.#]?[a-zA-Z0-9_-]+(?=\\s*\\{)"),
+                    selector_format,
+                )
+            )
+            property_format = QTextCharFormat()
+            property_format.setForeground(QColor(163, 21, 21))
+            self.highlighting_rules.append(
+                (QRegularExpression(r"[a-zA-Z-]+(?=:)"), property_format)
+            )
+        elif language == "markdown":
+            header_format = QTextCharFormat()
+            header_format.setForeground(QColor(0, 0, 200))
+            header_format.setFontWeight(QFont.Weight.Bold)
+            self.highlighting_rules.append(
+                (QRegularExpression(r"^#+.*"), header_format)
             )
         else:
-            # Plaintext or unknown: no highlighting
-            pass
+            self.highlighting_rules = []
         self.rehighlight()
 
     def highlightBlock(self, text: str):
