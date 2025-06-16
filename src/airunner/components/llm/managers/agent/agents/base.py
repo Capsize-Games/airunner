@@ -28,21 +28,34 @@ from airunner.enums import (
     LLMActionType,
     SignalCode,
 )
-from airunner.components.llm.managers.agent.agents.prompt_builder import PromptBuilder
-from airunner.components.llm.managers.agent.agents.prompt_config import PromptConfig
+from airunner.components.llm.managers.agent.agents.prompt_builder import (
+    PromptBuilder,
+)
+from airunner.components.llm.managers.agent.agents.prompt_config import (
+    PromptConfig,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
 from airunner.components.llm.managers.agent import (
     RAGMixin,
     ExternalConditionStoppingCriteria,
 )
-from airunner.components.llm.managers.agent.tools import ChatEngineTool, ReActAgentTool
+from airunner.components.llm.managers.agent.tools import (
+    ChatEngineTool,
+    ReActAgentTool,
+)
 from airunner.components.llm.managers.agent.tools.search_engine_tool import (
     SearchEngineTool,
 )
-from airunner.components.llm.managers.agent.chat_engine import RefreshSimpleChatEngine
+from airunner.components.llm.managers.agent.chat_engine import (
+    RefreshSimpleChatEngine,
+)
 from airunner.components.llm.managers.agent import WeatherMixin
-from airunner.components.llm.managers.storage.chat_store import DatabaseChatStore
+from airunner.components.llm.managers.storage.chat_store import (
+    DatabaseChatStore,
+)
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.managers.llm_settings import LLMSettings
@@ -137,6 +150,8 @@ class BaseAgent(
             4: LLMActionType.PERFORM_RAG_SEARCH,
             5: LLMActionType.APPLICATION_COMMAND,
             6: LLMActionType.BROWSER,
+            7: LLMActionType.FILE_INTERACTION,
+            8: LLMActionType.WORKFLOW_INTERACTION,
         }
         self.tool_handlers = {
             LLMActionType.CHAT: self.chat_tool_handler,
@@ -147,6 +162,8 @@ class BaseAgent(
             LLMActionType.GENERATE_IMAGE: self.generate_image_handler,
             LLMActionType.BROWSER: self.use_browser_handler,
             LLMActionType.SEARCH: self.search_tool_handler,
+            LLMActionType.FILE_INTERACTION: self.file_interaction_handler,
+            LLMActionType.WORKFLOW_INTERACTION: self.workflow_interaction_handler,
         }
         self.menu_choices = {
             1: {
@@ -1245,6 +1262,34 @@ class BaseAgent(
             )
         return self.react_tool_agent.call(**kwargs)
 
+    def file_interaction_handler(self, **kwargs: Any) -> Any:
+        """
+        Handle execution of a script based on the provided kwargs.
+        Args:
+            **kwargs (Any): Additional arguments for the script execution.
+        Returns:
+            Any: The result of the script execution.
+        """
+        kwargs["tool_choice"] = "execute_script_tool"
+        kwargs["chat_history"] = (
+            self.chat_memory.get() if self.chat_memory else []
+        )
+        return self.react_tool_agent.call(**kwargs)
+
+    def workflow_interaction_handler(self, **kwargs: Any) -> Any:
+        """
+        Handle execution of a workflow based on the provided kwargs.
+        Args:
+            **kwargs (Any): Additional arguments for the workflow execution.
+        Returns:
+            Any: The result of the workflow execution.
+        """
+        kwargs["tool_choice"] = "execute_workflow_tool"
+        kwargs["chat_history"] = (
+            self.chat_memory.get() if self.chat_memory else []
+        )
+        return self.react_tool_agent.call(**kwargs)
+
     def _perform_tool_call(
         self, action: LLMActionType, **kwargs: Any
     ) -> Optional[Any]:
@@ -1265,9 +1310,7 @@ class BaseAgent(
         response = handler(**kwargs)
 
         if action is LLMActionType.DECISION:
-            print("perform tool call menu choices", response.content)
             selection = self._parse_menu_selection(response.content)
-            print("selection", selection)
             new_action = self.action_map[selection]
             self.action = new_action
             handler = self.tool_handlers.get(new_action)
@@ -1454,13 +1497,6 @@ class BaseAgent(
         **kwargs: Any,
     ) -> AgentChatResponse:
         """Chat with the agent, handling slash commands and tool routing."""
-        print("CHAT CALLED")
-        print("message", message)
-        print("action", action)
-        print("system_prompt", system_prompt)
-        print("rag_system_prompt", rag_system_prompt)
-        print("llm_request", llm_request)
-        print("extra_context", extra_context)
         self.action = action
         self.interrupt = False
         # Ensure logger is initialized
@@ -1484,6 +1520,14 @@ class BaseAgent(
                     if stripped_message
                     else "Please search"
                 )
+            elif action == LLMActionType.FILE_INTERACTION:
+                message = (
+                    f"Please execute the following script {stripped_message}"
+                )
+            elif action == LLMActionType.WORKFLOW_INTERACTION:
+                message = (
+                    f"Please execute the following workflow {stripped_message}"
+                )
             elif action in [
                 LLMActionType.GENERATE_IMAGE,
                 LLMActionType.CODE,
@@ -1493,7 +1537,6 @@ class BaseAgent(
             else:
                 message = stripped_message
         self._chat_prompt = message
-        print("self.system_prompt", self.system_prompt)
         self._complete_response = ""
         if action is LLMActionType.CHAT:
             self._complete_response = f"{self.botname}: "
@@ -1534,7 +1577,6 @@ class BaseAgent(
         return None
 
     def _handle_decision_response(self, response, is_last_message=False):
-        print("HANDLING DECISION RESPONSE")
         selection = self._parse_menu_selection(self._complete_response)
         if selection is not None or is_last_message:
             if selection is None:
