@@ -6,8 +6,9 @@ from sqlalchemy.orm import joinedload
 from PySide6.QtWidgets import QApplication
 
 from airunner.components.application.data import ShortcutKeys, table_to_class
-from airunner.components.art.data.active_grid_settings import \
-    ActiveGridSettings
+from airunner.components.art.data.active_grid_settings import (
+    ActiveGridSettings,
+)
 from airunner.components.art.data.ai_models import AIModels
 from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.controlnet_model import ControlnetModel
@@ -17,8 +18,9 @@ from airunner.components.art.data.embedding import Embedding
 from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.components.art.data.grid_settings import GridSettings
 from airunner.components.art.data.image_filter_value import ImageFilterValue
-from airunner.components.art.data.image_to_image_settings import \
-    ImageToImageSettings
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
 from airunner.components.art.data.lora import Lora
 from airunner.components.art.data.memory_settings import MemorySettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
@@ -26,15 +28,19 @@ from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.data.saved_prompt import SavedPrompt
 from airunner.components.art.data.schedulers import Schedulers
 from airunner.components.llm.data.chatbot import Chatbot
-from airunner.components.llm.data.llm_generator_settings import \
-    LLMGeneratorSettings
+from airunner.components.llm.data.llm_generator_settings import (
+    LLMGeneratorSettings,
+)
 from airunner.components.llm.data.prompt_template import PromptTemplate
 from airunner.components.llm.data.target_files import TargetFiles
 from airunner.components.models.data.pipeline_model import PipelineModel
-from airunner.components.settings.data.application_settings import \
-    ApplicationSettings
+from airunner.components.settings.data.application_settings import (
+    ApplicationSettings,
+)
 from airunner.components.settings.data.font_setting import FontSetting
-from airunner.components.settings.data.language_settings import LanguageSettings
+from airunner.components.settings.data.language_settings import (
+    LanguageSettings,
+)
 from airunner.components.llm.data.rag_settings import RAGSettings
 from airunner.components.settings.data.path_settings import PathSettings
 from airunner.components.settings.data.sound_settings import SoundSettings
@@ -42,10 +48,12 @@ from airunner.components.settings.data.voice_settings import VoiceSettings
 from airunner.components.stt.data.stt_settings import STTSettings
 from airunner.components.stt.data.whisper_settings import WhisperSettings
 from airunner.components.tts.data.models.espeak_settings import EspeakSettings
-from airunner.components.tts.data.models.openvoice_settings import \
-    OpenVoiceSettings
-from airunner.components.tts.data.models.speech_t5_settings import \
-    SpeechT5Settings
+from airunner.components.tts.data.models.openvoice_settings import (
+    OpenVoiceSettings,
+)
+from airunner.components.tts.data.models.speech_t5_settings import (
+    SpeechT5Settings,
+)
 from airunner.components.user.data.user import User
 from airunner.enums import ModelService, TTSModel
 from airunner.utils.image import convert_binary_to_image
@@ -125,6 +133,40 @@ class SettingsMixin:
     @property
     def whisper_settings(self) -> WhisperSettings:
         return self.load_settings_from_db(WhisperSettings)
+
+    @property
+    def browser_settings(self) -> Dict[str, Any]:
+        settings = get_qsettings()
+        settings.beginGroup("browser")
+        browser_settings = {
+            "private_browsing": settings.value(
+                "private_browsing", False, type=bool
+            ),
+            "browser_type": settings.value(
+                "browser_type", "default", type=str
+            ),
+            "browser_os": settings.value("browser_os", "default", type=str),
+            "random_user_agent": settings.value(
+                "random_user_agent", False, type=bool
+            ),
+            "plaintext_display": settings.value(
+                "plaintext_display", False, type=bool
+            ),
+            "summarize_display": settings.value(
+                "summarize_display", False, type=bool
+            ),
+        }
+        settings.endGroup()
+        return browser_settings
+    
+    def update_browser_settings(self, **kwargs):
+        settings = get_qsettings()
+        settings.beginGroup("browser")
+        for key, value in kwargs.items():
+            settings.setValue(key, value)
+        settings.endGroup()
+        settings.sync()
+        self.__settings_updated(setting_name="browser", column_name=None, val=None)
 
     @property
     def window_settings(self) -> Dict[str, Any]:

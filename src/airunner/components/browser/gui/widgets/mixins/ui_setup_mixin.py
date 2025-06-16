@@ -11,7 +11,9 @@ from PySide6.QtCore import Slot
 import json
 
 from airunner.components.browser.data.settings import BrowserSettings
-from airunner.components.settings.data.airunner_settings import AIRunnerSettings
+from airunner.components.settings.data.airunner_settings import (
+    AIRunnerSettings,
+)
 from airunner.components.browser.gui.enums import BrowserType, BrowserOS
 from airunner.components.browser.gui.widgets.items_widget import ItemsWidget
 
@@ -72,15 +74,30 @@ class UISetupMixin:
         self.ui.stage.page().setBackgroundColor("#111111")
 
         # User agent browser/os setup
+        try:
+            browser_type = BrowserType[self.browser_settings["browser_type"]]
+        except KeyError:
+            browser_type = BrowserType.CHROME
+        try:
+            browser_os = BrowserOS[self.browser_settings["browser_os"]]
+        except KeyError:
+            browser_os = BrowserOS.WINDOWS
         for widget, enum, default in [
-            (self.ui.user_agent_browser, BrowserType, BrowserType.CHROME),
-            (self.ui.user_agent_os, BrowserOS, BrowserOS.WINDOWS),
+            (self.ui.user_agent_browser, BrowserType, browser_type),
+            (self.ui.user_agent_os, BrowserOS, browser_os),
         ]:
             widget.blockSignals(True)
             widget.clear()
             widget.addItems([e.value for e in enum])
             widget.setCurrentText(default.value)
             widget.blockSignals(False)
+
+        # Random user agent button setup
+        self.ui.random_button.blockSignals(True)
+        self.ui.random_button.setChecked(
+            self.browser_settings["random_user_agent"]
+        )
+        self.ui.random_button.blockSignals(False)
 
         # Connect Enter/Return in URL bar to submit handler
         self.ui.url.returnPressed.connect(self.on_submit_button_clicked)

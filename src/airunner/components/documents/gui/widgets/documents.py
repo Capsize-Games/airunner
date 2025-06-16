@@ -25,9 +25,10 @@ from airunner.components.browser.gui.widgets.mixins.panel_mixin import (
 from airunner.components.browser.gui.widgets.mixins.navigation_mixin import (
     NavigationMixin,
 )
-from airunner.components.browser.gui.widgets.mixins.summarization_mixin import (
-    SummarizationMixin,
-)
+
+# from airunner.components.browser.gui.widgets.mixins.summarization_mixin import (
+#     SummarizationMixin,
+# )
 from airunner.components.browser.gui.widgets.mixins.cache_mixin import (
     CacheMixin,
 )
@@ -43,7 +44,7 @@ class DocumentsWidget(
     PrivacyMixin,
     PanelMixin,
     NavigationMixin,
-    SummarizationMixin,
+    # SummarizationMixin,
     CacheMixin,
     BaseWidget,
 ):
@@ -134,7 +135,6 @@ class DocumentsWidget(
             print(f"Open document: {file_path}")
 
     def on_document_indexed(self, data: Dict):
-        print("ON DOCUMENT INDEXED", data)
         self._current_indexing += 1
         self._index_next_document()
 
@@ -152,13 +152,10 @@ class DocumentsWidget(
         for root, dirs, files in os.walk(doc_dir):
             for fname in files:
                 fpath = os.path.join(root, fname)
-                print("checking file", fpath)
                 ext = os.path.splitext(fname)[1][1:].lower()
                 if ext in self.file_extensions:
-                    print("ext matches", ext)
                     exists = Document.objects.filter_by(path=fpath)
                     if not exists or len(exists) == 0:
-                        print("Creating new Document entry for:", fpath)
                         Document.objects.create(path=fpath, active=True)
                     else:
                         print("Document already exists:", fpath)
@@ -170,7 +167,6 @@ class DocumentsWidget(
             for doc in Document.objects.filter(Document.indexed == False)
             if hasattr(doc, "path") and doc.path
         ]
-        print("UNINDEX", self._unindexed_docs)
         self._total_to_index = len(self._unindexed_docs)
         self._current_indexing = 0
         if self._total_to_index == 0:
@@ -193,7 +189,6 @@ class DocumentsWidget(
                 f"Indexing {percent}% ({self._current_indexing+1} of {self._total_to_index} files) {truncated}"
             )
             self.ui.progressBar.setVisible(True)
-            print("EMITTING SIGNAL CODE INDEX_DOCUMENT", doc)
             self.emit_signal(SignalCode.INDEX_DOCUMENT, {"path": doc})
         else:
             self._clear_progress_bar()

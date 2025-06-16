@@ -410,6 +410,7 @@ SLASH_COMMANDS = {
     "a": LLMActionType.GENERATE_IMAGE,
     "b": LLMActionType.BROWSER,
     "c": LLMActionType.CODE,
+    "f": LLMActionType.FILE_INTERACTION,
     "s": LLMActionType.SEARCH,
     "w": LLMActionType.WORKFLOW,
 }
