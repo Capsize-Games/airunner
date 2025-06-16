@@ -9,7 +9,9 @@ from airunner.components.tools.web_content_extractor import WebContentExtractor
 from PySide6.QtCore import Slot, QObject
 from PySide6.QtWebChannel import QWebChannel
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.settings.data.airunner_settings import AIRunnerSettings
+from airunner.components.settings.data.airunner_settings import (
+    AIRunnerSettings,
+)
 from PySide6.QtCore import QTimer
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QIcon
@@ -58,8 +60,6 @@ class BrowserWidgetHandler(QObject):
                 "type", "widget_command"
             )  # Use generic widget_command as default
 
-            print(f"Widget command received: {command} (type: {message_type})")
-
             # Emit signal for other components to handle specific commands
             self.browser_widget.emit_signal(
                 SignalCode.WIDGET_COMMAND_SIGNAL,
@@ -72,7 +72,6 @@ class BrowserWidgetHandler(QObject):
                 f"Command '{command}' processed successfully",
             )
         except Exception as e:
-            print(f"Error handling widget command: {e}")
             self.browser_widget._send_response(
                 "command_error", f"Error processing command: {str(e)}"
             )
@@ -143,8 +142,6 @@ class BrowserWidget(
 
             # Set WebChannel on the page
             self.ui.stage.page().setWebChannel(self.channel)
-
-            print("Widget communication channel established")
         except Exception as e:
             print(f"Error setting up widget communication: {e}")
 
@@ -182,6 +179,26 @@ class BrowserWidget(
 
         self.ui.stage.page().toHtml(self._on_html_ready)
 
+    @Slot(bool)
+    def on_private_browse_button_toggled(self, checked: bool) -> None:
+        self._set_private_browsing(checked)
+        self._save_browser_settings()
+
+    @Slot(bool)
+    def on_bookmark_button_toggled(self, checked: bool):
+        if checked:
+            self._show_panel("bookmarks")
+        else:
+            self._show_panel(None)
+
+    @Slot(bool)
+    def on_history_button_toggled(self, checked: bool):
+        if checked:
+            self.ui.bookmark_button.setChecked(False)
+            self._show_panel("history")
+        else:
+            self._show_panel(None)
+
     def _inject_webchannel_script(self):
         """Inject QWebChannel JavaScript for communication."""
         try:
@@ -209,26 +226,6 @@ class BrowserWidget(
             self.ui.stage.page().runJavaScript(webchannel_script)
         except Exception as e:
             print(f"Error injecting WebChannel script: {e}")
-
-    @Slot(bool)
-    def on_private_browse_button_toggled(self, checked: bool) -> None:
-        self._set_private_browsing(checked)
-        self._save_browser_settings()
-
-    @Slot(bool)
-    def on_bookmark_button_toggled(self, checked: bool):
-        if checked:
-            self._show_panel("bookmarks")
-        else:
-            self._show_panel(None)
-
-    @Slot(bool)
-    def on_history_button_toggled(self, checked: bool):
-        if checked:
-            self.ui.bookmark_button.setChecked(False)
-            self._show_panel("history")
-        else:
-            self._show_panel(None)
 
     def on_browser_navigate(self, data: Dict):
         """Handle browser navigation requests."""
@@ -312,6 +309,9 @@ class BrowserWidget(
         """Update the URL field when the page URL changes."""
         self.urlChanged.emit(url.toString(), self.ui.stage.title())
         self.ui.url.setText(url.toString())
+        # Ensure the page cache always has the latest URL for restoration
+        if hasattr(self, "_page_cache"):
+            self._page_cache["url"] = str(url.toString())
 
     def _on_title_changed(self, title):
         """Emit titleChanged signal when the page title changes."""

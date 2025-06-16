@@ -347,6 +347,9 @@ class LLMActionType(Enum):
     CODE = "code"
     WORKFLOW = "workflow"
 
+    FILE_INTERACTION = "file_interaction"
+    WORKFLOW_INTERACTION = "workflow_interaction"
+
 
 class CanvasToolName(Enum):
     ACTIVE_GRID_AREA = "active_grid_area"
