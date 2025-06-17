@@ -43,6 +43,7 @@ import os
 import hashlib
 from PySide6.QtCore import QUrl, Slot
 from airunner.enums import SignalCode
+from airunner.settings import LOCAL_SERVER_HOST, LOCAL_SERVER_PORT
 
 
 class BrowserWidgetHandler(QObject):
@@ -220,7 +221,9 @@ class BrowserWidget(
                 )
                 return
             # Redirect to the HTTP server
-            http_url = f"https://127.0.0.1:5005/{local_name}"
+            http_url = (
+                f"https://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}/{local_name}"
+            )
             self.ui.stage.setUrl(QUrl(http_url))
             self.ui.url.setText(http_url)
             return
