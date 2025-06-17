@@ -19,7 +19,6 @@ from llama_index.core.base.llms.types import (
 )
 from llama_index.core.base.llms.types import TextBlock
 
-from airunner.components.application.data import Tab
 from airunner.components.llm.data.conversation import Conversation
 from airunner.components.user.data.user import User
 from airunner.enums import (
@@ -193,7 +192,6 @@ class BaseAgent(
         }
         self.prompt: Optional[str] = None
         self.webpage_html: str = ""
-        self.current_tab: Optional[Tab] = None
         self.do_interrupt: bool = False
         self.llm_settings: LLMSettings = llm_settings
         self._use_memory: bool = use_memory
