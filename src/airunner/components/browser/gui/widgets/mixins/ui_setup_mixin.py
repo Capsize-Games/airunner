@@ -19,24 +19,6 @@ from airunner.components.browser.gui.widgets.items_widget import ItemsWidget
 
 
 class UISetupMixin:
-    @Slot(bool)
-    def on_bookmark_page_button_toggled(self, checked: bool):
-        """Add or remove the current page from bookmarks when the star button is toggled."""
-        url = self.ui.url.text().strip()
-        title = self.ui.stage.title().strip() or url
-        if not url:
-            return
-        # Use PanelMixin/bookmark logic for DRYness
-        if checked:
-            if not self.is_page_bookmarked(url):
-                self.add_bookmark(url, title)
-        else:
-            self.remove_bookmark(url)
-        # Update UI state to reflect bookmark status
-        self.ui.bookmark_page_button.blockSignals(True)
-        self.ui.bookmark_page_button.setChecked(self.is_page_bookmarked(url))
-        self.ui.bookmark_page_button.blockSignals(False)
-
     def on_load_finished(self, ok: bool):
         """Slot for QWebEngineView loadFinished signal. Updates security indicators and tab title."""
         self._update_security_indicators()
