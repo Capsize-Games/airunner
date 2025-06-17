@@ -37,9 +37,8 @@ class MapWidget(
         self.ui.webEngineView.loadFinished.connect(self._on_page_load_finished)
 
     def _on_page_load_finished(self, success: bool):
-        result = get_lat_lon("80111")
-        lat = result.get("lat", 0)
-        lon = result.get("lon", 0)
+        lat = self.user.latitude or 0.0
+        lon = self.user.longitude or 0.0
         self.add_marker(lat, lon)
         self.center_map(lat, lon, zoom=13)
 
