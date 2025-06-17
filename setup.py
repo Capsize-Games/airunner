@@ -72,6 +72,7 @@ extras_require = {
         "requests-cache==1.2.1",
         "retry-requests==2.0.0",
         "openmeteo_requests==1.4.0",
+        "uszipcode==1.0.1",
     ],
     "tts": [  # Text-to-speech dependencies (requires llm dependencies)
         "inflect==7.5.0",

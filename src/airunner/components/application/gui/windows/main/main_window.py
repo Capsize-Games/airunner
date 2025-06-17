@@ -7,16 +7,24 @@ from functools import partial
 from typing import Dict, Optional
 
 from airunner.components.about.gui.windows.about.about import AboutWindow
-from airunner.components.application.gui.widgets.stats.stats_widget import \
-    StatsWidget
-from airunner.components.application.gui.widgets.status.status_widget import \
-    StatusWidget
-from airunner.components.art.gui.windows.prompt_browser.prompt_browser import \
-    PromptBrowser
-from airunner.components.settings.gui.windows.settings.airunner_settings import \
-    SettingsWindow
-from airunner.components.application.gui.windows.main.model_load_balancer import ModelLoadBalancer
-from airunner.components.application.gui.windows.main.worker_manager import WorkerManager
+from airunner.components.application.gui.widgets.stats.stats_widget import (
+    StatsWidget,
+)
+from airunner.components.application.gui.widgets.status.status_widget import (
+    StatusWidget,
+)
+from airunner.components.art.gui.windows.prompt_browser.prompt_browser import (
+    PromptBrowser,
+)
+from airunner.components.settings.gui.windows.settings.airunner_settings import (
+    SettingsWindow,
+)
+from airunner.components.application.gui.windows.main.model_load_balancer import (
+    ModelLoadBalancer,
+)
+from airunner.components.application.gui.windows.main.worker_manager import (
+    WorkerManager,
+)
 from airunner.components.application.gui.windows.wayland_helper import (
     enable_wayland_window_decorations,
 )
@@ -53,11 +61,15 @@ from airunner.settings import (
     AIRUNNER_ART_ENABLED,
 )
 from airunner.utils.settings import get_qsettings
-from airunner.components.llm.managers.agent.actions.bash_execute import bash_execute
+from airunner.components.llm.managers.agent.actions.bash_execute import (
+    bash_execute,
+)
 from airunner.components.llm.managers.agent.actions.show_path import show_path
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.application.data.shortcut_keys import ShortcutKeys
-from airunner.components.settings.data.application_settings import ApplicationSettings
+from airunner.components.settings.data.application_settings import (
+    ApplicationSettings,
+)
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.components.application.data.tab import Tab
@@ -79,16 +91,29 @@ from airunner.utils.widgets import (
 )
 from airunner.utils.image import convert_image_to_binary
 from airunner.gui.styles.styles_mixin import StylesMixin
-from airunner.components.art.gui.windows.filter_window.filter_window import FilterWindow
-from airunner.components.application.gui.windows.main.ai_model_mixin import AIModelMixin
-from airunner.components.application.gui.windows.main.browser_control_mixin import BrowserControlMixin
-from airunner.components.application.gui.windows.main.pipeline_mixin import PipelineMixin
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.components.application.gui.windows.main.templates.main_window_ui import Ui_MainWindow
-from airunner.components.update.gui.windows.update.update_window import UpdateWindow
+from airunner.components.art.gui.windows.filter_window.filter_window import (
+    FilterWindow,
+)
+from airunner.components.application.gui.windows.main.ai_model_mixin import (
+    AIModelMixin,
+)
+from airunner.components.application.gui.windows.main.browser_control_mixin import (
+    BrowserControlMixin,
+)
+from airunner.components.application.gui.windows.main.pipeline_mixin import (
+    PipelineMixin,
+)
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
+from airunner.components.application.gui.windows.main.templates.main_window_ui import (
+    Ui_MainWindow,
+)
+from airunner.components.update.gui.windows.update.update_window import (
+    UpdateWindow,
+)
 from airunner.components.icons.managers.icon_manager import IconManager
 from airunner.components.plugins.plugin_loader import PluginLoader
-
 
 
 class MainWindow(
@@ -158,6 +183,7 @@ class MainWindow(
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
         ("home", "home_button"),
+        ("map", "map_button"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0
@@ -265,13 +291,17 @@ class MainWindow(
         # Restore last active tab index from QSettings
         tab_count = self.ui.center_tab_container.count()
         self.qsettings.beginGroup("window_settings")
-        active_tab_index = self.qsettings.value("active_main_tab_index", 0, type=int)
+        active_tab_index = self.qsettings.value(
+            "active_main_tab_index", 0, type=int
+        )
         self.qsettings.endGroup()
         if 0 <= active_tab_index < tab_count:
             self.ui.center_tab_container.setCurrentIndex(active_tab_index)
 
         # Store active tab index on tab change
-        self.ui.center_tab_container.currentChanged.connect(self._store_active_tab_index)
+        self.ui.center_tab_container.currentChanged.connect(
+            self._store_active_tab_index
+        )
 
     @property
     def generator_tab_widget(self):
@@ -329,10 +359,6 @@ class MainWindow(
     @Slot()
     def on_actionQuit_triggered(self):
         self.handle_close()
-
-    @Slot(bool)
-    def on_actionToggle_Eraser_toggled(self, active: bool):
-        self.toggle_tool(CanvasToolName.ERASER, active)
 
     @Slot()
     def on_actionReset_Settings_2_triggered(self):
@@ -585,6 +611,7 @@ class MainWindow(
             "document_editor_button",
             "browser_button",
             "workflow_editor_button",
+            "map_button",
         ]:
             getattr(self.ui, btn).blockSignals(True)
             getattr(self.ui, btn).setChecked(False)
@@ -600,6 +627,7 @@ class MainWindow(
             "document_editor_button",
             "browser_button",
             "workflow_editor_button",
+            "map_button",
         ]:
             getattr(self.ui, btn).blockSignals(True)
             getattr(self.ui, btn).setChecked(False)
@@ -615,6 +643,7 @@ class MainWindow(
             "art_editor_button",
             "browser_button",
             "workflow_editor_button",
+            "map_button",
         ]:
             getattr(self.ui, btn).blockSignals(True)
             getattr(self.ui, btn).setChecked(False)
@@ -630,6 +659,7 @@ class MainWindow(
             "art_editor_button",
             "document_editor_button",
             "workflow_editor_button",
+            "map_button",
         ]:
             getattr(self.ui, btn).blockSignals(True)
             getattr(self.ui, btn).setChecked(False)
@@ -645,6 +675,23 @@ class MainWindow(
             "art_editor_button",
             "document_editor_button",
             "browser_button",
+            "map_button",
+        ]:
+            getattr(self.ui, btn).blockSignals(True)
+            getattr(self.ui, btn).setChecked(False)
+            getattr(self.ui, btn).blockSignals(False)
+
+    @Slot(bool)
+    def on_map_button_toggled(self, active: bool):
+        self.ui.center_tab_container.setCurrentIndex(
+            self.ui.center_tab_container.indexOf(self.ui.map_tab)
+        )
+        for btn in [
+            "home_button",
+            "art_editor_button",
+            "document_editor_button",
+            "browser_button",
+            "workflow_editor_button",
         ]:
             getattr(self.ui, btn).blockSignals(True)
             getattr(self.ui, btn).setChecked(False)

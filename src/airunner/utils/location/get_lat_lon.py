@@ -1,21 +1,53 @@
-from typing import Tuple, Optional, Any
-import requests
+"""Location utilities for latitude/longitude lookup by ZIP code using a local CSV/TSV file.
+
+This module provides a function to get latitude and longitude for a US ZIP code using a pandas DataFrame loaded from a local file (2024_Gaz_zcta_national.txt).
+
+The file is expected to be a tab-delimited file with columns: 'GEOID', 'INTPTLAT', 'INTPTLONG'.
+
+Returns a dict with keys 'lat', 'lon', and 'row', or all None if not found.
+"""
+
+import os
+import logging
+from typing import Optional, Any, Dict
+
+import pandas as pd
+
+from airunner.components.settings.data.path_settings import PathSettings
 
 
 def get_lat_lon(
     zipcode: str, country_code: str = "US"
-) -> Optional[Tuple[float, float, Any]]:
-    url = f"https://nominatim.openstreetmap.org/search?postalcode={zipcode}&country={country_code}&format=json"
-    payload = {}
-    headers = {"User-Agent": "AI Runner/1.0 (capsizegames@fastmail.com)"}
+) -> Dict[str, Optional[Any]]:
+    """Get latitude and longitude for a ZIP code using a local ZCTA file.
 
-    response = requests.request("GET", url, headers=headers, data=payload)
-    data = response.json()
+    Args:
+        zipcode (str): ZIP code as a string (5 digits).
+        country_code (str): Country code (default: 'US').
 
-    if data:
-        lat = data[0]["lat"]
-        lon = data[0]["lon"]
-        display_name = data[0]["display_name"]
-        return float(lat), float(lon), display_name
-    else:
-        return None
+    Returns:
+        dict: Dictionary with keys 'lat', 'lon', and 'row'. Values are float or None.
+    """
+    path_settings = PathSettings.objects.first()
+    path = os.path.join(
+        path_settings.base_path, "map", "2024_Gaz_zcta_national.txt"
+    )
+    res: Dict[str, Optional[Any]] = {"lat": None, "lon": None, "row": None}
+    if not os.path.exists(path):
+        logging.error(f"ZCTA file not found: {path}")
+        return res
+    try:
+        df = pd.read_csv(path, sep="\t", dtype={"GEOID": str})
+        df.columns = (
+            df.columns.str.strip()
+        )  # Strip whitespace from column names
+        row = df[df["GEOID"] == zipcode]
+        if row.empty:
+            return res
+        row_data = row.iloc[0]
+        res["lat"] = float(row_data["INTPTLAT"])
+        res["lon"] = float(row_data["INTPTLONG"])
+        res["row"] = row_data
+    except Exception as e:
+        logging.exception(f"Error reading or parsing file {path}: {e}")
+    return res

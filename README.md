@@ -219,6 +219,7 @@ Organize them under your local AI Runner data directory:
 
 - **OpenStreetMap:** Map API
 - **OpenMeteo:** Weather API
+- **OpenStreetMaps (leaflet):** Maps
 
 </td>
 </tr>
@@ -482,5 +483,12 @@ AI Runner uses `pytest` for all automated testing. Test coverage is a priority, 
 - [NodeGraphQt Vendor Module](src/airunner/vendor/nodegraphqt/README.md)
 - [Xvfb-Required Tests](src/airunner/utils/tests/xvfb_required/README.md)
 - [ORM Models](src/airunner/components/data/models/README.md)
+- [Maps](src/airunner/components/map/README.md)
 
 For additional details, see the [Wiki](https://github.com/Capsize-Games/airunner/wiki).
+
+## Latitude Longitude Coordinates for US Zipcodes
+
+Download US zipcode data from [census.gov](https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_zcta_national.zip) and extract the contents to your project directory in a folder called `maps` (e.g. `~/.local/share/airunner/map/`).
+
+This data is used to look up latitude and longitude coordinates for US zipcodes, which is essential for the map and weather features in AI Runner. The data is automatically loaded when the application starts. You can replace the default data with your own if you have a different source.
