@@ -12,9 +12,11 @@ import subprocess
 import traceback
 import shutil
 
-from airunner.components.settings.data.airunner_settings import AIRunnerSettings
+from airunner.components.settings.data.airunner_settings import (
+    AIRunnerSettings,
+)
 from airunner.components.settings.data.path_settings import PathSettings
-from airunner.settings import AIRUNNER_BASE_PATH
+from airunner.settings import AIRUNNER_BASE_PATH, LOCAL_SERVER_HOST
 from airunner.setup_database import setup_database
 
 COMPONENTS_PATH = os.path.join(os.path.dirname(__file__), "components")
@@ -158,7 +160,7 @@ def generate_local_certs_if_needed(base_path):
                         "-key-file",
                         key_file,
                         "localhost",
-                        "127.0.0.1",
+                        LOCAL_SERVER_HOST,
                         "::1",
                     ],
                     check=True,

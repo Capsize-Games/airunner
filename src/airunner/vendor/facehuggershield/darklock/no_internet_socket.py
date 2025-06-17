@@ -1,6 +1,8 @@
 import logging
 import socket
 
+from airunner.settings import LOCAL_SERVER_HOST
+
 
 class NoInternetSocket(socket.socket):
     """
@@ -38,7 +40,7 @@ class NoInternetSocket(socket.socket):
             ConnectionError: If the connection attempt is to an address other than localhost on the allowed port.
         """
         host, port = address
-        if host == "127.0.0.1" and port == self.allowed_port:
+        if host == LOCAL_SERVER_HOST and port == self.allowed_port:
             super().connect(address)
             self.logger.info(f"Allowed connection to {host} on port {port}.")
         else:
