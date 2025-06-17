@@ -12,7 +12,3 @@ body {
     margin: 0;
     padding: 0;
 }
-
-.leaflet-bottom.leaflet-right {
-    display: none;
-}

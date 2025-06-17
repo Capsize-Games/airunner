@@ -207,7 +207,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="document_editor_button">
+           <widget class="QPushButton" name="workflow_editor_button">
             <property name="minimumSize">
              <size>
               <width>35</width>
@@ -230,14 +230,14 @@
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="toolTip">
-             <string>Document Editor</string>
+             <string>Workflow Editor</string>
             </property>
             <property name="text">
              <string/>
             </property>
             <property name="icon">
              <iconset resource="../../../../../../gui/resources/feather.qrc">
-              <normaloff>:/light/icons/feather/light/file-text.svg</normaloff>:/light/icons/feather/light/file-text.svg</iconset>
+              <normaloff>:/light/icons/feather/light/codesandbox.svg</normaloff>:/light/icons/feather/light/codesandbox.svg</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -301,7 +301,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="workflow_editor_button">
+           <widget class="QPushButton" name="document_editor_button">
             <property name="minimumSize">
              <size>
               <width>35</width>
@@ -324,14 +324,14 @@
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="toolTip">
-             <string>Workflow Editor</string>
+             <string>Document Editor</string>
             </property>
             <property name="text">
              <string/>
             </property>
             <property name="icon">
              <iconset resource="../../../../../../gui/resources/feather.qrc">
-              <normaloff>:/light/icons/feather/light/codesandbox.svg</normaloff>:/light/icons/feather/light/codesandbox.svg</iconset>
+              <normaloff>:/light/icons/feather/light/file-text.svg</normaloff>:/light/icons/feather/light/file-text.svg</iconset>
             </property>
             <property name="iconSize">
              <size>

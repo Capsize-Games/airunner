@@ -63,6 +63,8 @@ from airunner.utils.settings import get_qsettings
 from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
 
+from airunner.components.settings.data.window_settings import WindowSettings
+
 
 class SettingsMixinSharedInstance:
     _instance = None
@@ -158,7 +160,7 @@ class SettingsMixin:
         }
         settings.endGroup()
         return browser_settings
-    
+
     def update_browser_settings(self, **kwargs):
         settings = get_qsettings()
         settings.beginGroup("browser")
@@ -166,25 +168,44 @@ class SettingsMixin:
             settings.setValue(key, value)
         settings.endGroup()
         settings.sync()
-        self.__settings_updated(setting_name="browser", column_name=None, val=None)
+        self.__settings_updated(
+            setting_name="browser", column_name=None, val=None
+        )
 
     @property
-    def window_settings(self) -> Dict[str, Any]:
+    def window_settings(self) -> WindowSettings:
         settings = get_qsettings()
         settings.beginGroup("window_settings")
-        window_settings = {
-            "is_maximized": settings.value("is_maximized", False, type=bool),
-            "is_fullscreen": settings.value("is_fullscreen", False, type=bool),
-            "width": settings.value("width", 800, type=int),
-            "height": settings.value("height", 600, type=int),
-            "x_pos": settings.value("x_pos", 0, type=int),
-            "y_pos": settings.value("y_pos", 0, type=int),
-            "mode_tab_widget_index": settings.value(
-                "mode_tab_widget_index", 0, type=int
+        window_settings = WindowSettings(
+            is_maximized=settings.value("is_maximized", False, type=bool),
+            is_fullscreen=settings.value("is_fullscreen", False, type=bool),
+            width=settings.value("width", 800, type=int),
+            height=settings.value("height", 600, type=int),
+            x_pos=settings.value("x_pos", 0, type=int),
+            y_pos=settings.value("y_pos", 0, type=int),
+            active_main_tab_index=settings.value(
+                "active_main_tab_index", 0, type=int
             ),
-        }
+        )
         settings.endGroup()
         return window_settings
+
+    @window_settings.setter
+    def window_settings(self, settings_dict: Dict[str, Any]):
+        """Update window settings in QSettings."""
+        settings = get_qsettings()
+        settings.beginGroup("window_settings")
+        for key, value in settings_dict.items():
+            if key in ["is_maximized", "is_fullscreen"]:
+                value = bool(value)
+            else:
+                value = int(value)
+            settings.setValue(key, value)
+        settings.endGroup()
+        settings.sync()
+        self.__settings_updated(
+            setting_name="window_settings", column_name=None, val=None
+        )
 
     @property
     def rag_settings(self) -> RAGSettings:

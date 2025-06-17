@@ -2,8 +2,7 @@ import json
 import re
 
 from PySide6.QtCore import Signal, QRect, Slot
-
-from airunner.components.application.data import Tab
+from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.enums import (
     SignalCode,
     GeneratorSection,
@@ -29,6 +28,7 @@ class GeneratorForm(BaseWidget):
         self.seed_override = None
         self.parent = None
         self.initialized = False
+        self.qsettings = get_qsettings()
         self.ui.generator_form_tabs.currentChanged.connect(
             self.on_generator_form_tabs_currentChanged
         )
@@ -36,7 +36,7 @@ class GeneratorForm(BaseWidget):
 
     @Slot(int)
     def on_generator_form_tabs_currentChanged(self, index: int):
-        Tab.update_tabs("left", self.ui.generator_form_tabs, index)
+        self.qsettings.setValue("tabs/left/active_index", index)
 
     @property
     def is_txt2img(self):
@@ -180,10 +180,5 @@ class GeneratorForm(BaseWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self.initialized = True
-        active_index = 0
-        tabs = Tab.objects.filter_by(section="left")
-        for tab in tabs:
-            if tab.active:
-                active_index = tab.index
-                break
+        active_index = int(self.qsettings.value("tabs/left/active_index", 0))
         self.ui.generator_form_tabs.setCurrentIndex(active_index)

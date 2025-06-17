@@ -42,7 +42,6 @@ from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.data.image_filter_value import ImageFilterValue
 from airunner.components.stt.data.whisper_settings import WhisperSettings
 from airunner.components.news.data.news import RSSFeed, Category, Article
-from airunner.components.application.data.tab import Tab
 from airunner.components.nodegraph.data.workflow import Workflow
 from airunner.components.nodegraph.data.workflow_node import WorkflowNode
 from airunner.components.nodegraph.data.workflow_connection import WorkflowConnection
@@ -92,7 +91,6 @@ classes = [
     RSSFeed,
     Category,
     Article,
-    Tab,
     VoiceSettings,
     OpenVoiceSettings,
     Workflow,

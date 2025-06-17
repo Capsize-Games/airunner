@@ -72,7 +72,6 @@ from airunner.components.settings.data.application_settings import (
 )
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
-from airunner.components.application.data.tab import Tab
 from airunner.app_installer import AppInstaller
 from airunner.enums import (
     SignalCode,
@@ -287,21 +286,6 @@ class MainWindow(
         self.initialize_ui()
         self.last_tray_click_time = 0
         self.settings_window = None
-
-        # Restore last active tab index from QSettings
-        tab_count = self.ui.center_tab_container.count()
-        self.qsettings.beginGroup("window_settings")
-        active_tab_index = self.qsettings.value(
-            "active_main_tab_index", 0, type=int
-        )
-        self.qsettings.endGroup()
-        if 0 <= active_tab_index < tab_count:
-            self.ui.center_tab_container.setCurrentIndex(active_tab_index)
-
-        # Store active tab index on tab change
-        self.ui.center_tab_container.currentChanged.connect(
-            self._store_active_tab_index
-        )
 
     @property
     def generator_tab_widget(self):
@@ -601,101 +585,101 @@ class MainWindow(
         current_conversation = self.llm_generator_settings.current_conversation
         self.api.llm.converation_deleted(current_conversation.id)
 
+    def _set_tab_index(self, tab_widget):
+        index = self.ui.center_tab_container.indexOf(tab_widget)
+        # Get current window settings first
+        current_settings = self.window_settings
+        # Update only the active_main_tab_index, keeping other values unchanged
+        updated_settings = {
+            "is_maximized": current_settings.is_maximized,
+            "is_fullscreen": current_settings.is_fullscreen,
+            "width": current_settings.width,
+            "height": current_settings.height,
+            "x_pos": current_settings.x_pos,
+            "y_pos": current_settings.y_pos,
+            "active_main_tab_index": index,
+        }
+        self.window_settings = updated_settings
+        self.ui.center_tab_container.setCurrentIndex(index)
+
+    @property
+    def buttons(self) -> Dict:
+        return {
+            "home_button": self.ui.home_tab,
+            "art_editor_button": self.ui.art_tab,
+            "document_editor_button": self.ui.document_editor_tab,
+            "browser_button": self.ui.browser_tab,
+            "workflow_editor_button": self.ui.agent_workflow_tab,
+            "map_button": self.ui.map_tab,
+        }
+
+    def _restore_tab(self):
+        """
+        Restore the last active tab based on the saved index in QSettings.
+        """
+        # Read the saved tab index directly from QSettings to avoid getter issues
+        # from airunner.utils.settings import get_qsettings
+
+        # settings = get_qsettings()
+        # settings.beginGroup("window_settings")
+        # saved_index = settings.value("active_main_tab_index", 0, type=int)
+        # settings.endGroup()
+
+        saved_index = self.window_settings.active_main_tab_index
+
+        buttons = {
+            0: "home_button",
+            1: "art_editor_button",
+            2: "workflow_editor_button",
+            3: "browser_button",
+            4: "document_editor_button",
+            5: "map_button",
+        }
+
+        if saved_index in buttons:
+            self.ui.center_tab_container.setCurrentIndex(saved_index)
+            button_name = buttons[saved_index]
+            getattr(self.ui, button_name).setChecked(True)
+
+    def _set_current_button_and_tab(self, button_name: str, tab_widget):
+        """
+        Set the current button and tab based on the button name and tab widget.
+        """
+        buttons = self.buttons.keys()
+        for btn in buttons:
+            getattr(self.ui, btn).blockSignals(True)
+            getattr(self.ui, btn).setChecked(btn == button_name)
+            getattr(self.ui, btn).blockSignals(False)
+
+        self._set_tab_index(tab_widget)
+
     @Slot(bool)
     def on_home_button_toggled(self, active: bool):
-        self.ui.center_tab_container.setCurrentIndex(
-            self.ui.center_tab_container.indexOf(self.ui.home_tab)
-        )
-        for btn in [
-            "art_editor_button",
-            "document_editor_button",
-            "browser_button",
-            "workflow_editor_button",
-            "map_button",
-        ]:
-            getattr(self.ui, btn).blockSignals(True)
-            getattr(self.ui, btn).setChecked(False)
-            getattr(self.ui, btn).blockSignals(False)
+        self._set_current_button_and_tab("home_button", self.ui.home_tab)
 
     @Slot(bool)
     def on_art_editor_button_toggled(self, val: bool):
-        self.ui.center_tab_container.setCurrentIndex(
-            self.ui.center_tab_container.indexOf(self.ui.art_tab)
-        )
-        for btn in [
-            "home_button",
-            "document_editor_button",
-            "browser_button",
-            "workflow_editor_button",
-            "map_button",
-        ]:
-            getattr(self.ui, btn).blockSignals(True)
-            getattr(self.ui, btn).setChecked(False)
-            getattr(self.ui, btn).blockSignals(False)
+        self._set_current_button_and_tab("art_editor_button", self.ui.art_tab)
 
     @Slot(bool)
     def on_document_editor_button_toggled(self, val: bool):
-        self.ui.center_tab_container.setCurrentIndex(
-            self.ui.center_tab_container.indexOf(self.ui.document_editor_tab)
+        self._set_current_button_and_tab(
+            "document_editor_button", self.ui.document_editor_tab
         )
-        for btn in [
-            "home_button",
-            "art_editor_button",
-            "browser_button",
-            "workflow_editor_button",
-            "map_button",
-        ]:
-            getattr(self.ui, btn).blockSignals(True)
-            getattr(self.ui, btn).setChecked(False)
-            getattr(self.ui, btn).blockSignals(False)
 
     @Slot(bool)
     def on_browser_button_toggled(self, val: bool):
-        self.ui.center_tab_container.setCurrentIndex(
-            self.ui.center_tab_container.indexOf(self.ui.browser_tab)
-        )
-        for btn in [
-            "home_button",
-            "art_editor_button",
-            "document_editor_button",
-            "workflow_editor_button",
-            "map_button",
-        ]:
-            getattr(self.ui, btn).blockSignals(True)
-            getattr(self.ui, btn).setChecked(False)
-            getattr(self.ui, btn).blockSignals(False)
+        self._set_current_button_and_tab("browser_button", self.ui.browser_tab)
 
     @Slot(bool)
     def on_workflow_editor_button_toggled(self, val: bool):
-        self.ui.center_tab_container.setCurrentIndex(
-            self.ui.center_tab_container.indexOf(self.ui.agent_workflow_tab)
+        self._set_current_button_and_tab(
+            "workflow_editor_button", self.ui.agent_workflow_tab
         )
-        for btn in [
-            "home_button",
-            "art_editor_button",
-            "document_editor_button",
-            "browser_button",
-            "map_button",
-        ]:
-            getattr(self.ui, btn).blockSignals(True)
-            getattr(self.ui, btn).setChecked(False)
-            getattr(self.ui, btn).blockSignals(False)
 
     @Slot(bool)
     def on_map_button_toggled(self, active: bool):
-        self.ui.center_tab_container.setCurrentIndex(
-            self.ui.center_tab_container.indexOf(self.ui.map_tab)
-        )
-        for btn in [
-            "home_button",
-            "art_editor_button",
-            "document_editor_button",
-            "browser_button",
-            "workflow_editor_button",
-        ]:
-            getattr(self.ui, btn).blockSignals(True)
-            getattr(self.ui, btn).setChecked(False)
-            getattr(self.ui, btn).blockSignals(False)
+        self._set_current_button_and_tab("map_button", self.ui.map_tab)
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):
@@ -830,7 +814,6 @@ class MainWindow(
 
     def handle_single_click(self):
         """Handle single-click on the tray icon."""
-        print("Single click handler executing")
         # Create a dropdown menu
         menu = QMenu()
 
@@ -896,15 +879,12 @@ class MainWindow(
         if not AIRUNNER_ART_ENABLED:
             self._disable_aiart_gui_elements()
 
-        active_index = 0
-        tab = Tab.objects.filter_by(section="center", active=True)
-        if tab:
-            active_index = tab[0].index
+        # Restore last active tab index from QSettings
+        self._restore_tab()
 
-        self.ui.center_tab_container.setCurrentIndex(active_index)
-        # on tab change, track the Tab index on the Tab object
+        # Store active tab index on tab change
         self.ui.center_tab_container.currentChanged.connect(
-            lambda index: self.update_tab_index(section="center", index=index)
+            self._store_active_tab_index
         )
 
         self.set_stylesheet()
@@ -936,12 +916,6 @@ class MainWindow(
         self.settings_window = None
         self.hide_center_tab_header()
         self._load_plugins()
-
-    def update_tab_index(self, section: str, index: int):
-        Tab.objects.update_by(filter=dict(section=section), active=False)
-        Tab.objects.update_by(
-            filter=dict(section=section, index=index), active=True
-        )
 
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
@@ -1210,8 +1184,8 @@ class MainWindow(
             self.qsettings.setValue("y_pos", y_pos)
 
         self.qsettings.setValue(
-            "mode_tab_widget_index",
-            self.ui.generator_widget.ui.generator_form_tabs.currentIndex(),
+            "active_main_tab_index",
+            self.ui.center_tab_container.currentIndex(),
         )
         self.qsettings.endGroup()
         save_splitter_settings(self.ui, ["main_window_splitter"])
@@ -1413,7 +1387,6 @@ class MainWindow(
         self._set_keyboard_shortcuts()
 
     def move_to_second_screen(self):
-        print("x" * 100)
         screens = QGuiApplication.screens()
         if len(screens) > 1:
             screen = screens[1]
