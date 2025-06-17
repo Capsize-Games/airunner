@@ -90,6 +90,13 @@ class DocumentsWidget(
         # Optionally filter extensions
         self._filter_file_explorer_extensions()
 
+    @Slot(dict)
+    def on_file_open_requested(self, data):
+        file_path = data.get("file_path")
+        if file_path:
+            # Implement your document open logic here
+            print(f"Open document: {file_path}")
+
     def _filter_file_explorer_extensions(self):
         # Hide files that do not match allowed extensions
         model = self.file_explorer.model
@@ -127,13 +134,6 @@ class DocumentsWidget(
         if hasattr(self, "file_explorer"):
             self.file_explorer.set_root_directory(value)
 
-    @Slot(dict)
-    def on_file_open_requested(self, data):
-        file_path = data.get("file_path")
-        if file_path:
-            # Implement your document open logic here
-            print(f"Open document: {file_path}")
-
     def on_document_indexed(self, data: Dict):
         self._current_indexing += 1
         self._index_next_document()
@@ -157,8 +157,6 @@ class DocumentsWidget(
                     exists = Document.objects.filter_by(path=fpath)
                     if not exists or len(exists) == 0:
                         Document.objects.create(path=fpath, active=True)
-                    else:
-                        print("Document already exists:", fpath)
 
     def _request_index_for_unindexed_documents(self):
         # Query all documents that are not indexed
