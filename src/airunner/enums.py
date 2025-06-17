@@ -232,6 +232,7 @@ class SignalCode(Enum):
     SEND_IMAGE_TO_CANVAS_SIGNAL = "send_image_to_canvas_signal"
     RUN_WORKFLOW_SIGNAL = "run_workflow_signal"
     STOP_WORKFLOW_SIGNAL = "stop_workflow_signal"
+    WORKFLOW_EXECUTION_COMPLETED_SIGNAL = "workflow_execution_completed_signal"
     PAUSE_WORKFLOW_SIGNAL = "pause_workflow_signal"
     INPUT_IMAGE_SETTINGS_CHANGED = "input_image_settings_changed"
 
