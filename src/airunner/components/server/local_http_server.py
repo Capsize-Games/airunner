@@ -339,9 +339,6 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             return
         # Strict MIME type enforcement
         abs_path = self.translate_path(self.path)
-        print(
-            f"[DEBUG] MIME check: abs_path = {abs_path} for request path {self.path}"
-        )
         ext = os.path.splitext(abs_path)[1].lower()
         if ext in self.DANGEROUS_EXTENSIONS:
             logging.warning(
@@ -350,9 +347,6 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             self.send_error(403)
             return
         mime, _ = mimetypes.guess_type(abs_path)
-        print(
-            f"[DEBUG] MIME check: detected MIME type = {mime} for {abs_path}"
-        )
         if not mime or not mime.startswith(self.ALLOWED_MIME_PREFIXES):
             logging.warning(
                 f"[SECURITY] Refused to serve file with MIME type: {mime} ({abs_path})"
@@ -439,9 +433,6 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                 continue
             potential_path = os.path.join(abs_directory, normalized_safe_path)
             abs_potential = os.path.abspath(potential_path)
-            print(
-                f"[DEBUG] translate_path: Checking {abs_potential} for path {path}"
-            )
             try:
                 if (
                     os.path.commonpath([abs_directory, abs_potential])
@@ -454,10 +445,8 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             except ValueError:
                 continue
             if os.path.exists(abs_potential):
-                print(f"[DEBUG] translate_path: Found file at {abs_potential}")
                 return abs_potential
         # Fallback to default handler, but only with sanitized path
-        print(f"[DEBUG] translate_path: Using fallback for {safe_path}")
         return super().translate_path(safe_path)
 
 
@@ -572,8 +561,13 @@ class LocalHttpServerThread(QThread):
                     "../../../components/browser/gui/static",
                 )
             ),
+            os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "../../../components/map/gui/static",
+                )
+            ),
         ]
-        print("[DEBUG] static_dirs at server startup:", static_dirs)
         if self.additional_directories:
             static_dirs.extend(self.additional_directories)
         static_dirs = list(dict.fromkeys(static_dirs))

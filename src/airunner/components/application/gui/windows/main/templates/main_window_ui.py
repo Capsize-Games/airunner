@@ -27,6 +27,7 @@ from airunner.components.browser.gui.widgets.browser_widget import BrowserWidget
 from airunner.components.document_editor.gui.widgets.document_editor_container_widget import DocumentEditorContainerWidget
 from airunner.components.documents.gui.widgets.documents import DocumentsWidget
 from airunner.components.home_stage.gui.widgets.home_stage_widget import HomeStageWidget
+from airunner.components.map.gui.widgets.map_widget import MapWidget
 from airunner.components.nodegraph.gui.widgets.node_graph_widget import NodeGraphWidget
 import airunner.feather_rc
 
@@ -320,6 +321,19 @@ class Ui_MainWindow(object):
 
         self.action_sidebar.addWidget(self.workflow_editor_button)
 
+        self.map_button = QPushButton(self.actionsidebar)
+        self.map_button.setObjectName(u"map_button")
+        self.map_button.setMinimumSize(QSize(35, 35))
+        self.map_button.setMaximumSize(QSize(35, 35))
+        icon34 = QIcon()
+        icon34.addFile(u":/light/icons/feather/light/map.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.map_button.setIcon(icon34)
+        self.map_button.setIconSize(QSize(20, 20))
+        self.map_button.setCheckable(True)
+        self.map_button.setFlat(True)
+
+        self.action_sidebar.addWidget(self.map_button)
+
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.action_sidebar.addItem(self.verticalSpacer)
@@ -449,6 +463,17 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.widget, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.document_editor_tab, "")
+        self.map_tab = QWidget()
+        self.map_tab.setObjectName(u"map_tab")
+        self.gridLayout_12 = QGridLayout(self.map_tab)
+        self.gridLayout_12.setObjectName(u"gridLayout_12")
+        self.gridLayout_12.setContentsMargins(0, 0, 0, 0)
+        self.map = MapWidget(self.map_tab)
+        self.map.setObjectName(u"map")
+
+        self.gridLayout_12.addWidget(self.map, 0, 0, 1, 1)
+
+        self.center_tab_container.addTab(self.map_tab, "")
 
         self.gridLayout_4.addWidget(self.center_tab_container, 0, 0, 1, 1)
 
@@ -698,6 +723,10 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.workflow_editor_button.setText("")
 #if QT_CONFIG(tooltip)
+        self.map_button.setToolTip(QCoreApplication.translate("MainWindow", u"Maps", None))
+#endif // QT_CONFIG(tooltip)
+        self.map_button.setText("")
+#if QT_CONFIG(tooltip)
         self.chat_button.setToolTip(QCoreApplication.translate("MainWindow", u"Chat", None))
 #endif // QT_CONFIG(tooltip)
         self.chat_button.setText("")
@@ -711,6 +740,7 @@ class Ui_MainWindow(object):
         self.browser.setTabText(self.browser.indexOf(self.browser_page), "")
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.browser_tab), QCoreApplication.translate("MainWindow", u"Browser", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.document_editor_tab), QCoreApplication.translate("MainWindow", u"Document Editor", None))
+        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.map_tab), QCoreApplication.translate("MainWindow", u"Maps", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
         self.menuChat.setTitle(QCoreApplication.translate("MainWindow", u"Chat", None))
