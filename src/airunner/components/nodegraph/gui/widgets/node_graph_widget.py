@@ -92,6 +92,7 @@ class NodeGraphWidget(BaseWidget):
             SignalCode.NODE_EXECUTION_COMPLETED_SIGNAL: self._on_node_execution_completed,
             SignalCode.NODEGRAPH_ZOOM: self._on_nodegraph_zoom_changed,
             SignalCode.NODEGRAPH_PAN: self._on_nodegraph_pan_changed,
+            SignalCode.WORKFLOW_EXECUTION_COMPLETED_SIGNAL: self._on_workflow_execution_completed,
         }
         self.initialized = False
         self.splitters = ["nodegraph_splitter"]
@@ -1543,6 +1544,11 @@ class NodeGraphWidget(BaseWidget):
         #         center_y = 0
 
         self._save_state()
+
+    def _on_workflow_execution_completed(self, data: Dict):
+        """Signal handler for WORKFLOW_EXECUTION_COMPLETED signal."""
+        self.node_graph_worker.add_to_queue(data)
+        self.stop_progress_bar()
 
     def _on_nodegraph_pan_changed(self, data: Dict):
         """Signal handler for NODEGRAPH_PAN signal."""

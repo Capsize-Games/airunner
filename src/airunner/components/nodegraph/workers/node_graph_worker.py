@@ -549,14 +549,12 @@ class NodeGraphWorker(Worker):
         self, processed_count, max_steps, node_outputs, node_map
     ):
         """Finalize the workflow execution and log results."""
-        if processed_count >= max_steps:
-            self.logger.info(
-                "Workflow execution stopped: Maximum processing steps reached (potential cycle detected)."
-            )
-        else:
-            self.logger.info("---\nWorkflow execution finished.")
-
-        final_outputs = {
-            node_map[nid].name(): data for nid, data in node_outputs.items()
-        }
-        self.logger.info(f"Final Node Outputs: {final_outputs}")
+        self.emit_signal(
+            SignalCode.WORKFLOW_EXECUTION_COMPLETED_SIGNAL,
+            {
+                "processed_count": processed_count,
+                "max_steps": max_steps,
+                "node_outputs": node_outputs,
+                "node_map": node_map,
+            },
+        )

@@ -1,3 +1,4 @@
+from airunner.enums import SignalCode
 from airunner.vendor.nodegraphqt import (
     NodeGraph,
     PropertiesBinWidget,
@@ -5,7 +6,9 @@ from airunner.vendor.nodegraphqt import (
 from PySide6.QtCore import Qt
 
 
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.nodegraph.gui.widgets.nodes.core.variable_getter_node import (
     VariableGetterNode,
