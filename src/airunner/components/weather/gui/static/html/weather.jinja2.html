@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Weather</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../css/weather.css">
+    <link id="theme-style" rel="stylesheet" href="../css/theme-{{ theme }}.css">
+</head>
+<body>
+    <div id="stage">
+        <div class="container">
+            <h1>Weather</h1>
+            <div class="weather-info">
+                <div class="location">
+                    <label for="location">Location:</label>
+                    <input type="text" id="location" placeholder="Enter city or coordinates">
+                </div>
+                <button id="get-weather">Get Weather</button>
+            </div>
+            <div class="weather-result">
+                <h2>Current Weather</h2>
+                <p id="weather-description"></p>
+                <p id="temperature"></p>
+                <p id="humidity"></p>
+                <p id="wind-speed"></p>
+            </div>
+        </div>
+    </div>
+    <script src="../js/weather.js"></script>
+</body>
+</html>
