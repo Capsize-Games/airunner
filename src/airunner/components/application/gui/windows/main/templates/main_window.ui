@@ -361,6 +361,9 @@
               <height>35</height>
              </size>
             </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
             <property name="toolTip">
              <string>Maps</string>
             </property>
@@ -370,6 +373,47 @@
             <property name="icon">
              <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/map.svg</normaloff>:/light/icons/feather/light/map.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>17</width>
+              <height>17</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="weather_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Weather</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/sun.svg</normaloff>:/light/icons/feather/light/sun.svg</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -743,6 +787,28 @@
                </property>
                <item row="0" column="0">
                 <widget class="MapWidget" name="map" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="weather_tab">
+              <attribute name="title">
+               <string>Weather</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_13">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="WeatherWidget" name="weather" native="true"/>
                </item>
               </layout>
              </widget>
@@ -1408,6 +1474,12 @@
    <class>MapWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/map/gui/widgets/map_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>WeatherWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/weather/gui/widgets/weather_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
