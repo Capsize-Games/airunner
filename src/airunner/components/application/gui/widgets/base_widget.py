@@ -9,8 +9,10 @@ from PySide6.QtCore import QTimer
 from urllib.parse import urlencode
 from airunner.enums import CanvasToolName, TemplateName
 from airunner.gui.styles.styles_mixin import StylesMixin
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.settings import CONTENT_WIDGETS_BASE_PATH, LOCAL_SERVER_PORT
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
+from airunner.settings import CONTENT_WIDGETS_BASE_PATH, LOCAL_SERVER_HOST, LOCAL_SERVER_PORT
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import create_worker
 from airunner.utils.widgets import (
@@ -332,7 +334,7 @@ class BaseWidget(AbstractBaseWidget):
         Load a Jinja2 template from the local HTTP server, passing kwargs as query parameters for server-side rendering.
         """
         # Build the URL to the template on the local server
-        base_url = f"https://localhost:{LOCAL_SERVER_PORT}/static/html/{template_name}"
+        base_url = f"https://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}/static/html/{template_name}"
         # Pass kwargs as query parameters (JSON-encode complex values)
         query = urlencode(
             {k: v if isinstance(v, str) else str(v) for k, v in kwargs.items()}
