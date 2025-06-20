@@ -546,25 +546,7 @@ class LocalHttpServerThread(QThread):
             os.path.abspath(
                 os.path.join(
                     os.path.dirname(__file__),
-                    "../../../components/chat/gui/static",
-                )
-            ),
-            os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__),
-                    "../../../components/home_stage/gui/static",
-                )
-            ),
-            os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__),
-                    "../../../components/browser/gui/static",
-                )
-            ),
-            os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__),
-                    "../../../components/map/gui/static",
+                    "../../../components/**/gui/static",
                 )
             ),
         ]
