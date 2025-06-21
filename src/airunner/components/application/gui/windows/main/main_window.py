@@ -405,6 +405,19 @@ class MainWindow(
         self.api.art.canvas.clear()
 
     @Slot()
+    def on_actionCopy_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot copy image."
+            )
+            return
+        self.api.art.canvas.copy_image()
+
+    @Slot()
     def on_actionClear_all_prompts_triggered(self):
         self.clear_all_prompts()
 
