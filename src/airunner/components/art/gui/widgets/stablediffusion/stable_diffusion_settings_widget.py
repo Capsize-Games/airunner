@@ -1,5 +1,13 @@
-from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtCore import Slot, Qt
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QDialog,
+    QVBoxLayout,
+    QLabel,
+    QCheckBox,
+    QDialogButtonBox,
+    QProgressDialog,
+)
 
 from airunner.components.art.data.ai_models import AIModels
 from airunner.components.art.data.generator_settings import GeneratorSettings
@@ -16,6 +24,13 @@ from airunner.components.application.workers.model_scanner_worker import (
     ModelScannerWorker,
 )
 from airunner.settings import AIRUNNER_ART_ENABLED
+from airunner.utils.settings.get_qsettings import get_qsettings
+from airunner.utils.model_utils.model_utils import (
+    get_stable_diffusion_model_storage_path,
+)
+import shutil
+import threading
+import os
 
 
 class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
@@ -100,11 +115,99 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             or "",  # Start in current custom path or home
             self.tr("Model Files (*.safetensors)"),
         )
-        if file_path:
-            self.ui.custom_model.blockSignals(True)
-            self.ui.custom_model.setText(file_path)
-            self.ui.custom_model.blockSignals(False)
-            self.update_generator_settings("custom_path", file_path)
+        if not file_path:
+            return
+
+        qsettings = get_qsettings()
+        dont_ask_key = "import_model_dont_ask_again"
+        dont_ask = qsettings.value(dont_ask_key, False, type=bool)
+
+        if not dont_ask:
+            dialog = QDialog(self)
+            dialog.setWindowTitle(self.tr("Import Model"))
+            layout = QVBoxLayout(dialog)
+            label = QLabel(
+                self.tr(
+                    "Do you want to import this model to the AI Runner folder?"
+                )
+            )
+            layout.addWidget(label)
+            checkbox = QCheckBox(self.tr("Do not ask again"))
+            layout.addWidget(checkbox)
+            buttons = QDialogButtonBox(
+                QDialogButtonBox.Yes | QDialogButtonBox.No
+            )
+            layout.addWidget(buttons)
+            result = []
+
+            def on_accept():
+                result.append(True)
+                dialog.accept()
+
+            def on_reject():
+                result.append(False)
+                dialog.reject()
+
+            buttons.accepted.connect(on_accept)
+            buttons.rejected.connect(on_reject)
+            dialog.exec()
+            if checkbox.isChecked():
+                qsettings.setValue(dont_ask_key, True)
+            if not result or not result[0]:
+                # User chose No
+                self.ui.custom_model.blockSignals(True)
+                self.ui.custom_model.setText(file_path)
+                self.ui.custom_model.blockSignals(False)
+                self.update_generator_settings("custom_path", file_path)
+                return
+        # If we get here, import to AI Runner folder
+        filename = os.path.basename(file_path)
+        dest_path = get_stable_diffusion_model_storage_path(
+            base_dir=os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "art/models",
+                    self.generator_settings.version,
+                    self.generator_settings.pipeline_action,
+                )
+            ),
+            filename=filename,
+        )
+        progress = QProgressDialog(
+            self.tr("Importing model..."), None, 0, 100, self
+        )
+        progress.setWindowTitle(self.tr("Importing Model"))
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setValue(0)
+
+        def copy_with_progress(src, dst):
+            total = os.path.getsize(src)
+            copied = 0
+            bufsize = 1024 * 1024
+            with open(src, "rb") as fsrc, open(dst, "wb") as fdst:
+                while True:
+                    buf = fsrc.read(bufsize)
+                    if not buf:
+                        break
+                    fdst.write(buf)
+                    copied += len(buf)
+                    percent = int((copied / total) * 100)
+                    progress.setValue(percent)
+            progress.setValue(100)
+
+        def do_copy():
+            try:
+                copy_with_progress(file_path, dest_path)
+            finally:
+                progress.close()
+                self.ui.custom_model.blockSignals(True)
+                self.ui.custom_model.setText(dest_path)
+                self.ui.custom_model.blockSignals(False)
+                self.update_generator_settings("custom_path", dest_path)
+
+        thread = threading.Thread(target=do_copy)
+        thread.start()
 
     @Slot(str)
     def on_custom_model_textChanged(self, val: str):
