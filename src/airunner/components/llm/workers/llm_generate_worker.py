@@ -2,7 +2,9 @@ import threading
 from typing import Dict, Optional, Type
 
 from airunner.enums import SignalCode
-from airunner.components.llm.managers.ollama_model_manager import OllamaModelManager
+from airunner.components.llm.managers.ollama_model_manager import (
+    OllamaModelManager,
+)
 from airunner.components.application.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
 from airunner.components.llm.managers.llm_model_manager import LLMModelManager
@@ -39,6 +41,7 @@ class LLMGenerateWorker(Worker):
             SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
             SignalCode.BROWSER_EXTRA_CONTEXT: self.on_browser_extra_context,
             SignalCode.INDEX_DOCUMENT: self.on_index_document_signal,
+            SignalCode.MAP_SEARCH_REQUEST_SIGNAL: self.on_map_search_request_signal,  # Handle map search requests
         }
         self.context_manager = ContextManager()
         self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
@@ -242,6 +245,24 @@ class LLMGenerateWorker(Worker):
             )
         except Exception as e:
             pass
+
+    def on_map_search_request_signal(self, data: dict) -> None:
+        """Handle map search requests from the map widget via the LLM API service.
+
+        Args:
+            data (dict): Dictionary containing the search query.
+        """
+        query = data.get("query", "")
+        self._llm_agent_map_search(query)
+
+    def _llm_agent_map_search(self, query: str) -> None:
+        """Stub for LLM agent map search logic. To be implemented with LLM or geocoding API later.
+
+        Args:
+            query (str): The search query string.
+        """
+        # TODO: Implement actual LLM/geocoding logic
+        pass
 
     def start_worker_thread(self):
         if self.application_settings.llm_enabled or AIRUNNER_LLM_ON:

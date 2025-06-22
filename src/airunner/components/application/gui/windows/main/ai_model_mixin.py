@@ -23,7 +23,11 @@ class AIModelMixin:
         ]
 
     def on_ai_models_save_or_update_signal(self, data: dict):
+        print(
+            f"DEBUG: AI models signal received with data keys: {list(data.keys())}"
+        )
         new_models = data.get("models", [])
+        print(f"DEBUG: Signal handler received {len(new_models)} models")
         default_models = self.ai_models
 
         # Convert list of models to dictionary with model name as key

@@ -2,7 +2,9 @@ import os
 
 from airunner.components.art.data.ai_models import AIModels
 from airunner.enums import SignalCode
-from airunner.components.application.gui.windows.main.pipeline_mixin import PipelineMixin
+from airunner.components.application.gui.windows.main.pipeline_mixin import (
+    PipelineMixin,
+)
 from airunner.components.application.workers.worker import Worker
 
 
@@ -33,8 +35,23 @@ class ModelScannerWorker(Worker, PipelineMixin):
                 "art/models",
             )
         )
+        self.logger.debug(f"Model path: {model_path}")
         if not os.path.exists(model_path):
+            self.logger.debug(
+                f"Model path does not exist, creating: {model_path}"
+            )
             os.makedirs(model_path)
+
+        # Check if model_path is empty
+        try:
+            entries = list(os.scandir(model_path))
+            self.logger.debug(f"Found {len(entries)} entries in model path")
+            if len(entries) == 0:
+                self.logger.debug("Model path is empty")
+        except Exception as e:
+            self.logger.error(f"Error scanning model path: {e}")
+            entries = []
+
         # find all folders inside of model_path, each of those folders is a model version
         with os.scandir(model_path) as dir_object:
             # check if dir_object is a directory
@@ -103,7 +120,11 @@ class ModelScannerWorker(Worker, PipelineMixin):
                                             model.name = file_item.name
 
                                     if model:
+                                        self.logger.debug(
+                                            f"Found model: {model.name} at {model.path}"
+                                        )
                                         models.append(model)
+        self.logger.debug(f"Total models found: {len(models)}")
         self.emit_signal(
             SignalCode.AI_MODELS_SAVE_OR_UPDATE_SIGNAL, {"models": models}
         )

@@ -255,6 +255,7 @@ class SignalCode(Enum):
     FILE_EXPLORER_OPEN_FILE = "open_file_signal"
     INDEX_DOCUMENT = "index_document_signal"
     DOCUMENT_INDEXED = "document_indexed_signal"
+    MAP_SEARCH_REQUEST_SIGNAL = "map_search_request_signal"
 
 
 class EngineResponseCode(Enum):

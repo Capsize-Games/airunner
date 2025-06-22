@@ -1,4 +1,4 @@
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QUrl, Signal, Slot
 from typing import Optional
 from airunner.components.home_stage.gui.widgets.home_stage_widget import (
     HomeStageWidget,
@@ -10,13 +10,16 @@ from PySide6.QtCore import QObject, Slot
 
 
 class MapWidgetHandler(QObject):
-    """Handles commands from Python to JS for the MapWidget."""
+    """Handles commands from Python to JS for the MapWidget and receives search input from JS."""
 
     def __init__(self, map_widget):
         super().__init__()
         self.map_widget = map_widget
 
-    # Optionally, add slots for JS->Python communication if needed
+    @Slot(str)
+    def onSearchRequested(self, query: str) -> None:
+        """Slot called from JS when a map search is requested."""
+        self.map_widget.handle_map_search(query)
 
 
 class MapWidget(
@@ -28,12 +31,7 @@ class MapWidget(
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        url = QUrl(
-            f"https://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}/static/html/map.jinja2.html"
-        )
-        self.ui.webEngineView.setUrl(url)
         self._setup_webchannel()
-
         self.ui.webEngineView.loadFinished.connect(self._on_page_load_finished)
 
     def _on_page_load_finished(self, success: bool):
@@ -66,3 +64,9 @@ class MapWidget(
             % (lat, lon, zoom)
         )
         self.ui.webEngineView.page().runJavaScript(js)
+
+    def handle_map_search(self, query: str) -> None:
+        print("handle_map_search query:", query)
+        """Handle a map search request from the UI and call the LLM API service."""
+        if hasattr(self, "api") and hasattr(self.api, "llm"):
+            self.api.llm.map_search(query)

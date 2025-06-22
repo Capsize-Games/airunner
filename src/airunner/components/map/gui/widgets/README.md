@@ -34,3 +34,20 @@ widget.add_marker(40.7128, -74.0060)
 ## See Also
 - [Browser Widget API Documentation](../../browser/gui/static/js/api.js)
 - [Leaflet.js Documentation](https://leafletjs.com/)
+
+# Map Widget
+
+This module contains the MapWidget and its handler for displaying and interacting with a map in the AI Runner application.
+
+## Key Components
+- **MapWidget**: Main widget for map display and interaction. Integrates with the LLM API for map search.
+- **MapWidgetHandler**: Handles communication between JavaScript and Python, including receiving search queries from the frontend.
+
+## Map Search Workflow
+1. User enters a search query in the map widget's search input (frontend/JS).
+2. The query is sent to Python via the web channel and handled by `MapWidgetHandler.onSearchRequested`.
+3. `MapWidgetHandler` calls `MapWidget.handle_map_search`, which invokes the LLM API service (`self.api.llm.map_search`).
+4. The LLM API emits a signal to the LLM generate worker for processing.
+
+## Future Work
+- Implement actual LLM/geocoding logic for map search in the LLM agent.
