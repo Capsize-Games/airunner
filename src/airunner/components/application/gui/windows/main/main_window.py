@@ -75,7 +75,6 @@ from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.app_installer import AppInstaller
 from airunner.enums import (
     SignalCode,
-    CanvasToolName,
     GeneratorSection,
     LLMActionType,
     ModelType,
@@ -1120,6 +1119,7 @@ class MainWindow(
         )
 
     def on_toggle_tts(self, data: Dict = None, val=None):
+        print("ON TOGGLE TTS")
         if val is None:
             val = data.get(
                 "enabled", not self.application_settings.tts_enabled
@@ -1144,35 +1144,46 @@ class MainWindow(
         application_setting: str = None,
         data: Dict = None,
     ):
+        print("UPDATE ACTION BUTTON A")
         if self._model_status[model_type] is ModelStatus.LOADING:
             val = not val
+        print("UPDATE ACTION BUTTON B")
         element.blockSignals(True)
         element.setChecked(val)
         element.blockSignals(False)
+        print("UPDATE ACTION BUTTON C")
         QApplication.processEvents()
         if application_setting:
+            print("UPDATE ACTION BUTTON d")
             self.update_application_settings(application_setting, val)
+        print("UPDATE ACTION BUTTON e")
         if self._model_status[model_type] is not ModelStatus.LOADING:
-            if model_type is ModelType.TTS:
-                if val:
-                    if not self.api or not hasattr(self.api, "tts"):
-                        self.logger.warning(
-                            "MainWindow: self.api.tts is missing. Cannot start TTS."
-                        )
-                        return
-                    self.api.tts.start()
-                else:
-                    if not self.api or not hasattr(self.api, "tts"):
-                        self.logger.warning(
-                            "MainWindow: self.api.tts is missing. Cannot stop TTS."
-                        )
-                        return
-                    self.api.tts.stop()
+            # if model_type is ModelType.TTS:
+            #     if val:
+            #         if not self.api or not hasattr(self.api, "tts"):
+            #             self.logger.warning(
+            #                 "MainWindow: self.api.tts is missing. Cannot start TTS."
+            #             )
+            #             return
+            #         self.api.tts.start()
+            #     else:
+            #         if not self.api or not hasattr(self.api, "tts"):
+            #             self.logger.warning(
+            #                 "MainWindow: self.api.tts is missing. Cannot stop TTS."
+            #             )
+            #             return
+            #         self.api.tts.stop()
+            # else:
+            #     if val:
+            #         self.emit_signal(load_signal, data)
+            #     else:
+            #         self.emit_signal(unload_signal, data)
+            if val:
+                print("UPDATE ACTION BUTTON f", load_signal, data)
+                self.emit_signal(load_signal, data)
             else:
-                if val:
-                    self.emit_signal(load_signal, data)
-                else:
-                    self.emit_signal(unload_signal, data)
+                print("UPDATE ACTION BUTTON g")
+                self.emit_signal(unload_signal, data)
 
     def save_state(self):
         if self.quitting:

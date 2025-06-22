@@ -8,9 +8,40 @@
     <link rel="stylesheet" href="/static/js/map.css">
 </head>
 <body>
+    <div id="map-controls" class="map-controls">
+        <input class="search-input" type="text" id="search-input" placeholder="Search for a location...">
+        <ul>
+            <li><button id="locate-me">Locate Me</button></li>
+        </ul>
+    </div>
     <div id="map"></div>
     <script src="/static/leaflet/leaflet.js"></script>
     <script src="/static/js/api.js"></script>
     <script src="/static/js/map.js"></script>
+    <script>
+    // Wait for the DOM and WebChannel to be ready
+    function setupMapSearchInput() {
+        const input = document.getElementById('search-input');
+        if (!input) return;
+        input.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                const query = input.value.trim();
+                if (query && window.widgetHandler && window.widgetHandler.onSearchRequested) {
+                    window.widgetHandler.onSearchRequested(query);
+                }
+            }
+        });
+    }
+    // Wait for Qt WebChannel to be ready
+    if (typeof qt !== 'undefined') {
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+            window.widgetHandler = channel.objects.widgetHandler;
+            setupMapSearchInput();
+        });
+    } else {
+        // Fallback: try to set up after DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', setupMapSearchInput);
+    }
+    </script>
 </body>
 </html>

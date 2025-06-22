@@ -2,7 +2,9 @@ import os
 from typing import Dict, Optional
 
 import torch
-from airunner.components.art.managers.flux.flux_model_manager import FluxModelManager
+from airunner.components.art.managers.flux.flux_model_manager import (
+    FluxModelManager,
+)
 from airunner.components.art.managers.stablediffusion.stable_diffusion_model_manager import (
     StableDiffusionModelManager,
 )
@@ -85,6 +87,10 @@ class SDWorker(Worker):
     def model_manager(self):
         if self._model_manager is None:
             version = StableDiffusionVersion(self.generator_settings.version)
+
+            print("*" * 100)
+            print("VERSION", version)
+
             if version is StableDiffusionVersion.SD1_5:
                 self._model_manager = self.sd
             elif version in (
@@ -100,6 +106,7 @@ class SDWorker(Worker):
                 raise ValueError(
                     f"Unsupported Stable Diffusion version: {version}"
                 )
+        print("model manager", self._model_manager)
         return self._model_manager
 
     @model_manager.setter

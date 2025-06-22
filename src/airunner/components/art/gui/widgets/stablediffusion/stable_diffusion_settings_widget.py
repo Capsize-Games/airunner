@@ -8,9 +8,13 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.stablediffusion.templates.stable_diffusion_settings_ui import (
     Ui_stable_diffusion_settings_widget,
 )
-from airunner.components.application.gui.windows.main.pipeline_mixin import PipelineMixin
+from airunner.components.application.gui.windows.main.pipeline_mixin import (
+    PipelineMixin,
+)
 from airunner.utils.application.create_worker import create_worker
-from airunner.components.application.workers.model_scanner_worker import ModelScannerWorker
+from airunner.components.application.workers.model_scanner_worker import (
+    ModelScannerWorker,
+)
 from airunner.settings import AIRUNNER_ART_ENABLED
 
 
@@ -116,6 +120,36 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         model_id = self.ui.model.itemData(index)
         self.update_generator_settings("model", model_id)
 
+        # Automatically switch pipeline action to match the selected model
+        if model_id:
+            model = AIModels.objects.filter_first(AIModels.id == model_id)
+            if model and model.pipeline_action:
+                current_pipeline = self.generator_settings.pipeline_action
+                if current_pipeline != model.pipeline_action:
+                    # Update the pipeline action to match the model
+                    self.update_generator_settings(
+                        "pipeline_action", model.pipeline_action
+                    )
+                    # Update the UI pipeline dropdown to match the model's pipeline
+                    pipeline_display_text = None
+                    if model.pipeline_action == GeneratorSection.TXT2IMG.value:
+                        pipeline_display_text = f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}"
+                    elif (
+                        model.pipeline_action == GeneratorSection.INPAINT.value
+                    ):
+                        pipeline_display_text = f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}"
+
+                    if pipeline_display_text:
+                        pipeline_index = self.ui.pipeline.findText(
+                            pipeline_display_text
+                        )
+                        if pipeline_index >= 0:
+                            self.ui.pipeline.blockSignals(True)
+                            self.ui.pipeline.setCurrentIndex(pipeline_index)
+                            self.ui.pipeline.blockSignals(False)
+                    # Reload models for the new pipeline action
+                    self.load_models()
+
     def handle_scheduler_changed(self, name):
         self.update_generator_settings("scheduler", name)
         self.api.art.change_scheduler(name)
@@ -152,11 +186,16 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                     generator_settings.model = None
                 do_reload = True
         generator_settings.pipeline_action = val
-        generator_settings.save()
+
+        GeneratorSettings.objects.update(
+            pk=generator_settings.id,
+            model=generator_settings.model,
+            pipeline_action=generator_settings.pipeline_action,
+        )
 
         self.load_versions()
         self.load_models()
-        self.api.art.model_changed(pipeline=val)
+        self.api.art.model_changed(val)
 
     def handle_version_changed(self, val):
         self.update_generator_settings("version", val)
@@ -173,7 +212,12 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
 
         if model is not None:
             generator_settings.model = model.id
-            generator_settings.save()
+            GeneratorSettings.objects.update(
+                pk=generator_settings.id,
+                model=generator_settings.model,
+                version=generator_settings.version,
+                pipeline_action=generator_settings.pipeline_action,
+            )
 
         self.load_models()
 

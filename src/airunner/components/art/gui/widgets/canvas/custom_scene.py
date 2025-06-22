@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
     QGraphicsSceneMouseEvent,
     QMessageBox,
 )
+import requests  # Added for HTTP(S) image download
+from urllib.parse import urlparse
 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
 from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
@@ -38,7 +40,9 @@ from airunner.utils.image import (
 from airunner.components.art.gui.widgets.canvas.draggables.draggable_pixmap import (
     DraggablePixmap,
 )
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
 from airunner.components.art.managers.stablediffusion.rect import Rect
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
@@ -432,7 +436,15 @@ class CustomScene(
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
-            event.acceptProposedAction()
+            # Accept if any URL is a valid image (local file or http(s))
+            for url in event.mimeData().urls():
+                url_str = url.toString()
+                if url_str.lower().endswith(
+                    (".png", ".jpg", ".jpeg", ".bmp", ".gif")
+                ) or url_str.startswith("http"):
+                    event.acceptProposedAction()
+                    return
+            event.ignore()
         else:
             super().dragEnterEvent(event)
 
@@ -443,16 +455,56 @@ class CustomScene(
             super().dragMoveEvent(event)
 
     def dropEvent(self, event: QDropEvent):
-        for url in event.mimeData().urls():
-            path = url.toLocalFile()
-            if path:
-                if (
-                    hasattr(self, "api")
-                    and hasattr(self.api, "art")
-                    and hasattr(self.api.art, "canvas")
-                ):
-                    self.api.art.canvas.image_from_path(path)
-        event.acceptProposedAction()
+        mime = event.mimeData()
+        if hasattr(self, "logger"):
+            self.logger.debug(f"Drop mime types: {mime.formats()}")
+        handled = False
+        # Try raw image data (e.g. 'image/png')
+        for fmt in mime.formats():
+            if fmt.startswith("image/"):
+                data = mime.data(fmt)
+                try:
+                    img = Image.open(io.BytesIO(data.data()))
+                    self._add_image_to_undo()
+                    if self.application_settings.resize_on_paste:
+                        img = self._resize_image(img)
+                    self.current_active_image = img
+                    self.initialize_image(img)
+                    handled = True
+                    break
+                except Exception as e:
+                    if hasattr(self, "logger"):
+                        self.logger.error(
+                            f"Failed to load image from drop mime {fmt}: {e}"
+                        )
+        if not handled and mime.hasUrls():
+            for url in mime.urls():
+                url_str = url.toString()
+                img = self._load_image_from_url_or_file(url_str)
+                if img is not None:
+                    self._add_image_to_undo()
+                    if self.application_settings.resize_on_paste:
+                        img = self._resize_image(img)
+                    self.current_active_image = img
+                    self.initialize_image(img)
+                    handled = True
+                    break
+                # fallback: try as file path
+                path = url.toLocalFile()
+                if path:
+                    img = self._load_image_from_url_or_file(path)
+                    if img is not None:
+                        self._add_image_to_undo()
+                        if self.application_settings.resize_on_paste:
+                            img = self._resize_image(img)
+                        self.current_active_image = img
+                        self.initialize_image(img)
+                        handled = True
+                        break
+        if handled:
+            event.acceptProposedAction()
+        else:
+            super().dropEvent(event)
 
     def wheelEvent(self, event):
         if not hasattr(event, "delta"):
@@ -677,29 +729,97 @@ class CustomScene(
     def _load_image_from_object(self, image: Image, is_outpaint: bool = False):
         self._add_image_to_scene(is_outpaint=is_outpaint, image=image)
 
+    def _load_image_from_url_or_file(
+        self, url_or_path: str
+    ) -> Optional[Image.Image]:
+        """Load an image from a local file or HTTP(S) URL."""
+        if url_or_path.startswith("http://") or url_or_path.startswith(
+            "https://"
+        ):
+            try:
+                resp = requests.get(url_or_path, timeout=10)
+                resp.raise_for_status()
+                return Image.open(io.BytesIO(resp.content)).convert("RGBA")
+            except Exception as e:
+                if hasattr(self, "logger"):
+                    self.logger.error(f"Failed to download image: {e}")
+                return None
+        elif url_or_path.startswith("file://"):
+            path = url_or_path[7:]
+            if os.path.exists(path):
+                try:
+                    return Image.open(path).convert("RGBA")
+                except Exception as e:
+                    if hasattr(self, "logger"):
+                        self.logger.error(f"Failed to open file image: {e}")
+            return None
+        else:
+            if os.path.exists(url_or_path):
+                try:
+                    return Image.open(url_or_path).convert("RGBA")
+                except Exception as e:
+                    if hasattr(self, "logger"):
+                        self.logger.error(f"Failed to open file image: {e}")
+            return None
+
     def _paste_image_from_clipboard(self):
-        image = self._get_image_from_clipboard()
-
-        if not image:
-            return
-        return image
-
-    def _get_image_from_clipboard(self):
-        try:
-            clipboard = QApplication.clipboard()
-            qt_image = clipboard.image()
-            if not qt_image.isNull():
-                pil_image = ImageQt.fromqimage(qt_image)
-                if isinstance(pil_image, Image.Image):
-                    return pil_image
-        except Exception:
-            pass
-        try:
-            image = ImageGrab.grabclipboard()
-            if isinstance(image, Image.Image):
-                return image
-        except Exception:
-            pass
+        clipboard = QApplication.clipboard()
+        mime = clipboard.mimeData()
+        if hasattr(self, "logger"):
+            self.logger.debug(f"Clipboard mime types: {mime.formats()}")
+        # Try image data first
+        if mime.hasImage():
+            qimg = clipboard.image()
+            if not qimg.isNull():
+                buffer = QImage(qimg)
+                ptr = buffer.bits()
+                ptr.setsize(buffer.sizeInBytes())
+                img = Image.frombuffer(
+                    "RGBA",
+                    (buffer.width(), buffer.height()),
+                    bytes(ptr),
+                    "raw",
+                    "BGRA",
+                )
+                return img
+        # Try raw image data (e.g. 'image/png') with both .data() and bytes()
+        for fmt in mime.formats():
+            if fmt.startswith("image/"):
+                data = mime.data(fmt)
+                # Try PyQt6/PySide6 QByteArray .data() and bytes()
+                for get_bytes in (lambda d: d.data(), bytes):
+                    try:
+                        img = Image.open(io.BytesIO(get_bytes(data)))
+                        if hasattr(self, "logger"):
+                            self.logger.debug(
+                                f"Loaded image from clipboard mime {fmt} using {get_bytes.__name__}"
+                            )
+                        return img
+                    except Exception as e:
+                        if hasattr(self, "logger"):
+                            self.logger.error(
+                                f"Failed to load image from clipboard mime {fmt} using {get_bytes.__name__}: {e}"
+                            )
+        # Try URLs (e.g., from browser)
+        if mime.hasUrls():
+            for url in mime.urls():
+                url_str = url.toString()
+                img = self._load_image_from_url_or_file(url_str)
+                if img is not None:
+                    return img
+        # Try text (sometimes browsers put image URL as text)
+        if mime.hasText():
+            text = mime.text()
+            if (
+                text.startswith("http://")
+                or text.startswith("https://")
+                or text.startswith("file://")
+            ):
+                img = self._load_image_from_url_or_file(text)
+                if img is not None:
+                    return img
+        if hasattr(self, "logger"):
+            self.logger.warning("No image found in clipboard for paste.")
         return None
 
     def _copy_image(self, image: Image) -> Image:
