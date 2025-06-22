@@ -54,7 +54,6 @@ class TTSGeneratorWorker(Worker):
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.TTS_QUEUE_SIGNAL: self.on_add_to_queue_signal,
         }
-        print("REGISTER THE FOLLOWING", self._signal_handlers)
         super().__init__()
 
     @property
