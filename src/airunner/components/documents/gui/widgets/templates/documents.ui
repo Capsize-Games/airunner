@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Documents</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="leftMargin">
@@ -32,13 +32,111 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="0" column="0" colspan="2">
-    <widget class="QTreeView" name="treeView"/>
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="tabWidget">
+     <widget class="QWidget" name="tabDocuments">
+      <attribute name="title">
+       <string>Documents</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutDocuments">
+       <item>
+        <widget class="QTreeView" name="documentsTreeView"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabZim">
+      <attribute name="title">
+       <string>Kiwix ZIM</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutZim">
+       <item>
+        <layout class="QHBoxLayout" name="kiwixSearchLayout">
+         <item>
+          <widget class="QLineEdit" name="kiwixSearchBar">
+           <property name="placeholderText">
+            <string>Search Kiwix Library (title, keyword, language code)...</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="kiwixLangLabel">
+           <property name="text">
+            <string>Lang:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="kiwixLangCombo">
+           <item>
+            <property name="text">
+             <string>eng</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>all</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="kiwixSearchButton">
+           <property name="text">
+            <string>Search</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QSplitter" name="splitter">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <widget class="QWidget" name="localZimWidget">
+          <layout class="QVBoxLayout" name="verticalLayoutLocal">
+           <item>
+            <widget class="QLabel" name="labelLocal">
+             <property name="text">
+              <string>Local ZIM Files</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QListWidget" name="listLocalZims"/>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="remoteZimWidget">
+          <layout class="QVBoxLayout" name="verticalLayoutRemote">
+           <item>
+            <widget class="QLabel" name="labelRemote">
+             <property name="text">
+              <string>Kiwix Library Search Results</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QListWidget" name="listRemoteZims"/>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
    </item>
    <item row="1" column="0">
     <widget class="QProgressBar" name="progressBar">
      <property name="value">
-      <number>24</number>
+      <number>0</number>
      </property>
     </widget>
    </item>
