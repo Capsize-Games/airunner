@@ -5,8 +5,8 @@
 }
 
 #map {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     margin: 0;
     padding: 0;
 }
@@ -16,28 +16,4 @@ body {
     height: 100%;
     margin: 0;
     padding: 0;
-}
-
-.map-controls {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 1000;
-    border: 2px solid #000;
-    padding: 40px;
-    background-color: #fff;
-    width: 300px;
-}
-
-.map-controls ul {
-    list-style: none;
-}
-
-button {
-    cursor: pointer;
-    padding: 10px;
-}
-
-.search-input {
-    padding: 10px;
 }
