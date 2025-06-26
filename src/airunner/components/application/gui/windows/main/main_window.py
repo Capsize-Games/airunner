@@ -13,6 +13,9 @@ from airunner.components.application.gui.widgets.stats.stats_widget import (
 from airunner.components.application.gui.widgets.status.status_widget import (
     StatusWidget,
 )
+from airunner.components.application.gui.windows.main.download_model_dialog import (
+    show_download_model_dialog,
+)
 from airunner.components.art.gui.windows.prompt_browser.prompt_browser import (
     PromptBrowser,
 )
@@ -41,7 +44,6 @@ from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMessageBox,
-    QCheckBox,
     QInputDialog,
     QMenu,
 )
@@ -112,6 +114,9 @@ from airunner.components.update.gui.windows.update.update_window import (
 )
 from airunner.components.icons.managers.icon_manager import IconManager
 from airunner.components.plugins.plugin_loader import PluginLoader
+from airunner.components.application.gui.windows.main.nsfw_warning_dialog import (
+    show_nsfw_warning_dialog,
+)
 
 
 class MainWindow(
@@ -426,6 +431,12 @@ class MainWindow(
         if path == "":
             path = AIRUNNER_BASE_PATH
         show_path(path)
+
+    @Slot()
+    def on_actionDownload_Model_triggered(self):
+        show_download_model_dialog(
+            self, self.path_settings, self.application_settings
+        )
 
     @Slot()
     def action_show_model_path_txt2img(self):
@@ -1144,45 +1155,18 @@ class MainWindow(
         application_setting: str = None,
         data: Dict = None,
     ):
-        print("UPDATE ACTION BUTTON A")
         if self._model_status[model_type] is ModelStatus.LOADING:
             val = not val
-        print("UPDATE ACTION BUTTON B")
         element.blockSignals(True)
         element.setChecked(val)
         element.blockSignals(False)
-        print("UPDATE ACTION BUTTON C")
         QApplication.processEvents()
         if application_setting:
-            print("UPDATE ACTION BUTTON d")
             self.update_application_settings(application_setting, val)
-        print("UPDATE ACTION BUTTON e")
         if self._model_status[model_type] is not ModelStatus.LOADING:
-            # if model_type is ModelType.TTS:
-            #     if val:
-            #         if not self.api or not hasattr(self.api, "tts"):
-            #             self.logger.warning(
-            #                 "MainWindow: self.api.tts is missing. Cannot start TTS."
-            #             )
-            #             return
-            #         self.api.tts.start()
-            #     else:
-            #         if not self.api or not hasattr(self.api, "tts"):
-            #             self.logger.warning(
-            #                 "MainWindow: self.api.tts is missing. Cannot stop TTS."
-            #             )
-            #             return
-            #         self.api.tts.stop()
-            # else:
-            #     if val:
-            #         self.emit_signal(load_signal, data)
-            #     else:
-            #         self.emit_signal(unload_signal, data)
             if val:
-                print("UPDATE ACTION BUTTON f", load_signal, data)
                 self.emit_signal(load_signal, data)
             else:
-                print("UPDATE ACTION BUTTON g")
                 self.emit_signal(unload_signal, data)
 
     def save_state(self):
@@ -1313,41 +1297,11 @@ class MainWindow(
 
     def show_nsfw_warning_popup(self):
         if self.application_settings.show_nsfw_warning:
-            """
-            Display a popup window which asks the user if they are sure they want to disable the NSFW filter
-            along with a checkbox that allows the user to disable the warning in the future.
-            """
-            msg_box = QMessageBox()
-            msg_box.setWindowTitle("Disable Safety Checker Warning")
-            msg_box.setText(
-                (
-                    "WARNING\n\n"
-                    "You are attempting to disable the safety checker (NSFW filter).\n"
-                    "It is strongly recommended that you keep this enabled at all times.\n"
-                    "The Safety Checker prevents potentially harmful content from being displayed.\n"
-                    "Only disable it if you are sure the Image model you are using is not capable of generating "
-                    "harmful content.\n"
-                    "Disabling the safety checker is intended as a last resort for continual false positives and as a "
-                    "research feature.\n"
-                    "\n\n"
-                    "Are you sure you want to disable the filter?"
-                )
+            confirmed, do_not_show_again = show_nsfw_warning_dialog(
+                self, self.application_settings.show_nsfw_warning
             )
-            msg_box.setStandardButtons(
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            msg_box.setDefaultButton(QMessageBox.StandardButton.No)
-
-            # Create a QCheckBox
-            checkbox = QCheckBox("Do not show this warning again")
-            # Add the checkbox to the message box
-            msg_box.setCheckBox(checkbox)
-
-            result = msg_box.exec()
-
-            if result == QMessageBox.StandardButton.Yes:
-                self._disable_nsfw_filter(not checkbox.isChecked())
-
+            if confirmed:
+                self._disable_nsfw_filter(not do_not_show_again)
             self.ui.actionSafety_Checker.blockSignals(True)
             self.ui.actionSafety_Checker.setChecked(
                 self.application_settings.nsfw_filter

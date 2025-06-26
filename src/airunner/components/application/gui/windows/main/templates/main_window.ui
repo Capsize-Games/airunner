@@ -1010,6 +1010,7 @@
     <addaction name="separator"/>
     <addaction name="actionRun_setup_wizard_2"/>
     <addaction name="separator"/>
+    <addaction name="actionDownload_Model"/>
    </widget>
    <widget class="QMenu" name="menuImage">
     <property name="title">
@@ -1424,6 +1425,11 @@
    </property>
    <property name="text">
     <string>Save As</string>
+   </property>
+  </action>
+  <action name="actionDownload_Model">
+   <property name="text">
+    <string>Download Model</string>
    </property>
   </action>
  </widget>
