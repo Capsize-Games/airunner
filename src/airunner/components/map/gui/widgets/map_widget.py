@@ -3,6 +3,7 @@ from typing import Optional
 from airunner.components.home_stage.gui.widgets.home_stage_widget import (
     HomeStageWidget,
 )
+from airunner.components.map.gui.widgets.templates.map_ui import Ui_map
 from airunner.settings import LOCAL_SERVER_PORT, LOCAL_SERVER_HOST
 from airunner.utils.location.get_lat_lon import get_lat_lon
 from PySide6.QtWebChannel import QWebChannel
@@ -25,6 +26,8 @@ class MapWidgetHandler(QObject):
 class MapWidget(
     HomeStageWidget,
 ):
+    widget_class_ = Ui_map
+
     @property
     def template(self) -> Optional[str]:
         return "map.jinja2.html"
@@ -66,7 +69,48 @@ class MapWidget(
         self.ui.webEngineView.page().runJavaScript(js)
 
     def handle_map_search(self, query: str) -> None:
-        print("handle_map_search query:", query)
         """Handle a map search request from the UI and call the LLM API service."""
+        print("handle_map_search query:", query)
+
+        # Try to get coordinates for the location
+        try:
+            # Check if it's a ZIP code (5 digits) and use the get_lat_lon function
+            if query.strip().isdigit() and len(query.strip()) == 5:
+                result = get_lat_lon(query.strip())
+                lat = result.get("lat")
+                lon = result.get("lon")
+
+                if lat is not None and lon is not None:
+                    self.center_map(lat, lon, zoom=13)
+                    self.add_marker(lat, lon)
+                    print(f"Found ZIP code location: {query} at {lat}, {lon}")
+                else:
+                    print(f"Could not find ZIP code: {query}")
+            else:
+                # For non-ZIP code searches, we'll need a different geocoding service
+                # For now, just print a message and let the LLM API handle it
+                print(
+                    f"Location search for '{query}' requires a geocoding service (not implemented yet)"
+                )
+
+        except Exception as e:
+            print(f"Error searching for location '{query}': {e}")
+
+        # Also call the LLM API service if available
         if hasattr(self, "api") and hasattr(self.api, "llm"):
             self.api.llm.map_search(query)
+
+    @Slot()
+    def on_searchButton_clicked(self):
+        """Handle search button click or Enter key press."""
+        query = self.ui.searchLineEdit.text().strip()
+        if query:
+            self.handle_map_search(query)
+
+    @Slot()
+    def on_locateMeButton_clicked(self):
+        """Handle locate me button click."""
+        lat = self.user.latitude or 0.0
+        lon = self.user.longitude or 0.0
+        self.center_map(lat, lon, zoom=13)
+        self.add_marker(lat, lon)
