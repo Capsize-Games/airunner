@@ -49,6 +49,7 @@ extras_require = {
         "sentencepiece==0.2.0",
         "lingua-language-detector==2.1.0",
         "markdown==3.8",
+        "libzim==3.7.0",
     ],
     "agents": [
         "llama-index==0.12.36",
@@ -219,6 +220,7 @@ setup(
             "airunner-generate-cert=airunner.bin.generate_cert:main",
             "airunner-mypy=airunner.bin.mypy_shortcut:main",
             "airunner-create-theme=airunner.bin.airunner_create_theme:main",
+            "airunner-create-component=airunner.bin.airunner_create_component:main",
         ],
     },
 )

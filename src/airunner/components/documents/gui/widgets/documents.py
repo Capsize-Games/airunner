@@ -54,6 +54,7 @@ class DocumentsWidget(
     urlChanged = Signal(str, str)  # url, title
     faviconChanged = Signal(QIcon)
     widget_class_ = Ui_documents
+    zimDownloadFinished = Signal()
 
     def __init__(self, *args, private: bool = False, **kwargs):
         self._favicon = None
@@ -74,6 +75,7 @@ class DocumentsWidget(
         super().__init__(*args, **kwargs)
         self.setup_file_explorer()
         self.setup_kiwix_browser()
+        self.zimDownloadFinished.connect(self.refresh_kiwix_lists)
 
     def setup_file_explorer(self):
         from PySide6.QtWidgets import QFileSystemModel
@@ -269,17 +271,17 @@ class DocumentsWidget(
         )
         from PySide6.QtCore import Qt
         import os, json
+        from airunner.components.documents.data.scan_zimfiles import (
+            scan_zimfiles,
+        )
+        from airunner.components.documents.data.models.zimfile import ZimFile
 
-        self.local_zims_list.clear()
         zim_dir = os.path.join(
             os.path.expanduser(self.path_settings.base_path), "zim"
         )
-        if not os.path.exists(zim_dir):
-            os.makedirs(zim_dir, exist_ok=True)
-        local_zims = {
-            f for f in os.listdir(zim_dir) if f.lower().endswith(".zim")
-        }
-        self.local_zims_list.repaint()  # Force repaint in case of UI update issues
+        scan_zimfiles(zim_dir)
+        self.local_zims_list.clear()
+        local_zims = ZimFile.objects.all()
 
         def format_size(size):
             if not size or size <= 0:
@@ -294,23 +296,21 @@ class DocumentsWidget(
                 size /= 1024
             return f"{size:.1f} PB"
 
-        for fname in sorted(local_zims):
-            fpath = os.path.join(zim_dir, fname)
-            size = os.path.getsize(fpath)
-            meta_path = fpath + ".json"
-            meta = None
-            if os.path.exists(meta_path):
-                try:
-                    with open(meta_path, "r", encoding="utf-8") as mf:
-                        meta = json.load(mf)
-                except Exception:
-                    meta = None
+        for zim in sorted(local_zims, key=lambda z: z.name.lower()):
+            meta = {
+                "title": zim.title,
+                "summary": zim.summary,
+                "updated": zim.updated,
+            }
+            fname = zim.name
+            fpath = zim.path
+            size = zim.size
             row_widget = QWidget()
             row_layout = QVBoxLayout(row_widget)
             row_layout.setContentsMargins(6, 6, 6, 6)
             row_layout.setSpacing(2)
             top_row = QHBoxLayout()
-            title = meta.get("title") if meta else fname
+            title = meta.get("title") or fname
             title_label = QLabel(f"<b>{title}</b>")
             title_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
             top_row.addWidget(title_label, 2)
@@ -319,7 +319,7 @@ class DocumentsWidget(
             )
             size_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
             top_row.addWidget(size_label, 0)
-            if meta and meta.get("updated"):
+            if meta.get("updated"):
                 date_label = QLabel(
                     f"<span style='color:gray'>{meta['updated']}</span>"
                 )
@@ -333,7 +333,7 @@ class DocumentsWidget(
             )
             top_row.addWidget(del_btn, 0)
             row_layout.addLayout(top_row)
-            if meta and meta.get("summary"):
+            if meta.get("summary"):
                 desc_label = QLabel(meta["summary"])
                 desc_label.setWordWrap(True)
                 desc_label.setStyleSheet("color: #555; font-size: 10pt;")
@@ -344,7 +344,6 @@ class DocumentsWidget(
             item.setSizeHint(row_widget.sizeHint())
             self.local_zims_list.addItem(item)
             self.local_zims_list.setItemWidget(item, row_widget)
-        self.local_zims_list.repaint()  # Ensure repaint after update
 
     def refresh_search_results_list(self):
         from PySide6.QtWidgets import (
@@ -655,10 +654,7 @@ class DocumentsWidget(
                         json.dump(zim, mf, ensure_ascii=False, indent=2)
                 except Exception:
                     pass
-                # Ensure UI update is on the main thread
-                from PySide6.QtCore import QTimer
-
-                QTimer.singleShot(0, self.refresh_kiwix_lists)
+                self.zimDownloadFinished.emit()
             else:
                 QMessageBox.critical(
                     self, "Kiwix", f"Download failed: {error}"
