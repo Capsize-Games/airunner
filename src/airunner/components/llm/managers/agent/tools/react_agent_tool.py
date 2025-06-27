@@ -130,7 +130,9 @@ class ReActAgentTool(BaseConversationEngine):
 
         try:
             streaming_response = self.chat_engine.stream_chat(
-                query_str=query_str
+                query_str=query_str,
+                messages=chat_history,
+                tool_choice=tool_choice,
             )
         except Exception as e:
             import logging

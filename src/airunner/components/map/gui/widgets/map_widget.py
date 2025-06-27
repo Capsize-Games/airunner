@@ -1,13 +1,22 @@
 from PySide6.QtCore import QUrl, Signal, Slot
 from typing import Optional
+
+from mistralai import Dict
 from airunner.components.home_stage.gui.widgets.home_stage_widget import (
     HomeStageWidget,
 )
 from airunner.components.map.gui.widgets.templates.map_ui import Ui_map
-from airunner.settings import LOCAL_SERVER_PORT, LOCAL_SERVER_HOST
+from airunner.settings import (
+    LOCAL_SERVER_PORT,
+    LOCAL_SERVER_HOST,
+    AIRUNNER_NOMINATIM_URL,
+)
 from airunner.utils.location.get_lat_lon import get_lat_lon
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtCore import QObject, Slot
+from airunner.components.llm.api.llm_services import LLMAPIService
+from airunner.enums import SignalCode
+from PySide6.QtCore import QEventLoop, QTimer
 
 
 class MapWidgetHandler(QObject):
@@ -33,6 +42,9 @@ class MapWidget(
         return "map.jinja2.html"
 
     def __init__(self, *args, **kwargs):
+        self.signal_handlers = {
+            SignalCode.MAP_SEARCH_RESULT_SIGNAL: self._on_llm_signal,
+        }
         super().__init__(*args, **kwargs)
         self._setup_webchannel()
         self.ui.webEngineView.loadFinished.connect(self._on_page_load_finished)
@@ -49,12 +61,22 @@ class MapWidget(
         self.channel.registerObject("widgetHandler", self.handler)
         self.ui.webEngineView.page().setWebChannel(self.channel)
 
-    def add_marker(self, lat: float, lon: float) -> None:
+    def add_marker(self, lat: float, lon: float, label: str = None) -> None:
         """Add a marker to the map at the given latitude and longitude."""
         js = (
             "if (window.browserAPI) { "
-            "window.browserAPI._triggerEvent('map-command', {command: 'addMarker', data: {lat: %s, lon: %s}}); "
-            "} else { console.error('browserAPI not found'); }" % (lat, lon)
+            "window.browserAPI._triggerEvent('map-command', {command: 'addMarker', data: {lat: %s, lon: %s, label: %s}}); "
+            "} else { console.error('browserAPI not found'); }"
+            % (lat, lon, f"'{label}'" if label else "null")
+        )
+        self.ui.webEngineView.page().runJavaScript(js)
+
+    def clear_markers(self) -> None:
+        """Clear all markers from the map."""
+        js = (
+            "if (window.browserAPI) { "
+            "window.browserAPI._triggerEvent('map-command', {command: 'clearMarkers', data: {}}); "
+            "} else { console.error('browserAPI not found'); }"
         )
         self.ui.webEngineView.page().runJavaScript(js)
 
@@ -69,36 +91,167 @@ class MapWidget(
         self.ui.webEngineView.page().runJavaScript(js)
 
     def handle_map_search(self, query: str) -> None:
-        """Handle a map search request from the UI and call the LLM API service."""
-        print("handle_map_search query:", query)
+        """Handle a map search request from the UI and call the MapAgent LLM service."""
+        print(f"[MapWidget] handle_map_search called with query: {query}")
+        self._pending_map_query = query
+        self._pending_map_result = None
+        self._event_loop = QEventLoop()
+        self.api.llm.map_search(query)
 
-        # Try to get coordinates for the location
-        try:
-            # Check if it's a ZIP code (5 digits) and use the get_lat_lon function
-            if query.strip().isdigit() and len(query.strip()) == 5:
-                result = get_lat_lon(query.strip())
-                lat = result.get("lat")
-                lon = result.get("lon")
+        # QTimer.singleShot(5000, self._event_loop.quit)  # 5s timeout
+        # self._event_loop.exec()
+        # map_tool_result = self._pending_map_result
+        # if not map_tool_result:
+        #     print(f"[MapWidget] No map tool result from agent. Query: {query}")
+        #     print(
+        #         f"[MapWidget] _pending_map_result: {self._pending_map_result}"
+        #     )
+        #     print(f"[MapWidget] _pending_map_query: {self._pending_map_query}")
+        #     return
+        # print(f"[MapWidget] map_tool_result received: {map_tool_result}")
 
-                if lat is not None and lon is not None:
-                    self.center_map(lat, lon, zoom=13)
-                    self.add_marker(lat, lon)
-                    print(f"Found ZIP code location: {query} at {lat}, {lon}")
-                else:
-                    print(f"Could not find ZIP code: {query}")
-            else:
-                # For non-ZIP code searches, we'll need a different geocoding service
-                # For now, just print a message and let the LLM API handle it
+    def _handle_map_search_result(self, map_tool_result):
+        # Handle different types of map results
+        lat = None
+        lon = None
+
+        if isinstance(map_tool_result, dict):
+            # Check if this is a directions result with start/end points
+            if "start" in map_tool_result and "end" in map_tool_result:
                 print(
-                    f"Location search for '{query}' requires a geocoding service (not implemented yet)"
+                    f"[MapWidget] Handling directions result: {map_tool_result}"
                 )
 
-        except Exception as e:
-            print(f"Error searching for location '{query}': {e}")
+                # Clear existing markers first for directions
+                self.clear_markers()
 
-        # Also call the LLM API service if available
-        if hasattr(self, "api") and hasattr(self.api, "llm"):
-            self.api.llm.map_search(query)
+                start = map_tool_result["start"]
+                end = map_tool_result["end"]
+
+                # Add markers for both start and end points
+                if "lat" in start and "lon" in start:
+                    start_lat = float(start["lat"])
+                    start_lon = float(start["lon"])
+                    start_name = start.get("display_name", "Start")
+                    self.add_marker(
+                        start_lat, start_lon, f"Start: {start_name}"
+                    )
+                    print(
+                        f"[MapWidget] Added start marker at {start_lat}, {start_lon}"
+                    )
+
+                if "lat" in end and "lon" in end:
+                    end_lat = float(end["lat"])
+                    end_lon = float(end["lon"])
+                    end_name = end.get("display_name", "End")
+                    self.add_marker(end_lat, end_lon, f"End: {end_name}")
+                    print(
+                        f"[MapWidget] Added end marker at {end_lat}, {end_lon}"
+                    )
+
+                # Center map to show both points (use start point for centering)
+                if "lat" in start and "lon" in start:
+                    lat = float(start["lat"])
+                    lon = float(start["lon"])
+                    self.center_map(lat, lon, zoom=6)  # Zoom out to show route
+                    print(
+                        f"[MapWidget] Centered map on start location: {lat}, {lon}"
+                    )
+
+                # Show distance info if available
+                if "distance_miles" in map_tool_result:
+                    distance = map_tool_result["distance_miles"]
+                    print(f"[MapWidget] Route distance: {distance} miles")
+
+                return
+
+            # Handle simple location search results (existing logic)
+            lat = (
+                float(map_tool_result.get("lat"))
+                if map_tool_result.get("lat")
+                else None
+            )
+            lon = (
+                float(map_tool_result.get("lon"))
+                if map_tool_result.get("lon")
+                else None
+            )
+            print("LAT", lat, "LON", lon)
+            display_name = map_tool_result.get("display_name")
+            boundingbox = map_tool_result.get("boundingbox")
+
+            # Show marker at city center
+            if lat is not None and lon is not None:
+                # Clear previous markers for single location search
+                self.clear_markers()
+                marker_label = display_name or f"Location: {lat}, {lon}"
+                self.add_marker(lat, lon, marker_label)
+                self.center_map(lat, lon, zoom=11)
+
+            # Draw bounding box if available
+            if boundingbox and len(boundingbox) == 4:
+                try:
+                    south = float(boundingbox[0])
+                    north = float(boundingbox[1])
+                    west = float(boundingbox[2])
+                    east = float(boundingbox[3])
+                    # Draw rectangle (implement JS call or overlay as needed)
+                    js = f"if (window.browserAPI) {{ window.browserAPI._triggerEvent('map-command', {{command: 'drawBoundingBox', data: {{south: {south}, north: {north}, west: {west}, east: {east}}}}}); }}"
+                    self.ui.webEngineView.page().runJavaScript(js)
+                except Exception as e:
+                    print(f"[MapWidget] Error drawing bounding box: {e}")
+            return
+        # ...existing code for search_type branching...
+
+    def _on_llm_signal(self, data: Dict):
+        self._handle_map_search_result(data.get("result", {}))
+
+    def geocode_location(self, query: str):
+        """Geocode a location using Nominatim."""
+        from airunner.settings import AIRUNNER_NOMINATIM_URL
+        import requests
+
+        url = (
+            f"{AIRUNNER_NOMINATIM_URL.rstrip('/')}/search"
+            if AIRUNNER_NOMINATIM_URL
+            else "https://nominatim.openstreetmap.org/search"
+        )
+        params = {"q": query, "format": "json", "limit": 1}
+        try:
+            resp = requests.get(url, params=params, timeout=5)
+            resp.raise_for_status()
+            results = resp.json()
+            if results:
+                return float(results[0]["lat"]), float(results[0]["lon"])
+        except Exception as e:
+            print(f"Geocoding error: {e}")
+        return None, None
+
+    def search_poi(self, poi_type: str, lat: float = None, lon: float = None):
+        """Search for POIs using Nominatim (amenity/tourism)."""
+        from airunner.settings import AIRUNNER_NOMINATIM_URL
+        import requests
+
+        url = (
+            f"{AIRUNNER_NOMINATIM_URL.rstrip('/')}/search"
+            if AIRUNNER_NOMINATIM_URL
+            else "https://nominatim.openstreetmap.org/search"
+        )
+        params = {"q": poi_type, "format": "json", "limit": 10}
+        if lat is not None and lon is not None:
+            params["viewbox"] = f"{lon-0.05},{lat-0.05},{lon+0.05},{lat+0.05}"
+            params["bounded"] = 1
+        try:
+            resp = requests.get(url, params=params, timeout=5)
+            resp.raise_for_status()
+            results = resp.json()
+            return [
+                {"lat": float(r["lat"]), "lon": float(r["lon"])}
+                for r in results
+            ]
+        except Exception as e:
+            print(f"POI search error: {e}")
+        return []
 
     @Slot()
     def on_searchButton_clicked(self):

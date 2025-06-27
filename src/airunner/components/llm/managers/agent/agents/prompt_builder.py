@@ -86,7 +86,12 @@ class PromptBuilder:
                 prompt_parts.append("------")
 
         if include_system_instructions:
-            if (
+            if self.agent.action is LLMActionType.MAP_TOOL:
+                mapping_instructions = "You are an LLM agent that will perform map-based actions such as geocoding, POI search, and directions. You can add markers to the map and zoom in/out. Always return results in a structured format."
+                prompt_parts.append(
+                    f"Always follow these mapping instructions:\n{mapping_instructions}"
+                )
+            elif (
                 chatbot.use_system_instructions
                 and chatbot.system_instructions
                 and chatbot.system_instructions != ""
@@ -176,6 +181,36 @@ class PromptBuilder:
 
         # Remove curly-brace replacements, as all variables are now f-strings
         return prompt_str
+
+    @classmethod
+    def map_system_prompt(cls, agent) -> str:
+        """
+        Return the system prompt for the agent in map mode.
+        Args:
+            agent (BaseAgent): The agent instance for which to build the prompt.
+        Returns:
+            str: The system prompt.
+        """
+        # Call _build with all relevant flags for a full map prompt
+        return cls(agent)._build(
+            include_user_bot_intro=False,
+            include_rules=False,
+            include_backstory=False,
+            include_system_instructions=True,
+            include_guardrails=False,
+            include_context_header=False,
+            include_date_time=False,
+            include_personality=False,
+            include_mood=False,
+            include_operating_system=False,
+            include_speakers=False,
+            include_weather=False,
+            include_conversation_summary=False,
+            include_conversation_info_header=False,
+            include_conversation_timestamp=False,
+            include_browser_content=False,
+            include_language_instruction=False,
+        )
 
     @classmethod
     def browser_system_prompt(cls, agent) -> str:
@@ -297,6 +332,11 @@ class PromptBuilder:
             return cls.chat_system_prompt(agent)
         elif action is LLMActionType.BROWSER:
             return cls.browser_system_prompt(agent)
+        elif action is LLMActionType.MAP_TOOL:
+            return cls.map_system_prompt(agent)  # Use chat prompt for map tool
+        elif action is LLMActionType.NONE:
+            # Fallback to chat prompt when action is NONE
+            return cls.chat_system_prompt(agent)
         else:
             raise ValueError(
                 f"Unsupported action type for system prompt: {action}"
