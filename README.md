@@ -492,3 +492,35 @@ For additional details, see the [Wiki](https://github.com/Capsize-Games/airunner
 Download US zipcode data from [census.gov](https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_zcta_national.zip) and extract the contents to your project directory in a folder called `maps` (e.g. `~/.local/share/airunner/map/`).
 
 This data is used to look up latitude and longitude coordinates for US zipcodes, which is essential for the map and weather features in AI Runner. The data is automatically loaded when the application starts. You can replace the default data with your own if you have a different source.
+
+
+## Nominatim Geocoding API
+
+```bash
+NOMINATIM_PATH=/some/path
+
+sudo mkdir -p $NOMINATIM_PATH/nominatim_data
+sudo mkdir -p $NOMINATIM_PATH/nominatim_flatnode
+
+docker run -it \
+    -e PBF_URL=https://download.geofabrik.de/north-america/us-latest.osm.pbf \
+    -e REPLICATION_URL=https://download.geofabrik.de/north-america/us-updates/ \
+    -p 8080:8080 \
+    -v nominatim-data:/var/lib/postgresql/data \
+    --shm-size=2g \
+    --name nominatim \
+    mediagis/nominatim:5.1
+```
+
+- **Start existing container:**
+  ```bash
+  docker start nominatim
+  ```
+- **With logs:**
+  ```bash
+  docker start nominatim && docker logs -f nominatim
+  ```
+- **Stop existing container:**
+  ```bash
+  docker stop nominatim
+  ```

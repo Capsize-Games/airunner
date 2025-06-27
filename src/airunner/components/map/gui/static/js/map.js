@@ -4,15 +4,24 @@
 class MapAPI {
     constructor(mapInstance) {
         this.map = mapInstance;
-        this.marker = null;
+        this.markers = [];  // Changed to array to support multiple markers
     }
 
-    addMarker(lat, lon) {
-        if (this.marker) {
-            this.map.removeLayer(this.marker);
+    addMarker(lat, lon, label = null) {
+        const marker = L.marker([lat, lon]).addTo(this.map);
+        if (label) {
+            marker.bindPopup(label);
         }
-        this.marker = L.marker([lat, lon]).addTo(this.map);
+        this.markers.push(marker);
         return `Marker added at ${lat}, ${lon}`;
+    }
+
+    clearMarkers() {
+        this.markers.forEach(marker => {
+            this.map.removeLayer(marker);
+        });
+        this.markers = [];
+        return "All markers cleared";
     }
 
     moveMap(lat, lon, zoom = 13) {
@@ -24,7 +33,8 @@ class MapAPI {
         return JSON.stringify({
             mapCenter: this.map ? this.map.getCenter() : null,
             mapZoom: this.map ? this.map.getZoom() : null,
-            markerPosition: this.marker ? this.marker.getLatLng() : null
+            markerCount: this.markers.length,
+            markerPositions: this.markers.map(m => m.getLatLng())
         });
     }
 }
@@ -50,9 +60,11 @@ document.addEventListener('DOMContentLoaded', function () {
 function handleMapCommand(command, data) {
     if (!window.mapAPI) return;
     if (command === 'addMarker') {
-        window.mapAPI.addMarker(data.lat, data.lon);
+        window.mapAPI.addMarker(data.lat, data.lon, data.label);
     } else if (command === 'moveMap') {
         window.mapAPI.moveMap(data.lat, data.lon, data.zoom);
+    } else if (command === 'clearMarkers') {
+        window.mapAPI.clearMarkers();
     }
 }
 

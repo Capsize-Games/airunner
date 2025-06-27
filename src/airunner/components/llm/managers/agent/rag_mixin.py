@@ -25,12 +25,17 @@ from airunner.components.llm.data.conversation import Conversation
 from airunner.components.news.data.news import Article
 from airunner.enums import EngineResponseCode
 from airunner.components.llm.managers.agent import HtmlFileReader
-from airunner.components.llm.managers.agent.chat_engine import RefreshContextChatEngine
+from airunner.components.llm.managers.agent.chat_engine import (
+    RefreshContextChatEngine,
+)
 from airunner.components.llm.managers.agent.tools import RAGEngineTool
 from airunner.settings import (
     AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
     AIRUNNER_LOCAL_FILES_ONLY,
     CUDA_ERROR,
+)
+from airunner.components.zimreader.llamaindex_zim_reader import (
+    LlamaIndexZIMReader,
 )
 
 
@@ -196,6 +201,7 @@ class RAGMixin:
                         ".html": self.html_reader,
                         ".htm": self.html_reader,
                         ".md": self.markdown_reader,
+                        ".zim": LlamaIndexZIMReader(),
                     },
                     exclude_hidden=False,
                 )
