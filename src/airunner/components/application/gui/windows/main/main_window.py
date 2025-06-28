@@ -51,6 +51,9 @@ from PySide6.QtGui import QIcon
 
 from bs4 import BeautifulSoup
 
+from airunner.components.voice_visualizer.gui.widgets.voice_visualizer_component import (
+    VoiceVisualizerComponent,
+)
 from airunner.settings import (
     AIRUNNER_STATUS_ERROR_COLOR,
     AIRUNNER_STATUS_NORMAL_COLOR_LIGHT,
@@ -188,6 +191,7 @@ class MainWindow(
         ("home", "home_button"),
         ("map", "map_button"),
         ("sun", "weather_button"),
+        ("radio", "visualizer_button"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0
@@ -682,6 +686,12 @@ class MainWindow(
     @Slot(bool)
     def on_home_button_toggled(self, active: bool):
         self._set_current_button_and_tab("home_button", self.ui.home_tab)
+
+    @Slot(bool)
+    def on_visualizer_button_toggled(self, val: bool):
+        self._set_current_button_and_tab(
+            "visualizer_button", self.ui.visualizer_tab
+        )
 
     @Slot(bool)
     def on_art_editor_button_toggled(self, val: bool):
