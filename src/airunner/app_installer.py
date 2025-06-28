@@ -4,6 +4,7 @@
 ####################################################################################################
 import sys
 import signal
+import os
 
 from PySide6.QtCore import QObject
 from PySide6.QtGui import Qt
@@ -16,7 +17,9 @@ from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.downloader.gui.windows.download_wizard.download_wizard_window import (
     DownloadWizardWindow,
 )
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
 
 
 class AppInstaller(QObject, SettingsMixin, MediatorMixin):
@@ -64,6 +67,37 @@ class AppInstaller(QObject, SettingsMixin, MediatorMixin):
         :return:
         """
         signal.signal(signal.SIGINT, self.signal_handler)
+
+        # Set up OpenGL environment before Qt initialization
+        os.environ["QT_OPENGL"] = "desktop"
+
+        # Let Qt choose the appropriate platform (don't force X11)
+        # Only set GLX integration for X11 sessions
+        if os.environ.get("XDG_SESSION_TYPE") == "x11" or os.environ.get(
+            "DISPLAY"
+        ):
+            os.environ["QT_XCB_GL_INTEGRATION"] = (
+                "xcb_glx"  # Enable GLX for X11
+            )
+            print("X11 session detected - enabling GLX")
+        elif os.environ.get("WAYLAND_DISPLAY"):
+            print("Wayland session detected - using default EGL")
+
+        os.environ["LIBGL_ALWAYS_SOFTWARE"] = (
+            "0"  # Ensure hardware acceleration
+        )
+
+        # Set up OpenGL surface format before creating QApplication
+        from PySide6.QtGui import QSurfaceFormat
+
+        fmt = QSurfaceFormat()
+        fmt.setVersion(3, 3)
+        fmt.setProfile(QSurfaceFormat.OpenGLContextProfile.CoreProfile)
+        fmt.setSwapBehavior(QSurfaceFormat.SwapBehavior.DoubleBuffer)
+        fmt.setDepthBufferSize(24)
+        fmt.setStencilBufferSize(8)
+        QSurfaceFormat.setDefaultFormat(fmt)
+
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
         self.app = QApplication.instance()
         if self.app is None:
