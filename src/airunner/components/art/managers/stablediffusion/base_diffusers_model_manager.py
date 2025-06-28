@@ -43,7 +43,9 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from transformers import (
     CLIPFeatureExtractor,
 )
-from airunner.components.application.managers.base_model_manager import BaseModelManager
+from airunner.components.application.managers.base_model_manager import (
+    BaseModelManager,
+)
 from airunner.enums import (
     GeneratorSection,
     ModelStatus,
@@ -53,7 +55,10 @@ from airunner.enums import (
     ModelAction,
     ImagePreset,
 )
-from airunner.components.application.exceptions import PipeNotLoadedException, InterruptedException
+from airunner.components.application.exceptions import (
+    PipeNotLoadedException,
+    InterruptedException,
+)
 from airunner.settings import (
     AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG,
     AIRUNNER_LOCAL_FILES_ONLY,
@@ -308,11 +313,9 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.logger.debug(
                 f"Loading controlnet model from database {self.controlnet_settings.controlnet} {self.version}"
             )
-            self._controlnet_model = (
-                ControlnetModel.objects.filter_by_first(
-                    display_name=self.controlnet_settings.controlnet,
-                    version=self.version,
-                )
+            self._controlnet_model = ControlnetModel.objects.filter_by_first(
+                display_name=self.controlnet_settings.controlnet,
+                version=self.version,
             )
         return self._controlnet_model
 
@@ -345,6 +348,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         operation_type = self.pipeline
         if self.is_img2img:
             operation_type = "img2img"
+        elif self.is_inpaint:
+            operation_type = "inpaint"
         elif self.is_outpaint:
             operation_type = "outpaint"
         if self.controlnet_enabled:
@@ -384,6 +389,13 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def section(self) -> GeneratorSection:
+        # Check if we have an inpaint model selected, prioritize that
+        if (
+            self.generator_settings.pipeline_action
+            == GeneratorSection.INPAINT.value
+        ):
+            return GeneratorSection.INPAINT
+
         section = GeneratorSection.TXT2IMG
         if (
             self.img2img_image_cached is not None
@@ -480,6 +492,10 @@ class BaseDiffusersModelManager(BaseModelManager):
         return self.section is GeneratorSection.OUTPAINT
 
     @property
+    def is_inpaint(self) -> bool:
+        return self.section is GeneratorSection.INPAINT
+
+    @property
     def safety_checker_is_loading(self):
         return (
             self.model_status[ModelType.SAFETY_CHECKER] is ModelStatus.LOADING
@@ -515,9 +531,11 @@ class BaseDiffusersModelManager(BaseModelManager):
         return {
             "txt2img": StableDiffusionPipeline,
             "img2img": StableDiffusionImg2ImgPipeline,
+            "inpaint": StableDiffusionInpaintPipeline,
             "outpaint": StableDiffusionInpaintPipeline,
             "txt2img_controlnet": StableDiffusionControlNetPipeline,
             "img2img_controlnet": StableDiffusionControlNetImg2ImgPipeline,
+            "inpaint_controlnet": StableDiffusionControlNetInpaintPipeline,
             "outpaint_controlnet": StableDiffusionControlNetInpaintPipeline,
         }
 
@@ -996,10 +1014,16 @@ class BaseDiffusersModelManager(BaseModelManager):
                 metadata_dict["action"] = "txt2img"
             elif self.is_img2img:
                 metadata_dict["action"] = "img2img"
-            elif self.is_outpaint:
+            elif self.is_inpaint:
                 metadata_dict.update(
                     {
                         "action": "inpaint",
+                    }
+                )
+            elif self.is_outpaint:
+                metadata_dict.update(
+                    {
+                        "action": "outpaint",
                         "mask_blur": self.mask_blur,
                     }
                 )
@@ -1365,6 +1389,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             EnvironmentError,
             torch.OutOfMemoryError,
             ValueError,
+            diffusers.loaders.single_file_utils.SingleFileComponentError,
         ) as e:
             code = EngineResponseCode.ERROR
             error_message = f"Failed to load model from {self.model_path}: {e}"
@@ -1938,6 +1963,13 @@ class BaseDiffusersModelManager(BaseModelManager):
                 data["num_inference_steps"] = (
                     AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG
                 )
+        elif self.is_inpaint:
+            image = self.img2img_image_cached or self.drawing_pad_image
+            mask = self.drawing_pad_mask
+            if not image:
+                raise ValueError("No image provided for inpainting")
+            if not mask:
+                raise ValueError("No mask provided for inpainting")
         elif self.is_outpaint:
             image = self.outpaint_image
             if not image:
@@ -1992,11 +2024,12 @@ class BaseDiffusersModelManager(BaseModelManager):
             image = self._resize_image(image, width, height)
             data["image"] = image
 
-        if mask is not None and self.is_outpaint:
+        if mask is not None and (self.is_outpaint or self.is_inpaint):
             mask = self._resize_image(mask, width, height)
-            mask = self._pipe.mask_processor.blur(
-                mask, blur_factor=self.mask_blur
-            )
+            if self.is_outpaint:
+                mask = self._pipe.mask_processor.blur(
+                    mask, blur_factor=self.mask_blur
+                )
             data["mask_image"] = mask
 
         if self.controlnet_enabled:
@@ -2009,6 +2042,12 @@ class BaseDiffusersModelManager(BaseModelManager):
                     "guidance_scale": self.image_request.scale,
                     "controlnet_conditioning_scale": self.controlnet_conditioning_scale
                     / 100.0,
+                }
+            )
+        elif self.is_inpaint:
+            data.update(
+                {
+                    "strength": self.outpaint_settings.strength / 100.0,
                 }
             )
         elif self.is_outpaint:

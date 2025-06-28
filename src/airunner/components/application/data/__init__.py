@@ -1,10 +1,14 @@
 from airunner.components.settings.data.voice_settings import VoiceSettings
 from airunner.components.settings.data.sound_settings import SoundSettings
-from airunner.components.tts.data.models.openvoice_settings import OpenVoiceSettings
+from airunner.components.tts.data.models.openvoice_settings import (
+    OpenVoiceSettings,
+)
 from airunner.components.art.data.active_grid_settings import (
     ActiveGridSettings,
 )
-from airunner.components.settings.data.application_settings import ApplicationSettings
+from airunner.components.settings.data.application_settings import (
+    ApplicationSettings,
+)
 from airunner.components.art.data.controlnet_settings import ControlnetSettings
 from airunner.components.art.data.image_to_image_settings import (
     ImageToImageSettings,
@@ -14,8 +18,12 @@ from airunner.components.llm.data.chatstore import Chatstore
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.components.art.data.generator_settings import GeneratorSettings
-from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings
-from airunner.components.tts.data.models.speech_t5_settings import SpeechT5Settings
+from airunner.components.llm.data.llm_generator_settings import (
+    LLMGeneratorSettings,
+)
+from airunner.components.tts.data.models.speech_t5_settings import (
+    SpeechT5Settings,
+)
 from airunner.components.tts.data.models.espeak_settings import EspeakSettings
 from airunner.components.stt.data.stt_settings import STTSettings
 from airunner.components.art.data.schedulers import Schedulers
@@ -44,11 +52,18 @@ from airunner.components.stt.data.whisper_settings import WhisperSettings
 from airunner.components.news.data.news import RSSFeed, Category, Article
 from airunner.components.nodegraph.data.workflow import Workflow
 from airunner.components.nodegraph.data.workflow_node import WorkflowNode
-from airunner.components.nodegraph.data.workflow_connection import WorkflowConnection
+from airunner.components.nodegraph.data.workflow_connection import (
+    WorkflowConnection,
+)
 from airunner.components.llm.data.rag_settings import RAGSettings
-from airunner.components.settings.data.language_settings import LanguageSettings
-from airunner.components.settings.data.airunner_settings import AIRunnerSettings
+from airunner.components.settings.data.language_settings import (
+    LanguageSettings,
+)
+from airunner.components.settings.data.airunner_settings import (
+    AIRunnerSettings,
+)
 from airunner.components.documents.data.models.document import Document
+from airunner.components.documents.data.models.zimfile import ZimFile
 
 
 classes = [
@@ -101,6 +116,7 @@ classes = [
     AIRunnerSettings,
     SoundSettings,
     Document,
+    ZimFile,
 ]
 
 class_names = []
