@@ -520,3 +520,11 @@ docker run -it \
   ```bash
   docker stop nominatim
   ```
+
+The server will take hours to setup if you are using the full US map. You can use a smaller region if you want to speed up the process.
+
+After the server is running, you can access it at `http://localhost:8080/`. Be sure to set the `AIRUNNER_NOMINATIM_URL` environment variable to point to your local Nominatim instance:
+
+```bash
+export AIRUNNER_NOMINATIM_URL=http://localhost:8080/
+```
