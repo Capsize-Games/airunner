@@ -1,17 +1,23 @@
-from airunner.components.llm.workers.llm_generate_worker import LLMGenerateWorker
-from airunner.components.art.workers.mask_generator_worker import MaskGeneratorWorker
+from airunner.components.llm.workers.llm_generate_worker import (
+    LLMGenerateWorker,
+)
+from airunner.components.art.workers.mask_generator_worker import (
+    MaskGeneratorWorker,
+)
 from airunner.components.art.workers.sd_worker import SDWorker
 
-try:
-    from airunner.components.stt.workers.audio_capture_worker import AudioCaptureWorker
-    from airunner.components.stt.workers.audio_processor_worker import AudioProcessorWorker
-    from airunner.components.tts.workers.tts_generator_worker import TTSGeneratorWorker
-    from airunner.components.tts.workers.tts_vocalizer_worker import TTSVocalizerWorker
-except OSError:
-    AudioCaptureWorker = None
-    AudioProcessorWorker = None
-    TTSGeneratorWorker = None
-    TTSVocalizerWorker = None
+from airunner.components.stt.workers.audio_capture_worker import (
+    AudioCaptureWorker,
+)
+from airunner.components.stt.workers.audio_processor_worker import (
+    AudioProcessorWorker,
+)
+from airunner.components.tts.workers.tts_generator_worker import (
+    TTSGeneratorWorker,
+)
+from airunner.components.tts.workers.tts_vocalizer_worker import (
+    TTSVocalizerWorker,
+)
 
 from airunner.utils.application.create_worker import create_worker
 
@@ -33,16 +39,12 @@ class WorkerManager:
         self.logger.debug("Initializing worker manager...")
         self._mask_generator_worker = create_worker(MaskGeneratorWorker)
         self._sd_worker = create_worker(SDWorker)
-        if AudioCaptureWorker is not None:
-            self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-        if AudioProcessorWorker is not None:
-            self._stt_audio_processor_worker = create_worker(
-                AudioProcessorWorker
-            )
-        if TTSGeneratorWorker is not None:
-            self._tts_generator_worker = create_worker(TTSGeneratorWorker)
-        if TTSVocalizerWorker is not None:
-            self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
+        self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
+        self._stt_audio_processor_worker = create_worker(
+            AudioProcessorWorker
+        )
+        self._tts_generator_worker = create_worker(TTSGeneratorWorker)
+        self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
         self._llm_generate_worker = create_worker(LLMGenerateWorker)
 
     @property

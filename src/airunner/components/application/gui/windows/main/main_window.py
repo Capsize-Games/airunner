@@ -13,6 +13,9 @@ from airunner.components.application.gui.widgets.stats.stats_widget import (
 from airunner.components.application.gui.widgets.status.status_widget import (
     StatusWidget,
 )
+from airunner.components.application.gui.windows.main.download_model_dialog import (
+    show_download_model_dialog,
+)
 from airunner.components.art.gui.windows.prompt_browser.prompt_browser import (
     PromptBrowser,
 )
@@ -41,7 +44,6 @@ from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QMessageBox,
-    QCheckBox,
     QInputDialog,
     QMenu,
 )
@@ -75,7 +77,6 @@ from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.app_installer import AppInstaller
 from airunner.enums import (
     SignalCode,
-    CanvasToolName,
     GeneratorSection,
     LLMActionType,
     ModelType,
@@ -113,6 +114,9 @@ from airunner.components.update.gui.windows.update.update_window import (
 )
 from airunner.components.icons.managers.icon_manager import IconManager
 from airunner.components.plugins.plugin_loader import PluginLoader
+from airunner.components.application.gui.windows.main.nsfw_warning_dialog import (
+    show_nsfw_warning_dialog,
+)
 
 
 class MainWindow(
@@ -405,6 +409,19 @@ class MainWindow(
         self.api.art.canvas.clear()
 
     @Slot()
+    def on_actionCopy_triggered(self):
+        if (
+            not self.api
+            or not hasattr(self.api, "art")
+            or not hasattr(self.api.art, "canvas")
+        ):
+            self.logger.warning(
+                "MainWindow: self.api.art.canvas is missing. Cannot copy image."
+            )
+            return
+        self.api.art.canvas.copy_image()
+
+    @Slot()
     def on_actionClear_all_prompts_triggered(self):
         self.clear_all_prompts()
 
@@ -414,6 +431,12 @@ class MainWindow(
         if path == "":
             path = AIRUNNER_BASE_PATH
         show_path(path)
+
+    @Slot()
+    def on_actionDownload_Model_triggered(self):
+        show_download_model_dialog(
+            self, self.path_settings, self.application_settings
+        )
 
     @Slot()
     def action_show_model_path_txt2img(self):
@@ -1107,6 +1130,7 @@ class MainWindow(
         )
 
     def on_toggle_tts(self, data: Dict = None, val=None):
+        print("ON TOGGLE TTS")
         if val is None:
             val = data.get(
                 "enabled", not self.application_settings.tts_enabled
@@ -1140,26 +1164,10 @@ class MainWindow(
         if application_setting:
             self.update_application_settings(application_setting, val)
         if self._model_status[model_type] is not ModelStatus.LOADING:
-            if model_type is ModelType.TTS:
-                if val:
-                    if not self.api or not hasattr(self.api, "tts"):
-                        self.logger.warning(
-                            "MainWindow: self.api.tts is missing. Cannot start TTS."
-                        )
-                        return
-                    self.api.tts.start()
-                else:
-                    if not self.api or not hasattr(self.api, "tts"):
-                        self.logger.warning(
-                            "MainWindow: self.api.tts is missing. Cannot stop TTS."
-                        )
-                        return
-                    self.api.tts.stop()
+            if val:
+                self.emit_signal(load_signal, data)
             else:
-                if val:
-                    self.emit_signal(load_signal, data)
-                else:
-                    self.emit_signal(unload_signal, data)
+                self.emit_signal(unload_signal, data)
 
     def save_state(self):
         if self.quitting:
@@ -1289,41 +1297,11 @@ class MainWindow(
 
     def show_nsfw_warning_popup(self):
         if self.application_settings.show_nsfw_warning:
-            """
-            Display a popup window which asks the user if they are sure they want to disable the NSFW filter
-            along with a checkbox that allows the user to disable the warning in the future.
-            """
-            msg_box = QMessageBox()
-            msg_box.setWindowTitle("Disable Safety Checker Warning")
-            msg_box.setText(
-                (
-                    "WARNING\n\n"
-                    "You are attempting to disable the safety checker (NSFW filter).\n"
-                    "It is strongly recommended that you keep this enabled at all times.\n"
-                    "The Safety Checker prevents potentially harmful content from being displayed.\n"
-                    "Only disable it if you are sure the Image model you are using is not capable of generating "
-                    "harmful content.\n"
-                    "Disabling the safety checker is intended as a last resort for continual false positives and as a "
-                    "research feature.\n"
-                    "\n\n"
-                    "Are you sure you want to disable the filter?"
-                )
+            confirmed, do_not_show_again = show_nsfw_warning_dialog(
+                self, self.application_settings.show_nsfw_warning
             )
-            msg_box.setStandardButtons(
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            msg_box.setDefaultButton(QMessageBox.StandardButton.No)
-
-            # Create a QCheckBox
-            checkbox = QCheckBox("Do not show this warning again")
-            # Add the checkbox to the message box
-            msg_box.setCheckBox(checkbox)
-
-            result = msg_box.exec()
-
-            if result == QMessageBox.StandardButton.Yes:
-                self._disable_nsfw_filter(not checkbox.isChecked())
-
+            if confirmed:
+                self._disable_nsfw_filter(not do_not_show_again)
             self.ui.actionSafety_Checker.blockSignals(True)
             self.ui.actionSafety_Checker.setChecked(
                 self.application_settings.nsfw_filter

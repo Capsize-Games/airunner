@@ -255,6 +255,8 @@ class SignalCode(Enum):
     FILE_EXPLORER_OPEN_FILE = "open_file_signal"
     INDEX_DOCUMENT = "index_document_signal"
     DOCUMENT_INDEXED = "document_indexed_signal"
+    MAP_SEARCH_REQUEST_SIGNAL = "map_search_request_signal"
+    MAP_SEARCH_RESULT_SIGNAL = "map_search_result_signal"
 
 
 class EngineResponseCode(Enum):
@@ -350,6 +352,7 @@ class LLMActionType(Enum):
 
     FILE_INTERACTION = "file_interaction"
     WORKFLOW_INTERACTION = "workflow_interaction"
+    MAP_TOOL = "map_tool"
 
 
 class CanvasToolName(Enum):

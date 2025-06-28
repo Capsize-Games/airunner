@@ -503,7 +503,9 @@ class SettingsMixin:
         self.__settings_updated()
 
     def update_ai_model(self, model: AIModels):
-        ai_model = AIModels.objects.filter_by_first(
+        print(f"DEBUG: update_ai_model called for model: {model.name}")
+        # Check if model exists in DB
+        existing_dataclass = AIModels.objects.filter_by_first(
             name=model.name,
             path=model.path,
             branch=model.branch,
@@ -514,13 +516,53 @@ class SettingsMixin:
             model_type=model.model_type,
             is_default=model.is_default,
         )
-        if ai_model:
-            for key in model.__dict__.keys():
-                if key != "_sa_instance_state":
-                    setattr(ai_model, key, getattr(model, key))
-            ai_model.save()
+        print(
+            f"DEBUG: existing_dataclass found: {existing_dataclass is not None}"
+        )
+
+        if existing_dataclass:
+            # Get the actual ORM instance using the primary key from the dataclass
+            with session_scope() as session:
+                orm_instance = (
+                    session.query(AIModels)
+                    .filter(AIModels.id == existing_dataclass.id)
+                    .first()
+                )
+                if orm_instance:
+                    # Update the ORM instance
+                    for key in model.__dict__.keys():
+                        if key not in ("_sa_instance_state", "id"):
+                            setattr(orm_instance, key, getattr(model, key))
+                    session.commit()
+                else:
+                    # Create new if we can't find the ORM instance
+                    new_model = AIModels(
+                        name=model.name,
+                        path=model.path,
+                        branch=model.branch,
+                        version=model.version,
+                        category=model.category,
+                        pipeline_action=model.pipeline_action,
+                        enabled=model.enabled,
+                        model_type=model.model_type,
+                        is_default=model.is_default,
+                    )
+                    session.add(new_model)
+                    session.commit()
         else:
-            model.save()
+            # Create a new SQLAlchemy model instance
+            new_model = AIModels(
+                name=model.name,
+                path=model.path,
+                branch=model.branch,
+                version=model.version,
+                category=model.category,
+                pipeline_action=model.pipeline_action,
+                enabled=model.enabled,
+                model_type=model.model_type,
+                is_default=model.is_default,
+            )
+            new_model.save()
         self.__settings_updated()
 
     def update_generator_settings(self, column_name, val):
@@ -733,7 +775,17 @@ class SettingsMixin:
 
     @staticmethod
     def load_ai_models() -> List[Type[AIModels]]:
-        return AIModels.objects.all()
+        models = AIModels.objects.all()
+        print(f"DEBUG: load_ai_models found {len(models)} models in database")
+        for model in models[:5]:  # Print first 5 models
+            print(f"DEBUG: Model in DB: {model.name}")
+            print(f"  - path: {model.path}")
+            print(f"  - category: {model.category}")
+            print(f"  - pipeline_action: {model.pipeline_action}")
+            print(f"  - version: {model.version}")
+            print(f"  - enabled: {model.enabled}")
+            print(f"  - is_default: {model.is_default}")
+        return models
 
     @staticmethod
     def load_chatbots() -> List[Type[Chatbot]]:
@@ -810,7 +862,19 @@ class SettingsMixin:
                     setattr(new_lora, key, getattr(lora, key))
             new_lora.save()
         else:
-            lora.save()
+            # Create a new SQLAlchemy model instance
+            new_lora_instance = Lora(
+                name=lora.name,
+                path=getattr(lora, "path", ""),
+                branch=getattr(lora, "branch", ""),
+                version=getattr(lora, "version", ""),
+                category=getattr(lora, "category", ""),
+                pipeline_action=getattr(lora, "pipeline_action", ""),
+                enabled=getattr(lora, "enabled", True),
+                model_type=getattr(lora, "model_type", ""),
+                is_default=getattr(lora, "is_default", False),
+            )
+            new_lora_instance.save()
         self.__settings_updated()
 
     def update_loras(self, loras: List[Lora]):
@@ -822,7 +886,19 @@ class SettingsMixin:
                         setattr(new_lora, key, getattr(lora, key))
                 new_lora.save()
             else:
-                lora.save()
+                # Create a new SQLAlchemy model instance
+                new_lora_instance = Lora(
+                    name=lora.name,
+                    path=getattr(lora, "path", ""),
+                    branch=getattr(lora, "branch", ""),
+                    version=getattr(lora, "version", ""),
+                    category=getattr(lora, "category", ""),
+                    pipeline_action=getattr(lora, "pipeline_action", ""),
+                    enabled=getattr(lora, "enabled", True),
+                    model_type=getattr(lora, "model_type", ""),
+                    is_default=getattr(lora, "is_default", False),
+                )
+                new_lora_instance.save()
         self.__settings_updated()
 
     @staticmethod
@@ -868,7 +944,19 @@ class SettingsMixin:
                         setattr(new_embedding, key, getattr(embedding, key))
                 new_embedding.save()
             else:
-                embedding.save()
+                # Create a new SQLAlchemy model instance
+                new_embedding_instance = Embedding(
+                    name=embedding.name,
+                    path=embedding.path,
+                    branch=embedding.branch,
+                    version=embedding.version,
+                    category=embedding.category,
+                    pipeline_action=embedding.pipeline_action,
+                    enabled=embedding.enabled,
+                    model_type=embedding.model_type,
+                    is_default=embedding.is_default,
+                )
+                new_embedding_instance.save()
         self.__settings_updated()
 
     @staticmethod

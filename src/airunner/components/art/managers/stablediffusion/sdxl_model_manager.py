@@ -17,7 +17,9 @@ from airunner.components.art.managers.stablediffusion.stable_diffusion_model_man
     StableDiffusionModelManager,
 )
 from airunner.utils.memory import clear_memory
-from airunner.components.application.managers.base_model_manager import ModelManagerInterface
+from airunner.components.application.managers.base_model_manager import (
+    ModelManagerInterface,
+)
 
 
 class BaseDiffusersModelManager:
@@ -109,11 +111,11 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
         if self.is_sd_xl_turbo:
             config_path = os.path.expanduser(
                 os.path.join(
-                    self.path_settings_cached.base_path,
+                    self.path_settings.base_path,
                     "art",
                     "models",
                     StableDiffusionVersion.SDXL1_0.value,
-                    self.image_request.pipeline_action,
+                    self.generator_settings.pipeline_action,
                 )
             )
         return config_path
@@ -125,9 +127,11 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
         return {
             "txt2img": StableDiffusionXLPipeline,
             "img2img": StableDiffusionXLImg2ImgPipeline,
+            "inpaint": StableDiffusionXLInpaintPipeline,
             "outpaint": StableDiffusionXLInpaintPipeline,
             "txt2img_controlnet": StableDiffusionXLControlNetPipeline,
             "img2img_controlnet": StableDiffusionXLControlNetImg2ImgPipeline,
+            "inpaint_controlnet": StableDiffusionXLControlNetInpaintPipeline,
             "outpaint_controlnet": StableDiffusionXLControlNetInpaintPipeline,
         }
 

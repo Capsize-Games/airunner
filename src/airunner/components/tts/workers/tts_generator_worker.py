@@ -2,12 +2,16 @@ import queue
 import re
 from typing import Optional, Type, Dict
 
-from airunner.components.tts.managers.espeak_model_manager import \
-    EspeakModelManager
+from airunner.components.tts.managers.espeak_model_manager import (
+    EspeakModelManager,
+)
 from airunner.components.tts.managers.exceptions import OpenVoiceError
-from airunner.components.tts.managers.openvoice_model_manager import \
-    OpenVoiceModelManager
-from airunner.components.tts.managers.speecht5_model_manager import SpeechT5ModelManager
+from airunner.components.tts.managers.openvoice_model_manager import (
+    OpenVoiceModelManager,
+)
+from airunner.components.tts.managers.speecht5_model_manager import (
+    SpeechT5ModelManager,
+)
 from airunner.settings import AIRUNNER_TTS_MODEL_TYPE
 from airunner.enums import (
     SignalCode,
@@ -40,7 +44,7 @@ class TTSGeneratorWorker(Worker):
         self.play_queue_started = False
         self.do_interrupt = False
         self._current_model: Optional[str] = None
-        self.signal_handlers = {
+        self._signal_handlers = {
             SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
             SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL: self.on_unblock_tts_generator_signal,
             SignalCode.TTS_ENABLE_SIGNAL: self.on_enable_tts_signal,
@@ -109,6 +113,7 @@ class TTSGeneratorWorker(Worker):
                 callback()
 
     def on_enable_tts_signal(self):
+        print("ON ENABLE TTS SIGNAL")
         self._load_tts()
 
     def on_disable_tts_signal(self):
@@ -244,15 +249,18 @@ class TTSGeneratorWorker(Worker):
             self.on_interrupt_process_signal()
 
     def _load_tts(self):
+        print("LOAD TTS TRIGGERED")
         if not self.tts_enabled:
             self.logger.info("TTS is disabled. Skipping load.")
             return
 
         if not self.tts:
+            self.logger.info("Initializing TTS model manager...")
             self._initialize_tts_model_manager()
 
         if self.tts:
             try:
+                self.logger.info("Loading TTS model manager...")
                 self.tts.load()
             except FileNotFoundError as e:
                 self.api.application_error(e)

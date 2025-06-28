@@ -14,13 +14,9 @@ from airunner.components.art.managers.stablediffusion.base_diffusers_model_manag
 from airunner.components.art.managers.stablediffusion.prompt_weight_bridge import (
     PromptWeightBridge,
 )
-from airunner.components.application.managers.base_model_manager import ModelManagerInterface
-
-# Patch for test compatibility: expose clear_memory for patching in tests
-try:
-    from airunner.utils.memory import clear_memory
-except ImportError:
-    from airunner.vendor.framepack.diffusers_helper.memory import clear_memory
+from airunner.components.application.managers.base_model_manager import (
+    ModelManagerInterface,
+)
 
 
 # Dummy classes for test patching
@@ -75,9 +71,11 @@ class StableDiffusionModelManager(
         return {
             "txt2img": StableDiffusionPipeline,
             "img2img": StableDiffusionImg2ImgPipeline,
+            "inpaint": StableDiffusionInpaintPipeline,
             "outpaint": StableDiffusionInpaintPipeline,
             "txt2img_controlnet": StableDiffusionControlNetPipeline,
             "img2img_controlnet": StableDiffusionControlNetImg2ImgPipeline,
+            "inpaint_controlnet": StableDiffusionControlNetInpaintPipeline,
             "outpaint_controlnet": StableDiffusionControlNetInpaintPipeline,
         }
 
@@ -88,6 +86,8 @@ class StableDiffusionModelManager(
         operation_type = "txt2img"
         if self.is_img2img:
             operation_type = "img2img"
+        elif self.is_inpaint:
+            operation_type = "inpaint"
         elif self.is_outpaint:
             operation_type = "outpaint"
 

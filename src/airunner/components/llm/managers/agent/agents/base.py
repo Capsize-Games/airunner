@@ -85,6 +85,10 @@ from airunner.components.context.context_manager import ContextManager
 from airunner.components.llm.managers.agent.agents.tool_mixins.browser_tools_mixin import (
     BrowserToolsMixin,
 )
+from airunner.components.llm.managers.agent.tools.map_tool import MapTool
+from airunner.components.llm.managers.agent.agents.tool_mixins.map_tools_mixin import (
+    MapToolsMixin,
+)
 
 
 class BaseAgent(
@@ -103,6 +107,7 @@ class BaseAgent(
     LLMManagerMixin,
     MoodToolsMixin,
     AnalysisToolsMixin,
+    MapToolsMixin,
 ):
     """
     Base class for all agents.
@@ -163,6 +168,7 @@ class BaseAgent(
             LLMActionType.SEARCH: self.search_tool_handler,
             LLMActionType.FILE_INTERACTION: self.file_interaction_handler,
             LLMActionType.WORKFLOW_INTERACTION: self.workflow_interaction_handler,
+            LLMActionType.MAP_TOOL: self.map_tool_handler,  # Add map_tool_handler
         }
         self.menu_choices = {
             1: {
@@ -188,6 +194,10 @@ class BaseAgent(
             6: {
                 "action": LLMActionType.APPLICATION_COMMAND,
                 "description": "Not sure what to do: Reason about the user's request and choose from a list of available tools in order to fulfill the request.",
+            },
+            7: {
+                "action": LLMActionType.MAP_TOOL,
+                "description": "Use the map tool: Choose this when you want to search for locations, geocode, find POIs, or perform map-related actions.",
             },
         }
         self.prompt: Optional[str] = None
@@ -502,6 +512,7 @@ class BaseAgent(
             self.search_engine_tool,
             self.use_browser_tool,
             self.generate_image_tool,
+            self.map_tool,
         ]
         if AIRUNNER_ART_ENABLED:
             tools.extend(
@@ -539,6 +550,7 @@ class BaseAgent(
         """
         if not self._react_tool_agent:
             tools = self.tools
+
             self._react_tool_agent = ReActAgentTool.from_tools(
                 tools,
                 agent=self,
@@ -1288,6 +1300,59 @@ class BaseAgent(
         )
         return self.react_tool_agent.call(**kwargs)
 
+    def map_tool_handler(self, **kwargs: Any) -> Any:
+        """Handle map tool requests using standard react agent with minimal context."""
+        kwargs["tool_choice"] = "map_tool"
+        kwargs["chat_history"] = []
+
+        # Clear any previous map tool result
+        if hasattr(self, "_last_map_tool_result"):
+            delattr(self, "_last_map_tool_result")
+
+        # Build a clear instruction that forces ReAct format
+        if "query" in kwargs:
+            query = kwargs["query"]
+            # Create a very explicit instruction with examples that forces ReAct format
+            kwargs["input"] = (
+                f"CRITICAL: You MUST respond ONLY in the exact ReAct format shown below. DO NOT provide conversational responses.\n\n"
+                f'User request: "{query}"\n\n'
+                f"You must analyze this request and respond with EXACTLY the following format:\n\n"
+                f"Action: map_tool\n"
+                f'Action Input: {{"action": "ACTION_TYPE", "PARAM1": "VALUE1", "PARAM2": "VALUE2"}}\n\n'
+                f"Examples:\n"
+                f'For directions/routes like "from Denver to Chicago":\n'
+                f"Action: map_tool\n"
+                f'Action Input: {{"action": "get_directions", "from_location": "Denver", "to_location": "Chicago"}}\n\n'
+                f'For location search like "find Eiffel Tower":\n'
+                f"Action: map_tool\n"
+                f'Action Input: {{"action": "search_location", "search_location": "Eiffel Tower"}}\n\n'
+                f'NOW RESPOND IN THE EXACT FORMAT ABOVE FOR: "{query}"'
+            )
+        elif "input" in kwargs:
+            user_input = kwargs["input"]
+            kwargs["input"] = (
+                f"CRITICAL: You MUST respond ONLY in the exact ReAct format shown below. DO NOT provide conversational responses.\n\n"
+                f'User request: "{user_input}"\n\n'
+                f"You must analyze this request and respond with EXACTLY the following format:\n\n"
+                f"Action: map_tool\n"
+                f'Action Input: {{"action": "ACTION_TYPE", "PARAM1": "VALUE1", "PARAM2": "VALUE2"}}\n\n'
+                f"Examples:\n"
+                f'For directions/routes like "from Denver to Chicago":\n'
+                f"Action: map_tool\n"
+                f'Action Input: {{"action": "get_directions", "from_location": "Denver", "to_location": "Chicago"}}\n\n'
+                f'For location search like "find Eiffel Tower":\n'
+                f"Action: map_tool\n"
+                f'Action Input: {{"action": "search_location", "search_location": "Eiffel Tower"}}\n\n'
+                f'NOW RESPOND IN THE EXACT FORMAT ABOVE FOR: "{user_input}"'
+            )
+
+        result = self.react_tool_agent.call(**kwargs)
+        self._complete_response = (
+            result.content if hasattr(result, "content") else str(result)
+        )
+
+        return result
+
     def _perform_tool_call(
         self, action: LLMActionType, **kwargs: Any
     ) -> Optional[Any]:
@@ -1305,7 +1370,13 @@ class BaseAgent(
             return None
 
         self.logger.info(f"Performing tool call for action: {action}")
+        self.logger.info(
+            f"[DEBUG] _perform_tool_call calling handler with kwargs: {kwargs}"
+        )
         response = handler(**kwargs)
+        self.logger.info(
+            f"[DEBUG] _perform_tool_call got response: {response} (type: {type(response)})"
+        )
 
         if action is LLMActionType.DECISION:
             selection = self._parse_menu_selection(response.content)
