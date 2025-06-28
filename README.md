@@ -1,5 +1,7 @@
 [![AI Runner](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
+![image](https://github.com/user-attachments/assets/d463ab1f-ee26-431f-92d6-29389ca11863)
+
 
 <img src="https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa" alt="AI Runner Screenshot" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002;">
 
