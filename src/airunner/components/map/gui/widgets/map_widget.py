@@ -80,6 +80,40 @@ class MapWidget(
         )
         self.ui.webEngineView.page().runJavaScript(js)
 
+    def add_route_path(
+        self, coordinates: list, color: str = "#3388ff", weight: int = 5
+    ) -> None:
+        """Add a route path (polyline) to the map using an array of [lat, lon] coordinates."""
+        import json
+
+        print(
+            f"[MapWidget] add_route_path called with {len(coordinates)} coordinates"
+        )
+        print(
+            f"[MapWidget] First few coordinates: {coordinates[:3] if len(coordinates) > 3 else coordinates}"
+        )
+        print(f"[MapWidget] Color: {color}, Weight: {weight}")
+
+        # Properly serialize coordinates as JSON
+        coordinates_json = json.dumps(coordinates)
+
+        js = (
+            "if (window.browserAPI) { "
+            f"window.browserAPI._triggerEvent('map-command', {{command: 'addRoutePath', data: {{coordinates: {coordinates_json}, color: '{color}', weight: {weight}}}}}); "
+            "} else { console.error('browserAPI not found'); }"
+        )
+        print(f"[MapWidget] Executing JavaScript: {js[:200]}...")
+        self.ui.webEngineView.page().runJavaScript(js)
+
+    def clear_route_paths(self) -> None:
+        """Clear all route paths from the map."""
+        js = (
+            "if (window.browserAPI) { "
+            "window.browserAPI._triggerEvent('map-command', {command: 'clearRoutePaths', data: {}}); "
+            "} else { console.error('browserAPI not found'); }"
+        )
+        self.ui.webEngineView.page().runJavaScript(js)
+
     def center_map(self, lat: float, lon: float, zoom: int = 13) -> None:
         """Center the map at the given latitude and longitude with the specified zoom."""
         js = (
@@ -122,8 +156,9 @@ class MapWidget(
                     f"[MapWidget] Handling directions result: {map_tool_result}"
                 )
 
-                # Clear existing markers first for directions
+                # Clear existing markers and route paths first for directions
                 self.clear_markers()
+                self.clear_route_paths()
 
                 start = map_tool_result["start"]
                 end = map_tool_result["end"]
@@ -149,8 +184,44 @@ class MapWidget(
                         f"[MapWidget] Added end marker at {end_lat}, {end_lon}"
                     )
 
-                # Center map to show both points (use start point for centering)
-                if "lat" in start and "lon" in start:
+                # Draw the route path if available
+                if "path" in map_tool_result and map_tool_result["path"]:
+                    path_coordinates = map_tool_result["path"]
+                    print(
+                        f"[MapWidget] Drawing route path with {len(path_coordinates)} coordinate pairs"
+                    )
+                    print(
+                        f"[MapWidget] Raw path coordinates (first 3): {path_coordinates[:3] if len(path_coordinates) > 3 else path_coordinates}"
+                    )
+
+                    # Convert from [[lon, lat], [lon, lat], ...] to [[lat, lon], [lat, lon], ...]
+                    # OSRM returns coordinates as [longitude, latitude] but Leaflet expects [latitude, longitude]
+                    leaflet_coordinates = [
+                        [coord[1], coord[0]] for coord in path_coordinates
+                    ]
+
+                    print(
+                        f"[MapWidget] Transformed leaflet coordinates (first 3): {leaflet_coordinates[:3] if len(leaflet_coordinates) > 3 else leaflet_coordinates}"
+                    )
+                    print(
+                        f"[MapWidget] Total coordinates to send: {len(leaflet_coordinates)}"
+                    )
+
+                    self.add_route_path(
+                        leaflet_coordinates, color="#FF6B35", weight=4
+                    )
+                    print(f"[MapWidget] Route path drawn successfully")
+                else:
+                    print(
+                        f"[MapWidget] No path data available in map_tool_result"
+                    )
+
+                # Center map to show both points (use start point for centering if no path)
+                if (
+                    "lat" in start
+                    and "lon" in start
+                    and not map_tool_result.get("path")
+                ):
                     lat = float(start["lat"])
                     lon = float(start["lon"])
                     self.center_map(lat, lon, zoom=6)  # Zoom out to show route
@@ -182,8 +253,9 @@ class MapWidget(
 
             # Show marker at city center
             if lat is not None and lon is not None:
-                # Clear previous markers for single location search
+                # Clear previous markers and route paths for single location search
                 self.clear_markers()
+                self.clear_route_paths()
                 marker_label = display_name or f"Location: {lat}, {lon}"
                 self.add_marker(lat, lon, marker_label)
                 self.center_map(lat, lon, zoom=11)

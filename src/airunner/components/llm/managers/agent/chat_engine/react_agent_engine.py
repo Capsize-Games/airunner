@@ -207,102 +207,27 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                 output = str(result)
                 yield output
             # Now, after streaming, check for tool call
-            self.logger.info(f"[DEBUG] Full LLM output: {repr(output)}")
-            self.logger.info(f"[DEBUG] Tool choice: {tool_choice}")
-            self.logger.info(
-                f"[DEBUG] Available tools: {[getattr(getattr(t, 'metadata', None), 'name', None) for t in self.tools]}"
-            )
 
-            # First try standard ReAct format: Action: tool_name\nAction Input: {...}
             tool_call_match = re.search(
-                r"Action Input:\s*(\{[^}]*(?:\{[^}]*\}[^}]*)*\})",
-                output,
-                re.MULTILINE,
+                r"Action:\s*```json\s*({[\s\S]+?})\s*```", output
             )
-            self.logger.info(f"[DEBUG] Action Input match: {tool_call_match}")
-
-            # Fallback to simpler pattern if nested braces are too complex
-            if not tool_call_match:
-                tool_call_match = re.search(
-                    r"Action Input:\s*(\{.*?\})",
-                    output,
-                    re.MULTILINE | re.DOTALL,
-                )
-                self.logger.info(
-                    f"[DEBUG] Action Input simple match: {tool_call_match}"
-                )
-
-            # Fallback to legacy formats
-            if not tool_call_match:
-                tool_call_match = re.search(
-                    r"Action:\s*```json\s*({[\s\S]+?})\s*```", output
-                )
-                self.logger.info(
-                    f"[DEBUG] Action JSON match: {tool_call_match}"
-                )
             if not tool_call_match:
                 tool_call_match = re.search(r"Action:\s*({[\s\S]+?})", output)
-                self.logger.info(
-                    f"[DEBUG] Action fallback match: {tool_call_match}"
-                )
-
-            # Additional fallbacks for more flexible parsing
-            if not tool_call_match:
-                # Try to find JSON that contains expected action parameters
-                action_json_match = re.search(
-                    r'(\{[^}]*"action"[^}]*\})',
-                    output,
-                    re.MULTILINE | re.DOTALL,
-                )
-                if action_json_match:
-                    tool_call_match = action_json_match
-                    self.logger.info(
-                        f"[DEBUG] Action parameter match: {tool_call_match}"
-                    )
-
-            if not tool_call_match:
-                # Try to find any JSON with from_location/to_location for directions
-                direction_json_match = re.search(
-                    r'(\{[^}]*"from_location"[^}]*"to_location"[^}]*\})',
-                    output,
-                    re.MULTILINE | re.DOTALL,
-                )
-                if direction_json_match:
-                    tool_call_match = direction_json_match
-                    self.logger.info(
-                        f"[DEBUG] Direction parameter match: {tool_call_match}"
-                    )
             # Also match any JSON block if only one tool is available
             tool_name = tool_choice
             if not tool_call_match and len(self.tools) == 1:
                 tool_call_match = re.search(
                     r"```json\s*({[\s\S]+?})\s*```", output
                 )
-                self.logger.info(
-                    f"[DEBUG] JSON block match: {tool_call_match}"
-                )
                 if not tool_call_match:
                     tool_call_match = re.search(r"({[\s\S]+?})", output)
-                    self.logger.info(
-                        f"[DEBUG] Any JSON match: {tool_call_match}"
-                    )
                 tool_name = getattr(
                     getattr(self.tools[0], "metadata", None), "name", None
                 )
             if tool_call_match:
                 try:
                     tool_json = tool_call_match.group(1)
-                    self.logger.info(
-                        f"[DEBUG] Extracted tool JSON: {repr(tool_json)}"
-                    )
-                    # Try to clean up the JSON if needed
-                    tool_json = tool_json.strip()
-                    self.logger.info(
-                        f"[DEBUG] Cleaned tool JSON: {repr(tool_json)}"
-                    )
                     tool_args = json.loads(tool_json)
-                    self.logger.info(f"[DEBUG] Parsed tool args: {tool_args}")
-                    self.logger.info(f"[DEBUG] Tool name: {tool_name}")
                     # Try to infer tool name from context or tool_choice
                     if not tool_name:
                         # Try to find a tool name in the output (e.g., "use_browser_tool")
@@ -321,32 +246,7 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                             tool = t
                             break
                     if tool:
-                        self.logger.info(
-                            f"[DEBUG] Found tool: {tool} with name: {tool_name}"
-                        )
-                        self.logger.info(
-                            f"[DEBUG] Calling tool with args: {tool_args}"
-                        )
                         tool_result = tool(**tool_args)
-                        self.logger.info(f"[DEBUG] Tool result: {tool_result}")
-
-                        # Store the last tool result for map tool access
-                        if tool_name == "map_tool" and hasattr(
-                            tool_result, "raw_output"
-                        ):
-                            # Store on self (the react agent engine), for the LLMGenerateWorker to access
-                            self._last_map_tool_result = tool_result.raw_output
-                            self.logger.info(
-                                f"[DEBUG] Stored map tool result: {self._last_map_tool_result}"
-                            )
-                        elif tool_name == "map_tool":
-                            self.logger.info(
-                                f"[DEBUG] Map tool result has no raw_output: {tool_result}"
-                            )
-                            self.logger.info(
-                                f"[DEBUG] Tool result attributes: {dir(tool_result)}"
-                            )
-
                         # If the tool result is a generator, stream it
                         if isinstance(tool_result, types.GeneratorType):
                             for ttoken in tool_result:
@@ -358,13 +258,9 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                                 yield str(content)
                             else:
                                 yield str(tool_result)
-                    else:
-                        self.logger.error(
-                            f"[DEBUG] Tool not found: {tool_name}"
-                        )
                 except Exception as e:
                     self.logger.error(
-                        f"Failed to execute tool: {e}. Tool JSON: {tool_json if 'tool_json' in locals() else 'N/A'}"
+                        f"Failed to execute tool: {e}. Tool JSON: {tool_json}"
                     )
         # Always restore original tools list
         if tool_choice and original_tools:
