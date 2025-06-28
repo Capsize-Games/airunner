@@ -487,14 +487,10 @@ AI Runner uses `pytest` for all automated testing. Test coverage is a priority, 
 
 For additional details, see the [Wiki](https://github.com/Capsize-Games/airunner/wiki).
 
-## Latitude Longitude Coordinates for US Zipcodes
-
-Download US zipcode data from [census.gov](https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_zcta_national.zip) and extract the contents to your project directory in a folder called `maps` (e.g. `~/.local/share/airunner/map/`).
-
-This data is used to look up latitude and longitude coordinates for US zipcodes, which is essential for the map and weather features in AI Runner. The data is automatically loaded when the application starts. You can replace the default data with your own if you have a different source.
-
 
 ## Nominatim Geocoding API
+
+If you want to use OpenStreet maps completely offline you can run your own local [Nominatim instance](https://nominatim.org/release-docs/latest/admin/Installation/).
 
 ```bash
 NOMINATIM_PATH=/some/path
