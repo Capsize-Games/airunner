@@ -1,7 +1,8 @@
 [![AI Runner](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
-![image](https://github.com/user-attachments/assets/d463ab1f-ee26-431f-92d6-29389ca11863)
+## Support AI Runner by donating to this wallet: 0x02030569e866e22C9991f55Db0445eeAd2d646c8
 
+![image](https://github.com/user-attachments/assets/d463ab1f-ee26-431f-92d6-29389ca11863)
 
 <img src="https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa" alt="AI Runner Screenshot" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002;">
 
@@ -529,4 +530,15 @@ After the server is running, you can access it at `http://localhost:8080/`. Be s
 
 ```bash
 export AIRUNNER_NOMINATIM_URL=http://localhost:8080/
-```
+
+## Sponsorship
+
+If you find this project useful, please consider sponsoring its development. Your support helps cover the costs of infrastructure, development, and maintenance.
+
+You can sponsor the project on [GitHub Sponsors](https://github.com/sponsors/Capsize-Games).
+
+Thank you for your support!
+
+### Past Sponsors
+
+**[<image src="image.png" alt="Open Core Ventures Catalyst Program" style="max-width: 50px; height: auto;" /> Open Core Ventures Catalyst Program](https://www.opencoreventures.com/)**
