@@ -1,14 +1,10 @@
 [![AI Runner](images/banner.png)](https://github.com/Capsize-Games/airunner)
 
-## Support AI Runner by donating to this wallet: 0x02030569e866e22C9991f55Db0445eeAd2d646c8
-
 ![image](https://github.com/user-attachments/assets/d463ab1f-ee26-431f-92d6-29389ca11863)
 
 <img src="https://github.com/user-attachments/assets/392375c8-a7f6-4e6e-8662-511cffc608aa" alt="AI Runner Screenshot" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px #0002;">
 
 <video src="https://github.com/user-attachments/assets/2d5b41ff-a0cd-4239-945b-d9e7a1bc5644" controls width="100%" style="border-radius: 8px; box-shadow: 0 2px 8px #0002;"></video>
-
-[✉️ Get notified when the packaged version releases](https://airunner.org/)
 
 <table>
   <tr>
@@ -41,6 +37,20 @@
 </tr>
 
 </table>
+
+---
+
+## Support AI Runner
+
+Show your support for this project by choosing one of the following options for donations.
+
+- Crypto: 0x02030569e866e22C9991f55Db0445eeAd2d646c8
+- Github Sponsors: [https://github.com/sponsors/w4ffl35](https://github.com/sponsors/w4ffl35)
+- Patreon: [https://www.patreon.com/c/w4ffl35](https://www.patreon.com/c/w4ffl35)
+
+[✉️ Get notified when the packaged version releases](https://airunner.org/)
+
+---
 
 | ✨ Key Features |
 |:--------------------------------|
