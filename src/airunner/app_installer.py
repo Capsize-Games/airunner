@@ -20,6 +20,8 @@ from airunner.components.downloader.gui.windows.download_wizard.download_wizard_
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
+from airunner.setup_database import setup_database
+from airunner.settings import AIRUNNER_DB_URL
 
 
 class AppInstaller(QObject, SettingsMixin, MediatorMixin):
@@ -102,6 +104,18 @@ class AppInstaller(QObject, SettingsMixin, MediatorMixin):
         self.app = QApplication.instance()
         if self.app is None:
             self.app = QApplication([])
+
+        # Ensure database path exists and migrations are applied BEFORE any settings access
+        if AIRUNNER_DB_URL.startswith("sqlite:///"):
+            db_path = AIRUNNER_DB_URL.replace("sqlite:///", "")
+            try:
+                os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            except Exception as e:
+                print(f"Failed creating DB directory {db_path}: {e}")
+        try:
+            setup_database()
+        except Exception as e:
+            print(f"Database setup failed: {e}")
 
         self.wizard = SetupWizardWindow()
         self.wizard.exec()

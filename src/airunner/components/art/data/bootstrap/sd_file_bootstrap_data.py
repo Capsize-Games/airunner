@@ -93,6 +93,24 @@ SD_FILE_BOOTSTRAP_DATA = {
             "diffusion_pytorch_model.fp16.safetensors",
         ],
     },
+    "SD 3.5": {
+        "txt2img": [
+            "scheduler/scheduler_config.json",
+            "text_encoder/config.json",
+            # "text_encoder/model.fp16.safetensors",
+            "text_encoder_2/config.json",
+            # "text_encoder_2/model.fp16.safetensors",
+            "text_encoder_3/config.json",
+            # "text_encoder_3/model.fp16-00001-of-00002.safetensors",
+            # "text_encoder_3/model.fp16-00002-of-00002.safetensors",
+            "text_encoder_3/model.safetensors.index.fp16.json",
+            "transformer/config.json",
+            # "transformer/diffusion_pytorch_model.safetensors",
+            "vae/config.json",
+            # "vae/diffusion_pytorch_model.safetensors",
+            "model_index.json",
+        ],
+    },
 }
 
 
