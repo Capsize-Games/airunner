@@ -3,6 +3,17 @@ from airunner.settings import AIRUNNER_ART_ENABLED
 
 ai_art_models = [
     {
+        "name": "Stable Diffusion 3.5",
+        "path": "stabilityai/stable-diffusion-3.5-medium",
+        "branch": "main",
+        "version": "SD 3.5",
+        "category": "stablediffusion",
+        "pipeline_action": "txt2img",
+        "enabled": True,
+        "model_type": "art",
+        "is_default": True,
+    },
+    {
         "name": "Stable Diffusion 1.5",
         "path": "stable-diffusion-v1-5/stable-diffusion-v1-5",
         "branch": "main",
