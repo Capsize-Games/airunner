@@ -827,8 +827,10 @@ class CustomScene(
 
     def _move_pixmap_to_clipboard(self, image: Image) -> Image:
         if image is None:
+            self.logger.warning("No image to copy to clipboard.")
             return None
         if not isinstance(image, Image.Image):
+            self.logger.warning("Invalid image type.")
             return None
         data = io.BytesIO()
         image.save(data, format="png")
@@ -839,6 +841,9 @@ class CustomScene(
                 stdin=subprocess.PIPE,
             ).communicate(data)
         except FileNotFoundError:
+            self.logger.error(
+                "xclip not found. Cannot copy image to clipboard."
+            )
             pass
         return image
 
