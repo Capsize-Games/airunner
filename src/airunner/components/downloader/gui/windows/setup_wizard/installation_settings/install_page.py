@@ -17,14 +17,18 @@ except ImportError:
 from PySide6.QtCore import QObject, QThread, Slot, Signal, QTimer
 from PySide6.QtWidgets import QWizard
 
-from airunner.components.data.bootstrap.model_bootstrap_data import model_bootstrap_data
+from airunner.components.data.bootstrap.model_bootstrap_data import (
+    model_bootstrap_data,
+)
 from airunner.components.art.data.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
 )
 from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
     SD_FILE_BOOTSTRAP_DATA,
 )
-from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import OPENVOICE_FILES
+from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
+    OPENVOICE_FILES,
+)
 from airunner.components.art.data.bootstrap.flux_file_bootstrap_data import (
     FLUX_FILE_BOOTSTRAP_DATA,
 )
@@ -37,8 +41,12 @@ from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.network import HuggingfaceDownloader
 from airunner.utils.os import create_airunner_paths
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.components.downloader.gui.windows.setup_wizard.base_wizard import BaseWizard
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
+from airunner.components.downloader.gui.windows.setup_wizard.base_wizard import (
+    BaseWizard,
+)
 from airunner.components.downloader.gui.windows.setup_wizard.installation_settings.templates.install_page_ui import (
     Ui_install_page,
 )
@@ -111,11 +119,13 @@ class InstallWorker(
         super().__init__()
         self.parent = parent
         self.total_files = 0
+        self.completed_files = 0
         self.models_enabled = models_enabled
         self.current_step = -1
         self.total_models_in_current_step = 0
+        self.running = True  # Add running flag for clean shutdown
         self.hf_downloader = HuggingfaceDownloader(
-            lambda a, b: self.progress_updated.emit(a, b),
+            self._safe_progress_emit,
             initialize_gui=initialize_gui,
         )
         self.hf_downloader.completed.connect(
@@ -123,6 +133,38 @@ class InstallWorker(
         )
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.download_finished)
         self.register(SignalCode.PATH_SET, self.path_set)
+
+    def _safe_progress_emit(self, current, total):
+        """Safely emit progress signals with aggressive overflow protection"""
+        # Pre-emptively scale down very large values to prevent overflow
+        MAX_SAFE_VALUE = 2147483647  # 32-bit signed integer max
+
+        # Aggressively scale down if values are too large
+        if current > MAX_SAFE_VALUE or total > MAX_SAFE_VALUE:
+            scale = max(current, total) // MAX_SAFE_VALUE + 1
+            current = current // scale
+            total = total // scale
+
+        # Ensure we never emit zero total (causes division by zero)
+        if total <= 0:
+            total = 1
+        if current < 0:
+            current = 0
+        if current > total:
+            current = total
+
+        try:
+            self.progress_updated.emit(int(current), int(total))
+        except (OverflowError, ValueError):
+            # If still overflowing, use even more aggressive scaling
+            try:
+                scale = 1000000  # Scale to MB
+                safe_current = max(0, min(1000000, current // scale))
+                safe_total = max(1, min(1000000, total // scale))
+                self.progress_updated.emit(safe_current, safe_total)
+            except (OverflowError, ValueError, ZeroDivisionError):
+                # Last resort: emit safe minimal values
+                self.progress_updated.emit(0, 1)
 
     def download_stable_diffusion(self):
         if not self.models_enabled["stable_diffusion"]:
@@ -185,7 +227,7 @@ class InstallWorker(
                         requested_path=model["path"],
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
-                        requested_callback=self.progress_updated.emit,
+                        requested_callback=self._safe_progress_emit,
                     )
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
@@ -227,7 +269,7 @@ class InstallWorker(
                         requested_path=controlnet_model["path"],
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
-                        requested_callback=self.progress_updated.emit,
+                        requested_callback=self._safe_progress_emit,
                     )
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
@@ -269,7 +311,7 @@ class InstallWorker(
                         requested_path=model["path"],
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
-                        requested_callback=self.progress_updated.emit,
+                        requested_callback=self._safe_progress_emit,
                     )
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
@@ -297,7 +339,7 @@ class InstallWorker(
                     requested_path=f"lllyasviel/Annotators",
                     requested_file_name=filename,
                     requested_file_path=requested_file_path,
-                    requested_callback=self.progress_updated.emit,
+                    requested_callback=self._safe_progress_emit,
                 )
             except Exception as e:
                 print(f"Error downloading {filename}: {e}")
@@ -335,7 +377,7 @@ class InstallWorker(
                         requested_path=model["path"],
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
-                        requested_callback=self.progress_updated.emit,
+                        requested_callback=self._safe_progress_emit,
                     )
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
@@ -366,7 +408,7 @@ class InstallWorker(
                         requested_path=k,
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
-                        requested_callback=self.progress_updated.emit,
+                        requested_callback=self._safe_progress_emit,
                     )
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
@@ -375,13 +417,32 @@ class InstallWorker(
         if not self.models_enabled["speecht5"]:
             self.set_page()
             return
+
+        # Add a check to prevent multiple simultaneous TTS downloads
+        if (
+            hasattr(self, "_tts_download_in_progress")
+            and self._tts_download_in_progress
+        ):
+            print("TTS download already in progress, skipping duplicate call")
+            return
+
+        self._tts_download_in_progress = True
+
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading TTS models..."}
         )
-        for k, v in SPEECH_T5_FILES.items():
-            self.total_models_in_current_step += len(v)
 
-        print(f"Downloading {self.total_models_in_current_step} TTS files")
+        # Calculate total files first
+        total_files = 0
+        for k, v in SPEECH_T5_FILES.items():
+            total_files += len(v)
+
+        self.total_models_in_current_step += total_files
+
+        print(f"Downloading {total_files} TTS files")
+
+        # Add a small delay between downloads to prevent race conditions
+        import time
 
         for k, v in SPEECH_T5_FILES.items():
             for filename in v:
@@ -395,14 +456,19 @@ class InstallWorker(
                     )
                 )
                 try:
+                    # Add a small delay to prevent overwhelming the download system
+                    time.sleep(0.1)
                     self.hf_downloader.download_model(
                         requested_path=k,
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
-                        requested_callback=self.progress_updated.emit,
+                        requested_callback=self._safe_progress_emit,
                     )
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
+
+        # Reset the flag when downloads are queued
+        self._tts_download_in_progress = False
 
     def download_openvoice(self):
         if not self.models_enabled["openvoice_model"]:
@@ -429,7 +495,7 @@ class InstallWorker(
                         requested_path=k,
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
-                        requested_callback=self.progress_updated.emit,
+                        requested_callback=self._safe_progress_emit,
                     )
                 except Exception as e:
                     print(f"Error downloading {filename}: {e}")
@@ -455,7 +521,7 @@ class InstallWorker(
                             f.write(chunk)
                             downloaded += len(chunk)
                             if total > 0:
-                                self.progress_updated.emit(downloaded, total)
+                                self._safe_progress_emit(downloaded, total)
             if label:
                 self.parent.update_download_log(
                     {"message": f"Downloaded {label}"}
@@ -709,11 +775,10 @@ class InstallWorker(
                         }
                     )
 
-                    # Update progress bar during extraction
-                    if hasattr(self.parent, "ui") and hasattr(
-                        self.parent.ui, "status_bar"
-                    ):
-                        self.parent.ui.status_bar.setValue(progress_pct)
+                    # Update progress bar during extraction using thread-safe signal
+                    self._safe_progress_emit(
+                        extraction_count, total_to_extract
+                    )
 
                     with zipfile.ZipFile(zip_path, "r") as zip_ref:
                         zip_ref.extractall(self._openvoice_dir)
@@ -740,12 +805,20 @@ class InstallWorker(
                 {"label": "OpenVoice and unidic setup complete"}
             )
 
+            # Mark extraction as complete and trigger next step
+            self._openvoice_unidic_extraction_complete = True
+
             # Explicitly emit a download complete signal to ensure proper step progression
             self.emit_signal(
                 SignalCode.DOWNLOAD_COMPLETE,
                 {"file_name": "openvoice_extraction_complete"},
             )
-            self.file_download_finished.emit()
+
+            # Trigger the next step instead of just emitting file_download_finished
+            self.total_models_in_current_step = (
+                0  # Reset counter to trigger step progression
+            )
+            QTimer.singleShot(100, lambda: self.download_finished({}))
         else:
             self.parent.on_set_downloading_status_label(
                 {
@@ -997,10 +1070,10 @@ class InstallWorker(
             self.download_tts()
         elif self.current_step == 5:
             self.parent.on_set_downloading_status_label(
-                {"label": f"Downloading Text-to-Speech"}
+                {"label": f"Downloading Speech-to-Text"}
             )
             self.current_step = 6
-            self.download_tts()
+            self.download_stt()
         elif self.current_step == 6:
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Speech-to-Text"}
@@ -1097,6 +1170,13 @@ class InstallWorker(
         # Force progress bar to show completion
         self.parent.update_progress_bar(final=True)
 
+        # Signal that installation is complete and cleanup can begin
+        self.running = False
+
+        # Schedule thread cleanup with a small delay to ensure all signals are processed
+        if hasattr(self.parent, "cleanup_thread"):
+            QTimer.singleShot(1000, self.parent.cleanup_thread)
+
 
 class InstallPage(BaseWizard):
     class_name_ = Ui_install_page
@@ -1110,6 +1190,7 @@ class InstallPage(BaseWizard):
         super(InstallPage, self).__init__(parent)
         self.total_files_downloaded = 0
         self.total_files = 0
+        self.completed_files = 0
         self.stablediffusion_models = stablediffusion_models
         self.models_enabled = models_enabled
         self.steps_completed = 0
@@ -1209,6 +1290,30 @@ class InstallPage(BaseWizard):
         self.calculate_total_files()
         self.thread.start()
 
+    def __del__(self):
+        """Cleanup thread when page is destroyed"""
+        self.cleanup_thread()
+
+    def cleanup_thread(self):
+        """Properly cleanup the worker thread"""
+        if hasattr(self, "thread") and hasattr(self, "worker"):
+            try:
+                # Stop the worker
+                if hasattr(self.worker, "running"):
+                    self.worker.running = False
+
+                # Quit the thread
+                self.thread.quit()
+
+                # Wait for thread to finish (with timeout)
+                if not self.thread.wait(5000):  # 5 second timeout
+                    # Force terminate if it doesn't quit gracefully
+                    self.thread.terminate()
+                    self.thread.wait()
+
+            except Exception as e:
+                print(f"Error during thread cleanup: {e}")
+
     def calculate_total_files(self):
         if self.models_enabled["stable_diffusion"]:
             models = model_bootstrap_data
@@ -1289,7 +1394,23 @@ class InstallPage(BaseWizard):
         self.thread.start()
 
     def file_download_finished(self):
-        """Handler for when a file download completes"""
+        """Increment total installation progress when a file completes."""
+        self.completed_files += 1
+        if self.total_files > 0:
+            pct = int((self.completed_files / self.total_files) * 100)
+            try:
+                # Use progress_bar to show overall total download progress percentage
+                self.ui.progress_bar.setValue(pct)
+                self.ui.progress_bar.setFormat(
+                    f"Total download progress {pct}%"
+                )
+            except (OverflowError, ValueError):
+                # Handle potential overflow with large progress values
+                safe_pct = min(100, max(0, pct))
+                self.ui.progress_bar.setValue(safe_pct)
+                self.ui.progress_bar.setFormat(
+                    f"Total download progress {safe_pct}%"
+                )
 
     def file_progress_updated(self, current, total):
         """Handler for download progress updates"""
@@ -1303,11 +1424,29 @@ class InstallPage(BaseWizard):
             self.ui.status_bar.setFormat(data["label"])
 
     def download_progress(self, data: dict):
-        if data["current"] == 0:
-            progress = 0
+        total = data.get("total", 0) or 0
+        current = data.get("current", 0) or 0
+        if total <= 0:
+            # Unknown total size; show indeterminate until completion (handled when total becomes >0)
+            progress = (
+                0 if current == 0 else 0
+            )  # keep bar at 0 to avoid false %
         else:
-            progress = data["current"] / data["total"]
-        self.ui.status_bar.setValue(progress * 100)
+            progress = min(1.0, current / total)
+
+        # Use status_bar to show individual file download progress
+        try:
+            self.ui.status_bar.setValue(progress * 100)
+            self.ui.status_bar.setFormat(
+                f"File download progress {int(progress * 100)}%"
+            )
+        except OverflowError:
+            # For very large files, clamp to safe integer range
+            safe_progress = min(100, max(0, int(progress * 100)))
+            self.ui.status_bar.setValue(safe_progress)
+            self.ui.status_bar.setFormat(
+                f"File download progress {safe_progress}%"
+            )
 
     def update_progress_bar(self, final: bool = False, data: dict = None):
         """Update the progress bar and manage Next button state"""
@@ -1330,7 +1469,9 @@ class InstallPage(BaseWizard):
             self.total_files_downloaded = self.total_files
 
         if self.total_files == self.total_files_downloaded:
+            # Use progress_bar for total download progress
             self.ui.progress_bar.setValue(100)
+            self.ui.progress_bar.setFormat("Total download progress 100%")
 
             # Add a slight delay before enabling the Next button
             # to ensure all processing is complete
@@ -1339,7 +1480,19 @@ class InstallPage(BaseWizard):
             val = 0
             if self.total_files > 0:
                 val = (self.total_files_downloaded / self.total_files) * 100
-            self.ui.progress_bar.setValue(val)
+            try:
+                # Use progress_bar for total download progress
+                self.ui.progress_bar.setValue(val)
+                self.ui.progress_bar.setFormat(
+                    f"Total download progress {int(val)}%"
+                )
+            except (OverflowError, ValueError):
+                # Handle potential overflow with large progress values
+                safe_val = min(100, max(0, int(val)))
+                self.ui.progress_bar.setValue(safe_val)
+                self.ui.progress_bar.setFormat(
+                    f"Total download progress {safe_val}%"
+                )
 
     def _enable_next_button(self):
         """Enable the Next button when installation is complete"""
