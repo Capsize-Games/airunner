@@ -384,6 +384,7 @@ class StableDiffusionVersion(Enum):
     SDXL_HYPER = "SDXL Hyper"
     SD1_5 = "SD 1.5"
     FLUX_S = "Flux S"
+    SD3_5 = "SD 3.5"
 
 
 class Language(Enum):
