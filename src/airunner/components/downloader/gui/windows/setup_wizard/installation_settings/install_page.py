@@ -442,7 +442,6 @@ class InstallWorker(
         print(f"Downloading {total_files} TTS files")
 
         # Add a small delay between downloads to prevent race conditions
-        import time
 
         for k, v in SPEECH_T5_FILES.items():
             for filename in v:
