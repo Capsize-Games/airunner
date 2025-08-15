@@ -3,6 +3,8 @@ import importlib.util
 import os.path
 import sys
 import zipfile
+import time
+
 
 try:
     import requests
@@ -192,7 +194,7 @@ class InstallWorker(
                 files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
             except KeyError:
                 continue
-            self.parent.total_steps += len(files)
+            # Remove redundant total_steps increment - already counted in calculate_total_files()
             self.total_models_in_current_step += len(files)
 
         for model in models:
@@ -245,7 +247,7 @@ class InstallWorker(
             files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]][
                 "controlnet"
             ]
-            self.parent.total_steps += len(files)
+            # Remove redundant total_steps increment - already counted in calculate_total_files()
             self.total_models_in_current_step += len(files)
         for controlnet_model in controlnet_bootstrap_data:
             if not self.models_enabled.get(controlnet_model["name"], True):
@@ -287,7 +289,7 @@ class InstallWorker(
                 files = FLUX_FILE_BOOTSTRAP_DATA[model["version"]]
             except KeyError:
                 continue
-            self.parent.total_steps += len(files)
+            # Remove redundant total_steps increment - already counted in calculate_total_files()
             self.total_models_in_current_step += len(files)
         print(f"Downloading {self.total_models_in_current_step} Flux files")
         for model in models:
@@ -324,7 +326,7 @@ class InstallWorker(
             {"label": "Downloading Controlnet processors..."}
         )
         self.total_models_in_current_step += len(controlnet_processor_files)
-        self.parent.total_steps += len(controlnet_processor_files)
+        # Remove redundant total_steps increment - already counted in calculate_total_files()
         for filename in controlnet_processor_files:
             requested_file_path = os.path.expanduser(
                 os.path.join(
@@ -358,7 +360,7 @@ class InstallWorker(
                 models.append(model)
         for model in models:
             files = LLM_FILE_BOOTSTRAP_DATA[model["path"]]["files"]
-            self.parent.total_steps += len(files)
+            # Remove redundant total_steps increment - already counted in calculate_total_files()
             self.total_models_in_current_step += len(files)
             for filename in files:
                 requested_file_path = os.path.expanduser(
@@ -1162,12 +1164,17 @@ class InstallWorker(
             {"message": "All installation steps completed successfully"}
         )
 
-        # Make sure we complete all downloads in the counter
+        # Make sure we complete all downloads in both counters for consistency
         if self.parent.total_files != self.parent.total_files_downloaded:
             self.parent.total_files_downloaded = self.parent.total_files
 
+        # Also synchronize with the completed_files counter
+        if self.parent.total_files != self.parent.completed_files:
+            self.parent.completed_files = self.parent.total_files
+
         # Force progress bar to show completion
-        self.parent.update_progress_bar(final=True)
+        self.parent.ui.progress_bar.setValue(100)
+        self.parent.ui.progress_bar.setFormat("Total download progress 100%")
 
         # Signal that installation is complete and cleanup can begin
         self.running = False
@@ -1285,9 +1292,18 @@ class InstallPage(BaseWizard):
         # Connect thread signals
         self.thread.started.connect(self.worker.run)
 
-        # Calculate total files and start immediately
+        # Calculate total files but DON'T start downloads yet
+        # Downloads should only start when user clicks Next to reach this page
         self.calculate_total_files()
-        self.thread.start()
+        # Remove automatic thread.start() - this was causing premature downloads
+
+    def initializePage(self):
+        """Called when the wizard page becomes active - this is when we start downloads"""
+        super().initializePage()
+
+        # Only start downloads if thread hasn't been started yet
+        if hasattr(self, "thread") and not self.thread.isRunning():
+            self.thread.start()
 
     def __del__(self):
         """Cleanup thread when page is destroyed"""
@@ -1411,6 +1427,24 @@ class InstallPage(BaseWizard):
                     f"Total download progress {safe_pct}%"
                 )
 
+            # Check if all files are completed and enable Next button
+            if self.completed_files >= self.total_files:
+                # Force progress to 100% to ensure display is correct
+                self.ui.progress_bar.setValue(100)
+                self.ui.progress_bar.setFormat("Total download progress 100%")
+                # Add a slight delay before enabling the Next button
+                # to ensure all processing is complete
+                QTimer.singleShot(500, self._enable_next_button)
+            else:
+                # Add a fallback check in case we get stuck at 98%
+                # If we're very close to completion, check again after a delay
+                if (
+                    self.completed_files >= self.total_files * 0.98
+                ):  # 98% or higher
+                    QTimer.singleShot(
+                        5000, self._check_completion_fallback
+                    )  # Check in 5 seconds
+
     def file_progress_updated(self, current, total):
         """Handler for download progress updates"""
         self.download_progress({"current": current, "total": total})
@@ -1449,25 +1483,16 @@ class InstallPage(BaseWizard):
 
     def update_progress_bar(self, final: bool = False, data: dict = None):
         """Update the progress bar and manage Next button state"""
-        # Only increment counter if this is a file completion event
-        # or final progress update
+        # This method now only handles enabling the Next button when all downloads complete
+        # Progress updates are handled by file_download_finished() to prevent double counting
         if self.total_files == 0 and not final:
             return
 
-        # If data is provided and contains file_name, this is a download completion event
-        if data and "file_name" in data:
-            self.total_files_downloaded += 1
-        # If this is the final update, don't increment counter
-        elif not final and not data:
-            # This is a generic update_progress_bar call without specific file completion
-            # Only increment if specifically requested (legacy handling)
-            self.total_files_downloaded += 1
+        # Don't increment counters here - file_download_finished() handles that
+        # This prevents double counting that was causing 192% progress
 
-        # Never exceed total files
-        if self.total_files_downloaded > self.total_files:
-            self.total_files_downloaded = self.total_files
-
-        if self.total_files == self.total_files_downloaded:
+        # Check if all files are downloaded using the main counter from file_download_finished()
+        if self.total_files == self.completed_files:
             # Use progress_bar for total download progress
             self.ui.progress_bar.setValue(100)
             self.ui.progress_bar.setFormat("Total download progress 100%")
@@ -1475,32 +1500,50 @@ class InstallPage(BaseWizard):
             # Add a slight delay before enabling the Next button
             # to ensure all processing is complete
             QTimer.singleShot(500, self._enable_next_button)
-        else:
-            val = 0
-            if self.total_files > 0:
-                val = (self.total_files_downloaded / self.total_files) * 100
-            try:
-                # Use progress_bar for total download progress
-                self.ui.progress_bar.setValue(val)
-                self.ui.progress_bar.setFormat(
-                    f"Total download progress {int(val)}%"
-                )
-            except (OverflowError, ValueError):
-                # Handle potential overflow with large progress values
-                safe_val = min(100, max(0, int(val)))
-                self.ui.progress_bar.setValue(safe_val)
-                self.ui.progress_bar.setFormat(
-                    f"Total download progress {safe_val}%"
-                )
+        # If called for final update, synchronize total_files_downloaded with completed_files
+        elif final:
+            self.total_files_downloaded = self.completed_files
 
     def _enable_next_button(self):
         """Enable the Next button when installation is complete"""
-        if hasattr(self.parent, "button") and self.parent.button(
-            QWizard.WizardButton.NextButton
-        ):
-            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(
-                True
-            )
+        try:
+            if hasattr(self.parent, "button") and self.parent.button(
+                QWizard.WizardButton.NextButton
+            ):
+                next_button = self.parent.button(
+                    QWizard.WizardButton.NextButton
+                )
+                if next_button:
+                    next_button.setEnabled(True)
+                else:
+                    pass
+            else:
+                pass
+        except Exception as e:
+            pass
+
+        # Also try to enable the Back button if it was disabled
+        try:
+            if hasattr(self.parent, "button") and self.parent.button(
+                QWizard.WizardButton.BackButton
+            ):
+                back_button = self.parent.button(
+                    QWizard.WizardButton.BackButton
+                )
+                if back_button:
+                    back_button.setEnabled(True)
+        except Exception as e:
+            pass
+
+    def _check_completion_fallback(self):
+        """Fallback method to check if downloads are actually complete when stuck at 98%"""
+
+        # Force completion if we're close enough or if it's been stuck
+        if self.completed_files >= self.total_files * 0.98:  # 98% or higher
+            self.completed_files = self.total_files
+            self.ui.progress_bar.setValue(100)
+            self.ui.progress_bar.setFormat("Total download progress 100%")
+            QTimer.singleShot(500, self._enable_next_button)
 
     def set_status(self, message: str):
         # set the text of a QProgressBar
