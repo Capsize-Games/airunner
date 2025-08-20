@@ -26,11 +26,21 @@ logger = logging.getLogger(__name__)
 def apply_last_channels(pipe: Any, enabled: bool) -> None:
     """Apply torch.channels_last memory format if enabled."""
     if enabled:
-        pipe.unet.to(memory_format=torch.channels_last)
-        logger.info("Enabled torch.channels_last memory format.")
+        try:
+            pipe.unet.to(memory_format=torch.channels_last)
+            logger.info("Enabled torch.channels_last memory format.")
+        except AttributeError as e:
+            logger.warning(
+                f"Unable to enable torch.channels_last memory format. {e}"
+            )
     else:
-        pipe.unet.to(memory_format=torch.contiguous_format)
-        logger.info("Disabled torch.channels_last memory format.")
+        try:
+            pipe.unet.to(memory_format=torch.contiguous_format)
+            logger.info("Disabled torch.channels_last memory format.")
+        except AttributeError as e:
+            logger.warning(
+                f"Unable to disable torch.channels_last memory format. {e}"
+            )
 
 
 def set_memory_efficient(enabled: bool) -> bool:

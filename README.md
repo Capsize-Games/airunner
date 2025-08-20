@@ -540,6 +540,7 @@ After the server is running, you can access it at `http://localhost:8080/`. Be s
 
 ```bash
 export AIRUNNER_NOMINATIM_URL=http://localhost:8080/
+```
 
 ## Sponsorship
 
@@ -551,4 +552,4 @@ Thank you for your support!
 
 ### Past Sponsors
 
-**[<image src="image.png" alt="Open Core Ventures Catalyst Program" style="max-width: 50px; height: auto;" /> Open Core Ventures Catalyst Program](https://www.opencoreventures.com/)**
+[![Open Core Ventures Catalyst Program](images/image.png)](https://www.opencoreventures.com/) Open Core Ventures Catalyst Program

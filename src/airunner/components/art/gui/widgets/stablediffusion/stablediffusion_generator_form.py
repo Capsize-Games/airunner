@@ -402,8 +402,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
         This slot is called after an LLM has generated the prompts for an image.
         It sets the prompts in the generator form UI and continues the image generation process.
         """
-        print("*" * 100)
-        print("ON LLM IMAGE PROMPT GENERATED SIGNAL")
         # Unload non-Stable Diffusion models
         self.api.art.unload_non_sd(callback=self.unload_llm_callback)
         # Set the prompts in the generator form UI
