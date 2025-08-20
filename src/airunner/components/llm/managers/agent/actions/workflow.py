@@ -1,5 +1,7 @@
 from typing import List, Type
-from airunner.components.llm.managers.agent.actions.agent_action import AgentAction
+from airunner.components.llm.managers.agent.actions.agent_action import (
+    AgentAction,
+)
 from airunner.components.llm.managers.agent.actions.agent_action_message import (
     AgentActionMessage,
 )
@@ -19,5 +21,4 @@ class WorkFlow:
         logger.info(f"Description: {description}")
         current_message = message
         for current_step in steps:
-            logger.info(f"Running step: {current_step.__name__}")
             current_message = current_step.run(current_message)

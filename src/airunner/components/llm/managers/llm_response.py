@@ -18,6 +18,7 @@ class LLMResponse:
         is_end_of_message: Flag indicating if this is the last message in a sequence.
         name: Optional name associated with the response (e.g., assistant name).
         action: The type of action this response represents.
+        sequence_number: Sequential number to track message order.
     """
 
     message: str = ""
@@ -26,3 +27,4 @@ class LLMResponse:
     name: Optional[str] = None
     action: LLMActionType = LLMActionType.CHAT
     node_id: Optional[str] = None
+    sequence_number: int = 0
