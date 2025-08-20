@@ -31,7 +31,11 @@ def load_splitter_settings(
         settings = get_qsettings()
 
     for splitter_name in splitters:
-        splitter = getattr(ui, splitter_name)
+        try:
+            splitter = getattr(ui, splitter_name)
+        except AttributeError:
+            continue
+
         total_splitter_panels = splitter.count()
 
         if splitter_name in orientations:
