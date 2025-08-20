@@ -85,7 +85,6 @@ from airunner.components.context.context_manager import ContextManager
 from airunner.components.llm.managers.agent.agents.tool_mixins.browser_tools_mixin import (
     BrowserToolsMixin,
 )
-from airunner.components.llm.managers.agent.tools.map_tool import MapTool
 from airunner.components.llm.managers.agent.agents.tool_mixins.map_tools_mixin import (
     MapToolsMixin,
 )
@@ -231,6 +230,8 @@ class BaseAgent(
         self._memory: Optional[BaseMemory] = None
         self._react_tool_agent: Optional[Any] = react_tool_agent
         self._complete_response: str = ""
+        self._stream_started: bool = False
+        self._sequence_counter: int = 0
         self._store_user_tool: Optional[Any] = store_user_tool
         self.model: Optional[Any] = model
         self.tokenizer: Optional[Any] = tokenizer
@@ -1369,24 +1370,15 @@ class BaseAgent(
             self.logger.warning(f"No handler found for action: {action}")
             return None
 
-        self.logger.info(f"Performing tool call for action: {action}")
-        self.logger.info(
-            f"[DEBUG] _perform_tool_call calling handler with kwargs: {kwargs}"
-        )
         response = handler(**kwargs)
-        self.logger.info(
-            f"[DEBUG] _perform_tool_call got response: {response} (type: {type(response)})"
-        )
 
         if action is LLMActionType.DECISION:
             selection = self._parse_menu_selection(response.content)
             new_action = self.action_map[selection]
             self.action = new_action
             handler = self.tool_handlers.get(new_action)
-            self.logger.info(f"Performing tool call for action: {new_action}")
             response = handler(**kwargs)
 
-        self.logger.info(f"Tool call for action {action} completed.")
         return response
 
     def _strip_previous_messages_from_conversation(self) -> None:
@@ -1607,6 +1599,10 @@ class BaseAgent(
                 message = stripped_message
         self._chat_prompt = message
         self._complete_response = ""
+        self._stream_started = False
+        self._sequence_counter = (
+            0  # Reset sequence counter for new conversation
+        )
         if action is LLMActionType.CHAT:
             self._complete_response = f"{self.botname}: "
         self.do_interrupt = False
@@ -1693,13 +1689,24 @@ class BaseAgent(
         # We should send the individual 'response' (token/chunk) and then accumulate.
 
         if self.action is not LLMActionType.DECISION:
+            # Track streaming state to ensure proper is_first_message handling
+            # Only reset stream state if we haven't started streaming yet
+            # This prevents tools from interfering with an already active stream
+
+            # Debug logging to trace the issue - include agent ID to track multiple instances
+            if is_first_message:
+                self._stream_started = True
+                self._is_first_message_handled = True
+                self._sequence_counter = 1
+            else:
+                self._sequence_counter += 1
+
             self.api.llm.send_llm_text_streamed_signal(
                 LLMResponse(
                     message=response,
                     is_first_message=is_first_message,
                     is_end_of_message=is_last_message,
-                    name=self.botname,
-                    node_id=self.llm_request.node_id,
+                    sequence_number=self._sequence_counter,
                 )
             )
             self._complete_response += response

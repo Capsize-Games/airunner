@@ -57,6 +57,17 @@ class ConversationWidget(BaseWidget):
         self.loading_widget.hide()
         super().__init__()
         self.token_buffer = []
+        # Add a streaming buffer to ensure proper token ordering
+        self._current_stream_tokens = []
+        self._stream_started = False
+        self._orphaned_tokens = (
+            []
+        )  # Collect tokens that arrive before is_first_message
+        # Add sequence-based buffering to handle out-of-order signals
+        self._sequence_buffer = {}  # Dict[int, LLMResponse]
+        self._expected_sequence = 1  # Next expected sequence number
+        # Track which message index is currently being streamed to avoid overwriting
+        self._active_stream_message_index = None
         # prevent right click on self.ui.stage
         self.ui.stage.setContextMenuPolicy(
             Qt.ContextMenuPolicy.PreventContextMenu
@@ -64,9 +75,6 @@ class ConversationWidget(BaseWidget):
         self._web_channel = QWebChannel(self.ui.stage.page())
         self._chat_bridge = ChatBridge()
         self._chat_bridge.scrollRequested.connect(self._handle_scroll_request)
-        # self._chat_bridge.contentHeightChanged.connect(
-        #     self._handle_content_height_changed
-        # )
         self._chat_bridge.deleteMessageRequested.connect(self.deleteMessage)
         self._web_channel.registerObject("chatBridge", self._chat_bridge)
         self.ui.stage.page().setWebChannel(self._web_channel)
@@ -168,37 +176,16 @@ class ConversationWidget(BaseWidget):
         if llm_response.node_id is not None:
             return
 
-        if not self._streamed_messages:
-            self._streamed_messages = []
+        # Skip empty end-of-stream signals, but reset state
+        if llm_response.is_end_of_message:
+            # Allow inclusion of any final token content then finalize after processing
+            if not llm_response.message:
+                self._finalize_stream_state()
+                return
+            # If final token carries content we'll process it then finalize in _process_sequential_tokens
 
-        if llm_response.is_first_message:
-            self._streamed_messages.append(
-                {
-                    "name": self.chatbot.botname,
-                    "content": llm_response.message,
-                    "role": "assistant",
-                    "is_bot": True,
-                }
-            )
-        else:
-            if (
-                self._streamed_messages
-                and self._streamed_messages[-1]["is_bot"]
-            ):
-                self._streamed_messages[-1]["content"] += llm_response.message
-            else:
-                self._streamed_messages.append(
-                    {
-                        "name": self.chatbot.botname,
-                        "content": llm_response.message,
-                        "role": "assistant",
-                        "is_bot": True,
-                    }
-                )
-        self._streamed_messages = self._assign_message_ids(
-            self._streamed_messages
-        )
-        self.set_conversation(self._streamed_messages)
+        # Always use the sequence-based handler
+        self._handle_sequenced_token(llm_response)
 
     def hide_status_indicator(self):
         """Hide the loading spinner."""
@@ -364,26 +351,6 @@ class ConversationWidget(BaseWidget):
         trigger_scroll()
         QTimer.singleShot(50, trigger_scroll)
         QTimer.singleShot(200, trigger_scroll)
-
-    # def _handle_content_height_changed(self, height: int) -> None:
-    #     """Handle content height change from JavaScript and resize the QWebEngineView."""
-    #     target_height = max(height + 40, 100)
-    #
-    #     logger.debug(
-    #         f"ConversationWidget: Content height changed to {height}, setting view height to {target_height}"
-    #     )
-    #
-    #     self.ui.stage.setMinimumHeight(target_height)
-    #     self.setMinimumHeight(target_height)
-    #
-    #     self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-    #     self.ui.stage.setSizePolicy(
-    #         QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
-    #     )
-    #
-    #     self.updateGeometry()
-    #
-    #     QApplication.processEvents()
 
     def _assign_message_ids(self, messages: list[dict]) -> list[dict]:
         """Assign unique, consecutive integer 'id' to every message."""
@@ -573,6 +540,106 @@ class ConversationWidget(BaseWidget):
         Conversation.objects.update(pk=conversation.id, value=new_messages)
         self._conversation.value = new_messages
         self.set_conversation_widgets(new_messages)
+
+    def _handle_sequenced_token(self, llm_response):
+        """
+        Handle tokens with sequence numbers to ensure proper ordering.
+
+        Args:
+            llm_response: LLMResponse object with sequence_number field
+        """
+        sequence_num = llm_response.sequence_number
+
+        # Initialize / restart sequence tracking on first message boundary
+        if llm_response.is_first_message:
+            if not self._stream_started:
+                existing_keys = list(self._sequence_buffer.keys())
+                self._expected_sequence = sequence_num
+                self._current_stream_tokens = []
+                self._stream_started = True
+                self._active_stream_message_index = (
+                    None  # Force creation of a new message when processed
+                )
+            else:
+                # New stream while another is active -> finalize previous WITHOUT deleting its content
+                self._finalize_stream_state(
+                    partial=True
+                )  # Keep sequence buffer for possible early tokens
+                self._expected_sequence = sequence_num
+                self._current_stream_tokens = []
+                self._stream_started = True
+                self._active_stream_message_index = None
+
+        # Store token in sequence buffer
+        self._sequence_buffer[sequence_num] = llm_response
+
+        # Process any tokens that are now in sequence immediately
+        self._process_sequential_tokens()
+
+    def _process_sequential_tokens(self):
+        """Process buffered tokens that are in the correct sequence."""
+
+        processed_any = False
+        last_token_was_end = False
+        while self._expected_sequence in self._sequence_buffer:
+            token_response = self._sequence_buffer.pop(self._expected_sequence)
+
+            # Add to stream buffer
+            if token_response.message:
+                self._current_stream_tokens.append(token_response.message)
+            if getattr(token_response, "is_end_of_message", False):
+                last_token_was_end = True
+
+            self._expected_sequence += 1
+            processed_any = True
+
+        # Update the conversation display only once after processing all available tokens
+        if processed_any:
+            combined_content = "".join(self._current_stream_tokens)
+
+            if not self._streamed_messages:
+                self._streamed_messages = []
+
+            # Update or create bot message
+            if self._active_stream_message_index is None:
+                # Always create a new message for a new stream to avoid overwriting prior answers
+                self._streamed_messages.append(
+                    {
+                        "name": self.chatbot.botname,
+                        "content": combined_content,
+                        "role": "assistant",
+                        "is_bot": True,
+                    }
+                )
+                self._active_stream_message_index = (
+                    len(self._streamed_messages) - 1
+                )
+            else:
+                self._streamed_messages[self._active_stream_message_index][
+                    "content"
+                ] = combined_content
+
+            # Assign IDs and update conversation
+            self._streamed_messages = self._assign_message_ids(
+                self._streamed_messages
+            )
+            self.set_conversation(self._streamed_messages)
+
+        if last_token_was_end:
+            self._finalize_stream_state()
+
+    def _finalize_stream_state(self, partial: bool = False):
+        """Reset streaming state after a message completes.
+
+        Args:
+            partial: If True, keeps existing sequence buffer (used when a new first token arrives mid-stream).
+        """
+        self._stream_started = False
+        self._current_stream_tokens = []
+        self._active_stream_message_index = None
+        self._expected_sequence = 1 if not partial else self._expected_sequence
+        if not partial:
+            self._sequence_buffer = {}
 
     def on_theme_changed_signal(self, data: Dict):
         """
