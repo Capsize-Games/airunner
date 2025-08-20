@@ -85,7 +85,6 @@ from airunner.components.context.context_manager import ContextManager
 from airunner.components.llm.managers.agent.agents.tool_mixins.browser_tools_mixin import (
     BrowserToolsMixin,
 )
-from airunner.components.llm.managers.agent.tools.map_tool import MapTool
 from airunner.components.llm.managers.agent.agents.tool_mixins.map_tools_mixin import (
     MapToolsMixin,
 )
@@ -1371,24 +1370,15 @@ class BaseAgent(
             self.logger.warning(f"No handler found for action: {action}")
             return None
 
-        self.logger.info(f"Performing tool call for action: {action}")
-        self.logger.info(
-            f"[DEBUG] _perform_tool_call calling handler with kwargs: {kwargs}"
-        )
         response = handler(**kwargs)
-        self.logger.info(
-            f"[DEBUG] _perform_tool_call got response: {response} (type: {type(response)})"
-        )
 
         if action is LLMActionType.DECISION:
             selection = self._parse_menu_selection(response.content)
             new_action = self.action_map[selection]
             self.action = new_action
             handler = self.tool_handlers.get(new_action)
-            self.logger.info(f"Performing tool call for action: {new_action}")
             response = handler(**kwargs)
 
-        self.logger.info(f"Tool call for action {action} completed.")
         return response
 
     def _strip_previous_messages_from_conversation(self) -> None:

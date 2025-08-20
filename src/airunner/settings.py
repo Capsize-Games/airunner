@@ -405,7 +405,7 @@ CONTENT_WIDGETS_BASE_PATH = os.path.abspath(
 )
 
 VERBOSE_REACT_TOOL_AGENT = (
-    os.environ.get("VERBOSE_REACT_TOOL_AGENT", "1") == "1"
+    os.environ.get("VERBOSE_REACT_TOOL_AGENT", "0") == "1"
 )
 QTWEBENGINE_REMOTE_DEBUGGING = os.environ.get(
     "QTWEBENGINE_REMOTE_DEBUGGING", ""
