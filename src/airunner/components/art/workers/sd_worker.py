@@ -12,6 +12,10 @@ from airunner.components.art.managers.stablediffusion.sdxl_model_manager import 
     SDXLModelManager,
 )
 
+from airunner.components.art.managers.stablediffusion.sd35_model_manager import (
+    SD35ModelManager,
+)
+
 from airunner.enums import (
     QueueType,
     SignalCode,
@@ -35,6 +39,7 @@ class SDWorker(Worker):
     def __init__(self):
         self._sd: Optional[StableDiffusionModelManager] = None
         self._sdxl: Optional[SDXLModelManager] = None
+        self._sd35: Optional[SD35ModelManager] = None
         self._flux: Optional[FluxModelManager] = None
         self._safety_checker = None
         self._model_manager = None
@@ -87,10 +92,7 @@ class SDWorker(Worker):
     def model_manager(self):
         if self._model_manager is None:
             version = StableDiffusionVersion(self.generator_settings.version)
-
-            print("*" * 100)
-            print("VERSION", version)
-
+            
             if version is StableDiffusionVersion.SD1_5:
                 self._model_manager = self.sd
             elif version in (
@@ -102,6 +104,8 @@ class SDWorker(Worker):
                 self._model_manager = self.sdxl
             elif version is StableDiffusionVersion.FLUX_S:
                 self._model_manager = self.flux
+            elif version is StableDiffusionVersion.SD3_5:
+                self._model_manager = self.sd35
             else:
                 raise ValueError(
                     f"Unsupported Stable Diffusion version: {version}"
@@ -124,6 +128,12 @@ class SDWorker(Worker):
         if self._sdxl is None:
             self._sdxl = SDXLModelManager()
         return self._sdxl
+
+    @property
+    def sd35(self):
+        if self._sd35 is None:
+            self._sd35 = SD35ModelManager()
+        return self._sd35
 
     @property
     def flux(self):
