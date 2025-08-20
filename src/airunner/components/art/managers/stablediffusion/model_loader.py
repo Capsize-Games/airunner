@@ -274,12 +274,12 @@ def unload_lora(pipe: Any, logger: logging.Logger) -> None:
 
 def unload_embeddings(pipe: Any, logger: logging.Logger) -> None:
     """Unload all embeddings from the pipeline."""
-    try:
-        if pipe is not None and hasattr(pipe, "unload_textual_inversion"):
+    if pipe is not None and hasattr(pipe, "unload_textual_inversion"):
+        try:
             pipe.unload_textual_inversion()
             logger.info("Unloaded all embeddings from pipeline.")
-    except Exception as e:
-        logger.warning(f"Failed to unload embeddings: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to unload embeddings: {e}")
 
 
 def load_compel_proc(

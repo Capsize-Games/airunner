@@ -38,6 +38,13 @@ art_pipline_data = [
         "default": False,
     },
     {
+        "pipeline_action": "txt2img",
+        "version": "SD 3.5",
+        "category": "stablediffusion",
+        "classname": "diffusers.StableDiffusion3Pipeline",
+        "default": False,
+    },
+    {
         "pipeline_action": "outpaint",
         "version": "SDXL 1.0",
         "category": "stablediffusion",
