@@ -231,6 +231,8 @@ class BaseAgent(
         self._memory: Optional[BaseMemory] = None
         self._react_tool_agent: Optional[Any] = react_tool_agent
         self._complete_response: str = ""
+        self._stream_started: bool = False
+        self._sequence_counter: int = 0
         self._store_user_tool: Optional[Any] = store_user_tool
         self.model: Optional[Any] = model
         self.tokenizer: Optional[Any] = tokenizer
@@ -1607,6 +1609,10 @@ class BaseAgent(
                 message = stripped_message
         self._chat_prompt = message
         self._complete_response = ""
+        self._stream_started = False
+        self._sequence_counter = (
+            0  # Reset sequence counter for new conversation
+        )
         if action is LLMActionType.CHAT:
             self._complete_response = f"{self.botname}: "
         self.do_interrupt = False
@@ -1693,13 +1699,24 @@ class BaseAgent(
         # We should send the individual 'response' (token/chunk) and then accumulate.
 
         if self.action is not LLMActionType.DECISION:
+            # Track streaming state to ensure proper is_first_message handling
+            # Only reset stream state if we haven't started streaming yet
+            # This prevents tools from interfering with an already active stream
+
+            # Debug logging to trace the issue - include agent ID to track multiple instances
+            if is_first_message:
+                self._stream_started = True
+                self._is_first_message_handled = True
+                self._sequence_counter = 1
+            else:
+                self._sequence_counter += 1
+
             self.api.llm.send_llm_text_streamed_signal(
                 LLMResponse(
                     message=response,
                     is_first_message=is_first_message,
                     is_end_of_message=is_last_message,
-                    name=self.botname,
-                    node_id=self.llm_request.node_id,
+                    sequence_number=self._sequence_counter,
                 )
             )
             self._complete_response += response
