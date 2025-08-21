@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QColorDialog
+from PySide6.QtWidgets import QFileDialog
 from typing import Optional, Dict
 
 from PySide6.QtCore import Qt, QPoint
@@ -8,7 +9,9 @@ from PySide6.QtWidgets import QApplication
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import Ui_canvas
+from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import (
+    Ui_canvas,
+)
 from airunner.utils.application import set_widget_state
 from airunner.utils.widgets import load_splitter_settings
 
@@ -147,7 +150,32 @@ class CanvasWidget(BaseWidget):
 
     @Slot()
     def on_import_button_clicked(self):
-        self.api.art.canvas.import_image()
+        # Allow user to pick a file and perform import under a temporary user override
+        # so the facehuggershield permits opening the explicitly selected file.
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Import Image", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
+        )
+        if not file_path:
+            return
+
+        # Use the facehuggershield user override if available to allow this explicit user action.
+        try:
+            from airunner.vendor.facehuggershield.darklock.restrict_os_access import (
+                RestrictOSAccess,
+            )
+
+            ros = RestrictOSAccess()
+            # Allow only the selected file for this thread while importing
+            with ros.user_override(paths=[file_path]):
+                # Send the explicit path to the canvas API so the scene can load it directly.
+                # Use image_from_path which emits a load-image signal with the path.
+                self.api.art.canvas.image_from_path(file_path)
+        except Exception as e:
+            # Log via existing logger available on BaseWidget
+            try:
+                self.logger.exception(e)
+            except Exception:
+                print(e)
 
     @Slot()
     def on_export_button_clicked(self):
