@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'canvas.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.0
+## Created by: Qt User Interface Compiler version 6.9.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -83,7 +83,7 @@ class Ui_canvas(object):
         self.new_button.setMaximumSize(QSize(30, 30))
         self.new_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon = QIcon()
-        icon.addFile(u":/light/icons/feather/light/file-plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u":/light/icons/feather/light/loader.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.new_button.setIcon(icon)
         self.new_button.setFlat(False)
 
@@ -318,8 +318,17 @@ class Ui_canvas(object):
 
     def retranslateUi(self, canvas):
         canvas.setWindowTitle(QCoreApplication.translate("canvas", u"Form", None))
+#if QT_CONFIG(tooltip)
+        self.new_button.setToolTip(QCoreApplication.translate("canvas", u"Clear canvas", None))
+#endif // QT_CONFIG(tooltip)
         self.new_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.import_button.setToolTip(QCoreApplication.translate("canvas", u"Open image", None))
+#endif // QT_CONFIG(tooltip)
         self.import_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.export_button.setToolTip(QCoreApplication.translate("canvas", u"Save image", None))
+#endif // QT_CONFIG(tooltip)
         self.export_button.setText("")
 #if QT_CONFIG(tooltip)
         self.recenter_button.setToolTip(QCoreApplication.translate("canvas", u"Recenter grid", None))
@@ -345,7 +354,13 @@ class Ui_canvas(object):
         self.grid_button.setToolTip(QCoreApplication.translate("canvas", u"Toggle grid", None))
 #endif // QT_CONFIG(tooltip)
         self.grid_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.undo_button.setToolTip(QCoreApplication.translate("canvas", u"Undo", None))
+#endif // QT_CONFIG(tooltip)
         self.undo_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.redo_button.setToolTip(QCoreApplication.translate("canvas", u"Redo", None))
+#endif // QT_CONFIG(tooltip)
         self.redo_button.setText("")
 #if QT_CONFIG(tooltip)
         self.brush_size_slider.setToolTip(QCoreApplication.translate("canvas", u"Brush Size", None))
