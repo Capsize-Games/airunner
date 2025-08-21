@@ -46,6 +46,8 @@ class RestrictOSAccess(metaclass=Singleton):
             self.whitelisted_modules = set()
             self.allow_network = False
             self._import_guard = threading.local()
+            # thread-local structure to allow temporary user-initiated overrides
+            self._user_override = threading.local()
             self._initialized = True
             logger.debug("RestrictOSAccess initialized.")
 
@@ -224,6 +226,29 @@ class RestrictOSAccess(metaclass=Singleton):
 
         # For now, allow all operations if the path is whitelisted.
         # This should be refined based on specific operation requirements.
+        # First, check for a temporary user override on this thread.
+        try:
+            if getattr(self._user_override, "allow_any", False):
+                logger.debug(
+                    "is_file_operation_allowed: thread-local user override 'allow_any' is set. Allowing operation."
+                )
+                return True
+            allowed_paths = getattr(self._user_override, "allowed_paths", None)
+            if allowed_paths:
+                for p in allowed_paths:
+                    # allow if the file is exactly the allowed path or under an allowed directory
+                    if abs_path == p or abs_path.startswith(p + os.sep):
+                        logger.debug(
+                            "is_file_operation_allowed: path '%s' is allowed by thread-local override.",
+                            abs_path,
+                        )
+                        return True
+        except Exception:
+            # Any issue with override checking should fall back to whitelist behavior.
+            logger.exception(
+                "Error while checking thread-local user override. Falling back to whitelist."
+            )
+
         allowed = self.is_path_whitelisted(abs_path)
         logger.debug(
             f"is_file_operation_allowed: Path '{abs_path}' whitelisted: {allowed}"
@@ -286,6 +311,46 @@ class RestrictOSAccess(metaclass=Singleton):
             f"Checking whitelist for absolute file path: '{abs_file_path}' (original: '{file_path_str}')"
         )
 
+        # Check for thread-local user override first (allows explicit user actions)
+        try:
+            if getattr(self._user_override, "allow_any", False):
+                logger.info(
+                    f"Thread-local override 'allow_any' set. Allowing open for '{abs_file_path}'."
+                )
+                return self.original_open(
+                    file,
+                    mode,
+                    buffering,
+                    encoding,
+                    errors,
+                    newline,
+                    closefd,
+                    opener,
+                )
+            allowed_paths = getattr(self._user_override, "allowed_paths", None)
+            if allowed_paths:
+                for p in allowed_paths:
+                    if abs_file_path == p or abs_file_path.startswith(
+                        p + os.sep
+                    ):
+                        logger.info(
+                            f"Thread-local override allows open for '{abs_file_path}' via allowed_paths."
+                        )
+                        return self.original_open(
+                            file,
+                            mode,
+                            buffering,
+                            encoding,
+                            errors,
+                            newline,
+                            closefd,
+                            opener,
+                        )
+        except Exception:
+            logger.exception(
+                "Error while checking thread-local user override in restricted_open. Falling back to whitelist check."
+            )
+
         if self.is_path_whitelisted(abs_file_path):
             logger.info(
                 f"Path '{abs_file_path}' is whitelisted for open. Proceeding."
@@ -307,6 +372,59 @@ class RestrictOSAccess(metaclass=Singleton):
             raise PermissionError(
                 f"File system open operation to '{abs_file_path}' (from original path '{file}') is not allowed."
             )
+
+    from contextlib import contextmanager
+
+    @contextmanager
+    def user_override(self, paths=None, allow_any: bool = False):
+        """Context manager to temporarily allow file operations on the current thread.
+
+        - paths: optional iterable of file or directory paths to allow (they will be normalized to absolute paths).
+        - allow_any: if True, allows any file operation on this thread for the duration of the context. Use sparingly.
+
+        Example:
+            with RestrictOSAccess().user_override(paths=["/home/joe/Desktop"]):
+                open('/home/joe/Desktop/1.png', 'rb')  # allowed inside context
+
+        This operates per-thread using thread-local storage to avoid broad process-wide disabling.
+        """
+        # Normalize inputs
+        saved_allow_any = getattr(self._user_override, "allow_any", False)
+        saved_allowed_paths = getattr(
+            self._user_override, "allowed_paths", None
+        )
+        try:
+            self._user_override.allow_any = bool(allow_any)
+            if paths:
+                processed = []
+                for p in paths:
+                    try:
+                        processed.append(
+                            os.path.abspath(os.path.normpath(str(p)))
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Failed to normalize path for user_override: %s", p
+                        )
+                self._user_override.allowed_paths = processed
+            else:
+                # ensure attribute exists but is falsy
+                self._user_override.allowed_paths = None
+            yield
+        finally:
+            # Restore previous state
+            try:
+                self._user_override.allow_any = saved_allow_any
+                if saved_allowed_paths is None:
+                    if hasattr(self._user_override, "allowed_paths"):
+                        delattr(self._user_override, "allowed_paths")
+                else:
+                    self._user_override.allowed_paths = saved_allowed_paths
+            except Exception:
+                # Best-effort cleanup; don't raise from cleanup path
+                logger.exception(
+                    "Error while restoring thread-local user override state."
+                )
 
     def restricted_os_write(self, fd, data):
         # This operates on file descriptors. Mapping fd to path is non-trivial.

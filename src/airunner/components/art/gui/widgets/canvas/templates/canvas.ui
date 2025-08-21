@@ -166,12 +166,15 @@
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
+              <property name="toolTip">
+               <string>Clear canvas</string>
+              </property>
               <property name="text">
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
-                <normaloff>:/light/icons/feather/light/file-plus.svg</normaloff>:/light/icons/feather/light/file-plus.svg</iconset>
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/loader.svg</normaloff>:/light/icons/feather/light/loader.svg</iconset>
               </property>
               <property name="flat">
                <bool>false</bool>
@@ -195,11 +198,14 @@
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
+              <property name="toolTip">
+               <string>Open image</string>
+              </property>
               <property name="text">
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
                 <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
               </property>
               <property name="flat">
@@ -224,11 +230,14 @@
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
+              <property name="toolTip">
+               <string>Save image</string>
+              </property>
               <property name="text">
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
                 <normaloff>:/light/icons/feather/light/save.svg</normaloff>:/light/icons/feather/light/save.svg</iconset>
               </property>
               <property name="flat">
@@ -267,7 +276,7 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
                 <normaloff>:/light/icons/feather/light/target.svg</normaloff>:/light/icons/feather/light/target.svg</iconset>
               </property>
               <property name="flat">
@@ -299,7 +308,7 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
                 <normaloff>:/light/icons/feather/light/object-selected-icon.svg</normaloff>:/light/icons/feather/light/object-selected-icon.svg</iconset>
               </property>
               <property name="checkable">
@@ -331,7 +340,7 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
                 <normaloff>:/light/icons/feather/light/type.svg</normaloff>:/light/icons/feather/light/type.svg</iconset>
               </property>
               <property name="checkable">
@@ -363,7 +372,7 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
                 <normaloff>:/light/icons/feather/light/pencil-icon.svg</normaloff>:/light/icons/feather/light/pencil-icon.svg</iconset>
               </property>
               <property name="checkable">
@@ -398,7 +407,7 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
                 <normaloff>:/light/icons/feather/light/eraser-icon.svg</normaloff>:/light/icons/feather/light/eraser-icon.svg</iconset>
               </property>
               <property name="checkable">
@@ -433,7 +442,7 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
                 <normaloff>:/light/icons/feather/light/grid.svg</normaloff>:/light/icons/feather/light/grid.svg</iconset>
               </property>
               <property name="checkable">
@@ -468,11 +477,14 @@
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
+              <property name="toolTip">
+               <string>Undo</string>
+              </property>
               <property name="text">
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
                 <normaloff>:/light/icons/feather/light/corner-up-left.svg</normaloff>:/light/icons/feather/light/corner-up-left.svg</iconset>
               </property>
               <property name="flat">
@@ -497,11 +509,14 @@
               <property name="cursor">
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
+              <property name="toolTip">
+               <string>Redo</string>
+              </property>
               <property name="text">
                <string/>
               </property>
               <property name="icon">
-               <iconset resource="../../../resources/feather.qrc">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
                 <normaloff>:/light/icons/feather/light/corner-up-right.svg</normaloff>:/light/icons/feather/light/corner-up-right.svg</iconset>
               </property>
               <property name="flat">
@@ -737,7 +752,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources/feather.qrc"/>
+  <include location="../../../../../../gui/resources/feather.qrc"/>
  </resources>
  <connections/>
  <slots>
