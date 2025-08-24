@@ -56,7 +56,7 @@ extras_require = {
         "llama-index-readers-file==0.4.7",
         "llama-index-readers-web==0.4.1",
         "llama-index-llms-huggingface==0.5.0",
-        "llama-index-llms-groq==0.3.1",
+        "llama-index-llms-groq==0.4.0",
         "llama-index-embeddings-mistralai==0.3.0",
         "llama-index-vector-stores-faiss==0.4.0",
         "llama-index-embeddings-huggingface==0.5.4",
