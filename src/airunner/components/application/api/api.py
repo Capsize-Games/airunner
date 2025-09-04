@@ -21,16 +21,19 @@ from airunner.utils.application.ui_loader import (
     load_ui_file,
     load_ui_from_string,
 )
-from airunner.components.application.workers.model_scanner_worker import ModelScannerWorker
+from airunner.components.application.workers.model_scanner_worker import (
+    ModelScannerWorker,
+)
 from airunner.utils.audio.sound_device_manager import SoundDeviceManager
 
-from airunner.components.nodegraph.api.nodegraph_services import NodegraphAPIService
+from airunner.components.nodegraph.api.nodegraph_services import (
+    NodegraphAPIService,
+)
 from airunner.components.art.api.video_services import VideoAPIService
 from airunner.components.stt.api.stt_services import STTAPIService
 from airunner.components.tts.api.tts_services import TTSAPIService
 from airunner.components.art.api.art_services import ARTAPIService
 from airunner.components.llm.api.llm_services import LLMAPIService
-from airunner.components.browser.api.browser_services import BrowserAPIService
 from airunner.components.application.api import api as api_module
 
 
@@ -147,7 +150,6 @@ class API(App):
         }
         self._initialized = True
         self.llm = LLMAPIService(emit_signal=self.emit_signal)
-        self.browser = BrowserAPIService(emit_signal=self.emit_signal)
         self.art = ARTAPIService(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
         self.stt = STTAPIService(emit_signal=self.emit_signal)
@@ -394,7 +396,3 @@ class API(App):
         self.emit_signal(
             SignalCode.DO_GENERATE_SIGNAL, {"image_request": image_request}
         )
-
-    def navigate(self, url: str):
-        self.logger.info("Navigating to URL: %s", url)
-        self.emit_signal(SignalCode.BROWSER_NAVIGATE_SIGNAL, {"url": url})

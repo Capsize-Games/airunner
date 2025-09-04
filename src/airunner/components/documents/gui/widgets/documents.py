@@ -5,47 +5,16 @@ from airunner.components.documents.gui.widgets.templates.documents_ui import (
 )
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from PySide6.QtCore import Signal, Slot
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QIcon
-from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
-    FileExplorerWidget,
-)
 from airunner.enums import SignalCode
 import os
 
-from airunner.components.browser.gui.widgets.mixins.session_persistence_mixin import (
-    SessionPersistenceMixin,
-)
-from airunner.components.browser.gui.widgets.mixins.privacy_mixin import (
-    PrivacyMixin,
-)
-from airunner.components.browser.gui.widgets.mixins.panel_mixin import (
-    PanelMixin,
-)
-from airunner.components.browser.gui.widgets.mixins.navigation_mixin import (
-    NavigationMixin,
-)
-
-# from airunner.components.browser.gui.widgets.mixins.summarization_mixin import (
-#     SummarizationMixin,
-# )
-from airunner.components.browser.gui.widgets.mixins.cache_mixin import (
-    CacheMixin,
-)
-from airunner.components.browser.gui.widgets.mixins.ui_setup_mixin import (
-    UISetupMixin,
-)
 from airunner.utils.settings import get_qsettings
 
 
 class DocumentsWidget(
-    UISetupMixin,
-    SessionPersistenceMixin,
-    PrivacyMixin,
-    PanelMixin,
-    NavigationMixin,
     # SummarizationMixin,
-    CacheMixin,
     BaseWidget,
 ):
     """Widget that displays a file explorer for documents, reusing FileExplorerWidget."""

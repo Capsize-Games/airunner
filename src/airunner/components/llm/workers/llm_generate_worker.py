@@ -35,10 +35,8 @@ class LLMGenerateWorker(Worker):
             SignalCode.QUIT_APPLICATION: self.on_quit_application_signal,
             SignalCode.CONVERSATION_DELETED: self.on_conversation_deleted_signal,
             SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
-            SignalCode.WEB_BROWSER_PAGE_HTML: self.on_web_browser_page_html_signal,
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
             SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
-            SignalCode.BROWSER_EXTRA_CONTEXT: self.on_browser_extra_context,
             SignalCode.INDEX_DOCUMENT: self.on_index_document_signal,
             SignalCode.MAP_SEARCH_REQUEST_SIGNAL: self.on_map_search_request_signal,  # Handle map search requests
         }
@@ -114,28 +112,11 @@ class LLMGenerateWorker(Worker):
                 self._model_manager = self.local_model_manager
         return self._model_manager
 
-    def on_browser_extra_context(self, data: dict) -> None:
-        """
-        Handle extra context sent from the browser widget.
-        Args:
-            data (dict): Dictionary with 'plaintext', 'url', etc.
-        """
-        url = data.get("url")
-        if url and data.get("plaintext"):
-            self.context_manager.set_context(url, data)
-            self.logger.info(f"Set browser context for {url}")
-
     def on_conversation_deleted_signal(self, data):
         self.model_manager.on_conversation_deleted(data)
 
     def on_section_changed_signal(self):
         self.model_manager.on_section_changed()
-
-    def on_web_browser_page_html_signal(self, data):
-        if self.model_manager:
-            self.model_manager.on_web_browser_page_html(
-                data.get("content", "")
-            )
 
     def on_llm_model_changed_signal(self, data: Dict):
         # Reset the model manager to ensure it's re-evaluated on next access

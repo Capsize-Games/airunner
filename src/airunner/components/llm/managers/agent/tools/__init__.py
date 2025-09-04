@@ -8,7 +8,6 @@ from airunner.components.llm.managers.agent.tools.search_engine_tool import (
 from airunner.components.llm.managers.agent.tools.search_results_parser_tool import (
     RespondToSearchQueryTool,
 )
-from airunner.components.llm.managers.agent.tools.browser_tool import BrowserTool
 
 
 __all__ = [
@@ -18,5 +17,4 @@ __all__ = [
     "SearchTool",
     "SearchEngineTool",
     "RespondToSearchQueryTool",
-    "BrowserTool",
 ]

@@ -82,9 +82,6 @@ from airunner.components.llm.managers.agent.agents.tool_mixins import (
     AnalysisToolsMixin,
 )
 from airunner.components.context.context_manager import ContextManager
-from airunner.components.llm.managers.agent.agents.tool_mixins.browser_tools_mixin import (
-    BrowserToolsMixin,
-)
 from airunner.components.llm.managers.agent.agents.tool_mixins.map_tools_mixin import (
     MapToolsMixin,
 )
@@ -96,7 +93,6 @@ class BaseAgent(
     RAGMixin,
     WeatherMixin,
     ImageToolsMixin,
-    BrowserToolsMixin,
     ConversationToolsMixin,
     SystemToolsMixin,
     UserToolsMixin,
@@ -152,9 +148,8 @@ class BaseAgent(
             3: LLMActionType.GENERATE_IMAGE,
             4: LLMActionType.PERFORM_RAG_SEARCH,
             5: LLMActionType.APPLICATION_COMMAND,
-            6: LLMActionType.BROWSER,
-            7: LLMActionType.FILE_INTERACTION,
-            8: LLMActionType.WORKFLOW_INTERACTION,
+            6: LLMActionType.FILE_INTERACTION,
+            7: LLMActionType.WORKFLOW_INTERACTION,
         }
         self.tool_handlers = {
             LLMActionType.CHAT: self.chat_tool_handler,
@@ -163,7 +158,6 @@ class BaseAgent(
             LLMActionType.STORE_DATA: self.store_data_handler,
             LLMActionType.APPLICATION_COMMAND: self.application_command_handler,
             LLMActionType.GENERATE_IMAGE: self.generate_image_handler,
-            LLMActionType.BROWSER: self.use_browser_handler,
             LLMActionType.SEARCH: self.search_tool_handler,
             LLMActionType.FILE_INTERACTION: self.file_interaction_handler,
             LLMActionType.WORKFLOW_INTERACTION: self.workflow_interaction_handler,
@@ -187,14 +181,10 @@ class BaseAgent(
                 "description": "Use documents: Choose this when you want to search through documents or files to find relevant information to respond to the user's request.",
             },
             5: {
-                "action": LLMActionType.BROWSER,
-                "description": "Use the browser: Choose this when you want to open a webpage in a browser tab to gather information or perform actions on the web.",
-            },
-            6: {
                 "action": LLMActionType.APPLICATION_COMMAND,
                 "description": "Not sure what to do: Reason about the user's request and choose from a list of available tools in order to fulfill the request.",
             },
-            7: {
+            6: {
                 "action": LLMActionType.MAP_TOOL,
                 "description": "Use the map tool: Choose this when you want to search for locations, geocode, find POIs, or perform map-related actions.",
             },
@@ -271,10 +261,6 @@ class BaseAgent(
                     or command.lower() == v.value.lower()
                 ):
                     return k
-            # Additional fallback: if command is a known alias (e.g. 'browser'), map to single-letter
-            browser_aliases = ["browser", "browse", "web", "site"]
-            if command.lower() in browser_aliases:
-                return "b"
         return None
 
     @property
@@ -511,7 +497,6 @@ class BaseAgent(
             self.list_files_in_directory_tool,
             self.open_image_from_path_tool,
             self.search_engine_tool,
-            self.use_browser_tool,
             self.generate_image_tool,
             self.map_tool,
         ]
@@ -1254,17 +1239,6 @@ class BaseAgent(
         self._complete_response = confirmation
         return self.react_tool_agent.call(**kwargs)
 
-    def use_browser_handler(self, **kwargs: Any) -> Any:
-        kwargs["tool_choice"] = "use_browser_tool"
-        kwargs["chat_history"] = (
-            self.chat_memory.get() if self.chat_memory else []
-        )
-        result = self.react_tool_agent.call(**kwargs)
-        self._complete_response = (
-            result.content if hasattr(result, "content") else str(result)
-        )
-        return result
-
     def search_tool_handler(self, **kwargs: Any) -> Any:
         kwargs["tool_choice"] = "search_engine_tool"
         if "chat_history" not in kwargs:
@@ -1493,14 +1467,6 @@ class BaseAgent(
         """
         return ChatMessage(role=role, blocks=[TextBlock(text=content)])
 
-    def on_web_browser_page_html(self, content: str) -> None:
-        """
-        Handle web browser page HTML content.
-        Args:
-            content (str): The HTML content.
-        """
-        self.webpage_html = content
-
     def on_delete_messages_after_id(self) -> None:
         """
         Handle deletion of messages after a specific ID.
@@ -1569,13 +1535,7 @@ class BaseAgent(
         if command is not None:
             action = SLASH_COMMANDS[command]
             stripped_message = message[len(command) + 1 :].strip()
-            if action == LLMActionType.BROWSER:
-                message = (
-                    f"Please navigate to {stripped_message}"
-                    if stripped_message
-                    else "Please open the browser"
-                )
-            elif action == LLMActionType.SEARCH:
+            if action == LLMActionType.SEARCH:
                 message = (
                     f"Please search for {stripped_message}"
                     if stripped_message
