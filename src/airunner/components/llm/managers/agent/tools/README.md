@@ -1,6 +1,6 @@
 # LLM Agent Tools
 
-This directory contains all LLM agent tool wrappers for the AI Runner project. Each tool exposes a specific capability (search, chat, browser, RAG, etc.) to the agent framework, following a consistent interface and registration pattern.
+This directory contains all LLM agent tool wrappers for the AI Runner project. Each tool exposes a specific capability (search, chat, RAG, etc.) to the agent framework, following a consistent interface and registration pattern.
 
 ## Tool Inventory
 
@@ -9,7 +9,6 @@ This directory contains all LLM agent tool wrappers for the AI Runner project. E
 | `search_tool`            | `SearchTool`                | Raw search results                      | dict            | Direct search        |
 | `search_engine_tool`     | `SearchEngineTool`          | Search + answer synthesis               | str             | Conversational agent |
 | `respond_to_search_query`| `RespondToSearchQueryTool`  | Synthesize answer from search results   | str             | Multi-step workflow  |
-| `browser_tool`           | `BrowserTool`               | Web browsing/scraping                   | varies          | Web navigation       |
 | `rag_engine_tool`        | `RAGEngineTool`             | Retrieval-augmented generation          | str             | Knowledge retrieval  |
 | `chat_engine_tool`       | `ChatEngineTool`            | Conversational Q&A                      | str             | Chat agent           |
 | `react_agent_tool`       | `ReActAgentTool`            | Reasoning + acting (multi-tool)         | varies          | ReAct agent          |
@@ -34,24 +33,19 @@ This directory contains all LLM agent tool wrappers for the AI Runner project. E
 - **Purpose:** Thin wrapper for AggregatedSearchTool; exposes raw search as a tool.
 - **Usage:** Used for direct search queries, returns raw results.
 
-### 5. BrowserTool
-- **Purpose:** Allows agents to browse/scrape web pages and trigger browser navigation in the GUI.
-- **Usage:** Used for tasks requiring web navigation or scraping. Accepts both `url` and `input` as arguments (e.g., `{"input": "reddit.com"}` or `{"url": "https://reddit.com"}`), and normalizes to a full `https://` URL automatically. Robust to LLM and user input.
-- **Integration:** Emits browser navigation signals via the agent API for GUI/browser integration. See `BrowserToolsMixin` for singleton access pattern.
-
-### 6. SearchEngineTool
+### 5. SearchEngineTool
 - **Purpose:** High-level tool: performs search and synthesizes a conversational answer.
 - **Usage:** Main tool for "search and answer" workflows.
 
-### 7. RAGEngineTool
+### 6. RAGEngineTool
 - **Purpose:** Retrieval-Augmented Generation; fetches docs from a knowledge base, then answers.
 - **Usage:** Used for knowledge retrieval from internal/external corpora.
 
-### 8. WeatherTool
+### 7. WeatherTool
 - **Purpose:** Provides current weather information for a given location.
 - **Usage:** Used for weather queries via slash command or agent workflow.
 
-### 9. MapTool
+### 8. MapTool
 - **Purpose:** Provides map/geocoding/POI actions using Nominatim and Leaflet.
 - **Usage:** Used for geocoding, POI search, adding markers, and zooming to locations. Directions/routing is not supported by Nominatim. See `components/tools/map_tool.py` for API.
 

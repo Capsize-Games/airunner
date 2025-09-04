@@ -36,7 +36,6 @@ class ModelAction(Enum):
 
 class SignalCode(Enum):
     RUN_SCRIPT = "run_script_signal"
-    BROWSER_NAVIGATE_SIGNAL = "browser_navigate_signal"
     UPATE_LOCALE = "update_locale_signal"
     RETRANSLATE_UI_SIGNAL = "retranslate_ui_signal"
     SD_UPDATE_BATCH_IMAGES_SIGNAL = "sd_update_batch_images_signal"
@@ -211,8 +210,6 @@ class SignalCode(Enum):
 
     SECTION_CHANGED = "section_changed"
 
-    WEB_BROWSER_PAGE_HTML = "web_browser_page_html"
-
     CLEAR_PROMPTS = "clear_prompts"
 
     WIDGET_ELEMENT_CHANGED = "widget_element_changed"
@@ -248,7 +245,6 @@ class SignalCode(Enum):
     NODEGRAPH_PAN = "nodegraph_pan"
     LLM_MODEL_DOWNLOAD_PROGRESS = "llm_model_download_progress"
     MOOD_SUMMARY_UPDATE_STARTED = "mood_summary_update_started_signal"
-    BROWSER_EXTRA_CONTEXT = "browser_extra_context_signal"
     WIDGET_COMMAND_SIGNAL = "widget_command_signal"
 
     # file explorer
@@ -346,7 +342,6 @@ class LLMActionType(Enum):
     SEARCH = "search"
     DECISION = "decision"
 
-    BROWSER = "browser"
     CODE = "code"
     WORKFLOW = "workflow"
 

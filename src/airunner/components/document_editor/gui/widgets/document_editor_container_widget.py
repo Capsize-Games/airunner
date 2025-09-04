@@ -17,14 +17,11 @@ from airunner.components.document_editor.gui.widgets.document_editor_widget impo
     DocumentEditorWidget,
 )
 import os
-from airunner.components.browser.gui.widgets.mixins.tab_manager_mixin import (
-    TabManagerMixin,
-)
 import sys
 from PySide6.QtCore import QProcess
 
 
-class DocumentEditorContainerWidget(TabManagerMixin, BaseWidget):
+class DocumentEditorContainerWidget(BaseWidget):
     """Container for the DocumentEditorWidget, for use in tabbed or multi-document interfaces."""
 
     widget_class_ = Ui_document_editor_container
@@ -36,13 +33,6 @@ class DocumentEditorContainerWidget(TabManagerMixin, BaseWidget):
             SignalCode.RUN_SCRIPT: self.run_script,
         }
         super().__init__(*args, **kwargs)
-        self.setup_tab_manager(
-            self.ui.documents,
-            self._new_tab,
-            self._save_tab,
-            self._reopen_tab,
-            self._save_as_tab,
-        )
 
     def setup_tab_manager(self, *args, **kwargs):
         # Remove 'parent' from kwargs if present, since TabManagerMixin does not accept it

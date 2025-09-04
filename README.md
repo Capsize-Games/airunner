@@ -64,8 +64,6 @@ Show your support for this project by choosing one of the following options for 
 | - Text-to-Image (Stable Diffusion 1.5, SDXL, Turbo)<br>- Drawing tools & ControlNet<br>- LoRA & Embeddings<br>- Inpainting, outpainting, filters |
 | **🌍 Multi-lingual Capabilities** |
 | - Partial multi-lingual TTS/STT/interface<br>- English & Japanese GUI |
-| **🌐 Privacy-First Web Browser** |
-| - Built-in secure browser with off-the-record profiles<br>- HTTPS-only enforcement & strict certificate validation<br>- RAG integration for web content analysis<br>- Text extraction & summarization tools<br>- Zero persistent tracking or data storage |
 | **🔒 Privacy and Security** |
 | - Runs locally, no external API (default)<br>- Customizable LLM guardrails & image safety<br>- Disables HuggingFace telemetry<br> - Restricts network access |
 | **⚡ Performance & Utility** |
@@ -437,13 +435,12 @@ AI Runner supports a set of powerful chat slash commands, known as **Slash Tools
 | Slash | Command         | Action Type                | Description                                 |
 |-------|-----------------|---------------------------|---------------------------------------------|
 | `/a`  | Image           | GENERATE_IMAGE            | Generate an image from a prompt             |
-| `/b`  | Browser         | BROWSER                   | Open/navigate to a web page                 |
 | `/c`  | Code            | CODE                      | Run or generate code (if supported)         |
 | `/s`  | Search          | SEARCH                    | Search the web or knowledge base            |
 | `/w`  | Workflow        | WORKFLOW                  | Run a custom workflow (if supported)        |
 
 **Note:**
-- Some slash tools (like `/b` for browser and `/a` for image) return an immediate confirmation message (e.g., "Ok, I've navigated to ...", "Ok, generating your image...").
+- Some slash tools (like `/a` for image) return an immediate confirmation message (e.g., "Ok, I've navigated to ...", "Ok, generating your image...").
 - Others (like `/s` for search or `/w` for workflow) do not return a direct message, but instead show a loading indicator until the result is ready.
 - The set of available slash commands is defined in `SLASH_COMMANDS` in `src/airunner/settings.py` and may be extended in the future.
 

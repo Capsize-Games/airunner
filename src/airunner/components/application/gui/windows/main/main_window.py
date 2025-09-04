@@ -100,9 +100,6 @@ from airunner.components.art.gui.windows.filter_window.filter_window import (
 from airunner.components.application.gui.windows.main.ai_model_mixin import (
     AIModelMixin,
 )
-from airunner.components.application.gui.windows.main.browser_control_mixin import (
-    BrowserControlMixin,
-)
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
 )
@@ -128,7 +125,6 @@ class MainWindow(
     StylesMixin,
     PipelineMixin,
     AIModelMixin,
-    BrowserControlMixin,
     QMainWindow,
 ):
     show_grid_toggled = Signal(bool)
@@ -184,7 +180,6 @@ class MainWindow(
         ("save", "actionSave_As"),
         ("image", "art_editor_button"),
         ("file-text", "document_editor_button"),
-        ("chrome", "browser_button"),
         ("codesandbox", "workflow_editor_button"),
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
@@ -636,7 +631,6 @@ class MainWindow(
             "home_button": self.ui.home_tab,
             "art_editor_button": self.ui.art_tab,
             "document_editor_button": self.ui.document_editor_tab,
-            "browser_button": self.ui.browser_tab,
             "workflow_editor_button": self.ui.agent_workflow_tab,
             "map_button": self.ui.map_tab,
             "weather_button": self.ui.weather_tab,
@@ -660,10 +654,9 @@ class MainWindow(
             0: "home_button",
             1: "art_editor_button",
             2: "workflow_editor_button",
-            3: "browser_button",
-            4: "document_editor_button",
-            5: "map_button",
-            6: "weather_button",
+            3: "document_editor_button",
+            4: "map_button",
+            5: "weather_button",
         }
 
         if saved_index in buttons:
@@ -702,10 +695,6 @@ class MainWindow(
         self._set_current_button_and_tab(
             "document_editor_button", self.ui.document_editor_tab
         )
-
-    @Slot(bool)
-    def on_browser_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("browser_button", self.ui.browser_tab)
 
     @Slot(bool)
     def on_workflow_editor_button_toggled(self, val: bool):
@@ -1055,7 +1044,6 @@ class MainWindow(
         self.api.application_error(AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE)
 
     def closeEvent(self, event):
-        self.browser_cleanup()
         event.ignore()
         self.handle_close()
 
@@ -1373,9 +1361,6 @@ class MainWindow(
         self._initialize_window()
         self._initialize_default_buttons()
         self._initialize_filter_actions()
-
-        # Initialize browser controls
-        self.initialize_browser_controls()
 
         self.initialized = True
         self.logger.debug("Showing window")

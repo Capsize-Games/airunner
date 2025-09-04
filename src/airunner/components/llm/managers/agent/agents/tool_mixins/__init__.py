@@ -10,9 +10,6 @@ from airunner.components.llm.managers.agent.agents.tool_mixins.conversation_tool
 from airunner.components.llm.managers.agent.agents.tool_mixins.image_tools_mixin import (
     ImageToolsMixin,
 )
-from airunner.components.llm.managers.agent.agents.tool_mixins.browser_tools_mixin import (
-    BrowserToolsMixin,
-)
 from airunner.components.llm.managers.agent.agents.tool_mixins.llm_manager_mixin import (
     LLMManagerMixin,
 )
@@ -54,6 +51,5 @@ __all__ = [
     "UserManagerMixin",
     "UserToolsMixin",
     "SearchToolsMixin",
-    "BrowserToolsMixin",
     "MapToolsMixin",
 ]
