@@ -193,8 +193,13 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                 query_str = enhanced_query
 
         if hasattr(super(), "stream_chat"):
+            # Forward kwargs through to the parent stream_chat so downstream
+            # formatters and steps can access contextual kwargs like username.
             result = super().stream_chat(
-                query_str, chat_history=messages, tool_choice=tool_choice
+                query_str,
+                chat_history=messages,
+                tool_choice=tool_choice,
+                **(kwargs or {}),
             )
             # Parse for tool call and execute tool
             output = ""

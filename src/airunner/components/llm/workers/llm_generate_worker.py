@@ -324,7 +324,7 @@ class LLMGenerateWorker(Worker):
             f"[LLMGenerateWorker] Emitting MAP_SEARCH_RESULT_SIGNAL with payload: {payload}"
         )
         self.emit_signal(
-            SignalCode.MAP_SEARCH_RESULT_SIGNAL,  # <-- FIXED: use result signal, not request
+            SignalCode.MAP_SEARCH_RESULT_SIGNAL,
             payload,
         )
 
