@@ -440,20 +440,6 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 "Cannot update section - chat agent not loaded"
             )
 
-    def on_web_browser_page_html(self, content: str) -> None:
-        """
-        Process HTML content from a web browser page.
-
-        This allows the chat agent to analyze and use web page content in responses.
-
-        Args:
-            content: The HTML content of the web page.
-        """
-        if self._chat_agent:
-            self._chat_agent.on_web_browser_page_html(content)
-        else:
-            self.logger.error("Chat agent not loaded")
-
     def _load_tokenizer(self) -> None:
         """
         Load the tokenizer for the selected model.

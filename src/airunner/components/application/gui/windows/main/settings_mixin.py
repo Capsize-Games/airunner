@@ -137,42 +137,6 @@ class SettingsMixin:
         return self.load_settings_from_db(WhisperSettings)
 
     @property
-    def browser_settings(self) -> Dict[str, Any]:
-        settings = get_qsettings()
-        settings.beginGroup("browser")
-        browser_settings = {
-            "private_browsing": settings.value(
-                "private_browsing", False, type=bool
-            ),
-            "browser_type": settings.value(
-                "browser_type", "default", type=str
-            ),
-            "browser_os": settings.value("browser_os", "default", type=str),
-            "random_user_agent": settings.value(
-                "random_user_agent", False, type=bool
-            ),
-            "plaintext_display": settings.value(
-                "plaintext_display", False, type=bool
-            ),
-            "summarize_display": settings.value(
-                "summarize_display", False, type=bool
-            ),
-        }
-        settings.endGroup()
-        return browser_settings
-
-    def update_browser_settings(self, **kwargs):
-        settings = get_qsettings()
-        settings.beginGroup("browser")
-        for key, value in kwargs.items():
-            settings.setValue(key, value)
-        settings.endGroup()
-        settings.sync()
-        self.__settings_updated(
-            setting_name="browser", column_name=None, val=None
-        )
-
-    @property
     def window_settings(self) -> WindowSettings:
         settings = get_qsettings()
         settings.beginGroup("window_settings")

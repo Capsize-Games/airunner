@@ -254,53 +254,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="browser_button">
-            <property name="minimumSize">
-             <size>
-              <width>35</width>
-              <height>35</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>35</width>
-              <height>35</height>
-             </size>
-            </property>
-            <property name="baseSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="cursor">
-             <cursorShape>PointingHandCursor</cursorShape>
-            </property>
-            <property name="toolTip">
-             <string>Browser</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset resource="../../../../../../gui/resources/feather.qrc">
-              <normaloff>:/light/icons/feather/light/chrome.svg</normaloff>:/light/icons/feather/light/chrome.svg</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="checkable">
-             <bool>true</bool>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QPushButton" name="document_editor_button">
             <property name="minimumSize">
              <size>
@@ -747,37 +700,6 @@
                </property>
                <item row="0" column="0">
                 <widget class="NodeGraphWidget" name="graph" native="true"/>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="browser_tab">
-              <attribute name="title">
-               <string>Browser</string>
-              </attribute>
-              <layout class="QGridLayout" name="gridLayout_7">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item row="0" column="0">
-                <widget class="QTabWidget" name="browser">
-                 <property name="movable">
-                  <bool>true</bool>
-                 </property>
-                 <widget class="BrowserWidget" name="browser_page">
-                  <attribute name="title">
-                   <string/>
-                  </attribute>
-                 </widget>
-                </widget>
                </item>
               </layout>
              </widget>
@@ -1507,12 +1429,6 @@
    <class>NodeGraphWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/nodegraph/gui/widgets/node_graph_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>BrowserWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/browser/gui/widgets/browser_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
