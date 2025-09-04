@@ -1321,6 +1321,16 @@ class BaseAgent(
                 f'NOW RESPOND IN THE EXACT FORMAT ABOVE FOR: "{user_input}"'
             )
 
+        # Ensure template format args expected by the React formatter are present
+        try:
+            kwargs.setdefault("username", self.username)
+        except Exception:
+            kwargs.setdefault("username", "")
+        try:
+            kwargs.setdefault("botname", self.botname)
+        except Exception:
+            kwargs.setdefault("botname", "")
+
         result = self.react_tool_agent.call(**kwargs)
         self._complete_response = (
             result.content if hasattr(result, "content") else str(result)

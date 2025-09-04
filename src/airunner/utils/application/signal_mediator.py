@@ -52,7 +52,19 @@ class Signal(QObject):
             else:
                 self.callback(data)
         except Exception as e:
-            print(f"Error in signal callback: {e}")
+            # Print full traceback and context to aid debugging of signal handlers
+            import traceback
+
+            print(f"Error in signal callback: {e} (type: {type(e)})")
+            try:
+                print("data", data)
+            except Exception:
+                print("data: <unprintable>")
+            try:
+                print("callback", self.callback)
+            except Exception:
+                print("callback: <unprintable>")
+            traceback.print_exc()
 
     # Add a property for backward compatibility
     @property
