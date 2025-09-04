@@ -112,9 +112,40 @@ class DocumentEditorContainerWidget(BaseWidget):
         self._script_process = None
 
     def _open_file_tab(self, file_path: str):
+        if not file_path:
+            return
+
+        # Normalize path for comparison
+        try:
+            target = os.path.abspath(file_path)
+        except Exception:
+            target = file_path
+
+        # If a tab for this file is already open, switch to it instead of opening a new one
+        for i in range(self.ui.documents.count()):
+            w = self.ui.documents.widget(i)
+            candidate = None
+            if hasattr(w, "file_path") and callable(getattr(w, "file_path")):
+                try:
+                    candidate = w.file_path()
+                except Exception:
+                    candidate = None
+            else:
+                candidate = getattr(w, "current_file_path", None) or getattr(
+                    w, "file_path", None
+                )
+            if candidate:
+                try:
+                    if os.path.abspath(candidate) == target:
+                        self.ui.documents.setCurrentIndex(i)
+                        return
+                except Exception:
+                    # ignore path normalization errors and continue
+                    pass
+
         editor = DocumentEditorWidget()
         editor.load_file(file_path)
-        editor.file_path = file_path
+        # load_file sets editor.current_file_path; avoid setting editor.file_path attribute
         filename = os.path.basename(file_path)
         self.ui.documents.addTab(editor, filename)
         self.ui.documents.setCurrentWidget(editor)
@@ -122,32 +153,61 @@ class DocumentEditorContainerWidget(BaseWidget):
     def _new_tab(self):
         print("NEW TAB PRESSED")
         editor = DocumentEditorWidget()
-        editor.file_path = None
+        # Leave editor.current_file_path as the source of truth; do not set an attribute
         self.ui.documents.addTab(editor, "Untitled")
         self.ui.documents.setCurrentWidget(editor)
 
     def _save_tab(self, editor):
         # Use the DocumentEditorWidget API for saving
-        file_path = getattr(editor, "file_path", None)
+        # Resolve file path using available API (method or attributes)
+        if hasattr(editor, "file_path") and callable(
+            getattr(editor, "file_path")
+        ):
+            try:
+                file_path = editor.file_path()
+            except Exception:
+                file_path = None
+        else:
+            file_path = getattr(editor, "current_file_path", None) or getattr(
+                editor, "file_path", None
+            )
+
         if hasattr(editor, "save_file"):
             if not file_path:
                 return self._save_as_tab(editor)
             editor.save_file()
             idx = self.ui.documents.indexOf(editor)
             if idx != -1:
-                self.ui.documents.setTabText(
-                    idx, os.path.basename(editor.file_path)
-                )
+                # compute fresh file path for tab label
+                label_path = None
+                if hasattr(editor, "file_path") and callable(
+                    getattr(editor, "file_path")
+                ):
+                    try:
+                        label_path = editor.file_path()
+                    except Exception:
+                        label_path = None
+                else:
+                    label_path = getattr(
+                        editor, "current_file_path", None
+                    ) or getattr(editor, "file_path", None)
+                if label_path:
+                    self.ui.documents.setTabText(
+                        idx, os.path.basename(label_path)
+                    )
         else:
             # fallback for legacy
             if not file_path:
                 return self._save_as_tab(editor)
-            with open(editor.file_path, "w", encoding="utf-8") as f:
+            path_to_write = getattr(
+                editor, "current_file_path", None
+            ) or getattr(editor, "file_path", None)
+            with open(path_to_write, "w", encoding="utf-8") as f:
                 f.write(editor.toPlainText())
             idx = self.ui.documents.indexOf(editor)
-            if idx != -1:
+            if idx != -1 and path_to_write:
                 self.ui.documents.setTabText(
-                    idx, os.path.basename(editor.file_path)
+                    idx, os.path.basename(path_to_write)
                 )
 
     def _save_as_tab(self, editor):
@@ -155,7 +215,18 @@ class DocumentEditorContainerWidget(BaseWidget):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save File As")
         if not file_path:
             return
-        editor.file_path = file_path
+        # Prefer storing in the widget's `current_file_path` so we don't shadow methods
+        if hasattr(editor, "current_file_path"):
+            try:
+                editor.current_file_path = file_path
+            except Exception:
+                pass
+        else:
+            # last resort: set attribute
+            try:
+                setattr(editor, "file_path", file_path)
+            except Exception:
+                pass
         if hasattr(editor, "save_file"):
             editor.save_file(file_path)
         else:
