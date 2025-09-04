@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>privacy_policy</class>
+ <widget class="QWidget" name="privacy_policy">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>526</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="1" column="0">
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>366</width>
+        <height>1565</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>AI Runner Privacy Policy
+
+**Last Updated: September 5, 2025**
+
+This Privacy Policy describes how Capsize LLC ("Capsize," "we," "us," or "our") handles information in connection with your use of the AI Runner software ("Software"). Our guiding principle is privacy-by-design. The Software is built to run locally on your machine, giving you maximum control over your data.
+
+This policy will explain:
+1.  Our Core Privacy Philosophy
+2.  Information We **Do Not** Collect
+3.  Information Processed **Locally** on Your Device
+4.  Information Shared with **Third-Party Services**
+5.  Your Control and Data Rights
+6.  Security
+7.  Children's Privacy
+8.  Changes to This Policy
+9.  Contact Us
+
+#### 1. Our Core Privacy Philosophy
+
+Your privacy is paramount. AI Runner is engineered to be a local-first application, meaning the vast majority of its operations, including AI model inference, data processing, and storage, occur directly on your computer. We do not operate servers that collect or store your personal data from the Software.
+
+#### 2. Information We Do Not Collect
+
+Capsize LLC **does not** collect, store, or have access to any of the following data through your use of the Software:
+
+* Your conversations or interactions with AI agents.
+* The content of your documents or websites processed by the Retrieval-Augmented Generation (RAG) feature.
+* Your voice data from real-time conversations.
+* Images or art you generate.
+* The adapted "moods" or "personalities" of your AI agents.
+* Your browsing history from the built-in browser.
+* Your IP address or unique device identifiers.
+
+All of the above data remains under your control on your local machine.
+
+#### 3. Information Processed Locally on Your Device
+
+While we don't collect your data, the Software needs to process certain information on your device to function. This processing is confined to your machine. Types of data processed locally include:
+
+* **User Inputs:** Text, voice commands, and images you provide to the Software.
+* **AI Model Outputs:** The Generated Content produced by the AI models.
+* **RAG Data:** A local index of the documents and web pages you choose to make available to your AI agents.
+* **Configuration and Profile Data:** Your saved agent personalities, moods, and conversation history, which are stored in a local SQLite database on your machine.
+
+#### 4. Information Shared with Third-Party Services
+
+Certain optional features in AI Runner require an internet connection to function by sending data to external, third-party services. **You control whether to enable these features.** When you use them, you are sending your data directly to that service, and your interaction is governed by their respective privacy policies.
+
+We encourage you to review the privacy policies of any third-party service you choose to connect with AI Runner.
+
+**A. Integrated Optional Services:**
+The Software may offer built-in integrations for your convenience. These services are disabled by default. If you enable them, they may receive the following data:
+
+* **OpenMeteo (Weather API):** Receives your general location coordinates to provide weather forecasts.
+* **OpenStreetMap (Maps API):** Receives location data to display maps.
+* **Aggregated Search Tool (e.g., DuckDuckGo, Wikipedia):** Receives the search queries you enter.
+
+**B. User-Configured API Services:**
+AI Runner allows you to connect to external AI model providers by entering your own API keys. This provides flexibility but means you are responsible for the data you send.
+
+* **Examples:** OpenRouter, a custom Ollama endpoint, or other future LLM/image model providers.
+* **Data Sent:** When you use one of these services, the **prompts you provide** (which may include text from your conversations, documents, or image descriptions) are sent to that provider to be processed.
+* **Your Responsibility:** Your use of these services is subject entirely to that provider's privacy policy and terms of service. **Capsize LLC has no control over how these third parties collect, use, or store your data.**
+
+#### 5. Your Control and Data Rights
+
+Because your data is stored locally, you have direct control over it. You can:
+
+* **Access Your Data:** Access conversation logs and other data stored within the local AI Runner directory on your computer.
+* **Delete Your Data:** Delete individual conversations, RAG indexes, or the entire local database to permanently erase your history and agent profiles.
+* **Disable Third-Party Services:** You can choose not to provide API keys or use features that connect to external services, keeping the application entirely offline.
+
+As a resident of Colorado, you have specific rights under the Colorado Privacy Act (CPA). While Capsize LLC does not act as a data controller for your personal information, we support your rights by designing the Software to give you the technical ability to manage your own data.
+
+#### 6. Security
+
+We take the security of the Software seriously. We implement measures to protect the application's integrity, such as enforcing HTTPS for any local server communication. However, you are responsible for the overall security of your own computer, network, and the data you choose to process with AI Runner.
+
+#### 7. Children's Privacy
+
+The Software is not intended for or directed at individuals under the age of 18. We do not knowingly collect personal information from children. If you are a parent or guardian and believe your child has used this software in a way that concerns you, please contact us.
+
+#### 8. Changes to This Policy
+
+We may update this Privacy Policy from time to time. We will notify you of any significant changes by updating the "Last Updated" date of this policy and may provide a notice within the Software or on our website. We encourage you to review this policy periodically.
+
+#### 9. Contact Us
+
+If you have any questions or concerns about this Privacy Policy, please contact us at:
+
+**contact@capsizegames.com**
+</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Privacy Policy</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QCheckBox" name="checkBox">
+     <property name="text">
+      <string>I have read and agree to the terms of the Privacy Policy</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>checkBox</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>privacy_policy</receiver>
+   <slot>agreement_clicked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>575</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>270</x>
+     <y>-12</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>agreement_clicked(bool)</slot>
+ </slots>
+</ui>

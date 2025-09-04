@@ -102,7 +102,31 @@ Please be aware that AI-generated content could unintentionally replicate copyri
           </font>
          </property>
          <property name="text">
-          <string>This application may generate content that is not suitable for all audiences, including nude images. Please confirm that you are at least 18 years old before proceeding.</string>
+          <string>**Age &amp; Content Acknowledgment**
+
+Before using the AI image generation features, you must read and agree to the following:
+
+#### **1. Age Requirement**
+
+You must be **18 years of age or older** to use this feature. This is not negotiable.
+
+#### **2. Content &amp; User Responsibility**
+
+* **Sensitive Content:** The AI is capable of generating a wide range of content, including material that may be considered sensitive, explicit, or NSFW (Not Safe For Work).
+* **Legal Compliance:** You are solely responsible for the content you create. It is your responsibility to ensure that all generated content complies with the laws and regulations of your jurisdiction. The software might produce content that is illegal in certain regions.
+* **Copyright Risk:** AI-generated content can unintentionally replicate or be substantially similar to copyrighted materials. You are responsible for how you use the generated images and for assessing the legal risks of copyright infringement.
+
+---
+
+### **Click "Agree and Continue" to Confirm**
+
+By clicking **"Agree and Continue"**, you hereby certify, acknowledge, and agree that:
+
+1.  **I am 18 years of age or older.**
+2.  **I understand** the software can create explicit or potentially offensive content and I choose to proceed at my own risk.
+3.  **I understand** the potential legal risks related to copyright and will use the generated content responsibly.
+4.  **I accept full and sole responsibility** for the content I create and for ensuring it is lawful in my location.
+          </string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
@@ -158,32 +182,6 @@ Please be aware that AI-generated content could unintentionally replicate copyri
      </widget>
     </widget>
    </item>
-   <item row="8" column="0">
-    <layout class="QFormLayout" name="formLayout">
-     <item row="0" column="0">
-      <widget class="QCheckBox" name="checkBox_2">
-       <property name="font">
-        <font>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>I have read and understood the age restrictions, content warnings, and legal disclaimers provided above. I agree to abide by these guidelines</string>
-       </property>
-       <property name="wordWrap">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
    <item row="0" column="0">
     <widget class="QLabel" name="label">
      <property name="font">
@@ -214,22 +212,6 @@ Please be aware that AI-generated content could unintentionally replicate copyri
     <hint type="destinationlabel">
      <x>-4</x>
      <y>378</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>checkBox_2</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>age_restriction_warning</receiver>
-   <slot>read_agreement_clicked(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>14</x>
-     <y>454</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-2</x>
-     <y>447</y>
     </hint>
    </hints>
   </connection>

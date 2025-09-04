@@ -86,6 +86,21 @@ Show your support for this project by choosing one of the following options for 
 [🫰 Request language support](https://github.com/Capsize-Games/airunner/issues/new?template=language_support.md)
 ---
 
+## ⚖️ Regulatory Compliance & Disclosures
+
+AI Runner is a powerful tool designed for local, private use. However, its capabilities mean that users must be aware of their responsibilities under emerging AI regulations. This section provides information regarding the Colorado AI Act.
+
+### Colorado AI Act (SB 24-205) Notice
+
+As the **developer** of AI Runner, we have a duty of care to inform our users about how this law may apply to them.
+
+* **Your Role as a User:** If you use AI Runner to make, or as a substantial factor in making, an important decision that has a legal or similarly significant effect on someone's life, you may be considered a **"deployer"** of a **"high-risk AI system"** under Colorado law.
+* **What is a "High-Risk" Use Case?** Examples of high-risk decisions include using AI to screen job applicants, evaluate eligibility for loans, housing, insurance, or other essential services.
+* **User Responsibility:** Given AI Runner's customizable nature (e.g., using RAG with personal or business documents), it is possible to configure it for such high-risk purposes. If you do so, **you are responsible** for complying with the obligations of a "deployer," which include performing impact assessments and preventing algorithmic discrimination.
+* **Our Commitment:** We are committed to developing AI Runner responsibly. The built-in privacy features, local-first design, and configurable guardrails are intended to provide you with the tools to use AI safely. We strongly encourage you to understand the capabilities and limitations of the AI models you choose to use and to consider the ethical implications of your specific application.
+
+For more information, we recommend reviewing the text of the [Colorado AI Act](https://leg.colorado.gov/bills/sb24-205).
+
 ## 💾 Installation Quick Start
 
 ### ⚙️ System Requirements
