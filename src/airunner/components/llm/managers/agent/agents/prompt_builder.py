@@ -33,7 +33,6 @@ class PromptBuilder:
         include_conversation_summary: bool = True,
         include_conversation_info_header: bool = True,
         include_conversation_timestamp: bool = True,
-        include_browser_content: bool = True,
         include_language_instruction: bool = True,
     ) -> str:
         """
@@ -155,7 +154,7 @@ class PromptBuilder:
                 prompt_parts.append(self.agent.conversation_summary_prompt)
             prompt_parts.append("------")
 
-        if any([include_conversation_timestamp, include_browser_content]):
+        if any([include_conversation_timestamp]):
             if include_conversation_info_header:
                 prompt_parts.append(
                     "**More information about the current conversation:**"
@@ -172,15 +171,6 @@ class PromptBuilder:
                     f"The conversation started on {self.agent.conversation.timestamp}."
                 )
 
-            if include_browser_content:
-                if (
-                    self.agent.latest_extra_context != ""
-                    and self.agent.latest_extra_context is not None
-                ):
-                    prompt_parts.append(
-                        "\nYou are viewing a browser page with the following content:"
-                    )
-                    prompt_parts.append(self.agent.latest_extra_context)
             prompt_parts.append("------")
 
         prompt_str = "\n".join(prompt_parts)
@@ -217,38 +207,7 @@ class PromptBuilder:
             include_conversation_summary=False,
             include_conversation_info_header=False,
             include_conversation_timestamp=False,
-            include_browser_content=False,
             include_language_instruction=False,
-        )
-
-    @classmethod
-    def browser_system_prompt(cls, agent) -> str:
-        """
-        Return the system prompt for the agent in browser mode.
-        Args:
-            agent (BaseAgent): The agent instance for which to build the prompt.
-        Returns:
-            str: The system prompt.
-        """
-        # Call _build with all relevant flags for a full browser prompt
-        return cls(agent)._build(
-            include_user_bot_intro=False,
-            include_rules=False,
-            include_backstory=False,
-            include_system_instructions=False,
-            include_guardrails=False,
-            include_context_header=False,
-            include_date_time=False,
-            include_personality=False,
-            include_mood=False,
-            include_operating_system=False,
-            include_speakers=False,
-            include_weather=False,
-            include_conversation_summary=False,
-            include_conversation_info_header=False,
-            include_conversation_timestamp=False,
-            include_browser_content=True,
-            include_language_instruction=False,  # Browser mode doesn't need this
         )
 
     @classmethod
@@ -277,7 +236,6 @@ class PromptBuilder:
             include_conversation_summary=True,
             include_conversation_info_header=True,
             include_conversation_timestamp=True,
-            include_browser_content=True,
             include_language_instruction=True,
         )
 
@@ -306,7 +264,6 @@ class PromptBuilder:
             include_conversation_summary=True,
             include_conversation_info_header=True,
             include_conversation_timestamp=True,
-            include_browser_content=True,
             include_language_instruction=False,
         )
         menu_text = "\n".join(
@@ -339,8 +296,6 @@ class PromptBuilder:
             return cls.chat_system_prompt(agent)
         elif action is LLMActionType.SEARCH:
             return cls.chat_system_prompt(agent)
-        elif action is LLMActionType.BROWSER:
-            return cls.browser_system_prompt(agent)
         elif action is LLMActionType.MAP_TOOL:
             return cls.map_system_prompt(agent)  # Use chat prompt for map tool
         elif action is LLMActionType.NONE:

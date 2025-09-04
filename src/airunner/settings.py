@@ -412,7 +412,6 @@ QTWEBENGINE_REMOTE_DEBUGGING = os.environ.get(
 )  # set to port "9223" to enable remote debugging
 SLASH_COMMANDS = {
     "a": LLMActionType.GENERATE_IMAGE,
-    "b": LLMActionType.BROWSER,
     "c": LLMActionType.CODE,
     "f": LLMActionType.FILE_INTERACTION,
     "s": LLMActionType.SEARCH,
