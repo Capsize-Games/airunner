@@ -467,7 +467,6 @@ class SettingsMixin:
         self.__settings_updated()
 
     def update_ai_model(self, model: AIModels):
-        print(f"DEBUG: update_ai_model called for model: {model.name}")
         # Check if model exists in DB
         existing_dataclass = AIModels.objects.filter_by_first(
             name=model.name,
@@ -479,9 +478,6 @@ class SettingsMixin:
             enabled=model.enabled,
             model_type=model.model_type,
             is_default=model.is_default,
-        )
-        print(
-            f"DEBUG: existing_dataclass found: {existing_dataclass is not None}"
         )
 
         if existing_dataclass:
@@ -740,15 +736,6 @@ class SettingsMixin:
     @staticmethod
     def load_ai_models() -> List[Type[AIModels]]:
         models = AIModels.objects.all()
-        print(f"DEBUG: load_ai_models found {len(models)} models in database")
-        for model in models[:5]:  # Print first 5 models
-            print(f"DEBUG: Model in DB: {model.name}")
-            print(f"  - path: {model.path}")
-            print(f"  - category: {model.category}")
-            print(f"  - pipeline_action: {model.pipeline_action}")
-            print(f"  - version: {model.version}")
-            print(f"  - enabled: {model.enabled}")
-            print(f"  - is_default: {model.is_default}")
         return models
 
     @staticmethod
