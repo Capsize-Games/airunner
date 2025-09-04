@@ -12,7 +12,7 @@ from airunner.components.document_editor.gui.templates.document_editor_container
 )
 from airunner.enums import SignalCode
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from airunner.components.document_editor.gui.widgets.document_editor_widget import (
     DocumentEditorWidget,
 )
@@ -33,6 +33,16 @@ class DocumentEditorContainerWidget(BaseWidget):
             SignalCode.RUN_SCRIPT: self.run_script,
         }
         super().__init__(*args, **kwargs)
+        # Ensure the tab close signal is connected to our handler. Some UI auto-connect
+        # setups may not attach correctly in all contexts, so connect explicitly.
+        try:
+            self.ui.documents.tabCloseRequested.connect(
+                self.on_documents_tabCloseRequested
+            )
+        except Exception:
+            # If the UI isn't fully constructed or the documents widget doesn't exist,
+            # just ignore; auto-connect may still work.
+            pass
 
     def setup_tab_manager(self, *args, **kwargs):
         # Remove 'parent' from kwargs if present, since TabManagerMixin does not accept it
@@ -159,3 +169,49 @@ class DocumentEditorContainerWidget(BaseWidget):
 
     def _reopen_tab(self, file_path):
         self._open_file_tab(file_path)
+
+    def on_documents_tabCloseRequested(self, index: int) -> None:
+        """Handle the QTabWidget tabCloseRequested signal for `documents`.
+
+        Prompts to save if the document is modified. Supports Save / Discard / Cancel.
+        """
+        widget = self.ui.documents.widget(index)
+        if widget is None:
+            return
+
+        # If the widget exposes an is_modified() API, use it to decide whether to prompt
+        try:
+            modified = False
+            if hasattr(widget, "is_modified") and callable(
+                getattr(widget, "is_modified")
+            ):
+                modified = widget.is_modified()
+        except Exception:
+            modified = False
+
+        if modified:
+            # Ask the user whether to save changes
+            resp = QMessageBox.question(
+                self,
+                "Save changes?",
+                "The document has unsaved changes. Do you want to save them?",
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+                | QMessageBox.StandardButton.Cancel,
+            )
+            if resp == QMessageBox.StandardButton.Cancel:
+                return
+            if resp == QMessageBox.StandardButton.Yes:
+                # Attempt to save using existing helper; if user cancels save-as, abort close
+                prev_tab_count = self.ui.documents.count()
+                self._save_tab(widget)
+                # if tab count unchanged and widget still exists at index, assume save cancelled
+                if (
+                    self.ui.documents.count() == prev_tab_count
+                    and self.ui.documents.widget(index) is widget
+                ):
+                    return
+
+        # Remove the tab and schedule the widget for deletion
+        self.ui.documents.removeTab(index)
+        widget.deleteLater()
