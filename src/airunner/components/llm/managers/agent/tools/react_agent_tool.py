@@ -128,11 +128,15 @@ class ReActAgentTool(BaseConversationEngine):
             else (chat_history or [])
         )
 
+        # Keep a copy of kwargs so we can retry with safe defaults if formatting fails
+        original_kwargs = {} if kwargs is None else dict(kwargs)
         try:
+            # Forward any kwargs (e.g., username, botname) into the chat engine.
             streaming_response = self.chat_engine.stream_chat(
                 query_str=query_str,
                 messages=chat_history,
                 tool_choice=tool_choice,
+                **(original_kwargs or {}),
             )
         except Exception as e:
             import logging
@@ -152,13 +156,66 @@ class ReActAgentTool(BaseConversationEngine):
             )
         response = ""
         is_first_message = True
-        for token in streaming_response:
-            if not token:
-                continue
-            response += token
-            if self.agent is not None:
-                self.agent.handle_response(token, is_first_message)
-            is_first_message = False
+        # Stream tokens; if a KeyError occurs during formatting (e.g., missing
+        # 'username'), retry once with safe defaults inserted.
+        try:
+            for token in streaming_response:
+                if not token:
+                    continue
+                response += token
+                if self.agent is not None:
+                    self.agent.handle_response(token, is_first_message)
+                is_first_message = False
+        except KeyError as e:
+            # Only attempt a retry for missing username/botname formatting keys.
+            msg = str(e)
+            if "username" in msg or "botname" in msg:
+                self.logger.error(
+                    f"ReAct streaming failed due to missing format key: {e}; retrying with safe defaults."
+                )
+                safe_kwargs = dict(original_kwargs or {})
+                try:
+                    safe_kwargs.setdefault(
+                        "username", getattr(self.agent, "username", "") or ""
+                    )
+                except Exception:
+                    safe_kwargs.setdefault("username", "")
+                try:
+                    safe_kwargs.setdefault(
+                        "botname", getattr(self.agent, "botname", "") or ""
+                    )
+                except Exception:
+                    safe_kwargs.setdefault("botname", "")
+
+                try:
+                    streaming_response = self.chat_engine.stream_chat(
+                        query_str=query_str,
+                        messages=chat_history,
+                        tool_choice=tool_choice,
+                        **safe_kwargs,
+                    )
+                except Exception as e2:
+                    self.logger.error(f"Retry stream_chat failed: {e2}")
+                    return ToolOutput(
+                        content="",
+                        tool_name=self.metadata.name,
+                        raw_input={"input": query_str},
+                        raw_output="",
+                    )
+
+                # replay tokens from the retried generator
+                response = ""
+                is_first_message = True
+                for token in streaming_response:
+                    if not token:
+                        continue
+                    response += token
+                    if self.agent is not None:
+                        self.agent.handle_response(token, is_first_message)
+                    is_first_message = False
+            else:
+                # re-raise other KeyErrors
+                raise
 
         if not action is LLMActionType.DECISION:
             self.chat_engine.chat_history.append(

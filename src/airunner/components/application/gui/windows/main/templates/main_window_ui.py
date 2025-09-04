@@ -29,7 +29,6 @@ from airunner.components.home_stage.gui.widgets.home_stage_widget import HomeSta
 from airunner.components.map.gui.widgets.map_widget import MapWidget
 from airunner.components.nodegraph.gui.widgets.node_graph_widget import NodeGraphWidget
 from airunner.components.voice_visualizer.gui.widgets.voice_visualizer_widget import VoiceVisualizerWidget
-from airunner.components.weather.gui.widgets.weather_widget import WeatherWidget
 import airunner.feather_rc
 
 class Ui_MainWindow(object):
@@ -323,20 +322,6 @@ class Ui_MainWindow(object):
 
         self.action_sidebar.addWidget(self.map_button)
 
-        self.weather_button = QPushButton(self.actionsidebar)
-        self.weather_button.setObjectName(u"weather_button")
-        self.weather_button.setMinimumSize(QSize(35, 35))
-        self.weather_button.setMaximumSize(QSize(35, 35))
-        self.weather_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon34 = QIcon()
-        icon34.addFile(u":/light/icons/feather/light/sun.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.weather_button.setIcon(icon34)
-        self.weather_button.setIconSize(QSize(20, 20))
-        self.weather_button.setCheckable(True)
-        self.weather_button.setFlat(True)
-
-        self.action_sidebar.addWidget(self.weather_button)
-
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.action_sidebar.addItem(self.verticalSpacer)
@@ -345,9 +330,9 @@ class Ui_MainWindow(object):
         self.visualizer_button.setObjectName(u"visualizer_button")
         self.visualizer_button.setMinimumSize(QSize(35, 35))
         self.visualizer_button.setMaximumSize(QSize(35, 35))
-        icon35 = QIcon()
-        icon35.addFile(u":/dark/icons/feather/dark/radio.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.visualizer_button.setIcon(icon35)
+        icon34 = QIcon()
+        icon34.addFile(u":/dark/icons/feather/dark/radio.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.visualizer_button.setIcon(icon34)
         self.visualizer_button.setIconSize(QSize(20, 20))
         self.visualizer_button.setCheckable(True)
         self.visualizer_button.setFlat(True)
@@ -475,17 +460,6 @@ class Ui_MainWindow(object):
         self.gridLayout_12.addWidget(self.map, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.map_tab, "")
-        self.weather_tab = QWidget()
-        self.weather_tab.setObjectName(u"weather_tab")
-        self.gridLayout_13 = QGridLayout(self.weather_tab)
-        self.gridLayout_13.setObjectName(u"gridLayout_13")
-        self.gridLayout_13.setContentsMargins(0, 0, 0, 0)
-        self.weather = WeatherWidget(self.weather_tab)
-        self.weather.setObjectName(u"weather")
-
-        self.gridLayout_13.addWidget(self.weather, 0, 0, 1, 1)
-
-        self.center_tab_container.addTab(self.weather_tab, "")
         self.visualizer_tab = QWidget()
         self.visualizer_tab.setObjectName(u"visualizer_tab")
         self.gridLayout_14 = QGridLayout(self.visualizer_tab)
@@ -747,10 +721,6 @@ class Ui_MainWindow(object):
         self.map_button.setToolTip(QCoreApplication.translate("MainWindow", u"Maps", None))
 #endif // QT_CONFIG(tooltip)
         self.map_button.setText("")
-#if QT_CONFIG(tooltip)
-        self.weather_button.setToolTip(QCoreApplication.translate("MainWindow", u"Weather", None))
-#endif // QT_CONFIG(tooltip)
-        self.weather_button.setText("")
         self.visualizer_button.setText("")
 #if QT_CONFIG(tooltip)
         self.chat_button.setToolTip(QCoreApplication.translate("MainWindow", u"Chat", None))
@@ -765,7 +735,6 @@ class Ui_MainWindow(object):
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.agent_workflow_tab), QCoreApplication.translate("MainWindow", u"Agent Workflow", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.document_editor_tab), QCoreApplication.translate("MainWindow", u"Document Editor", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.map_tab), QCoreApplication.translate("MainWindow", u"Maps", None))
-        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.weather_tab), QCoreApplication.translate("MainWindow", u"Weather", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.visualizer_tab), QCoreApplication.translate("MainWindow", u"Visualizer", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))

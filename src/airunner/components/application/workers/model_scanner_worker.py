@@ -71,6 +71,8 @@ class ModelScannerWorker(Worker, PipelineMixin):
                         for path in paths:
                             if not os.path.exists(path):
                                 continue
+                            if not os.path.isdir(path):
+                                continue
                             with os.scandir(path) as file_object:
                                 for file_item in file_object:
                                     model = AIModels()
