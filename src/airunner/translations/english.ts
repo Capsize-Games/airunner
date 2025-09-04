@@ -701,11 +701,6 @@ Please be aware that AI-generated content could unintentionally replicate copyri
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../gui/windows/setup_wizard/age_restriction/templates/age_restriction.ui" line="178"/>
-        <source>I have read and understood the age restrictions, content warnings, and legal disclaimers provided above. I agree to abide by these guidelines</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../gui/windows/setup_wizard/age_restriction/templates/age_restriction.ui" line="196"/>
         <source>AI Runner is for users of 18 years of age or older</source>
         <translation type="unfinished"></translation>
