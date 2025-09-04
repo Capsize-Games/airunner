@@ -40,10 +40,9 @@ class UserSettingsWidget(BaseWidget):
                 data["zipcode"] = val
                 result = get_lat_lon(val)
                 if result:
-                    lat, lon, display_name = result
-                    data["latitude"] = lat
-                    data["longitude"] = lon
-                    data["location_display_name"] = display_name
+                    data["latitude"] = result["lat"]
+                    data["longitude"] = result["lon"]
+                    data["location_display_name"] = str(result["row"])
                 User.objects.update(pk=user.id, **data)
 
     @Slot(str)
