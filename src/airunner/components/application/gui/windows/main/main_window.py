@@ -185,7 +185,6 @@ class MainWindow(
         ("message-square", "chat_button"),
         ("home", "home_button"),
         ("map", "map_button"),
-        ("sun", "weather_button"),
         ("radio", "visualizer_button"),
     ]
     _last_reload_time = 0
@@ -633,7 +632,6 @@ class MainWindow(
             "document_editor_button": self.ui.document_editor_tab,
             "workflow_editor_button": self.ui.agent_workflow_tab,
             "map_button": self.ui.map_tab,
-            "weather_button": self.ui.weather_tab,
         }
 
     def _restore_tab(self):
@@ -656,7 +654,6 @@ class MainWindow(
             2: "workflow_editor_button",
             3: "document_editor_button",
             4: "map_button",
-            5: "weather_button",
         }
 
         if saved_index in buttons:
@@ -705,10 +702,6 @@ class MainWindow(
     @Slot(bool)
     def on_map_button_toggled(self, active: bool):
         self._set_current_button_and_tab("map_button", self.ui.map_tab)
-
-    @Slot(bool)
-    def on_weather_button_toggled(self, active: bool):
-        self._set_current_button_and_tab("weather_button", self.ui.weather_tab)
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):
