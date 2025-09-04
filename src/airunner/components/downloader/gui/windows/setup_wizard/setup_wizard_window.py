@@ -1,5 +1,6 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWizard
+from airunner.components.downloader.gui.windows.setup_wizard.privacy_policy.privacy_policy import PrivacyPolicy
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
 from airunner.components.downloader.gui.windows.setup_wizard.age_restriction.age_restriction_warning import (
@@ -20,9 +21,6 @@ from airunner.components.downloader.gui.windows.setup_wizard.user_agreement.user
 )
 from airunner.components.downloader.gui.windows.setup_wizard.model_setup.stable_diffusion_setup.stable_diffusion_license import (
     StableDiffusionLicense,
-)
-from airunner.components.downloader.gui.windows.setup_wizard.ai_runner_license.ai_runner_license import (
-    AIRunnerLicense,
 )
 
 
@@ -48,32 +46,24 @@ class SetupWizardWindow(
         self.age_restriction_warning_id = None
         self.welcome_page_id = None
         self.user_agreement_id = None
-        self.airunner_license_id = None
         self.controlnet_download_id = None
         self.llm_welcome_page_id = None
         self.tts_welcome_page_id = None
         self.stt_welcome_page_id = None
         self.stable_diffusion_license_id = None
         self.meta_data_settings_id = None
-        self.airunner_license_id = None
         self.page_ids = {}
         self.page_order = []
         self.pages = {
             "welcome_page": WelcomePage(self),
             "age_restriction_warning": AgeRestrictionWarning(self),
             "user_agreement": UserAgreement(self),
-            "airunner_license": AIRunnerLicense(self),
+            "privacy_policy": PrivacyPolicy(self),
             "stable_diffusion_license": StableDiffusionLicense(self),
             "mistral_license": MistralLicense(self),
             "whisper_license": WhisperLicense(self),
             "speech_t5_license": SpeechT5License(self),
         }
-
-        if self.application_settings.age_agreement_checked:
-            del self.pages["age_restriction_warning"]
-
-        if self.application_settings.user_agreement_checked:
-            del self.pages["user_agreement"]
 
         for index, key in enumerate(self.pages.keys()):
             page_id = self.addPage(self.pages[key])
