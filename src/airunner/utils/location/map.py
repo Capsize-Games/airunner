@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict
 import pyrosm
-import geopandas as gpd
 import time
 
 
