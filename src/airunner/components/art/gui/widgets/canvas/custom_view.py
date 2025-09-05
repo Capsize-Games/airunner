@@ -471,7 +471,7 @@ class CustomGraphicsView(
                         return QEvent.Type.Enter
 
                 # Tell the scene to update the cursor based on current tool
-                self.scene._handle_cursor(SimpleEvent(), True)
+                self.scene.handle_cursor(SimpleEvent(), True)
 
             event.accept()
             return
