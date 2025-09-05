@@ -132,6 +132,9 @@ extras_require = {
         "scrapy==2.13.1",
         "trafilatura==2.0.0",
     ],
+    "map": [
+        "pyrosm==0.6.2",
+    ],
 }
 
 extras_require["all"] = []
