@@ -226,6 +226,9 @@ class CustomScene(
     def image_pivot_point(self, value):
         self.api.art.canvas.update_current_layer(value)
 
+    def handle_cursor(self, event, apply_cursor: bool = True):
+        self._handle_cursor(event, apply_cursor)
+
     def on_clear_history_signal(self):
         self._clear_history()
 

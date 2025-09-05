@@ -393,7 +393,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.clear_models()
 
         image_generator = ImageGenerator.STABLEDIFFUSION.value
-        generator_settings = GeneratorSettings.objects.first()
+        generator_settings = self.generator_settings
         pipeline = generator_settings.pipeline_action
         version = generator_settings.version
         pipeline_actions = [GeneratorSection.TXT2IMG.value]
@@ -728,7 +728,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.clear_models()
 
         image_generator = ImageGenerator.STABLEDIFFUSION.value
-        generator_settings = GeneratorSettings.objects.first()
+        generator_settings = self.generator_settings
         pipeline = generator_settings.pipeline_action
         version = generator_settings.version
         pipeline_actions = [GeneratorSection.TXT2IMG.value]

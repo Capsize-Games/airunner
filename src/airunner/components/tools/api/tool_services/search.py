@@ -1,5 +1,5 @@
 from typing import Dict
-from airunner.components.tools import AggregatedSearchTool
+from airunner.components.tools.search_tool import AggregatedSearchTool
 
 
 def search(inp: Dict) -> Dict:
