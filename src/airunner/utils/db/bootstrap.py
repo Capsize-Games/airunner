@@ -3,7 +3,7 @@ import sqlalchemy as sa
 
 from PySide6 import QtCore
 
-from airunner.components.application.data import ShortcutKeys
+from airunner.components.application.data.shortcut_keys import ShortcutKeys
 from airunner.components.art.data.ai_models import AIModels
 from airunner.components.art.data.bootstrap.controlnet_bootstrap_data import (
     controlnet_bootstrap_data,
