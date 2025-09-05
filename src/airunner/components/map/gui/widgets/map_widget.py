@@ -1,4 +1,4 @@
-from PySide6.QtCore import QUrl, Signal, Slot
+from PySide6.QtCore import Slot
 from typing import Optional
 
 from mistralai import Dict
@@ -6,17 +6,10 @@ from airunner.components.home_stage.gui.widgets.home_stage_widget import (
     HomeStageWidget,
 )
 from airunner.components.map.gui.widgets.templates.map_ui import Ui_map
-from airunner.settings import (
-    LOCAL_SERVER_PORT,
-    LOCAL_SERVER_HOST,
-    AIRUNNER_NOMINATIM_URL,
-)
-from airunner.utils.location.get_lat_lon import get_lat_lon
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtCore import QObject, Slot
-from airunner.components.llm.api.llm_services import LLMAPIService
 from airunner.enums import SignalCode
-from PySide6.QtCore import QEventLoop, QTimer
+from PySide6.QtCore import QEventLoop
 
 
 class MapWidgetHandler(QObject):
