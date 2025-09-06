@@ -227,20 +227,22 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                 tool_choice=tool_choice,
             )
             output = ""
-            if hasattr(result, "response_gen"):
-                if tool_choice:
-                    # Collect silently for tool-call JSON detection
-                    for token in result.response_gen:
-                        output += token
-                else:
-                    # Normal chat: stream tokens to caller
-                    for token in result.response_gen:
-                        output += token
-                        yield token
+
+            # Try multiple approaches to get streaming response
+            if (
+                hasattr(result, "response_gen")
+                and result.response_gen is not None
+            ):
+                # Always yield tokens for real-time streaming, regardless of tool_choice
+                for token in result.response_gen:
+                    output += token
+                    yield token
+            elif hasattr(result, "response") and result.response:
+                output = str(result.response)
+                yield output
             else:
                 output = str(result)
-                if not tool_choice:
-                    yield output
+                yield output
             # Now, after streaming, check for tool call
 
             tool_call_match = re.search(
@@ -286,16 +288,16 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                         tname = getattr(
                             getattr(tool, "metadata", None), "name", None
                         )
-                        if tname != "generate_image_tool":
-                            if isinstance(tool_result, types.GeneratorType):
-                                for ttoken in tool_result:
-                                    yield ttoken
+                        # if tname != "generate_image_tool":
+                        if isinstance(tool_result, types.GeneratorType):
+                            for ttoken in tool_result:
+                                yield ttoken
+                        else:
+                            content = getattr(tool_result, "content", None)
+                            if content is not None:
+                                yield str(content)
                             else:
-                                content = getattr(tool_result, "content", None)
-                                if content is not None:
-                                    yield str(content)
-                                else:
-                                    yield str(tool_result)
+                                yield str(tool_result)
                 except Exception as e:
                     self.logger.error(
                         f"Failed to execute tool: {e}. Tool JSON: {tool_json}"

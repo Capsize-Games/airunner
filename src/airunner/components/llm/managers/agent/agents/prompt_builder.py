@@ -292,15 +292,15 @@ class PromptBuilder:
         action = agent.action
         if action is LLMActionType.DECISION:
             return cls.decision_system_prompt(agent, menu)
-        elif action is LLMActionType.CHAT:
-            return cls.chat_system_prompt(agent)
-        elif action is LLMActionType.SEARCH:
+        elif action in [
+            LLMActionType.APPLICATION_COMMAND,
+            LLMActionType.CHAT,
+            LLMActionType.SEARCH,
+            LLMActionType.NONE,
+        ]:
             return cls.chat_system_prompt(agent)
         elif action is LLMActionType.MAP_TOOL:
             return cls.map_system_prompt(agent)  # Use chat prompt for map tool
-        elif action is LLMActionType.NONE:
-            # Fallback to chat prompt when action is NONE
-            return cls.chat_system_prompt(agent)
         elif action is LLMActionType.GENERATE_IMAGE:
             return cls.image_system_prompt(agent)
         else:

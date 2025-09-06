@@ -5,7 +5,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from llama_index.core.llms import ChatMessage
 from llama_index.core.storage.chat_store.base import BaseChatStore
-from llama_index.core.base.llms.types import TextBlock
+from llama_index.core.base.llms.types import TextBlock, MessageRole
 
 from airunner.components.llm.data.conversation import Conversation
 from airunner.components.llm.utils import strip_names_from_message
@@ -26,6 +26,56 @@ class DatabaseChatStore(BaseChatStore):
         """Set messages for a key."""
         index = int(key)
         conversation = Conversation.objects.get(index)
+
+        # TODO: Re-enable this protection after fixing streaming
+        # Skip updates if messages contain incomplete assistant responses
+        # This prevents race conditions during streaming
+        # if messages and len(messages) > 0:
+        #     last_message = messages[-1]
+        #     if (
+        #         hasattr(last_message, "role")
+        #         and last_message.role == MessageRole.ASSISTANT
+        #         and hasattr(last_message, "blocks")
+        #         and len(last_message.blocks) > 0
+        #         and hasattr(last_message.blocks[0], "text")
+        #         and not last_message.blocks[0].text.strip()
+        #     ):
+        #         print(
+        #             f"Skipping database update for conversation {index} - empty assistant message detected"
+        #         )
+        #         return
+
+        # Protect against incomplete message overwrites - but allow incremental updates
+        # Check if the last message is an incomplete assistant message
+        if (
+            messages
+            and len(messages) > 0
+            and hasattr(messages[-1], "role")
+            and messages[-1].role == MessageRole.ASSISTANT
+            and hasattr(messages[-1], "blocks")
+            and messages[-1].blocks
+            and hasattr(messages[-1].blocks[0], "text")
+        ):
+            # For incremental updates, allow updates if:
+            # 1. Message has explicit is_complete=False (streaming in progress)
+            # 2. Message has is_complete=True (final update)
+            # 3. Message text is not empty (has actual content)
+            last_message = messages[-1]
+            message_dict = (
+                last_message.model_dump()
+                if hasattr(last_message, "model_dump")
+                else last_message
+            )
+
+            is_complete = message_dict.get(
+                "is_complete", True
+            )  # Default to complete if not specified
+            has_content = last_message.blocks[0].text.strip()
+
+            # Only skip if message is complete but has no content (likely corrupted)
+            if is_complete and not has_content:
+                return
+
         if messages and len(messages) > 0:
             formatted_messages = []
             for message in messages:
@@ -37,16 +87,19 @@ class DatabaseChatStore(BaseChatStore):
                 formatted_messages.append(message.model_dump())
             messages = formatted_messages
 
-            if conversation:
-                Conversation.objects.update(index, value=messages)
-            else:
-                conversation = Conversation.objects.create(
-                    timestamp=datetime.datetime.now(datetime.timezone.utc),
-                    title="",
-                    key=key,
-                    value=messages,
-                )
-                Conversation.make_current(conversation.id)
+            self.update_or_create(conversation, index, messages, key)
+
+    def update_or_create(self, conversation, index, messages, key):
+        if conversation:
+            Conversation.objects.update(index, value=messages)
+        else:
+            conversation = Conversation.objects.create(
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+                title="",
+                key=key,
+                value=messages,
+            )
+            Conversation.make_current(conversation.id)
 
     @staticmethod
     def get_latest_chatstore() -> dict:
@@ -128,16 +181,7 @@ class DatabaseChatStore(BaseChatStore):
         )
         new_msg = message.model_dump()
         messages.append(new_msg)
-        if conversation:
-            Conversation.objects.update(conversation.id, value=messages)
-        else:
-            conversation = Conversation.objects.create(
-                timestamp=datetime.datetime.now(datetime.timezone.utc),
-                title="",
-                key=key,
-                value=messages,
-            )
-            Conversation.make_current(conversation.id)
+        self.update_or_create(conversation, index, messages, key)
 
     def delete_messages(self, key: str) -> Optional[List[SafeChatMessage]]:
         """Delete messages for a key."""
@@ -172,7 +216,7 @@ class DatabaseChatStore(BaseChatStore):
         # Remove the message at the given index
         removed_message = messages[-1]
         messages.pop(-1)
-        Conversation.objects.update(index, {"value": messages})
+        Conversation.objects.update(index, value=messages)
         return SafeChatMessage.model_validate(removed_message)
 
     def get_keys(self) -> list[str]:

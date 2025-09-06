@@ -1,4 +1,6 @@
 from typing import Dict, Any
+
+from llama_cloud import MessageRole
 from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 from airunner.components.nodegraph.gui.widgets.nodes.llm.base_llm_node import (
     BaseLLMNode,
@@ -127,7 +129,7 @@ class Gemma3Node(BaseLLMNode):
             if system_prompt:
                 messages.append(
                     {
-                        "role": "system",
+                        "role": MessageRole.SYSTEM.value,
                         "content": [{"type": "text", "text": system_prompt}],
                     }
                 )
@@ -164,7 +166,9 @@ class Gemma3Node(BaseLLMNode):
 
             # Add user message if we have content
             if content:
-                messages.append({"role": "user", "content": content})
+                messages.append(
+                    {"role": MessageRole.USER.value, "content": content}
+                )
 
         # Get or create LLMRequest
         llm_request = input_data.get("llm_request", LLMRequest())
