@@ -120,6 +120,7 @@ class InstallWorker(
     def __init__(self, parent, models_enabled: List[str], initialize_gui=True):
         super().__init__()
         self.parent = parent
+        self.files_in_current_step = []
         self.total_files = 0
         self.completed_files = 0
         self.models_enabled = models_enabled
@@ -130,9 +131,17 @@ class InstallWorker(
             self._safe_progress_emit,
             initialize_gui=initialize_gui,
         )
-        self.hf_downloader.completed.connect(
-            lambda: self.file_download_finished.emit()
-        )
+        self._openvoice_zip_urls = [
+            "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_1226.zip",
+            "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip",
+        ]
+        self._openvoice_zip_urls_completed = []
+        self._openvoice_zip_paths = []
+        # Remove the old single completion connection that only fired once per downloader
+        # self.hf_downloader.completed.connect(
+        #     lambda: self.file_download_finished.emit()
+        # )
+        # Instead, rely on DOWNLOAD_COMPLETE signals which fire once per file
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.download_finished)
         self.register(SignalCode.PATH_SET, self.path_set)
 
@@ -194,8 +203,6 @@ class InstallWorker(
                 files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
             except KeyError:
                 continue
-            # Remove redundant total_steps increment - already counted in calculate_total_files()
-            self.total_models_in_current_step += len(files)
 
         for model in models:
             if model["name"] == "CompVis Safety Checker":
@@ -211,9 +218,14 @@ class InstallWorker(
                 continue
             try:
                 files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
+                self.total_models_in_current_step += len(files)
             except KeyError:
                 continue
 
+            total_attempted_files = 0
+            total_failed = 0
+            total_success = 0
+            self.files_in_current_step += files
             for filename in files:
                 requested_file_path = os.path.expanduser(
                     os.path.join(
@@ -224,6 +236,7 @@ class InstallWorker(
                         action,
                     )
                 )
+                total_attempted_files += 1
                 try:
                     self.hf_downloader.download_model(
                         requested_path=model["path"],
@@ -231,8 +244,9 @@ class InstallWorker(
                         requested_file_path=requested_file_path,
                         requested_callback=self._safe_progress_emit,
                     )
+                    total_success += 1
                 except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
+                    total_failed += 1
 
     def download_controlnet(self):
         if not self.models_enabled["stable_diffusion"]:
@@ -291,7 +305,6 @@ class InstallWorker(
                 continue
             # Remove redundant total_steps increment - already counted in calculate_total_files()
             self.total_models_in_current_step += len(files)
-        print(f"Downloading {self.total_models_in_current_step} Flux files")
         for model in models:
             action = model["pipeline_action"]
             try:
@@ -374,7 +387,6 @@ class InstallWorker(
                     )
                 )
                 try:
-                    print("trying to download", filename)
                     self.hf_downloader.download_model(
                         requested_path=model["path"],
                         requested_file_name=filename,
@@ -425,7 +437,6 @@ class InstallWorker(
             hasattr(self, "_tts_download_in_progress")
             and self._tts_download_in_progress
         ):
-            print("TTS download already in progress, skipping duplicate call")
             return
 
         self._tts_download_in_progress = True
@@ -440,8 +451,6 @@ class InstallWorker(
             total_files += len(v)
 
         self.total_models_in_current_step += total_files
-
-        print(f"Downloading {total_files} TTS files")
 
         # Add a small delay between downloads to prevent race conditions
 
@@ -530,16 +539,11 @@ class InstallWorker(
 
             # Check if this is an OpenVoice zip file
             if "openvoice" in dest_path and dest_path.endswith(".zip"):
-                # Use the special handler for OpenVoice zip downloads
                 self.handle_openvoice_zip_download_finished(dest_path)
-                # Do NOT emit standard download complete signals here
-                # The special handler will manage the download sequence
-            else:
-                # For regular files, emit standard completion signals
-                self.emit_signal(
-                    SignalCode.DOWNLOAD_COMPLETE, {"file_name": dest_path}
-                )
-                self.file_download_finished.emit()
+            self.emit_signal(
+                SignalCode.DOWNLOAD_COMPLETE, {"file_name": dest_path}
+            )
+            self.file_download_finished.emit()
 
         except Exception as e:
             self.parent.update_download_log(
@@ -550,6 +554,90 @@ class InstallWorker(
                 0, self.total_models_in_current_step - 1
             )
 
+    @property
+    def unidic_exists(self) -> bool:
+        unidic_spec = importlib.util.find_spec("unidic")
+        if unidic_spec is not None and unidic_spec.submodule_search_locations:
+            self._unidic_dir = os.path.join(
+                unidic_spec.submodule_search_locations[0]
+            )
+        else:
+            self._unidic_dir = None
+        return (
+            self._unidic_dir
+            and os.path.isdir(self._unidic_dir)
+            and os.listdir(self._unidic_dir)
+        )
+
+    @property
+    def openvoice_exists(self) -> bool:
+        base_path = self.path_settings.base_path
+        self._openvoice_dir = os.path.expanduser(
+            os.path.join(base_path, "text", "models", "tts", "openvoice")
+        )
+        return os.path.isdir(self._openvoice_dir) and os.listdir(
+            self._openvoice_dir
+        )
+
+    def _download_unidic(self):
+        if self.unidic_exists:
+            self.parent.update_download_log(
+                {"message": "Unidic already present, skipping download."}
+            )
+            self.total_models_in_current_step = 0
+            self.emit_signal(SignalCode.DOWNLOAD_COMPLETE, {})
+            QTimer.singleShot(100, self.set_page)
+            return
+
+        os.makedirs(self._unidic_dir, exist_ok=True)
+        self.parent.on_set_downloading_status_label(
+            {"label": "Downloading unidic dictionary..."}
+        )
+        self._unidic_zip_path = os.path.join(
+            self._unidic_dir, "unidic-3.1.0.zip"
+        )
+        unidic_url = "https://cotonoha-dic.s3-ap-northeast-1.amazonaws.com/unidic-3.1.0.zip"
+        self.total_models_in_current_step += 1  # Track unidic zip
+        self._download_file_with_progress(
+            unidic_url, self._unidic_zip_path, label="unidic-3.1.0.zip"
+        )
+
+    def _download_openvoice(self):
+        if self.openvoice_exists:
+            self.parent.update_download_log(
+                {"message": "OpenVoice already present, skipping download."}
+            )
+            for n_ in range(len(self._openvoice_zip_urls)):
+                self.file_download_finished.emit()
+            self.total_models_in_current_step = 0
+            QTimer.singleShot(100, self.set_page)
+            return
+        self.parent.on_set_downloading_status_label(
+            {"label": "Downloading OpenVoice checkpoints..."}
+        )
+
+        # Log the download attempt
+        self.parent.update_download_log(
+            {
+                "message": f"Starting download of OpenVoice zip files to {self._openvoice_dir}"
+            }
+        )
+
+        # Start with the first zip file - rest will be downloaded sequentially
+        first_url = self._openvoice_zip_urls[0]
+        zip_name = os.path.basename(first_url)
+        zip_path = os.path.join(self._openvoice_dir, zip_name)
+
+        # Track this zip file download
+        self.total_models_in_current_step += 1
+
+        self.parent.update_download_log(
+            {"message": f"Starting download of {zip_name} to {zip_path}"}
+        )
+
+        # Download the first zip file - completion handler will trigger the next one
+        self._download_file_with_progress(first_url, zip_path, label=zip_name)
+
     def download_openvoice_and_unidic(self):
         """
         Download unidic and OpenVoice checkpoints, using direct URL download for these files.
@@ -559,107 +647,10 @@ class InstallWorker(
         """
         # Set state flag to track this step has been attempted
         self._openvoice_unidic_download_attempted = True
-
-        base_path = self.path_settings.base_path
-        self._openvoice_dir = os.path.expanduser(
-            os.path.join(base_path, "text", "models", "tts", "openvoice")
-        )
-
-        # Find unidic package path
-        unidic_spec = importlib.util.find_spec("unidic")
-        if unidic_spec is not None and unidic_spec.submodule_search_locations:
-            self._unidic_dir = os.path.join(
-                unidic_spec.submodule_search_locations[0]
-            )
-        else:
-            self._unidic_dir = None
-
-        # Skip if both folders exist and are non-empty
-        openvoice_exists = os.path.isdir(self._openvoice_dir) and os.listdir(
-            self._openvoice_dir
-        )
-        unidic_exists = (
-            self._unidic_dir
-            and os.path.isdir(self._unidic_dir)
-            and os.listdir(self._unidic_dir)
-        )
-
-        if unidic_exists and openvoice_exists:
-            self.parent.update_download_log(
-                {
-                    "message": "Unidic and OpenVoice already present, skipping download."
-                }
-            )
-            # Signal completion through normal flow rather than directly calling finalize_installation
-            self._openvoice_unidic_complete = True
-            self.total_models_in_current_step = 0
-            self.emit_signal(SignalCode.DOWNLOAD_COMPLETE, {})
-            return
-
-        if self._unidic_dir:
-            os.makedirs(self._unidic_dir, exist_ok=True)
-        os.makedirs(self._openvoice_dir, exist_ok=True)
-
-        # Download unidic zip if needed
-        if not unidic_exists and self._unidic_dir:
-            self.parent.on_set_downloading_status_label(
-                {"label": "Downloading unidic dictionary..."}
-            )
-            self._unidic_zip_path = os.path.join(
-                self._unidic_dir, "unidic-3.1.0.zip"
-            )
-            unidic_url = "https://cotonoha-dic.s3-ap-northeast-1.amazonaws.com/unidic-3.1.0.zip"
-            self.total_models_in_current_step += 1  # Track unidic zip
-            self._download_file_with_progress(
-                unidic_url, self._unidic_zip_path, label="unidic-3.1.0.zip"
-            )
-        else:
-            self._unidic_zip_path = None
-            self.parent.update_download_log(
-                {"message": "Unidic already present, skipping download."}
-            )
-
-        # OpenVoice download if needed
-        if not openvoice_exists:
-            # Initialize OpenVoice tracking variables
-            self._openvoice_zip_urls = [
-                "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_1226.zip",
-                "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip",
-            ]
-            self._openvoice_zip_urls_completed = []
-            self._openvoice_zip_paths = []
-
-            self.parent.on_set_downloading_status_label(
-                {"label": "Downloading OpenVoice checkpoints..."}
-            )
-
-            # Log the download attempt
-            self.parent.update_download_log(
-                {
-                    "message": f"Starting download of OpenVoice zip files to {self._openvoice_dir}"
-                }
-            )
-
-            # Start with the first zip file - rest will be downloaded sequentially
-            first_url = self._openvoice_zip_urls[0]
-            zip_name = os.path.basename(first_url)
-            zip_path = os.path.join(self._openvoice_dir, zip_name)
-
-            # Track this zip file download
-            self.total_models_in_current_step += 1
-
-            self.parent.update_download_log(
-                {"message": f"Starting download of {zip_name} to {zip_path}"}
-            )
-
-            # Download the first zip file - completion handler will trigger the next one
-            self._download_file_with_progress(
-                first_url, zip_path, label=zip_name
-            )
-        else:
-            self.parent.update_download_log(
-                {"message": "OpenVoice already present, skipping download."}
-            )
+        self._download_unidic()
+        self._download_openvoice()
+        self._openvoice_unidic_complete = True
+        self._openvoice_unidic_extraction_complete = True
 
     def _process_next_openvoice_zip(self):
         """Process the next OpenVoice zip download in the queue"""
@@ -759,11 +750,6 @@ class InstallWorker(
                 zip_name = os.path.basename(zip_path)
                 try:
                     extraction_count += 1
-                    progress_pct = (
-                        int((extraction_count / total_to_extract) * 100)
-                        if total_to_extract > 0
-                        else 0
-                    )
 
                     self.parent.on_set_downloading_status_label(
                         {
@@ -814,6 +800,7 @@ class InstallWorker(
                 SignalCode.DOWNLOAD_COMPLETE,
                 {"file_name": "openvoice_extraction_complete"},
             )
+            self.file_download_finished.emit()
 
             # Trigger the next step instead of just emitting file_download_finished
             self.total_models_in_current_step = (
@@ -921,7 +908,15 @@ class InstallWorker(
     def handle_openvoice_zip_download_finished(self, file_path):
         """
         Called when an OpenVoice zip file download is complete.
-        Determines if we need to download the next one or proceed to extraction.
+                # Emit completion events for the three counted items (2 OpenVoice zips + 1 unidic zip)
+                for _ in range(3):
+                    self.emit_signal(SignalCode.DOWNLOAD_COMPLETE, {})
+                    try:
+                        self.file_download_finished.emit()
+                    except Exception:
+                        pass
+                # Proactively advance to finalization to prevent getting stuck on re-runs
+                QTimer.singleShot(100, self.set_page)
         """
         # Initialize OpenVoice tracking variables if not already done
         if not hasattr(self, "_openvoice_zip_urls"):
@@ -988,6 +983,8 @@ class InstallWorker(
 
     @Slot()
     def download_finished(self, data):
+        self.file_download_finished.emit()
+
         self.total_models_in_current_step = max(
             0, self.total_models_in_current_step - 1
         )
@@ -1024,7 +1021,6 @@ class InstallWorker(
                         # No files to extract, mark step as complete
                         self._openvoice_unidic_extraction_complete = True
 
-            # Move to next step only if we get here
             self.set_page()
 
     @Slot()
@@ -1076,18 +1072,12 @@ class InstallWorker(
             self.current_step = 6
             self.download_stt()
         elif self.current_step == 6:
-            self.parent.on_set_downloading_status_label(
-                {"label": f"Downloading Speech-to-Text"}
-            )
-            self.current_step = 7
-            self.download_stt()
-        elif self.current_step == 7:
             # Set step before downloading to ensure processing in download_finished
-            self.current_step = 8
+            self.current_step = 7
             self.download_openvoice()
             # Only download unidic/openvoice zips after OpenVoice models are completed
             # download_openvoice_and_unidic will be called automatically when OpenVoice models finish
-        elif self.current_step == 8:
+        elif self.current_step == 7:
             # Only called when set_page() runs after step 8 completes
             self.finalize_installation()
 
@@ -1165,8 +1155,8 @@ class InstallWorker(
         )
 
         # Make sure we complete all downloads in both counters for consistency
-        if self.parent.total_files != self.parent.total_files_downloaded:
-            self.parent.total_files_downloaded = self.parent.total_files
+        if self.parent.total_files != self.parent.completed_files:
+            self.parent.completed_files = self.parent.total_files
 
         # Also synchronize with the completed_files counter
         if self.parent.total_files != self.parent.completed_files:
@@ -1183,6 +1173,8 @@ class InstallWorker(
         if hasattr(self.parent, "cleanup_thread"):
             QTimer.singleShot(1000, self.parent.cleanup_thread)
 
+        self.parent.enable_next_button()
+
 
 class InstallPage(BaseWizard):
     class_name_ = Ui_install_page
@@ -1194,23 +1186,19 @@ class InstallPage(BaseWizard):
         models_enabled: List[str],
     ):
         super(InstallPage, self).__init__(parent)
-        self.total_files_downloaded = 0
         self.total_files = 0
-        self.completed_files = 0
+        self.completed_file_set = set()  # Track unique completed files
         self.stablediffusion_models = stablediffusion_models
         self.models_enabled = models_enabled
         self.steps_completed = 0
+        self.parent = parent
 
         # reset the progress bar
         self.ui.progress_bar.setValue(0)
         self.ui.progress_bar.setMaximum(100)
 
         # Disable the Next button when starting downloads
-        if hasattr(parent, "button") and parent.button(
-            QWizard.WizardButton.NextButton
-        ):
-            parent.button(QWizard.WizardButton.BackButton).setEnabled(False)
-            parent.button(QWizard.WizardButton.NextButton).setEnabled(False)
+        self.toggle_buttons(False)
 
         # These will increase
         self.total_steps = 0
@@ -1265,6 +1253,10 @@ class InstallPage(BaseWizard):
         if self.models_enabled["openvoice_model"]:
             for k, v in OPENVOICE_FILES.items():
                 self.total_steps += len(v["files"])
+            # Add OpenVoice zip files (2 zips)
+            self.total_steps += 2
+            # Add unidic zip file
+            self.total_steps += 1
 
         # Register update_progress_bar to receive download_complete signals with file data
         self.register(SignalCode.DOWNLOAD_COMPLETE, self.on_download_complete)
@@ -1297,9 +1289,31 @@ class InstallPage(BaseWizard):
         self.calculate_total_files()
         # Remove automatic thread.start() - this was causing premature downloads
 
+    def toggle_buttons(self, enabled: bool = False):
+        if hasattr(self.parent, "button") and self.parent.button(
+            QWizard.WizardButton.NextButton
+        ):
+            self.parent.button(QWizard.WizardButton.BackButton).setEnabled(
+                enabled
+            )
+            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(
+                enabled
+            )
+
     def initializePage(self):
         """Called when the wizard page becomes active - this is when we start downloads"""
         super().initializePage()
+
+        # Reset counters for page reuse
+        self.total_files = 0
+        self.completed_files = 0
+
+        # Recalculate total files
+        self.calculate_total_files()
+
+        # Reset the progress bar
+        self.ui.progress_bar.setValue(0)
+        self.ui.progress_bar.setFormat("Total download progress 0%")
 
         # Only start downloads if thread hasn't been started yet
         if hasattr(self, "thread") and not self.thread.isRunning():
@@ -1330,6 +1344,7 @@ class InstallPage(BaseWizard):
                 print(f"Error during thread cleanup: {e}")
 
     def calculate_total_files(self):
+        self.total_files = 0  # Reset counter
         if self.models_enabled["stable_diffusion"]:
             models = model_bootstrap_data
             for model in models:
@@ -1351,7 +1366,6 @@ class InstallPage(BaseWizard):
                     self.total_files += len(files)
                 except KeyError:
                     continue
-
             for controlnet_model in controlnet_bootstrap_data:
                 if not self.models_enabled.get(controlnet_model["name"], True):
                     continue
@@ -1359,9 +1373,7 @@ class InstallPage(BaseWizard):
                     "controlnet"
                 ]
                 self.total_files += len(files)
-
             self.total_files += len(controlnet_processor_files)
-
         if self.models_enabled["mistral"]:
             models = []
             for model in model_bootstrap_data:
@@ -1375,41 +1387,38 @@ class InstallPage(BaseWizard):
                     models.append(model)
                     files = LLM_FILE_BOOTSTRAP_DATA[model["path"]]["files"]
                     self.total_files += len(files)
-
         if self.models_enabled["whisper"]:
             for k, v in WHISPER_FILES.items():
                 self.total_files += len(v)
-
         if self.models_enabled["speecht5"]:
             for k, v in SPEECH_T5_FILES.items():
                 self.total_files += len(v)
-
         if self.models_enabled["openvoice_model"]:
             for k, v in OPENVOICE_FILES.items():
                 self.total_files += len(v["files"])
+            # Add OpenVoice zip files (2 zips)
+            self.total_files += 2
+            # Add unidic zip file
+            self.total_files += 1
 
     def start(self):
         """Start the installation process and ensure Next button is disabled"""
         # Make sure Next button is disabled when downloads start
-        if hasattr(self.parent, "button") and self.parent.button(
-            QWizard.WizardButton.NextButton
-        ):
-            self.parent.button(QWizard.WizardButton.BackButton).setEnabled(
-                False
-            )
-            self.parent.button(QWizard.WizardButton.NextButton).setEnabled(
-                False
-            )
+        self.toggle_buttons(False)
 
         # Connect signals and start the thread
         self.calculate_total_files()
-        self.worker.file_download_finished.connect(self.file_download_finished)
-        self.worker.progress_updated.connect(self.file_progress_updated)
         self.thread.started.connect(self.worker.run)
         self.thread.start()
 
-    def file_download_finished(self):
-        """Increment total installation progress when a file completes."""
+    def file_download_finished(self, file_name=None):
+        """Increment total installation progress when a file completes, only if unique."""
+        # file_name can be None for legacy calls, so fallback to a generic counter
+        if file_name is None:
+            file_name = f"legacy_{self.completed_files}"
+        if file_name in self.completed_file_set:
+            return
+        self.completed_file_set.add(file_name)
         self.completed_files += 1
         if self.total_files > 0:
             pct = int((self.completed_files / self.total_files) * 100)
@@ -1426,24 +1435,6 @@ class InstallPage(BaseWizard):
                 self.ui.progress_bar.setFormat(
                     f"Total download progress {safe_pct}%"
                 )
-
-            # Check if all files are completed and enable Next button
-            if self.completed_files >= self.total_files:
-                # Force progress to 100% to ensure display is correct
-                self.ui.progress_bar.setValue(100)
-                self.ui.progress_bar.setFormat("Total download progress 100%")
-                # Add a slight delay before enabling the Next button
-                # to ensure all processing is complete
-                QTimer.singleShot(500, self._enable_next_button)
-            else:
-                # Add a fallback check in case we get stuck at 98%
-                # If we're very close to completion, check again after a delay
-                if (
-                    self.completed_files >= self.total_files * 0.98
-                ):  # 98% or higher
-                    QTimer.singleShot(
-                        5000, self._check_completion_fallback
-                    )  # Check in 5 seconds
 
     def file_progress_updated(self, current, total):
         """Handler for download progress updates"""
@@ -1500,11 +1491,8 @@ class InstallPage(BaseWizard):
             # Add a slight delay before enabling the Next button
             # to ensure all processing is complete
             QTimer.singleShot(500, self._enable_next_button)
-        # If called for final update, synchronize total_files_downloaded with completed_files
-        elif final:
-            self.total_files_downloaded = self.completed_files
 
-    def _enable_next_button(self):
+    def enable_next_button(self):
         """Enable the Next button when installation is complete"""
         try:
             if hasattr(self.parent, "button") and self.parent.button(

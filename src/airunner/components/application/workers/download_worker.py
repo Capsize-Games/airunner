@@ -100,22 +100,21 @@ class DownloadWorker(Worker):
                 except FileExistsError:
                     pass
 
+            # Get file size before checking existence
+            size_bytes = self.get_size(url)
+
             if os.path.exists(file_name_full):
+                # Emit progress as complete - use size_bytes if available, otherwise use 1/1
+                progress_current = size_bytes if size_bytes > 0 else 1
+                progress_total = size_bytes if size_bytes > 0 else 1
                 self.emit_signal(
-                    SignalCode.UPDATE_DOWNLOAD_LOG,
-                    {"message": "File already exists, skipping download"},
-                )
-                self.emit_signal(
-                    SignalCode.DOWNLOAD_PROGRESS, {"current": 0, "total": 0}
+                    SignalCode.DOWNLOAD_PROGRESS,
+                    {"current": progress_current, "total": progress_total},
                 )
                 self._safe_download_complete(file_name_full)
-                # Emit DOWNLOAD_COMPLETE signal for InstallWorker progression
-                self.emit_signal(
-                    SignalCode.DOWNLOAD_COMPLETE, {"file_name": file_name_full}
-                )
                 if callable(callback):
                     try:
-                        callback(0, 0)
+                        callback(progress_current, progress_total)
                     except Exception:
                         logger.exception(
                             "Progress callback failed after skip for %s",
@@ -124,7 +123,6 @@ class DownloadWorker(Worker):
                 self.finished.emit({})
                 return
 
-            size_bytes = self.get_size(url)
             try:
                 human_size = (
                     f"{size_bytes/1024:.2f} KB"
@@ -308,10 +306,6 @@ class DownloadWorker(Worker):
                     {"message": f"Finished download: {file_name_full}"},
                 )
                 self._safe_download_complete(file_name_full)
-                # Emit DOWNLOAD_COMPLETE signal for InstallWorker progression
-                self.emit_signal(
-                    SignalCode.DOWNLOAD_COMPLETE, {"file_name": file_name_full}
-                )
                 if callable(callback):
                     final_total = size_bytes if size_bytes else written
                     MAX_SAFE_VALUE = 2147483647  # 32-bit signed integer max
@@ -356,4 +350,6 @@ class DownloadWorker(Worker):
                 self.failed.emit(e)
         finally:
             # Do not modify self.running here; allow Worker.run loop to continue
-            pass
+            self.emit_signal(
+                SignalCode.DOWNLOAD_COMPLETE, {"file_name": file_name_full}
+            )
