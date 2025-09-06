@@ -1,6 +1,7 @@
 import re
 from typing import (
     Any,
+    List,
     Optional,
     Union,
     Dict,
@@ -810,7 +811,7 @@ class BaseAgent(
                 chat_engine=self.chat_engine,
                 agent=self,
                 return_direct=True,
-                do_handle_response=False,
+                do_handle_response=True,
             )
 
         return self._get_or_create_singleton("_chat_engine_tool", factory)
@@ -1221,7 +1222,8 @@ class BaseAgent(
         return self.react_tool_agent.call(**kwargs)
 
     def application_command_handler(self, **kwargs: Any) -> Any:
-        kwargs["tool_choice"] = "application_command_tool"
+        # Let the React agent choose the appropriate tool dynamically
+        # Do not force a specific tool_choice - the agent will determine the best tool
         kwargs["chat_history"] = (
             self.chat_memory.get() if self.chat_memory else []
         )
@@ -1392,7 +1394,7 @@ class BaseAgent(
             now = datetime.datetime.now(datetime.timezone.utc).isoformat()
             conversation.value.append(
                 {
-                    "role": "user",
+                    "role": MessageRole.USER.value,
                     "name": self.username,
                     "content": message,
                     "timestamp": now,
@@ -1401,7 +1403,7 @@ class BaseAgent(
             )
             conversation.value.append(
                 {
-                    "role": "assistant",
+                    "role": MessageRole.ASSISTANT.value,
                     "name": self.botname,
                     "content": self._complete_response,
                     "timestamp": now,
@@ -1453,6 +1455,58 @@ class BaseAgent(
                 self.chat_memory.set(chat_messages)
             self.sync_memory_to_all_engines()
 
+    def _append_assistant_message(
+        self, conversation, content, is_complete=True
+    ):
+        """
+        Add a new assistant message to the conversation.
+        Args:
+            conversation: The conversation object to update
+            content: The message content
+            is_complete: Whether this is a complete message
+        Returns:
+            Updated conversation object
+        """
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        assistant_message = {
+            "role": MessageRole.ASSISTANT.value,
+            "name": self.botname,
+            "content": content,
+            "timestamp": now,
+            "blocks": [{"block_type": "text", "text": content}],
+            "is_complete": is_complete,  # Track completion status
+        }
+        conversation.value.append(assistant_message)
+        return conversation
+
+    def _update_last_assistant_message(
+        self, conversation, content, is_complete=True
+    ):
+        """
+        Update the last assistant message in the conversation.
+        Args:
+            conversation: The conversation object to update
+            content: The updated message content
+            is_complete: Whether this is a complete message
+        Returns:
+            Updated conversation object
+        """
+        if (
+            conversation.value
+            and conversation.value[-1].get("role")
+            == MessageRole.ASSISTANT.value
+        ):
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            conversation.value[-1].update(
+                {
+                    "content": content,
+                    "timestamp": now,
+                    "blocks": [{"block_type": "text", "text": content}],
+                    "is_complete": is_complete,
+                }
+            )
+        return conversation
+
     def _remove_last_message_from_conversation(self, conversation) -> None:
         """
         Remove the last message from the conversation.
@@ -1488,9 +1542,7 @@ class BaseAgent(
         conversation = self.conversation
         if conversation:
             messages = conversation.value
-            self.chat_memory.set(messages)
-            if self._chat_engine:
-                self._chat_engine.memory = self.chat_memory
+            self._update_conversation_messages(messages)
 
     def on_load_conversation(self, data: Optional[Dict] = None) -> None:
         """
@@ -1582,17 +1634,19 @@ class BaseAgent(
         self.do_interrupt = False
         self._update_memory(action)
         kwargs = kwargs or {}
-        kwargs["input"] = f'{self.username}: "{message}"'
+        if llm_request.role is MessageRole.USER:
+            kwargs["input"] = f'{self.username}: "{message}"'
+        else:
+            kwargs["input"] = message
         self._update_system_prompt(self.system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._update_memory_settings()
 
         self._perform_tool_call(action, **kwargs)
 
-        conversation = self.conversation
-        if conversation is not None:
-            self._append_conversation_messages(conversation, message)
-            self.update_conversation_state(conversation)
+        # Note: Conversation update is deferred until streaming is complete
+        # This prevents incomplete responses from being saved to the database
+        # The conversation will be updated via the finalize mechanism in llama_index
 
         # if action is LLMActionType.CHAT:
         #     if (
@@ -1605,6 +1659,12 @@ class BaseAgent(
         #     self._perform_analysis(action)
 
         return AgentChatResponse(response=self._complete_response)
+
+    def _update_conversation_messages(self, messages: List[Dict]) -> None:
+        if self.chat_memory:
+            self.chat_memory.set(messages)
+            if self._chat_engine:
+                self._chat_engine.memory = self.chat_memory
 
     def _parse_menu_selection(self, text: str) -> Optional[int]:
         match = re.match(r"\s*(\d+)[\.|\s]", text)
@@ -1656,7 +1716,18 @@ class BaseAgent(
                 is_last_message=is_last_message,
             )
 
-        if not response and not do_not_display:
+        # Handle end of stream signal for conversation update
+        # NOTE: Disabled - now using incremental updates during streaming
+        # if is_last_message and not response:
+        #     conversation = self.conversation
+        #     if conversation is not None:
+        #         self._append_conversation_messages(
+        #             conversation, self._chat_prompt
+        #         )
+        #         self.update_conversation_state(conversation)
+        #     return
+
+        if not response or do_not_display:
             return
 
         # The 'full_message' variable as defined in the diff caused duplication when sent.
@@ -1672,9 +1743,15 @@ class BaseAgent(
                 self._stream_started = True
                 self._is_first_message_handled = True
                 self._sequence_counter = 1
+                # Reset accumulated response for new message
+                self._complete_response = ""
             else:
                 self._sequence_counter += 1
 
+            # Accumulate the response
+            self._complete_response += response
+
+            # Send to GUI immediately for real-time display
             self.api.llm.send_llm_text_streamed_signal(
                 LLMResponse(
                     message=response,
@@ -1683,7 +1760,10 @@ class BaseAgent(
                     sequence_number=self._sequence_counter,
                 )
             )
-            self._complete_response += response
+
+            # Only send to GUI for real-time display
+            # Let the React Agent framework handle all database persistence
+            # This avoids duplication issues between incremental updates and final persistence
 
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """

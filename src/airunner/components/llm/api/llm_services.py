@@ -78,6 +78,24 @@ class LLMAPIService(APIServiceBase):
             SignalCode.DELETE_MESSAGES_AFTER_ID, {"message_id": message_id}
         )
 
+    def finalize_image_generated_by_llm(self, _data):
+        """
+        Callback function to be called after the image has been generated.
+        """
+        # Ask the LLM to provide a brief confirmation in the current conversation style
+        self.send_request(
+            "The image request has completed. Write a single concise reply (1 short sentence) acknowledging the generated image.",
+            action=LLMActionType.CHAT,
+            do_tts_reply=True,
+        )
+        # self.send_llm_text_streamed_signal(
+        #     LLMResponse(
+        #         message="Your image has been generated successfully.",
+        #         is_first_message=True,
+        #         is_end_of_message=True,
+        #     )
+        # )
+
     def send_llm_text_streamed_signal(self, response: LLMResponse):
         self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}

@@ -115,6 +115,7 @@ class ReActAgentTool(BaseConversationEngine):
         return self.call(*args, **kwargs)
 
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
+        print("REACT AGENT TOOL", kwargs)
         tool_choice = kwargs.get("tool_choice", None)
         llm_request = kwargs.get("llm_request", LLMRequest.from_default())
         self.agent.llm.llm_request = llm_request
@@ -171,12 +172,16 @@ class ReActAgentTool(BaseConversationEngine):
         # 'username'), retry once with safe defaults inserted.
         try:
             for token in streaming_response:
-                if not token:
-                    continue
+                # Accumulate all tokens (including empty ones)
                 response += token
-                if self.agent is not None:
+                # Only send non-empty tokens to GUI to avoid flickering
+                if token and self.agent is not None:
                     self.agent.handle_response(token, is_first_message)
-                is_first_message = False
+                    is_first_message = False
+
+            # Signal that streaming is complete
+            if self.agent is not None:
+                self.agent.handle_response("", is_last_message=True)
         except KeyError as e:
             # Only attempt a retry for missing username/botname formatting keys.
             msg = str(e)
@@ -228,6 +233,10 @@ class ReActAgentTool(BaseConversationEngine):
                     if self.agent is not None:
                         self.agent.handle_response(token, is_first_message)
                     is_first_message = False
+
+                # Signal that streaming is complete
+                if self.agent is not None:
+                    self.agent.handle_response("", is_last_message=True)
             else:
                 # re-raise other KeyErrors
                 raise

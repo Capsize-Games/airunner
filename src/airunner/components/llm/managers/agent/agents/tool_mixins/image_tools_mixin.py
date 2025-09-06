@@ -1,3 +1,4 @@
+import json
 from typing import Annotated, Optional
 import os
 from llama_index.core.tools import FunctionTool
@@ -105,7 +106,15 @@ class ImageToolsMixin(ToolSingletonMixin):
                 self.api.art.llm_image_generated(
                     prompt, second_prompt, preset_val, width, height
                 )
-                return "Generating image..."
+                return json.dumps(
+                    {
+                        "prompt": prompt,
+                        "second_prompt": second_prompt,
+                        "preset": preset_val,
+                        "width": width,
+                        "height": height,
+                    }
+                )
 
             # Make the description very explicit for the LLM
             self._generate_image_tool = FunctionTool.from_defaults(
