@@ -92,7 +92,7 @@ class SDWorker(Worker):
     def model_manager(self):
         if self._model_manager is None:
             version = StableDiffusionVersion(self.generator_settings.version)
-            
+
             if version is StableDiffusionVersion.SD1_5:
                 self._model_manager = self.sd
             elif version in (
@@ -275,6 +275,8 @@ class SDWorker(Worker):
         return data
 
     def load_model_manager(self, data: Dict = None):
+        # Ensure data is a dict to avoid TypeError when called without args
+        data = data or {}
         data["settings"] = self.generator_settings
         data = self._process_image_request(data)
         do_reload = data.get("do_reload", False)
@@ -365,7 +367,13 @@ class SDWorker(Worker):
         if message is not None:
             action = message.get("action", None)
             model_type = message.get("type", None)
-            data = message.get("message", {})
+            # Messages enqueued for GENERATE use key 'message',
+            # while LOAD/UNLOAD paths use key 'data'. Support both.
+            data = (
+                message.get("message")
+                if "message" in message
+                else message.get("data", {})
+            )
             if action is not None and model_type is not None:
                 if action is ModelAction.LOAD:
                     if model_type is ModelType.SD:

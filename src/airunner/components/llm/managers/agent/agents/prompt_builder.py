@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from airunner.enums import LLMActionType
+from airunner.enums import LLMActionType, ImagePreset
 
 
 class PromptBuilder:
@@ -301,7 +301,67 @@ class PromptBuilder:
         elif action is LLMActionType.NONE:
             # Fallback to chat prompt when action is NONE
             return cls.chat_system_prompt(agent)
+        elif action is LLMActionType.GENERATE_IMAGE:
+            return cls.image_system_prompt(agent)
         else:
             raise ValueError(
                 f"Unsupported action type for system prompt: {action}"
             )
+
+    @classmethod
+    def image_system_prompt(cls, agent) -> str:
+        """
+        Return a system prompt specialized for image-generation tool use.
+        This prompt explicitly instructs the model to call the generate_image_tool
+        with a strict JSON Action block and no conversational detours.
+        """
+        base = cls(agent)._build(
+            include_user_bot_intro=True,
+            include_rules=False,
+            include_backstory=False,
+            include_system_instructions=True,
+            include_guardrails=True,
+            include_context_header=True,
+            include_date_time=False,
+            include_personality=False,
+            include_mood=False,
+            include_operating_system=False,
+            include_speakers=True,
+            include_weather=False,
+            include_conversation_summary=False,
+            include_conversation_info_header=False,
+            include_conversation_timestamp=False,
+            include_language_instruction=True,
+        )
+
+        # Current defaults from settings to guide width/height
+        working_w = getattr(agent.application_settings, "working_width", 1024)
+        working_h = getattr(agent.application_settings, "working_height", 1024)
+        presets = ", ".join([p.value for p in ImagePreset if p.value])
+
+        sample_json = (
+            "{\n"
+            '  "prompt": "<short, vivid subject description>",\n'
+            '  "second_prompt": "<concise background/mood/scene details>",\n'
+            f'  "image_type": "<one of: {presets}>",\n'
+            f'  "width": {working_w},\n'
+            f'  "height": {working_h}\n'
+            "}"
+        )
+        # Escape braces to avoid str.format() interpreting them as placeholders
+        sample_json_escaped = sample_json.replace("{", "{{").replace("}", "}}")
+
+        instructions = (
+            "\nYou must generate an image by calling the tool generate_image_tool.\n"
+            "Follow these rules strictly:\n"
+            "- Do NOT write a normal assistant reply.\n"
+            "- Respond only with an Action JSON block for the tool call.\n"
+            "- Use this JSON shape exactly inside a fenced block after 'Action:':\n"
+            "```json\n"
+            f"{sample_json_escaped}\n"
+            "```\n"
+            "- Keep prompts concise but specific; avoid long paragraphs.\n"
+            "- Prefer the current working width/height unless the user explicitly requests otherwise.\n"
+        )
+
+        return base + "\n" + instructions
