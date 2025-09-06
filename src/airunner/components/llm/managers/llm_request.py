@@ -1,9 +1,12 @@
 from dataclasses import dataclass, asdict
 from typing import Optional, Dict
 
+from llama_cloud import MessageRole
+
 from airunner.components.llm.data.chatbot import Chatbot
-from airunner.components.llm.data.llm_generator_settings import \
-    LLMGeneratorSettings
+from airunner.components.llm.data.llm_generator_settings import (
+    LLMGeneratorSettings,
+)
 from airunner.components.llm.utils import get_chatbot
 
 
@@ -50,6 +53,7 @@ class LLMRequest:
     do_tts_reply: bool = True
     node_id: Optional[str] = None
     use_memory: bool = True
+    role: MessageRole = MessageRole.USER
 
     def to_dict(self) -> Dict:
         """
@@ -89,6 +93,7 @@ class LLMRequest:
 
         data.pop("node_id")
         data.pop("use_memory")
+        data.pop("role")
 
         return data
 

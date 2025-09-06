@@ -68,7 +68,7 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
         botname = getattr(getattr(self, "agent", None), "botname", "Computer")
         conversation.value.append(
             {
-                "role": "user",
+                "role": MessageRole.USER.value,
                 "name": username,
                 "content": user_message,
                 "timestamp": now,
@@ -79,7 +79,7 @@ class RefreshSimpleChatEngine(SimpleChatEngine):
         if assistant_message is not None:
             conversation.value.append(
                 {
-                    "role": "assistant",
+                    "role": MessageRole.ASSISTANT.value,
                     "name": botname,
                     "content": assistant_message,
                     "timestamp": now,

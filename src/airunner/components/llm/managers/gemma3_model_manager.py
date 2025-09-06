@@ -1,4 +1,5 @@
 import os
+from llama_cloud import MessageRole
 import torch
 from typing import Dict, Optional, Any, List, Union
 
@@ -148,7 +149,7 @@ class Gemma3Manager(LLMModelManager):
             # Prepare messages in Gemma 3 format
             messages = [
                 {
-                    "role": "system",
+                    "role": MessageRole.SYSTEM.value,
                     "content": [{"type": "text", "text": system_message}],
                 }
             ]
@@ -166,7 +167,9 @@ class Gemma3Manager(LLMModelManager):
 
             # Add user message if we have content
             if user_content:
-                messages.append({"role": "user", "content": user_content})
+                messages.append(
+                    {"role": MessageRole.USER.value, "content": user_content}
+                )
 
         # Process through Gemma 3 model
         llm_request = llm_request or LLMRequest.from_default()

@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 from PySide6.QtCore import QTimer, Slot, Qt
 from PySide6.QtWidgets import QApplication
 from PySide6.QtWebChannel import QWebChannel
+from llama_cloud import MessageRole
 
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
@@ -476,7 +477,7 @@ class ConversationWidget(BaseWidget):
                     {
                         "name": self.chatbot.botname,
                         "content": combined_message,
-                        "role": "assistant",
+                        "role": MessageRole.ASSISTANT.value,
                         "is_bot": True,
                     }
                 )
@@ -607,7 +608,7 @@ class ConversationWidget(BaseWidget):
                     {
                         "name": self.chatbot.botname,
                         "content": combined_content,
-                        "role": "assistant",
+                        "role": MessageRole.ASSISTANT.value,
                         "is_bot": True,
                     }
                 )

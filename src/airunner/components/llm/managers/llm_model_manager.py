@@ -12,20 +12,28 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
 from llama_index.core.chat_engine.types import AgentChatResponse
 
-from airunner.components.conversations.conversation_history_manager import ConversationHistoryManager
+from airunner.components.conversations.conversation_history_manager import (
+    ConversationHistoryManager,
+)
 from airunner.components.llm.data.conversation import Conversation
-from airunner.components.application.managers.base_model_manager import BaseModelManager
+from airunner.components.application.managers.base_model_manager import (
+    BaseModelManager,
+)
 from airunner.enums import (
     ModelType,
     ModelStatus,
     LLMActionType,
+    SignalCode,
 )
 from airunner.settings import (
     AIRUNNER_MAX_SEED,
     AIRUNNER_LOCAL_FILES_ONLY,
 )
 from airunner.utils.memory import clear_memory
-from airunner.components.llm.managers.agent.agents import LocalAgent, OpenRouterQObject
+from airunner.components.llm.managers.agent.agents import (
+    LocalAgent,
+    OpenRouterQObject,
+)
 from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
@@ -238,6 +246,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         # Update status based on loading results
         if self._model and self._tokenizer and self._chat_agent:
             self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
+            self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True})
             # If there was a pending conversation load, process it now
             if getattr(self, "_pending_conversation_message", None):
                 self.logger.info(
@@ -627,10 +636,6 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             llm_request=llm_request,
             extra_context=extra_context,
         )
-
-        # Handle the response
-        # Send end-of-message signal for chat actions
-        from airunner.enums import LLMActionType
 
         if action is LLMActionType.CHAT:
             self._send_final_message(llm_request)

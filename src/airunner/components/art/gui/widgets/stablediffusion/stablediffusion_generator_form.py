@@ -464,23 +464,13 @@ class StableDiffusionGeneratorForm(BaseWidget):
         """
         Callback function to be called after the image has been generated.
         """
-
-        def _llm_followup(_):
-            # Ask the LLM to provide a brief confirmation in the current conversation style
-            prompt = "The image request has completed. Write a single concise reply (1 short sentence) acknowledging the generated image."
-            self.api.llm.send_request(
-                prompt,
-                action=LLMActionType.CHAT,
-                do_tts_reply=True,
-            )
-
         self.api.art.toggle_sd(
             enabled=False,
             callback=lambda _d: self.api.art.load_non_sd(
                 # Reload only the LLM explicitly. TTS/STT should reload only
                 # if they had been enabled prior to switching to art mode.
                 {"models": [ModelType.LLM]},
-                callback=_llm_followup,
+                callback=self.api.llm.finalize_image_generated_by_llm,
             ),
         )
 
