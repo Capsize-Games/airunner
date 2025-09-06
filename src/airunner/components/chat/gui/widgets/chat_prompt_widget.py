@@ -19,7 +19,9 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.utils.application import create_worker
 from airunner.utils.widgets import load_splitter_settings
 from airunner.components.llm.managers.llm_request import LLMRequest
-from airunner.components.llm.workers.llm_response_worker import LLMResponseWorker
+from airunner.components.llm.workers.llm_response_worker import (
+    LLMResponseWorker,
+)
 from airunner.settings import AIRUNNER_ART_ENABLED, SLASH_COMMANDS
 
 
@@ -146,8 +148,7 @@ class ChatPromptWidget(BaseWidget):
 
     @property
     def action(self) -> LLMActionType:
-        # return LLMActionType[self.llm_generator_settings.action]
-        return LLMActionType.DECISION
+        return LLMActionType[self.llm_generator_settings.action]
 
     def on_model_status_changed_signal(self, data):
         if data["model"] == ModelType.LLM:

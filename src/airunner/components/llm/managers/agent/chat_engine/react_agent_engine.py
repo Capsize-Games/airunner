@@ -104,6 +104,19 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                 "Cannot provide both context and react_chat_formatter"
             )
         if context:
+            # Replace placeholders in context before creating formatter
+            username = ""
+            botname = ""
+            try:
+                if hasattr(self._llm, "agent") and self._llm.agent:
+                    username = getattr(self._llm.agent, "username", "") or ""
+                    botname = getattr(self._llm.agent, "botname", "") or ""
+            except AttributeError:
+                # Agent not set yet, will be handled later
+                pass
+            context = context.replace("{username}", username).replace(
+                "{botname}", botname
+            )
             react_chat_formatter = ReActChatFormatter.from_defaults(context)
             context = None
 
@@ -175,41 +188,59 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
     ):
         # Store original tools for restoration later
         original_tools = getattr(self, "tools", [])
-
-        if tool_choice:
-            # Find the target tool
-            target_tool = None
-            for tool in original_tools:
-                tool_name = getattr(
-                    getattr(tool, "metadata", None), "name", None
-                )
-                if tool_name == tool_choice:
-                    target_tool = tool
-                    break
-
-            if target_tool:
-                self.agent_worker.reinitialize_tools(tools=[target_tool])
-                enhanced_query = f"{query_str}\n\nUse the {tool_choice} tool to fulfill this request. Think carefully about the correct parameters."
-                query_str = enhanced_query
+        # Note: we prefer to let ReAct produce the tool-call JSON first. We'll only
+        # fallback to a direct image tool invocation if parsing fails below.
 
         if hasattr(super(), "stream_chat"):
             # Forward kwargs through to the parent stream_chat so downstream
             # formatters and steps can access contextual kwargs like username.
+            # Remove tool_choice and chat_history from kwargs to avoid multiple values error
+            # Only pass kwargs that are safe for the parent stream_chat method
+            # ReActAgent.stream_chat accepts: message, chat_history, tool_choice
+            safe_kwargs = {
+                k: v
+                for k, v in (kwargs or {}).items()
+                if k
+                in [
+                    "message",
+                    "chat_history",
+                    "tool_choice",
+                ]  # but tool_choice is handled separately
+            }
+            # Actually, since we're handling tool_choice and chat_history separately,
+            # and message is positional, we can filter out everything except safe ones
+            filtered_kwargs = {
+                k: v
+                for k, v in (kwargs or {}).items()
+                if k
+                not in [
+                    "tool_choice",
+                    "chat_history",
+                    "input",
+                    "query_str",
+                    "messages",
+                ]
+            }
             result = super().stream_chat(
                 query_str,
                 chat_history=messages,
                 tool_choice=tool_choice,
-                **(kwargs or {}),
             )
-            # Parse for tool call and execute tool
             output = ""
             if hasattr(result, "response_gen"):
-                for token in result.response_gen:
-                    output += token
-                    yield token  # Stream LLM output as usual
+                if tool_choice:
+                    # Collect silently for tool-call JSON detection
+                    for token in result.response_gen:
+                        output += token
+                else:
+                    # Normal chat: stream tokens to caller
+                    for token in result.response_gen:
+                        output += token
+                        yield token
             else:
                 output = str(result)
-                yield output
+                if not tool_choice:
+                    yield output
             # Now, after streaming, check for tool call
 
             tool_call_match = re.search(
@@ -251,21 +282,92 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                             break
                     if tool:
                         tool_result = tool(**tool_args)
-                        # If the tool result is a generator, stream it
-                        if isinstance(tool_result, types.GeneratorType):
-                            for ttoken in tool_result:
-                                yield ttoken
-                        else:
-                            # If the tool has a 'content' attribute, yield that
-                            content = getattr(tool_result, "content", None)
-                            if content is not None:
-                                yield str(content)
+                        # For image tool, suppress echoing tool output to avoid duplicate messages
+                        tname = getattr(
+                            getattr(tool, "metadata", None), "name", None
+                        )
+                        if tname != "generate_image_tool":
+                            if isinstance(tool_result, types.GeneratorType):
+                                for ttoken in tool_result:
+                                    yield ttoken
                             else:
-                                yield str(tool_result)
+                                content = getattr(tool_result, "content", None)
+                                if content is not None:
+                                    yield str(content)
+                                else:
+                                    yield str(tool_result)
                 except Exception as e:
                     self.logger.error(
                         f"Failed to execute tool: {e}. Tool JSON: {tool_json}"
                     )
+            else:
+                # No tool-call JSON found; if a specific tool was requested, fallback
+                if tool_choice == "generate_image_tool":
+                    # Find the tool by name
+                    target_tool = None
+                    for tool in original_tools:
+                        tool_name = getattr(
+                            getattr(tool, "metadata", None), "name", None
+                        )
+                        if tool_name == tool_choice:
+                            target_tool = tool
+                            break
+                    if target_tool:
+                        try:
+                            prompt = query_str
+                            fallback_args = {
+                                "prompt": prompt,
+                                "second_prompt": "",
+                                "image_type": "Illustration",
+                                "width": 1024,
+                                "height": 1024,
+                            }
+                            _ = target_tool(**fallback_args)
+                            # cleanup and exit early
+                            if original_tools:
+                                self.agent_worker.reinitialize_tools(
+                                    tools=original_tools
+                                )
+                            return
+                        except Exception as e:
+                            self.logger.error(
+                                f"Fallback direct image tool execution failed: {e}"
+                            )
         # Always restore original tools list
         if tool_choice and original_tools:
             self.agent_worker.reinitialize_tools(tools=original_tools)
+
+    def update_system_prompt(self, system_prompt: str):
+        """
+        Update the system prompt by modifying the formatter's system_header.
+        """
+        if (
+            hasattr(self, "_step_engine")
+            and self._step_engine
+            and hasattr(self._step_engine, "_react_chat_formatter")
+        ):
+            # Try to get username and botname from the agent via LLM
+            username = "User"
+            botname = "Assistant"
+
+            if (
+                hasattr(self, "_llm")
+                and self._llm
+                and hasattr(self._llm, "agent")
+            ):
+                agent = self._llm.agent
+                try:
+                    username = agent.username or "User"
+                except:
+                    pass
+                try:
+                    botname = agent.botname or "Assistant"
+                except:
+                    pass
+
+            # Replace {username} and {botname} placeholders
+            system_prompt = system_prompt.replace("{username}", username)
+            system_prompt = system_prompt.replace("{botname}", botname)
+            self._step_engine._react_chat_formatter.system_header = (
+                system_prompt
+            )

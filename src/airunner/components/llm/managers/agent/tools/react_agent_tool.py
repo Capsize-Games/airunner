@@ -94,6 +94,11 @@ class ReActAgentTool(BaseConversationEngine):
             and agent is not None
         ):
             chat_engine._llm.set_agent(agent)
+            # Update the system prompt with the agent information
+            if hasattr(chat_engine, "update_system_prompt"):
+                chat_engine.update_system_prompt(
+                    chat_engine._llm.agent.system_prompt
+                )
 
         name = "react_agent_tool"
         description = """Useful for determining which tool to use."""
@@ -132,11 +137,17 @@ class ReActAgentTool(BaseConversationEngine):
         original_kwargs = {} if kwargs is None else dict(kwargs)
         try:
             # Forward any kwargs (e.g., username, botname) into the chat engine.
+            # Remove tool_choice and messages from kwargs to avoid multiple values error
+            filtered_kwargs = {
+                k: v
+                for k, v in (original_kwargs or {}).items()
+                if k not in ["tool_choice", "messages"]
+            }
             streaming_response = self.chat_engine.stream_chat(
                 query_str=query_str,
                 messages=chat_history,
                 tool_choice=tool_choice,
-                **(original_kwargs or {}),
+                **filtered_kwargs,
             )
         except Exception as e:
             import logging
@@ -192,7 +203,11 @@ class ReActAgentTool(BaseConversationEngine):
                         query_str=query_str,
                         messages=chat_history,
                         tool_choice=tool_choice,
-                        **safe_kwargs,
+                        **{
+                            k: v
+                            for k, v in safe_kwargs.items()
+                            if k not in ["tool_choice", "messages"]
+                        },
                     )
                 except Exception as e2:
                     self.logger.error(f"Retry stream_chat failed: {e2}")
