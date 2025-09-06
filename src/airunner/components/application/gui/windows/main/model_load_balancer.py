@@ -43,7 +43,22 @@ class ModelLoadBalancer(MediatorMixin):
             (ModelType.TTS, self.worker_manager.tts_generator_worker),
             (ModelType.STT, self.worker_manager.stt_audio_processor_worker),
         ]:
-            if worker and getattr(worker, "is_loaded", lambda: True)():
+            if not worker:
+                continue
+            # Use application settings to determine if a model was enabled/"loaded"
+            try:
+                if model_type is ModelType.LLM:
+                    was_enabled = worker.application_settings.llm_enabled
+                elif model_type is ModelType.TTS:
+                    was_enabled = worker.application_settings.tts_enabled
+                elif model_type is ModelType.STT:
+                    was_enabled = worker.application_settings.stt_enabled
+                else:
+                    was_enabled = False
+            except Exception:
+                was_enabled = False
+
+            if was_enabled:
                 self._last_non_art_models.append(model_type)
                 worker.unload()
                 self._emit_model_status(model_type, ModelStatus.UNLOADED)
@@ -55,10 +70,16 @@ class ModelLoadBalancer(MediatorMixin):
                 f"Switched to art mode. Unloaded: {self._last_non_art_models}"
             )
 
-    def switch_to_non_art_mode(self):
+    def switch_to_non_art_mode(
+        self, additional_types: Optional[List[ModelType]] = None
+    ):
         """
         Reload previously unloaded non-art models (LLM, TTS, STT).
+        Optionally load additional model types (e.g., [ModelType.LLM]) even if they
+        were not previously enabled.
         """
+        additional_types = additional_types or []
+        # First reload those that were actually unloaded previously
         for model_type in self._last_non_art_models:
             worker = None
             if model_type == ModelType.LLM:
@@ -70,6 +91,19 @@ class ModelLoadBalancer(MediatorMixin):
             if worker:
                 worker.load()
                 self._emit_model_status(model_type, ModelStatus.LOADED)
+        # Then load any additional types requested that aren't already restored
+        for model_type in additional_types:
+            if model_type not in self._last_non_art_models:
+                worker = None
+                if model_type == ModelType.LLM:
+                    worker = self.worker_manager.llm_generate_worker
+                elif model_type == ModelType.TTS:
+                    worker = self.worker_manager.tts_generator_worker
+                elif model_type == ModelType.STT:
+                    worker = self.worker_manager.stt_audio_processor_worker
+                if worker:
+                    worker.load()
+                    self._emit_model_status(model_type, ModelStatus.LOADED)
         if self.logger:
             self.logger.info(
                 f"Restored non-art models: {self._last_non_art_models}"

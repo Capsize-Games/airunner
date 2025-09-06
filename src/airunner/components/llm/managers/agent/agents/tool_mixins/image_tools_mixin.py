@@ -15,9 +15,7 @@ class ImageToolsMixin(ToolSingletonMixin):
         if not hasattr(self, "_set_working_width_and_height"):
 
             width_label = f"The width of the image. Currently: {self.application_settings.working_width}. "
-            height_label = (
-                f"The height of the image. Currently: {self.application_settings.working_height}. "
-            )
+            height_label = f"The height of the image. Currently: {self.application_settings.working_height}. "
 
             def set_working_width_and_height(
                 width: Annotated[
@@ -69,10 +67,10 @@ class ImageToolsMixin(ToolSingletonMixin):
                     ),
                 ],
                 image_type: Annotated[
-                    GeneratorSection,
+                    ImagePreset,
                     (
-                        "The type of image to generate. "
-                        f"Can be {image_preset_options}."
+                        "The style preset for the image. "
+                        f"Allowed values: {image_preset_options}."
                     ),
                 ],
                 width: Annotated[
@@ -94,10 +92,18 @@ class ImageToolsMixin(ToolSingletonMixin):
                     width = (width // 64) * 64
                 if height % 64 != 0:
                     height = (height // 64) * 64
-                print("x" * 100)
-                print("Executing generate_image with params:")
+                # Normalize preset to string value
+                try:
+                    preset_val = (
+                        image_type.value
+                        if isinstance(image_type, ImagePreset)
+                        else str(image_type)
+                    )
+                except Exception:
+                    preset_val = ImagePreset.ILLUSTRATION.value
+                # Emit the signal to continue the UI pipeline
                 self.api.art.llm_image_generated(
-                    prompt, second_prompt, image_type, width, height
+                    prompt, second_prompt, preset_val, width, height
                 )
                 return "Generating image..."
 

@@ -21,7 +21,9 @@ from airunner.components.llm.managers.agent.chat_engine import (
     RefreshSimpleChatEngine,
 )
 from airunner.components.llm.managers.llm_request import LLMRequest
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.llm.managers.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
@@ -121,8 +123,20 @@ class ChatEngineTool(
             do_not_display = kwargs.get("do_not_display", False)
             chat_history = kwargs.get("chat_history", [])
             try:
+                # Filter out tool_choice from kwargs to avoid conflicts
+                filtered_kwargs = {
+                    k: v
+                    for k, v in kwargs.items()
+                    if k
+                    not in [
+                        "tool_choice",
+                        "query_str",
+                        "messages",
+                        "chat_history",
+                    ]
+                }
                 streaming_response = self.chat_engine.stream_chat(
-                    query_str, **kwargs
+                    query_str, **filtered_kwargs
                 )
             except jinja2.exceptions.TemplateError as e:
                 self.logger.error(
