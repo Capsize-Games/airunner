@@ -18,7 +18,9 @@ from airunner.components.settings.data.bootstrap.font_settings_bootstrap_data im
 from airunner.components.art.data.bootstrap.imagefilter_bootstrap_data import (
     imagefilter_bootstrap_data,
 )
-from airunner.components.data.bootstrap.model_bootstrap_data import model_bootstrap_data
+from airunner.components.data.bootstrap.model_bootstrap_data import (
+    model_bootstrap_data,
+)
 from airunner.components.data.bootstrap.pipeline_bootstrap_data import (
     pipeline_bootstrap_data,
 )
@@ -213,6 +215,15 @@ def set_default_pipeline_values():
 def set_image_filter_settings():
     connection = op.get_bind()
     for filter_name, filter_data in imagefilter_bootstrap_data.items():
+        # Check if the filter already exists
+        existing_filter = connection.execute(
+            sa.text("SELECT id FROM image_filter_settings WHERE name = :name"),
+            {"name": filter_data["name"]},
+        ).fetchone()
+        if existing_filter:
+            # Filter already exists, skip
+            continue
+        # Insert the filter
         result = connection.execute(
             sa.text(
                 "INSERT INTO image_filter_settings (name, display_name, auto_apply, filter_class) "
