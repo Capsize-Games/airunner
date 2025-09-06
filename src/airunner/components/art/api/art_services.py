@@ -112,7 +112,7 @@ class ARTAPIService(APIServiceBase):
                 "message": {
                     "prompt": prompt,
                     "second_prompt": second_prompt,
-                    "type": section,
+                    "image_type": section,
                     "width": width,
                     "height": height,
                 }
@@ -161,10 +161,11 @@ class ARTAPIService(APIServiceBase):
             {"enabled": enabled, "callback": callback, "finalize": finalize},
         )
 
-    def load_non_sd(self, callback):
-        self.emit_signal(
-            SignalCode.LOAD_NON_SD_MODELS, dict(callback=callback)
-        )
+    def load_non_sd(self, data: Optional[Dict] = None, callback=None):
+        data = data or {}
+        if callback:
+            data["callback"] = callback
+        self.emit_signal(SignalCode.LOAD_NON_SD_MODELS, data)
 
     def unload_non_sd(self, callback):
         self.emit_signal(

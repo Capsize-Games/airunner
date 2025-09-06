@@ -206,7 +206,7 @@ class BatchContainer(BaseWidget):
 
     def find_date_loose_images(self, folder_path: str) -> list:
         """Return a list of loose images (not in batches) for the given folder."""
-        if not os.path.exists(folder_path):
+        if not folder_path or not os.path.exists(folder_path):
             return []
 
         loose_images = sorted(
@@ -220,7 +220,7 @@ class BatchContainer(BaseWidget):
 
     def find_date_batches(self, folder_path: str) -> list:
         """Return a list of batch folders and their images for the given folder."""
-        if not os.path.exists(folder_path):
+        if not folder_path or not os.path.exists(folder_path):
             return []
 
         batch_folders = sorted(
@@ -263,6 +263,12 @@ class BatchContainer(BaseWidget):
         layout = container.layout()
         self._clear_layout(layout)
 
+        # Ensure we have a valid date folder before populating
+        if not self.current_date_folder:
+            self.current_date_folder = get_today_folder(
+                self.path_settings.image_path
+            )
+
         if self.current_batch_folder:
             # We're viewing a batch folder - display all images in this batch
             images = self.find_batch_images(self.current_batch_folder)
@@ -294,6 +300,11 @@ class BatchContainer(BaseWidget):
 
     def update_batch_images(self, data: Dict):
         """Update the layout with new batch images."""
+        # Ensure current_date_folder is valid before refreshing
+        if not self.current_date_folder:
+            self.current_date_folder = get_today_folder(
+                self.path_settings.image_path
+            )
         # Always refresh the UI to show new batches or images
         self.populate_current_folder()
 

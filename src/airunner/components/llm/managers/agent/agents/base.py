@@ -1358,6 +1358,10 @@ class BaseAgent(
 
         if action is LLMActionType.DECISION:
             selection = self._parse_menu_selection(response.content)
+            if selection is None:
+                selection = list(self.action_map.keys())[
+                    0
+                ]  # Default to first action
             new_action = self.action_map[selection]
             self.action = new_action
             handler = self.tool_handlers.get(new_action)
@@ -1700,3 +1704,12 @@ class BaseAgent(
             Optional[RefreshSimpleChatEngine]: The engine instance.
         """
         return EngineRegistry.get(name)
+
+    def clear_history(self, data: Optional[Dict] = None) -> None:
+        """
+        Clear the chat history by resetting the chat memory.
+        Args:
+            data: Optional data (not used in base implementation).
+        """
+        if self.chat_memory:
+            self.chat_memory.reset()

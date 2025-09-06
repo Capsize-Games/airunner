@@ -1089,8 +1089,10 @@ class MainWindow(
     def on_load_non_sd_models(self, data: Dict = None):
         """
         Reload previously unloaded non-SD models using the load balancer.
+        Optionally accepts 'models' list in data to load additional specific models.
         """
-        self.model_load_balancer.switch_to_non_art_mode()
+        models = data.get("models", None) if data else None
+        self.model_load_balancer.switch_to_non_art_mode(models)
         callback = data.get("callback", None) if data else None
         if callback:
             callback(data)

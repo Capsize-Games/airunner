@@ -3,7 +3,15 @@ import json
 import re
 import time
 
-from PySide6.QtCore import Signal, QRect, QThread, QObject, Slot, QSettings
+from PySide6.QtCore import (
+    Signal,
+    QRect,
+    QThread,
+    QObject,
+    Slot,
+    QSettings,
+    QTimer,
+)
 from PySide6.QtWidgets import QApplication, QWidget
 
 from airunner.components.application.data import ShortcutKeys
@@ -27,7 +35,9 @@ from airunner.components.art.gui.widgets.stablediffusion.templates.stablediffusi
 from airunner.components.art.gui.widgets.stablediffusion.prompt_container_widget import (
     PromptContainerWidget,
 )
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
@@ -402,65 +412,75 @@ class StableDiffusionGeneratorForm(BaseWidget):
         This slot is called after an LLM has generated the prompts for an image.
         It sets the prompts in the generator form UI and continues the image generation process.
         """
-        # Unload non-Stable Diffusion models
-        self.api.art.unload_non_sd(callback=self.unload_llm_callback)
-        # Set the prompts in the generator form UI
-        data = data["message"]
-        self.update_application_settings("working_width", data["width"])
-        self.update_application_settings("working_height", data["height"])
-        self.update_generator_settings("image_preset", data.get("type", ""))
-        prompt = data.get("prompt", None)
-        secondary_prompt = data.get("second_prompt", None)
-        image_preset = data.get("image_type", ImagePreset.ILLUSTRATION.value)
+        # Extract payload and update UI/settings first to avoid races
+        msg = data["message"]
+        self.update_application_settings("working_width", msg["width"])
+        self.update_application_settings("working_height", msg["height"])
+        self.update_generator_settings(
+            "image_preset", msg.get("image_type", "")
+        )
+
+        prompt = msg.get("prompt", "")
+        secondary_prompt = msg.get("second_prompt", "")
+        image_preset = msg.get("image_type", ImagePreset.ILLUSTRATION.value)
+
+        # Update UI fields immediately
         self.ui.image_presets.setCurrentText(image_preset)
         self.ui.prompt.setPlainText(prompt)
         self.ui.secondary_prompt.setPlainText(secondary_prompt)
-        self.ui.generate_button.click()
+
+        # Ensure infinite images is off so finalize will be called
+        if self.ui.infinite_images_button.isChecked():
+            self.ui.infinite_images_button.blockSignals(True)
+            self.ui.infinite_images_button.setChecked(False)
+            self.ui.infinite_images_button.blockSignals(False)
+            self.update_generator_settings("generate_infinite_images", False)
+
+        # Stash prompts so we pass them directly into generation
+        self._pending_llm_image = {
+            "prompt": prompt,
+            "second_prompt": secondary_prompt,
+        }
+
+        # Now unload non-Stable Diffusion models and proceed to generation in callback
+        self.api.art.unload_non_sd(callback=self.unload_llm_callback)
+
+    # Defer actual generation to unload_llm_callback so we can inject finalize
 
     def unload_llm_callback(self, _data: dict = None):
         """
         Callback function to be called after the LLM has been unloaded.
         """
-        if not self.application_settings.sd_enabled:
-            # If SD is not enabled, enable it and then emit a signal to generate the image
-            # The callback function is handled by the signal handler for the SD_LOAD_SIGNAL.
-            # The finalize function is a callback which is called after the image has been generated.
-            self.logger.info(
-                "Stable Diffusion is not enabled, enabling it now."
-            )
-            self.api.art.toggle_sd(
-                enabled=True,
-                callback=self.handle_generate_button_clicked,
-                finalize=self.finalize_image_generated_by_llm,
-            )
-        else:
-            # If SD is already enabled, emit a signal to generate the image.
-            # The finalize function is a callback which is called after the image has been generated.
-            self.logger.info(
-                "Stable Diffusion is already enabled, generating the image."
-            )
-            self.handle_generate_button_clicked(
-                dict(
-                    enabled=True, finalize=self.finalize_image_generated_by_llm
-                )
-            )
+        # SD has been loaded by the load balancer; trigger generation now with finalize
+        # and the exact prompts we stashed to avoid any race with UI/settings writes.
+        gen_data = {
+            "finalize": self.finalize_image_generated_by_llm,
+        }
+        if hasattr(self, "_pending_llm_image") and self._pending_llm_image:
+            gen_data.update(self._pending_llm_image)
+        self.handle_generate_button_clicked(gen_data)
 
     def finalize_image_generated_by_llm(self, _data):
         """
         Callback function to be called after the image has been generated.
         """
+
+        def _llm_followup(_):
+            # Ask the LLM to provide a brief confirmation in the current conversation style
+            prompt = "The image request has completed. Write a single concise reply (1 short sentence) acknowledging the generated image."
+            self.api.llm.send_request(
+                prompt,
+                action=LLMActionType.CHAT,
+                do_tts_reply=True,
+            )
+
         self.api.art.toggle_sd(
             enabled=False,
-            callback=lambda _d: self.load_non_sd(
-                callback=lambda _d: self.api.llm.send_llm_text_streamed_signal(
-                    LLMResponse(
-                        message="Your image has been generated",
-                        is_first_message=True,
-                        is_end_of_message=True,
-                        name=self.chatbot.botname,
-                        action=LLMActionType.GENERATE_IMAGE,
-                    )
-                )
+            callback=lambda _d: self.api.art.load_non_sd(
+                # Reload only the LLM explicitly. TTS/STT should reload only
+                # if they had been enabled prior to switching to art mode.
+                {"models": [ModelType.LLM]},
+                callback=_llm_followup,
             ),
         )
 
@@ -633,42 +653,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
     @Slot(bool)
     def on_infinite_images_button_toggled(self, val: bool):
         self.update_generator_settings("generate_infinite_images", val)
-
-    @Slot(str)
-    def on_original_size_width_textChanged(self, val: str):
-        val = 0 if val == "" or val is None else val
-        original_size = self.generator_settings.original_size
-        original_size = original_size or {}
-        original_size["width"] = int(val)
-        self.update_generator_settings("original_size", original_size)
-
-    @Slot(str)
-    def on_original_size_height_textChanged(self, val: str):
-        val = 0 if val == "" or val is None else val
-        original_size = self.generator_settings.original_size
-        original_size = original_size or {}
-        original_size["height"] = int(val)
-        self.update_generator_settings("original_size", original_size)
-
-    @Slot(str)
-    def on_negative_original_size_width_textChanged(self, val: str):
-        val = 0 if val == "" or val is None else val
-        negative_original_size = self.generator_settings.negative_original_size
-        negative_original_size = negative_original_size or {}
-        negative_original_size["width"] = int(val)
-        self.update_generator_settings(
-            "negative_original_size", negative_original_size
-        )
-
-    @Slot(str)
-    def on_negative_original_size_height_textChanged(self, val: str):
-        val = 0 if val == "" or val is None else val
-        negative_original_size = self.generator_settings.negative_original_size
-        negative_original_size = negative_original_size or {}
-        negative_original_size["height"] = int(val)
-        self.update_generator_settings(
-            "negative_original_size", negative_original_size
-        )
 
     @Slot(str)
     def on_target_size_width_textChanged(self, val: str):
