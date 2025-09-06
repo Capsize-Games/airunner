@@ -7,6 +7,8 @@ Provides standardized message appending, conversation state updating, and memory
 import datetime
 from typing import Any, Optional
 
+from llama_cloud import MessageRole
+
 from airunner.enums import LLMActionType
 
 
@@ -32,7 +34,7 @@ class BaseConversationEngine:
         now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         conversation.value.append(
             {
-                "role": "user",
+                "role": MessageRole.USER.value,
                 "name": self.agent.username,
                 "content": user_message,
                 "timestamp": now,
@@ -42,7 +44,7 @@ class BaseConversationEngine:
         if assistant_message is not None:
             conversation.value.append(
                 {
-                    "role": "assistant",
+                    "role": MessageRole.ASSISTANT.value,
                     "name": self.agent.botname,
                     "content": assistant_message,
                     "timestamp": now,

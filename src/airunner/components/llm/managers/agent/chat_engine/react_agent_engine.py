@@ -286,16 +286,16 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                         tname = getattr(
                             getattr(tool, "metadata", None), "name", None
                         )
-                        if tname != "generate_image_tool":
-                            if isinstance(tool_result, types.GeneratorType):
-                                for ttoken in tool_result:
-                                    yield ttoken
+                        # if tname != "generate_image_tool":
+                        if isinstance(tool_result, types.GeneratorType):
+                            for ttoken in tool_result:
+                                yield ttoken
+                        else:
+                            content = getattr(tool_result, "content", None)
+                            if content is not None:
+                                yield str(content)
                             else:
-                                content = getattr(tool_result, "content", None)
-                                if content is not None:
-                                    yield str(content)
-                                else:
-                                    yield str(tool_result)
+                                yield str(tool_result)
                 except Exception as e:
                     self.logger.error(
                         f"Failed to execute tool: {e}. Tool JSON: {tool_json}"

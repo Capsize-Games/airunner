@@ -1,6 +1,7 @@
 import re
 from typing import (
     Any,
+    List,
     Optional,
     Union,
     Dict,
@@ -1392,7 +1393,7 @@ class BaseAgent(
             now = datetime.datetime.now(datetime.timezone.utc).isoformat()
             conversation.value.append(
                 {
-                    "role": "user",
+                    "role": MessageRole.USER.value,
                     "name": self.username,
                     "content": message,
                     "timestamp": now,
@@ -1401,7 +1402,7 @@ class BaseAgent(
             )
             conversation.value.append(
                 {
-                    "role": "assistant",
+                    "role": MessageRole.ASSISTANT.value,
                     "name": self.botname,
                     "content": self._complete_response,
                     "timestamp": now,
@@ -1488,9 +1489,7 @@ class BaseAgent(
         conversation = self.conversation
         if conversation:
             messages = conversation.value
-            self.chat_memory.set(messages)
-            if self._chat_engine:
-                self._chat_engine.memory = self.chat_memory
+            self._update_conversation_messages(messages)
 
     def on_load_conversation(self, data: Optional[Dict] = None) -> None:
         """
@@ -1582,7 +1581,10 @@ class BaseAgent(
         self.do_interrupt = False
         self._update_memory(action)
         kwargs = kwargs or {}
-        kwargs["input"] = f'{self.username}: "{message}"'
+        if llm_request.role is MessageRole.USER:
+            kwargs["input"] = f'{self.username}: "{message}"'
+        else:
+            kwargs["input"] = message
         self._update_system_prompt(self.system_prompt, rag_system_prompt)
         self._update_llm_request(llm_request)
         self._update_memory_settings()
@@ -1605,6 +1607,12 @@ class BaseAgent(
         #     self._perform_analysis(action)
 
         return AgentChatResponse(response=self._complete_response)
+
+    def _update_conversation_messages(self, messages: List[Dict]) -> None:
+        if self.chat_memory:
+            self.chat_memory.set(messages)
+            if self._chat_engine:
+                self._chat_engine.memory = self.chat_memory
 
     def _parse_menu_selection(self, text: str) -> Optional[int]:
         match = re.match(r"\s*(\d+)[\.|\s]", text)

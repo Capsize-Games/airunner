@@ -1,4 +1,5 @@
 from typing import Type
+from llama_cloud import MessageRole
 from llama_index.core.llms.llm import LLM
 
 from airunner.components.llm.managers.agent.agents.base import BaseAgent
@@ -16,5 +17,5 @@ class OpenAI(BaseAgent):
         completion = self.llm.chat.completions.create(
             extra_body={},
             model="",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{"role": MessageRole.USER.value, "content": prompt}],
         )
