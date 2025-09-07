@@ -65,7 +65,7 @@ class RAGEngineTool(
         return self._metadata
 
     def call(self, *args, **kwargs):
-        """Main entry point for RAGEngineTool. Performs a RAG query using the chat engine."""
+        """Main entry point for RAGEngineTool. Streams a RAG answer using the chat engine."""
         # Accept both 'input' (ReAct standard) and 'query' (legacy)
         query_str = (
             kwargs.get("input")
@@ -75,6 +75,7 @@ class RAGEngineTool(
 
         if not query_str:
             raise ValueError("No query provided for RAGEngineTool.call().")
+
         llm_request = kwargs.get("llm_request", None)
         system_prompt = kwargs.get("system_prompt", None)
         self.update_system_prompt(system_prompt)
@@ -82,23 +83,54 @@ class RAGEngineTool(
             self.chat_engine.llm, "llm_request"
         ):
             self.chat_engine.llm.llm_request = llm_request
+
         # Don't pass tool-specific kwargs to chat engine
         clean_kwargs = {
             k: v
             for k, v in kwargs.items()
-            if k not in ["input", "query", "llm_request", "system_prompt"]
+            if k
+            not in [
+                "input",
+                "query",
+                "llm_request",
+                "system_prompt",
+                "tool_choice",
+                "messages",
+            ]
         }
 
-        response = self.chat_engine.chat(query_str, **clean_kwargs)
+        # Provide a generator that streams tokens progressively
+        def _stream():
+            # Try streaming first
+            try:
+                streaming = self.chat_engine.stream_chat(
+                    query_str, **clean_kwargs
+                )
+                # LlamaIndex streaming responses often expose response_gen
+                if hasattr(streaming, "response_gen"):
+                    for token in streaming.response_gen:
+                        if token is None:
+                            continue
+                        yield token
+                    return
+                # If streaming is directly iterable
+                try:
+                    for token in streaming:
+                        if token is None:
+                            continue
+                        yield token
+                    return
+                except TypeError:
+                    pass
+            except Exception:
+                pass
 
-        # Return proper ToolOutput format
-        result = ToolOutput(
-            content=str(getattr(response, "response", response)),
-            tool_name=self.metadata.name,
-            raw_input={"input": query_str},
-            raw_output=response,
-        )
-        return result
+            # Fallback: non-streaming
+            response = self.chat_engine.chat(query_str, **clean_kwargs)
+            content = str(getattr(response, "response", response))
+            yield content
+
+        return _stream()
 
     async def acall(self, *args, **kwargs):
         pass

@@ -248,6 +248,8 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
 
                     if isinstance(tool_result, _types.GeneratorType):
                         for ttoken in tool_result:
+                            if ttoken is None:
+                                continue
                             yield ttoken
                         # Restore original tools and exit
                         if original_tools:
