@@ -35,7 +35,7 @@ class RAGEngineTool(
         resolve_input_errors: bool = True,
         agent=None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(agent)
         self.chat_engine = chat_engine
@@ -66,7 +66,13 @@ class RAGEngineTool(
 
     def call(self, *args, **kwargs):
         """Main entry point for RAGEngineTool. Performs a RAG query using the chat engine."""
-        query_str = kwargs.get("query") or (args[0] if args else None)
+        # Accept both 'input' (ReAct standard) and 'query' (legacy)
+        query_str = (
+            kwargs.get("input")
+            or kwargs.get("query")
+            or (args[0] if args else None)
+        )
+
         if not query_str:
             raise ValueError("No query provided for RAGEngineTool.call().")
         llm_request = kwargs.get("llm_request", None)
@@ -76,8 +82,23 @@ class RAGEngineTool(
             self.chat_engine.llm, "llm_request"
         ):
             self.chat_engine.llm.llm_request = llm_request
-        response = self.chat_engine.chat(query_str, **kwargs)
-        return response
+        # Don't pass tool-specific kwargs to chat engine
+        clean_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in ["input", "query", "llm_request", "system_prompt"]
+        }
+
+        response = self.chat_engine.chat(query_str, **clean_kwargs)
+
+        # Return proper ToolOutput format
+        result = ToolOutput(
+            content=str(getattr(response, "response", response)),
+            tool_name=self.metadata.name,
+            raw_input={"input": query_str},
+            raw_output=response,
+        )
+        return result
 
     async def acall(self, *args, **kwargs):
         pass
