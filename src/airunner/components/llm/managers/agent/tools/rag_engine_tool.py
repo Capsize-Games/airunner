@@ -3,13 +3,26 @@ from typing import (
 )
 from llama_index.core.tools.types import ToolMetadata
 
-from airunner.components.llm.managers.agent.chat_engine import RefreshContextChatEngine
+from airunner.components.llm.managers.agent.chat_engine import (
+    RefreshContextChatEngine,
+)
 from airunner.components.llm.managers.agent.engines.base_conversation_engine import (
     BaseConversationEngine,
 )
+from llama_index.core.tools.types import (
+    AsyncBaseTool,
+    ToolMetadata,
+    ToolOutput,
+)
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
+from airunner.utils.application.mediator_mixin import MediatorMixin
 
 
-class RAGEngineTool(BaseConversationEngine):
+class RAGEngineTool(
+    BaseConversationEngine, AsyncBaseTool, SettingsMixin, MediatorMixin
+):
     """Retrieval-Augmented Generation (RAG) tool.
 
     Fetches relevant documents from a vector database or corpus and synthesizes an answer using the LLM.
@@ -22,7 +35,7 @@ class RAGEngineTool(BaseConversationEngine):
         resolve_input_errors: bool = True,
         agent=None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(agent)
         self.chat_engine = chat_engine
@@ -41,23 +54,86 @@ class RAGEngineTool(BaseConversationEngine):
     def __call__(self, *args, **kwargs):
         return self.call(*args, **kwargs)
 
-    def call(self, *args, **kwargs):
-        """Main entry point for RAGEngineTool. Performs a RAG query using the chat engine."""
-        query_str = kwargs.get("query") or (args[0] if args else None)
-        if not query_str:
-            raise ValueError("No query provided for RAGEngineTool.call().")
-        llm_request = kwargs.get("llm_request", None)
-        system_prompt = kwargs.get("system_prompt", None)
+    def update_system_prompt(self, system_prompt: str):
         if system_prompt is not None and hasattr(
             self.chat_engine, "update_system_prompt"
         ):
             self.chat_engine.update_system_prompt(system_prompt)
+
+    @property
+    def metadata(self) -> ToolMetadata:
+        return self._metadata
+
+    def call(self, *args, **kwargs):
+        """Main entry point for RAGEngineTool. Streams a RAG answer using the chat engine."""
+        # Accept both 'input' (ReAct standard) and 'query' (legacy)
+        query_str = (
+            kwargs.get("input")
+            or kwargs.get("query")
+            or (args[0] if args else None)
+        )
+
+        if not query_str:
+            raise ValueError("No query provided for RAGEngineTool.call().")
+
+        llm_request = kwargs.get("llm_request", None)
+        system_prompt = kwargs.get("system_prompt", None)
+        self.update_system_prompt(system_prompt)
         if llm_request is not None and hasattr(
             self.chat_engine.llm, "llm_request"
         ):
             self.chat_engine.llm.llm_request = llm_request
-        response = self.chat_engine.chat(query_str, **kwargs)
-        return response
+
+        # Don't pass tool-specific kwargs to chat engine
+        clean_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k
+            not in [
+                "input",
+                "query",
+                "llm_request",
+                "system_prompt",
+                "tool_choice",
+                "messages",
+            ]
+        }
+
+        # Provide a generator that streams tokens progressively
+        def _stream():
+            # Try streaming first
+            try:
+                streaming = self.chat_engine.stream_chat(
+                    query_str, **clean_kwargs
+                )
+                # LlamaIndex streaming responses often expose response_gen
+                if hasattr(streaming, "response_gen"):
+                    for token in streaming.response_gen:
+                        if token is None:
+                            continue
+                        yield token
+                    return
+                # If streaming is directly iterable
+                try:
+                    for token in streaming:
+                        if token is None:
+                            continue
+                        yield token
+                    return
+                except TypeError:
+                    pass
+            except Exception:
+                pass
+
+            # Fallback: non-streaming
+            response = self.chat_engine.chat(query_str, **clean_kwargs)
+            content = str(getattr(response, "response", response))
+            yield content
+
+        return _stream()
+
+    async def acall(self, *args, **kwargs):
+        pass
 
     @property
     def logger(self):

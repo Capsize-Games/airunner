@@ -191,6 +191,88 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
         # Note: we prefer to let ReAct produce the tool-call JSON first. We'll only
         # fallback to a direct image tool invocation if parsing fails below.
 
+        # If a specific tool is explicitly requested, execute it directly and stream its result.
+        # This guarantees that RAG (or any other tool) is actually used when the caller forces it.
+        if isinstance(tool_choice, str) and original_tools:
+            target_tool = None
+            for tool in original_tools:
+                try:
+                    tname = getattr(
+                        getattr(tool, "metadata", None), "name", None
+                    )
+                    if tname == tool_choice:
+                        target_tool = tool
+                        break
+                except Exception:
+                    continue
+
+            if target_tool is not None:
+                try:
+                    # Build arguments for the tool
+                    tool_args: dict = {"input": query_str}
+                    # Forward llm_request/system_prompt when present
+                    if isinstance(kwargs, dict):
+                        if "llm_request" in kwargs:
+                            tool_args["llm_request"] = kwargs["llm_request"]
+                        if "system_prompt" in kwargs:
+                            tool_args["system_prompt"] = kwargs[
+                                "system_prompt"
+                            ]
+
+                    # Special-case: if RAG tool, prefer the agent's rag_system_prompt when available
+                    if tool_choice == "rag_engine_tool":
+                        try:
+                            if (
+                                hasattr(self, "_llm")
+                                and self._llm
+                                and hasattr(self._llm, "agent")
+                                and getattr(
+                                    self._llm.agent, "rag_system_prompt", None
+                                )
+                            ):
+                                tool_args.setdefault(
+                                    "system_prompt",
+                                    self._llm.agent.rag_system_prompt,
+                                )
+                        except Exception:
+                            pass
+
+                    self.logger.debug(
+                        f"[ReactAgentEngine] Directly executing tool '{tool_choice}' with args keys: {list(tool_args.keys())}"
+                    )
+
+                    tool_result = target_tool(**tool_args)
+
+                    # Stream the result
+                    import types as _types
+
+                    if isinstance(tool_result, _types.GeneratorType):
+                        for ttoken in tool_result:
+                            if ttoken is None:
+                                continue
+                            yield ttoken
+                        # Restore original tools and exit
+                        if original_tools:
+                            self.agent_worker.reinitialize_tools(
+                                tools=original_tools
+                            )
+                        return
+                    else:
+                        content = getattr(tool_result, "content", None)
+                        if content is not None:
+                            yield str(content)
+                        else:
+                            yield str(tool_result)
+                        if original_tools:
+                            self.agent_worker.reinitialize_tools(
+                                tools=original_tools
+                            )
+                        return
+                except Exception as e:
+                    self.logger.error(
+                        f"[ReactAgentEngine] Direct tool execution failed for '{tool_choice}': {e}"
+                    )
+
         if hasattr(super(), "stream_chat"):
             # Forward kwargs through to the parent stream_chat so downstream
             # formatters and steps can access contextual kwargs like username.
@@ -283,7 +365,14 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                             tool = t
                             break
                     if tool:
+                        self.logger.debug(
+                            f"Executing tool: {tool_name} with args: {tool_args}"
+                        )
                         tool_result = tool(**tool_args)
+                        self.logger.debug(
+                            f"Tool result type: {type(tool_result)}, result: {tool_result}"
+                        )
+
                         # For image tool, suppress echoing tool output to avoid duplicate messages
                         tname = getattr(
                             getattr(tool, "metadata", None), "name", None
@@ -294,6 +383,9 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                                 yield ttoken
                         else:
                             content = getattr(tool_result, "content", None)
+                            self.logger.debug(
+                                f"Tool result content: {content}"
+                            )
                             if content is not None:
                                 yield str(content)
                             else:
