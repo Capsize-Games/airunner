@@ -211,6 +211,30 @@ class PromptBuilder:
         )
 
     @classmethod
+    def rag_system_prompt(cls, agent) -> str:
+        """
+        Return the system prompt for the agent in RAG mode.
+        """
+        return cls(agent)._build(
+            include_user_bot_intro=False,
+            include_rules=False,
+            include_backstory=False,
+            include_system_instructions=True,
+            include_guardrails=False,
+            include_context_header=False,
+            include_date_time=False,
+            include_personality=False,
+            include_mood=False,
+            include_operating_system=False,
+            include_speakers=False,
+            include_weather=False,
+            include_conversation_summary=False,
+            include_conversation_info_header=False,
+            include_conversation_timestamp=False,
+            include_language_instruction=False,
+        )
+
+    @classmethod
     def chat_system_prompt(cls, agent) -> str:
         """
         Return the system prompt for the agent in chat mode.
@@ -299,6 +323,8 @@ class PromptBuilder:
             LLMActionType.NONE,
         ]:
             return cls.chat_system_prompt(agent)
+        elif action is LLMActionType.PERFORM_RAG_SEARCH:
+            return cls.rag_system_prompt(agent)
         elif action is LLMActionType.MAP_TOOL:
             return cls.map_system_prompt(agent)  # Use chat prompt for map tool
         elif action is LLMActionType.GENERATE_IMAGE:
