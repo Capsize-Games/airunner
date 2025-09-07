@@ -346,27 +346,6 @@ class BaseAgent(
         return self.action is LLMActionType.CHAT
 
     @property
-    def rag_enabled(self) -> bool:
-        """
-        Whether RAG is enabled.
-        Returns:
-            bool: True if RAG is enabled.
-        """
-        return self.rag_settings.enabled
-
-    @property
-    def rag_mode_enabled(self) -> bool:
-        """
-        Whether RAG mode is enabled for the current action.
-        Returns:
-            bool: True if RAG mode is enabled.
-        """
-        return (
-            self.rag_enabled
-            and self.action is LLMActionType.PERFORM_RAG_SEARCH
-        )
-
-    @property
     def date_time_prompt(self) -> str:
         """
         Get the date/time prompt string.
@@ -1080,9 +1059,14 @@ class BaseAgent(
         self.chat_engine_tool.update_system_prompt(
             system_prompt or self.system_prompt
         )
-
-        if self.rag_mode_enabled:
-            self.update_rag_system_prompt(rag_system_prompt)
+        # Keep RAG system prompt in sync when RAG is enabled
+        try:
+            if getattr(self, "rag_mode_enabled", False):
+                update_fn = getattr(self, "update_rag_system_prompt", None)
+                if callable(update_fn):
+                    update_fn(rag_system_prompt)
+        except Exception:
+            pass
 
     def _perform_analysis(self, action: LLMActionType) -> None:
         """
