@@ -16,7 +16,7 @@ extras_require = {
         "peft==0.17.1",
     ],
     "gui": [  # GUI dependencies
-        "PySide6==6.9.0",
+        "PySide6==6.9.2",
         "PySide6_Addons==6.9.0",
         "PySide6_Essentials==6.9.0",
     ],
