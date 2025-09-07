@@ -7,13 +7,13 @@ extras_require = {
         "nvidia-cuda-runtime-cu12",  # This package provides CUDA 12 runtime
     ],
     "huggingface": [
-        "diffusers==0.33.1",
+        "diffusers==0.35.1",
         "controlnet_aux==0.0.10",
-        "safetensors==0.5.2",
-        "compel==2.1.0",
-        "transformers==4.51.3",
-        "datasets==3.6.0",
-        "peft==0.15.2",
+        "safetensors==0.6.2",
+        "compel==2.1.1",
+        "transformers==4.56.1",
+        "datasets==4.0.0",
+        "peft==0.17.1",
     ],
     "gui": [  # GUI dependencies
         "PySide6==6.9.0",
@@ -22,7 +22,7 @@ extras_require = {
     ],
     "linux": [  # Linux-specific dependencies
         # "faiss-gpu==1.7.2", # If faiss-gpu is from NVIDIA or a custom index, it needs similar handling
-        "tensorrt==10.9.0.34",
+        "tensorrt==10.13.3.9",
     ],
     "dev": [  # Development dependencies
         "pytest",
@@ -52,22 +52,22 @@ extras_require = {
         "libzim==3.7.0",
     ],
     "agents": [
-        "llama-index==0.12.36",
-        "llama-index-readers-file==0.4.7",
-        "llama-index-readers-web==0.4.1",
-        "llama-index-llms-huggingface==0.5.0",
-        "llama-index-llms-groq==0.3.1",
-        "llama-index-embeddings-mistralai==0.3.0",
-        "llama-index-vector-stores-faiss==0.4.0",
-        "llama-index-embeddings-huggingface==0.5.4",
-        "llama-index-llms-openrouter==0.3.1",
-        "langchain-community==0.3.24",
+        "llama-index==0.13.6",
+        "llama-index-readers-file==0.5.3",
+        "llama-index-readers-web==0.5.1",
+        "llama-index-llms-huggingface==0.6.0",
+        "llama-index-llms-groq==0.4.0",
+        "llama-index-embeddings-mistralai==0.4.0",
+        "llama-index-vector-stores-faiss==0.5.0",
+        "llama-index-embeddings-huggingface==0.6.0",
+        "llama-index-llms-openrouter==0.4.0",
+        "langchain-community==0.3.29",
         "EbookLib==0.19",
-        "html2text==2024.2.26",
+        "html2text==2025.4.15",
         "rake_nltk==1.0.6",
     ],
     "ollama": [
-        "llama-index-llms-ollama==0.5.4",
+        "llama-index-llms-ollama==0.7.1",
     ],
     "llm_weather": [  # LLM dependencies for weather (requires llm dependencies)
         "requests-cache==1.2.1",
