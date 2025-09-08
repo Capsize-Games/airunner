@@ -5,6 +5,8 @@ from airunner.components.data.models.base import BaseModel
 
 
 class AIModels(BaseModel):
+    # Stores all trigger words as a comma-separated string
+    trigger_words = Column(String, default="")
     __tablename__ = "aimodels"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, default="Model")
