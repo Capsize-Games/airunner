@@ -10,6 +10,7 @@ class Lora(BaseModel):
     scale = Column(Integer, nullable=False, default=0)
     enabled = Column(Boolean, nullable=False, default=False)
     loaded = Column(Boolean, nullable=False, default=False)
-    trigger_word = Column(String, nullable=True)
+    # Stores all trigger words as a comma-separated string
+    trigger_word = Column(String, nullable=True, default="")
     path = Column(String, nullable=True)
     version = Column(String, nullable=True)

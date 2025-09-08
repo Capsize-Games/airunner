@@ -20,6 +20,9 @@ from airunner.components.application.workers.qt_civitai_workers import (
     ModelInfoWorker,
     FileDownloadWorker,
 )
+from airunner.components.application.utils.model_persistence import (
+    persist_trigger_words,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +47,7 @@ class DownloadModelDialog(QDialog):
             return "inpaint"
         # Embedding
         if (
-            t in ("TEXTUAL EMBEDDING", "EMBEDDING")
+            t in ("TEXTUAL EMBEDDING", "EMBEDDING", "TEXTUALINVERSION")
             or file_type == "EMBEDDING"
             or fname.endswith(".pt")
         ):
@@ -72,6 +75,11 @@ class DownloadModelDialog(QDialog):
         self._progress_dialog: Optional[QProgressDialog] = None
         self._info_thread: Optional[QThread] = None
         self._info_worker: Optional[ModelInfoWorker] = None
+
+        # Store download context for persistence
+        self._current_version_data: Optional[Dict[str, Any]] = None
+        self._current_model_type: Optional[str] = None
+        self._current_file_info: Optional[Dict[str, Any]] = None
 
         self._setup_ui()
 
@@ -175,12 +183,40 @@ class DownloadModelDialog(QDialog):
         self._progress_dialog.setValue(percent)
 
     def _on_download_finished(self, save_path: str) -> None:
+        # Persist trigger words immediately (no popup, no delay)
+        if (
+            self._current_version_data
+            and self._current_model_type is not None
+            and self._current_file_info
+        ):
+            try:
+                persist_trigger_words(
+                    self._current_version_data,
+                    self._current_model_type,
+                    self._current_file_info,
+                    save_path,
+                )
+                logger.info(
+                    f"Successfully persisted trigger words for {save_path}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to persist trigger words for {save_path}: {e}",
+                    exc_info=True,
+                )
+
+        # Clear download context and cleanup (no extra popups)
+        self._current_version_data = None
+        self._current_model_type = None
+        self._current_file_info = None
         self._cleanup_download()
-        QMessageBox.information(
-            self, "Download Complete", f"Model downloaded to: {save_path}"
-        )
 
     def _on_download_failed(self, error: Exception) -> None:
+        # Clear download context on failure
+        self._current_version_data = None
+        self._current_model_type = None
+        self._current_file_info = None
+
         self._cleanup_download()
         QMessageBox.critical(
             self,
@@ -189,10 +225,20 @@ class DownloadModelDialog(QDialog):
         )
 
     def _on_download_failed_str(self, msg: str) -> None:
+        # Clear download context on failure
+        self._current_version_data = None
+        self._current_model_type = None
+        self._current_file_info = None
+
         self._cleanup_download()
         QMessageBox.critical(self, "Download Failed", msg or "Unknown error")
 
     def _on_download_canceled(self) -> None:
+        # Clear download context on cancellation
+        self._current_version_data = None
+        self._current_model_type = None
+        self._current_file_info = None
+
         try:
             if self._download_worker:
                 self._download_worker.cancel()
@@ -251,6 +297,11 @@ class DownloadModelDialog(QDialog):
         )
         os.makedirs(model_dir, exist_ok=True)
         save_path = os.path.join(model_dir, file_name)
+
+        # Store context for persistence after successful download
+        self._current_version_data = version
+        self._current_model_type = model_type
+        self._current_file_info = file_info
 
         api_key = getattr(self.application_settings, "civit_ai_api_key", "")
         self._download_worker = FileDownloadWorker(

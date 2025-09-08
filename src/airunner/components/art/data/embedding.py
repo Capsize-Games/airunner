@@ -11,4 +11,5 @@ class Embedding(BaseModel):
     version = Column(String, nullable=False, default="")
     tags = Column(String, default="")
     active = Column(Boolean, default=False)
+    # Stores all trigger words as a comma-separated string
     trigger_word = Column(String, default="")
