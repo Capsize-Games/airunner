@@ -25,6 +25,33 @@ logger = logging.getLogger(__name__)
 
 
 class DownloadModelDialog(QDialog):
+    @staticmethod
+    def _get_model_subfolder(model_type: str, file_info: dict) -> str:
+        """Map model type and file info to correct subfolder."""
+        # Normalize type
+        t = (model_type or "checkpoint").strip().upper()
+        # Try to use file type if available
+        file_type = (file_info.get("type") or "").strip().upper()
+        fname = file_info.get("name", "").lower()
+        # LORA
+        if t == "LORA":
+            return "lora"
+        # Checkpoint (txt2img)
+        if t in ("CHECKPOINT", "MODEL"):
+            return "txt2img"
+        # Inpaint
+        if t == "INPAINT" or "inpaint" in fname:
+            return "inpaint"
+        # Embedding
+        if (
+            t in ("TEXTUAL EMBEDDING", "EMBEDDING")
+            or file_type == "EMBEDDING"
+            or fname.endswith(".pt")
+        ):
+            return "embeddings"
+        # Fallback
+        return t.lower()
+
     """Dialog for downloading a model from CivitAI by URL.
 
     Attributes:
@@ -193,6 +220,7 @@ class DownloadModelDialog(QDialog):
         file_url: Optional[str] = None
         file_name: Optional[str] = None
         file_size_kb = 0
+        file_info = None
         for f in files:
             if f.get("downloadUrl") and any(
                 f.get("name", "").endswith(ext)
@@ -201,8 +229,9 @@ class DownloadModelDialog(QDialog):
                 file_url = f["downloadUrl"]
                 file_name = f.get("name")
                 file_size_kb = f.get("sizeKB", 0) or 0
+                file_info = f
                 break
-        if not file_url or not file_name:
+        if not file_url or not file_name or not file_info:
             QMessageBox.warning(
                 self,
                 "No Downloadable File",
@@ -210,9 +239,16 @@ class DownloadModelDialog(QDialog):
             )
             return
 
-        model_type = (version.get("type") or "checkpoint").lower()
+        # Get baseModel (e.g., "SDXL 1.0") and type (e.g., "LORA")
+        base_model = version.get("baseModel", "checkpoint")
+        model_type = version.get(
+            "type", self.model_info.get("type", "checkpoint")
+        )
+        subfolder = self._get_model_subfolder(model_type, file_info)
         base_path = os.path.expanduser(self.path_settings.base_path)
-        model_dir = os.path.join(base_path, "art/models", model_type)
+        model_dir = os.path.join(
+            base_path, "art/models", base_model, subfolder
+        )
         os.makedirs(model_dir, exist_ok=True)
         save_path = os.path.join(model_dir, file_name)
 
