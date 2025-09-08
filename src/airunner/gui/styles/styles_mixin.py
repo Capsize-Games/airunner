@@ -48,4 +48,7 @@ class StylesMixin:
             stylesheet = ""
 
         self.setStyleSheet(stylesheet)
-        self.icon_manager.set_icons()
+        if self.icon_manager is not None:
+            self.icon_manager.set_icons()
+        else:
+            print("Icon manager not set, skipping icon update")

@@ -1,6 +1,4 @@
-"""
-Dialog and logic for downloading models from CivitAI by URL.
-"""
+"""Dialog and logic for downloading models from CivitAI by URL."""
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -15,26 +13,42 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThread
 import os
-from airunner.components.art.managers.stablediffusion.civit_ai_api import (
-    CivitAIAPI,
+import logging
+from typing import Any, Dict, Optional
+
+from airunner.components.application.workers.qt_civitai_workers import (
+    ModelInfoWorker,
+    FileDownloadWorker,
 )
-from airunner.components.application.workers.civit_ai_download_worker import (
-    CivitAIDownloadWorker,
-)
+
+logger = logging.getLogger(__name__)
 
 
 class DownloadModelDialog(QDialog):
-    """Dialog for downloading a model from CivitAI by URL."""
+    """Dialog for downloading a model from CivitAI by URL.
+
+    Attributes:
+        path_settings: Application path settings, used to resolve base paths.
+        application_settings: Global application settings (contains CivitAI API key).
+    """
 
     def __init__(self, parent, path_settings, application_settings):
         super().__init__(parent)
         self.setWindowTitle("CivitAI Model Details")
         self.path_settings = path_settings
         self.application_settings = application_settings
-        self.model_info = None
+        self.model_info: Optional[Dict[str, Any]] = None
+
+        # Keep strong references to avoid GC while running
+        self._download_thread: Optional[QThread] = None
+        self._download_worker: Optional[FileDownloadWorker] = None
+        self._progress_dialog: Optional[QProgressDialog] = None
+        self._info_thread: Optional[QThread] = None
+        self._info_worker: Optional[ModelInfoWorker] = None
+
         self._setup_ui()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         self.layout = QVBoxLayout(self)
         self.list_widget = QListWidget(self)
         self.download_btn = QPushButton("Download Selected Version", self)
@@ -42,45 +56,143 @@ class DownloadModelDialog(QDialog):
         self.layout.addWidget(self.download_btn)
         self.download_btn.clicked.connect(self._start_download)
 
-    def fetch_and_display(self, url):
+    def fetch_and_display(self, url: str) -> None:
+        """Fetch model info from CivitAI and populate the UI (async)."""
+        api_key = getattr(self.application_settings, "civit_ai_api_key", "")
+        self._info_worker = ModelInfoWorker(url=url, api_key=api_key)
+        self._info_thread = QThread(self)
+        self._info_worker.moveToThread(self._info_thread)
+        self._info_worker.fetched.connect(self._on_info_fetched)
+        self._info_worker.error.connect(self._on_info_error)
+        self._info_thread.started.connect(self._info_worker.run)
+        # Cleanup thread when done
+        self._info_worker.fetched.connect(self._info_thread.quit)
+        self._info_worker.error.connect(self._info_thread.quit)
+        self._info_thread.finished.connect(self._on_info_thread_finished)
+        self._info_thread.start()
+
+    def _on_info_thread_finished(self) -> None:
         try:
-            api_key = getattr(
-                self.application_settings, "civit_ai_api_key", None
-            )
-            civitai = CivitAIAPI(api_key=api_key)
-            self.model_info = civitai.get_model_info(url)
-        except Exception as e:
-            QMessageBox.critical(
-                self, "CivitAI Error", f"Failed to fetch model info: {e}"
-            )
-            self.reject()
-            return
-        name = self.model_info.get("name", "Unknown")
-        desc = self.model_info.get("description", "")
+            if self._info_worker is not None:
+                self._info_worker.deleteLater()
+        except Exception:
+            pass
+        try:
+            if self._info_thread is not None:
+                self._info_thread.deleteLater()
+        except Exception:
+            pass
+        self._info_worker = None
+        self._info_thread = None
+
+    def _on_info_error(self, msg: str) -> None:
+        QMessageBox.critical(self, "CivitAI Error", msg)
+        self.reject()
+
+    def _on_info_fetched(self, data: Dict[str, Any]) -> None:
+        self.model_info = data
+        name = data.get("name", "Unknown")
+        desc = data.get("description", "")
         self.layout.insertWidget(0, QLabel(f"<b>{name}</b>"))
         if desc:
             self.layout.insertWidget(1, QLabel(desc))
-        versions = self.model_info.get("modelVersions", [])
-        for v in versions:
+        self.layout.insertWidget(2, QLabel("Select a version to download:"))
+        self.list_widget.clear()
+        for v in data.get("modelVersions", []):
             item = QListWidgetItem(
                 f"Version {v.get('id')}: {v.get('name', '')}"
             )
-            item.setData(1000, v)
+            item.setData(Qt.ItemDataRole.UserRole, v)
             self.list_widget.addItem(item)
-        self.layout.insertWidget(2, QLabel("Select a version to download:"))
 
-    def _start_download(self):
+    def _on_thread_finished(self) -> None:
+        try:
+            if self._download_worker is not None:
+                self._download_worker.deleteLater()
+        except Exception:
+            pass
+        try:
+            if self._download_thread is not None:
+                self._download_thread.deleteLater()
+        except Exception:
+            pass
+        self._download_worker = None
+        self._download_thread = None
+
+    def _cleanup_download(self) -> None:
+        """Stop thread, clear references, and close progress dialog if needed."""
+        try:
+            if self._progress_dialog is not None:
+                self._progress_dialog.close()
+        except Exception:
+            pass
+        if self._download_thread is not None:
+            try:
+                self._download_thread.quit()
+            except Exception:
+                logger.debug("Thread quit failed", exc_info=True)
+        self._progress_dialog = None
+
+    def _on_download_progress(self, current: int, total: int) -> None:
+        if not self._progress_dialog:
+            return
+        if total <= 0:
+            self._progress_dialog.setRange(0, 0)
+            return
+        if (
+            self._progress_dialog.minimum() == 0
+            and self._progress_dialog.maximum() == 0
+        ):
+            self._progress_dialog.setRange(0, 100)
+        percent = max(0, min(100, int((current / total) * 100)))
+        self._progress_dialog.setValue(percent)
+
+    def _on_download_finished(self, save_path: str) -> None:
+        self._cleanup_download()
+        QMessageBox.information(
+            self, "Download Complete", f"Model downloaded to: {save_path}"
+        )
+
+    def _on_download_failed(self, error: Exception) -> None:
+        self._cleanup_download()
+        QMessageBox.critical(
+            self,
+            "Download Failed",
+            f"Error: {str(error) or 'Unknown error'}",
+        )
+
+    def _on_download_failed_str(self, msg: str) -> None:
+        self._cleanup_download()
+        QMessageBox.critical(self, "Download Failed", msg or "Unknown error")
+
+    def _on_download_canceled(self) -> None:
+        try:
+            if self._download_worker:
+                self._download_worker.cancel()
+        except Exception:
+            logger.debug("Cancel call failed", exc_info=True)
+        self._cleanup_download()
+
+    def _start_download(self) -> None:
         selected = self.list_widget.currentItem()
         if not selected:
             QMessageBox.warning(
                 self, "No Selection", "Please select a version."
             )
             return
-        version = selected.data(1000)
-        files = version.get("files", [])
-        file_url = None
-        file_name = None
-        file_size = 0
+        if self._download_thread is not None:
+            QMessageBox.information(
+                self,
+                "Download In Progress",
+                "A download is already in progress.",
+            )
+            return
+
+        version = selected.data(Qt.ItemDataRole.UserRole)
+        files = version.get("files", []) if version else []
+        file_url: Optional[str] = None
+        file_name: Optional[str] = None
+        file_size_kb = 0
         for f in files:
             if f.get("downloadUrl") and any(
                 f.get("name", "").endswith(ext)
@@ -88,70 +200,63 @@ class DownloadModelDialog(QDialog):
             ):
                 file_url = f["downloadUrl"]
                 file_name = f.get("name")
-                file_size = f.get("sizeKB", 0)
+                file_size_kb = f.get("sizeKB", 0) or 0
                 break
-        if not file_url:
+        if not file_url or not file_name:
             QMessageBox.warning(
                 self,
                 "No Downloadable File",
                 "No suitable file found for this version.",
             )
             return
+
         model_type = (version.get("type") or "checkpoint").lower()
         base_path = os.path.expanduser(self.path_settings.base_path)
         model_dir = os.path.join(base_path, "art/models", model_type)
         os.makedirs(model_dir, exist_ok=True)
         save_path = os.path.join(model_dir, file_name)
-        worker = CivitAIDownloadWorker()
-        thread = QThread(self)
-        worker.moveToThread(thread)
-        worker.add_to_queue((file_url, save_path, file_size))
-        progress_dialog = QProgressDialog(
+
+        api_key = getattr(self.application_settings, "civit_ai_api_key", "")
+        self._download_worker = FileDownloadWorker(
+            url=file_url,
+            save_path=save_path,
+            api_key=api_key,
+            total_size_bytes=int(file_size_kb * 1024),
+        )
+        self._download_thread = QThread(self)
+        self._download_worker.moveToThread(self._download_thread)
+
+        self._progress_dialog = QProgressDialog(
             f"Downloading {file_name}...\nDestination: {save_path}",
             "Cancel",
             0,
             100,
             self,
         )
-        progress_dialog.setWindowTitle("Downloading Model")
-        progress_dialog.setWindowModality(Qt.WindowModal)
-        progress_dialog.setMinimumDuration(0)
+        self._progress_dialog.setWindowTitle("Downloading Model")
+        self._progress_dialog.setWindowModality(Qt.WindowModality.NonModal)
+        self._progress_dialog.setMinimumDuration(0)
+        self._progress_dialog.setAutoClose(True)
+        self._progress_dialog.setAutoReset(True)
+        self._progress_dialog.setRange(0, 0)
 
-        def on_progress(current, total):
-            percent = int((current / total) * 100) if total else 0
-            progress_dialog.setValue(percent)
-            progress_dialog.setLabelText(
-                f"Downloading {file_name}...\nDestination: {save_path}"
-            )
+        # Wire signals
+        self._download_worker.progress.connect(self._on_download_progress)
+        self._download_worker.finished.connect(self._on_download_finished)
+        self._download_worker.error.connect(self._on_download_failed_str)
+        self._download_worker.canceled.connect(self._on_download_canceled)
+        self._progress_dialog.canceled.connect(self._download_worker.cancel)
 
-        def on_finished():
-            progress_dialog.close()
-            thread.quit()
-            thread.wait()
-            QMessageBox.information(
-                self, "Download Complete", f"Model downloaded to: {save_path}"
-            )
+        # Ensure thread cleans up non-blocking
+        self._download_thread.finished.connect(self._on_thread_finished)
+        self._download_worker.finished.connect(self._download_thread.quit)
+        self._download_worker.error.connect(self._download_thread.quit)
+        self._download_worker.canceled.connect(self._download_thread.quit)
 
-        def on_failed(error):
-            progress_dialog.close()
-            thread.quit()
-            thread.wait()
-            QMessageBox.critical(
-                self,
-                "Download Failed",
-                f"Error: {str(error) or 'Unknown error'}",
-            )
-
-        worker.progress.connect(on_progress)
-        worker.finished.connect(on_finished)
-        worker.failed.connect(on_failed)
-        progress_dialog.canceled.connect(worker.cancel)
-        thread.started.connect(worker.download)
-        thread.start()
-        progress_dialog.exec()
-
-
-# Helper function to launch the dialog from MainWindow
+        # Start
+        self._download_thread.started.connect(self._download_worker.run)
+        self._download_thread.start()
+        self._progress_dialog.show()
 
 
 def show_download_model_dialog(parent, path_settings, application_settings):
