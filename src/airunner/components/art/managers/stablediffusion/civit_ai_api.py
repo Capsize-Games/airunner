@@ -40,7 +40,7 @@ class CivitAIAPI:
         api_url = f"{self.BASE_API_URL}{model_id}"
         headers = {"Content-Type": "application/json"}
         if self.api_key:
-            api_url += f"?token={self.api_key}"
+            headers["Authorization"] = f"Bearer {self.api_key}"
         resp = requests.get(api_url, headers=headers, timeout=10)
         resp.raise_for_status()
         data = resp.json()

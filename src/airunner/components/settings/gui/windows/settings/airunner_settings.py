@@ -16,28 +16,42 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
 )
 
-from airunner.components.application.gui.widgets.language.language_settings_widget import \
-    LanguageSettingsWidget
-from airunner.components.application.gui.widgets.paths.paths_widget import \
-    PathsWidget
-from airunner.components.llm.gui.widgets.bot_preferences import \
-    BotPreferencesWidget
-from airunner.components.llm.gui.widgets.prompt_templates_widget import \
-    PromptTemplatesWidget
-from airunner.components.settings.gui.widgets.export_preferences.export_preferences_widget import \
-    ExportPreferencesWidget
+from airunner.components.application.gui.widgets.language.language_settings_widget import (
+    LanguageSettingsWidget,
+)
+from airunner.components.application.gui.widgets.paths.paths_widget import (
+    PathsWidget,
+)
+from airunner.components.llm.gui.widgets.bot_preferences import (
+    BotPreferencesWidget,
+)
+from airunner.components.llm.gui.widgets.prompt_templates_widget import (
+    PromptTemplatesWidget,
+)
+from airunner.components.settings.gui.widgets.export_preferences.export_preferences_widget import (
+    ExportPreferencesWidget,
+)
 from airunner.enums import SignalCode, TemplateName
-from airunner.components.application.gui.widgets.api_token.api_token_widget import APITokenWidget
+from airunner.components.application.gui.widgets.api_token.api_token_widget import (
+    APITokenWidget,
+)
 from airunner.components.application.gui.widgets.keyboard_shortcuts.keyboard_shortcuts_widget import (
     KeyboardShortcutsWidget,
 )
 from airunner.components.settings.gui.widgets.memory_preferences.memory_preferences_widget import (
     MemoryPreferencesWidget,
 )
-from airunner.components.tts.gui.widgets.voice_settings_widget import VoiceSettingsWidget
-from airunner.components.application.gui.widgets.user.user_settings_widget import UserSettingsWidget
+from airunner.components.tts.gui.widgets.voice_settings_widget import (
+    VoiceSettingsWidget,
+)
+from airunner.components.application.gui.widgets.user.user_settings_widget import (
+    UserSettingsWidget,
+)
 from airunner.components.settings.gui.widgets.huggingface_settings.huggingface_settings_widget import (
     HuggingfaceSettingsWidget,
+)
+from airunner.components.art.gui.widgets.civitai_preferences.civitai_preferences_widget import (
+    CivitAIPreferencesWidget,
 )
 from airunner.components.llm.gui.widgets.rag_settings_widget import (
     RAGSettingsWidget,
@@ -144,6 +158,8 @@ class SettingsWindow(BaseWindow):
             return SoundSettingsWidget
         elif name == "huggingface_settings":
             return HuggingfaceSettingsWidget
+        elif name == "civitai_preferences":
+            return CivitAIPreferencesWidget
         elif name == "rag_settings":
             return RAGSettingsWidget
         elif name == "openrouter_settings":
@@ -254,6 +270,11 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "huggingface_settings",
                         "display_name": "Huggingface Settings",
+                        "checkable": False,
+                    },
+                    {
+                        "name": "civitai_preferences",
+                        "display_name": "CivitAI Preferences",
                         "checkable": False,
                     },
                     {
