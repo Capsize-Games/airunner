@@ -20,4 +20,4 @@ class CivitAIPreferencesWidget(BaseWidget):
         self.ui.api_key.blockSignals(False)
 
     def on_text_changed(self, text):
-        self.update_application_settings("civitai_api_key", text)
+        self.update_application_settings("civit_ai_api_key", text)

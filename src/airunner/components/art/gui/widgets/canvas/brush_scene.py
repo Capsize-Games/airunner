@@ -73,15 +73,22 @@ class BrushScene(CustomScene):
         super().on_canvas_clear_signal()
 
     def delete_image(self):
+        # Remove mask item if present
         item_scene = None
         if self.mask_item is not None:
             item_scene = self.mask_item.scene()
         if item_scene is not None:
             item_scene.removeItem(self.mask_item)
+
+        # Ensure any painter is stopped and reset
         if self.painter and self.painter.isActive():
             self.painter.end()
+        self.painter = None
+
+        # Clear mask image reference; don't recreate yet
         self.mask_image = None
-        self._create_mask_image()
+
+        # Let base class remove the main image item and reset state
         super().delete_image()
 
     def initialize_image(self, image: Image = None, generated: bool = False):
