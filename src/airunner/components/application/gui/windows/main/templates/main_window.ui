@@ -928,17 +928,9 @@
     <addaction name="separator"/>
     <addaction name="actionDownload_Model"/>
    </widget>
-   <widget class="QMenu" name="menuImage">
-    <property name="title">
-     <string>Canvas</string>
-    </property>
-    <addaction name="separator"/>
-    <addaction name="separator"/>
-   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
-   <addaction name="menuImage"/>
    <addaction name="menuFilters"/>
    <addaction name="menuTools"/>
    <addaction name="menuAbout"/>

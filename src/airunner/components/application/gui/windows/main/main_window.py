@@ -1386,6 +1386,7 @@ class MainWindow(
             )
 
     def _initialize_filter_actions(self):
+        self.ui.menuFilters.clear()
         image_filters = ImageFilter.objects.all()
         try:
             for image_filter in image_filters:

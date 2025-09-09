@@ -541,8 +541,6 @@ class Ui_MainWindow(object):
         self.menuStable_Diffusion = QMenu(self.menuTools)
         self.menuStable_Diffusion.setObjectName(u"menuStable_Diffusion")
         self.menuStable_Diffusion.setIcon(icon17)
-        self.menuImage = QMenu(self.menubar)
-        self.menuImage.setObjectName(u"menuImage")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -559,7 +557,6 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
-        self.menubar.addAction(self.menuImage.menuAction())
         self.menubar.addAction(self.menuFilters.menuAction())
         self.menubar.addAction(self.menuTools.menuAction())
         self.menubar.addAction(self.menuAbout.menuAction())
@@ -620,8 +617,6 @@ class Ui_MainWindow(object):
         self.menuStable_Diffusion.addAction(self.actionSafety_Checker)
         self.menuStable_Diffusion.addAction(self.actionToggle_Stable_Diffusion)
         self.menuStable_Diffusion.addAction(self.actionToggle_Controlnet)
-        self.menuImage.addSeparator()
-        self.menuImage.addSeparator()
         self.model_toolbar.addAction(self.actionSettings)
         self.model_toolbar.addSeparator()
         self.model_toolbar.addAction(self.actionToggle_Speech_to_Text)
@@ -746,7 +741,6 @@ class Ui_MainWindow(object):
         self.menuView.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
         self.menuTools.setTitle(QCoreApplication.translate("MainWindow", u"Tools", None))
         self.menuStable_Diffusion.setTitle(QCoreApplication.translate("MainWindow", u"Stable Diffusion", None))
-        self.menuImage.setTitle(QCoreApplication.translate("MainWindow", u"Canvas", None))
         self.model_toolbar.setWindowTitle(QCoreApplication.translate("MainWindow", u"toolBar_2", None))
     # retranslateUi
 
