@@ -163,7 +163,7 @@ for k, v in extras_require.items():
 
 setup(
     name="airunner",
-    version="5.0.0",
+    version="5.0.4",
     author="Capsize LLC",
     description="Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI",
     long_description=open("README.md", "r", encoding="utf-8").read(),
@@ -224,6 +224,7 @@ setup(
             "airunner-mypy=airunner.bin.mypy_shortcut:main",
             "airunner-create-theme=airunner.bin.airunner_create_theme:main",
             "airunner-create-component=airunner.bin.airunner_create_component:main",
+            "airunner-train-diffusers=airunner.bin.train_diffusers:main",
         ],
     },
 )
