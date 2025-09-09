@@ -606,15 +606,22 @@ class CustomScene(
         view.setSceneRect(current_viewport_rect)
 
     def delete_image(self):
-        item_scene = self.item.scene()
+        # Safely remove the image item from the scene (if present)
+        try:
+            item_scene = self.item.scene()
+        except AttributeError:
+            item_scene = None
         if item_scene is not None:
             item_scene.removeItem(self.item)
 
+        # Properly end and reset the painter so drawBackground can reinitialize
         if self.painter and self.painter.isActive():
             self.painter.end()
+        self.painter = None
         self.current_active_image = None
         self.image = None
-        del self.item
+        if hasattr(self, "item") and self.item is not None:
+            del self.item
         self.item = None
 
     def set_image(self, pil_image: Image = None):
