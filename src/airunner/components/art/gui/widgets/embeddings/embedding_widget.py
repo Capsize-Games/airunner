@@ -5,7 +5,9 @@ from airunner.components.art.data.embedding import Embedding
 from airunner.components.art.gui.widgets.embeddings.embedding_trigger_word_widget import (
     EmbeddingTriggerWordWidget,
 )
-from airunner.components.art.gui.widgets.embeddings.templates.embedding_ui import Ui_embedding
+from airunner.components.art.gui.widgets.embeddings.templates.embedding_ui import (
+    Ui_embedding,
+)
 
 
 class EmbeddingWidget(BaseWidget):
@@ -37,7 +39,14 @@ class EmbeddingWidget(BaseWidget):
         self.api.art.embeddings.delete(self)
 
     def update_embedding(self, embedding: Embedding):
-        embedding.save()
+        Embedding.objects.update(
+            **{
+                "pk": embedding.id,
+                "name": embedding.name,
+                "trigger_word": embedding.trigger_word,
+                "active": embedding.active,
+            }
+        )
 
     @Slot(bool)
     def action_toggled_embedding(self, val, _emit_signal=True):
