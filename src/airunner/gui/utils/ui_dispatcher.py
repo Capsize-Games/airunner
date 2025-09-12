@@ -11,7 +11,10 @@ from PySide6.QtWidgets import (
 def render_ui_from_spec(spec, parent_window):
     if spec["type"] == "window":
         if isinstance(parent_window, QDialog):
-            layout = QVBoxLayout(parent_window)
+            # Use existing layout if available to avoid QLayout warnings
+            layout = parent_window.layout()
+            if layout is None:
+                layout = QVBoxLayout(parent_window)
         else:
             parent_window.setWindowTitle(spec.get("title", "Untitled"))
             central_widget = QWidget()
@@ -23,9 +26,8 @@ def render_ui_from_spec(spec, parent_window):
                 label = QLabel(widget_spec.get("text", ""))
                 layout.addWidget(label)
 
-        if isinstance(parent_window, QDialog):
-            parent_window.setLayout(layout)
-        parent_window.show()
+        if not isinstance(parent_window, QDialog):
+            parent_window.show()
 
 
 def test_hello_world_window():
