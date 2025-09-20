@@ -1,7 +1,13 @@
 import os
+import threading
 
 from airunner.components.art.data.embedding import Embedding
 from airunner.components.art.data.lora import Lora
+
+
+# Thread locks to prevent concurrent scanning
+_lora_scan_lock = threading.Lock()
+_embedding_scan_lock = threading.Lock()
 
 
 # Dummy mixin for test patching
@@ -10,101 +16,115 @@ class SettingsMixin:
 
 
 def scan_path_for_lora(base_path) -> bool:
-    lora_added = False
-    lora_deleted = False
+    # Prevent concurrent scans
+    if not _lora_scan_lock.acquire(blocking=False):
+        return False  # Another scan is in progress
 
-    for versionpath, versionnames, versionfiles in os.walk(
-        os.path.expanduser(os.path.join(base_path, "art/models"))
-    ):
-        version = versionpath.split("/")[-1]
-        lora_path = os.path.expanduser(
-            os.path.join(base_path, "art/models", version, "lora")
-        )
-        if not os.path.exists(lora_path):
-            continue
+    try:
+        lora_added = False
+        lora_deleted = False
 
-        existing_lora = Lora.objects.all()
-        for lora in existing_lora:
-            if not os.path.exists(lora.path):
-                Lora.objects.delete(lora.id)
-                lora_deleted = True
-        for dirpath, dirnames, filenames in os.walk(lora_path):
-            for file in filenames:
-                if (
-                    file.endswith(".ckpt")
-                    or file.endswith(".safetensors")
-                    or file.endswith(".pt")
-                ):
-                    name = (
-                        file.replace(".ckpt", "")
-                        .replace(".safetensors", "")
-                        .replace(".pt", "")
-                    )
-                    path = os.path.join(dirpath, file)
-                    item = Lora.objects.filter_first(Lora.name == name)
+        for versionpath, versionnames, versionfiles in os.walk(
+            os.path.expanduser(os.path.join(base_path, "art/models"))
+        ):
+            version = versionpath.split("/")[-1]
+            lora_path = os.path.expanduser(
+                os.path.join(base_path, "art/models", version, "lora")
+            )
+            if not os.path.exists(lora_path):
+                continue
+
+            existing_lora = Lora.objects.all()
+            for lora in existing_lora:
+                if not os.path.exists(lora.path):
+                    Lora.objects.delete(lora.id)
+                    lora_deleted = True
+            for dirpath, dirnames, filenames in os.walk(lora_path):
+                for file in filenames:
                     if (
-                        not item
-                        or item.path != path
-                        or item.version != version
+                        file.endswith(".ckpt")
+                        or file.endswith(".safetensors")
+                        or file.endswith(".pt")
                     ):
-                        item = Lora.objects.create(
-                            name=name,
-                            path=path,
-                            scale=1,
-                            enabled=False,
-                            loaded=False,
-                            trigger_word="",
-                            version=version,
+                        name = (
+                            file.replace(".ckpt", "")
+                            .replace(".safetensors", "")
+                            .replace(".pt", "")
                         )
-                        lora_added = True
-    return lora_deleted or lora_added
+                        path = os.path.join(dirpath, file)
+                        item = Lora.objects.filter_first(Lora.name == name)
+                        if (
+                            not item
+                            or item.path != path
+                            or item.version != version
+                        ):
+                            item = Lora.objects.create(
+                                name=name,
+                                path=path,
+                                scale=1,
+                                enabled=False,
+                                loaded=False,
+                                trigger_word="",
+                                version=version,
+                            )
+                            lora_added = True
+        return lora_deleted or lora_added
+    finally:
+        _lora_scan_lock.release()
 
 
 def scan_path_for_embeddings(base_path) -> bool:
-    embedding_added = False
-    embedding_deleted = False
-    for versionpath, versionnames, versionfiles in os.walk(
-        os.path.expanduser(os.path.join(base_path, "art/models"))
-    ):
-        version = versionpath.split("/")[-1]
-        embedding_path = os.path.expanduser(
-            os.path.join(base_path, "art/models", version, "embeddings")
-        )
-        if not os.path.exists(embedding_path):
-            continue
-        existing_embeddings = Embedding.objects.all()
-        for embedding in existing_embeddings:
-            if not os.path.exists(embedding.path):
-                Embedding.objects.delete(embedding.id)
-                embedding_deleted = True
-        for dirpath, dirnames, filenames in os.walk(embedding_path):
-            for file in filenames:
-                if (
-                    file.endswith(".ckpt")
-                    or file.endswith(".safetensors")
-                    or file.endswith(".pt")
-                ):
-                    name = (
-                        file.replace(".ckpt", "")
-                        .replace(".safetensors", "")
-                        .replace(".pt", "")
-                    )
-                    path = os.path.join(dirpath, file)
-                    item = Embedding.objects.filter_first(
-                        Embedding.name == name
-                    )
+    # Prevent concurrent scans
+    if not _embedding_scan_lock.acquire(blocking=False):
+        return False  # Another scan is in progress
+
+    try:
+        embedding_added = False
+        embedding_deleted = False
+        for versionpath, versionnames, versionfiles in os.walk(
+            os.path.expanduser(os.path.join(base_path, "art/models"))
+        ):
+            version = versionpath.split("/")[-1]
+            embedding_path = os.path.expanduser(
+                os.path.join(base_path, "art/models", version, "embeddings")
+            )
+            if not os.path.exists(embedding_path):
+                continue
+            existing_embeddings = Embedding.objects.all()
+            for embedding in existing_embeddings:
+                if not os.path.exists(embedding.path):
+                    Embedding.objects.delete(embedding.id)
+                    embedding_deleted = True
+            for dirpath, dirnames, filenames in os.walk(embedding_path):
+                for file in filenames:
                     if (
-                        not item
-                        or item.path != path
-                        or item.version != version
+                        file.endswith(".ckpt")
+                        or file.endswith(".safetensors")
+                        or file.endswith(".pt")
                     ):
-                        item = Embedding.objects.create(
-                            name=name,
-                            path=path,
-                            version=version,
-                            tags="",
-                            active=False,
-                            trigger_word="",
+                        name = (
+                            file.replace(".ckpt", "")
+                            .replace(".safetensors", "")
+                            .replace(".pt", "")
                         )
-                        embedding_added = True
-    return embedding_deleted or embedding_added
+                        path = os.path.join(dirpath, file)
+                        item = Embedding.objects.filter_first(
+                            Embedding.name == name
+                        )
+                        if (
+                            not item
+                            or item.path != path
+                            or item.version != version
+                        ):
+                            item = Embedding.objects.create(
+                                name=name,
+                                path=path,
+                                version=version,
+                                tags="",
+                                active=False,
+                                trigger_word="",
+                            )
+                            embedding_added = True
+        return embedding_deleted or embedding_added
+    finally:
+        _embedding_scan_lock.release()

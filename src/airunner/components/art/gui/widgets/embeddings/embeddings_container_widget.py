@@ -1,17 +1,21 @@
 import os
 
-from PySide6.QtCore import Slot, QThread, QSize, QTimer
+from PySide6.QtCore import Slot, QThread, QSize, QTimer, Qt
 from PySide6.QtWidgets import QWidget, QSizePolicy, QApplication
 
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.components.art.utils.embeddings import get_embeddings_by_version
 from airunner.utils.models import scan_path_for_embeddings
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.art.gui.widgets.embeddings.embedding_widget import EmbeddingWidget
+from airunner.components.art.gui.widgets.embeddings.embedding_widget import (
+    EmbeddingWidget,
+)
 from airunner.components.art.gui.widgets.embeddings.templates.embeddings_container_ui import (
     Ui_embeddings_container,
 )
-from airunner.components.application.workers.directory_watcher import DirectoryWatcher
+from airunner.components.application.workers.directory_watcher import (
+    DirectoryWatcher,
+)
 
 
 class EmbeddingsContainerWidget(BaseWidget):
@@ -37,15 +41,64 @@ class EmbeddingsContainerWidget(BaseWidget):
         )
         self._apply_button_enabled = False
         self.ui.apply_embeddings_button.setEnabled(self._apply_button_enabled)
-        self._scanner_worker = DirectoryWatcher(
-            self.path_settings.base_path,
-            self._scan_path_for_embeddings,
-            self.on_scan_completed,
-        )
-        self._scanner_thread = QThread()
-        self._scanner_worker.moveToThread(self._scanner_thread)
-        self._scanner_thread.started.connect(self._scanner_worker.run)
-        self._scanner_thread.start()
+
+        # Initialize scanner components
+        self._scanner_worker = None
+        self._scanner_thread = None
+        self._setup_directory_watcher()
+
+    def _setup_directory_watcher(self):
+        """Setup directory watcher with proper error handling and cleanup."""
+        try:
+            self._scanner_worker = DirectoryWatcher(
+                self.path_settings.base_path,
+                self._scan_path_for_embeddings,
+            )
+            self._scanner_thread = QThread()
+            self._scanner_worker.moveToThread(self._scanner_thread)
+
+            # Ensure scan_completed is handled in the UI thread
+            self._scanner_worker.scan_completed.connect(
+                self.on_scan_completed,
+                type=Qt.QueuedConnection,  # Ensure thread-safe signal handling
+            )
+            self._scanner_thread.started.connect(self._scanner_worker.run)
+            self._scanner_thread.finished.connect(self._cleanup_scanner)
+            self._scanner_thread.start()
+
+            self.logger.debug(
+                "Directory watcher started for embeddings scanning"
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to setup directory watcher: {e}")
+
+    def _cleanup_scanner(self):
+        """Clean up scanner resources."""
+        if self._scanner_worker:
+            self._scanner_worker.deleteLater()
+            self._scanner_worker = None
+        if self._scanner_thread:
+            self._scanner_thread.deleteLater()
+            self._scanner_thread = None
+
+    def closeEvent(self, event):
+        # Graceful shutdown of the watcher thread
+        try:
+            if hasattr(self, "_scanner_worker") and self._scanner_worker:
+                self._scanner_worker.stop()
+            if hasattr(self, "_scanner_thread") and self._scanner_thread:
+                self._scanner_thread.quit()
+                if not self._scanner_thread.wait(2000):  # Wait up to 2 seconds
+                    self.logger.warning(
+                        "Scanner thread did not quit gracefully, terminating"
+                    )
+                    self._scanner_thread.terminate()
+                    self._scanner_thread.wait(1000)
+        except Exception as e:
+            self.logger.error(f"Error during scanner cleanup: {e}")
+        finally:
+            self._cleanup_scanner()
+            super().closeEvent(event)
 
     def _scan_path_for_embeddings(self, path) -> bool:
         if self._deleting:
