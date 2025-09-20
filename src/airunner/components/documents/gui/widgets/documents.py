@@ -146,7 +146,7 @@ class DocumentsWidget(
     def showEvent(self, event):
         super().showEvent(event)
         self._sync_documents_with_directory()
-        self._request_index_for_unindexed_documents()
+        # self._request_index_for_unindexed_documents()
 
     def _sync_documents_with_directory(self):
         # Ensure every file in the watched directory and subdirectories has a Document entry
