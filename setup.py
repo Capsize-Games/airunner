@@ -224,6 +224,7 @@ setup(
             "airunner-mypy=airunner.bin.mypy_shortcut:main",
             "airunner-create-theme=airunner.bin.airunner_create_theme:main",
             "airunner-create-component=airunner.bin.airunner_create_component:main",
+            "airunner-train-diffusers=airunner.bin.train_diffusers:main",
         ],
     },
 )

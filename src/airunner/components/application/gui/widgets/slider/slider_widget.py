@@ -4,7 +4,9 @@ from PySide6.QtWidgets import QDoubleSpinBox
 
 from airunner.components.application.data import table_to_class
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.application.gui.widgets.slider.templates.slider_ui import Ui_slider_widget
+from airunner.components.application.gui.widgets.slider.templates.slider_ui import (
+    Ui_slider_widget,
+)
 from airunner.components.art.data.lora import Lora
 
 
@@ -348,7 +350,12 @@ class SliderWidget(BaseWidget):
 
             if self.table_item is not None:
                 setattr(self.table_item, self.table_column, val)
-                self.table_item.save()
+                if self.table_item.__class__.__name__ == "LoraData":
+                    Lora.objects.update(
+                        self.table_item.id, **self.table_item.__dict__
+                    )
+                else:
+                    self.table_item.save()
             elif settings_property is not None:
                 keys = settings_property.split(".")
                 self.update_setting_by_table_name(

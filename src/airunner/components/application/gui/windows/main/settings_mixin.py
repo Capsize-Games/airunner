@@ -811,7 +811,7 @@ class SettingsMixin:
             for key in lora.__dict__.keys():
                 if key != "_sa_instance_state":
                     setattr(new_lora, key, getattr(lora, key))
-            new_lora.save()
+            Lora.objects.update(new_lora.id, **new_lora.__dict__)
         else:
             # Create a new SQLAlchemy model instance
             new_lora_instance = Lora(
