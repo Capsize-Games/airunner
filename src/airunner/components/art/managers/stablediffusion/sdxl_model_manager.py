@@ -11,7 +11,9 @@ from diffusers import (
 )
 
 from compel import ReturnedEmbeddingsType
+from safetensors.torch import load_file
 
+from airunner.components.art.data.embedding import Embedding
 from airunner.enums import QualityEffects, StableDiffusionVersion
 from airunner.components.art.managers.stablediffusion.stable_diffusion_model_manager import (
     StableDiffusionModelManager,
@@ -262,6 +264,11 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
 
         return data
 
+    def _prepare_lora_data(self, data: Dict) -> Dict:
+        if len(self._loaded_lora) > 0:
+            self._set_lora_adapters()
+        return data
+
     def _build_conditioning_tensors(
         self, compel_prompt, compel_negative_prompt
     ):
@@ -411,6 +418,39 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
                 self._pooled_prompt_embeds.half().to(self._device)
             if self._negative_pooled_prompt_embeds is not None:
                 self._negative_pooled_prompt_embeds.half().to(self._device)
+
+    def _load_embedding(self, embedding: Embedding):
+        state_dict = load_file(embedding.path)
+        self._pipe.load_textual_inversion(
+            state_dict["clip_l"],
+            token=embedding.trigger_word.split(","),
+            text_encoder=self._pipe.text_encoder,
+            tokenizer=self._pipe.tokenizer,
+        )
+        self._pipe.load_textual_inversion(
+            state_dict["clip_g"],
+            token=embedding.trigger_word.split(","),
+            text_encoder=self._pipe.text_encoder_2,
+            tokenizer=self._pipe.tokenizer_2,
+        )
+        self._loaded_embeddings.append(embedding.path)
+        # Invalidate cached prompt embeddings to ensure new embedding is applied
+        self._unload_prompt_embeds()
+
+    def _unload_embedding(self, embedding: Embedding):
+        self._pipe.unload_textual_inversion(
+            tokens=embedding.trigger_word.split(","),
+            text_encoder=self._pipe.text_encoder,
+            tokenizer=self._pipe.tokenizer,
+        )
+        self._pipe.unload_textual_inversion(
+            tokens=embedding.trigger_word.split(","),
+            text_encoder=self._pipe.text_encoder_2,
+            tokenizer=self._pipe.tokenizer_2,
+        )
+        self._loaded_embeddings.remove(embedding.path)
+        # Invalidate cached prompt embeddings to ensure embedding removal is applied
+        self._unload_prompt_embeds()
 
     def load_model(self, *args, **kwargs):
         return self._load_model(*args, **kwargs)
