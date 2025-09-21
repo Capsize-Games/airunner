@@ -1486,43 +1486,41 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self._pipe is None:
             self.logger.error("Pipe is None, unable to load embeddings")
             return
-        self.logger.debug("Loading embeddings")
-        try:
-            self._pipe.unload_textual_inversion()
-        except RuntimeError as e:
-            self.logger.error(f"Failed to unload embeddings: {e}")
-
         embeddings = Embedding.objects.filter_by(version=self.version)
-
+        embeddings_changed = False
         for embedding in embeddings:
-            embedding_path = embedding.path
+            if not embedding.path:
+                continue
             if (
-                embedding.active
-                and embedding_path not in self._loaded_embeddings
+                os.path.exists(embedding.path)
+                and embedding.path not in self._loaded_embeddings
+                and embedding.active
             ):
-                if not os.path.exists(embedding_path):
-                    self.logger.error(
-                        f"Embedding path {embedding_path} does not exist"
-                    )
-                else:
-                    try:
-                        self.logger.debug(
-                            f"Loading embedding {embedding_path}"
-                        )
-                        self._pipe.load_textual_inversion(
-                            embedding_path,
-                            token=embedding.name,
-                            weight_name=embedding_path,
-                        )
-                        self._loaded_embeddings.append(embedding_path)
-                    except Exception as e:
-                        self.logger.error(
-                            f"Failed to load embedding {embedding_path}: {e}"
-                        )
-        if len(self._loaded_embeddings) > 0:
-            self.logger.debug("Embeddings loaded")
-        else:
-            self.logger.debug("No embeddings enabled")
+                embeddings_changed = True
+                self._load_embedding(embedding)
+            elif embedding.path in self._loaded_embeddings and (
+                not os.path.exists(embedding.path) or not embedding.active
+            ):
+                embeddings_changed = True
+                self._unload_embedding(embedding)
+        self.logger.info(f"Loaded embeddings: {self._loaded_embeddings}")
+        if embeddings_changed:
+            # Invalidate cached prompt embeddings to ensure new embeddings are applied
+            self._unload_prompt_embeds()
+
+    def _load_embedding(self, embedding):
+        file_name = os.path.basename(embedding.path)
+        path_name = os.path.dirname(embedding.path)
+        self._pipe.load_textual_inversion(
+            path_name,
+            weight_name=file_name,
+            token=embedding.trigger_word.split(","),
+        )
+        self._loaded_embeddings.append(embedding.path)
+
+    def _unload_embedding(self, embedding):
+        self._pipe.unload_textual_inversion(embedding.path)
+        self._loaded_embeddings.remove(embedding.path)
 
     def _load_compel(self):
         if self.use_compel:
@@ -1831,6 +1829,15 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._unload_compel_proc()
             self._unload_prompt_embeds()
             clear_memory()
+
+    def _unload_textual_inversion(self):
+        self.logger.info("Attempting to unload textual inversion")
+        try:
+            self._pipe.unload_textual_inversion()
+            self.logger.info("Textual inversion unloaded")
+        except Exception as e:
+            self.logger.error(f"Failed to unload textual inversion: {e}")
+            pass
 
     def _unload_textual_inversion_manager(self):
         self.logger.debug("Unloading textual inversion manager")
