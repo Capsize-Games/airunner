@@ -218,28 +218,6 @@ def load_lora_weights(
         return False
 
 
-def load_embedding(
-    pipe: Any,
-    embedding: Embedding,
-    logger: logging.Logger,
-) -> bool:
-    """Load a single embedding into the pipeline."""
-    if not os.path.exists(embedding.path):
-        logger.error(f"Embedding path {embedding.path} does not exist")
-        return False
-    try:
-        pipe.load_textual_inversion(
-            embedding.path,
-            token=embedding.name,
-            weight_name=embedding.path,
-        )
-        logger.info(f"Loaded embedding: {embedding.path}")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to load embedding {embedding.path}: {e}")
-        return False
-
-
 def unload_safety_checker(pipe: Any, logger: logging.Logger) -> None:
     """Unload the safety checker from the pipeline and free resources."""
     if pipe is not None and hasattr(pipe, "safety_checker"):
@@ -270,16 +248,6 @@ def unload_lora(pipe: Any, logger: logging.Logger) -> None:
             logger.info("Unloaded all LORA weights from pipeline.")
     except Exception as e:
         logger.warning(f"Failed to unload LORA weights: {e}")
-
-
-def unload_embeddings(pipe: Any, logger: logging.Logger) -> None:
-    """Unload all embeddings from the pipeline."""
-    if pipe is not None and hasattr(pipe, "unload_textual_inversion"):
-        try:
-            pipe.unload_textual_inversion()
-            logger.info("Unloaded all embeddings from pipeline.")
-        except Exception as e:
-            logger.warning(f"Failed to unload embeddings: {e}")
 
 
 def load_compel_proc(
@@ -391,10 +359,6 @@ def load_lora(path=None):
     return SomeLoraClass(path)
 
 
-def load_embedding(path=None):
-    return SomeEmbeddingsClass(path)
-
-
 def load_compel(*args, **kwargs):
     return SomeCompelClass(*args, **kwargs)
 
@@ -405,10 +369,6 @@ def load_deep_cache(*args, **kwargs):
 
 def load_scheduler(*args, **kwargs):
     return SomeSchedulerClass()
-
-
-def load_embeddings(path=None):
-    return SomeEmbeddingsClass(path)
 
 
 def unload_deep_cache(instance):
