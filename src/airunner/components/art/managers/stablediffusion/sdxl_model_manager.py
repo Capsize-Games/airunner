@@ -481,6 +481,7 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
                 if self.do_join_prompts
                 else None
             ),
+            second_prompt=True,
         )
         return second_prompt
 
