@@ -10,7 +10,8 @@ from diffusers import (
     StableDiffusionXLControlNetInpaintPipeline,
 )
 
-from compel import ReturnedEmbeddingsType
+from compel import ReturnedEmbeddingsType, Compel
+import torch
 from safetensors.torch import load_file
 
 from airunner.components.art.data.embedding import Embedding
@@ -155,6 +156,148 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
     def compel_text_encoder(self) -> List[Any]:
         return [self._pipe.text_encoder, self._pipe.text_encoder_2]
 
+    @property
+    def use_compel_dual_prompts(self) -> bool:
+        """Whether we should treat primary and secondary prompts as distinct encoder inputs.
+
+        SDXL has two text encoders. Normally (without pre-computed embeds) diffusers passes
+        `prompt` to text_encoder and `prompt_2` to text_encoder_2. Our previous Compel usage
+        blended both prompts into a single logical expression and fed both encoders with the
+        combined text. This property enables a mode where we construct two *separate* Compel
+        embeddings – one per encoder – and then concatenate their hidden states to match the
+        shape expected by the UNet (feature-dim concat). The pooled embedding comes only from
+        the second encoder, mirroring diffusers' internal SDXL `encode_prompt` behavior.
+        """
+        return self.use_compel and bool(self.second_prompt)
+
+    def _build_dual_compel_embeddings(
+        self,
+        prompt: str,
+        second_prompt: str,
+        negative_prompt: str,
+        second_negative_prompt: str,
+    ):
+        """Build embeddings for SDXL where each encoder gets its own logical prompt.
+
+        We instantiate two Compel processors: one for encoder 1 (no pooled output) and
+        one for encoder 2 (requires pooled). We then concatenate their sequence hidden
+        states across the feature dimension to produce the final `prompt_embeds` /
+        `negative_prompt_embeds` tensors expected by the pipeline. Pooled embeddings
+        come only from encoder 2 (positive & negative) consistent with SDXL design.
+
+        If a secondary prompt is missing we mirror diffusers behavior by reusing the
+        primary prompt for that encoder.
+        """
+        # Fallbacks to mirror upstream encode_prompt logic
+        if not second_prompt:
+            second_prompt = prompt
+        if not second_negative_prompt:
+            second_negative_prompt = negative_prompt
+
+        # Primary encoder Compel (no pooled output required)
+        compel_primary = Compel(
+            tokenizer=self._pipe.tokenizer,
+            text_encoder=self._pipe.text_encoder,
+            returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
+            requires_pooled=False,
+        )
+        # Secondary encoder Compel (pooled output required)
+        compel_secondary = Compel(
+            tokenizer=self._pipe.tokenizer_2,
+            text_encoder=self._pipe.text_encoder_2,
+            returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
+            requires_pooled=True,
+        )
+
+        # Positive prompts
+        primary_out = compel_primary.build_conditioning_tensor(prompt)
+        primary_embeds, _ = self._normalize_compel_output(primary_out)
+        secondary_out = compel_secondary.build_conditioning_tensor(
+            second_prompt
+        )
+        secondary_embeds, pooled_secondary = self._normalize_compel_output(
+            secondary_out
+        )
+
+        # Negative prompts
+        neg_primary_out = compel_primary.build_conditioning_tensor(
+            negative_prompt
+        )
+        neg_primary_embeds, _ = self._normalize_compel_output(neg_primary_out)
+        neg_secondary_out = compel_secondary.build_conditioning_tensor(
+            second_negative_prompt
+        )
+        neg_secondary_embeds, neg_pooled_secondary = (
+            self._normalize_compel_output(neg_secondary_out)
+        )
+
+        # Ensure sequence lengths match before concatenation (should normally be fixed 77)
+        if primary_embeds.shape[1] != secondary_embeds.shape[1]:
+            # Pad shorter sequence with zeros (rare, but safe guard)
+            max_len = max(primary_embeds.shape[1], secondary_embeds.shape[1])
+
+            def _pad(t):
+                if t.shape[1] == max_len:
+                    return t
+                pad_tokens = max_len - t.shape[1]
+                return torch.nn.functional.pad(t, (0, 0, 0, pad_tokens))
+
+            primary_embeds = _pad(primary_embeds)
+            secondary_embeds = _pad(secondary_embeds)
+        if neg_primary_embeds.shape[1] != neg_secondary_embeds.shape[1]:
+            max_len = max(
+                neg_primary_embeds.shape[1], neg_secondary_embeds.shape[1]
+            )
+
+            def _pad(t):
+                if t.shape[1] == max_len:
+                    return t
+                pad_tokens = max_len - t.shape[1]
+                return torch.nn.functional.pad(t, (0, 0, 0, pad_tokens))
+
+            neg_primary_embeds = _pad(neg_primary_embeds)
+            neg_secondary_embeds = _pad(neg_secondary_embeds)
+
+        prompt_embeds = torch.cat([primary_embeds, secondary_embeds], dim=-1)
+        negative_prompt_embeds = torch.cat(
+            [neg_primary_embeds, neg_secondary_embeds], dim=-1
+        )
+
+        # Pad positive/negative to same seq length if needed (should already match)
+        if prompt_embeds.shape[1] != negative_prompt_embeds.shape[1]:
+            max_len = max(
+                prompt_embeds.shape[1], negative_prompt_embeds.shape[1]
+            )
+
+            def _pad_len(t):
+                if t.shape[1] == max_len:
+                    return t
+                return torch.nn.functional.pad(
+                    t, (0, 0, 0, max_len - t.shape[1])
+                )
+
+            prompt_embeds = _pad_len(prompt_embeds)
+            negative_prompt_embeds = _pad_len(negative_prompt_embeds)
+
+        return (
+            prompt_embeds,
+            pooled_secondary,
+            negative_prompt_embeds,
+            neg_pooled_secondary,
+        )
+
+    @staticmethod
+    def _normalize_compel_output(out) -> tuple:
+        """Ensure compel output is always a (embeds, pooled) tuple.
+
+        Some Compel configurations (e.g. requires_pooled=False) return only the
+        embeddings tensor. We normalize to a 2-tuple to simplify downstream logic.
+        """
+        if isinstance(out, (list, tuple)) and len(out) == 2:
+            return out[0], out[1]
+        # Single tensor case
+        return out, None
+
     def _prepare_data(self, active_rect=None) -> Dict:
         data = super()._prepare_data(active_rect)
         data.update(
@@ -281,11 +424,15 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
     def _build_conditioning_tensors(
         self, compel_prompt, compel_negative_prompt
     ):
-        prompt_embeds, pooled_prompt_embeds = (
-            self._compel_proc.build_conditioning_tensor(compel_prompt)
+        prompt_out = self._compel_proc.build_conditioning_tensor(compel_prompt)
+        neg_out = self._compel_proc.build_conditioning_tensor(
+            compel_negative_prompt
+        )
+        prompt_embeds, pooled_prompt_embeds = self._normalize_compel_output(
+            prompt_out
         )
         negative_prompt_embeds, negative_pooled_prompt_embeds = (
-            self._compel_proc.build_conditioning_tensor(compel_negative_prompt)
+            self._normalize_compel_output(neg_out)
         )
         return (
             prompt_embeds,
@@ -392,40 +539,58 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
             or self._negative_pooled_prompt_embeds is None
         ):
             self.logger.debug("Loading prompt embeds")
-            if prompt != "" and second_prompt != "":
-                compel_prompt = f'("{prompt}", "{second_prompt}").and()'
-            elif prompt != "" and second_prompt == "":
-                compel_prompt = prompt
-            elif prompt == "" and second_prompt != "":
-                compel_prompt = second_prompt
-            else:
-                compel_prompt = ""
-
-            if negative_prompt != "" and second_negative_prompt != "":
-                compel_negative_prompt = (
-                    f'("{negative_prompt}", "{second_negative_prompt}").and()'
-                )
-            elif negative_prompt != "" and second_negative_prompt == "":
-                compel_negative_prompt = negative_prompt
-            elif negative_prompt == "" and second_negative_prompt != "":
-                compel_negative_prompt = second_negative_prompt
-            else:
-                compel_negative_prompt = ""
-
             try:
-                (
-                    prompt_embeds,
-                    pooled_prompt_embeds,
-                    negative_prompt_embeds,
-                    negative_pooled_prompt_embeds,
-                ) = self._build_conditioning_tensors(
-                    compel_prompt, compel_negative_prompt
-                )
-                [prompt_embeds, negative_prompt_embeds] = (
-                    self._compel_proc.pad_conditioning_tensors_to_same_length(
-                        [prompt_embeds, negative_prompt_embeds]
+                if self.use_compel_dual_prompts:
+                    (
+                        prompt_embeds,
+                        pooled_prompt_embeds,
+                        negative_prompt_embeds,
+                        negative_pooled_prompt_embeds,
+                    ) = self._build_dual_compel_embeddings(
+                        prompt,
+                        second_prompt,
+                        negative_prompt,
+                        second_negative_prompt,
                     )
-                )
+                else:
+                    # Legacy blended behavior
+                    if prompt != "" and second_prompt != "":
+                        compel_prompt = (
+                            f'("{prompt}", "{second_prompt}").and()'
+                        )
+                    elif prompt != "" and second_prompt == "":
+                        compel_prompt = prompt
+                    elif prompt == "" and second_prompt != "":
+                        compel_prompt = second_prompt
+                    else:
+                        compel_prompt = ""
+
+                    if negative_prompt != "" and second_negative_prompt != "":
+                        compel_negative_prompt = f'("{negative_prompt}", "{second_negative_prompt}").and()'
+                    elif (
+                        negative_prompt != "" and second_negative_prompt == ""
+                    ):
+                        compel_negative_prompt = negative_prompt
+                    elif (
+                        negative_prompt == "" and second_negative_prompt != ""
+                    ):
+                        compel_negative_prompt = second_negative_prompt
+                    else:
+                        compel_negative_prompt = ""
+
+                    (
+                        prompt_embeds,
+                        pooled_prompt_embeds,
+                        negative_prompt_embeds,
+                        negative_pooled_prompt_embeds,
+                    ) = self._build_conditioning_tensors(
+                        compel_prompt, compel_negative_prompt
+                    )
+                    [prompt_embeds, negative_prompt_embeds] = (
+                        self._compel_proc.pad_conditioning_tensors_to_same_length(
+                            [prompt_embeds, negative_prompt_embeds]
+                        )
+                    )
             except RuntimeError as e:
                 self.logger.error(f"Prompt embedding failed: {e}")
                 self._prompt_embeds = None
@@ -441,14 +606,16 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
             self._pooled_prompt_embeds = pooled_prompt_embeds
             self._negative_pooled_prompt_embeds = negative_pooled_prompt_embeds
 
-            if self._prompt_embeds is not None:
-                self._prompt_embeds.half().to(self._device)
-            if self._negative_prompt_embeds is not None:
-                self._negative_prompt_embeds.half().to(self._device)
-            if self._pooled_prompt_embeds is not None:
-                self._pooled_prompt_embeds.half().to(self._device)
-            if self._negative_pooled_prompt_embeds is not None:
-                self._negative_pooled_prompt_embeds.half().to(self._device)
+            # Move to device & half precision
+            for tensor_attr in [
+                "_prompt_embeds",
+                "_negative_prompt_embeds",
+                "_pooled_prompt_embeds",
+                "_negative_pooled_prompt_embeds",
+            ]:
+                t = getattr(self, tensor_attr)
+                if t is not None:
+                    setattr(self, tensor_attr, t.half().to(self._device))
 
     def _load_embedding(self, embedding: Embedding):
         state_dict = load_file(embedding.path)
