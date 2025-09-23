@@ -13,8 +13,12 @@ from airunner.utils.image import (
     convert_image_to_binary,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.art.gui.widgets.canvas.templates.input_image_ui import Ui_input_image
-from airunner.components.art.gui.widgets.canvas.input_image_scene import InputImageScene
+from airunner.components.art.gui.widgets.canvas.templates.input_image_ui import (
+    Ui_input_image,
+)
+from airunner.components.art.gui.widgets.canvas.input_image_scene import (
+    InputImageScene,
+)
 
 
 class InputImage(BaseWidget):
@@ -124,30 +128,14 @@ class InputImage(BaseWidget):
             self.load_image_from_settings()
 
     def update_current_settings(self, key, value):
-        settings_updated = False
-        settings_class = None
-        settings_property_name = None
-
         if self.settings_key == "controlnet_settings":
             self.update_controlnet_settings(key, value)
-            settings_class = self.controlnet_settings.__class__
-            settings_property_name = "controlnet_settings"
-            settings_updated = True
         elif self.settings_key == "image_to_image_settings":
             self.update_image_to_image_settings(key, value)
-            settings_class = self.image_to_image_settings.__class__
-            settings_property_name = "image_to_image_settings"
-            settings_updated = True
         elif self.settings_key == "outpaint_settings":
             self.update_outpaint_settings(key, value)
-            settings_class = self.outpaint_settings.__class__
-            settings_property_name = "outpaint_settings"
-            settings_updated = True
         elif self.settings_key == "drawing_pad_settings":
             self.update_drawing_pad_settings(key, value)
-            settings_class = self.drawing_pad_settings.__class__
-            settings_property_name = "drawing_pad_settings"
-            settings_updated = True
 
         self.api.art.canvas.input_image_changed(self.settings_key, key, value)
 
@@ -224,19 +212,38 @@ class InputImage(BaseWidget):
         self.delete_image()
 
     def import_image(self):
-        if self.settings_key == "drawing_pad_settings":
-            self._import_path, _ = QFileDialog.getOpenFileName(
-                self.window(),
-                "Open Image",
-                self._import_path,
-                f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
-            )
-            if self._import_path == "":
-                return
-            self.load_image(os.path.abspath(self._import_path))
+        self._import_path, _ = QFileDialog.getOpenFileName(
+            self.window(),
+            "Open Image",
+            self._import_path,
+            f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
+        )
+        if self._import_path == "":
+            return
+        self.load_image(os.path.abspath(self._import_path))
 
     def load_image(self, file_path: str):
-        image = Image.open(file_path)
+        # Use the facehuggershield user override if available to allow this explicit user action.
+        try:
+            from airunner.vendor.facehuggershield.darklock.restrict_os_access import (
+                RestrictOSAccess,
+            )
+
+            ros = RestrictOSAccess()
+            # Allow only the selected file for this thread while importing
+            with ros.user_override(paths=[file_path]):
+                image = Image.open(file_path)
+        except Exception as e:
+            # Fallback to normal operation if darklock is not available or fails
+            try:
+                # Try to log the exception if possible
+                print(
+                    f"Darklock user_override failed, falling back to normal operation: {e}"
+                )
+            except Exception:
+                pass
+            image = Image.open(file_path)
+
         self.load_image_from_object(image)
         if image is not None:
             self.update_current_settings(

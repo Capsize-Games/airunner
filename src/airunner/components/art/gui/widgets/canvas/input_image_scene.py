@@ -2,6 +2,12 @@ from typing import Dict
 from PIL.Image import Image
 from PIL import ImageQt
 
+from airunner.components.art.data.controlnet_settings import ControlnetSettings
+from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
+from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.utils.image import (
     convert_binary_to_image,
     convert_image_to_binary,
@@ -28,11 +34,7 @@ class InputImageScene(BrushScene):
         if self._is_mask:
             # For mask image (outpainting mask)
             base_64_image = self.drawing_pad_settings.mask
-        elif (
-            self.settings_key == "controlnet_settings"
-            and hasattr(self, "use_generated_image")
-            and self.use_generated_image
-        ):
+        elif self.settings_key == "controlnet_settings":
             # For controlnet generated image
             base_64_image = self.controlnet_settings.generated_image
         elif self.settings_key == "outpaint_settings":
@@ -58,11 +60,7 @@ class InputImageScene(BrushScene):
             if self._is_mask:
                 # For mask image
                 self.update_drawing_pad_settings("mask", image_binary)
-            elif (
-                self.settings_key == "controlnet_settings"
-                and hasattr(self, "use_generated_image")
-                and self.use_generated_image
-            ):
+            elif self.settings_key == "controlnet_settings":
                 # For controlnet generated image
                 self.update_controlnet_settings(
                     "generated_image", image_binary
@@ -92,32 +90,29 @@ class InputImageScene(BrushScene):
                 self.update_drawing_pad_settings("mask", base_64_image)
                 # Also update the database model
                 model = self.drawing_pad_settings.__class__.objects.first()
-                model.mask = base_64_image
-                model.save()
-            elif (
-                self.settings_key == "controlnet_settings"
-                and hasattr(self, "use_generated_image")
-                and self.use_generated_image
-            ):
+                DrawingPadSettings.objects.update(model.id, mask=base_64_image)
+            elif self.settings_key == "controlnet_settings":
                 # For controlnet generated image
                 self.update_controlnet_settings(
                     "generated_image", base_64_image
                 )
                 model = self.controlnet_settings.__class__.objects.first()
-                model.generated_image = base_64_image
-                model.save()
+                ControlnetSettings.objects.update(
+                    model.id,
+                    generated_image=base_64_image,
+                )
             elif self.settings_key == "outpaint_settings":
                 # For outpaint image
                 self.update_outpaint_settings("image", base_64_image)
                 model = self.outpaint_settings.__class__.objects.first()
-                model.image = base_64_image
-                model.save()
+                OutpaintSettings.objects.update(model.id, image=base_64_image)
             elif self.settings_key == "image_to_image_settings":
                 # For image-to-image
                 self.update_image_to_image_settings("image", base_64_image)
                 model = self.image_to_image_settings.__class__.objects.first()
-                model.image = base_64_image
-                model.save()
+                ImageToImageSettings.objects.update(
+                    model.id, image=base_64_image
+                )
 
             if self.drawing_pad_settings.enable_automatic_drawing:
                 self.api.art.send_request()

@@ -110,7 +110,6 @@ class SDWorker(Worker):
                 raise ValueError(
                     f"Unsupported Stable Diffusion version: {version}"
                 )
-        print("model manager", self._model_manager)
         return self._model_manager
 
     @model_manager.setter
