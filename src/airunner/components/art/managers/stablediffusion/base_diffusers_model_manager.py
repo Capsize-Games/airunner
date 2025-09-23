@@ -33,7 +33,9 @@ from airunner.components.art.data.controlnet_model import ControlnetModel
 from airunner.components.art.data.embedding import Embedding
 from airunner.components.art.data.lora import Lora
 from airunner.components.art.data.schedulers import Schedulers
-from airunner.components.art.workers.image_export_worker import ImageExportWorker
+from airunner.components.art.workers.image_export_worker import (
+    ImageExportWorker,
+)
 from airunner.settings import (
     AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT,
     AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT,
@@ -582,7 +584,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def prompt(self) -> str:
-        return prompt_utils.format_prompt(
+        prompt = prompt_utils.format_prompt(
             self.image_request.prompt,
             prompt_utils.get_prompt_preset(self.image_request.image_preset),
             (
@@ -591,6 +593,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 else None
             ),
         )
+        return prompt
 
     @property
     def negative_prompt(self) -> str:
@@ -901,34 +904,38 @@ class BaseDiffusersModelManager(BaseModelManager):
                         total=self.image_request.steps
                     )
 
-                    data.update({
-                        "current_prompt": self._current_prompt,
-                        "current_prompt_2": self._current_prompt_2,
-                        "current_negative_prompt": self._current_negative_prompt,
-                        "current_negative_prompt_2": self._current_negative_prompt_2,
-                        "image_request": self.image_request,
-                        "model_path": self.model_path,
-                        "version": self.version,
-                        "scheduler_name": self.scheduler_name,
-                        "loaded_lora": self._loaded_lora,
-                        "loaded_embeddings": self._loaded_embeddings,
-                        "controlnet_enabled": self.controlnet_enabled,
-                        "is_txt2img": self.is_txt2img,
-                        "is_img2img": self.is_img2img,
-                        "is_inpaint": self.is_inpaint,
-                        "is_outpaint": self.is_outpaint,
-                        "mask_blur": self.mask_blur,
-                        "memory_settings_flags": self._memory_settings_flags,
-                        "application_settings": self.application_settings,
-                        "path_settings": self.path_settings,
-                        "metadata_settings": self.metadata_settings,
-                        "controlnet_settings": self.controlnet_settings,
-                    })
+                    data.update(
+                        {
+                            "current_prompt": self._current_prompt,
+                            "current_prompt_2": self._current_prompt_2,
+                            "current_negative_prompt": self._current_negative_prompt,
+                            "current_negative_prompt_2": self._current_negative_prompt_2,
+                            "image_request": self.image_request,
+                            "model_path": self.model_path,
+                            "version": self.version,
+                            "scheduler_name": self.scheduler_name,
+                            "loaded_lora": self._loaded_lora,
+                            "loaded_embeddings": self._loaded_embeddings,
+                            "controlnet_enabled": self.controlnet_enabled,
+                            "is_txt2img": self.is_txt2img,
+                            "is_img2img": self.is_img2img,
+                            "is_inpaint": self.is_inpaint,
+                            "is_outpaint": self.is_outpaint,
+                            "mask_blur": self.mask_blur,
+                            "memory_settings_flags": self._memory_settings_flags,
+                            "application_settings": self.application_settings,
+                            "path_settings": self.path_settings,
+                            "metadata_settings": self.metadata_settings,
+                            "controlnet_settings": self.controlnet_settings,
+                        }
+                    )
 
-                    self.image_export_worker.add_to_queue({
-                        "images": images,
-                        "data": data,
-                    })
+                    self.image_export_worker.add_to_queue(
+                        {
+                            "images": images,
+                            "data": data,
+                        }
+                    )
                 else:
                     images = images or []
 
