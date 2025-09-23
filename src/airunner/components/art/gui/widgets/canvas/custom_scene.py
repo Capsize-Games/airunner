@@ -243,8 +243,8 @@ class CustomScene(
                     self._current_active_image_ref = img
                     self._current_active_image_binary = binary_data
                     return img
-            except Exception:
-                pass
+            except Exception as e:
+                self.logger.error(f"Error decoding AIRAW1 image: {e}")
         # Fallback to general converter
         try:
             img = convert_binary_to_image(binary_data)
@@ -294,12 +294,16 @@ class CustomScene(
         # Lightweight hash based on size and sampled bytes to detect change
         try:
             w, h = image.size
+            w_hash_val = 1315423911
+            h_hash_val = 2654435761
             sample = image.crop((0, 0, min(64, w), min(64, h))).tobytes()
-            hval = (w * 1315423911) ^ (h * 2654435761)
+            hval = (w * w_hash_val) ^ (h * h_hash_val)
+            # Hash constant: 0x9E3779B9 is the fractional part of the golden ratio (used for mixing)
+            GOLDEN_RATIO_HASH_CONST = 0x9E3779B9
             stride = max(1, len(sample) // 256)
             for b in sample[::stride]:
                 hval = (
-                    hval ^ (b + 0x9E3779B9 + (hval << 6) + (hval >> 2))
+                    hval ^ (b + GOLDEN_RATIO_HASH_CONST + (hval << 6) + (hval >> 2))
                 ) & 0xFFFFFFFF
         except Exception:
             hval = None
