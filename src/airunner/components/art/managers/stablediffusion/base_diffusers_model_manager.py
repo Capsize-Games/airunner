@@ -886,10 +886,10 @@ class BaseDiffusersModelManager(BaseModelManager):
             for results in self._get_results(data):
 
                 # Benchmark getting images from results
-                images = results.get("images", [])
+                generated_images = results.get("images", [])
 
                 images, nsfw_content_detected = (
-                    self._check_and_mark_nsfw_images(images)
+                    self._check_and_mark_nsfw_images(generated_images)
                 )
 
                 if images is not None:
