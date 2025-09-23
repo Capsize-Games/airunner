@@ -1,6 +1,7 @@
 import io
 import os
 import subprocess
+import time
 from typing import Optional, Tuple, Dict
 
 import PIL
@@ -99,12 +100,15 @@ class CustomScene(
         )
         # Performance feature flags / caches
         self._raw_image_storage_enabled = (
-            True  # raw RGBA storage instead of PNG
+            True  # Re-enable raw RGBA storage for speed
         )
         self._current_active_image_hash = None  # lightweight change detector
         self._qimage_cache = None  # last QImage
         self._qimage_cache_size = None
         self._qimage_cache_hash = None  # hash of cached QImage content
+        # Cache for expensive database settings queries
+        self._active_grid_cache = None
+        self._active_grid_cache_time = 0
 
         # Add viewport rectangle that includes negative space
         self._extended_viewport_rect = QRect(-2000, -2000, 4000, 4000)
@@ -253,7 +257,12 @@ class CustomScene(
                 binary_data if img is not None else None
             )
             return img
-        except Exception:
+        except OSError as e:
+            # Catch libpng errors specifically
+            self.logger.error(f"Image format error (libpng/PIL): {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"General error loading image: {e}")
             return None
 
     @current_active_image.setter
@@ -291,26 +300,21 @@ class CustomScene(
         if image is self._current_active_image_ref:
             return
 
-        # Lightweight hash based on size and sampled bytes to detect change
-        try:
-            w, h = image.size
-            w_hash_val = 1315423911
-            h_hash_val = 2654435761
-            sample = image.crop((0, 0, min(64, w), min(64, h))).tobytes()
-            hval = (w * w_hash_val) ^ (h * h_hash_val)
-            # Hash constant: 0x9E3779B9 is the fractional part of the golden ratio (used for mixing)
-            GOLDEN_RATIO_HASH_CONST = 0x9E3779B9
-            stride = max(1, len(sample) // 256)
-            for b in sample[::stride]:
-                hval = (
-                    hval ^ (b + GOLDEN_RATIO_HASH_CONST + (hval << 6) + (hval >> 2))
-                ) & 0xFFFFFFFF
-        except Exception:
-            hval = None
-
-        if hval is not None and hval == self._current_active_image_hash:
-            return
-        self._current_active_image_hash = hval
+        # Quick size/mode change check before expensive conversion
+        if self._current_active_image_ref is not None:
+            if (
+                image.size == self._current_active_image_ref.size
+                and image.mode == self._current_active_image_ref.mode
+            ):
+                # Same size/mode - check if it's actually the same data
+                try:
+                    if (
+                        image.tobytes()
+                        == self._current_active_image_ref.tobytes()
+                    ):
+                        return  # Identical image data, skip update
+                except:
+                    pass  # Fall through to normal processing if tobytes fails
 
         # Raw storage path (faster than PNG) else fallback
         if self._raw_image_storage_enabled:
@@ -500,6 +504,7 @@ class CustomScene(
             if callback:
                 callback(data)
 
+    @profile
     def _handle_image_generated_signal(self, data: Dict):
         image_response: Optional[ImageResponse] = data.get("message", None)
         if image_response is None:
@@ -509,13 +514,19 @@ class CustomScene(
             pass
         elif image_response and not getattr(image_response, "node_id", None):
             outpaint_box_rect = image_response.active_rect
+            # Optimize: Only convert if absolutely necessary and cache conversion
+            image = images[0]
+            # Use lazy conversion - defer RGBA conversion until QImage creation
             self._create_image(
-                image=images[0].convert("RGBA"),
+                image=image,
                 is_outpaint=image_response.is_outpaint,
                 outpaint_box_rect=outpaint_box_rect,
                 generated=True,
             )
-            self.api.art.update_batch_images(images)
+            # Defer batch image update to not block UI
+            QTimer.singleShot(
+                100, lambda: self.api.art.update_batch_images(images)
+            )
 
     def display_gpu_memory_error(self, message: str):
         msg_box = QMessageBox()
@@ -628,7 +639,17 @@ class CustomScene(
             if fmt.startswith("image/"):
                 data = mime.data(fmt)
                 try:
-                    img = Image.open(io.BytesIO(data.data()))
+                    # Validate data before opening
+                    if data.size() < 10:  # Minimum size check
+                        continue
+                    data_bytes = data.data()
+                    if not data_bytes or len(data_bytes) < 10:
+                        continue
+                    img = Image.open(io.BytesIO(data_bytes))
+                    # Verify the image can be loaded
+                    img.verify()
+                    # Reopen since verify() consumes the image
+                    img = Image.open(io.BytesIO(data_bytes))
                     self._add_image_to_undo()
                     if self.application_settings.resize_on_paste:
                         img = self._resize_image(img)
@@ -638,9 +659,10 @@ class CustomScene(
                     break
                 except Exception as e:
                     if hasattr(self, "logger"):
-                        self.logger.error(
-                            f"Failed to load image from drop mime {fmt}: {e}"
+                        self.logger.debug(
+                            f"Failed to load image from {fmt}: {e}"
                         )
+                    continue
         if not handled and mime.hasUrls():
             for url in mime.urls():
                 url_str = url.toString()
@@ -971,7 +993,15 @@ class CustomScene(
                 # Try PyQt6/PySide6 QByteArray .data() and bytes()
                 for get_bytes in (lambda d: d.data(), bytes):
                     try:
-                        img = Image.open(io.BytesIO(get_bytes(data)))
+                        # Validate data before opening
+                        data_bytes = get_bytes(data)
+                        if not data_bytes or len(data_bytes) < 10:
+                            continue
+                        img = Image.open(io.BytesIO(data_bytes))
+                        # Verify the image can be loaded
+                        img.verify()
+                        # Reopen since verify() consumes the image
+                        img = Image.open(io.BytesIO(data_bytes))
                         if hasattr(self, "logger"):
                             self.logger.debug(
                                 f"Loaded image from clipboard mime {fmt} using {get_bytes.__name__}"
@@ -1029,6 +1059,7 @@ class CustomScene(
             pass
         return image
 
+    @profile
     def _create_image(
         self,
         image: Image.Image,
@@ -1059,6 +1090,7 @@ class CustomScene(
         image.thumbnail(max_size, PIL.Image.Resampling.BICUBIC)
         return image
 
+    @profile
     def _add_image_to_scene(
         self,
         image: Image.Image,
@@ -1092,10 +1124,19 @@ class CustomScene(
         # If generated, prefer active_rect from active grid settings for precise placement
         if generated:
             try:
-                # Use active grid settings position directly
+                # Cache active grid settings to avoid multiple DB queries (expire after 1 second)
+                current_time = time.time()
+                if (
+                    self._active_grid_cache is None
+                    or current_time - self._active_grid_cache_time > 1.0
+                ):
+                    self._active_grid_cache = self.active_grid_settings
+                    self._active_grid_cache_time = current_time
+
+                active_grid = self._active_grid_cache
                 root_point = QPoint(
-                    self.active_grid_settings.pos_x,
-                    self.active_grid_settings.pos_y,
+                    active_grid.pos_x,
+                    active_grid.pos_y,
                 )
             except Exception as e:
                 self.logger.error(
@@ -1109,22 +1150,52 @@ class CustomScene(
         if self.item:
             # Converting PIL image to QImage for existing item
             try:
-                # Cache QImage based on both size and hash to ensure we regenerate when content changes
-                if (
+                # Enhanced caching with image content hash to detect actual changes
+                image_hash = (
+                    hash(image.tobytes())
+                    if hasattr(image, "tobytes")
+                    else id(image)
+                )
+                cache_valid = (
                     self._qimage_cache is not None
                     and self._qimage_cache_size == image.size
                     and hasattr(self, "_qimage_cache_hash")
-                    and self._qimage_cache_hash
-                    == self._current_active_image_hash
-                ):
+                    and self._qimage_cache_hash == image_hash
+                    and not self._qimage_cache.isNull()
+                )
+
+                if cache_valid:
                     # Using cached QImage
                     q_image = self._qimage_cache
                 else:
-                    # Creating new QImage via ImageQt
-                    q_image = ImageQt.ImageQt(image)
+                    # Optimize: Use direct QImage creation instead of ImageQt for better performance
+                    if image.mode == "RGBA":
+                        # Direct RGBA conversion - fastest path
+                        w, h = image.size
+                        img_data = image.tobytes("raw", "RGBA")
+                        q_image = QImage(
+                            img_data, w, h, QImage.Format.Format_RGBA8888
+                        )
+                    elif image.mode == "RGB":
+                        # Direct RGB conversion
+                        w, h = image.size
+                        img_data = image.tobytes("raw", "RGB")
+                        q_image = QImage(
+                            img_data, w, h, QImage.Format.Format_RGB888
+                        )
+                    else:
+                        # Fallback to RGBA conversion + direct creation
+                        rgba_image = image.convert("RGBA")
+                        w, h = rgba_image.size
+                        img_data = rgba_image.tobytes("raw", "RGBA")
+                        q_image = QImage(
+                            img_data, w, h, QImage.Format.Format_RGBA8888
+                        )
+
+                    # Cache the result
                     self._qimage_cache = q_image
                     self._qimage_cache_size = image.size
-                    self._qimage_cache_hash = self._current_active_image_hash
+                    self._qimage_cache_hash = image_hash
             except Exception as e:
                 self.logger.error(f"Failed to convert image to QImage: {e}")
                 try:
@@ -1174,7 +1245,9 @@ class CustomScene(
             return
 
         # Existing item: avoid full initialize_image (expensive duplicate work)
-        self.current_active_image = image
+        # Optimize: Only update current_active_image if it's actually different
+        if self.current_active_image is not image:
+            self.current_active_image = image
         # If conversion pipeline produced a null cached qimage previously, re-attempt a safe RGBA conversion
         if self.item and (
             self._qimage_cache is None or self._qimage_cache.isNull()
@@ -1183,7 +1256,13 @@ class CustomScene(
                 safe_rgba = (
                     image if image.mode == "RGBA" else image.convert("RGBA")
                 )
-                q_image_retry = ImageQt.ImageQt(safe_rgba)
+                # Use our optimized direct QImage creation instead of ImageQt
+                w, h = safe_rgba.size
+                img_data = safe_rgba.tobytes("raw", "RGBA")
+                q_image_retry = QImage(
+                    img_data, w, h, QImage.Format.Format_RGBA8888
+                )
+
                 if not q_image_retry.isNull():
                     self._qimage_cache = q_image_retry
                     self._qimage_cache_size = safe_rgba.size

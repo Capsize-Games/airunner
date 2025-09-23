@@ -3,7 +3,7 @@ import datetime
 import re
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy, QPushButton, QWidget
 from PySide6.QtGui import QPixmap, Qt, QDrag
-from PySide6.QtCore import QMimeData, QUrl
+from PySide6.QtCore import QMimeData, QUrl, QTimer
 from typing import Dict
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.canvas.templates.batch_container_ui import (
@@ -33,6 +33,12 @@ class BatchContainer(BaseWidget):
         self.back_button = (
             None  # Reference to the back button when in a batch folder
         )
+
+        # Debounce timer for batch updates to prevent filesystem spam
+        self._batch_update_timer = QTimer()
+        self._batch_update_timer.setSingleShot(True)
+        self._batch_update_timer.timeout.connect(self._do_batch_update)
+
         super().__init__(*args, **kwargs)
         self.setup_ui_connections()
 
@@ -300,13 +306,18 @@ class BatchContainer(BaseWidget):
         layout.addItem(spacer)
 
     def update_batch_images(self, data: Dict):
-        """Update the layout with new batch images."""
+        """Update the layout with new batch images (debounced)."""
+        # Debounce the update to prevent filesystem spam during batch generation
+        self._batch_update_timer.start(500)  # 500ms delay
+
+    def _do_batch_update(self):
+        """Actually perform the batch update (called by timer)."""
         # Ensure current_date_folder is valid before refreshing
         if not self.current_date_folder:
             self.current_date_folder = get_today_folder(
                 self.path_settings.image_path
             )
-        # Always refresh the UI to show new batches or images
+        # Refresh the UI to show new batches or images
         self.populate_current_folder()
 
 
