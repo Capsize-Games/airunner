@@ -27,4 +27,4 @@ class EmbeddingTriggerWordWidget(BaseWidget):
     def action_click_button_copy(self):
         # copy embedding name to clipboard
         clipboard = QApplication.clipboard()
-        clipboard.setText(self.embedding.name)
+        clipboard.setText(self.trigger_word)
