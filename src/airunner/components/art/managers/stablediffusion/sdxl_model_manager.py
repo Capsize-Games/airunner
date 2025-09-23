@@ -14,6 +14,7 @@ from compel import ReturnedEmbeddingsType
 from safetensors.torch import load_file
 
 from airunner.components.art.data.embedding import Embedding
+from airunner.components.art.managers.stablediffusion import prompt_utils
 from airunner.enums import QualityEffects, StableDiffusionVersion
 from airunner.components.art.managers.stablediffusion.stable_diffusion_model_manager import (
     StableDiffusionModelManager,
@@ -262,6 +263,13 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
                 ):
                     data.update({key: (val["width"], val["height"])})
 
+        data.update(
+            {
+                "prompt_2": self.second_prompt,
+                "negative_prompt_2": self.second_negative_prompt,
+            }
+        )
+
         return data
 
     def _prepare_lora_data(self, data: Dict) -> Dict:
@@ -312,6 +320,28 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
             clear_memory()
             return result
         return super()._get_results(data)
+
+    @property
+    def second_prompt(self) -> str:
+        second_prompt = prompt_utils.format_prompt(
+            self.image_request.second_prompt,
+            prompt_utils.get_prompt_preset(self.image_request.image_preset),
+            (
+                self.image_request.additional_prompts
+                if self.do_join_prompts
+                else None
+            ),
+        )
+        return second_prompt
+
+    @property
+    def second_negative_prompt(self) -> str:
+        return prompt_utils.format_negative_prompt(
+            self.image_request.second_negative_prompt,
+            prompt_utils.get_negative_prompt_preset(
+                self.image_request.image_preset
+            ),
+        )
 
     def _load_prompt_embeds(self):
         if not self.use_compel:
