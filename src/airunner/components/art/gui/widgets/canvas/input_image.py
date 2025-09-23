@@ -212,19 +212,38 @@ class InputImage(BaseWidget):
         self.delete_image()
 
     def import_image(self):
-        if self.settings_key == "drawing_pad_settings":
-            self._import_path, _ = QFileDialog.getOpenFileName(
-                self.window(),
-                "Open Image",
-                self._import_path,
-                f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
-            )
-            if self._import_path == "":
-                return
-            self.load_image(os.path.abspath(self._import_path))
+        self._import_path, _ = QFileDialog.getOpenFileName(
+            self.window(),
+            "Open Image",
+            self._import_path,
+            f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
+        )
+        if self._import_path == "":
+            return
+        self.load_image(os.path.abspath(self._import_path))
 
     def load_image(self, file_path: str):
-        image = Image.open(file_path)
+        # Use the facehuggershield user override if available to allow this explicit user action.
+        try:
+            from airunner.vendor.facehuggershield.darklock.restrict_os_access import (
+                RestrictOSAccess,
+            )
+
+            ros = RestrictOSAccess()
+            # Allow only the selected file for this thread while importing
+            with ros.user_override(paths=[file_path]):
+                image = Image.open(file_path)
+        except Exception as e:
+            # Fallback to normal operation if darklock is not available or fails
+            try:
+                # Try to log the exception if possible
+                print(
+                    f"Darklock user_override failed, falling back to normal operation: {e}"
+                )
+            except Exception:
+                pass
+            image = Image.open(file_path)
+
         self.load_image_from_object(image)
         if image is not None:
             self.update_current_settings(
