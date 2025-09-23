@@ -98,7 +98,6 @@ from airunner.components.art.managers.stablediffusion import (
     model_loader,
     prompt_utils,
     image_generation,
-    memory_utils,
     utils,
 )
 
