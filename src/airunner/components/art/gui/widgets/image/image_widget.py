@@ -65,8 +65,14 @@ class ImageWidget(BaseWidget):
                     pass
             if self.is_thumbnail:
                 pixmap = QPixmap(path)
+                if pixmap.isNull():
+                    # Fallback for corrupted thumbnail
+                    pixmap = QPixmap(1, 1)
             else:
                 pixmap = QPixmap(self.image_path)
+                if pixmap.isNull():
+                    # Fallback for corrupted image
+                    pixmap = QPixmap(1, 1)
         self.pixmap = pixmap
 
         # set width and height
@@ -112,10 +118,14 @@ class ImageWidget(BaseWidget):
             # Set a pixmap for the drag operation
             pixmap = QPixmap(self.image_path)
 
-            # Scale the pixmap to no larger than 128x128 while maintaining aspect ratio
-            pixmap = pixmap.scaled(
-                128, 128, Qt.AspectRatioMode.KeepAspectRatio
-            )
+            # Guard against null pixmap
+            if pixmap.isNull():
+                pixmap = QPixmap(1, 1)  # Fallback to minimal pixmap
+            else:
+                # Scale the pixmap to no larger than 128x128 while maintaining aspect ratio
+                pixmap = pixmap.scaled(
+                    128, 128, Qt.AspectRatioMode.KeepAspectRatio
+                )
 
             drag.setPixmap(pixmap)
 
@@ -158,6 +168,9 @@ class ImageWidget(BaseWidget):
     def view_image(self):
         # Open the image
         image = QPixmap(self.image_path)
+        if image.isNull():
+            # Skip view if image is corrupted
+            return
 
         # Create a QGraphicsScene and add the image to it
         scene = QGraphicsScene()
