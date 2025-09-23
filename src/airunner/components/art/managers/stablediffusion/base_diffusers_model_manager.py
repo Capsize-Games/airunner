@@ -33,6 +33,7 @@ from airunner.components.art.data.controlnet_model import ControlnetModel
 from airunner.components.art.data.embedding import Embedding
 from airunner.components.art.data.lora import Lora
 from airunner.components.art.data.schedulers import Schedulers
+from airunner.components.art.workers.image_export_worker import ImageExportWorker
 from airunner.settings import (
     AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT,
     AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT,
@@ -78,6 +79,7 @@ from airunner.settings import (
     AIRUNNER_MEM_USE_TILED_VAE,
     AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
 )
+from airunner.utils.application.create_worker import create_worker
 from airunner.utils.memory import clear_memory, is_ampere_or_newer
 from airunner.utils.image import (
     convert_binary_to_image,
@@ -171,6 +173,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._outpaint_settings = None
         self._path_settings = None
         self._current_memory_settings = None
+
+        self.image_export_worker = create_worker(ImageExportWorker)
 
     def settings_changed(self):
         if self._pipe and self._pipe.__class__ is not self._pipeline_class:
@@ -897,8 +901,34 @@ class BaseDiffusersModelManager(BaseModelManager):
                         total=self.image_request.steps
                     )
 
-                    # Benchmark exporting images
-                    self._export_images(images, data)
+                    data.update({
+                        "current_prompt": self._current_prompt,
+                        "current_prompt_2": self._current_prompt_2,
+                        "current_negative_prompt": self._current_negative_prompt,
+                        "current_negative_prompt_2": self._current_negative_prompt_2,
+                        "image_request": self.image_request,
+                        "model_path": self.model_path,
+                        "version": self.version,
+                        "scheduler_name": self.scheduler_name,
+                        "loaded_lora": self._loaded_lora,
+                        "loaded_embeddings": self._loaded_embeddings,
+                        "controlnet_enabled": self.controlnet_enabled,
+                        "is_txt2img": self.is_txt2img,
+                        "is_img2img": self.is_img2img,
+                        "is_inpaint": self.is_inpaint,
+                        "is_outpaint": self.is_outpaint,
+                        "mask_blur": self.mask_blur,
+                        "memory_settings_flags": self._memory_settings_flags,
+                        "application_settings": self.application_settings,
+                        "path_settings": self.path_settings,
+                        "metadata_settings": self.metadata_settings,
+                        "controlnet_settings": self.controlnet_settings,
+                    })
+
+                    self.image_export_worker.add_to_queue({
+                        "images": images,
+                        "data": data,
+                    })
                 else:
                     images = images or []
 
@@ -951,112 +981,6 @@ class BaseDiffusersModelManager(BaseModelManager):
                 yield results
                 if not self.image_request.generate_infinite_images:
                     total += 1
-
-    def _initialize_metadata(
-        self, images: List[Any], data: Dict
-    ) -> Optional[dict]:
-        metadata = None
-        if self.metadata_settings.export_metadata:
-            metadata_dict = {}
-            if self.metadata_settings.image_export_metadata_prompt:
-                metadata_dict["prompt"] = self._current_prompt
-                metadata_dict["prompt_2"] = self._current_prompt_2
-            if self.metadata_settings.image_export_metadata_negative_prompt:
-                metadata_dict["negative_prompt"] = (
-                    self._current_negative_prompt
-                )
-                metadata_dict["negative_prompt_2"] = (
-                    self._current_negative_prompt_2
-                )
-            if self.metadata_settings.image_export_metadata_scale:
-                metadata_dict["scale"] = data.get("guidance_scale", 0)
-            if self.metadata_settings.image_export_metadata_seed:
-                metadata_dict["seed"] = self.image_request.seed
-            if self.metadata_settings.image_export_metadata_steps:
-                metadata_dict["steps"] = self.image_request.steps
-            if self.metadata_settings.image_export_metadata_ddim_eta:
-                metadata_dict["ddim_eta"] = self.image_request.ddim_eta
-            if self.metadata_settings.image_export_metadata_iterations:
-                metadata_dict["num_inference_steps"] = data[
-                    "num_inference_steps"
-                ]
-            if self.metadata_settings.image_export_metadata_samples:
-                metadata_dict["n_samples"] = self.image_request.n_samples
-            if self.metadata_settings.image_export_metadata_model:
-                metadata_dict["model"] = self.model_path
-            if self.metadata_settings.image_export_metadata_version:
-                metadata_dict["version"] = self.version
-            if self.metadata_settings.image_export_metadata_scheduler:
-                metadata_dict["scheduler"] = self.scheduler_name
-            if self.metadata_settings.image_export_metadata_strength:
-                metadata_dict["strength"] = data.get("strength", 0)
-            if self.metadata_settings.image_export_metadata_lora:
-                metadata_dict["lora"] = self._loaded_lora
-            if self.metadata_settings.image_export_metadata_embeddings:
-                metadata_dict["embeddings"] = self._loaded_embeddings
-            if self.metadata_settings.image_export_metadata_timestamp:
-                metadata_dict["timestamp"] = datetime.datetime.now(
-                    datetime.timezone.utc
-                ).isoformat()
-            if (
-                self.metadata_settings.image_export_metadata_controlnet
-                and self.controlnet_enabled
-            ):
-                metadata_dict.update(
-                    {
-                        "guess_mode": data["guess_mode"],
-                        "control_guidance_start": data[
-                            "control_guidance_start"
-                        ],
-                        "control_guidance_end": data["control_guidance_end"],
-                        "controlnet_strength": data["strength"],
-                        "controlnet_guidance_scale": data["guidance_scale"],
-                        "controlnet_conditioning_scale": data[
-                            "controlnet_conditioning_scale"
-                        ],
-                        "controlnet": self.controlnet_settings.controlnet,
-                    }
-                )
-            if self.is_txt2img:
-                metadata_dict["action"] = "txt2img"
-            elif self.is_img2img:
-                metadata_dict["action"] = "img2img"
-            elif self.is_inpaint:
-                metadata_dict.update(
-                    {
-                        "action": "inpaint",
-                    }
-                )
-            elif self.is_outpaint:
-                metadata_dict.update(
-                    {
-                        "action": "outpaint",
-                        "mask_blur": self.mask_blur,
-                    }
-                )
-            metadata_dict["tome_sd"] = self._memory_settings_flags[
-                "use_tome_sd"
-            ]
-            metadata_dict["tome_ratio"] = self._memory_settings_flags[
-                "tome_ratio"
-            ]
-            metadata = [metadata_dict for _ in range(len(images))]
-        return metadata
-
-    def _export_images(self, images: List[Any], data: Dict):
-        if not self.application_settings.auto_export_images:
-            return
-
-        self.logger.debug("Exporting images")
-        extension = self.application_settings.image_export_type
-        filename = "image"
-        file_path = os.path.expanduser(
-            os.path.join(
-                self.path_settings.image_path, f"{filename}.{extension}"
-            )
-        )
-        metadata = self._initialize_metadata(images, data)
-        export_images(images, file_path, metadata)
 
     def _check_and_mark_nsfw_images(self, images) -> tuple:
         if not self._feature_extractor or not self._safety_checker:
@@ -1223,21 +1147,6 @@ class BaseDiffusersModelManager(BaseModelManager):
     def _check_and_mark_nsfw_images(self, images):
         return image_generation.check_and_mark_nsfw_images(
             images, self._feature_extractor, self._safety_checker, self._device
-        )
-
-    def _export_images(self, images, data):
-        if not self.application_settings.auto_export_images:
-            return
-        extension = self.application_settings.image_export_type
-        filename = "image"
-        file_path = os.path.expanduser(
-            os.path.join(
-                self.path_settings.image_path, f"{filename}.{extension}"
-            )
-        )
-        metadata = self._initialize_metadata(images, data)
-        image_generation.export_images_with_metadata(
-            images, file_path, metadata
         )
 
     def _resize_image(self, image, max_width, max_height):
