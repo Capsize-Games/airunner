@@ -7,6 +7,7 @@ import PIL
 from PIL import ImageQt, Image, ImageFilter, ImageGrab
 from PySide6.QtGui import QImage
 from PySide6.QtCore import Qt, QPoint, QRect, QPointF
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import (
     QDragEnterEvent,
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
     QGraphicsSceneMouseEvent,
     QMessageBox,
 )
+from line_profiler import profile
 import requests  # Added for HTTP(S) image download
 from urllib.parse import urlparse
 
@@ -60,6 +62,9 @@ class CustomScene(
         self._is_drawing = None
         self.canvas_type = canvas_type
         self.image_backup = None
+        # Cache for current_active_image to avoid redundant binary conversions
+        self._current_active_image_ref = None
+        self._current_active_image_binary = None
         self.previewing_filter = False
         self.painter = None
         self.image: Optional[QImage] = None
@@ -84,6 +89,22 @@ class CustomScene(
         self.right_mouse_button_pressed = False
         self.handling_event = False
         self._original_item_positions = {}  # Store original positions of items
+        # Debounce timer for persisting current_active_image to DB
+        self._persist_timer = QTimer()
+        self._persist_timer.setSingleShot(True)
+        self._persist_timer.timeout.connect(self._flush_pending_image)
+        self._pending_image_binary = None
+        self._pending_image_generation = (
+            0  # monotonic counter to ensure latest wins
+        )
+        # Performance feature flags / caches
+        self._raw_image_storage_enabled = (
+            True  # raw RGBA storage instead of PNG
+        )
+        self._current_active_image_hash = None  # lightweight change detector
+        self._qimage_cache = None  # last QImage
+        self._qimage_cache_size = None
+        self._qimage_cache_hash = None  # hash of cached QImage content
 
         # Add viewport rectangle that includes negative space
         self._extended_viewport_rect = QRect(-2000, -2000, 4000, 4000)
@@ -199,21 +220,157 @@ class CustomScene(
 
     @property
     def current_active_image(self) -> Image:
-        base_64_image = self.current_settings.image
+        # Fast path: return cached reference if available
+        if self._current_active_image_ref is not None:
+            return self._current_active_image_ref
+        binary_data = self.current_settings.image
+        if binary_data is None:
+            return None
+        # Attempt raw fast decode inline to avoid extra function overhead
+        if (
+            isinstance(binary_data, (bytes, bytearray))
+            and binary_data.startswith(b"AIRAW1")
+            and len(binary_data) >= 14
+        ):
+            try:
+                w = int.from_bytes(binary_data[6:10], "big")
+                h = int.from_bytes(binary_data[10:14], "big")
+                rgba = binary_data[14:]
+                if len(rgba) == w * h * 4:
+                    img = Image.frombuffer(
+                        "RGBA", (w, h), rgba, "raw", "RGBA", 0, 1
+                    ).copy()
+                    self._current_active_image_ref = img
+                    self._current_active_image_binary = binary_data
+                    return img
+            except Exception:
+                pass
+        # Fallback to general converter
         try:
-            return convert_binary_to_image(base_64_image)
-        except PIL.UnidentifiedImageError:
+            img = convert_binary_to_image(binary_data)
+            self._current_active_image_ref = img
+            self._current_active_image_binary = (
+                binary_data if img is not None else None
+            )
+            return img
+        except Exception:
             return None
 
     @current_active_image.setter
     def current_active_image(self, image: Image):
+        """Set the current active image, avoiding unnecessary DB writes.
+
+        The original implementation always converted and persisted the image.
+        This adds a small optimization: skip the DB update if the incoming
+        image (after conversion) matches what is already stored. This helps
+        when UI paths redundantly reassign the same image object.
+        """
         if image is not None and not isinstance(image, Image.Image):
             return
-        if image is not None:
-            image = convert_image_to_binary(image)
-        self._update_current_settings("image", image)
+
+        if image is None:
+            settings = self.current_settings  # cache to avoid double load
+            if (
+                settings.image is not None
+                or self._pending_image_binary is not None
+            ):
+                # Clear pending and persisted
+                self._pending_image_binary = None
+                self._current_active_image_binary = None
+                self._current_active_image_ref = None
+                # Immediate flush
+                self._update_current_settings("image", None)
+                if self.settings_key == "drawing_pad_settings":
+                    self.api.art.canvas.image_updated()
+            return
+
+        # Convert to binary for comparison & persistence
+        settings = self.current_settings  # cache
+
+        # Fast identity check: same object reference -> skip
+        if image is self._current_active_image_ref:
+            return
+
+        # Lightweight hash based on size and sampled bytes to detect change
+        try:
+            w, h = image.size
+            sample = image.crop((0, 0, min(64, w), min(64, h))).tobytes()
+            hval = (w * 1315423911) ^ (h * 2654435761)
+            stride = max(1, len(sample) // 256)
+            for b in sample[::stride]:
+                hval = (
+                    hval ^ (b + 0x9E3779B9 + (hval << 6) + (hval >> 2))
+                ) & 0xFFFFFFFF
+        except Exception:
+            hval = None
+
+        if hval is not None and hval == self._current_active_image_hash:
+            return
+        self._current_active_image_hash = hval
+
+        # Raw storage path (faster than PNG) else fallback
+        if self._raw_image_storage_enabled:
+            try:
+                rgba = image if image.mode == "RGBA" else image.convert("RGBA")
+                w, h = rgba.size
+                header = (
+                    b"AIRAW1" + w.to_bytes(4, "big") + h.to_bytes(4, "big")
+                )
+                binary_image = header + rgba.tobytes()
+            except Exception:
+                # Raw encoding failed, fallback to PNG
+                binary_image = convert_image_to_binary(image)
+        else:
+            binary_image = convert_image_to_binary(image)
+
+        if self._current_active_image_binary == binary_image:
+            self._current_active_image_ref = image
+            return
+
+        self._current_active_image_ref = image
+        self._current_active_image_binary = binary_image
+
+        # Debounced persistence: schedule DB update rather than immediate commit.
+        self._pending_image_binary = binary_image
+        self._pending_image_generation += 1
+        generation = self._pending_image_generation
+        # Restart timer (150ms window)
+        self._persist_timer.start(150)
+        # Optionally notify lightweight listeners about in-memory change only
         if self.settings_key == "drawing_pad_settings":
+            # Do not spam full image_updated if nothing rendered changes; here we allow it
             self.api.art.canvas.image_updated()
+
+    def _flush_pending_image(self):
+        """Persist the most recent pending image binary to settings (debounced)."""
+        if self._pending_image_binary is None:
+            return
+        # If already persisted, skip
+        if self.current_settings.image == self._pending_image_binary:
+            self._pending_image_binary = None
+            return
+        self._update_current_settings("image", self._pending_image_binary)
+        self._pending_image_binary = None
+
+    def _binary_to_pil_fast(self, binary_data: bytes) -> Optional[Image.Image]:
+        """Fast inverse for raw storage format; fallback to existing converter.
+
+        Raw format layout: b"AIRAW1" + 4 bytes width + 4 bytes height + RGBA bytes.
+        """
+        if binary_data is None:
+            return None
+        try:
+            if binary_data.startswith(b"AIRAW1") and len(binary_data) > 14:
+                w = int.from_bytes(binary_data[6:10], "big")
+                h = int.from_bytes(binary_data[10:14], "big")
+                rgba = binary_data[14:]
+                if len(rgba) == w * h * 4:
+                    return Image.frombuffer(
+                        "RGBA", (w, h), rgba, "raw", "RGBA", 0, 1
+                    )
+        except Exception:
+            pass
+        return convert_binary_to_image(binary_data)
 
     @property
     def is_brush_or_eraser(self):
@@ -631,20 +788,24 @@ class CustomScene(
 
         if base64image is not None:
             try:
-                pil_image = convert_binary_to_image(base64image).convert(
-                    "RGBA"
-                )
-            except AttributeError:
+                pil_image = convert_binary_to_image(base64image)
+                if pil_image is not None:
+                    pil_image = pil_image.convert("RGBA")
+            except AttributeError as e:
                 pil_image = None
-            except PIL.UnidentifiedImageError:
+            except PIL.UnidentifiedImageError as e:
+                pil_image = None
+            except Exception as e:
                 pil_image = None
 
         if pil_image is not None:
             try:
                 img = ImageQt.ImageQt(pil_image)
-            except AttributeError as _e:
+            except AttributeError as e:
                 img = None
-            except IsADirectoryError as _e:
+            except IsADirectoryError as e:
+                img = None
+            except Exception as e:
                 img = None
             self.image = img
         else:
@@ -677,7 +838,14 @@ class CustomScene(
             else:
                 self.item.setPos(x, y)
                 self.original_item_positions[self.item] = self.item.pos()
-                self.item.updateImage(image)
+                if image is not None and not image.isNull():
+                    try:
+                        self.item.updateImage(image)
+                    except Exception:
+                        if hasattr(self, "logger"):
+                            self.logger.warning(
+                                "Failed to update existing item with new image."
+                            )
             self.item.setZValue(z_index)
 
             self.item.setVisible(True)
@@ -896,11 +1064,14 @@ class CustomScene(
     ):
         if image is None:
             return
-
+        # NOTE: Major hotspot previously (line profiler ~44% time) was the
+        # second attribute access to drawing_pad_settings.* which triggered
+        # another full settings DB load. Cache the settings object locally
+        # so we only hit the database once for both x_pos/y_pos.
         canvas_offset = self.get_canvas_offset()
-
-        settings_x = self.drawing_pad_settings.x_pos
-        settings_y = self.drawing_pad_settings.y_pos
+        settings = self.drawing_pad_settings  # single DB fetch
+        settings_x = settings.x_pos
+        settings_y = settings.y_pos
 
         if outpaint_box_rect:
             if is_outpaint:
@@ -914,13 +1085,64 @@ class CustomScene(
         else:
             root_point = QPoint(0, 0)
 
-        q_image = ImageQt.ImageQt(image)
+        # If generated, prefer active_rect from active grid settings for precise placement
+        if generated:
+            try:
+                # Use active grid settings position directly
+                root_point = QPoint(
+                    self.active_grid_settings.pos_x,
+                    self.active_grid_settings.pos_y,
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to use active grid settings position: {e}"
+                )
 
+        # Avoid double ImageQt conversions: initialize_image will convert.
+        # If an item already exists we still need a QImage for updateImage,
+        # otherwise we can let initialize_image handle creation.
+        q_image = None
         if self.item:
-            self.item.updateImage(q_image)
-            self.item.setZValue(0)
+            # Converting PIL image to QImage for existing item
+            try:
+                # Cache QImage based on both size and hash to ensure we regenerate when content changes
+                if (
+                    self._qimage_cache is not None
+                    and self._qimage_cache_size == image.size
+                    and hasattr(self, "_qimage_cache_hash")
+                    and self._qimage_cache_hash
+                    == self._current_active_image_hash
+                ):
+                    # Using cached QImage
+                    q_image = self._qimage_cache
+                else:
+                    # Creating new QImage via ImageQt
+                    q_image = ImageQt.ImageQt(image)
+                    self._qimage_cache = q_image
+                    self._qimage_cache_size = image.size
+                    self._qimage_cache_hash = self._current_active_image_hash
+            except Exception as e:
+                self.logger.error(f"Failed to convert image to QImage: {e}")
+                try:
+                    rgba_image = image.convert("RGBA")
+                    q_image = ImageQt.ImageQt(rgba_image)
+                except Exception as e2:
+                    self.logger.error(f"Retry RGBA conversion failed: {e2}")
+                    q_image = None
+            if q_image is not None and not q_image.isNull():
+                try:
+                    self.item.updateImage(q_image)
+                except Exception:
+                    pass
+                self.item.setZValue(0)
+            else:
+                if hasattr(self, "logger"):
+                    self.logger.warning(
+                        "Skipped updateImage due to null QImage (possible decode failure)."
+                    )
         else:
-            self.set_item(q_image, z_index=5)
+            # Defer item creation to initialize_image for consistency.
+            pass
 
         if self.item:
             absolute_pos = QPointF(root_point.x(), root_point.y())
@@ -928,11 +1150,67 @@ class CustomScene(
 
             visible_pos_x = absolute_pos.x() - canvas_offset.x()
             visible_pos_y = absolute_pos.y() - canvas_offset.y()
-            self.item.setPos(visible_pos_x, visible_pos_y)
+            current_pos = self.item.pos()
+            if (
+                abs(current_pos.x() - visible_pos_x) > 0.5
+                or abs(current_pos.y() - visible_pos_y) > 0.5
+            ):
+                self.item.setPos(visible_pos_x, visible_pos_y)
 
-        self.update()
-        self.initialize_image(image, generated=generated)
+        # For new items we need full initialization.
+        if not self.item:
+            self.current_active_image = image
+            self.initialize_image(image, generated=generated)
+            if self.item:
+                self.original_item_positions[self.item] = QPointF(
+                    root_point.x(), root_point.y()
+                )
+                self.update_image_position(self.get_canvas_offset())
+            self.update()
+            return
+
+        # Existing item: avoid full initialize_image (expensive duplicate work)
         self.current_active_image = image
+        # If conversion pipeline produced a null cached qimage previously, re-attempt a safe RGBA conversion
+        if self.item and (
+            self._qimage_cache is None or self._qimage_cache.isNull()
+        ):
+            try:
+                safe_rgba = (
+                    image if image.mode == "RGBA" else image.convert("RGBA")
+                )
+                q_image_retry = ImageQt.ImageQt(safe_rgba)
+                if not q_image_retry.isNull():
+                    self._qimage_cache = q_image_retry
+                    self._qimage_cache_size = safe_rgba.size
+                    try:
+                        self.item.updateImage(q_image_retry)
+                    except Exception:
+                        pass
+            except Exception:
+                if hasattr(self, "logger"):
+                    self.logger.warning(
+                        "Retry RGBA->QImage failed; image update skipped."
+                    )
+        # Update painter target if needed
+        if self.painter is None or (
+            self.painter and not self.painter.isActive()
+        ):
+            try:
+                # DraggablePixmap stores QImage directly, not QPixmap
+                if (
+                    hasattr(self.item, "_qimage")
+                    and self.item._qimage is not None
+                ):
+                    self.set_painter(self.item._qimage)
+            except Exception:
+                pass
+        # Update stored absolute origin then reposition
+        self.original_item_positions[self.item] = QPointF(
+            root_point.x(), root_point.y()
+        )
+        self.update_image_position(self.get_canvas_offset())
+        self.update()
 
     def _handle_outpaint(
         self, outpaint_box_rect: Rect, outpainted_image: Image

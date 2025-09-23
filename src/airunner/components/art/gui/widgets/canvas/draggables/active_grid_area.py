@@ -62,10 +62,14 @@ class ActiveGridArea(DraggablePixmap):
         width = abs(self.rect.width())
         height = abs(self.rect.height())
 
-        if not self.image:
+        if not self.image or self.image.isNull():
             self.image = QImage(width, height, QImage.Format.Format_ARGB32)
         else:
-            self.image = self.image.scaled(width, height)
+            # Guard against null image scaling
+            if width > 0 and height > 0:
+                self.image = self.image.scaled(width, height)
+            else:
+                self.image = QImage(width, height, QImage.Format.Format_ARGB32)
 
         fill_color = (
             self.get_fill_color()

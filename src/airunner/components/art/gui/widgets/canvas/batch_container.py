@@ -44,12 +44,13 @@ class BatchContainer(BaseWidget):
 
     def _add_image_layer_item(self, image_path: str, total: int, layout):
         pixmap = QPixmap(image_path)
-        pixmap = pixmap.scaled(
-            256,
-            256,
-            aspectMode=Qt.KeepAspectRatio,
-            mode=Qt.SmoothTransformation,
-        )
+        if not pixmap.isNull():
+            pixmap = pixmap.scaled(
+                256,
+                256,
+                aspectMode=Qt.KeepAspectRatio,
+                mode=Qt.SmoothTransformation,
+            )
         image_layer_item = ImageLayerItemWidget(image_path)
         image_layer_item.ui.image.setPixmap(pixmap)
 
@@ -349,7 +350,7 @@ class ImageLayerItemWidget(QWidget):
 
             # Set drag pixmap for visual feedback, centered on cursor
             pixmap = self.ui.image.pixmap()
-            if pixmap is not None:
+            if pixmap is not None and not pixmap.isNull():
                 scaled_pixmap = pixmap.scaled(
                     128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation
                 )
