@@ -263,12 +263,13 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
                 ):
                     data.update({key: (val["width"], val["height"])})
 
-        data.update(
-            {
-                "prompt_2": self.second_prompt,
-                "negative_prompt_2": self.second_negative_prompt,
-            }
-        )
+        if not self.use_compel:
+            data.update(
+                {
+                    "prompt_2": self.second_prompt,
+                    "negative_prompt_2": self.second_negative_prompt,
+                }
+            )
 
         return data
 
