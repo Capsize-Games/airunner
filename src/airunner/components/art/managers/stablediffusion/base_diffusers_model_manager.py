@@ -13,7 +13,10 @@ from PIL import ImageDraw, ImageFont
 from PIL.Image import Image
 from compel import (
     Compel,
-    DiffusersTextualInversionManager,
+    DiffusersTextualInversionManager,  # retained for backward compatibility if referenced elsewhere
+)
+from airunner.components.art.managers.stablediffusion.safe_textual_inversion_manager import (
+    SafeDiffusersTextualInversionManager,
 )
 from diffusers import (
     StableDiffusionPipeline,
@@ -54,6 +57,7 @@ from airunner.enums import (
     EngineResponseCode,
     ModelAction,
     ImagePreset,
+    StableDiffusionVersion,
 )
 from airunner.components.application.exceptions import (
     PipeNotLoadedException,
@@ -252,17 +256,15 @@ class BaseDiffusersModelManager(BaseModelManager):
     @property
     def controlnet_path(self) -> Optional[str]:
         if self.controlnet_model:
-            version: str = self.controlnet_model.version
-            path: str = self.controlnet_model.path
-            return os.path.expanduser(
-                os.path.join(
-                    self.path_settings.base_path,
-                    "art",
-                    "models",
-                    version,
-                    "controlnet",
-                    path,
-                )
+            version = self.version
+            if version == StableDiffusionVersion.SDXL_TURBO.value:
+                version = StableDiffusionVersion.SDXL1_0.value
+            return os.path.join(
+                self.path_settings.base_path,
+                "art/models",
+                version,
+                "controlnet",
+                os.path.expanduser(self.controlnet_model.path),
             )
         return None
 
@@ -642,13 +644,13 @@ class BaseDiffusersModelManager(BaseModelManager):
             return
         self._unload_safety_checker()
 
-    def load_controlnet(self):
+    def load_controlnet(self) -> bool:
         """
         Public method to load the controlnet model.
         """
         # clear the controlnet settings so that we get the latest selected controlnet model
         if not self.controlnet_enabled or self.controlnet_is_loading:
-            return
+            return False
         self._controlnet_model = None
         self._controlnet_settings = None
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
@@ -660,17 +662,17 @@ class BaseDiffusersModelManager(BaseModelManager):
                 f"Error loading controlnet {e} from {self.controlnet_path}"
             )
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
-            return
+            return False
 
         try:
             self._load_controlnet_processor()
         except Exception as e:
             self.logger.error(f"Error loading controlnet processor {e}")
             self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
-            return
+            return False
 
         self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
-        self._swap_pipeline()
+        return True
 
     def unload_controlnet(self):
         """
@@ -679,7 +681,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self.controlnet_is_loading:
             return
         self._unload_controlnet()
-        self._swap_pipeline()
 
     def _swap_pipeline(self):
         pipeline_class_ = self._pipeline_class
@@ -756,6 +757,17 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.change_model_status(ModelType.SD, ModelStatus.FAILED)
             return
         self._load_safety_checker()
+
+        if (
+            self.controlnet_enabled
+            and not self.controlnet_is_loading
+            and self._pipe
+            and not self._controlnet_model
+        ):
+            self.unload()
+
+        self.load_controlnet()
+
         if self._load_pipe():
             self._send_pipeline_loaded_signal()
             self._move_pipe_to_device()
@@ -766,8 +778,6 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._load_deep_cache()
             self._make_memory_efficient()
             self._finalize_load_stable_diffusion()
-
-        self.load_controlnet()
 
     def unload(self):
         if self.sd_is_loading or self.sd_is_unloaded:
@@ -892,8 +902,6 @@ class BaseDiffusersModelManager(BaseModelManager):
                     self._export_images(images, data)
                 else:
                     images = images or []
-
-                print("preparing to generate")
 
                 self._current_state = HandlerState.PREPARING_TO_GENERATE
                 response = None
@@ -1131,7 +1139,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.controlnet_enabled,
             self.controlnet_path,
             self.data_type,
-            self._device,
+            self._pipe.device if self._pipe else self._device,
             self.logger,
         )
         if self._controlnet:
@@ -1547,10 +1555,21 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.logger.error(f"Failed to enable deep cache: {e}")
 
     def _load_textual_inversion_manager(self):
-        self.logger.debug("Loading textual inversion manager")
-        self._textual_inversion_manager = DiffusersTextualInversionManager(
-            self._pipe
+        self.logger.debug(
+            "Loading safe textual inversion manager (caps token expansion at model max length)"
         )
+        try:
+            self._textual_inversion_manager = SafeDiffusersTextualInversionManager(
+                self._pipe, logger=self.logger  # type: ignore[arg-type]
+            )
+        except Exception as e:
+            # Fallback to upstream if something unexpected happens
+            self.logger.error(
+                f"Safe manager failed, falling back to upstream: {e}"
+            )
+            self._textual_inversion_manager = DiffusersTextualInversionManager(
+                self._pipe
+            )
 
     def _load_compel_proc(self):
         self.logger.debug("Loading compel proc")
@@ -1586,11 +1605,44 @@ class BaseDiffusersModelManager(BaseModelManager):
         if not self._pipe:
             self.logger.error("Pipe is None, unable to apply memory settings")
             return
-        # Example: apply channels_last, more can be added as needed
-        memory_utils.apply_last_channels(
-            self._pipe, self.memory_settings.use_last_channels
+
+        # Apply all memory efficient settings using the helper method
+        self._apply_memory_setting(
+            "last_channels_applied",
+            "use_last_channels",
+            self._apply_last_channels,
         )
-        # TODO: Add calls to other memory_utils functions for vae slicing, attention slicing, etc.
+        self._apply_memory_setting(
+            "vae_slicing_applied",
+            "use_enable_vae_slicing",
+            self._apply_vae_slicing,
+        )
+        self._apply_memory_setting(
+            "attention_slicing_applied",
+            "use_attention_slicing",
+            self._apply_attention_slicing,
+        )
+        self._apply_memory_setting(
+            "tiled_vae_applied", "use_tiled_vae", self._apply_tiled_vae
+        )
+        self._apply_memory_setting(
+            "accelerated_transformers_applied",
+            "use_accelerated_transformers",
+            self._apply_accelerated_transformers,
+        )
+        self._apply_memory_setting(
+            "cpu_offload_applied",
+            "use_enable_sequential_cpu_offload",
+            self._apply_cpu_offload,
+        )
+        self._apply_memory_setting(
+            "model_cpu_offload_applied",
+            "enable_model_cpu_offload",
+            self._apply_model_offload,
+        )
+        self._apply_memory_setting(
+            "tome_sd_applied", "use_tome_sd", self._apply_tome
+        )
 
     def _apply_memory_setting(self, setting_name, attribute_name, apply_func):
         attr_val = getattr(self.memory_settings, attribute_name)
@@ -1678,6 +1730,15 @@ class BaseDiffusersModelManager(BaseModelManager):
         enabled = AIRUNNER_MEM_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD
         if enabled is None:
             enabled = attr_val
+
+        # Disable sequential CPU offload only for SDXL models when compel is enabled
+        # due to compatibility issues with compel prompt processing and meta tensor handling
+        if enabled and "SDXL" in self.version and self.use_compel:
+            self.logger.warning(
+                "Disabling sequential CPU offload for SDXL model with compel due to compatibility issues"
+            )
+            enabled = False
+
         if enabled and not self.memory_settings.enable_model_cpu_offload:
             self._pipe.to("cpu")
             try:
@@ -1695,6 +1756,13 @@ class BaseDiffusersModelManager(BaseModelManager):
         enabled = AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD
         if enabled is None:
             enabled = attr_val
+
+        # Add warning for SDXL models with model CPU offload when using compel
+        if enabled and "SDXL" in self.version and self.use_compel:
+            self.logger.warning(
+                "Model CPU offload with SDXL + compel may cause stability issues"
+            )
+
         if (
             enabled
             and not self.memory_settings.use_enable_sequential_cpu_offload

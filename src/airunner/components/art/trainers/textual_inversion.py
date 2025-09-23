@@ -44,9 +44,9 @@ class TextualInversionTrainer(BaseTrainer):
             shutil.rmtree(final_dir, ignore_errors=True)
             logger.info(f"Deleted folder: {final_dir}")
 
-    """Train a learnable embedding for a placeholder token using SD 1.x text encoder.
+    """Train a learnable embedding for a placeholder token using SD 1.x or SDXL text encoder(s).
 
-    Saves learned embeddings to `output_dir/learned_embeds.safetensors`.
+    Saves learned embeddings to `output_dir/<token>.safetensors`.
     """
 
     def __init__(self, config: TrainingConfig):
@@ -664,9 +664,8 @@ class TextualInversionTrainer(BaseTrainer):
                     )
                 )
 
-                data: dict[str, torch.Tensor] = {
-                    f"string_to_param/{token}": te1_tensor
-                }
+                # Minimal key set expected by SDXL loader: clip_l (always), clip_g (if dual encoder)
+                data: dict[str, torch.Tensor] = {"clip_l": te1_tensor}
 
                 if learned_embed_te2 is not None:
                     te2_cpu = learned_embed_te2.detach().cpu()
@@ -679,8 +678,7 @@ class TextualInversionTrainer(BaseTrainer):
                             else te2_cpu
                         )
                     )
-                    # SDXL second encoder key
-                    data[f"string_to_param_2/{token}"] = te2_tensor
+                    data["clip_g"] = te2_tensor
 
                 final_path = os.path.join(
                     self.config.output_dir, final_filename
@@ -694,70 +692,22 @@ class TextualInversionTrainer(BaseTrainer):
                 self.config.output_dir, f"checkpoint-{step}"
             )
             os.makedirs(out_dir, exist_ok=True)
+            ckpt = {"clip_l": tensor1}
+            if learned_embed_te2 is not None:
+                ckpt["clip_g"] = learned_embed_te2.detach().cpu()
             save_file(
-                {f"string_to_param/{token}": tensor1},
-                os.path.join(out_dir, "learned_embeds_te1.safetensors"),
+                ckpt,
+                os.path.join(out_dir, "learned_embeds.safetensors"),
             )
-            if learned_embed_te2 is not None and tokenizer_2 is not None:
-                save_file(
-                    {
-                        f"string_to_param_2/{token}": learned_embed_te2.detach().cpu()
-                    },
-                    os.path.join(out_dir, "learned_embeds_te2.safetensors"),
-                )
 
-        except Exception:
-            if final:
-                final_filename = f"{(model_name or token)}.pt"
-                te1_tensor = (
-                    tensor1.squeeze(0)
-                    if tensor1.dim() > 1 and self.config.num_vectors == 1
-                    else (
-                        tensor1.mean(dim=0) if tensor1.dim() > 1 else tensor1
-                    )
-                )
-                if learned_embed_te2 is not None:
-                    te2_cpu = learned_embed_te2.detach().cpu()
-                    te2_tensor = (
-                        te2_cpu.squeeze(0)
-                        if te2_cpu.dim() > 1 and self.config.num_vectors == 1
-                        else (
-                            te2_cpu.mean(dim=0)
-                            if te2_cpu.dim() > 1
-                            else te2_cpu
-                        )
-                    )
-                    combined = {
-                        "string_to_param": {token: te1_tensor},
-                        "string_to_param_2": {token: te2_tensor},
-                    }
-                else:
-                    combined = {"string_to_param": {token: te1_tensor}}
-                final_path = os.path.join(
-                    self.config.output_dir, final_filename
-                )
-                torch.save(combined, final_path)
-                logger.info("Saved final embedding to %s", final_path)
-                return
-
-            # Checkpoint fallback
-            out_dir = os.path.join(
-                self.config.output_dir, f"checkpoint-{step}"
+        except Exception as e:  # pragma: no cover - save errors are rare
+            logger.error(
+                "Failed to save textual inversion embeddings (final=%s, step=%s): %s",
+                final,
+                step,
+                e,
             )
-            os.makedirs(out_dir, exist_ok=True)
-            torch.save(
-                {"string_to_param": {token: tensor1}},
-                os.path.join(out_dir, "learned_embeds_te1.pt"),
-            )
-            if learned_embed_te2 is not None and tokenizer_2 is not None:
-                torch.save(
-                    {
-                        "string_to_param_2": {
-                            token: learned_embed_te2.detach().cpu()
-                        }
-                    },
-                    os.path.join(out_dir, "learned_embeds_te2.pt"),
-                )
+            return
 
         # For checkpoint saves, write a token file to aid inspection
         if not final:

@@ -1,35 +1,22 @@
-"""
-Model loading and unloading utilities for Stable Diffusion handlers.
-Handles model, scheduler, controlnet, lora, embeddings, compel, and deep cache loading/unloading.
-Follows project standards: docstrings, type hints, logging.
-"""
+"""Utilities for loading/unloading Stable Diffusion related resources."""
 
 import os
 import logging
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional
+
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
+from diffusers import SchedulerMixin
 from transformers import CLIPFeatureExtractor
 
-from airunner.components.art.data.embedding import Embedding
+from controlnet_aux.processor import MODELS as controlnet_aux_models
 from airunner.components.art.data.lora import Lora
 from airunner.components.art.data.schedulers import Schedulers
-from airunner.enums import ModelType, ModelStatus
-from airunner.components.art.managers.stablediffusion.prompt_weight_bridge import (
-    PromptWeightBridge,
-)
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
-from airunner.utils.application import get_torch_device
-from airunner.components.art.managers.stablediffusion.image_request import (
-    ImageRequest,
-)
-from airunner.components.art.managers.stablediffusion.rect import Rect
-from diffusers import SchedulerMixin
 
 logger = logging.getLogger(__name__)
 
 
-# Dummy classes for legacy test patching (for test_model_loader.py only)
-class SomeModelClass:
+class SomeModelClass:  # legacy test helper
     def __init__(self, path):
         self.path = path
 
@@ -37,43 +24,40 @@ class SomeModelClass:
         return True
 
 
-class SomeSchedulerClass:
+class SomeSchedulerClass:  # legacy test helper
     pass
 
 
-class SomeControlNetClass:
+class SomeControlNetClass:  # legacy test helper
     pass
 
 
-class SomeLoraClass:
+class SomeLoraClass:  # legacy test helper
     def __init__(self, path=None):
         self.path = path
 
 
-class SomeEmbeddingsClass:
+class SomeEmbeddingsClass:  # legacy test helper
     def __init__(self, path=None):
         self.path = path
 
 
-class SomeCompelClass:
+class SomeCompelClass:  # legacy test helper
     def __init__(self, *args, **kwargs):
         pass
 
 
-class SomeDeepCacheClass:
+class SomeDeepCacheClass:  # legacy test helper
     def __init__(self, *args, **kwargs):
         pass
 
 
 def load_safety_checker(
-    application_settings: Any,
-    path_settings: Any,
-    data_type: Any,
+    application_settings, path_settings, data_type
 ) -> Optional[StableDiffusionSafetyChecker]:
-    """Load the safety checker model if enabled in settings."""
     if not application_settings.nsfw_filter:
         return None
-    safety_checker_path = os.path.expanduser(
+    path = os.path.expanduser(
         os.path.join(
             path_settings.base_path,
             "art",
@@ -85,7 +69,7 @@ def load_safety_checker(
     )
     try:
         checker = StableDiffusionSafetyChecker.from_pretrained(
-            safety_checker_path,
+            path,
             torch_dtype=data_type,
             device_map="cpu",
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
@@ -99,11 +83,9 @@ def load_safety_checker(
 
 
 def load_feature_extractor(
-    path_settings: Any,
-    data_type: Any,
+    path_settings, data_type
 ) -> Optional[CLIPFeatureExtractor]:
-    """Load the feature extractor for NSFW checking."""
-    feature_extractor_path = os.path.expanduser(
+    path = os.path.expanduser(
         os.path.join(
             path_settings.base_path,
             "art",
@@ -115,7 +97,7 @@ def load_feature_extractor(
     )
     try:
         extractor = CLIPFeatureExtractor.from_pretrained(
-            feature_extractor_path,
+            path,
             torch_dtype=data_type,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
             use_safetensors=True,
@@ -128,12 +110,8 @@ def load_feature_extractor(
 
 
 def load_scheduler(
-    scheduler_name: str,
-    path_settings: Any,
-    version: str,
-    logger: logging.Logger,
+    scheduler_name: str, path_settings, version: str, logger: logging.Logger
 ) -> Optional[SchedulerMixin]:
-    """Load a scheduler by name from disk."""
     base_path = path_settings.base_path
     scheduler_path = os.path.expanduser(
         os.path.join(
@@ -149,19 +127,18 @@ def load_scheduler(
     if not scheduler:
         logger.error(f"Failed to find scheduler {scheduler_name}")
         return None
-    scheduler_class_name = scheduler.name
+    class_name = scheduler.name
     try:
-        scheduler_class = getattr(
-            __import__("diffusers", fromlist=[scheduler_class_name]),
-            scheduler_class_name,
+        cls = getattr(
+            __import__("diffusers", fromlist=[class_name]), class_name
         )
-        scheduler_instance = scheduler_class.from_pretrained(
+        inst = cls.from_pretrained(
             scheduler_path,
             subfolder="scheduler",
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
         )
         logger.info(f"Loaded scheduler {scheduler_name}")
-        return scheduler_instance
+        return inst
     except Exception as e:
         logger.error(f"Failed to load scheduler {scheduler_name}: {e}")
         return None
@@ -170,18 +147,16 @@ def load_scheduler(
 def load_controlnet_model(
     controlnet_enabled: bool,
     controlnet_path: str,
-    data_type: Any,
-    device: Any,
+    data_type,
+    device,
     logger: logging.Logger,
-) -> Optional[Any]:
-    """Load the ControlNet model if enabled."""
+):
     if not controlnet_enabled:
         return None
     from diffusers import ControlNetModel
 
     try:
-        model = ControlNetModel.from_pretrained(
-            controlnet_path,
+        data = dict(
             torch_dtype=data_type,
             device=device,
             local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
@@ -189,22 +164,27 @@ def load_controlnet_model(
             use_fp16=True,
             variant="fp16",
         )
+        if os.path.isdir(controlnet_path):
+            model = ControlNetModel.from_pretrained(controlnet_path, **data)
+        else:
+            directory_only = os.path.dirname(controlnet_path)
+            config_path = os.path.join(directory_only, "config.json")
+            model = ControlNetModel.from_single_file(
+                pretrained_model_link_or_path_or_dict=controlnet_path,
+                config=config_path,
+                **data,
+            )
         logger.info(f"Loaded ControlNet model from {controlnet_path}")
         return model
     except Exception as e:
         logger.error(f"Error loading ControlNet model: {e}")
+        print("PATH", controlnet_path)
         return None
 
 
 def load_lora_weights(
-    pipe: Any,
-    lora: Lora,
-    lora_base_path: str,
-    logger: logging.Logger,
+    pipe, lora: Lora, lora_base_path: str, logger: logging.Logger
 ) -> bool:
-    """Load LORA weights into the pipeline."""
-    import os
-
     filename = os.path.basename(lora.path)
     adapter_name = os.path.splitext(filename)[0].replace(".", "_")
     try:
@@ -312,7 +292,6 @@ def load_controlnet_processor(
     """Load the ControlNet processor if enabled."""
     if not controlnet_enabled or not controlnet_model:
         return None
-    from controlnet_aux.processor import MODELS as controlnet_aux_models
 
     controlnet_data = controlnet_aux_models[controlnet_model.name]
     controlnet_class_ = controlnet_data["class"]

@@ -13,8 +13,12 @@ from airunner.utils.image import (
     convert_image_to_binary,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.art.gui.widgets.canvas.templates.input_image_ui import Ui_input_image
-from airunner.components.art.gui.widgets.canvas.input_image_scene import InputImageScene
+from airunner.components.art.gui.widgets.canvas.templates.input_image_ui import (
+    Ui_input_image,
+)
+from airunner.components.art.gui.widgets.canvas.input_image_scene import (
+    InputImageScene,
+)
 
 
 class InputImage(BaseWidget):
@@ -124,30 +128,14 @@ class InputImage(BaseWidget):
             self.load_image_from_settings()
 
     def update_current_settings(self, key, value):
-        settings_updated = False
-        settings_class = None
-        settings_property_name = None
-
         if self.settings_key == "controlnet_settings":
             self.update_controlnet_settings(key, value)
-            settings_class = self.controlnet_settings.__class__
-            settings_property_name = "controlnet_settings"
-            settings_updated = True
         elif self.settings_key == "image_to_image_settings":
             self.update_image_to_image_settings(key, value)
-            settings_class = self.image_to_image_settings.__class__
-            settings_property_name = "image_to_image_settings"
-            settings_updated = True
         elif self.settings_key == "outpaint_settings":
             self.update_outpaint_settings(key, value)
-            settings_class = self.outpaint_settings.__class__
-            settings_property_name = "outpaint_settings"
-            settings_updated = True
         elif self.settings_key == "drawing_pad_settings":
             self.update_drawing_pad_settings(key, value)
-            settings_class = self.drawing_pad_settings.__class__
-            settings_property_name = "drawing_pad_settings"
-            settings_updated = True
 
         self.api.art.canvas.input_image_changed(self.settings_key, key, value)
 
