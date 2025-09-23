@@ -200,6 +200,7 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
             text_encoder=self._pipe.text_encoder,
             returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
             requires_pooled=False,
+            textual_inversion_manager=self._textual_inversion_manager,
         )
         # Secondary encoder Compel (pooled output required)
         compel_secondary = Compel(
@@ -207,6 +208,7 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
             text_encoder=self._pipe.text_encoder_2,
             returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
             requires_pooled=True,
+            textual_inversion_manager=self._textual_inversion_manager,
         )
 
         # Positive prompts
