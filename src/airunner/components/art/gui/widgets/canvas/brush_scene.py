@@ -103,7 +103,12 @@ class BrushScene(CustomScene):
 
     def drawBackground(self, painter, rect):
         if self.painter is None:
-            self.refresh_image(self.current_active_image)
+            # Use cached reference first to avoid database lookup during pending persistence
+            image = self._current_active_image_ref
+            if image is None:
+                # Fallback to property getter if no cached reference
+                image = self.current_active_image
+            self.refresh_image(image)
         if self.painter is not None and self.painter.isActive():
             if self.last_pos and self.draw_button_down:
                 if self.current_tool is CanvasToolName.BRUSH:
@@ -269,23 +274,15 @@ class BrushScene(CustomScene):
                 drawing_pad_settings.image = base_64_image
                 self.update_drawing_pad_settings("image", base_64_image)
 
+                # CRITICAL: Update the cached reference to ensure consistency
+                self._current_active_image_ref = image
+                self._current_active_image_binary = base_64_image
+
                 if self.current_tool and (
                     self.current_tool is CanvasToolName.BRUSH
                     or self.current_tool is CanvasToolName.ERASER
                 ):
                     self.api.art.canvas.generate_mask()
-
-        # Ensure changes are saved to database
-        DrawingPadSettings.objects.update(
-            drawing_pad_settings.id,
-            image=drawing_pad_settings.image,
-            mask=drawing_pad_settings.mask,
-            enabled=drawing_pad_settings.enabled,
-            enable_automatic_drawing=drawing_pad_settings.enable_automatic_drawing,
-            mask_layer_enabled=drawing_pad_settings.mask_layer_enabled,
-            x_pos=drawing_pad_settings.x_pos,
-            y_pos=drawing_pad_settings.y_pos,
-        )
 
         # Emit signals to refresh related UI
         self.api.art.canvas.image_updated()
