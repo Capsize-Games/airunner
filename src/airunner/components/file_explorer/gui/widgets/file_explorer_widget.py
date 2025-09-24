@@ -31,7 +31,6 @@ class FileExplorerWidget(BaseWidget):
         parent: Optional[QWidget] = None,
     ):
         # Robust handling for UI-instantiated widgets: if first arg is QWidget, treat as parent
-        self.emit_signal = None
         self._file_open_slot = None
         if isinstance(path_to_display, QWidget) and parent is None:
             parent = path_to_display
