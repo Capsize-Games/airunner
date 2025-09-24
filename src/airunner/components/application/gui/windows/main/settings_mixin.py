@@ -27,6 +27,7 @@ from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.data.saved_prompt import SavedPrompt
 from airunner.components.art.data.schedulers import Schedulers
+from airunner.components.art.utils.layer_compositor import layer_compositor
 from airunner.components.llm.data.chatbot import Chatbot
 from airunner.components.llm.data.llm_generator_settings import (
     LLMGeneratorSettings,
@@ -55,7 +56,7 @@ from airunner.components.tts.data.models.speech_t5_settings import (
     SpeechT5Settings,
 )
 from airunner.components.user.data.user import User
-from airunner.enums import ModelService, TTSModel
+from airunner.enums import ModelService, TTSModel, SignalCode
 from airunner.utils.image import convert_binary_to_image
 from airunner.components.data.session_manager import session_scope
 from airunner.components.llm.utils import get_chatbot
@@ -87,6 +88,8 @@ class SettingsMixinSharedInstance:
         self.chatbot: Optional[Chatbot] = None
         # Cache for settings instances keyed by model class to avoid repeated DB reads
         self._settings_cache: Dict[Type[Any], Any] = {}
+        # Cache for layer-specific settings instances keyed by string keys
+        self._settings_cache_by_key: Dict[str, Any] = {}
 
     def get_cached_setting(self, model_class: Type[Any]) -> Optional[Any]:
         """Return a cached settings instance if present."""
@@ -97,6 +100,14 @@ class SettingsMixinSharedInstance:
     ) -> None:
         """Store a settings instance in cache."""
         self._settings_cache[model_class] = instance
+
+    def get_cached_setting_by_key(self, key: str) -> Optional[Any]:
+        """Return a cached settings instance by string key if present."""
+        return self._settings_cache_by_key.get(key)
+
+    def set_cached_setting_by_key(self, key: str, instance: Any) -> None:
+        """Store a settings instance in cache by string key."""
+        self._settings_cache_by_key[key] = instance
 
     def invalidate_cached_setting(self, model_class: Type[Any]) -> None:
         """Remove a settings instance from cache."""
@@ -149,6 +160,22 @@ class SettingsMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Initialize layer selection tracking
+        self._selected_layer_ids = set()
+
+        # Add layer selection signal handler if signal_handlers exists
+        if (
+            hasattr(self, "signal_handlers")
+            and self.signal_handlers is not None
+        ):
+            self.signal_handlers[SignalCode.LAYER_SELECTION_CHANGED] = (
+                self._on_layer_selection_changed
+            )
+        else:
+            self.signal_handlers = {
+                SignalCode.LAYER_SELECTION_CHANGED: self._on_layer_selection_changed
+            }
+
         app = QApplication.instance()
         if app:
             self.api = getattr(app, "api", None)
@@ -196,6 +223,208 @@ class SettingsMixin:
             model_class_, instance
         )
         return instance
+
+    def _get_layer_specific_settings(
+        self,
+        model_class_: Type[Any],
+        layer_id: Optional[int] = None,
+        eager_load: Optional[List[str]] = None,
+    ) -> Any:
+        """Get layer-specific settings instance.
+
+        Args:
+            model_class_: SQLAlchemy model class for the settings table.
+            layer_id: Layer ID to get settings for. If None, gets settings for first selected layer.
+            eager_load: Optional list of relationship names to eager-load.
+
+        Returns:
+            Instance of the settings model for the specified layer.
+        """
+        from airunner.components.art.data.canvas_layer import CanvasLayer
+
+        # If no layer_id provided, try to get the first selected layer
+        if layer_id is None:
+            layer_id = self._get_current_selected_layer_id()
+
+        # If still no layer_id, fall back to global settings (for backwards compatibility)
+        if layer_id is None:
+            return self._get_or_cache_settings(
+                model_class_, eager_load=eager_load
+            )
+
+        # Check cache first with layer-specific key
+        cache_key = f"{model_class_.__name__}_layer_{layer_id}"
+        cached = self.settings_mixin_shared_instance.get_cached_setting_by_key(
+            cache_key
+        )
+        if cached is not None:
+            return cached
+
+        # Load layer-specific settings from database
+        instance = self._load_layer_settings_from_db(
+            model_class_, layer_id, eager_load=eager_load
+        )
+
+        # Cache the result
+        self.settings_mixin_shared_instance.set_cached_setting_by_key(
+            cache_key, instance
+        )
+        return instance
+
+    def _on_layer_selection_changed(self, data: Dict[str, Any]):
+        """Handle layer selection changes from the canvas layer container."""
+        selected_layer_ids = data.get("selected_layer_ids", [])
+        self._selected_layer_ids = set(selected_layer_ids)
+
+    def _get_current_selected_layer_id(self) -> Optional[int]:
+        """Get the first selected layer ID from the current UI state.
+
+        Returns:
+            The first selected layer ID, or None if no layers are selected.
+        """
+        # Return the first selected layer ID, or None if no selection
+        if self._selected_layer_ids:
+            return min(
+                self._selected_layer_ids
+            )  # Use the lowest ID for consistency
+        return None
+
+    def _load_layer_settings_from_db(
+        self,
+        model_class_: Type[Any],
+        layer_id: int,
+        eager_load: Optional[List[str]] = None,
+    ) -> Any:
+        """Load layer-specific settings from database, creating if not exists.
+
+        Args:
+            model_class_: SQLAlchemy model class for the settings table.
+            layer_id: Layer ID to get settings for.
+            eager_load: Optional list of relationship names to eager-load.
+
+        Returns:
+            Instance of the settings model for the specified layer.
+        """
+        from airunner.components.data.session_manager import session_scope
+        from sqlalchemy.orm import joinedload
+
+        try:
+            with session_scope() as session:
+                query = session.query(model_class_).filter(
+                    model_class_.layer_id == layer_id
+                )
+
+                if eager_load:
+                    for relation in eager_load:
+                        try:
+                            relation_attr = getattr(
+                                model_class_, relation, None
+                            )
+                            if relation_attr is not None:
+                                query = query.options(
+                                    joinedload(relation_attr)
+                                )
+                        except Exception as e:
+                            self.logger.warning(
+                                f"Could not eager load {relation} for {model_class_.__name__}: {e}"
+                            )
+
+                settings_instance = query.first()
+
+                if settings_instance is None:
+                    # Create new settings instance for this layer
+                    self.logger.info(
+                        f"No layer-specific settings found for {model_class_.__name__} layer {layer_id}, creating new entry."
+                    )
+                    settings_instance = model_class_(layer_id=layer_id)
+                    session.add(settings_instance)
+                    session.commit()
+
+                    # Refresh to get the full instance with relationships if needed
+                    if eager_load:
+                        query_after_create = session.query(
+                            model_class_
+                        ).filter(model_class_.layer_id == layer_id)
+                        for relation in eager_load:
+                            try:
+                                relation_attr = getattr(
+                                    model_class_, relation, None
+                                )
+                                if relation_attr is not None:
+                                    query_after_create = (
+                                        query_after_create.options(
+                                            joinedload(relation_attr)
+                                        )
+                                    )
+                            except Exception:
+                                pass
+                        settings_instance = query_after_create.first()
+
+                # Create a detached copy with all the attributes we need
+                # to avoid DetachedInstanceError when accessed later
+                if settings_instance:
+                    # Make sure all commonly used attributes are loaded before session closes
+                    try:
+                        # Access key attributes to ensure they're loaded
+                        _ = (
+                            settings_instance.x_pos
+                            if hasattr(settings_instance, "x_pos")
+                            else None
+                        )
+                        _ = (
+                            settings_instance.y_pos
+                            if hasattr(settings_instance, "y_pos")
+                            else None
+                        )
+                        _ = (
+                            settings_instance.strength
+                            if hasattr(settings_instance, "strength")
+                            else None
+                        )
+                        _ = (
+                            settings_instance.scale
+                            if hasattr(settings_instance, "scale")
+                            else None
+                        )
+                    except Exception as e:
+                        self.logger.warning(
+                            f"Could not pre-load attributes for {model_class_.__name__}: {e}"
+                        )
+
+                # Use expunge to detach from session to prevent DetachedInstanceError
+                if settings_instance:
+                    session.expunge(settings_instance)
+
+                return settings_instance
+
+        except Exception as e:
+            self.logger.error(
+                f"Error loading layer-specific settings for {model_class_.__name__} layer {layer_id}: {e}"
+            )
+            # Fall back to creating a default instance
+            return model_class_(layer_id=layer_id)
+
+    def _get_target_image_size(self) -> Optional[tuple]:
+        """Get target image size for layer composition based on generator settings.
+
+        Returns:
+            Tuple of (width, height) if available, None otherwise.
+        """
+        try:
+            gen_settings = self.generator_settings
+            if (
+                gen_settings
+                and hasattr(gen_settings, "width")
+                and hasattr(gen_settings, "height")
+            ):
+                return (gen_settings.width, gen_settings.height)
+        except Exception as e:
+            self.logger.debug(
+                f"Could not get target image size from generator settings: {e}"
+            )
+
+        # Default size if generator settings not available
+        return (512, 512)
 
     @property
     def stt_settings(self) -> STTSettings:
@@ -279,23 +508,27 @@ class SettingsMixin:
 
     @property
     def controlnet_settings(self) -> ControlnetSettings:
-        return self._get_or_cache_settings(ControlnetSettings)
+        return self._get_layer_specific_settings(ControlnetSettings)
 
     @property
     def image_to_image_settings(self) -> ImageToImageSettings:
-        return self._get_or_cache_settings(ImageToImageSettings)
+        return self._get_layer_specific_settings(ImageToImageSettings)
 
     @property
     def outpaint_settings(self) -> OutpaintSettings:
-        return self._get_or_cache_settings(OutpaintSettings)
+        return self._get_layer_specific_settings(OutpaintSettings)
 
     @property
     def drawing_pad_settings(self) -> DrawingPadSettings:
-        return self._get_or_cache_settings(DrawingPadSettings)
+        return self._get_layer_specific_settings(DrawingPadSettings)
 
     @property
     def brush_settings(self) -> BrushSettings:
-        return self._get_or_cache_settings(BrushSettings)
+        return self._get_layer_specific_settings(BrushSettings)
+
+    @property
+    def metadata_settings(self) -> MetadataSettings:
+        return self._get_layer_specific_settings(MetadataSettings)
 
     @property
     def grid_settings(self) -> GridSettings:
@@ -432,6 +665,20 @@ class SettingsMixin:
 
     @property
     def drawing_pad_image(self):
+        """Get composed image from all visible layers for drawing pad operations.
+
+        Returns:
+            PIL Image composed from all visible layers, or fallback to single layer image.
+        """
+        # Try to compose visible layers first
+        composed_image = layer_compositor.compose_visible_layers(
+            target_size=self._get_target_image_size()
+        )
+
+        if composed_image is not None:
+            return composed_image.convert("RGB")
+
+        # Fallback to original single-layer behavior
         base_64_image = self.drawing_pad_settings.image
         image = convert_binary_to_image(base_64_image)
         if image is not None:
@@ -448,6 +695,20 @@ class SettingsMixin:
 
     @property
     def img2img_image(self):
+        """Get composed image from all visible layers for image-to-image operations.
+
+        Returns:
+            PIL Image composed from all visible layers, or fallback to single layer image.
+        """
+        # Try to compose visible layers first
+        composed_image = layer_compositor.compose_visible_layers(
+            target_size=self._get_target_image_size()
+        )
+
+        if composed_image is not None:
+            return composed_image.convert("RGB")
+
+        # Fallback to original single-layer behavior
         base_64_image = self.image_to_image_settings.image
         image = convert_binary_to_image(base_64_image)
         if image is not None:
@@ -456,6 +717,20 @@ class SettingsMixin:
 
     @property
     def controlnet_image(self):
+        """Get composed image from all visible layers for controlnet operations.
+
+        Returns:
+            PIL Image composed from all visible layers, or fallback to single layer image.
+        """
+        # Try to compose visible layers first
+        composed_image = layer_compositor.compose_visible_layers(
+            target_size=self._get_target_image_size()
+        )
+
+        if composed_image is not None:
+            return composed_image.convert("RGB")
+
+        # Fallback to original single-layer behavior
         base_64_image = self.controlnet_settings.image
         image = convert_binary_to_image(base_64_image)
         if image is not None:
@@ -480,6 +755,20 @@ class SettingsMixin:
 
     @property
     def outpaint_image(self):
+        """Get composed image from all visible layers for outpaint operations.
+
+        Returns:
+            PIL Image composed from all visible layers, or fallback to single layer image.
+        """
+        # Try to compose visible layers first
+        composed_image = layer_compositor.compose_visible_layers(
+            target_size=self._get_target_image_size()
+        )
+
+        if composed_image is not None:
+            return composed_image.convert("RGB")
+
+        # Fallback to original single-layer behavior
         base_64_image = self.outpaint_settings.image
         image = convert_binary_to_image(base_64_image)
         if image is not None:
@@ -530,20 +819,37 @@ class SettingsMixin:
     def update_speech_t5_settings(self, **settings_dict):
         self.update_settings(SpeechT5Settings, settings_dict)
 
-    def update_controlnet_settings(self, **settings_dict):
-        self.update_settings(ControlnetSettings, settings_dict)
+    def update_controlnet_settings(
+        self, layer_id: Optional[int] = None, **settings_dict
+    ):
+        self.update_layer_settings(ControlnetSettings, settings_dict, layer_id)
 
-    def update_brush_settings(self, **settings_dict):
-        self.update_settings(BrushSettings, settings_dict)
+    def update_brush_settings(
+        self, layer_id: Optional[int] = None, **settings_dict
+    ):
+        self.update_layer_settings(BrushSettings, settings_dict, layer_id)
 
-    def update_image_to_image_settings(self, **settings_dict):
-        self.update_settings(ImageToImageSettings, settings_dict)
+    def update_image_to_image_settings(
+        self, layer_id: Optional[int] = None, **settings_dict
+    ):
+        self.update_layer_settings(
+            ImageToImageSettings, settings_dict, layer_id
+        )
 
-    def update_outpaint_settings(self, **settings_dict):
-        self.update_settings(OutpaintSettings, settings_dict)
+    def update_outpaint_settings(
+        self, layer_id: Optional[int] = None, **settings_dict
+    ):
+        self.update_layer_settings(OutpaintSettings, settings_dict, layer_id)
 
-    def update_drawing_pad_settings(self, **settings_dict):
-        self.update_settings(DrawingPadSettings, settings_dict)
+    def update_drawing_pad_settings(
+        self, layer_id: Optional[int] = None, **settings_dict
+    ):
+        self.update_layer_settings(DrawingPadSettings, settings_dict, layer_id)
+
+    def update_metadata_settings(
+        self, layer_id: Optional[int] = None, **settings_dict
+    ):
+        self.update_layer_settings(MetadataSettings, settings_dict, layer_id)
 
     def update_grid_settings(self, **settings_dict):
         self.update_settings(GridSettings, settings_dict)
@@ -779,6 +1085,77 @@ class SettingsMixin:
                 )
         else:
             self.logger.error("Failed to update settings: No setting found")
+
+    def update_layer_settings(
+        self,
+        model_class_,
+        updates: Dict[str, Any],
+        layer_id: Optional[int] = None,
+    ):
+        """Update settings for a specific layer.
+
+        Args:
+            model_class_: SQLAlchemy model class for the settings table.
+            updates: Dictionary of field updates.
+            layer_id: Layer ID to update settings for. If None, updates settings for first selected layer.
+        """
+        # Get layer_id if not provided
+        if layer_id is None:
+            layer_id = self._get_current_selected_layer_id()
+
+        # If still no layer_id, fall back to global settings update
+        if layer_id is None:
+            self.logger.warning(
+                f"No layer selected, falling back to global settings update for {model_class_.__name__}"
+            )
+            return self.update_settings(model_class_, updates)
+
+        try:
+            from airunner.components.data.session_manager import session_scope
+
+            with session_scope() as session:
+                # Find existing layer-specific settings
+                setting = (
+                    session.query(model_class_)
+                    .filter(model_class_.layer_id == layer_id)
+                    .first()
+                )
+
+                if setting is None:
+                    # Create new layer-specific settings
+                    self.logger.info(
+                        f"Creating new layer-specific settings for {model_class_.__name__} layer {layer_id}"
+                    )
+                    setting = model_class_(layer_id=layer_id, **updates)
+                    session.add(setting)
+                else:
+                    # Update existing settings
+                    for key, value in updates.items():
+                        if hasattr(setting, key):
+                            setattr(setting, key, value)
+                        else:
+                            self.logger.warning(
+                                f"Field {key} does not exist on {model_class_.__name__}"
+                            )
+
+                session.commit()
+
+                # Clear cache for this layer-specific settings
+                cache_key = f"{model_class_.__name__}_layer_{layer_id}"
+                self.settings_mixin_shared_instance.set_cached_setting_by_key(
+                    cache_key, None
+                )
+
+                # Notify of settings update
+                for name, value in updates.items():
+                    self.__settings_updated(
+                        model_class_.__tablename__, name, value
+                    )
+
+        except Exception as e:
+            self.logger.error(
+                f"Failed to update layer-specific settings for {model_class_.__name__} layer {layer_id}: {e}"
+            )
 
     @staticmethod
     def reset_settings():

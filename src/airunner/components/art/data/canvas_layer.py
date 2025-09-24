@@ -14,3 +14,7 @@ class CanvasLayer(BaseModel):
     blend_mode = Column(String, default="normal")
     image = Column(LargeBinary, nullable=True)
     mask = Column(LargeBinary, nullable=True)
+
+    # Temporarily commented out relationships to avoid initialization issues
+    # TODO: Re-enable after fixing SQLAlchemy relationship mapping
+    # relationships will be added back in a future update

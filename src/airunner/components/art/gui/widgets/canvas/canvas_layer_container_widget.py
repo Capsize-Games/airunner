@@ -5,6 +5,14 @@ from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
 )
 from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.brush_settings import BrushSettings
+from airunner.components.art.data.controlnet_settings import ControlnetSettings
+from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
+from airunner.components.art.data.metadata_settings import MetadataSettings
+from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.gui.widgets.canvas.layer_item_widget import (
     LayerItemWidget,
 )
@@ -37,6 +45,8 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if not self.layers or len(self.layers) == 0:
             layer = CanvasLayer.objects.create(order=0, name="Layer 1")
             layer = CanvasLayer.objects.get(layer.id)
+            # Initialize default settings for the first layer
+            self._initialize_layer_default_settings(layer.id)
             self.layers = [layer]
 
         # Add layers to the grid layout
@@ -51,6 +61,11 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if self.layers:
             self.selected_layers.add(self.layers[0].id)
             self.layer_widgets[self.layers[0].id].set_selected(True)
+            # Emit selection changed signal to notify settings system
+            self.emit_signal(
+                SignalCode.LAYER_SELECTION_CHANGED,
+                {"selected_layer_ids": list(self.selected_layers)},
+            )
 
         # add a vertical spacer
         self.spacer = QSpacerItem(
@@ -69,6 +84,10 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             order=len(self.layers), name=f"Layer {len(self.layers) + 1}"
         )
         layer = CanvasLayer.objects.get(layer.id)
+
+        # Initialize default settings for the new layer
+        self._initialize_layer_default_settings(layer.id)
+
         self.layers.append(layer)
         item = LayerItemWidget(layer_id=layer.id)
         self.layer_widgets[layer.id] = item
@@ -80,6 +99,21 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         )
         self.ui.layer_list_layout.layout().addItem(
             self.spacer, len(self.layers), 0
+        )
+
+        # Select the newly created layer
+        # Clear previous selections
+        for lid in self.selected_layers:
+            self.layer_widgets[lid].set_selected(False)
+
+        self.selected_layers.clear()
+        self.selected_layers.add(layer.id)
+        item.set_selected(True)
+
+        # Emit selection changed signal to notify settings system
+        self.emit_signal(
+            SignalCode.LAYER_SELECTION_CHANGED,
+            {"selected_layer_ids": list(self.selected_layers)},
         )
 
     @Slot()
@@ -182,6 +216,11 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if self.layers:
             self.selected_layers.add(self.layers[0].id)
             self.layer_widgets[self.layers[0].id].set_selected(True)
+            # Emit selection changed signal to notify settings system
+            self.emit_signal(
+                SignalCode.LAYER_SELECTION_CHANGED,
+                {"selected_layer_ids": list(self.selected_layers)},
+            )
 
         self._refresh_layer_display()
 
@@ -411,3 +450,39 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             event.accept()
         else:
             event.ignore()
+
+    def _initialize_layer_default_settings(self, layer_id: int):
+        """Initialize default settings for a new layer.
+
+        Args:
+            layer_id: The ID of the layer to initialize settings for.
+        """
+        try:
+            # Create default DrawingPadSettings
+            if not DrawingPadSettings.objects.filter_by(layer_id=layer_id):
+                DrawingPadSettings.objects.create(layer_id=layer_id)
+
+            # Create default ControlnetSettings
+            if not ControlnetSettings.objects.filter_by(layer_id=layer_id):
+                ControlnetSettings.objects.create(layer_id=layer_id)
+
+            # Create default ImageToImageSettings
+            if not ImageToImageSettings.objects.filter_by(layer_id=layer_id):
+                ImageToImageSettings.objects.create(layer_id=layer_id)
+
+            # Create default OutpaintSettings
+            if not OutpaintSettings.objects.filter_by(layer_id=layer_id):
+                OutpaintSettings.objects.create(layer_id=layer_id)
+
+            # Create default BrushSettings
+            if not BrushSettings.objects.filter_by(layer_id=layer_id):
+                BrushSettings.objects.create(layer_id=layer_id)
+
+            # Create default MetadataSettings
+            if not MetadataSettings.objects.filter_by(layer_id=layer_id):
+                MetadataSettings.objects.create(layer_id=layer_id)
+
+        except Exception as e:
+            print(
+                f"Error initializing default settings for layer {layer_id}: {e}"
+            )
