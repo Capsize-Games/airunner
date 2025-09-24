@@ -27,6 +27,18 @@ if AIRUNNER_DB_URL.__contains__("sqlite"):
 # Import your models here
 from airunner.components.data.models.base import Base
 
+# Import all model classes that need to be registered with SQLAlchemy
+# This is especially important for models with relationships
+from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.controlnet_settings import ControlnetSettings
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
+from airunner.components.art.data.outpaint_settings import OutpaintSettings
+from airunner.components.art.data.brush_settings import BrushSettings
+from airunner.components.art.data.metadata_settings import MetadataSettings
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

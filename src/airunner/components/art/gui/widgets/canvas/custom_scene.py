@@ -49,6 +49,7 @@ from airunner.components.art.managers.stablediffusion.rect import Rect
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
+from airunner.components.art.utils.layer_compositor import LayerCompositor
 from airunner.utils.settings.get_qsettings import get_qsettings
 
 
@@ -386,6 +387,13 @@ class CustomScene(
             CanvasToolName.ERASER,
         )
 
+    @property
+    def layer_compositor(self):
+        """Get the LayerCompositor instance for this scene."""
+        if not hasattr(self, "_layer_compositor"):
+            self._layer_compositor = LayerCompositor()
+        return self._layer_compositor
+
     @image_pivot_point.setter
     def image_pivot_point(self, value):
         self.api.art.canvas.update_current_layer(value)
@@ -433,9 +441,20 @@ class CustomScene(
         self.on_load_image_signal(file_path)
 
     def on_send_image_to_canvas_signal(self, data: Dict):
+        """Handle generated image by creating a new layer."""
         image_response: ImageResponse = data.get("image_response")
+        if not image_response or not image_response.images:
+            return
+
         image = image_response.images[0]
-        self.initialize_image(image)
+
+        # Create a new layer from the generated image
+        layer_id = self.layer_compositor.create_layer_from_image(
+            image=image, name="Generated Image"
+        )
+
+        # Emit signal to refresh the layer container to show the new layer
+        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     def on_paste_image_from_clipboard(self):
         image = self._paste_image_from_clipboard()
@@ -895,7 +914,7 @@ class CustomScene(
         if generated:
             self.update_drawing_pad_settings(
                 x_pos=self.active_grid_settings.pos_x,
-                y_pos=self.active_grid_settings.pos_y
+                y_pos=self.active_grid_settings.pos_y,
             )
             x = self.active_grid_settings.pos_x
             y = self.active_grid_settings.pos_y
@@ -1111,9 +1130,16 @@ class CustomScene(
         # another full settings DB load. Cache the settings object locally
         # so we only hit the database once for both x_pos/y_pos.
         canvas_offset = self.get_canvas_offset()
-        settings = self.drawing_pad_settings  # single DB fetch
-        settings_x = settings.x_pos
-        settings_y = settings.y_pos
+        try:
+            settings = self.drawing_pad_settings  # single DB fetch
+            settings_x = settings.x_pos
+            settings_y = settings.y_pos
+        except Exception as e:
+            self.logger.warning(
+                f"Error accessing drawing pad settings: {e}, using defaults"
+            )
+            settings_x = 0
+            settings_y = 0
 
         if outpaint_box_rect:
             if is_outpaint:
