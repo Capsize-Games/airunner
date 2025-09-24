@@ -20,11 +20,13 @@ from PySide6.QtWidgets import (QApplication, QGridLayout, QScrollArea, QSizePoli
 
 from airunner.components.art.gui.widgets.active_grid_settings.active_grid_settings_widget import ActiveGridSettingsWidget
 from airunner.components.art.gui.widgets.canvas.batch_container import BatchContainer
+from airunner.components.art.gui.widgets.canvas.canvas_layer_container_widget import CanvasLayerContainerWidget
 from airunner.components.art.gui.widgets.canvas.input_image_container import InputImageContainer
 from airunner.components.art.gui.widgets.embeddings.embeddings_container_widget import EmbeddingsContainerWidget
 from airunner.components.art.gui.widgets.grid_preferences.grid_preferences_widget import GridPreferencesWidget
 from airunner.components.art.gui.widgets.lora.lora_container_widget import LoraContainerWidget
 from airunner.components.art.gui.widgets.stablediffusion.stable_diffusion_settings_widget import StableDiffusionSettingsWidget
+import airunner.feather_rc
 
 class Ui_stablediffusion_tool_tab_widget(object):
     def setupUi(self, stablediffusion_tool_tab_widget):
@@ -58,6 +60,17 @@ class Ui_stablediffusion_tool_tab_widget(object):
         self.gridLayout_4.addWidget(self.stable_diffusion_widget, 0, 0, 2, 2)
 
         self.tool_tab_widget_container.addTab(self.tab_3, "")
+        self.tab_2 = QWidget()
+        self.tab_2.setObjectName(u"tab_2")
+        self.gridLayout_5 = QGridLayout(self.tab_2)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.canvas_layer_container = CanvasLayerContainerWidget(self.tab_2)
+        self.canvas_layer_container.setObjectName(u"canvas_layer_container")
+
+        self.gridLayout_5.addWidget(self.canvas_layer_container, 0, 0, 1, 1)
+
+        self.tool_tab_widget_container.addTab(self.tab_2, "")
         self.tab_6 = QWidget()
         self.tab_6.setObjectName(u"tab_6")
         self.gridLayout_7 = QGridLayout(self.tab_6)
@@ -183,6 +196,7 @@ class Ui_stablediffusion_tool_tab_widget(object):
     def retranslateUi(self, stablediffusion_tool_tab_widget):
         stablediffusion_tool_tab_widget.setWindowTitle(QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Form", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_3), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Stable Diffusion", None))
+        self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_2), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Layers", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_6), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"LoRA", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_7), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Embeddings", None))
         self.tool_tab_widget_container.setTabText(self.tool_tab_widget_container.indexOf(self.tab_4), QCoreApplication.translate("stablediffusion_tool_tab_widget", u"Grid", None))

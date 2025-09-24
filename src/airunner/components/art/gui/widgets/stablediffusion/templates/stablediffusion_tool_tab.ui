@@ -88,6 +88,28 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>Layers</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_5">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="CanvasLayerContainerWidget" name="canvas_layer_container" native="true"/>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="tab_6">
       <attribute name="title">
        <string>LoRA</string>
@@ -342,7 +364,15 @@
    <header>airunner/components/art/gui/widgets/canvas/batch_container</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>CanvasLayerContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/art/gui/widgets/canvas/canvas_layer_container_widget</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../../../../../../gui/resources/feather.qrc"/>
+ </resources>
  <connections/>
 </ui>
