@@ -2,7 +2,9 @@ import os
 
 from PySide6.QtWidgets import QFileDialog
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.application.gui.widgets.paths.templates.path_ui import Ui_path_widget
+from airunner.components.application.gui.widgets.paths.templates.path_ui import (
+    Ui_path_widget,
+)
 
 
 class PathWidget(BaseWidget):
@@ -64,4 +66,4 @@ class PathWidget(BaseWidget):
 
     def set_path(self, path):
         self.ui.path.setText(path)
-        self.update_path_settings(self.path_name, path)
+        self.update_path_settings(**{self.path_name: path})

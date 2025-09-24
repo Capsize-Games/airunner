@@ -22,7 +22,7 @@ class ControlnetSettingsWidget(BaseWidget):
         self._load_controlnet_models()
 
     def controlnet_changed(self, val):
-        self.update_controlnet_settings("controlnet", val)
+        self.update_controlnet_settings(controlnet=val)
 
     def on_application_settings_changed_signal(self):
         self._load_controlnet_models()

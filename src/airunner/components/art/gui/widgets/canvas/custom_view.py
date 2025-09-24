@@ -19,7 +19,9 @@ from PySide6.QtWidgets import (
 )
 
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
-from airunner.components.art.gui.widgets.canvas.grid_graphics_item import GridGraphicsItem
+from airunner.components.art.gui.widgets.canvas.grid_graphics_item import (
+    GridGraphicsItem,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.image import convert_image_to_binary
 from airunner.components.art.gui.widgets.canvas.brush_scene import BrushScene
@@ -27,7 +29,9 @@ from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
 from airunner.components.art.gui.widgets.canvas.draggables.active_grid_area import (
     ActiveGridArea,
 )
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
 from airunner.components.art.gui.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.utils.settings import get_qsettings
@@ -205,8 +209,7 @@ class CustomGraphicsView(
         pos_y = -grid_height / 2
 
         # 4. Set active grid area to this centered position
-        self.update_active_grid_settings("pos_x", int(pos_x))
-        self.update_active_grid_settings("pos_y", int(pos_y))
+        self.update_active_grid_settings(pos_x=int(pos_x), pos_y=int(pos_y))
 
         # 5. If there's an image in the scene, update its position to match the active grid area
         if self.scene and hasattr(self.scene, "item") and self.scene.item:
@@ -218,15 +221,14 @@ class CustomGraphicsView(
         # 6. Update all display positions based on new offset
         self.updateImagePositions()
         self.update_active_grid_area_position()
-        self.update_drawing_pad_settings("x_pos", int(pos_x))
-        self.update_drawing_pad_settings("y_pos", int(pos_y))
+        self.update_drawing_pad_settings(x_pos=int(pos_x), y_pos=int(pos_y))
         self.do_draw(force_draw=True)
 
     def on_mask_generator_worker_response_signal(self, message: dict):
         mask = message["mask"]
         if mask is not None:
             mask = convert_image_to_binary(mask)
-            self.update_drawing_pad_settings("mask", mask)
+            self.update_drawing_pad_settings(mask=mask)
 
     def on_main_window_loaded_signal(self):
         self.initialized = True
@@ -342,8 +344,9 @@ class CustomGraphicsView(
             )
 
             # Save this initial absolute position
-            self.update_active_grid_settings("pos_x", int(round(absolute_x)))
-            self.update_active_grid_settings("pos_y", int(round(absolute_y)))
+            self.update_active_grid_settings(
+                pos_x=int(round(absolute_x)), pos_y=int(round(absolute_y))
+            )
             self.settings.sync()
 
         # Calculate and set the display position
@@ -782,7 +785,7 @@ class CustomGraphicsView(
                 }
             )
         # Store in application_settings (or replace with actual DB call)
-        self.update_drawing_pad_settings("text_items", text_items_data)
+        self.update_drawing_pad_settings(text_items=text_items_data)
 
     def _restore_text_items_from_db(self):
         # Restore text items from the database (via application_settings or similar)

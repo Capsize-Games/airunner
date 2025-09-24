@@ -60,7 +60,7 @@ class GeneratorForm(BaseWidget):
 
     @seed.setter
     def seed(self, val):
-        self.update_generator_settings("seed", val)
+        self.update_generator_settings(seed=val)
 
     @property
     def active_rect(self):
@@ -105,7 +105,7 @@ class GeneratorForm(BaseWidget):
         self.ui.secondary_negative_prompt.blockSignals(False)
 
     def handle_image_presets_changed(self, val):
-        self.update_generator_settings("image_preset", val)
+        self.update_generator_settings(image_preset=val)
 
     def do_generate_image_from_image_signal_handler(self, _data):
         self.do_generate()

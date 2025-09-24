@@ -48,23 +48,23 @@ class ImageGeneratorPreferencesWidget(BaseWidget):
     def stablediffusion_toggled(self, val):
         if val:
             self.update_application_settings(
-                "current_image_generator", ImageGenerator.STABLEDIFFUSION.value
+                current_image_generator=ImageGenerator.STABLEDIFFUSION.value
             )
             self.update_application_settings(
-                "generator_section", GeneratorSection.TXT2IMG.value
+                generator_section=GeneratorSection.TXT2IMG.value
             )
 
     def category_changed(self, val):
-        self.update_application_settings("generator_section", val)
+        self.update_application_settings(generator_section=val)
 
     def pipeline_changed(self, val):
-        self.update_application_settings("current_image_generator", val)
+        self.update_application_settings(current_image_generator=val)
 
     def version_changed(self, val):
-        self.update_application_settings("current_image_generator", val)
+        self.update_application_settings(current_image_generator=val)
 
     def action_changed(self, val):
-        self.update_application_settings("current_image_generator", val)
+        self.update_application_settings(current_image_generator=val)
 
     def model_changed(self, val):
-        self.update_application_settings("current_image_generator", val)
+        self.update_application_settings(current_image_generator=val)

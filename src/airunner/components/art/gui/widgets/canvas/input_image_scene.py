@@ -59,18 +59,16 @@ class InputImageScene(BrushScene):
 
             if self._is_mask:
                 # For mask image
-                self.update_drawing_pad_settings("mask", image_binary)
+                self.update_drawing_pad_settings(mask=image_binary)
             elif self.settings_key == "controlnet_settings":
                 # For controlnet generated image
-                self.update_controlnet_settings(
-                    "generated_image", image_binary
-                )
+                self.update_controlnet_settings(generated_image=image_binary)
             elif self.settings_key == "outpaint_settings":
                 # For outpaint image
-                self.update_outpaint_settings("image", image_binary)
+                self.update_outpaint_settings(image=image_binary)
             elif self.settings_key == "image_to_image_settings":
                 # For image-to-image
-                self.update_image_to_image_settings("image", image_binary)
+                self.update_image_to_image_settings(image=image_binary)
             else:
                 # Update the appropriate settings
                 self._update_current_settings("image", image_binary)
@@ -87,15 +85,13 @@ class InputImageScene(BrushScene):
             # Update based on what type of input image this is
             if self._is_mask:
                 # For mask image
-                self.update_drawing_pad_settings("mask", base_64_image)
+                self.update_drawing_pad_settings(mask=base_64_image)
                 # Also update the database model
                 model = self.drawing_pad_settings.__class__.objects.first()
                 DrawingPadSettings.objects.update(model.id, mask=base_64_image)
             elif self.settings_key == "controlnet_settings":
                 # For controlnet generated image
-                self.update_controlnet_settings(
-                    "generated_image", base_64_image
-                )
+                self.update_controlnet_settings(generated_image=base_64_image)
                 model = self.controlnet_settings.__class__.objects.first()
                 ControlnetSettings.objects.update(
                     model.id,
@@ -103,12 +99,12 @@ class InputImageScene(BrushScene):
                 )
             elif self.settings_key == "outpaint_settings":
                 # For outpaint image
-                self.update_outpaint_settings("image", base_64_image)
+                self.update_outpaint_settings(image=base_64_image)
                 model = self.outpaint_settings.__class__.objects.first()
                 OutpaintSettings.objects.update(model.id, image=base_64_image)
             elif self.settings_key == "image_to_image_settings":
                 # For image-to-image
-                self.update_image_to_image_settings("image", base_64_image)
+                self.update_image_to_image_settings(image=base_64_image)
                 model = self.image_to_image_settings.__class__.objects.first()
                 ImageToImageSettings.objects.update(
                     model.id, image=base_64_image

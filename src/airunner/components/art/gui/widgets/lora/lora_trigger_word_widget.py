@@ -16,14 +16,13 @@ class LoraTriggerWordWidget(BaseWidget):
 
     def action_click_button_to_prompt(self):
         self.update_generator_settings(
-            "prompt", f"{self.generator_settings.prompt} {self.trigger_word}"
+            prompt=f"{self.generator_settings.prompt} {self.trigger_word}"
         )
         self.api.art.update_generator_form_values()
 
     def action_click_button_to_negative_prompt(self):
         self.update_generator_settings(
-            "negative_prompt",
-            f"{self.generator_settings.negative_prompt} {self.trigger_word}",
+            negative_prompt=f"{self.generator_settings.negative_prompt} {self.trigger_word}",
         )
         self.api.art.updae_generator_form_values()
 

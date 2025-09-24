@@ -118,74 +118,72 @@ class ExportPreferencesWidget(BaseWidget):
             element.blockSignals(False)
 
     def action_toggled_steps(self, val):
-        self.update_metadata_settings("image_export_metadata_steps", val)
+        self.update_metadata_settings(image_export_metadata_steps=val)
 
     def action_toggled_seed(self, val):
-        self.update_metadata_settings("image_export_metadata_seed", val)
+        self.update_metadata_settings(image_export_metadata_seed=val)
 
     def action_toggled_scheduler(self, val):
-        self.update_metadata_settings("image_export_metadata_scheduler", val)
+        self.update_metadata_settings(image_export_metadata_scheduler=val)
 
     def action_toggled_scale(self, val):
-        self.update_metadata_settings("image_export_metadata_scale", val)
+        self.update_metadata_settings(image_export_metadata_scale=val)
 
     def action_toggled_samples(self, val):
-        self.update_metadata_settings("image_export_metadata_samples", val)
+        self.update_metadata_settings(image_export_metadata_samples=val)
 
     def action_toggled_prompt(self, val):
-        self.update_metadata_settings("image_export_metadata_prompt", val)
+        self.update_metadata_settings(image_export_metadata_prompt=val)
 
     def action_toggled_negative_prompt(self, val):
         self.update_metadata_settings(
-            "image_export_metadata_negative_prompt", val
+            image_export_metadata_negative_prompt=val
         )
 
     def action_toggled_model_branch(self, val):
-        self.update_metadata_settings(
-            "image_export_metadata_model_branch", val
-        )
+        self.update_metadata_settings(image_export_metadata_model_branch=val)
 
     def action_toggled_model(self, val):
-        self.update_metadata_settings("image_export_metadata_model", val)
+        self.update_metadata_settings(image_export_metadata_model=val)
 
     def action_toggled_iterations(self, val):
-        self.update_metadata_settings("image_export_metadata_iterations", val)
+        self.update_metadata_settings(image_export_metadata_iterations=val)
 
     def action_toggled_ddim(self, val):
-        self.update_metadata_settings("image_export_metadata_ddim_eta", val)
+        self.update_metadata_settings(image_export_metadata_ddim_eta=val)
 
     def action_toggled_strength(self, val):
-        self.update_metadata_settings("image_export_metadata_strength", val)
+        self.update_metadata_settings(image_export_metadata_strength=val)
 
     def action_toggled_clip_skip(self, val):
-        self.update_metadata_settings("image_export_metadata_clip_skip", val)
+        self.update_metadata_settings(image_export_metadata_clip_skip=val)
 
     def action_toggled_version(self, val):
-        self.update_metadata_settings("image_export_metadata_version", val)
+        self.update_metadata_settings(image_export_metadata_version=val)
 
     def action_toggled_lora(self, val):
-        self.update_metadata_settings("image_export_metadata_lora", val)
+        self.update_metadata_settings(image_export_metadata_lora=val)
 
     def action_toggled_embeddings(self, val):
-        self.update_metadata_settings("image_export_metadata_embeddings", val)
+        self.update_metadata_settings(image_export_metadata_embeddings=val)
 
     def action_toggled_timestamp(self, val):
-        self.update_metadata_settings("image_export_metadata_timestamp", val)
+        self.update_metadata_settings(image_export_metadata_timestamp=val)
 
     def action_toggled_controlnet(self, val):
-        self.update_metadata_settings("image_export_metadata_controlnet", val)
+        self.update_metadata_settings(image_export_metadata_controlnet=val)
 
     def action_toggled_export_metadata(self, val):
-        self.update_metadata_settings("export_metadata", val)
+        self.update_metadata_settings(export_metadata=val)
 
     def action_toggle_automatically_export_images(self, val):
-        self.update_application_settings("auto_export_images", val)
+        self.update_application_settings(auto_export_images=val)
 
     def action_image_type_text_changed(self, val):
-        self.update_application_settings("image_export_type", val)
+        self.update_application_settings(image_export_type=val)
 
     def image_export_path_text_edited(self, val):
-        self.update_application_settings("path_settings", val)
+        self.update_application_settings(path_settings=val)
 
     def action_clicked_button_browse(self):
         path = QFileDialog.getExistingDirectory(
@@ -193,4 +191,4 @@ class ExportPreferencesWidget(BaseWidget):
         )
         if path:
             self.ui.image_path.setText(path)
-            self.update_path_settings("embeddings_model_path", path)
+            self.update_path_settings(embeddings_model_path=path)

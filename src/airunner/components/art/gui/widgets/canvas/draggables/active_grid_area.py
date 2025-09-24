@@ -230,10 +230,8 @@ class ActiveGridArea(DraggablePixmap):
                 ):
                     # Update DB settings
                     self.update_active_grid_settings(
-                        "pos_x", int(self._current_snapped_pos[0])
-                    )
-                    self.update_active_grid_settings(
-                        "pos_y", int(self._current_snapped_pos[1])
+                        pos_x=int(self._current_snapped_pos[0]),
+                        pos_y=int(self._current_snapped_pos[1]),
                     )
 
                     # Update the in-memory settings object immediately
