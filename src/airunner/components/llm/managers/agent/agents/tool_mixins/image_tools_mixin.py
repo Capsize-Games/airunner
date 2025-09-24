@@ -11,6 +11,10 @@ from airunner.components.llm.managers.agent.agents.tool_mixins.tool_singleton_mi
 class ImageToolsMixin(ToolSingletonMixin):
     """Mixin for image-related tools."""
 
+    def __init__(self):
+        self._generate_image_tool = None
+        self._set_working_width_and_height = None
+
     @property
     def set_working_width_and_height(self):
         if not hasattr(self, "_set_working_width_and_height"):

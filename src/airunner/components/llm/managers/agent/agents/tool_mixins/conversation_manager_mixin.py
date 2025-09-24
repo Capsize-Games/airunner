@@ -8,6 +8,12 @@ class ConversationManagerMixin:
     Mixin for managing conversation retrieval, creation, updating, and summary logic.
     """
 
+    def __init__(self):
+        self._chatbot = None
+        self._user = None
+        self._conversation_id = None
+        self._conversation = None
+
     @property
     def conversation(self) -> Optional[Conversation]:
         if not self.use_memory:

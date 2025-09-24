@@ -48,6 +48,7 @@ class VoiceVisualizerWidget(VoiceVisualizerComponent, BaseWidget):
 
     def __init__(self, *args, **kwargs):
         # Initialize the shader uniforms dict before calling super().__init__
+        self._available_shaders = None
         self._current_shader_uniforms: Dict[str, Any] = {}
         self._pending_uniforms: Dict[str, Any] = (
             {}

@@ -140,6 +140,10 @@ class BaseAgent(
         *args,
         **kwargs,
     ) -> None:
+        self._is_first_message_handled = False
+        self.interrupt = None
+        self._chat_memory = None
+        self._language = None
         self.default_tool_choice: Optional[Union[str, dict]] = (
             default_tool_choice
         )
