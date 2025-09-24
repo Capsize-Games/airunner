@@ -253,6 +253,9 @@ class SignalCode(Enum):
     DOCUMENT_INDEXED = "document_indexed_signal"
     MAP_SEARCH_REQUEST_SIGNAL = "map_search_request_signal"
     MAP_SEARCH_RESULT_SIGNAL = "map_search_result_signal"
+    LAYER_DELETED = "layer_deleted_signal"
+    LAYER_VISIBILITY_TOGGLED = "layer_visibility_toggled_signal"
+    LAYER_REORDERED = "layer_reordered_signal"
 
 
 class EngineResponseCode(Enum):
