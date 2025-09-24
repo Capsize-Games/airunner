@@ -256,6 +256,8 @@ class SignalCode(Enum):
     LAYER_DELETED = "layer_deleted_signal"
     LAYER_VISIBILITY_TOGGLED = "layer_visibility_toggled_signal"
     LAYER_REORDERED = "layer_reordered_signal"
+    LAYER_SELECTED = "layer_selected_signal"
+    LAYER_SELECTION_CHANGED = "layer_selection_changed_signal"
 
 
 class EngineResponseCode(Enum):

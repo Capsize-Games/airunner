@@ -22,6 +22,7 @@ class LayerItemWidget(BaseWidget, PipelineMixin):
     def __init__(self, layer_id: int, *args, **kwargs):
         self.layer = CanvasLayer.objects.get(layer_id)
         self.drag_start_position = None
+        self.is_selected = False
 
         super().__init__(*args, **kwargs)
         self.ui.label.setText(self.layer.name)
@@ -31,6 +32,9 @@ class LayerItemWidget(BaseWidget, PipelineMixin):
 
         # Enable drag functionality
         self.setAcceptDrops(True)
+
+        # Set initial style
+        self._update_selection_style()
 
     @Slot(bool)
     def on_visibility_toggled(self, checked: bool):
@@ -50,6 +54,13 @@ class LayerItemWidget(BaseWidget, PipelineMixin):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.drag_start_position = event.position().toPoint()
+
+            # Handle layer selection
+            self.emit_signal(
+                SignalCode.LAYER_SELECTED,
+                {"layer_id": self.layer.id, "modifiers": event.modifiers()},
+            )
+
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -116,3 +127,30 @@ class LayerItemWidget(BaseWidget, PipelineMixin):
             event.accept()
         else:
             event.ignore()
+
+    def set_selected(self, selected: bool):
+        """Set the selection state and update visual appearance."""
+        self.is_selected = selected
+        self._update_selection_style()
+
+    def _update_selection_style(self):
+        """Update the widget's appearance based on selection state."""
+        if self.is_selected:
+            self.setStyleSheet(
+                """
+                QWidget {
+                    background-color: #4a90e2;
+                    border: 2px solid #357abd;
+                    border-radius: 4px;
+                }
+            """
+            )
+        else:
+            self.setStyleSheet(
+                """
+                QWidget {
+                    background-color: transparent;
+                    border: none;
+                }
+            """
+            )

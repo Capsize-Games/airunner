@@ -28,7 +28,10 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             SignalCode.LAYER_DELETED: self.on_layer_deleted,
             SignalCode.LAYER_VISIBILITY_TOGGLED: self.on_visibility_toggled,
             SignalCode.LAYER_REORDERED: self.on_layer_reordered,
+            SignalCode.LAYER_SELECTED: self.on_layer_selected,
         }
+        self.selected_layers = set()  # Track selected layer IDs
+        self.layer_widgets = {}  # Map layer_id to widget
         super().__init__(*args, **kwargs)
         self.layers = CanvasLayer.objects.order_by("order").all()
         if not self.layers or len(self.layers) == 0:
@@ -39,9 +42,15 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         # Add layers to the grid layout
         for i, layer in enumerate(self.layers):
             item = LayerItemWidget(layer_id=layer.id)
+            self.layer_widgets[layer.id] = item
             self.ui.layer_list_layout.layout().addWidget(
                 item, i, 0
             )  # Add to row i, column 0
+
+        # Select the first layer by default
+        if self.layers:
+            self.selected_layers.add(self.layers[0].id)
+            self.layer_widgets[self.layers[0].id].set_selected(True)
 
         # add a vertical spacer
         self.spacer = QSpacerItem(
@@ -62,6 +71,7 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         layer = CanvasLayer.objects.get(layer.id)
         self.layers.append(layer)
         item = LayerItemWidget(layer_id=layer.id)
+        self.layer_widgets[layer.id] = item
 
         # Remove spacer, add new widget, then add spacer back
         self.ui.layer_list_layout.layout().removeItem(self.spacer)
@@ -72,6 +82,109 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             self.spacer, len(self.layers), 0
         )
 
+    @Slot()
+    def on_move_layer_up_clicked(self):
+        if not self.selected_layers:
+            return
+
+        selected_layer_ids = sorted(self.selected_layers)
+        selected_layers = [
+            l for l in self.layers if l.id in selected_layer_ids
+        ]
+
+        # Find the minimum order among selected layers
+        min_order = min(layer.order for layer in selected_layers)
+
+        # Can't move up if already at the top
+        if min_order == 0:
+            return
+
+        # Move each selected layer up by one position
+        for layer in selected_layers:
+            # Find the layer above this one
+            layer_above = next(
+                (l for l in self.layers if l.order == layer.order - 1), None
+            )
+            if layer_above and layer_above.id not in selected_layer_ids:
+                # Swap orders
+                layer_above.order, layer.order = layer.order, layer_above.order
+                CanvasLayer.objects.update(layer.id, order=layer.order)
+                CanvasLayer.objects.update(
+                    layer_above.id, order=layer_above.order
+                )
+
+        self._refresh_layer_display()
+
+    @Slot()
+    def on_move_layer_down_clicked(self):
+        if not self.selected_layers:
+            return
+
+        selected_layer_ids = sorted(self.selected_layers, reverse=True)
+        selected_layers = [
+            l for l in self.layers if l.id in selected_layer_ids
+        ]
+
+        # Find the maximum order among selected layers
+        max_order = max(layer.order for layer in selected_layers)
+
+        # Can't move down if already at the bottom
+        if max_order >= len(self.layers) - 1:
+            return
+
+        # Move each selected layer down by one position
+        for layer in selected_layers:
+            # Find the layer below this one
+            layer_below = next(
+                (l for l in self.layers if l.order == layer.order + 1), None
+            )
+            if layer_below and layer_below.id not in selected_layer_ids:
+                # Swap orders
+                layer_below.order, layer.order = layer.order, layer_below.order
+                CanvasLayer.objects.update(layer.id, order=layer.order)
+                CanvasLayer.objects.update(
+                    layer_below.id, order=layer_below.order
+                )
+
+        self._refresh_layer_display()
+
+    @Slot()
+    def on_delete_layer_clicked(self):
+        if not self.selected_layers:
+            return
+
+        # Can't delete all layers - must have at least one
+        if len(self.selected_layers) >= len(self.layers):
+            return
+
+        layers_to_delete = [
+            l for l in self.layers if l.id in self.selected_layers
+        ]
+
+        # Delete selected layers
+        for layer in layers_to_delete:
+            self.layers.remove(layer)
+            widget = self.layer_widgets.pop(layer.id, None)
+            if widget:
+                self.ui.layer_list_layout.layout().removeWidget(widget)
+                widget.deleteLater()
+            CanvasLayer.objects.delete(layer.id)
+
+        # Clear selection
+        self.selected_layers.clear()
+
+        # Reorder remaining layers
+        for i, layer in enumerate(self.layers):
+            layer.order = i
+            CanvasLayer.objects.update(layer.id, order=i)
+
+        # Select the first remaining layer
+        if self.layers:
+            self.selected_layers.add(self.layers[0].id)
+            self.layer_widgets[self.layers[0].id].set_selected(True)
+
+        self._refresh_layer_display()
+
     def on_layer_deleted(self, data: dict):
         layer_id = data.get("layer_id")
         layer_item = data.get("layer_item")
@@ -81,7 +194,97 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                 self.layers.remove(layer)
                 self.ui.layer_list_layout.layout().removeWidget(layer_item)
                 layer_item.deleteLater()
+                # Remove from tracking
+                self.layer_widgets.pop(layer_id, None)
+                self.selected_layers.discard(layer_id)
             CanvasLayer.objects.delete(layer_id)
+
+    def on_layer_selected(self, data: dict):
+        layer_id = data.get("layer_id")
+        modifiers = data.get("modifiers", Qt.KeyboardModifier.NoModifier)
+
+        if modifiers & Qt.KeyboardModifier.ControlModifier:
+            # Ctrl+Click: Toggle individual selection
+            if layer_id in self.selected_layers:
+                # Don't allow deselecting if it's the only selected layer
+                if len(self.selected_layers) > 1:
+                    self.selected_layers.remove(layer_id)
+                    self.layer_widgets[layer_id].set_selected(False)
+            else:
+                self.selected_layers.add(layer_id)
+                self.layer_widgets[layer_id].set_selected(True)
+
+        elif modifiers & Qt.KeyboardModifier.ShiftModifier:
+            # Shift+Click: Select range
+            if self.selected_layers:
+                # Find the current selection range
+                selected_orders = [
+                    l.order
+                    for l in self.layers
+                    if l.id in self.selected_layers
+                ]
+                clicked_layer = next(
+                    (l for l in self.layers if l.id == layer_id), None
+                )
+
+                if clicked_layer:
+                    min_order = min(selected_orders + [clicked_layer.order])
+                    max_order = max(selected_orders + [clicked_layer.order])
+
+                    # Clear current selection visual
+                    for lid in self.selected_layers:
+                        self.layer_widgets[lid].set_selected(False)
+
+                    # Select range
+                    self.selected_layers.clear()
+                    for layer in self.layers:
+                        if min_order <= layer.order <= max_order:
+                            self.selected_layers.add(layer.id)
+                            self.layer_widgets[layer.id].set_selected(True)
+            else:
+                # No previous selection, just select this layer
+                self.selected_layers.add(layer_id)
+                self.layer_widgets[layer_id].set_selected(True)
+        else:
+            # Normal click: Select only this layer
+            # Clear previous selections
+            for lid in self.selected_layers:
+                self.layer_widgets[lid].set_selected(False)
+
+            self.selected_layers.clear()
+            self.selected_layers.add(layer_id)
+            self.layer_widgets[layer_id].set_selected(True)
+
+        # Emit selection changed signal
+        self.emit_signal(
+            SignalCode.LAYER_SELECTION_CHANGED,
+            {"selected_layer_ids": list(self.selected_layers)},
+        )
+
+    def _refresh_layer_display(self):
+        """Refresh the layer display order after reordering."""
+        # Sort layers by order
+        self.layers.sort(key=lambda l: l.order)
+
+        # Clear layout (except spacer)
+        widgets = list(self.layer_widgets.values())
+        for widget in widgets:
+            self.ui.layer_list_layout.layout().removeWidget(widget)
+
+        # Remove spacer
+        if self.spacer:
+            self.ui.layer_list_layout.layout().removeItem(self.spacer)
+
+        # Re-add widgets in new order
+        for i, layer in enumerate(self.layers):
+            widget = self.layer_widgets.get(layer.id)
+            if widget:
+                self.ui.layer_list_layout.layout().addWidget(widget, i, 0)
+
+        # Add spacer back
+        self.ui.layer_list_layout.layout().addItem(
+            self.spacer, len(self.layers), 0
+        )
 
     def on_visibility_toggled(self, data: dict):
         layer_id = data.get("layer_id")
