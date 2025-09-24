@@ -25,6 +25,9 @@ from PySide6.QtWidgets import (
 )
 from line_profiler import profile
 
+from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+
 logger = logging.getLogger(__name__)
 import requests  # Added for HTTP(S) image download
 
@@ -703,11 +706,15 @@ class CustomScene(
         """Refresh the display of all visible layers on the canvas."""
         logger.info("Refreshing layer display")
         try:
-            from airunner.components.art.data.canvas_layer import CanvasLayer
+            from airunner.components.art.data.drawingpad_settings import (
+                DrawingPadSettings,
+            )
             from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
                 LayerImageItem,
             )
             from airunner.utils.image import convert_binary_to_image
+            from PySide6.QtGui import QImage
+            from PIL.ImageQt import ImageQt
 
             # Get all layers ordered by their order property
             layers = CanvasLayer.objects.order_by("order").all()
@@ -730,16 +737,25 @@ class CustomScene(
             # Create or update layer items for each layer
             for layer in layers:
                 logger.debug(
-                    f"Processing layer {layer.id}: name={layer.name}, visible={layer.visible}, has_image={bool(layer.image)}"
+                    f"Processing layer {layer.id}: name={layer.name}, visible={layer.visible}"
                 )
-                if layer.image:
+
+                # Get the corresponding DrawingPadSettings for this layer
+                drawing_pad_settings = DrawingPadSettings.objects.get(
+                    layer.id
+                )
+
+                if drawing_pad_settings and drawing_pad_settings.image:
                     # Convert binary image data to PIL Image
-                    pil_image = convert_binary_to_image(layer.image)
+                    pil_image = convert_binary_to_image(
+                        drawing_pad_settings.image
+                    )
+                    logger.debug(
+                        f"Layer {layer.id} has image from DrawingPadSettings"
+                    )
+
                     if pil_image:
                         # Convert PIL Image to QImage
-                        from PySide6.QtGui import QImage
-                        from PIL.ImageQt import ImageQt
-
                         qimage = ImageQt(pil_image)
 
                         if layer.id in self._layer_items:
@@ -769,15 +785,16 @@ class CustomScene(
 
                             # Set position (could be from layer settings or default)
                             layer_item.setPos(0, 0)  # Default position
-                elif layer.id in self._layer_items:
-                    # Layer has no image, remove its item
-                    logger.debug(
-                        f"Layer {layer.id} has no image, removing from scene"
-                    )
-                    item = self._layer_items[layer.id]
-                    if item.scene():
-                        item.scene().removeItem(item)
-                    del self._layer_items[layer.id]
+                else:
+                    # Layer has no drawing pad settings with image, remove its item if it exists
+                    if layer.id in self._layer_items:
+                        logger.debug(
+                            f"Layer {layer.id} has no image in DrawingPadSettings, removing from scene"
+                        )
+                        item = self._layer_items[layer.id]
+                        if item.scene():
+                            item.scene().removeItem(item)
+                        del self._layer_items[layer.id]
 
         except Exception as e:
             self.logger.error(f"Error refreshing layer display: {e}")
