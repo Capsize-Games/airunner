@@ -28,7 +28,6 @@ from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.utils.model_utils.model_utils import (
     get_stable_diffusion_model_storage_path,
 )
-import shutil
 import threading
 import os
 
