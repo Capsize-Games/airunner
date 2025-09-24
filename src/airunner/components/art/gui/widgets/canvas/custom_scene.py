@@ -522,6 +522,8 @@ class CustomScene(
                 outpaint_box_rect=outpaint_box_rect,
                 generated=True,
             )
+            # Force immediate persistence to avoid race condition with undo operations
+            self._flush_pending_image()
             # Defer batch image update to not block UI
             QTimer.singleShot(
                 100, lambda: self.api.art.update_batch_images(images)
@@ -809,7 +811,11 @@ class CustomScene(
     def set_image(self, pil_image: Image = None):
         base64image = None
         if not pil_image:
-            base64image = self.current_settings.image
+            # Use cached reference first to avoid database lookup during pending persistence
+            pil_image = self._current_active_image_ref
+            if pil_image is None:
+                # Fallback to loading from database if no cached reference
+                base64image = self.current_settings.image
 
         if base64image is not None:
             try:
@@ -915,6 +921,9 @@ class CustomScene(
         if image is None:
             return
         try:
+            # Ensure any existing painter is stopped first
+            if self.painter and self.painter.isActive():
+                self.painter.end()
             self.painter = QPainter(image)
         except TypeError as _e:
             pass
@@ -1205,7 +1214,16 @@ class CustomScene(
                     q_image = None
             if q_image is not None and not q_image.isNull():
                 try:
+                    # Stop any active painter before updating the image
+                    if self.painter and self.painter.isActive():
+                        self.painter.end()
+
                     self.item.updateImage(q_image)
+                    # CRITICAL: Update self.image so drawing operations work on the correct image
+                    self.image = q_image
+
+                    # Restart painter with new image
+                    self.set_painter(self.image)
                 except Exception:
                     pass
                 self.item.setZValue(0)
@@ -1266,7 +1284,16 @@ class CustomScene(
                     self._qimage_cache = q_image_retry
                     self._qimage_cache_size = safe_rgba.size
                     try:
+                        # Stop any active painter before updating the image
+                        if self.painter and self.painter.isActive():
+                            self.painter.end()
+
                         self.item.updateImage(q_image_retry)
+                        # CRITICAL: Update self.image so drawing operations work on the correct image
+                        self.image = q_image_retry
+
+                        # Restart painter with new image
+                        self.set_painter(self.image)
                     except Exception:
                         pass
             except Exception:
@@ -1274,19 +1301,6 @@ class CustomScene(
                     self.logger.warning(
                         "Retry RGBA->QImage failed; image update skipped."
                     )
-        # Update painter target if needed
-        if self.painter is None or (
-            self.painter and not self.painter.isActive()
-        ):
-            try:
-                # DraggablePixmap stores QImage directly, not QPixmap
-                if (
-                    hasattr(self.item, "_qimage")
-                    and self.item._qimage is not None
-                ):
-                    self.set_painter(self.item._qimage)
-            except Exception:
-                pass
         # Update stored absolute origin then reposition
         self.original_item_positions[self.item] = QPointF(
             root_point.x(), root_point.y()
@@ -1408,14 +1422,23 @@ class CustomScene(
             self.delete_image()
 
     def _add_image_to_undo(self, image: Image = None):
-        image = self.current_active_image if image is None else image
+        if image is None:
+            # Use cached reference first to avoid database lookup during pending persistence
+            image = self._current_active_image_ref
+            if image is None:
+                # Fallback to property getter if no cached reference
+                image = self.current_active_image
         self._add_undo_history({"image": image if image is not None else None})
         self.api.art.canvas.update_history(
             len(self.undo_history), len(self.redo_history)
         )
 
     def _add_image_to_redo(self):
-        image = self.current_active_image
+        # Use cached reference first to avoid database lookup during pending persistence
+        image = self._current_active_image_ref
+        if image is None:
+            # Fallback to property getter if no cached reference
+            image = self.current_active_image
         self._add_redo_history({"image": image if image is not None else None})
         self.api.art.canvas.update_history(
             len(self.undo_history), len(self.redo_history)
