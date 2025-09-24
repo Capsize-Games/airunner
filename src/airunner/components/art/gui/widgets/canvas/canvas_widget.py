@@ -129,8 +129,8 @@ class CanvasWidget(BaseWidget):
         settings = self.application_settings
         settings.pivot_point_x = value.x()
         settings.pivot_point_y = value.y()
-        self.update_application_settings("pivot_point_x", value.x())
-        self.update_application_settings("pivot_point_y", value.y())
+        self.update_application_settings(pivot_point_x=value.x())
+        self.update_application_settings(pivot_point_y=value.y())
 
     @Slot()
     def on_brush_color_button_clicked(self):
@@ -191,7 +191,7 @@ class CanvasWidget(BaseWidget):
 
     @Slot(bool)
     def on_grid_button_toggled(self, val: bool):
-        self.update_grid_settings("show_grid", val)
+        self.update_grid_settings(show_grid=val)
 
     @Slot(bool)
     def on_brush_button_toggled(self, val: bool):
@@ -208,9 +208,9 @@ class CanvasWidget(BaseWidget):
     def on_toggle_tool_signal(self, message: Dict):
         tool = message.get("tool", None)
         active = message.get("active", False)
-        self.update_application_settings(
-            "current_tool", tool.value if (tool and active) else None
-        )
+        settings_data = {}
+        settings_data["current_tool"] = tool.value if active else None
+        self.update_application_settings(**settings_data)
         # self.api.art.canvas.tool_changed(tool, active)
         self._update_action_buttons(tool, active)
         self._update_cursor()
@@ -222,7 +222,7 @@ class CanvasWidget(BaseWidget):
         color = QColorDialog.getColor()
         if color.isValid():
             self.brush_settings.primary_color = color.name()
-            self.update_brush_settings("primary_color", color.name())
+            self.update_brush_settings(primary_color=color.name())
             self.set_button_color()
             self.api.art.canvas.brush_color_changed(color.name())
 

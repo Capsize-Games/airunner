@@ -70,7 +70,7 @@ class ActiveGridSettingsWidget(BaseWidget):
 
     @Slot(bool)
     def size_lock_toggled(self, val):
-        self.update_application_settings("active_grid_size_lock", val)
+        self.update_application_settings(active_grid_size_lock=val)
 
     def update_size(self, _message: dict):
         width = self.application_settings.working_width
@@ -92,24 +92,24 @@ class ActiveGridSettingsWidget(BaseWidget):
             self.ui.height_slider_widget.set_slider_and_spinbox_values(height)
             self.ui.width_slider_widget.blockSignals(False)
             self.ui.height_slider_widget.blockSignals(False)
-            self.update_application_settings("working_width", width)
-            self.update_application_settings("working_height", height)
+            self.update_application_settings(working_width=width)
+            self.update_application_settings(working_height=height)
 
     def action_clicked_checkbox_toggle_active_grid_border(self, checked):
-        self.update_active_grid_settings("render_border", checked)
+        self.update_active_grid_settings(render_border=checked)
 
     def action_clicked_checkbox_toggle_active_grid_fill(self, checked):
-        self.update_active_grid_settings("render_fill", checked)
+        self.update_active_grid_settings(render_fill=checked)
 
     def action_clicked_checkbox_toggle_active_grid_area(self, checked):
-        self.update_active_grid_settings("enabled", checked)
+        self.update_active_grid_settings(enabled=checked)
 
     def action_choose_border_color_clicked(self):
         color = QColorDialog.getColor()
         if color.isValid():
-            self.update_active_grid_settings("border_color", color.name())
+            self.update_active_grid_settings(border_color=color.name())
 
     def action_choose_fill_color_clicked(self):
         color = QColorDialog.getColor()
         if color.isValid():
-            self.update_active_grid_settings("fill_color", color.name())
+            self.update_active_grid_settings(fill_color=color.name())

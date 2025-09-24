@@ -1,8 +1,11 @@
 import pyttsx3
 
-from airunner.components.tts.gui.widgets.templates.espeak_preferences_ui import \
-    Ui_espeak_preferences
-from airunner.components.tts.data.bootstrap.espeak_settings_data import ESPEAK_SETTINGS_DATA
+from airunner.components.tts.gui.widgets.templates.espeak_preferences_ui import (
+    Ui_espeak_preferences,
+)
+from airunner.components.tts.data.bootstrap.espeak_settings_data import (
+    ESPEAK_SETTINGS_DATA,
+)
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 import pycountry
 from airunner.components.tts.data.models.espeak_settings import EspeakSettings
@@ -85,15 +88,13 @@ class EspeakPreferencesWidget(BaseWidget):
         EspeakSettings.objects.update(**{attr_name: value})
 
     def voice_changed(self, text):
-        self.update_espeak_settings("voice", text)
+        self.update_espeak_settings(voice=text)
 
     def gender_changed(self, text):
-        self.update_espeak_settings("gender", text)
+        self.update_espeak_settings(gender=text)
         self.ui.voice_combobox.clear()
         self.ui.voice_combobox.addItems(ESPEAK_SETTINGS_DATA["voices"][text])
-        self.update_espeak_settings(
-            "voice", self.ui.voice_combobox.currentText()
-        )
+        self.update_espeak_settings(voice=self.ui.voice_combobox.currentText())
 
     def load_settings(self):
         """Load the Espeak settings into the widget."""

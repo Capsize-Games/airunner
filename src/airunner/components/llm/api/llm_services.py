@@ -53,7 +53,7 @@ class LLMAPIService(APIServiceBase):
         )
 
     def model_changed(self, model_service: str):
-        self.update_llm_generator_settings("model_service", model_service)
+        self.update_llm_generator_settings(model_service=model_service)
         self.emit_signal(
             SignalCode.LLM_MODEL_CHANGED, {"model_service": model_service}
         )

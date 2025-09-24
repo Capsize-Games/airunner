@@ -1045,7 +1045,7 @@ class InstallWorker(
             Create the airunner paths
             """
             create_airunner_paths(self.path_settings)
-            self.update_application_settings("paths_initialized", True)
+            self.update_application_settings(paths_initialized=True)
             self.parent.on_set_downloading_status_label(
                 {"label": f"Downloading Stable Diffusion"}
             )

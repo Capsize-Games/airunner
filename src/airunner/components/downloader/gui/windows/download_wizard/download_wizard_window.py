@@ -61,8 +61,8 @@ class DownloadWizardWindow(
         Do not call this function directly.
         :return:
         """
-        self.update_application_settings("run_setup_wizard", False)
-        self.update_application_settings("download_wizard_completed", True)
+        self.update_application_settings(run_setup_wizard=False)
+        self.update_application_settings(download_wizard_completed=True)
 
     def next_button_clicked(self):
         current_page = self.currentPage()

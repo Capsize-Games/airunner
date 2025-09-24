@@ -1,8 +1,12 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWizard
-from airunner.components.downloader.gui.windows.setup_wizard.privacy_policy.privacy_policy import PrivacyPolicy
+from airunner.components.downloader.gui.windows.setup_wizard.privacy_policy.privacy_policy import (
+    PrivacyPolicy,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
 from airunner.components.downloader.gui.windows.setup_wizard.age_restriction.age_restriction_warning import (
     AgeRestrictionWarning,
 )
@@ -15,7 +19,9 @@ from airunner.components.downloader.gui.windows.setup_wizard.model_setup.stt.whi
 from airunner.components.downloader.gui.windows.setup_wizard.model_setup.tts.speecht5_license import (
     SpeechT5License,
 )
-from airunner.components.downloader.gui.windows.setup_wizard.welcome_page import WelcomePage
+from airunner.components.downloader.gui.windows.setup_wizard.welcome_page import (
+    WelcomePage,
+)
 from airunner.components.downloader.gui.windows.setup_wizard.user_agreement.user_agreement import (
     UserAgreement,
 )
@@ -36,10 +42,10 @@ class SetupWizardWindow(
 
         # Reset agreements
         self.update_application_settings(
-            "stable_diffusion_agreement_checked", False
+            stable_diffusion_agreement_checked=False
         )
-        self.update_application_settings("airunner_agreement_checked", False)
-        self.update_application_settings("user_agreement_checked", False)
+        self.update_application_settings(airunner_agreement_checked=False)
+        self.update_application_settings(user_agreement_checked=False)
 
         # Set up the wizard pages
         self.final_page_id = None

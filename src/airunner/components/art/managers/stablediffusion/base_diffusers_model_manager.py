@@ -1953,8 +1953,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 )
                 if control_image is not None:
                     self.update_controlnet_settings(
-                        "generated_image",
-                        convert_image_to_binary(control_image),
+                        generated_image=convert_image_to_binary(control_image),
                     )
                     if self.is_txt2img:
                         image = control_image

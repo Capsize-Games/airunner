@@ -403,19 +403,19 @@ class SettingsWindow(BaseWindow):
 
         if name == "resize_on_import":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.update_application_settings("resize_on_paste", checked)
+            self.update_application_settings(resize_on_paste=checked)
         elif name == "image_to_new_layer":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.update_application_settings("image_to_new_layer", checked)
+            self.update_application_settings(image_to_new_layer=checked)
         elif name == "check_for_updates":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.update_application_settings("latest_version_check", checked)
+            self.update_application_settings(latest_version_check=checked)
         elif name == "enable_workflows":
             checked = item.checkState() == Qt.CheckState.Checked
             self.enable_workflows = checked
         elif name == "allow_online_mode":
             checked = item.checkState() == Qt.CheckState.Checked
-            self.update_application_settings("allow_online_mode", checked)
+            self.update_application_settings(allow_online_mode=checked)
         elif name == "reset_settings":
             self.emit_signal(SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL)
 

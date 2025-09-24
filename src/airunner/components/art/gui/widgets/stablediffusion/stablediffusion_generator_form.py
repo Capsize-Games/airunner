@@ -99,21 +99,19 @@ class SaveGeneratorSettingsWorker(
                 do_update_settings = False
                 # Update individual fields using the proper update methods
                 self.parent.update_generator_settings(
-                    "prompt", self.current_prompt_value
+                    prompt=self.current_prompt_value
                 )
                 self.parent.update_generator_settings(
-                    "negative_prompt", self.current_negative_prompt_value
+                    negative_prompt=self.current_negative_prompt_value
                 )
                 self.parent.update_generator_settings(
-                    "second_prompt", self.current_secondary_prompt_value
+                    second_prompt=self.current_secondary_prompt_value
                 )
                 self.parent.update_generator_settings(
-                    "second_negative_prompt",
-                    self.current_secondary_negative_prompt_value,
+                    second_negative_prompt=self.current_secondary_negative_prompt_value,
                 )
                 self.parent.update_generator_settings(
-                    "crops_coords_top_left",
-                    {
+                    crops_coords_top_left={
                         "x": self.crops_coords_top_left_x,
                         "y": self.crops_coords_top_left_y,
                     },
@@ -379,7 +377,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     @seed.setter
     def seed(self, val):
-        self.update_generator_settings("seed", val)
+        self.update_generator_settings(seed=val)
 
     @property
     def active_rect(self):
@@ -420,11 +418,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
         """
         # Extract payload and update UI/settings first to avoid races
         msg = data["message"]
-        self.update_application_settings("working_width", msg["width"])
-        self.update_application_settings("working_height", msg["height"])
-        self.update_generator_settings(
-            "image_preset", msg.get("image_type", "")
-        )
+        self.update_application_settings(working_width=msg["width"])
+        self.update_application_settings(working_height=msg["height"])
+        self.update_generator_settings(image_preset=msg.get("image_type", ""))
 
         prompt = msg.get("prompt", "")
         secondary_prompt = msg.get("second_prompt", "")
@@ -440,7 +436,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.ui.infinite_images_button.blockSignals(True)
             self.ui.infinite_images_button.setChecked(False)
             self.ui.infinite_images_button.blockSignals(False)
-            self.update_generator_settings("generate_infinite_images", False)
+            self.update_generator_settings(generate_infinite_images=False)
 
         # Stash prompts so we pass them directly into generation
         self._pending_llm_image = {
@@ -536,7 +532,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.secondary_negative_prompt.blockSignals(False)
 
     def handle_image_presets_changed(self, val):
-        self.update_generator_settings("image_preset", val)
+        self.update_generator_settings(image_preset=val)
 
     def do_generate_image_from_image_signal_handler(self, _data):
         self.do_generate()
@@ -570,7 +566,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
             if aimodel is not None:
                 model_path = aimodel.path
-                self.update_generator_settings("model", aimodel.id)
+                self.update_generator_settings(model=aimodel.id)
 
         image_request = ImageRequest(
             prompt=data.get("prompt", self.ui.prompt.toPlainText()),
@@ -648,7 +644,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     @Slot(bool)
     def on_infinite_images_button_toggled(self, val: bool):
-        self.update_generator_settings("generate_infinite_images", val)
+        self.update_generator_settings(generate_infinite_images=val)
 
     @Slot(str)
     def on_target_size_width_textChanged(self, val: str):
@@ -656,7 +652,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         target_size = self.generator_settings.target_size
         target_size = target_size or {}
         target_size["width"] = int(val)
-        self.update_generator_settings("target_size", target_size)
+        self.update_generator_settings(target_size=target_size)
 
     @Slot(str)
     def on_target_size_height_textChanged(self, val: str):
@@ -664,7 +660,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         target_size = self.generator_settings.target_size
         target_size = target_size or {}
         target_size["height"] = int(val)
-        self.update_generator_settings("target_size", target_size)
+        self.update_generator_settings(target_size=target_size)
 
     @Slot(str)
     def on_negative_target_size_width_textChanged(self, val: str):
@@ -673,7 +669,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         negative_target_size = negative_target_size or {}
         negative_target_size["width"] = int(val)
         self.update_generator_settings(
-            "negative_target_size", negative_target_size
+            negative_target_size=negative_target_size
         )
 
     @Slot(str)
@@ -683,7 +679,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         negative_target_size = negative_target_size or {}
         negative_target_size["height"] = int(val)
         self.update_generator_settings(
-            "negative_target_size", negative_target_size
+            negative_target_size=negative_target_size
         )
 
     @Slot(str)
@@ -693,7 +689,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         crops_coords_top_left = crops_coords_top_left or {}
         crops_coords_top_left["x"] = int(val)
         self.update_generator_settings(
-            "crops_coords_top_left", crops_coords_top_left
+            crops_coords_top_left=crops_coords_top_left
         )
 
     @Slot(str)
@@ -703,7 +699,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         crops_coords_top_left = crops_coords_top_left or {}
         crops_coords_top_left["y"] = int(val)
         self.update_generator_settings(
-            "crops_coords_top_left", crops_coords_top_left
+            crops_coords_top_left=crops_coords_top_left
         )
 
     @Slot(str)
@@ -715,7 +711,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         negative_crops_coords_top_left = negative_crops_coords_top_left or {}
         negative_crops_coords_top_left["x"] = int(val)
         self.update_generator_settings(
-            "negative_crops_coords_top_left", negative_crops_coords_top_left
+            negative_crops_coords_top_left=negative_crops_coords_top_left
         )
 
     @Slot(str)
@@ -727,7 +723,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         negative_crops_coords_top_left = negative_crops_coords_top_left or {}
         negative_crops_coords_top_left["y"] = int(val)
         self.update_generator_settings(
-            "negative_crops_coords_top_left", negative_crops_coords_top_left
+            negative_crops_coords_top_left=negative_crops_coords_top_left
         )
 
     def generate(self, data=None):
@@ -775,7 +771,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         }
 
     def handle_quality_effects_changed(self, val):
-        self.update_generator_settings("quality_effects", val)
+        self.update_generator_settings(quality_effects=val)
         self.toggle_microconditioning(val == QualityEffects.CUSTOM.value)
 
     def toggle_microconditioning(self, enabled: bool):

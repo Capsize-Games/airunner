@@ -1,7 +1,9 @@
 from airunner.enums import SignalCode
 from airunner.utils.application import random_seed
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.application.gui.widgets.seed.templates.seed_ui import Ui_seed_widget
+from airunner.components.application.gui.widgets.seed.templates.seed_ui import (
+    Ui_seed_widget,
+)
 
 
 class SeedWidget(BaseWidget):
@@ -37,9 +39,9 @@ class SeedWidget(BaseWidget):
 
         # Make sure the settings are updated with the default values if they were None
         if self.generator_settings.seed is None:
-            self.update_generator_settings("seed", seed)
+            self.update_generator_settings(seed=seed)
         if self.generator_settings.random_seed is None:
-            self.update_generator_settings("random_seed", random_seed_value)
+            self.update_generator_settings(random_seed=random_seed_value)
 
     def on_application_settings_changed_signal(self):
         try:
@@ -55,19 +57,19 @@ class SeedWidget(BaseWidget):
             pass
 
     def action_clicked_button_random_seed(self, value):
-        self.update_generator_settings("random_seed", value)
+        self.update_generator_settings(random_seed=value)
         self.ui.lineEdit.setEnabled(not value)
         if value is True:
             seed = random_seed()
-            self.update_generator_settings("seed", seed)
+            self.update_generator_settings(seed=seed)
             self.ui.lineEdit.setText(str(seed))
 
     def action_value_changed_seed(self, value):
         try:
             seed_value = int(value)
-            self.update_generator_settings("seed", seed_value)
+            self.update_generator_settings(seed=seed_value)
         except ValueError:
             # If conversion fails, set a random seed
             seed = random_seed()
-            self.update_generator_settings("seed", seed)
+            self.update_generator_settings(seed=seed)
             self.ui.lineEdit.setText(str(seed))

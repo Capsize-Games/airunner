@@ -69,7 +69,7 @@ class BrushScene(CustomScene):
         self._brush_color = QColor(data["color"])
 
     def on_canvas_clear_signal(self):
-        self.update_drawing_pad_settings("mask", None)
+        self.update_drawing_pad_settings(mask=None)
         super().on_canvas_clear_signal()
 
     def delete_image(self):
@@ -124,7 +124,7 @@ class BrushScene(CustomScene):
             mask = convert_binary_to_image(mask)
             mask = mask.rotate(angle, expand=True)
             self.update_drawing_pad_settings(
-                "mask", convert_image_to_binary(mask)
+                mask=convert_image_to_binary(mask)
             )
             mask_updated = True
         super().rotate_image(angle)
@@ -264,7 +264,7 @@ class BrushScene(CustomScene):
             base_64_image = convert_image_to_binary(mask_image)
             # Update both database object and in-memory settings with the same base64 image
             drawing_pad_settings.mask = base_64_image
-            self.update_drawing_pad_settings("mask", base_64_image)
+            self.update_drawing_pad_settings(mask=base_64_image)
         else:
             # For normal image layer
             if self.active_image is not None:
@@ -272,7 +272,7 @@ class BrushScene(CustomScene):
                 base_64_image = convert_image_to_binary(image)
                 # Update both database object and in-memory settings with the same base64 image
                 drawing_pad_settings.image = base_64_image
-                self.update_drawing_pad_settings("image", base_64_image)
+                self.update_drawing_pad_settings(image=base_64_image)
 
                 # CRITICAL: Update the cached reference to ensure consistency
                 self._current_active_image_ref = image
@@ -351,7 +351,7 @@ class BrushScene(CustomScene):
             (0, 0, 0, 255),
         )
         self.update_drawing_pad_settings(
-            "mask", convert_image_to_binary(mask_image)
+            mask=convert_image_to_binary(mask_image)
         )
         self.mask_image = ImageQt.ImageQt(mask_image)
         self.initialize_image()

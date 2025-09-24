@@ -245,7 +245,7 @@ class ChatPromptWidget(BaseWidget):
             llm_action_value = LLMActionType.APPLICATION_COMMAND
         else:
             llm_action_value = LLMActionType.APPLICATION_COMMAND
-        self.update_llm_generator_settings("action", llm_action_value.name)
+        self.update_llm_generator_settings(action=llm_action_value.name)
 
     def prompt_text_changed(self) -> None:
         """Handle changes to the prompt text and highlight slash commands if present."""
@@ -345,7 +345,7 @@ class ChatPromptWidget(BaseWidget):
         self.ui.prompt.insertPlainText("\n")
 
     def message_type_text_changed(self, val):
-        self.update_llm_generator_settings("message_type", val)
+        self.update_llm_generator_settings(message_type=val)
 
     def on_add_bot_message_to_conversation(self, data: Dict):
         llm_response = data.get("response", None)
