@@ -370,7 +370,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             conversation = Conversation.create()
             data["conversation_id"] = conversation.id
             self.update_llm_generator_settings(
-                "current_conversation_id", conversation.id
+                current_conversation_id=conversation.id
             )
         else:
             conversation = Conversation.objects.get(conversation_id)

@@ -1,5 +1,7 @@
 from PySide6.QtWidgets import QLineEdit
-from airunner.components.application.gui.widgets.api_token.templates.api_token_ui import Ui_api_token
+from airunner.components.application.gui.widgets.api_token.templates.api_token_ui import (
+    Ui_api_token,
+)
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 
 
@@ -26,7 +28,7 @@ class APITokenWidget(BaseWidget):
         self.ui.hf_api_key_writetoken.blockSignals(False)
 
     def action_text_edited_api_key(self, value):
-        self.update_application_settings("hf_api_key_read_key", value)
+        self.update_application_settings(hf_api_key_read_key=value)
 
     def action_text_edited_writekey(self, value):
-        self.update_settings("hf_api_key_read_key", value)
+        self.update_application_settings(hf_api_key_read_key=value)

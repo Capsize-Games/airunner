@@ -521,50 +521,56 @@ class SettingsMixin:
             document = TargetFiles(file_path=file_path, chatbot_id=chatbot.id)
         TargetFiles.objects.merge(document)
 
-    def update_application_settings(self, column_name, val):
-        self.update_setting(ApplicationSettings, column_name, val)
+    def update_application_settings(self, **settings_dict):
+        self.update_settings(ApplicationSettings, settings_dict)
 
-    def update_espeak_settings(self, column_name, val):
-        self.update_setting(EspeakSettings, column_name, val)
+    def update_espeak_settings(self, **settings_dict):
+        self.update_settings(EspeakSettings, settings_dict)
 
-    def update_speech_t5_settings(self, column_name, val):
-        self.update_setting(SpeechT5Settings, column_name, val)
+    def update_speech_t5_settings(self, **settings_dict):
+        self.update_settings(SpeechT5Settings, settings_dict)
 
-    def update_controlnet_settings(self, column_name, val):
-        self.update_setting(ControlnetSettings, column_name, val)
+    def update_controlnet_settings(self, **settings_dict):
+        self.update_settings(ControlnetSettings, settings_dict)
 
-    def update_brush_settings(self, column_name, val):
-        self.update_setting(BrushSettings, column_name, val)
+    def update_brush_settings(self, **settings_dict):
+        self.update_settings(BrushSettings, settings_dict)
 
-    def update_image_to_image_settings(self, column_name, val):
-        self.update_setting(ImageToImageSettings, column_name, val)
+    def update_image_to_image_settings(self, **settings_dict):
+        self.update_settings(ImageToImageSettings, settings_dict)
 
-    def update_outpaint_settings(self, column_name, val):
-        self.update_setting(OutpaintSettings, column_name, val)
+    def update_outpaint_settings(self, **settings_dict):
+        self.update_settings(OutpaintSettings, settings_dict)
 
-    def update_drawing_pad_settings(self, column_name, val):
-        self.update_setting(DrawingPadSettings, column_name, val)
+    def update_drawing_pad_settings(self, **settings_dict):
+        self.update_settings(DrawingPadSettings, settings_dict)
 
-    def update_grid_settings(self, column_name, val):
-        self.update_setting(GridSettings, column_name, val)
+    def update_grid_settings(self, **settings_dict):
+        self.update_settings(GridSettings, settings_dict)
 
-    def update_active_grid_settings(self, column_name, val):
-        self.update_setting(ActiveGridSettings, column_name, val)
+    def update_active_grid_settings(self, **settings_dict):
+        self.update_settings(ActiveGridSettings, settings_dict)
 
-    def update_path_settings(self, column_name, val):
-        self.update_setting(PathSettings, column_name, val)
+    def update_path_settings(self, **settings_dict):
+        self.update_settings(PathSettings, settings_dict)
 
-    def update_memory_settings(self, column_name, val):
-        self.update_setting(MemorySettings, column_name, val)
+    def update_memory_settings(self, **settings_dict):
+        self.update_settings(MemorySettings, settings_dict)
 
-    def update_metadata_settings(self, column_name, val):
-        self.update_setting(MetadataSettings, column_name, val)
+    def update_metadata_settings(self, **settings_dict):
+        self.update_settings(MetadataSettings, settings_dict)
 
-    def update_llm_generator_settings(self, column_name: str, val):
-        self.update_setting(LLMGeneratorSettings, column_name, val)
+    def update_llm_generator_settings(self, **settings_dict):
+        self.update_settings(LLMGeneratorSettings, settings_dict)
 
-    def update_whisper_settings(self, column_name, val):
-        self.update_setting(WhisperSettings, column_name, val)
+    def update_whisper_settings(self, **settings_dict):
+        self.update_settings(WhisperSettings, settings_dict)
+
+    def update_generator_settings(self, **settings_dict):
+        self.update_settings(GeneratorSettings, settings_dict)
+
+    def update_controlnet_image_settings(self, **settings_dict):
+        self.update_settings(ControlnetSettings, settings_dict)
 
     def update_ai_models(self, models: List[AIModels]):
         for model in models:
@@ -629,19 +635,6 @@ class SettingsMixin:
             )
             new_model.save()
         self.__settings_updated()
-
-    def update_generator_settings(self, column_name, val):
-        # Update the cached instance
-        generator_settings = self.generator_settings
-        setattr(generator_settings, column_name, val)
-
-        # Use database-level update instead of saving transient instance
-        self.update_setting(GeneratorSettings, column_name, val)
-
-    def update_controlnet_image_settings(self, column_name, val):
-        controlnet_settings = self.controlnet_settings
-        setattr(controlnet_settings, column_name, val)
-        self.update_controlnet_settings(column_name, val)
 
     def update_setting_by_table_name(self, table_name, column_name, val):
         model_class_ = table_to_class.get(table_name)
@@ -773,14 +766,17 @@ class SettingsMixin:
 
         return settings_instance
 
-    def update_setting(self, model_class_, name, value):
+    def update_settings(self, model_class_, updates: Dict[str, Any]):
         if model_class_.objects.first() is None:
             model_class_.objects.create()
 
         setting = model_class_.objects.order_by(model_class_.id.desc()).first()
         if setting:
-            model_class_.objects.update(setting.id, **{name: value})
-            self.__settings_updated(model_class_.__tablename__, name, value)
+            model_class_.objects.update(setting.id, **updates)
+            for name, value in updates.items():
+                self.__settings_updated(
+                    model_class_.__tablename__, name, value
+                )
         else:
             self.logger.error("Failed to update settings: No setting found")
 

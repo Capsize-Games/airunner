@@ -29,8 +29,7 @@ class LayerImageItem(DraggablePixmap):
         super().update_position(x, y, save)
 
         if save:
-            self.update_drawing_pad_settings("x_pos", x)
-            self.update_drawing_pad_settings("y_pos", y)
+            self.update_drawing_pad_settings(x_pos=x, y_pos=y)
 
     def mousePressEvent(self, event):
         if self.current_tool not in [
@@ -135,10 +134,8 @@ class LayerImageItem(DraggablePixmap):
                 ):
                     # Update settings with new position
                     self.update_drawing_pad_settings(
-                        "x_pos", int(self._current_snapped_pos[0])
-                    )
-                    self.update_drawing_pad_settings(
-                        "y_pos", int(self._current_snapped_pos[1])
+                        x_pos=int(self._current_snapped_pos[0]),
+                        y_pos=int(self._current_snapped_pos[1]),
                     )
 
                     # Update layer image data
@@ -152,9 +149,7 @@ class LayerImageItem(DraggablePixmap):
                     # Critical fix: Update scene's position tracking
                     try:
                         scene = self.scene()
-                        if scene and hasattr(
-                            scene, "original_item_positions"
-                        ):
+                        if scene and hasattr(scene, "original_item_positions"):
                             # Update the scene's tracked position for this item
                             scene.original_item_positions[self] = QPointF(
                                 int(self._current_snapped_pos[0]),

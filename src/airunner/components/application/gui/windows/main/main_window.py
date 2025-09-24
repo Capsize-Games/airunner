@@ -258,8 +258,7 @@ class MainWindow(
         self.logger.debug("Starting AI Runnner")
         super().__init__()
         enable_wayland_window_decorations(self)
-        ApplicationSettings.objects.update(
-            self.application_settings.id,
+        self.update_application_settings(
             sd_enabled=False,
             llm_enabled=False,
             tts_enabled=False,
@@ -472,7 +471,7 @@ class MainWindow(
 
     @Slot(bool)
     def action_outpaint_toggled(self, val: bool):
-        self.update_outpaint_settings("enabled", val)
+        self.update_outpaint_settings(enabled=val)
 
     @Slot()
     def action_outpaint_export(self):
@@ -517,7 +516,7 @@ class MainWindow(
         if val is False:
             self.show_nsfw_warning_popup()
         else:
-            self.update_application_settings("nsfw_filter", val)
+            self.update_application_settings(nsfw_filter=val)
             self.toggle_nsfw_filter()
             if not self.api or not hasattr(self.api, "art"):
                 self.logger.warning(
@@ -539,7 +538,7 @@ class MainWindow(
             "stt_enabled",
         )
         QApplication.processEvents()
-        self.update_application_settings("stt_enabled", val)
+        self.update_application_settings(stt_enabled=val)
 
     @Slot()
     def on_workflow_actionClear_triggered(self):
@@ -579,7 +578,7 @@ class MainWindow(
 
     @Slot(bool)
     def on_actionToggle_Controlnet_toggled(self, val: bool):
-        self.update_controlnet_settings("enabled", val)
+        self.update_controlnet_settings(enabled=val)
         self._update_action_button(
             ModelType.CONTROLNET,
             self.ui.actionToggle_Controlnet,
@@ -1026,7 +1025,7 @@ class MainWindow(
         )
 
     def set_path_settings(self, key, val):
-        self.update_path_settings(key, val)
+        self.update_path_settings(**{key: val})
 
     def on_nsfw_content_detected_signal(self):
         # display message in status
@@ -1157,7 +1156,9 @@ class MainWindow(
         element.blockSignals(False)
         QApplication.processEvents()
         if application_setting:
-            self.update_application_settings(application_setting, val)
+            settings_data = {}
+            settings_data[application_setting] = val
+            self.update_application_settings(**settings_data)
         if self._model_status[model_type] is not ModelStatus.LOADING:
             if val:
                 self.emit_signal(load_signal, data)
@@ -1312,11 +1313,11 @@ class MainWindow(
         """
         # User confirmed to disable the NSFW filter
         # Update the settings accordingly
-        self.update_application_settings("nsfw_filter", False)
+        self.update_application_settings(nsfw_filter=False)
         # Update the show_nsfw_warning setting based on the checkbox state
         if show_nsfw_warning is not None:
             self.update_application_settings(
-                "show_nsfw_warning", show_nsfw_warning
+                show_nsfw_warning=show_nsfw_warning
             )
         self.toggle_nsfw_filter()
         if not self.api or not hasattr(self.api, "art"):
@@ -1544,7 +1545,7 @@ class MainWindow(
         img = Image.new("RGB", (width, height), (0, 0, 0))
         base64_image = convert_image_to_binary(img)
 
-        self.update_drawing_pad_settings("mask", base64_image)
+        self.update_drawing_pad_settings(mask=base64_image)
 
     def display_missing_models_error(self, data):
         msg_box = QMessageBox()

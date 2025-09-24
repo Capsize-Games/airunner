@@ -6,7 +6,9 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.gui.widgets.templates.llm_settings_ui import (
     Ui_llm_settings_widget,
 )
-from airunner.components.application.gui.windows.main.ai_model_mixin import AIModelMixin
+from airunner.components.application.gui.windows.main.ai_model_mixin import (
+    AIModelMixin,
+)
 from airunner.enums import ModelService, SignalCode
 
 
@@ -28,7 +30,7 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     @Slot(str)
     def on_model_path_textChanged(self, val: str):
-        self.update_llm_generator_settings("model_path", val)
+        self.update_llm_generator_settings(model_path=val)
 
     @Slot(str)
     def on_model_service_currentTextChanged(self, model_service: str):
@@ -58,8 +60,9 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def toggle_leave_model_in_vram(self, val):
         if val:
-            self.update_memory_settings("unload_unused_models", False)
-            self.update_memory_settings("move_unused_model_to_cpu", False)
+            self.update_memory_settings(
+                unload_unused_models=False, move_unused_model_to_cpu=False
+            )
 
     def initialize_form(self):
         elements = [
@@ -140,19 +143,22 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def callback(self, attr_name, value, _widget=None):
         keys = attr_name.split(".")
-        self.update_llm_generator_settings(keys[1], value)
+        self.update_llm_generator_settings(**{keys[1]: value})
 
     def model_text_changed(self, val):
-        self.update_application_settings("current_llm_generator", val)
+        self.update_application_settings(current_llm_generator=val)
         self.initialize_form()
 
     def toggle_move_model_to_cpu(self, val):
-        self.update_memory_settings("move_unused_model_to_cpu", val)
+        data = {
+            "move_unused_model_to_cpu": val,
+        }
         if val:
-            self.update_memory_settings("unload_unused_models", False)
+            data["unload_unused_models"] = False
+        self.update_memory_settings(**data)
 
     def override_parameters_toggled(self, val):
-        self.update_llm_generator_settings("override_parameters", val)
+        self.update_llm_generator_settings(override_parameters=val)
 
     def random_seed_toggled(self, val):
         self.update_chatbot("random_seed", val)
@@ -161,9 +167,12 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         self.update_chatbot("seed", val)
 
     def toggle_unload_model(self, val):
-        self.update_memory_settings("unload_unused_models", val)
+        data = {
+            "unload_unused_models": val,
+        }
         if val:
-            self.update_memory_settings("move_unused_model_to_cpu", False)
+            data["move_unused_model_to_cpu"] = False
+        self.update_memory_settings(**data)
 
     def reset_settings_to_default_clicked(self):
         self.initialize_form()
