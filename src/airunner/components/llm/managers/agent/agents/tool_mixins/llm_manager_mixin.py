@@ -9,6 +9,12 @@ class LLMManagerMixin:
     Mixin for managing LLM instantiation, model, and tokenizer logic.
     """
 
+    def __init__(self):
+        self._tokenizer = None
+        self._model = None
+        self._llm = None
+        self._llm_request = None
+
     @property
     def llm_request(self) -> LLMRequest:
         if not hasattr(self, "_llm_request") or self._llm_request is None:

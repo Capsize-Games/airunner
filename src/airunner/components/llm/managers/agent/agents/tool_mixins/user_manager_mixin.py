@@ -8,6 +8,9 @@ class UserManagerMixin:
     Mixin for managing user retrieval and updates.
     """
 
+    def __init__(self):
+        self._user = None
+
     @property
     def user(self) -> User:
         # If _user is set by test, always return it

@@ -40,6 +40,7 @@ class CustomGraphicsView(
 ):
     def __init__(self, *args, **kwargs):
         super().__init__()
+        self._recent_event_size = None
         self.setMouseTracking(True)
         self._initialized = False
         self._scene: Optional[CustomScene] = None

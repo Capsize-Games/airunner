@@ -14,6 +14,9 @@ class TrainingMixin:
     including managing checkpoints, adapters, and training data formatting.
     """
 
+    def __init__(self):
+        self._model = None
+
     @property
     def finetuned_model_directory(self) -> str:
         """

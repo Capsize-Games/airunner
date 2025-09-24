@@ -63,6 +63,7 @@ class MessageWidget(BaseWidget):
     ]
 
     def __init__(self, *args, **kwargs):
+        self._current_content_type = None
         self.signal_handlers = {
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.DELETE_MESSAGES_AFTER_ID: self.on_delete_messages_after_id,
