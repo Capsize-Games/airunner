@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import subprocess
 import time
@@ -23,6 +24,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 from line_profiler import profile
+
+logger = logging.getLogger(__name__)
 import requests  # Added for HTTP(S) image download
 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
@@ -113,6 +116,12 @@ class CustomScene(
         # Add viewport rectangle that includes negative space
         self._extended_viewport_rect = QRect(-2000, -2000, 4000, 4000)
 
+        # Layer rendering system
+        self._layer_items = (
+            {}
+        )  # Maps layer_id to LayerImageItem graphics items
+        self._layers_initialized = False
+
         for signal, handler in [
             (
                 SignalCode.CANVAS_COPY_IMAGE_SIGNAL,
@@ -174,6 +183,22 @@ class CustomScene(
             (
                 SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
                 self.on_settings_changed,
+            ),
+            (
+                SignalCode.LAYER_VISIBILITY_TOGGLED,
+                self.on_layer_visibility_toggled,
+            ),
+            (
+                SignalCode.LAYER_DELETED,
+                self.on_layer_deleted,
+            ),
+            (
+                SignalCode.LAYER_REORDERED,
+                self.on_layer_reordered,
+            ),
+            (
+                SignalCode.LAYERS_SHOW_SIGNAL,
+                self.on_layers_show_signal,
             ),
         ]:
             self.register(signal, handler)
@@ -456,6 +481,9 @@ class CustomScene(
         # Emit signal to refresh the layer container to show the new layer
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
+        # Refresh the canvas display to show the new layer
+        self._refresh_layer_display()
+
     def on_paste_image_from_clipboard(self):
         image = self._paste_image_from_clipboard()
         if image is None:
@@ -628,6 +656,131 @@ class CustomScene(
         if not self._image_initialized:
             self._image_initialized = True
             self.initialize_image()
+        if not self._layers_initialized:
+            self._layers_initialized = True
+            self._refresh_layer_display()
+
+    # Layer management signal handlers
+    def on_layer_visibility_toggled(self, data: Dict):
+        """Handle layer visibility changes."""
+        layer_id = data.get("layer_id")
+        visible = data.get("visible")
+
+        self.logger.info(
+            f"Layer visibility toggled: layer_id={layer_id}, visible={visible}"
+        )
+
+        if layer_id in self._layer_items:
+            layer_item = self._layer_items[layer_id]
+            layer_item.setVisible(visible)
+            self.logger.info(f"Updated layer item visibility: {visible}")
+        else:
+            self.logger.warning(
+                f"Layer item not found for layer_id={layer_id}"
+            )
+            # Try to refresh the entire display
+            self._refresh_layer_display()
+
+    def on_layer_deleted(self, data: Dict):
+        """Handle layer deletion by removing its graphics item."""
+        layer_id = data.get("layer_id")
+
+        if layer_id in self._layer_items:
+            layer_item = self._layer_items[layer_id]
+            if layer_item.scene():
+                layer_item.scene().removeItem(layer_item)
+            del self._layer_items[layer_id]
+
+    def on_layer_reordered(self, data: Dict):
+        """Handle layer reordering by updating z-values."""
+        self._refresh_layer_display()
+
+    def on_layers_show_signal(self, data: Dict = None):
+        """Handle layer container refresh signal."""
+        self._refresh_layer_display()
+
+    def _refresh_layer_display(self):
+        """Refresh the display of all visible layers on the canvas."""
+        logger.info("Refreshing layer display")
+        try:
+            from airunner.components.art.data.canvas_layer import CanvasLayer
+            from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
+                LayerImageItem,
+            )
+            from airunner.utils.image import convert_binary_to_image
+
+            # Get all layers ordered by their order property
+            layers = CanvasLayer.objects.order_by("order").all()
+            logger.info(f"Found {len(layers)} layers to display")
+
+            # Remove any layer items that no longer exist
+            existing_layer_ids = {layer.id for layer in layers}
+            items_to_remove = []
+            for layer_id, item in self._layer_items.items():
+                if layer_id not in existing_layer_ids:
+                    items_to_remove.append(layer_id)
+
+            for layer_id in items_to_remove:
+                logger.info(f"Removing deleted layer {layer_id} from scene")
+                item = self._layer_items[layer_id]
+                if item.scene():
+                    item.scene().removeItem(item)
+                del self._layer_items[layer_id]
+
+            # Create or update layer items for each layer
+            for layer in layers:
+                logger.debug(
+                    f"Processing layer {layer.id}: name={layer.name}, visible={layer.visible}, has_image={bool(layer.image)}"
+                )
+                if layer.image:
+                    # Convert binary image data to PIL Image
+                    pil_image = convert_binary_to_image(layer.image)
+                    if pil_image:
+                        # Convert PIL Image to QImage
+                        from PySide6.QtGui import QImage
+                        from PIL.ImageQt import ImageQt
+
+                        qimage = ImageQt(pil_image)
+
+                        if layer.id in self._layer_items:
+                            # Update existing layer item
+                            layer_item = self._layer_items[layer.id]
+                            logger.debug(
+                                f"Updating existing layer item {layer.id} - setting visible={layer.visible}"
+                            )
+                            if hasattr(layer_item, "updateImage"):
+                                layer_item.updateImage(qimage)
+                            layer_item.setVisible(layer.visible)
+                            layer_item.setOpacity(layer.opacity / 100.0)
+                            layer_item.setZValue(layer.order)
+                        else:
+                            # Create new layer item
+                            logger.debug(
+                                f"Creating new layer item {layer.id} - setting visible={layer.visible}"
+                            )
+                            layer_item = LayerImageItem(qimage)
+                            layer_item.setVisible(layer.visible)
+                            layer_item.setOpacity(layer.opacity / 100.0)
+                            layer_item.setZValue(layer.order)
+
+                            # Add to scene
+                            self.addItem(layer_item)
+                            self._layer_items[layer.id] = layer_item
+
+                            # Set position (could be from layer settings or default)
+                            layer_item.setPos(0, 0)  # Default position
+                elif layer.id in self._layer_items:
+                    # Layer has no image, remove its item
+                    logger.debug(
+                        f"Layer {layer.id} has no image, removing from scene"
+                    )
+                    item = self._layer_items[layer.id]
+                    if item.scene():
+                        item.scene().removeItem(item)
+                    del self._layer_items[layer.id]
+
+        except Exception as e:
+            self.logger.error(f"Error refreshing layer display: {e}")
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
@@ -924,6 +1077,12 @@ class CustomScene(
 
         self.set_item(self.image, x=x, y=y)
         self.set_painter(self.image)
+
+        # Initialize layers on first image initialization
+        if not self._layers_initialized:
+            self._layers_initialized = True
+            self._refresh_layer_display()
+
         self.update()
         for view in self.views():
             view.viewport().update()
