@@ -22,6 +22,7 @@ class FramePackWorker(Worker):
 
     def __init__(self):
         """Initialize the FramePackWorker."""
+        self._current_job_id = None
         self._framepack_handler = None
         self.signal_handlers = {
             SignalCode.VIDEO_LOAD_SIGNAL: self.on_load_video_signal,

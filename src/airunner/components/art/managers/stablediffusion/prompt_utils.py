@@ -23,7 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 def format_prompt(
-    prompt: str, preset: str = "", additional_prompts: Optional[list] = None
+    prompt: str,
+    preset: str = "",
+    additional_prompts: Optional[list] = None,
+    second_prompt: bool = False,
 ) -> str:
     """Format the main prompt with preset and additional prompts. Default preset to empty string for test compatibility."""
     prompt = PromptWeightBridge.convert(prompt)
@@ -31,7 +34,10 @@ def format_prompt(
     if additional_prompts:
         prompts = [f'"{prompt}"']
         for add_settings in additional_prompts:
-            add_prompt = add_settings["prompt"]
+            if second_prompt:
+                add_prompt = add_settings.get("prompt_secondary", "")
+            else:
+                add_prompt = add_settings["prompt"]
             prompts.append(f'"{add_prompt}"')
         return f'({", ".join(prompts)}, "{preset}").and()'
     if preset:

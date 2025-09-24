@@ -140,6 +140,7 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
 
     def __init__(self, document, language: str = "python"):
         super().__init__(document)
+        self.highlighting_rules = None
         self.language = language
         self.set_language_rules(language)
 

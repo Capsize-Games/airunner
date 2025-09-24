@@ -108,6 +108,7 @@ from airunner.components.art.managers.stablediffusion import (
 
 class BaseDiffusersModelManager(BaseModelManager):
     def __init__(self, *args, **kwargs):
+        self._scheduler = None
         self._model_status = {
             ModelType.SD: ModelStatus.UNLOADED,
             ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
@@ -988,54 +989,6 @@ class BaseDiffusersModelManager(BaseModelManager):
                 yield results
                 if not self.image_request.generate_infinite_images:
                     total += 1
-
-    def _check_and_mark_nsfw_images(self, images) -> tuple:
-        if not self._feature_extractor or not self._safety_checker:
-            return images, [False] * len(images)
-
-        self._safety_checker.to(self._device)
-
-        safety_checker_input = self._feature_extractor(
-            images, return_tensors="pt"
-        ).to(self._device)
-        _, has_nsfw_concepts = self._safety_checker(
-            images=[np.array(img) for img in images],
-            clip_input=safety_checker_input.pixel_values.to(self._device),
-        )
-
-        # Mark images as NSFW if NSFW content is detected
-        for i, img in enumerate(images):
-            if has_nsfw_concepts[i]:
-                img = img.convert("RGBA")
-                img.paste((0, 0, 0), (0, 0, img.size[0], img.size[1]))
-
-                draw = ImageDraw.Draw(img)
-                font = ImageFont.load_default(
-                    50
-                )  # load_default() does not support size argument
-
-                # Text you want to center
-                text = "NSFW"
-
-                # Calculate the bounding box of the text
-                text_bbox = draw.textbbox((0, 0), text, font=font)
-                text_width = text_bbox[2] - text_bbox[0]
-                text_height = text_bbox[3] - text_bbox[1]
-
-                # Calculate the position to center the text line
-                text_x = (img.width - text_width) // 2
-                text_y = (img.height - text_height) // 2
-
-                # Draw the text at the calculated position, ensuring the text line is centered
-                draw.text(
-                    (text_x, text_y), text, font=font, fill=(255, 255, 255)
-                )
-
-                images[i] = img
-
-        self._safety_checker.to("cpu")
-
-        return images, has_nsfw_concepts
 
     def _load_safety_checker(self):
         if (

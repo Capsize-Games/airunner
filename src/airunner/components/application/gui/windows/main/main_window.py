@@ -191,6 +191,7 @@ class MainWindow(
     _reload_debounce_seconds = 1.0
 
     def __init__(self, *args, **kwargs):
+        self._state_restored = None
         self.ui = self.ui_class_()
         self.qsettings = get_qsettings()
         self.icon_manager: Optional[IconManager] = None

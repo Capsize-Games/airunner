@@ -119,6 +119,13 @@ class InstallWorker(
 
     def __init__(self, parent, models_enabled: List[str], initialize_gui=True):
         super().__init__()
+        self._installation_finalized = None
+        self._openvoice_unidic_extraction_complete = None
+        self._openvoice_unidic_complete = None
+        self._openvoice_unidic_download_attempted = None
+        self._openvoice_dir = None
+        self._unidic_dir = None
+        self._tts_download_in_progress = None
         self.parent = parent
         self.files_in_current_step = []
         self.total_files = 0
@@ -1186,6 +1193,7 @@ class InstallPage(BaseWizard):
         models_enabled: List[str],
     ):
         super(InstallPage, self).__init__(parent)
+        self.completed_files = None
         self.total_files = 0
         self.completed_file_set = set()  # Track unique completed files
         self.stablediffusion_models = stablediffusion_models

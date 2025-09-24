@@ -10,6 +10,11 @@ from airunner.enums import SignalCode
 class NodeGraphWorker(Worker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._initial_input_data = None
+        self._node_map = None
+        self._executed_nodes = None
+        self._node_outputs = None
+        self._execution_queue = None
         self.graph = None
         self.register(SignalCode.RUN_WORKFLOW_SIGNAL, self.on_run_workflow)
         self.register(SignalCode.STOP_WORKFLOW_SIGNAL, self.on_stop_workflow)

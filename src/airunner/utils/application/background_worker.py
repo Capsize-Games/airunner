@@ -28,6 +28,7 @@ class BackgroundWorker(QThread):
             progress_callback: Optional function to call to update progress
         """
         super().__init__()
+        self.task_function_args = None
         self.task_function = task_function
         self.callback_data = callback_data or {}
         self.progress_callback = progress_callback
