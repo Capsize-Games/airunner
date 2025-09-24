@@ -62,6 +62,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
     )
 
     def __init__(self, *args, directories=None, lna_enabled=False, **kwargs):
+        self._add_no_cache_headers = None
         self.directories = directories or []
         self.lna_enabled = lna_enabled
         super().__init__(*args, **kwargs)

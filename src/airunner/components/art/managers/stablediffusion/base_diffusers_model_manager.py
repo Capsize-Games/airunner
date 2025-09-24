@@ -108,6 +108,7 @@ from airunner.components.art.managers.stablediffusion import (
 
 class BaseDiffusersModelManager(BaseModelManager):
     def __init__(self, *args, **kwargs):
+        self._scheduler = None
         self._model_status = {
             ModelType.SD: ModelStatus.UNLOADED,
             ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,

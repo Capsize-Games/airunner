@@ -5,7 +5,7 @@ import time
 from typing import Optional, Tuple, Dict
 
 import PIL
-from PIL import ImageQt, Image, ImageFilter, ImageGrab
+from PIL import ImageQt, Image, ImageFilter
 from PySide6.QtGui import QImage
 from PySide6.QtCore import Qt, QPoint, QRect, QPointF
 from PySide6.QtCore import QTimer
@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
 )
 from line_profiler import profile
 import requests  # Added for HTTP(S) image download
-from urllib.parse import urlparse
 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
 from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (

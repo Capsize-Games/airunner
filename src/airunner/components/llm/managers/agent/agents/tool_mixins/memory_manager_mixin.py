@@ -9,6 +9,10 @@ class MemoryManagerMixin:
     Mixin for managing chat memory and chat store logic.
     """
 
+    def __init__(self):
+        self._chat_memory = None
+        self._chat_store = None
+
     @property
     def chat_store(self):
         if not hasattr(self, "_chat_store") or self._chat_store is None:

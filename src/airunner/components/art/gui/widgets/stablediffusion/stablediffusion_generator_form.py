@@ -128,6 +128,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
     ]
 
     def __init__(self, *args, **kwargs):
+        self._pending_llm_image = None
         self.signal_handlers = {
             SignalCode.SD_GENERATE_IMAGE_SIGNAL: self.on_generate_image_signal,
             SignalCode.APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL: self.on_stop_image_generator_progress_bar_signal,

@@ -35,6 +35,9 @@ class MapWidget(
         return "map.jinja2.html"
 
     def __init__(self, *args, **kwargs):
+        self._event_loop = None
+        self._pending_map_result = None
+        self._pending_map_query = None
         self.signal_handlers = {
             SignalCode.MAP_SEARCH_RESULT_SIGNAL: self._on_llm_signal,
         }
