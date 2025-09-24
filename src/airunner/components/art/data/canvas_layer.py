@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Boolean, String, LargeBinary
+from sqlalchemy import Column, Integer, Boolean, String
 
 from airunner.components.data.models.base import BaseModel
 
@@ -12,8 +12,9 @@ class CanvasLayer(BaseModel):
     name = Column(String, default="Layer")
     opacity = Column(Integer, default=100)
     blend_mode = Column(String, default="normal")
-    image = Column(LargeBinary, nullable=True)
-    mask = Column(LargeBinary, nullable=True)
+
+    # Images are now stored in DrawingPadSettings.image and DrawingPadSettings.mask
+    # which have a layer_id foreign key to this table
 
     # Temporarily commented out relationships to avoid initialization issues
     # TODO: Re-enable after fixing SQLAlchemy relationship mapping
