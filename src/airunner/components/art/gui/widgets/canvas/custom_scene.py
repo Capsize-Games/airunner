@@ -705,6 +705,13 @@ class CustomScene(
     def _refresh_layer_display(self):
         """Refresh the display of all visible layers on the canvas."""
         logger.info("Refreshing layer display")
+        logger.debug(
+            f"Current scene items before refresh: {len(self.items())}"
+        )
+        logger.debug(
+            f"Current _layer_items before refresh: {list(self._layer_items.keys())}"
+        )
+
         try:
             from airunner.components.art.data.drawingpad_settings import (
                 DrawingPadSettings,
@@ -719,6 +726,19 @@ class CustomScene(
             # Get all layers ordered by their order property
             layers = CanvasLayer.objects.order_by("order").all()
             logger.info(f"Found {len(layers)} layers to display")
+
+            # If we have layers, remove the old drawing pad item to prevent duplication
+            if (
+                len(layers) > 0
+                and hasattr(self, "item")
+                and self.item is not None
+            ):
+                logger.debug(
+                    "Removing old drawing pad item to use layer system"
+                )
+                if self.item.scene():
+                    self.removeItem(self.item)
+                self.item = None
 
             # Remove any layer items that no longer exist
             existing_layer_ids = {layer.id for layer in layers}
@@ -741,9 +761,19 @@ class CustomScene(
                 )
 
                 # Get the corresponding DrawingPadSettings for this layer
-                drawing_pad_settings = DrawingPadSettings.objects.get(
-                    layer.id
-                )
+                drawing_pad_settings = None
+                try:
+                    results = DrawingPadSettings.objects.filter_by(
+                        layer_id=layer.id
+                    )
+                    drawing_pad_settings = results[0] if results else None
+                    logger.debug(
+                        f"Found DrawingPadSettings for layer {layer.id}: {drawing_pad_settings is not None}"
+                    )
+                except Exception as e:
+                    logger.debug(
+                        f"No DrawingPadSettings found for layer {layer.id}: {e}"
+                    )
 
                 if drawing_pad_settings and drawing_pad_settings.image:
                     # Convert binary image data to PIL Image
@@ -768,7 +798,9 @@ class CustomScene(
                                 layer_item.updateImage(qimage)
                             layer_item.setVisible(layer.visible)
                             layer_item.setOpacity(layer.opacity / 100.0)
-                            layer_item.setZValue(layer.order)
+                            # Invert Z-order: lower order numbers should be on top
+                            # Use a high base value and subtract the order
+                            layer_item.setZValue(1000 - layer.order)
                         else:
                             # Create new layer item
                             logger.debug(
@@ -777,14 +809,27 @@ class CustomScene(
                             layer_item = LayerImageItem(qimage)
                             layer_item.setVisible(layer.visible)
                             layer_item.setOpacity(layer.opacity / 100.0)
-                            layer_item.setZValue(layer.order)
+                            # Invert Z-order: lower order numbers should be on top
+                            layer_item.setZValue(1000 - layer.order)
 
                             # Add to scene
                             self.addItem(layer_item)
                             self._layer_items[layer.id] = layer_item
 
-                            # Set position (could be from layer settings or default)
-                            layer_item.setPos(0, 0)  # Default position
+                            # Set position from DrawingPadSettings if available, otherwise use default
+                            if drawing_pad_settings:
+                                x_pos = drawing_pad_settings.x_pos or 0
+                                y_pos = drawing_pad_settings.y_pos or 0
+                                layer_item.setPos(x_pos, y_pos)
+                                # Track original position for canvas recentering
+                                self.original_item_positions[layer_item] = (
+                                    QPointF(x_pos, y_pos)
+                                )
+                            else:
+                                layer_item.setPos(0, 0)
+                                self.original_item_positions[layer_item] = (
+                                    QPointF(0, 0)
+                                )
                 else:
                     # Layer has no drawing pad settings with image, remove its item if it exists
                     if layer.id in self._layer_items:
@@ -795,6 +840,13 @@ class CustomScene(
                         if item.scene():
                             item.scene().removeItem(item)
                         del self._layer_items[layer.id]
+
+            logger.debug(
+                f"Current scene items after refresh: {len(self.items())}"
+            )
+            logger.debug(
+                f"Current _layer_items after refresh: {list(self._layer_items.keys())}"
+            )
 
         except Exception as e:
             self.logger.error(f"Error refreshing layer display: {e}")
@@ -1048,6 +1100,13 @@ class CustomScene(
         if image is not None:
             x = self.active_grid_settings.pos_x if x is None else x
             y = self.active_grid_settings.pos_y if y is None else y
+
+            # Check if we have layer items - if so, don't use the old drawing pad item system
+            if len(self._layer_items) > 0:
+                logger.debug(
+                    "Layer system active, skipping drawing pad item creation"
+                )
+                return
 
             if self.item is None:
                 self.item = LayerImageItem(image)
@@ -1715,34 +1774,80 @@ class CustomScene(
         return filtered_image
 
     def update_image_position(self, canvas_offset):
-        if not self.item:
-            return
-        if self.item not in self.original_item_positions:
-            abs_x = self.drawing_pad_settings.x_pos
-            abs_y = self.drawing_pad_settings.y_pos
+        # Update the old drawing pad item if it exists
+        if self.item:
+            if self.item not in self.original_item_positions:
+                abs_x = self.drawing_pad_settings.x_pos
+                abs_y = self.drawing_pad_settings.y_pos
 
-            if abs_x is None or abs_y is None:
-                abs_x = self.item.pos().x()
-                abs_y = self.item.pos().y()
+                if abs_x is None or abs_y is None:
+                    abs_x = self.item.pos().x()
+                    abs_y = self.item.pos().y()
 
-            self.original_item_positions[self.item] = QPointF(abs_x, abs_y)
+                self.original_item_positions[self.item] = QPointF(abs_x, abs_y)
 
-        original_pos = self.original_item_positions[self.item]
+            original_pos = self.original_item_positions[self.item]
 
-        new_x = original_pos.x() - canvas_offset.x()
-        new_y = original_pos.y() - canvas_offset.y()
+            new_x = original_pos.x() - canvas_offset.x()
+            new_y = original_pos.y() - canvas_offset.y()
 
-        current_pos = self.item.pos()
-        if (
-            abs(current_pos.x() - new_x) > 1
-            or abs(current_pos.y() - new_y) > 1
-        ):
-            self.item.prepareGeometryChange()
-            self.item.setPos(new_x, new_y)
-            self.item.setVisible(True)
-            rect = self.item.boundingRect().adjusted(-10, -10, 10, 10)
-            scene_rect = self.item.mapRectToScene(rect)
-            self.update(scene_rect)
+            current_pos = self.item.pos()
+            if (
+                abs(current_pos.x() - new_x) > 1
+                or abs(current_pos.y() - new_y) > 1
+            ):
+                self.item.prepareGeometryChange()
+                self.item.setPos(new_x, new_y)
+                self.item.setVisible(True)
+                rect = self.item.boundingRect().adjusted(-10, -10, 10, 10)
+                scene_rect = self.item.mapRectToScene(rect)
+                self.update(scene_rect)
+
+        # Update layer items
+        from airunner.components.art.data.canvas_layer import CanvasLayer
+        from airunner.components.art.data.drawingpad_settings import (
+            DrawingPadSettings,
+        )
+
+        for layer_id, layer_item in self._layer_items.items():
+            # Get the original position from DrawingPadSettings
+            if layer_item not in self.original_item_positions:
+                try:
+                    results = DrawingPadSettings.objects.filter_by(
+                        layer_id=layer_id
+                    )
+                    settings = results[0] if results else None
+                    if settings:
+                        abs_x = settings.x_pos or 0
+                        abs_y = settings.y_pos or 0
+                    else:
+                        abs_x = layer_item.pos().x()
+                        abs_y = layer_item.pos().y()
+
+                    self.original_item_positions[layer_item] = QPointF(
+                        abs_x, abs_y
+                    )
+                except Exception as e:
+                    # Fallback to current position
+                    self.original_item_positions[layer_item] = layer_item.pos()
+
+            original_pos = self.original_item_positions[layer_item]
+            new_x = original_pos.x() - canvas_offset.x()
+            new_y = original_pos.y() - canvas_offset.y()
+
+            current_pos = layer_item.pos()
+            if (
+                abs(current_pos.x() - new_x) > 1
+                or abs(current_pos.y() - new_y) > 1
+            ):
+                layer_item.prepareGeometryChange()
+                layer_item.setPos(new_x, new_y)
+                layer_item.setVisible(
+                    layer_item.isVisible()
+                )  # Preserve visibility
+                rect = layer_item.boundingRect().adjusted(-10, -10, 10, 10)
+                scene_rect = layer_item.mapRectToScene(rect)
+                self.update(scene_rect)
 
     def get_canvas_offset(self):
         if self.views() and hasattr(self.views()[0], "canvas_offset"):
