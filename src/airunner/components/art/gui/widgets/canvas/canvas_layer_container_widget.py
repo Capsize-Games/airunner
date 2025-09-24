@@ -43,8 +43,7 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         super().__init__(*args, **kwargs)
         self.layers = CanvasLayer.objects.order_by("order").all()
         if not self.layers or len(self.layers) == 0:
-            layer = CanvasLayer.objects.create(order=0, name="Layer 1")
-            layer = CanvasLayer.objects.get(layer.id)
+            layer = self.create_layer(order=0, name="Layer 1")
             # Initialize default settings for the first layer
             self._initialize_layer_default_settings(layer.id)
             self.layers = [layer]
@@ -78,12 +77,24 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         # Enable drag and drop for the container
         self.setAcceptDrops(True)
 
+    def create_layer(self, **kwargs) -> CanvasLayer:
+        if "name" not in kwargs:
+            kwargs["name"] = f"Layer {len(self.layers) + 1}"
+
+        if "order" not in kwargs:
+            kwargs["order"] = len(self.layers)
+        layer = CanvasLayer.objects.create(**kwargs)
+        DrawingPadSettings.objects.create(layer_id=layer.id)
+        ControlnetSettings.objects.create(layer_id=layer.id)
+        ImageToImageSettings.objects.create(layer_id=layer.id)
+        OutpaintSettings.objects.create(layer_id=layer.id)
+        BrushSettings.objects.create(layer_id=layer.id)
+        MetadataSettings.objects.create(layer_id=layer.id)
+        return CanvasLayer.objects.get(layer.id)
+
     @Slot()
     def on_add_layer_clicked(self):
-        layer = CanvasLayer.objects.create(
-            order=len(self.layers), name=f"Layer {len(self.layers) + 1}"
-        )
-        layer = CanvasLayer.objects.get(layer.id)
+        layer = self.create_layer()
 
         # Initialize default settings for the new layer
         self._initialize_layer_default_settings(layer.id)
@@ -244,6 +255,12 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                 self.layer_widgets.pop(layer_id, None)
                 self.selected_layers.discard(layer_id)
             CanvasLayer.objects.delete(layer_id)
+            DrawingPadSettings.objects.delete(layer_id=layer_id)
+            ControlnetSettings.objects.delete(layer_id=layer_id)
+            ImageToImageSettings.objects.delete(layer_id=layer_id)
+            OutpaintSettings.objects.delete(layer_id=layer_id)
+            BrushSettings.objects.delete(layer_id=layer_id)
+            MetadataSettings.objects.delete(layer_id=layer_id)
 
     def on_layer_selected(self, data: dict):
         layer_id = data.get("layer_id")
