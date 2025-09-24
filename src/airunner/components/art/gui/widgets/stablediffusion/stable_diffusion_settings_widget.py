@@ -103,7 +103,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             self._update_model_id()
 
     def toggled_use_compel(self, val):
-        self.update_generator_settings("use_compel", val)
+        self.update_generator_settings(use_compel=val)
 
     @Slot()
     def on_browse_button_clicked(self):
@@ -158,7 +158,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 self.ui.custom_model.blockSignals(True)
                 self.ui.custom_model.setText(file_path)
                 self.ui.custom_model.blockSignals(False)
-                self.update_generator_settings("custom_path", file_path)
+                self.update_generator_settings(custom_path=file_path)
                 return
         # If we get here, import to AI Runner folder
         filename = os.path.basename(file_path)
@@ -221,14 +221,14 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 self.ui.custom_model.blockSignals(True)
                 self.ui.custom_model.setText(dest_path)
                 self.ui.custom_model.blockSignals(False)
-                self.update_generator_settings("custom_path", dest_path)
+                self.update_generator_settings(custom_path=dest_path)
 
         thread = threading.Thread(target=do_copy)
         thread.start()
 
     @Slot(str)
     def on_custom_model_textChanged(self, val: str):
-        self.update_generator_settings("custom_path", val)
+        self.update_generator_settings(custom_path=val)
 
     @Slot(str)
     def handle_model_changed(self, val: str):
@@ -238,7 +238,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def _update_model_id(self):
         index = self.ui.model.currentIndex()
         model_id = self.ui.model.itemData(index)
-        self.update_generator_settings("model", model_id)
+        self.update_generator_settings(model=model_id)
 
         # Automatically switch pipeline action to match the selected model
         if model_id:
@@ -248,7 +248,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 if current_pipeline != model.pipeline_action:
                     # Update the pipeline action to match the model
                     self.update_generator_settings(
-                        "pipeline_action", model.pipeline_action
+                        pipeline_action=model.pipeline_action
                     )
                     # Update the UI pipeline dropdown to match the model's pipeline
                     pipeline_display_text = None
@@ -271,7 +271,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                     self.load_models()
 
     def handle_scheduler_changed(self, name):
-        self.update_generator_settings("scheduler", name)
+        self.update_generator_settings(scheduler=name)
         self.api.art.change_scheduler(name)
 
     @Slot(str)
@@ -318,7 +318,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.api.art.model_changed(val)
 
     def handle_version_changed(self, val):
-        self.update_generator_settings("version", val)
+        self.update_generator_settings(version=val)
         self.api.widget_element_changed("sd_version", "version", val)
 
         generator_settings = GeneratorSettings.objects.first()
@@ -412,7 +412,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         model_id = generator_settings.model
         if model_id is None and len(models) > 0:
             current_model = models[0]
-            self.update_generator_settings("model", current_model.id)
+            self.update_generator_settings(model=current_model.id)
 
         for model in models:
             self.ui.model.addItem(model.name, model.id)
@@ -435,7 +435,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         else:
             self.generator_settings.scheduler = self.ui.scheduler.currentText()
         self.update_generator_settings(
-            "scheduler", self.generator_settings.scheduler
+            scheduler=self.generator_settings.scheduler
         )
         self.ui.scheduler.blockSignals(False)
 
@@ -492,7 +492,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 self.ui.custom_model.blockSignals(True)
                 self.ui.custom_model.setText(file_path)
                 self.ui.custom_model.blockSignals(False)
-                self.update_generator_settings("custom_path", file_path)
+                self.update_generator_settings(custom_path=file_path)
                 return
         # If we get here, import to AI Runner folder
         filename = os.path.basename(file_path)
@@ -555,14 +555,14 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 self.ui.custom_model.blockSignals(True)
                 self.ui.custom_model.setText(dest_path)
                 self.ui.custom_model.blockSignals(False)
-                self.update_generator_settings("custom_path", dest_path)
+                self.update_generator_settings(custom_path=dest_path)
 
         thread = threading.Thread(target=do_copy)
         thread.start()
 
     @Slot(str)
     def on_custom_model_textChanged(self, val: str):
-        self.update_generator_settings("custom_path", val)
+        self.update_generator_settings(custom_path=val)
 
     @Slot(str)
     def handle_model_changed(self, val: str):
@@ -572,7 +572,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def _update_model_id(self):
         index = self.ui.model.currentIndex()
         model_id = self.ui.model.itemData(index)
-        self.update_generator_settings("model", model_id)
+        self.update_generator_settings(model=model_id)
 
         # Automatically switch pipeline action to match the selected model
         if model_id:
@@ -582,7 +582,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 if current_pipeline != model.pipeline_action:
                     # Update the pipeline action to match the model
                     self.update_generator_settings(
-                        "pipeline_action", model.pipeline_action
+                        pipeline_action=model.pipeline_action
                     )
                     # Update the UI pipeline dropdown to match the model's pipeline
                     pipeline_display_text = None
@@ -605,7 +605,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                     self.load_models()
 
     def handle_scheduler_changed(self, name):
-        self.update_generator_settings("scheduler", name)
+        self.update_generator_settings(scheduler=name)
         self.api.art.change_scheduler(name)
 
     @Slot(str)
@@ -652,7 +652,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.api.art.model_changed(val)
 
     def handle_version_changed(self, val):
-        self.update_generator_settings("version", val)
+        self.update_generator_settings(version=val)
         self.api.widget_element_changed("sd_version", "version", val)
 
         generator_settings = GeneratorSettings.objects.first()
@@ -746,7 +746,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         model_id = generator_settings.model
         if model_id is None and len(models) > 0:
             current_model = models[0]
-            self.update_generator_settings("model", current_model.id)
+            self.update_generator_settings(model=current_model.id)
 
         for model in models:
             self.ui.model.addItem(model.name, model.id)
@@ -769,6 +769,6 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         else:
             self.generator_settings.scheduler = self.ui.scheduler.currentText()
         self.update_generator_settings(
-            "scheduler", self.generator_settings.scheduler
+            scheduler=self.generator_settings.scheduler
         )
         self.ui.scheduler.blockSignals(False)

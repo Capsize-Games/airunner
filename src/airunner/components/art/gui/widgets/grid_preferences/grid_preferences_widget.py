@@ -30,28 +30,28 @@ class GridPreferencesWidget(BaseWidget):
 
     def action_toggled_snap_to_grid(self, val):
         self.grid_settings.snap_to_grid = val
-        self.update_grid_settings("snap_to_grid", val)
+        self.update_grid_settings(snap_to_grid=val)
 
     def action_toggled_show_grid(self, val):
         self.grid_settings.show_grid = val
-        self.update_grid_settings("show_grid", val)
+        self.update_grid_settings(show_grid=val)
 
     def action_button_clicked_grid_line_color(self):
         color = QColorDialog.getColor(parent=self)
         if color.isValid():
             self.grid_settings.line_color = color.name()
-            self.update_grid_settings("line_color", color.name())
+            self.update_grid_settings(line_color=color.name())
 
     def action_button_clicked_canvas_color(self):
         color = QColorDialog.getColor(parent=self)
         if color.isValid():
             self.grid_settings.canvas_color = color.name()
-            self.update_grid_settings("canvas_color", color.name())
+            self.update_grid_settings(canvas_color=color.name())
 
     def grid_size_changed(self, val):
         self.grid_settings.cell_size = val
-        self.update_grid_settings("cell_size", val)
+        self.update_grid_settings(cell_size=val)
 
     def line_width_changed(self, val):
         self.grid_settings.line_width = val
-        self.update_grid_settings("line_width", val)
+        self.update_grid_settings(line_width=val)

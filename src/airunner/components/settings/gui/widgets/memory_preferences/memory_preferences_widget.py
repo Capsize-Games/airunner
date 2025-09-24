@@ -76,35 +76,33 @@ class MemoryPreferencesWidget(BaseWidget):
     @Slot(str)
     def action_changed_sd_combobox(self, val: str):
         self.update_memory_settings(
-            "default_gpu_sd", self.available_devices.index(val)
+            default_gpu_sd=self.available_devices.index(val)
         )
 
     @Slot(str)
     def action_changed_llm_combobox(self, val: str):
         self.update_memory_settings(
-            "default_gpu_llm", self.available_devices.index(val)
+            default_gpu_llm=self.available_devices.index(val)
         )
 
     @Slot(str)
     def action_changed_tts_combobox(self, val: str):
         self.update_memory_settings(
-            "default_gpu_tts", self.available_devices.index(val)
+            default_gpu_tts=self.available_devices.index(val)
         )
 
     @Slot(str)
     def action_changed_stt_combobox(self, val: str):
         self.update_memory_settings(
-            "default_gpu_stt", self.available_devices.index(val)
+            default_gpu_stt=self.available_devices.index(val)
         )
 
     @Slot(bool)
     def action_toggled_prevent_unload_on_llm_image_generation(self, val: bool):
-        self.update_memory_settings(
-            "prevent_unload_on_llm_image_generation", val
-        )
+        self.update_memory_settings(prevent_unload_on_llm_image_generation=val)
 
     def action_toggled_setting(self, setting_name, val):
-        self.update_memory_settings(setting_name, val)
+        self.update_memory_settings(**{setting_name: val})
 
     def action_toggled_tome(self, val):
         self.action_toggled_setting("use_tome_sd", val)
@@ -146,7 +144,7 @@ class MemoryPreferencesWidget(BaseWidget):
         self.ui.tome_sd_ratio.ui.slider.setValue(600)
 
     def action_toggled_use_tome(self, val):
-        self.update_memory_settings("use_tome_sd", val)
+        self.update_memory_settings(use_tome_sd=val)
 
     def tome_sd_ratio_value_change(self, _prop, val):
-        self.update_memory_settings("tome_sd_ratio", val)
+        self.update_memory_settings(tome_sd_ratio=val)

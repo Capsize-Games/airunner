@@ -23,13 +23,13 @@ class BrushContainerWidget(BaseWidget):
 
     def toggle_auto_generate_while_drawing(self, val):
         self.drawing_pad_settings.enable_automatic_drawing = val
-        self.update_drawing_pad_settings("enable_automatic_drawing", val)
+        self.update_drawing_pad_settings(enable_automatic_drawing=val)
 
     def color_button_clicked(self):
         color = QColorDialog.getColor()
         if color.isValid():
             self.brush_settings.primary_color = color.name()
-            self.update_brush_settings("primary_color", color.name())
+            self.update_brush_settings(primary_color=color.name())
             self.set_button_color()
             self.api.art.canvas.brush_color_changed(color.name())
 

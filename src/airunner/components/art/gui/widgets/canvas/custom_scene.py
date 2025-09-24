@@ -550,7 +550,7 @@ class CustomScene(
             self.enable_cpu_offload_callback()
 
     def enable_cpu_offload_callback(self):
-        self.update_memory_settings("enable_model_cpu_offload", True)
+        self.update_memory_settings(enable_model_cpu_offload=True)
 
     def on_canvas_clear_signal(self):
         self.current_active_image = None
@@ -710,7 +710,7 @@ class CustomScene(
             zoom_level += zoom_factor
             if zoom_level < 0.1:
                 zoom_level = 0.1
-            self.update_grid_settings("zoom_level", zoom_level)
+            self.update_grid_settings(zoom_level=zoom_level)
             self.api.art.canvas.zoom_level_changed()
 
     def mousePressEvent(self, event):
@@ -894,10 +894,8 @@ class CustomScene(
 
         if generated:
             self.update_drawing_pad_settings(
-                "x_pos", self.active_grid_settings.pos_x
-            )
-            self.update_drawing_pad_settings(
-                "y_pos", self.active_grid_settings.pos_y
+                x_pos=self.active_grid_settings.pos_x,
+                y_pos=self.active_grid_settings.pos_y
             )
             x = self.active_grid_settings.pos_x
             y = self.active_grid_settings.pos_y
@@ -930,13 +928,13 @@ class CustomScene(
 
     def _update_current_settings(self, key, value):
         if self.settings_key == "controlnet_settings":
-            self.update_controlnet_settings(key, value)
+            self.update_controlnet_settings(**{key: value})
         elif self.settings_key == "image_to_image_settings":
-            self.update_image_to_image_settings(key, value)
+            self.update_image_to_image_settings(**{key: value})
         elif self.settings_key == "outpaint_settings":
-            self.update_outpaint_settings(key, value)
+            self.update_outpaint_settings(**{key: value})
         elif self.settings_key == "drawing_pad_settings":
-            self.update_drawing_pad_settings(key, value)
+            self.update_drawing_pad_settings(**{key: value})
 
     def _load_image_from_object(self, image: Image, is_outpaint: bool = False):
         self._add_image_to_scene(is_outpaint=is_outpaint, image=image)

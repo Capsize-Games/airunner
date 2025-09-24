@@ -101,14 +101,14 @@ class BotPreferencesWidget(BaseWidget):
         # If the user clicked "OK" and entered a name
         if ok and chatbot_name:
             self.create_chatbot(chatbot_name)
-            self.update_llm_generator_settings("current_chatbot", chatbot_name)
+            self.update_llm_generator_settings(current_chatbot=chatbot_name)
             self.load_saved_chatbots()
 
     @Slot(str)
     def saved_chatbots_changed(self, val: str):
         chatbot = Chatbot.objects.filter_first(Chatbot.name == val)
         chatbot_id = chatbot.id
-        self.update_llm_generator_settings("current_chatbot", chatbot_id)
+        self.update_llm_generator_settings(current_chatbot=chatbot_id)
         self.load_form_elements()
         self.api.llm.chatbot_changed()
 

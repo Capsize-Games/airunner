@@ -39,9 +39,9 @@ class ImageToolsMixin(ToolSingletonMixin):
                 ],
             ) -> str:
                 if width is not None:
-                    self.update_application_settings("working_width", width)
+                    self.update_application_settings(working_width=width)
                 if height is not None:
-                    self.update_application_settings("working_height", height)
+                    self.update_application_settings(working_height=height)
                 return f"Working width and height set to {width}x{height}."
 
             self._set_working_width_and_height = FunctionTool.from_defaults(

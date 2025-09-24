@@ -129,13 +129,13 @@ class InputImage(BaseWidget):
 
     def update_current_settings(self, key, value):
         if self.settings_key == "controlnet_settings":
-            self.update_controlnet_settings(key, value)
+            self.update_controlnet_settings(**{key: value})
         elif self.settings_key == "image_to_image_settings":
-            self.update_image_to_image_settings(key, value)
+            self.update_image_to_image_settings(**{key: value})
         elif self.settings_key == "outpaint_settings":
-            self.update_outpaint_settings(key, value)
+            self.update_outpaint_settings(**{key: value})
         elif self.settings_key == "drawing_pad_settings":
-            self.update_drawing_pad_settings(key, value)
+            self.update_drawing_pad_settings(**{key: value})
 
         self.api.art.canvas.input_image_changed(self.settings_key, key, value)
 
@@ -361,7 +361,7 @@ class InputImage(BaseWidget):
 
     def delete_image(self):
         if self.settings_key == "outpaint_settings" and self.is_mask:
-            self.update_drawing_pad_settings("mask", None)
+            self.update_drawing_pad_settings(mask=None)
         else:
             self.update_current_settings("image", None)
 
@@ -383,7 +383,7 @@ class InputImage(BaseWidget):
                 base_64_image = convert_image_to_binary(image)
 
                 if self.is_mask:
-                    self.update_drawing_pad_settings("mask", base_64_image)
+                    self.update_drawing_pad_settings(mask=base_64_image)
                     model = self.drawing_pad_settings.__class__.objects.first()
                     model.mask = base_64_image
                     model.save()
@@ -393,18 +393,18 @@ class InputImage(BaseWidget):
                     and self.use_generated_image
                 ):
                     self.update_controlnet_settings(
-                        "generated_image", base_64_image
+                        generated_image=base_64_image
                     )
                     model = self.controlnet_settings.__class__.objects.first()
                     model.generated_image = base_64_image
                     model.save()
                 elif self.settings_key == "outpaint_settings":
-                    self.update_outpaint_settings("image", base_64_image)
+                    self.update_outpaint_settings(image=base_64_image)
                     model = self.outpaint_settings.__class__.objects.first()
                     model.image = base_64_image
                     model.save()
                 elif self.settings_key == "image_to_image_settings":
-                    self.update_image_to_image_settings("image", base_64_image)
+                    self.update_image_to_image_settings(image=base_64_image)
                     model = (
                         self.image_to_image_settings.__class__.objects.first()
                     )

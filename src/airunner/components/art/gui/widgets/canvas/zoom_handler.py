@@ -37,7 +37,7 @@ class ZoomHandler(
 
     @zoom_level.setter
     def zoom_level(self, value):
-        self.update_grid_settings("zoom_level", value)
+        self.update_grid_settings(zoom_level=value)
 
     def on_zoom_level_changed(self) -> QTransform:
         # Create a QTransform object and scale it
