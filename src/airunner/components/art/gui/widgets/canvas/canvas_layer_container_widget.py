@@ -202,6 +202,13 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             if widget:
                 self.ui.layer_list_layout.layout().removeWidget(widget)
                 widget.deleteLater()
+
+            # Emit layer deleted signal for canvas to handle
+            self.emit_signal(
+                SignalCode.LAYER_DELETED,
+                {"layer_id": layer.id},
+            )
+
             CanvasLayer.objects.delete(layer.id)
 
         # Clear selection
@@ -331,6 +338,8 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         layer = CanvasLayer.objects.get(layer_id)
         if layer:
             CanvasLayer.objects.update(layer.id, visible=visible)
+            # Emit signal to update canvas display
+            self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     def on_layer_reordered(self, data: dict):
         source_layer_id = data.get("source_layer_id")
@@ -394,6 +403,9 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             for i, layer in enumerate(self.layers):
                 CanvasLayer.objects.update(layer.id, order=i)
                 layer.order = i
+
+            # Emit signal to update canvas display
+            self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat("application/x-layer-item"):

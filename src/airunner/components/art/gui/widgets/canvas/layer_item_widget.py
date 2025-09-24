@@ -1,6 +1,8 @@
 from PySide6.QtCore import Slot, Qt, QMimeData
-from PySide6.QtGui import QDrag, QPainter
+from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import QApplication
+from airunner.enums import TemplateName
+from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
     PipelineMixin,
@@ -28,6 +30,10 @@ class LayerItemWidget(BaseWidget, PipelineMixin):
         self.ui.label.setText(self.layer.name)
         self.ui.visibility.blockSignals(True)
         self.ui.visibility.setChecked(self.layer.visible)
+
+        # Set initial visibility icon
+        self._update_visibility_icon()
+
         self.ui.visibility.blockSignals(False)
 
         # Enable drag functionality
@@ -37,12 +43,37 @@ class LayerItemWidget(BaseWidget, PipelineMixin):
         self._update_selection_style()
 
     @Slot(bool)
-    def on_visibility_toggled(self, checked: bool):
-        self.layer.visible = checked
+    def on_visibility_toggled(self, visible: bool):
+        """Handle visibility toggle button click."""
+        self.layer.visible = visible
+
+        # Update the icon
+        self._update_visibility_icon()
+
+        # Emit signal to notify canvas
         self.emit_signal(
             SignalCode.LAYER_VISIBILITY_TOGGLED,
-            {"layer_id": self.layer.id, "visible": checked},
+            {
+                "layer_id": self.layer.id,
+                "visible": visible,
+            },
         )
+
+    def _update_visibility_icon(self):
+        """Update the visibility icon based on layer state."""
+        settings = get_qsettings()
+        theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
+        theme_name = theme.lower().replace(" ", "_")
+
+        if self.layer.visible:
+            icon = self.icon_manager.get_icon("eye", theme_name)
+            tooltip = "Hide layer"
+        else:
+            icon = self.icon_manager.get_icon("eye-off", theme_name)
+            tooltip = "Show layer"
+
+        self.ui.visibility.setIcon(icon)
+        self.ui.visibility.setToolTip(tooltip)
 
     @Slot()
     def on_delete_layer_clicked(self):
