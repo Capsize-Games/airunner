@@ -85,6 +85,62 @@ class SettingsMixinSharedInstance:
 
         self._initialized = True
         self.chatbot: Optional[Chatbot] = None
+        # Cache for settings instances keyed by model class to avoid repeated DB reads
+        self._settings_cache: Dict[Type[Any], Any] = {}
+
+    def get_cached_setting(self, model_class: Type[Any]) -> Optional[Any]:
+        """Return a cached settings instance if present."""
+        return self._settings_cache.get(model_class)
+
+    def set_cached_setting(
+        self, model_class: Type[Any], instance: Any
+    ) -> None:
+        """Store a settings instance in cache."""
+        self._settings_cache[model_class] = instance
+
+    def invalidate_cached_setting(self, model_class: Type[Any]) -> None:
+        """Remove a settings instance from cache."""
+        self._settings_cache.pop(model_class, None)
+
+    def on_settings_updated(
+        self, setting_name: Optional[str], column_name: Optional[str], val: Any
+    ) -> None:
+        """Update or invalidate cache when settings change.
+
+        Args:
+            setting_name: Table name for the setting (SQLAlchemy __tablename__).
+            column_name: Column updated, if any.
+            val: New value for the column if column_name is provided.
+        """
+        if not setting_name:
+            return
+
+        model_class = table_to_class.get(setting_name)
+        if not model_class:
+            # Fallback: attempt to find matching class by __tablename__ within cached classes
+            for cls in list(self._settings_cache.keys()):
+                try:
+                    if getattr(cls, "__tablename__", None) == setting_name:
+                        model_class = cls
+                        break
+                except Exception:
+                    continue
+            if not model_class:
+                return
+
+        cached = self.get_cached_setting(model_class)
+        if cached is None:
+            return
+
+        if column_name:
+            try:
+                setattr(cached, column_name, val)
+            except Exception:
+                # If direct assignment fails for any reason, drop cache
+                self.invalidate_cached_setting(model_class)
+        else:
+            # Unknown change scope; safest is to drop cache to force reload on next access
+            self.invalidate_cached_setting(model_class)
 
 
 class SettingsMixin:
@@ -116,25 +172,50 @@ class SettingsMixin:
     def logger(self):
         return self.settings_mixin_shared_instance.logger
 
+    def _get_or_cache_settings(
+        self, model_class_: Type[Any], eager_load: Optional[List[str]] = None
+    ) -> Any:
+        """Get a settings instance from cache or load and cache it.
+
+        Args:
+            model_class_: SQLAlchemy model class for the settings table.
+            eager_load: Optional list of relationship names to eager-load.
+
+        Returns:
+            Instance of the settings model.
+        """
+        cached = self.settings_mixin_shared_instance.get_cached_setting(
+            model_class_
+        )
+        if cached is not None:
+            return cached
+        instance = self.load_settings_from_db(
+            model_class_, eager_load=eager_load
+        )
+        self.settings_mixin_shared_instance.set_cached_setting(
+            model_class_, instance
+        )
+        return instance
+
     @property
     def stt_settings(self) -> STTSettings:
-        return self.load_settings_from_db(STTSettings)
+        return self._get_or_cache_settings(STTSettings)
 
     @property
     def application_settings(self) -> ApplicationSettings:
-        return self.load_settings_from_db(ApplicationSettings)
+        return self._get_or_cache_settings(ApplicationSettings)
 
     @property
     def language_settings(self) -> LanguageSettings:
-        return self.load_settings_from_db(LanguageSettings)
+        return self._get_or_cache_settings(LanguageSettings)
 
     @property
     def sound_settings(self) -> SoundSettings:
-        return self.load_settings_from_db(SoundSettings)
+        return self._get_or_cache_settings(SoundSettings)
 
     @property
     def whisper_settings(self) -> WhisperSettings:
-        return self.load_settings_from_db(WhisperSettings)
+        return self._get_or_cache_settings(WhisperSettings)
 
     @property
     def window_settings(self) -> WindowSettings:
@@ -188,49 +269,49 @@ class SettingsMixin:
         """Return the LLMGeneratorSettings instance from the database, creating it if necessary.
         No longer manages current_chatbot; current chatbot is determined via Chatbot.objects.filter_by(current=True).
         """
-        return self.load_settings_from_db(LLMGeneratorSettings)
+        return self._get_or_cache_settings(LLMGeneratorSettings)
 
     @property
     def generator_settings(self) -> GeneratorSettings:
-        return self.load_settings_from_db(
+        return self._get_or_cache_settings(
             GeneratorSettings, eager_load=["aimodel"]
         )
 
     @property
     def controlnet_settings(self) -> ControlnetSettings:
-        return self.load_settings_from_db(ControlnetSettings)
+        return self._get_or_cache_settings(ControlnetSettings)
 
     @property
     def image_to_image_settings(self) -> ImageToImageSettings:
-        return self.load_settings_from_db(ImageToImageSettings)
+        return self._get_or_cache_settings(ImageToImageSettings)
 
     @property
     def outpaint_settings(self) -> OutpaintSettings:
-        return self.load_settings_from_db(OutpaintSettings)
+        return self._get_or_cache_settings(OutpaintSettings)
 
     @property
     def drawing_pad_settings(self) -> DrawingPadSettings:
-        return self.load_settings_from_db(DrawingPadSettings)
+        return self._get_or_cache_settings(DrawingPadSettings)
 
     @property
     def brush_settings(self) -> BrushSettings:
-        return self.load_settings_from_db(BrushSettings)
+        return self._get_or_cache_settings(BrushSettings)
 
     @property
     def grid_settings(self) -> GridSettings:
-        return self.load_settings_from_db(GridSettings)
+        return self._get_or_cache_settings(GridSettings)
 
     @property
     def active_grid_settings(self) -> ActiveGridSettings:
-        return self.load_settings_from_db(ActiveGridSettings)
+        return self._get_or_cache_settings(ActiveGridSettings)
 
     @property
     def path_settings(self) -> PathSettings:
-        return self.load_settings_from_db(PathSettings)
+        return self._get_or_cache_settings(PathSettings)
 
     @property
     def memory_settings(self) -> MemorySettings:
-        return self.load_settings_from_db(MemorySettings)
+        return self._get_or_cache_settings(MemorySettings)
 
     @property
     def chatbots(self) -> List[Type[Chatbot]]:
@@ -282,28 +363,52 @@ class SettingsMixin:
 
     @property
     def speech_t5_settings(self) -> SpeechT5Settings:
+        cached = self.settings_mixin_shared_instance.get_cached_setting(
+            SpeechT5Settings
+        )
+        if cached is not None:
+            return cached
         settings = SpeechT5Settings.objects.first()
         if settings is None:
             settings = SpeechT5Settings.objects.create()
-        return SpeechT5Settings.objects.first()
+        self.settings_mixin_shared_instance.set_cached_setting(
+            SpeechT5Settings, settings
+        )
+        return settings
 
     @property
     def espeak_settings(self) -> Optional[object]:
+        cached = self.settings_mixin_shared_instance.get_cached_setting(
+            EspeakSettings
+        )
+        if cached is not None:
+            return cached
         settings = EspeakSettings.objects.first()
         if settings is None:
             settings = EspeakSettings.objects.create()
-        return EspeakSettings.objects.first()
+        self.settings_mixin_shared_instance.set_cached_setting(
+            EspeakSettings, settings
+        )
+        return settings
 
     @property
     def openvoice_settings(self) -> OpenVoiceSettings:
+        cached = self.settings_mixin_shared_instance.get_cached_setting(
+            OpenVoiceSettings
+        )
+        if cached is not None:
+            return cached
         settings = OpenVoiceSettings.objects.first()
         if settings is None:
             settings = OpenVoiceSettings.objects.create()
-        return OpenVoiceSettings.objects.first()
+        self.settings_mixin_shared_instance.set_cached_setting(
+            OpenVoiceSettings, settings
+        )
+        return settings
 
     @property
     def metadata_settings(self) -> MetadataSettings:
-        return self.load_settings_from_db(MetadataSettings)
+        return self._get_or_cache_settings(MetadataSettings)
 
     @property
     def prompt_templates(self) -> List[Type[PromptTemplate]]:
@@ -526,14 +631,12 @@ class SettingsMixin:
         self.__settings_updated()
 
     def update_generator_settings(self, column_name, val):
+        # Update the cached instance
         generator_settings = self.generator_settings
         setattr(generator_settings, column_name, val)
-        generator_settings.save()
-        self.__settings_updated(
-            setting_name=GeneratorSettings.__tablename__,
-            column_name=column_name,
-            val=val,
-        )
+
+        # Use database-level update instead of saving transient instance
+        self.update_setting(GeneratorSettings, column_name, val)
 
     def update_controlnet_image_settings(self, column_name, val):
         controlnet_settings = self.controlnet_settings
@@ -621,7 +724,30 @@ class SettingsMixin:
                         settings_instance = None
 
                 if settings_instance:
-                    session.expunge(settings_instance)
+                    # Force-load all scalar attributes and make the instance transient
+                    try:
+                        from sqlalchemy import inspect as sa_inspect
+                        from sqlalchemy.orm import make_transient
+
+                        mapper = sa_inspect(model_class_)
+                        for attr in mapper.column_attrs:
+                            _ = getattr(settings_instance, attr.key)
+                        # Optionally force-load requested relationships as well
+                        if eager_load:
+                            for relation in eager_load:
+                                try:
+                                    _ = getattr(settings_instance, relation)
+                                except Exception:
+                                    pass
+
+                        # Make the instance transient to completely detach it from SQLAlchemy state tracking
+                        make_transient(settings_instance)
+                    except Exception:
+                        # Fallback to expunge if make_transient fails
+                        try:
+                            session.expunge(settings_instance)
+                        except Exception:
+                            pass
 
                 return settings_instance
 
@@ -685,6 +811,11 @@ class SettingsMixin:
         ]
         for cls in settings_models:
             cls.objects.delete_all()
+        # Invalidate any cached settings after reset
+        try:
+            SettingsMixinSharedInstance()._settings_cache.clear()
+        except Exception:
+            pass
 
     @staticmethod
     def get_saved_prompt_by_id(prompt_id) -> Type[SavedPrompt]:
@@ -965,6 +1096,14 @@ class SettingsMixin:
     def __settings_updated(
         self, setting_name=None, column_name=None, val=None
     ):
+        # Update/invalidate local settings cache first
+        try:
+            self.settings_mixin_shared_instance.on_settings_updated(
+                setting_name, column_name, val
+            )
+        except Exception:
+            # Avoid breaking update flow due to cache issues
+            pass
         if hasattr(self, "api") and self.api:
             self.api.application_settings_changed(
                 setting_name=setting_name,
