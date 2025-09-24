@@ -412,8 +412,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         model_id = generator_settings.model
         if model_id is None and len(models) > 0:
             current_model = models[0]
-            generator_settings.model = current_model.id
-            generator_settings.save()
+            self.update_generator_settings("model", current_model.id)
 
         for model in models:
             self.ui.model.addItem(model.name, model.id)
@@ -747,8 +746,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         model_id = generator_settings.model
         if model_id is None and len(models) > 0:
             current_model = models[0]
-            generator_settings.model = current_model.id
-            generator_settings.save()
+            self.update_generator_settings("model", current_model.id)
 
         for model in models:
             self.ui.model.addItem(model.name, model.id)
