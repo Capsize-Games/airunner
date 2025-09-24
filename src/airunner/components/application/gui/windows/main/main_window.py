@@ -1544,9 +1544,7 @@ class MainWindow(
         img = Image.new("RGB", (width, height), (0, 0, 0))
         base64_image = convert_image_to_binary(img)
 
-        drawing_pad_settings = DrawingPadSettings.objects.first()
-        drawing_pad_settings.mask = base64_image
-        drawing_pad_settings.save()
+        self.update_drawing_pad_settings("mask", base64_image)
 
     def display_missing_models_error(self, data):
         msg_box = QMessageBox()

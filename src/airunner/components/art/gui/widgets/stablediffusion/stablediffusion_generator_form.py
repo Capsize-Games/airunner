@@ -97,22 +97,27 @@ class SaveGeneratorSettingsWorker(
 
             if do_update_settings:
                 do_update_settings = False
-                generator_settings = self.generator_settings
-                generator_settings.prompt = self.current_prompt_value
-                generator_settings.negative_prompt = (
-                    self.current_negative_prompt_value
+                # Update individual fields using the proper update methods
+                self.parent.update_generator_settings(
+                    "prompt", self.current_prompt_value
                 )
-                generator_settings.second_prompt = (
-                    self.current_secondary_prompt_value
+                self.parent.update_generator_settings(
+                    "negative_prompt", self.current_negative_prompt_value
                 )
-                generator_settings.second_negative_prompt = (
-                    self.current_secondary_negative_prompt_value
+                self.parent.update_generator_settings(
+                    "second_prompt", self.current_secondary_prompt_value
                 )
-                generator_settings.crops_coords_top_left = {
-                    "x": self.crops_coords_top_left_x,
-                    "y": self.crops_coords_top_left_y,
-                }
-                generator_settings.save()
+                self.parent.update_generator_settings(
+                    "second_negative_prompt",
+                    self.current_secondary_negative_prompt_value,
+                )
+                self.parent.update_generator_settings(
+                    "crops_coords_top_left",
+                    {
+                        "x": self.crops_coords_top_left_x,
+                        "y": self.crops_coords_top_left_y,
+                    },
+                )
 
             time.sleep(0.1)
 
