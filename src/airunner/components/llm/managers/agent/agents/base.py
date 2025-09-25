@@ -83,9 +83,6 @@ from airunner.components.llm.managers.agent.agents.tool_mixins import (
     AnalysisToolsMixin,
 )
 from airunner.components.context.context_manager import ContextManager
-from airunner.components.llm.managers.agent.agents.tool_mixins.map_tools_mixin import (
-    MapToolsMixin,
-)
 
 
 class BaseAgent(
@@ -103,7 +100,6 @@ class BaseAgent(
     LLMManagerMixin,
     MoodToolsMixin,
     AnalysisToolsMixin,
-    MapToolsMixin,
 ):
     """
     Base class for all agents.
@@ -166,7 +162,6 @@ class BaseAgent(
             LLMActionType.SEARCH: self.search_tool_handler,
             LLMActionType.FILE_INTERACTION: self.file_interaction_handler,
             LLMActionType.WORKFLOW_INTERACTION: self.workflow_interaction_handler,
-            LLMActionType.MAP_TOOL: self.map_tool_handler,  # Add map_tool_handler
         }
         self.menu_choices = {
             1: {
@@ -188,10 +183,6 @@ class BaseAgent(
             5: {
                 "action": LLMActionType.APPLICATION_COMMAND,
                 "description": "Not sure what to do: Reason about the user's request and choose from a list of available tools in order to fulfill the request.",
-            },
-            6: {
-                "action": LLMActionType.MAP_TOOL,
-                "description": "Use the map tool: Choose this when you want to search for locations, geocode, find POIs, or perform map-related actions.",
             },
         }
         self.prompt: Optional[str] = None
@@ -482,7 +473,6 @@ class BaseAgent(
             self.open_image_from_path_tool,
             self.search_engine_tool,
             self.generate_image_tool,
-            self.map_tool,
         ]
         if AIRUNNER_ART_ENABLED:
             tools.extend(
@@ -1264,69 +1254,6 @@ class BaseAgent(
             self.chat_memory.get() if self.chat_memory else []
         )
         return self.react_tool_agent.call(**kwargs)
-
-    def map_tool_handler(self, **kwargs: Any) -> Any:
-        """Handle map tool requests using standard react agent with minimal context."""
-        kwargs["tool_choice"] = "map_tool"
-        kwargs["chat_history"] = []
-
-        # Clear any previous map tool result
-        if hasattr(self, "_last_map_tool_result"):
-            delattr(self, "_last_map_tool_result")
-
-        # Build a clear instruction that forces ReAct format
-        if "query" in kwargs:
-            query = kwargs["query"]
-            # Create a very explicit instruction with examples that forces ReAct format
-            kwargs["input"] = (
-                f"CRITICAL: You MUST respond ONLY in the exact ReAct format shown below. DO NOT provide conversational responses.\n\n"
-                f'User request: "{query}"\n\n'
-                f"You must analyze this request and respond with EXACTLY the following format:\n\n"
-                f"Action: map_tool\n"
-                f'Action Input: {{"action": "ACTION_TYPE", "PARAM1": "VALUE1", "PARAM2": "VALUE2"}}\n\n'
-                f"Examples:\n"
-                f'For directions/routes like "from Denver to Chicago":\n'
-                f"Action: map_tool\n"
-                f'Action Input: {{"action": "get_directions", "from_location": "Denver", "to_location": "Chicago"}}\n\n'
-                f'For location search like "find Eiffel Tower":\n'
-                f"Action: map_tool\n"
-                f'Action Input: {{"action": "search_location", "search_location": "Eiffel Tower"}}\n\n'
-                f'NOW RESPOND IN THE EXACT FORMAT ABOVE FOR: "{query}"'
-            )
-        elif "input" in kwargs:
-            user_input = kwargs["input"]
-            kwargs["input"] = (
-                f"CRITICAL: You MUST respond ONLY in the exact ReAct format shown below. DO NOT provide conversational responses.\n\n"
-                f'User request: "{user_input}"\n\n'
-                f"You must analyze this request and respond with EXACTLY the following format:\n\n"
-                f"Action: map_tool\n"
-                f'Action Input: {{"action": "ACTION_TYPE", "PARAM1": "VALUE1", "PARAM2": "VALUE2"}}\n\n'
-                f"Examples:\n"
-                f'For directions/routes like "from Denver to Chicago":\n'
-                f"Action: map_tool\n"
-                f'Action Input: {{"action": "get_directions", "from_location": "Denver", "to_location": "Chicago"}}\n\n'
-                f'For location search like "find Eiffel Tower":\n'
-                f"Action: map_tool\n"
-                f'Action Input: {{"action": "search_location", "search_location": "Eiffel Tower"}}\n\n'
-                f'NOW RESPOND IN THE EXACT FORMAT ABOVE FOR: "{user_input}"'
-            )
-
-        # Ensure template format args expected by the React formatter are present
-        try:
-            kwargs.setdefault("username", self.username)
-        except Exception:
-            kwargs.setdefault("username", "")
-        try:
-            kwargs.setdefault("botname", self.botname)
-        except Exception:
-            kwargs.setdefault("botname", "")
-
-        result = self.react_tool_agent.call(**kwargs)
-        self._complete_response = (
-            result.content if hasattr(result, "content") else str(result)
-        )
-
-        return result
 
     def _perform_tool_call(
         self, action: LLMActionType, **kwargs: Any

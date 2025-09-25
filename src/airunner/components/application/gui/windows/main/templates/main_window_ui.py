@@ -26,7 +26,6 @@ from airunner.components.art.gui.widgets.generator_form.generator_form_widget im
 from airunner.components.document_editor.gui.widgets.document_editor_container_widget import DocumentEditorContainerWidget
 from airunner.components.documents.gui.widgets.documents import DocumentsWidget
 from airunner.components.home_stage.gui.widgets.home_stage_widget import HomeStageWidget
-from airunner.components.map.gui.widgets.map_widget import MapWidget
 from airunner.components.nodegraph.gui.widgets.node_graph_widget import NodeGraphWidget
 from airunner.components.voice_visualizer.gui.widgets.voice_visualizer_widget import VoiceVisualizerWidget
 import airunner.feather_rc
@@ -308,36 +307,22 @@ class Ui_MainWindow(object):
 
         self.action_sidebar.addWidget(self.document_editor_button)
 
-        self.map_button = QPushButton(self.actionsidebar)
-        self.map_button.setObjectName(u"map_button")
-        self.map_button.setMinimumSize(QSize(35, 35))
-        self.map_button.setMaximumSize(QSize(35, 35))
-        self.map_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon33 = QIcon()
-        icon33.addFile(u":/light/icons/feather/light/map.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.map_button.setIcon(icon33)
-        self.map_button.setIconSize(QSize(17, 17))
-        self.map_button.setCheckable(True)
-        self.map_button.setFlat(True)
-
-        self.action_sidebar.addWidget(self.map_button)
-
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.action_sidebar.addItem(self.verticalSpacer)
-
         self.visualizer_button = QPushButton(self.actionsidebar)
         self.visualizer_button.setObjectName(u"visualizer_button")
         self.visualizer_button.setMinimumSize(QSize(35, 35))
         self.visualizer_button.setMaximumSize(QSize(35, 35))
-        icon34 = QIcon()
-        icon34.addFile(u":/dark/icons/feather/dark/radio.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.visualizer_button.setIcon(icon34)
+        icon33 = QIcon()
+        icon33.addFile(u":/dark/icons/feather/dark/radio.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.visualizer_button.setIcon(icon33)
         self.visualizer_button.setIconSize(QSize(20, 20))
         self.visualizer_button.setCheckable(True)
         self.visualizer_button.setFlat(True)
 
         self.action_sidebar.addWidget(self.visualizer_button)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.action_sidebar.addItem(self.verticalSpacer)
 
         self.chat_button = QPushButton(self.actionsidebar)
         self.chat_button.setObjectName(u"chat_button")
@@ -449,17 +434,6 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.widget, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.document_editor_tab, "")
-        self.map_tab = QWidget()
-        self.map_tab.setObjectName(u"map_tab")
-        self.gridLayout_12 = QGridLayout(self.map_tab)
-        self.gridLayout_12.setObjectName(u"gridLayout_12")
-        self.gridLayout_12.setContentsMargins(0, 0, 0, 0)
-        self.map = MapWidget(self.map_tab)
-        self.map.setObjectName(u"map")
-
-        self.gridLayout_12.addWidget(self.map, 0, 0, 1, 1)
-
-        self.center_tab_container.addTab(self.map_tab, "")
         self.visualizer_tab = QWidget()
         self.visualizer_tab.setObjectName(u"visualizer_tab")
         self.gridLayout_14 = QGridLayout(self.visualizer_tab)
@@ -712,10 +686,6 @@ class Ui_MainWindow(object):
         self.document_editor_button.setToolTip(QCoreApplication.translate("MainWindow", u"Document Editor", None))
 #endif // QT_CONFIG(tooltip)
         self.document_editor_button.setText("")
-#if QT_CONFIG(tooltip)
-        self.map_button.setToolTip(QCoreApplication.translate("MainWindow", u"Maps", None))
-#endif // QT_CONFIG(tooltip)
-        self.map_button.setText("")
         self.visualizer_button.setText("")
 #if QT_CONFIG(tooltip)
         self.chat_button.setToolTip(QCoreApplication.translate("MainWindow", u"Chat", None))
@@ -729,7 +699,6 @@ class Ui_MainWindow(object):
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.art_tab), QCoreApplication.translate("MainWindow", u"Art", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.agent_workflow_tab), QCoreApplication.translate("MainWindow", u"Agent Workflow", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.document_editor_tab), QCoreApplication.translate("MainWindow", u"Document Editor", None))
-        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.map_tab), QCoreApplication.translate("MainWindow", u"Maps", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.visualizer_tab), QCoreApplication.translate("MainWindow", u"Visualizer", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))

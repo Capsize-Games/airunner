@@ -301,60 +301,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="map_button">
-            <property name="minimumSize">
-             <size>
-              <width>35</width>
-              <height>35</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>35</width>
-              <height>35</height>
-             </size>
-            </property>
-            <property name="cursor">
-             <cursorShape>PointingHandCursor</cursorShape>
-            </property>
-            <property name="toolTip">
-             <string>Maps</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset resource="../../../../../../gui/resources/feather.qrc">
-              <normaloff>:/light/icons/feather/light/map.svg</normaloff>:/light/icons/feather/light/map.svg</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>17</width>
-              <height>17</height>
-             </size>
-            </property>
-            <property name="checkable">
-             <bool>true</bool>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="verticalSpacer">
-            <property name="orientation">
-             <enum>Qt::Orientation::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
            <widget class="QPushButton" name="visualizer_button">
             <property name="minimumSize">
              <size>
@@ -388,6 +334,19 @@
              <bool>true</bool>
             </property>
            </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
           </item>
           <item>
            <widget class="QPushButton" name="chat_button">
@@ -681,28 +640,6 @@
                </property>
                <item row="0" column="0">
                 <widget class="DocumentEditorContainerWidget" name="widget" native="true"/>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="map_tab">
-              <attribute name="title">
-               <string>Maps</string>
-              </attribute>
-              <layout class="QGridLayout" name="gridLayout_12">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item row="0" column="0">
-                <widget class="MapWidget" name="map" native="true"/>
                </item>
               </layout>
              </widget>
@@ -1376,12 +1313,6 @@
    <class>HomeStageWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/home_stage/gui/widgets/home_stage_widget</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>MapWidget</class>
-   <extends>QWidget</extends>
-   <header>airunner/components/map/gui/widgets/map_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>
