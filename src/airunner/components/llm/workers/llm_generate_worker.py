@@ -38,7 +38,6 @@ class LLMGenerateWorker(Worker):
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
             SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
             SignalCode.INDEX_DOCUMENT: self.on_index_document_signal,
-            SignalCode.MAP_SEARCH_REQUEST_SIGNAL: self.on_map_search_request_signal,  # Handle map search requests
         }
         self.context_manager = ContextManager()
         self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
@@ -225,108 +224,6 @@ class LLMGenerateWorker(Worker):
             )
         except Exception as e:
             pass
-
-    def on_map_search_request_signal(self, data: dict) -> None:
-        print(
-            f"[LLMGenerateWorker] on_map_search_request_signal called with data: {data}"
-        )
-        # Only process if this is a new query, not a result
-        if not data or "query" not in data or not data["query"]:
-            print(
-                "[LLMGenerateWorker] Ignoring MAP_SEARCH_REQUEST_SIGNAL with no query."
-            )
-            return
-        query = data.get("query", "")
-        self._llm_agent_map_search(query)
-
-    def _llm_agent_map_search(self, query: str) -> None:
-        print(
-            f"[LLMGenerateWorker] _llm_agent_map_search called with query: {query}"
-        )
-        if not self.model_manager or not hasattr(self.model_manager, "agent"):
-            print("[LLMGenerateWorker] No model_manager or agent available.")
-            return
-        agent = self.model_manager.agent
-        print(f"[LLMGenerateWorker] Using agent: {agent}")
-        # Let the LLM agent reason about the action/tool to use
-        print(
-            f"[LLMGenerateWorker] map_search: calling agent._perform_tool_call with action={LLMActionType.MAP_TOOL}, query={query}"
-        )
-        result = agent._perform_tool_call(
-            LLMActionType.MAP_TOOL,
-            query=query,
-        )
-        print(f"[LLMGenerateWorker] agent._perform_tool_call result: {result}")
-
-        # Check if the react_tool_agent has stored map tool result data
-        print(f"[LLMGenerateWorker] Checking for stored map result...")
-        print(
-            f"[LLMGenerateWorker] Agent has react_tool_agent: {hasattr(agent, 'react_tool_agent')}"
-        )
-        if hasattr(agent, "react_tool_agent"):
-            print(
-                f"[LLMGenerateWorker] react_tool_agent: {agent.react_tool_agent}"
-            )
-            print(
-                f"[LLMGenerateWorker] react_tool_agent has chat_engine: {hasattr(agent.react_tool_agent, 'chat_engine')}"
-            )
-            if hasattr(agent.react_tool_agent, "chat_engine"):
-                print(
-                    f"[LLMGenerateWorker] chat_engine has _last_map_tool_result: {hasattr(agent.react_tool_agent.chat_engine, '_last_map_tool_result')}"
-                )
-                if hasattr(
-                    agent.react_tool_agent.chat_engine, "_last_map_tool_result"
-                ):
-                    print(
-                        f"[LLMGenerateWorker] _last_map_tool_result value: {agent.react_tool_agent.chat_engine._last_map_tool_result}"
-                    )
-
-        if (
-            hasattr(agent, "react_tool_agent")
-            and hasattr(agent.react_tool_agent, "chat_engine")
-            and hasattr(
-                agent.react_tool_agent.chat_engine, "_last_map_tool_result"
-            )
-            and agent.react_tool_agent.chat_engine._last_map_tool_result
-        ):
-            print(
-                f"[LLMGenerateWorker] Found stored map tool result: {agent.react_tool_agent.chat_engine._last_map_tool_result}"
-            )
-            result_obj = (
-                agent.react_tool_agent.chat_engine._last_map_tool_result
-            )
-            # Clean up the stored result
-            delattr(
-                agent.react_tool_agent.chat_engine, "_last_map_tool_result"
-            )
-        else:
-            # Use raw_output for map data, fallback to content for errors
-            if hasattr(result, "raw_output") and result.raw_output:
-                result_obj = result.raw_output
-            else:
-                result_obj = (
-                    result.content if hasattr(result, "content") else result
-                )
-        # If result_obj is a string that looks like a dict, parse it
-        if (
-            isinstance(result_obj, str)
-            and result_obj.startswith("{")
-            and result_obj.endswith("}")
-        ):
-            import ast
-
-            try:
-                result_obj = ast.literal_eval(result_obj)
-            except Exception:
-                pass
-        payload = {"result": result_obj}
-        print(
-            f"[LLMGenerateWorker] Emitting MAP_SEARCH_RESULT_SIGNAL with payload: {payload}"
-        )
-        self.emit_signal(
-            SignalCode.MAP_SEARCH_RESULT_SIGNAL,
-            payload,
-        )
 
     def start_worker_thread(self):
         if self.application_settings.llm_enabled or AIRUNNER_LLM_ON:

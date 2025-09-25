@@ -382,8 +382,6 @@ AIRUNNER_DISABLE_FACEHUGGERSHIELD = (
     os.environ.get("AIRUNNER_DISABLE_FACEHUGGERSHIELD", "0") == "1"
 )
 
-# Nominatim server URL for map geocoding (None = use OpenStreetMap default)
-AIRUNNER_NOMINATIM_URL = os.environ.get("AIRUNNER_NOMINATIM_URL", None)
 
 CUDA_ERROR = "CUDA out of memory"
 DEFAULT_HF_ENDPOINT = "https://huggingface.co"
