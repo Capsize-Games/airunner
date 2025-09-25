@@ -344,22 +344,6 @@ class MainWindow(
         self._action_reset_settings()
 
     @Slot()
-    def import_controlnet_image(self):
-        pass
-
-    @Slot()
-    def export_controlnet_image(self):
-        pass
-
-    @Slot()
-    def import_drawingpad_image(self):
-        pass
-
-    @Slot()
-    def export_drawingpad_image(self):
-        pass
-
-    @Slot()
     def on_actionExport_image_button_triggered(self):
         if (
             not self.api

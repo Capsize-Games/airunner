@@ -28,7 +28,6 @@ from line_profiler import profile
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 
-logger = logging.getLogger(__name__)
 import requests  # Added for HTTP(S) image download
 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
@@ -740,14 +739,6 @@ class CustomScene(
 
     def _refresh_layer_display(self):
         """Refresh the display of all visible layers on the canvas."""
-        logger.info("Refreshing layer display")
-        logger.debug(
-            f"Current scene items before refresh: {len(self.items())}"
-        )
-        logger.debug(
-            f"Current _layer_items before refresh: {list(self._layer_items.keys())}"
-        )
-
         try:
             from airunner.components.art.data.drawingpad_settings import (
                 DrawingPadSettings,
@@ -761,7 +752,6 @@ class CustomScene(
 
             # Get all layers ordered by their order property
             layers = CanvasLayer.objects.order_by("order").all()
-            logger.info(f"Found {len(layers)} layers to display")
 
             # If we have layers, remove the old drawing pad item to prevent duplication
             if (
@@ -769,9 +759,6 @@ class CustomScene(
                 and hasattr(self, "item")
                 and self.item is not None
             ):
-                logger.debug(
-                    "Removing old drawing pad item to use layer system"
-                )
                 if self.item.scene():
                     self.removeItem(self.item)
                 self.item = None
@@ -784,7 +771,6 @@ class CustomScene(
                     items_to_remove.append(layer_id)
 
             for layer_id in items_to_remove:
-                logger.info(f"Removing deleted layer {layer_id} from scene")
                 item = self._layer_items[layer_id]
                 if item.scene():
                     item.scene().removeItem(item)
@@ -792,10 +778,6 @@ class CustomScene(
 
             # Create or update layer items for each layer
             for layer in layers:
-                logger.debug(
-                    f"Processing layer {layer.id}: name={layer.name}, visible={layer.visible}"
-                )
-
                 # Get the corresponding DrawingPadSettings for this layer
                 drawing_pad_settings = None
                 try:
@@ -803,11 +785,8 @@ class CustomScene(
                         layer_id=layer.id
                     )
                     drawing_pad_settings = results[0] if results else None
-                    logger.debug(
-                        f"Found DrawingPadSettings for layer {layer.id}: {drawing_pad_settings is not None}"
-                    )
                 except Exception as e:
-                    logger.debug(
+                    self.logger.error(
                         f"No DrawingPadSettings found for layer {layer.id}: {e}"
                     )
 
@@ -815,9 +794,6 @@ class CustomScene(
                     # Convert binary image data to PIL Image
                     pil_image = convert_binary_to_image(
                         drawing_pad_settings.image
-                    )
-                    logger.debug(
-                        f"Layer {layer.id} has image from DrawingPadSettings"
                     )
 
                     if pil_image:
@@ -827,9 +803,6 @@ class CustomScene(
                         if layer.id in self._layer_items:
                             # Update existing layer item
                             layer_item = self._layer_items[layer.id]
-                            logger.debug(
-                                f"Updating existing layer item {layer.id} - setting visible={layer.visible}"
-                            )
                             if hasattr(layer_item, "updateImage"):
                                 layer_item.updateImage(qimage)
                             layer_item.setVisible(layer.visible)
@@ -866,10 +839,6 @@ class CustomScene(
                                         visible_pos = new_pos - canvas_offset
                                         layer_item.setPos(visible_pos)
                         else:
-                            # Create new layer item
-                            logger.debug(
-                                f"Creating new layer item {layer.id} - setting visible={layer.visible}"
-                            )
                             layer_item = LayerImageItem(qimage)
                             layer_item.setVisible(layer.visible)
                             layer_item.setOpacity(layer.opacity / 100.0)
@@ -910,7 +879,7 @@ class CustomScene(
                                             x_pos=x_pos, y_pos=y_pos
                                         )
                                     except Exception as e:
-                                        logger.debug(
+                                        self.logger.error(
                                             f"Failed to update drawing pad settings position: {e}"
                                         )
 
@@ -926,20 +895,10 @@ class CustomScene(
                 else:
                     # Layer has no drawing pad settings with image, remove its item if it exists
                     if layer.id in self._layer_items:
-                        logger.debug(
-                            f"Layer {layer.id} has no image in DrawingPadSettings, removing from scene"
-                        )
                         item = self._layer_items[layer.id]
                         if item.scene():
                             item.scene().removeItem(item)
                         del self._layer_items[layer.id]
-
-            logger.debug(
-                f"Current scene items after refresh: {len(self.items())}"
-            )
-            logger.debug(
-                f"Current _layer_items after refresh: {list(self._layer_items.keys())}"
-            )
 
         except Exception as e:
             self.logger.error(f"Error refreshing layer display: {e}")
@@ -1196,9 +1155,6 @@ class CustomScene(
 
             # Check if we have layer items - if so, don't use the old drawing pad item system
             if len(self._layer_items) > 0:
-                logger.debug(
-                    "Layer system active, skipping drawing pad item creation"
-                )
                 return
 
             if self.item is None:

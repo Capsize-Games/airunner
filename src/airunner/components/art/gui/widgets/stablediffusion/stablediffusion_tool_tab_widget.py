@@ -11,6 +11,7 @@ class StablediffusionToolTabWidget(BaseWidget):
     widget_class_ = Ui_stablediffusion_tool_tab_widget
 
     def __init__(self, *args, **kwargs):
+        self._splitters = ["layer_tab_splitter"]
         super().__init__(*args, **kwargs)
         self.qsettings = get_qsettings()
         self.ui.tool_tab_widget_container.currentChanged.connect(
