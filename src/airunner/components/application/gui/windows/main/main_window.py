@@ -51,9 +51,6 @@ from PySide6.QtGui import QIcon
 
 from bs4 import BeautifulSoup
 
-from airunner.components.voice_visualizer.gui.widgets.voice_visualizer_component import (
-    VoiceVisualizerComponent,
-)
 from airunner.settings import (
     AIRUNNER_STATUS_ERROR_COLOR,
     AIRUNNER_STATUS_NORMAL_COLOR_LIGHT,
@@ -72,11 +69,7 @@ from airunner.components.llm.managers.agent.actions.bash_execute import (
 from airunner.components.llm.managers.agent.actions.show_path import show_path
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.application.data.shortcut_keys import ShortcutKeys
-from airunner.components.settings.data.application_settings import (
-    ApplicationSettings,
-)
 from airunner.components.art.data.image_filter import ImageFilter
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.app_installer import AppInstaller
 from airunner.enums import (
     SignalCode,
