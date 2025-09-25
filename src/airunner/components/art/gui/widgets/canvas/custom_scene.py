@@ -72,6 +72,7 @@ class CustomScene(
         self._current_active_image_binary = None
         self.previewing_filter = False
         self.painter = None
+        self._painter_target = None
         self.image: Optional[QImage] = None
         self.item: Optional[DraggablePixmap] = None
         self._image_initialized: bool = False
@@ -817,6 +818,9 @@ class CustomScene(
                     layer_qimage is not None
                     and getattr(layer_item, "qimage", None) is not layer_qimage
                 ):
+                    self._release_painter_for_device(
+                        getattr(layer_item, "qimage", None)
+                    )
                     layer_item.updateImage(layer_qimage)
 
             layer_item.setVisible(layer_info["visible"])
@@ -858,6 +862,17 @@ class CustomScene(
             layer_item.setPos(visible_pos)
             self.original_item_positions[layer_item] = QPointF(x_pos, y_pos)
 
+        # Remove any items that no longer have backing settings data
+        for layer_id in list(self._layer_items.keys()):
+            if layer_id not in existing_layer_ids:
+                layer_item = self._layer_items[layer_id]
+                self._release_painter_for_device(
+                    getattr(layer_item, "qimage", None)
+                )
+                if layer_item.scene():
+                    layer_item.scene().removeItem(layer_item)
+                del self._layer_items[layer_id]
+
     def _get_active_layer_item(self) -> Optional[LayerImageItem]:
         """Return the currently selected layer item, falling back to top-most."""
         layer_id = self._get_current_selected_layer_id()
@@ -874,6 +889,10 @@ class CustomScene(
             except Exception:
                 return next(iter(self._layer_items.values()))
         return None
+
+    def _release_painter_for_device(self, device: Optional[QImage]):
+        if device is not None and device is self._painter_target:
+            self.stop_painter()
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
@@ -1064,9 +1083,7 @@ class CustomScene(
             item_scene.removeItem(self.item)
 
         # Properly end and reset the painter so drawBackground can reinitialize
-        if self.painter and self.painter.isActive():
-            self.painter.end()
-        self.painter = None
+        self.stop_painter()
         self.current_active_image = None
         self.image = None
         if hasattr(self, "item") and self.item is not None:
@@ -1187,19 +1204,23 @@ class CustomScene(
         self.update_image_position(self.get_canvas_offset())
 
     def stop_painter(self):
-        if self.painter is not None and self.painter.isActive():
-            self.painter.end()
+        if self.painter is not None:
+            if self.painter.isActive():
+                self.painter.end()
+            self.painter = None
+        self._painter_target = None
 
     def set_painter(self, image: QImage):
         if image is None:
             return
         try:
-            # Ensure any existing painter is stopped first
-            if self.painter and self.painter.isActive():
-                self.painter.end()
+            # Ensure any existing painter is fully stopped before rebinding
+            self.stop_painter()
             self.painter = QPainter(image)
+            self._painter_target = image
         except TypeError as _e:
-            pass
+            self.painter = None
+            self._painter_target = None
 
     def _update_current_settings(self, key, value):
         if self.settings_key == "controlnet_settings":
