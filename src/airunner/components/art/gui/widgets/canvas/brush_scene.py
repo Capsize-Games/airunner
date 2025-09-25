@@ -2,18 +2,15 @@ import PIL
 from PIL import ImageQt
 from PIL.Image import Image
 from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import QPainterPath
 from PySide6.QtGui import QPen, QPixmap, QPainter, QColor
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsLineItem
 
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.utils.image import (
     convert_binary_to_image,
     convert_image_to_binary,
 )
 from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
-import logging
 
 
 class BrushScene(CustomScene):
@@ -36,9 +33,11 @@ class BrushScene(CustomScene):
         self._is_drawing = False
         self._is_erasing = False
         self._do_generate_image = False
-
         self.register(
             SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.on_brush_color_changed
+        )
+        self.register(
+            SignalCode.LAYER_SELECTION_CHANGED, self.on_layer_selection_changed
         )
 
     @property
@@ -67,6 +66,10 @@ class BrushScene(CustomScene):
 
     def on_brush_color_changed(self, data):
         self._brush_color = QColor(data["color"])
+
+    def on_layer_selection_changed(self, data):
+        """Handle layer selection changes to update painter target."""
+        self.stop_painter()
 
     def on_canvas_clear_signal(self):
         self.update_drawing_pad_settings(mask=None)
