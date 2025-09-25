@@ -810,7 +810,10 @@ class CustomScene(
                 layer_qimage.fill(Qt.GlobalColor.transparent)
 
             if layer_item is None:
-                layer_item = LayerImageItem(layer_qimage)
+                layer_item = LayerImageItem(
+                    layer_qimage,
+                    layer_id=layer_id,
+                )
                 self.addItem(layer_item)
                 self._layer_items[layer_id] = layer_item
             else:
@@ -822,6 +825,8 @@ class CustomScene(
                         getattr(layer_item, "qimage", None)
                     )
                     layer_item.updateImage(layer_qimage)
+                layer_item.layer_id = layer_id
+                layer_item.set_layer_context(layer_id)
 
             layer_item.setVisible(layer_info["visible"])
             layer_item.setOpacity(layer_info["opacity"] / 100.0)
@@ -850,7 +855,9 @@ class CustomScene(
                 if drawing_pad_settings:
                     try:
                         self.update_drawing_pad_settings(
-                            x_pos=x_pos, y_pos=y_pos
+                            x_pos=x_pos,
+                            y_pos=y_pos,
+                            layer_id=layer_id,
                         )
                     except Exception as e:
                         self.logger.error(
