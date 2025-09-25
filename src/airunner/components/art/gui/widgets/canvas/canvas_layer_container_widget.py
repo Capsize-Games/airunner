@@ -160,6 +160,9 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
 
         self._refresh_layer_display()
 
+        # Emit signal to update canvas display
+        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+
     @Slot()
     def on_move_layer_down_clicked(self):
         if not self.selected_layers:
@@ -192,6 +195,9 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                 )
 
         self._refresh_layer_display()
+
+        # Emit signal to update canvas display
+        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     @Slot()
     def on_delete_layer_clicked(self):

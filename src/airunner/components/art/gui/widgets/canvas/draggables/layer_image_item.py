@@ -35,6 +35,7 @@ class LayerImageItem(DraggablePixmap):
         if self.current_tool not in [
             CanvasToolName.ACTIVE_GRID_AREA,
         ]:
+            super().mousePressEvent(event)
             return
         # Handle drag initiation similar to ActiveGridArea
         if event.button() == Qt.MouseButton.LeftButton:
@@ -61,6 +62,7 @@ class LayerImageItem(DraggablePixmap):
         if self.current_tool not in [
             CanvasToolName.ACTIVE_GRID_AREA,
         ]:
+            super().mouseMoveEvent(event)
             return
         # Only do the complex drag calculations if we're actually dragging
         if self.initial_mouse_scene_pos is not None:
@@ -108,6 +110,7 @@ class LayerImageItem(DraggablePixmap):
         if self.current_tool not in [
             CanvasToolName.ACTIVE_GRID_AREA,
         ]:
+            super().mouseReleaseEvent(event)
             return
         if self.initial_mouse_scene_pos is not None:
             # Check if the item has actually moved
