@@ -574,6 +574,8 @@ class CustomScene(
             )
             # Force immediate persistence to avoid race condition with undo operations
             self._flush_pending_image()
+            # Refresh layer display to show the newly generated image
+            self._refresh_layer_display()
             # Defer batch image update to not block UI
             QTimer.singleShot(
                 100, lambda: self.api.art.update_batch_images(images)
