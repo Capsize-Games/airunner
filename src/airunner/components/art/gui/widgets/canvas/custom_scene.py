@@ -677,8 +677,24 @@ class CustomScene(
 
         if layer_id in self._layer_items:
             layer_item = self._layer_items[layer_id]
-            layer_item.setVisible(visible)
-            self.logger.info(f"Updated layer item visibility: {visible}")
+            try:
+                # Check if the Qt object is still valid before using it
+                layer_item.setVisible(visible)
+                self.logger.info(f"Updated layer item visibility: {visible}")
+            except RuntimeError as e:
+                if "Internal C++ object" in str(
+                    e
+                ) and "already deleted" in str(e):
+                    self.logger.warning(
+                        f"Layer item {layer_id} was already deleted, removing from cache"
+                    )
+                    # Remove the invalid reference from our cache
+                    del self._layer_items[layer_id]
+                    # Refresh the display to sync with current state
+                    self._refresh_layer_display()
+                else:
+                    # Re-raise unexpected RuntimeErrors
+                    raise
         else:
             self.logger.warning(
                 f"Layer item not found for layer_id={layer_id}"
@@ -692,9 +708,27 @@ class CustomScene(
 
         if layer_id in self._layer_items:
             layer_item = self._layer_items[layer_id]
-            if layer_item.scene():
-                layer_item.scene().removeItem(layer_item)
-            del self._layer_items[layer_id]
+            try:
+                # Check if the item is still in a scene before removing
+                if layer_item.scene():
+                    layer_item.scene().removeItem(layer_item)
+            except RuntimeError as e:
+                if "Internal C++ object" in str(
+                    e
+                ) and "already deleted" in str(e):
+                    self.logger.info(
+                        f"Layer item {layer_id} was already deleted from Qt side"
+                    )
+                else:
+                    self.logger.warning(
+                        f"Error removing layer item {layer_id}: {e}"
+                    )
+            finally:
+                # Always remove from our tracking dictionary
+                del self._layer_items[layer_id]
+                self.logger.info(
+                    f"Removed layer {layer_id} from canvas display"
+                )
 
     def on_layer_reordered(self, data: Dict):
         """Handle layer reordering by updating z-values."""
