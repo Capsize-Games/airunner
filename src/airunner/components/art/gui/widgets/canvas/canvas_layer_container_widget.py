@@ -37,6 +37,7 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             SignalCode.LAYER_VISIBILITY_TOGGLED: self.on_visibility_toggled,
             SignalCode.LAYER_REORDERED: self.on_layer_reordered,
             SignalCode.LAYER_SELECTED: self.on_layer_selected,
+            SignalCode.LAYERS_SHOW_SIGNAL: self.on_layers_show_signal,
         }
         self.selected_layers = set()  # Track selected layer IDs
         self.layer_widgets = {}  # Map layer_id to widget
@@ -94,38 +95,49 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
 
     @Slot()
     def on_add_layer_clicked(self):
-        layer = self.create_layer()
+        self.api.art.canvas.begin_layer_operation("create")
+        try:
+            layer = self.create_layer()
+            if not layer:
+                self.api.art.canvas.cancel_layer_operation("create")
+                return
 
-        # Initialize default settings for the new layer
-        self._initialize_layer_default_settings(layer.id)
+            # Initialize default settings for the new layer
+            self._initialize_layer_default_settings(layer.id)
 
-        self.layers.append(layer)
-        item = LayerItemWidget(layer_id=layer.id)
-        self.layer_widgets[layer.id] = item
+            self.layers.append(layer)
+            item = LayerItemWidget(layer_id=layer.id)
+            self.layer_widgets[layer.id] = item
 
-        # Remove spacer, add new widget, then add spacer back
-        self.ui.layer_list_layout.layout().removeItem(self.spacer)
-        self.ui.layer_list_layout.layout().addWidget(
-            item, len(self.layers) - 1, 0
-        )
-        self.ui.layer_list_layout.layout().addItem(
-            self.spacer, len(self.layers), 0
-        )
+            # Remove spacer, add new widget, then add spacer back
+            self.ui.layer_list_layout.layout().removeItem(self.spacer)
+            self.ui.layer_list_layout.layout().addWidget(
+                item, len(self.layers) - 1, 0
+            )
+            self.ui.layer_list_layout.layout().addItem(
+                self.spacer, len(self.layers), 0
+            )
 
-        # Select the newly created layer
-        # Clear previous selections
-        for lid in self.selected_layers:
-            self.layer_widgets[lid].set_selected(False)
+            # Select the newly created layer
+            # Clear previous selections
+            for lid in self.selected_layers:
+                self.layer_widgets[lid].set_selected(False)
 
-        self.selected_layers.clear()
-        self.selected_layers.add(layer.id)
-        item.set_selected(True)
+            self.selected_layers.clear()
+            self.selected_layers.add(layer.id)
+            item.set_selected(True)
 
-        # Emit selection changed signal to notify settings system
-        self.emit_signal(
-            SignalCode.LAYER_SELECTION_CHANGED,
-            {"selected_layer_ids": list(self.selected_layers)},
-        )
+            # Emit selection changed signal to notify settings system
+            self.emit_signal(
+                SignalCode.LAYER_SELECTION_CHANGED,
+                {"selected_layer_ids": list(self.selected_layers)},
+            )
+
+            self.api.art.canvas.commit_layer_operation("create", [layer.id])
+            self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        except Exception:
+            self.api.art.canvas.cancel_layer_operation("create")
+            raise
 
     @Slot()
     def on_move_layer_up_clicked(self):
@@ -144,24 +156,42 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if min_order == 0:
             return
 
-        # Move each selected layer up by one position
-        for layer in selected_layers:
-            # Find the layer above this one
-            layer_above = next(
-                (l for l in self.layers if l.order == layer.order - 1), None
-            )
-            if layer_above and layer_above.id not in selected_layer_ids:
-                # Swap orders
-                layer_above.order, layer.order = layer.order, layer_above.order
-                CanvasLayer.objects.update(layer.id, order=layer.order)
-                CanvasLayer.objects.update(
-                    layer_above.id, order=layer_above.order
+        self.api.art.canvas.begin_layer_operation(
+            "reorder", selected_layer_ids
+        )
+        changed = False
+
+        try:
+            # Move each selected layer up by one position
+            for layer in selected_layers:
+                # Find the layer above this one
+                layer_above = next(
+                    (l for l in self.layers if l.order == layer.order - 1),
+                    None,
                 )
+                if layer_above and layer_above.id not in selected_layer_ids:
+                    # Swap orders
+                    layer_above.order, layer.order = (
+                        layer.order,
+                        layer_above.order,
+                    )
+                    CanvasLayer.objects.update(layer.id, order=layer.order)
+                    CanvasLayer.objects.update(
+                        layer_above.id, order=layer_above.order
+                    )
+                    changed = True
+        except Exception:
+            self.api.art.canvas.cancel_layer_operation("reorder")
+            raise
 
-        self._refresh_layer_display()
-
-        # Emit signal to update canvas display
-        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        if changed:
+            self._refresh_layer_display()
+            self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+            self.api.art.canvas.commit_layer_operation(
+                "reorder", selected_layer_ids
+            )
+        else:
+            self.api.art.canvas.cancel_layer_operation("reorder")
 
     @Slot()
     def on_move_layer_down_clicked(self):
@@ -180,24 +210,42 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if max_order >= len(self.layers) - 1:
             return
 
-        # Move each selected layer down by one position
-        for layer in selected_layers:
-            # Find the layer below this one
-            layer_below = next(
-                (l for l in self.layers if l.order == layer.order + 1), None
-            )
-            if layer_below and layer_below.id not in selected_layer_ids:
-                # Swap orders
-                layer_below.order, layer.order = layer.order, layer_below.order
-                CanvasLayer.objects.update(layer.id, order=layer.order)
-                CanvasLayer.objects.update(
-                    layer_below.id, order=layer_below.order
+        self.api.art.canvas.begin_layer_operation(
+            "reorder", selected_layer_ids
+        )
+        changed = False
+
+        try:
+            # Move each selected layer down by one position
+            for layer in selected_layers:
+                # Find the layer below this one
+                layer_below = next(
+                    (l for l in self.layers if l.order == layer.order + 1),
+                    None,
                 )
+                if layer_below and layer_below.id not in selected_layer_ids:
+                    # Swap orders
+                    layer_below.order, layer.order = (
+                        layer.order,
+                        layer_below.order,
+                    )
+                    CanvasLayer.objects.update(layer.id, order=layer.order)
+                    CanvasLayer.objects.update(
+                        layer_below.id, order=layer_below.order
+                    )
+                    changed = True
+        except Exception:
+            self.api.art.canvas.cancel_layer_operation("reorder")
+            raise
 
-        self._refresh_layer_display()
-
-        # Emit signal to update canvas display
-        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        if changed:
+            self._refresh_layer_display()
+            self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+            self.api.art.canvas.commit_layer_operation(
+                "reorder", selected_layer_ids
+            )
+        else:
+            self.api.art.canvas.cancel_layer_operation("reorder")
 
     @Slot()
     def on_delete_layer_clicked(self):
@@ -212,41 +260,58 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             l for l in self.layers if l.id in self.selected_layers
         ]
 
-        # Delete selected layers
-        for layer in layers_to_delete:
-            self.layers.remove(layer)
-            widget = self.layer_widgets.pop(layer.id, None)
-            if widget:
-                self.ui.layer_list_layout.layout().removeWidget(widget)
-                widget.deleteLater()
+        if not layers_to_delete:
+            return
 
-            # Emit layer deleted signal for canvas to handle
-            self.emit_signal(
-                SignalCode.LAYER_DELETED,
-                {"layer_id": layer.id},
-            )
+        layer_ids = [layer.id for layer in layers_to_delete]
+        self.api.art.canvas.begin_layer_operation("delete", layer_ids)
+        deleted_any = False
 
-            CanvasLayer.objects.delete(layer.id)
+        try:
+            # Delete selected layers
+            for layer in layers_to_delete:
+                self.layers.remove(layer)
+                widget = self.layer_widgets.pop(layer.id, None)
+                if widget:
+                    self.ui.layer_list_layout.layout().removeWidget(widget)
+                    widget.deleteLater()
 
-        # Clear selection
-        self.selected_layers.clear()
+                # Emit layer deleted signal for canvas to handle
+                self.emit_signal(
+                    SignalCode.LAYER_DELETED,
+                    {"layer_id": layer.id},
+                )
+                CanvasLayer.objects.delete(layer.id)
+                deleted_any = True
 
-        # Reorder remaining layers
-        for i, layer in enumerate(self.layers):
-            layer.order = i
-            CanvasLayer.objects.update(layer.id, order=i)
+            # Clear selection
+            self.selected_layers.clear()
 
-        # Select the first remaining layer
-        if self.layers:
-            self.selected_layers.add(self.layers[0].id)
-            self.layer_widgets[self.layers[0].id].set_selected(True)
-            # Emit selection changed signal to notify settings system
-            self.emit_signal(
-                SignalCode.LAYER_SELECTION_CHANGED,
-                {"selected_layer_ids": list(self.selected_layers)},
-            )
+            # Reorder remaining layers
+            for i, layer in enumerate(self.layers):
+                layer.order = i
+                CanvasLayer.objects.update(layer.id, order=i)
 
-        self._refresh_layer_display()
+            # Select the first remaining layer
+            if self.layers:
+                self.selected_layers.add(self.layers[0].id)
+                self.layer_widgets[self.layers[0].id].set_selected(True)
+                # Emit selection changed signal to notify settings system
+                self.emit_signal(
+                    SignalCode.LAYER_SELECTION_CHANGED,
+                    {"selected_layer_ids": list(self.selected_layers)},
+                )
+
+            self._refresh_layer_display()
+        except Exception:
+            self.api.art.canvas.cancel_layer_operation("delete")
+            raise
+
+        if deleted_any:
+            self.api.art.canvas.commit_layer_operation("delete", layer_ids)
+            self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        else:
+            self.api.art.canvas.cancel_layer_operation("delete")
 
     def on_layer_deleted(self, data: dict):
         layer_id = data.get("layer_id")
@@ -255,8 +320,10 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             layer = next((l for l in self.layers if l.id == layer_id), None)
             if layer:
                 self.layers.remove(layer)
-                self.ui.layer_list_layout.layout().removeWidget(layer_item)
-                layer_item.deleteLater()
+                widget = layer_item or self.layer_widgets.get(layer_id)
+                if widget:
+                    self.ui.layer_list_layout.layout().removeWidget(widget)
+                    widget.deleteLater()
                 # Remove from tracking
                 self.layer_widgets.pop(layer_id, None)
                 self.selected_layers.discard(layer_id)
@@ -355,6 +422,43 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             self.spacer, len(self.layers), 0
         )
 
+    def _sync_layers_from_database(self) -> None:
+        db_layers = CanvasLayer.objects.all() or []
+        db_layers.sort(key=lambda layer: getattr(layer, "order", 0))
+        db_layer_ids = {layer.id for layer in db_layers}
+
+        # Remove widgets for layers that no longer exist
+        for layer_id in list(self.layer_widgets.keys()):
+            if layer_id not in db_layer_ids:
+                widget = self.layer_widgets.pop(layer_id)
+                self.ui.layer_list_layout.layout().removeWidget(widget)
+                widget.deleteLater()
+                self.selected_layers.discard(layer_id)
+
+        # Create widgets for new layers
+        for layer in db_layers:
+            if layer.id not in self.layer_widgets:
+                widget = LayerItemWidget(layer_id=layer.id)
+                self.layer_widgets[layer.id] = widget
+
+        self.layers = db_layers
+        self._refresh_layer_display()
+
+        # Ensure selection remains valid
+        self.selected_layers = {
+            layer_id
+            for layer_id in self.selected_layers
+            if layer_id in db_layer_ids
+        }
+        if not self.selected_layers and self.layers:
+            self.selected_layers.add(self.layers[0].id)
+
+        for layer_id, widget in self.layer_widgets.items():
+            widget.set_selected(layer_id in self.selected_layers)
+
+    def on_layers_show_signal(self, _data: dict | None = None) -> None:
+        self._sync_layers_from_database()
+
     def on_visibility_toggled(self, data: dict):
         layer_id = data.get("layer_id")
         visible = data.get("visible")
@@ -379,56 +483,72 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if not source_layer or not target_layer:
             return
 
-        # Get the layout
-        layout = self.ui.layer_list_layout.layout()
-
-        # Collect all widgets first
-        widgets = []
-        for i in range(layout.count()):
-            item = layout.itemAt(i)
-            if item and item.widget() and hasattr(item.widget(), "layer"):
-                widgets.append(item.widget())
-
-        # Clear the layout (except spacer)
-        for widget in widgets:
-            layout.removeWidget(widget)
-
-        # Remove spacer temporarily
-        if self.spacer:
-            layout.removeItem(self.spacer)
-
-        # Find source and target widgets
-        source_widget = next(
-            (w for w in widgets if w.layer.id == source_layer_id), None
+        self.api.art.canvas.begin_layer_operation(
+            "reorder", [source_layer_id, target_layer_id]
         )
-        target_widget = next(
-            (w for w in widgets if w.layer.id == target_layer_id), None
-        )
+        changed = False
+        try:
+            # Get the layout
+            layout = self.ui.layer_list_layout.layout()
 
-        if source_widget and target_widget:
-            # Update the layers list order
-            self.layers.remove(source_layer)
-            target_index = self.layers.index(target_layer)
-            self.layers.insert(target_index, source_layer)
+            # Collect all widgets first
+            widgets = []
+            for i in range(layout.count()):
+                item = layout.itemAt(i)
+                if item and item.widget() and hasattr(item.widget(), "layer"):
+                    widgets.append(item.widget())
 
-            # Re-add widgets in new order
-            for i, layer in enumerate(self.layers):
-                widget = next(
-                    (w for w in widgets if w.layer.id == layer.id), None
-                )
-                if widget:
-                    layout.addWidget(widget, i, 0)  # Add to row i, column 0
+            # Clear the layout (except spacer)
+            for widget in widgets:
+                layout.removeWidget(widget)
 
-            # Add spacer back at the end
-            layout.addItem(self.spacer, len(self.layers), 0)
+            # Remove spacer temporarily
+            if self.spacer:
+                layout.removeItem(self.spacer)
 
-            # Update order values in database
-            for i, layer in enumerate(self.layers):
-                CanvasLayer.objects.update(layer.id, order=i)
-                layer.order = i
+            # Find source and target widgets
+            source_widget = next(
+                (w for w in widgets if w.layer.id == source_layer_id), None
+            )
+            target_widget = next(
+                (w for w in widgets if w.layer.id == target_layer_id), None
+            )
 
-            # Emit signal to update canvas display
-            self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+            if source_widget and target_widget:
+                # Update the layers list order
+                self.layers.remove(source_layer)
+                target_index = self.layers.index(target_layer)
+                self.layers.insert(target_index, source_layer)
+                changed = True
+
+                # Re-add widgets in new order
+                for i, layer in enumerate(self.layers):
+                    widget = next(
+                        (w for w in widgets if w.layer.id == layer.id), None
+                    )
+                    if widget:
+                        layout.addWidget(widget, i, 0)
+
+                # Add spacer back at the end
+                layout.addItem(self.spacer, len(self.layers), 0)
+
+                # Update order values in database
+                for i, layer in enumerate(self.layers):
+                    CanvasLayer.objects.update(layer.id, order=i)
+                    layer.order = i
+
+                # Emit signal to update canvas display
+                self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        except Exception:
+            self.api.art.canvas.cancel_layer_operation("reorder")
+            raise
+
+        if changed:
+            self.api.art.canvas.commit_layer_operation(
+                "reorder", [source_layer_id, target_layer_id]
+            )
+        else:
+            self.api.art.canvas.cancel_layer_operation("reorder")
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat("application/x-layer-item"):

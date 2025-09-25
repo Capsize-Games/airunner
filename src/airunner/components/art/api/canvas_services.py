@@ -132,3 +132,25 @@ class CanvasAPIService(APIServiceBase):
 
     def update_image_positions(self):
         self.emit_signal(SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS)
+
+    def begin_layer_operation(
+        self, action: str, layer_ids: list[int] | None = None
+    ):
+        self.emit_signal(
+            SignalCode.LAYER_OPERATION_BEGIN,
+            {"action": action, "layer_ids": layer_ids or []},
+        )
+
+    def commit_layer_operation(
+        self, action: str, layer_ids: list[int] | None = None
+    ):
+        self.emit_signal(
+            SignalCode.LAYER_OPERATION_COMMIT,
+            {"action": action, "layer_ids": layer_ids or []},
+        )
+
+    def cancel_layer_operation(self, action: str):
+        self.emit_signal(
+            SignalCode.LAYER_OPERATION_CANCEL,
+            {"action": action},
+        )
