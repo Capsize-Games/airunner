@@ -254,7 +254,6 @@ class BrushScene(CustomScene):
 
     def _handle_left_mouse_release(self, event) -> bool:
         self.draw_button_down = False
-        drawing_pad_settings = DrawingPadSettings.objects.first()
 
         # First get the correct image
         if self.drawing_pad_settings.mask_layer_enabled:
@@ -266,7 +265,6 @@ class BrushScene(CustomScene):
             )
             base_64_image = convert_image_to_binary(mask_image)
             # Update both database object and in-memory settings with the same base64 image
-            drawing_pad_settings.mask = base_64_image
             self.update_drawing_pad_settings(mask=base_64_image)
         else:
             # For normal image layer
@@ -274,7 +272,6 @@ class BrushScene(CustomScene):
                 image = ImageQt.fromqimage(self.active_image)
                 base_64_image = convert_image_to_binary(image)
                 # Update both database object and in-memory settings with the same base64 image
-                drawing_pad_settings.image = base_64_image
                 self.update_drawing_pad_settings(image=base_64_image)
 
                 # CRITICAL: Update the cached reference to ensure consistency

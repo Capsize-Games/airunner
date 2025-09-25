@@ -1,5 +1,4 @@
 import io
-import logging
 import os
 import subprocess
 import time
@@ -735,173 +734,158 @@ class CustomScene(
 
     def on_layers_show_signal(self, data: Dict = None):
         """Handle layer container refresh signal."""
+        self._current_active_image_ref = None
         self._refresh_layer_display()
 
     def _refresh_layer_display(self):
         """Refresh the display of all visible layers on the canvas."""
-        try:
-            from airunner.components.art.data.drawingpad_settings import (
-                DrawingPadSettings,
+        # Get all layers ordered by their order property
+        layers = CanvasLayer.objects.order_by("order").all()
+
+        # Extract layer data immediately while session is active to avoid DetachedInstanceError
+        layer_data = []
+        for layer in layers:
+            layer_data.append(
+                {
+                    "id": layer.id,
+                    "visible": layer.visible,
+                    "opacity": layer.opacity,
+                    "order": layer.order,
+                }
             )
-            from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
-                LayerImageItem,
+
+        # If we have layers, remove the old drawing pad item to prevent duplication
+        if (
+            len(layer_data) > 0
+            and hasattr(self, "item")
+            and self.item is not None
+        ):
+            if self.item.scene():
+                self.removeItem(self.item)
+            self.item = None
+
+        # Remove any layer items that no longer exist
+        existing_layer_ids = {data["id"] for data in layer_data}
+        items_to_remove = []
+        for layer_id, item in self._layer_items.items():
+            if layer_id not in existing_layer_ids:
+                items_to_remove.append(layer_id)
+
+        for layer_id in items_to_remove:
+            item = self._layer_items[layer_id]
+            if item.scene():
+                item.scene().removeItem(item)
+            del self._layer_items[layer_id]
+
+        # Create or update layer items for each layer
+        for layer_info in layer_data:
+            layer_id = layer_info["id"]
+            drawing_pad_settings = self._get_layer_specific_settings(
+                DrawingPadSettings, layer_id=layer_id
             )
-            from airunner.utils.image import convert_binary_to_image
-            from PySide6.QtGui import QImage
-            from PIL.ImageQt import ImageQt
+            if drawing_pad_settings and drawing_pad_settings.image:
+                # Convert binary image data to PIL Image
+                pil_image = convert_binary_to_image(drawing_pad_settings.image)
 
-            # Get all layers ordered by their order property
-            layers = CanvasLayer.objects.order_by("order").all()
+                if pil_image:
+                    # Convert PIL Image to QImage
+                    qimage = ImageQt.ImageQt(pil_image)
 
-            # If we have layers, remove the old drawing pad item to prevent duplication
-            if (
-                len(layers) > 0
-                and hasattr(self, "item")
-                and self.item is not None
-            ):
-                if self.item.scene():
-                    self.removeItem(self.item)
-                self.item = None
+                    if layer_id in self._layer_items:
+                        # Update existing layer item
+                        layer_item = self._layer_items[layer_id]
+                        if hasattr(layer_item, "updateImage"):
+                            layer_item.updateImage(qimage)
+                        layer_item.setVisible(layer_info["visible"])
+                        layer_item.setOpacity(layer_info["opacity"] / 100.0)
+                        # Invert Z-order: lower order numbers should be on top
+                        # Use a high base value and subtract the order
+                        layer_item.setZValue(1000 - layer_info["order"])
 
-            # Remove any layer items that no longer exist
-            existing_layer_ids = {layer.id for layer in layers}
-            items_to_remove = []
-            for layer_id, item in self._layer_items.items():
-                if layer_id not in existing_layer_ids:
-                    items_to_remove.append(layer_id)
-
-            for layer_id in items_to_remove:
-                item = self._layer_items[layer_id]
-                if item.scene():
-                    item.scene().removeItem(item)
-                del self._layer_items[layer_id]
-
-            # Create or update layer items for each layer
-            for layer in layers:
-                # Get the corresponding DrawingPadSettings for this layer
-                drawing_pad_settings = None
-                try:
-                    results = DrawingPadSettings.objects.filter_by(
-                        layer_id=layer.id
-                    )
-                    drawing_pad_settings = results[0] if results else None
-                except Exception as e:
-                    self.logger.error(
-                        f"No DrawingPadSettings found for layer {layer.id}: {e}"
-                    )
-
-                if drawing_pad_settings and drawing_pad_settings.image:
-                    # Convert binary image data to PIL Image
-                    pil_image = convert_binary_to_image(
-                        drawing_pad_settings.image
-                    )
-
-                    if pil_image:
-                        # Convert PIL Image to QImage
-                        qimage = ImageQt(pil_image)
-
-                        if layer.id in self._layer_items:
-                            # Update existing layer item
-                            layer_item = self._layer_items[layer.id]
-                            if hasattr(layer_item, "updateImage"):
-                                layer_item.updateImage(qimage)
-                            layer_item.setVisible(layer.visible)
-                            layer_item.setOpacity(layer.opacity / 100.0)
-                            # Invert Z-order: lower order numbers should be on top
-                            # Use a high base value and subtract the order
-                            layer_item.setZValue(1000 - layer.order)
-
-                            # Update position if drawing_pad_settings has changed
-                            if drawing_pad_settings:
-                                if (
-                                    drawing_pad_settings.x_pos is not None
-                                    and drawing_pad_settings.y_pos is not None
-                                ):
-                                    new_pos = QPointF(
-                                        drawing_pad_settings.x_pos,
-                                        drawing_pad_settings.y_pos,
-                                    )
-                                    if (
-                                        layer_item
-                                        not in self.original_item_positions
-                                        or self.original_item_positions[
-                                            layer_item
-                                        ]
-                                        != new_pos
-                                    ):
-                                        self.original_item_positions[
-                                            layer_item
-                                        ] = new_pos
-                                        # Apply canvas offset to get current visible position
-                                        canvas_offset = (
-                                            self.get_canvas_offset()
-                                        )
-                                        visible_pos = new_pos - canvas_offset
-                                        layer_item.setPos(visible_pos)
-                        else:
-                            layer_item = LayerImageItem(qimage)
-                            layer_item.setVisible(layer.visible)
-                            layer_item.setOpacity(layer.opacity / 100.0)
-                            # Invert Z-order: lower order numbers should be on top
-                            layer_item.setZValue(1000 - layer.order)
-
-                            # Add to scene
-                            self.addItem(layer_item)
-                            self._layer_items[layer.id] = layer_item
-
-                            # Set position: prefer active grid settings for newly generated content,
-                            # fallback to drawing_pad_settings for existing content
+                        # Update position if drawing_pad_settings has changed
+                        if drawing_pad_settings:
                             if (
-                                drawing_pad_settings
-                                and drawing_pad_settings.x_pos is not None
+                                drawing_pad_settings.x_pos is not None
                                 and drawing_pad_settings.y_pos is not None
                             ):
-                                # Use stored position from drawing_pad_settings
-                                x_pos = drawing_pad_settings.x_pos
-                                y_pos = drawing_pad_settings.y_pos
-                            else:
-                                # Use active grid settings position (for newly generated content)
-                                x_pos = (
-                                    self.active_grid_settings.pos_x
-                                    if hasattr(self, "active_grid_settings")
-                                    else 0
+                                new_pos = QPointF(
+                                    drawing_pad_settings.x_pos,
+                                    drawing_pad_settings.y_pos,
                                 )
-                                y_pos = (
-                                    self.active_grid_settings.pos_y
-                                    if hasattr(self, "active_grid_settings")
-                                    else 0
-                                )
+                                if (
+                                    layer_item
+                                    not in self.original_item_positions
+                                    or self.original_item_positions[layer_item]
+                                    != new_pos
+                                ):
+                                    self.original_item_positions[
+                                        layer_item
+                                    ] = new_pos
+                                    # Apply canvas offset to get current visible position
+                                    canvas_offset = self.get_canvas_offset()
+                                    visible_pos = new_pos - canvas_offset
+                                    layer_item.setPos(visible_pos)
+                    else:
+                        layer_item = LayerImageItem(qimage)
+                        layer_item.setVisible(layer_info["visible"])
+                        layer_item.setOpacity(layer_info["opacity"] / 100.0)
+                        # Invert Z-order: lower order numbers should be on top
+                        layer_item.setZValue(1000 - layer_info["order"])
 
-                                # Update drawing_pad_settings with the active grid position
-                                if drawing_pad_settings:
-                                    try:
-                                        self.update_drawing_pad_settings(
-                                            x_pos=x_pos, y_pos=y_pos
-                                        )
-                                    except Exception as e:
-                                        self.logger.error(
-                                            f"Failed to update drawing pad settings position: {e}"
-                                        )
+                        # Add to scene
+                        self.addItem(layer_item)
+                        self._layer_items[layer_id] = layer_item
 
-                            # Apply canvas offset to position the item correctly in the current view
-                            canvas_offset = self.get_canvas_offset()
-                            visible_pos = QPointF(x_pos, y_pos) - canvas_offset
-                            layer_item.setPos(visible_pos)
-
-                            # Track original position for canvas recentering
-                            self.original_item_positions[layer_item] = QPointF(
-                                x_pos, y_pos
+                        # Set position: prefer active grid settings for newly generated content,
+                        # fallback to drawing_pad_settings for existing content
+                        if (
+                            drawing_pad_settings
+                            and drawing_pad_settings.x_pos is not None
+                            and drawing_pad_settings.y_pos is not None
+                        ):
+                            # Use stored position from drawing_pad_settings
+                            x_pos = drawing_pad_settings.x_pos
+                            y_pos = drawing_pad_settings.y_pos
+                        else:
+                            # Use active grid settings position (for newly generated content)
+                            x_pos = (
+                                self.active_grid_settings.pos_x
+                                if hasattr(self, "active_grid_settings")
+                                else 0
                             )
-                else:
-                    # Layer has no drawing pad settings with image, remove its item if it exists
-                    if layer.id in self._layer_items:
-                        item = self._layer_items[layer.id]
-                        if item.scene():
-                            item.scene().removeItem(item)
-                        del self._layer_items[layer.id]
+                            y_pos = (
+                                self.active_grid_settings.pos_y
+                                if hasattr(self, "active_grid_settings")
+                                else 0
+                            )
 
-        except Exception as e:
-            self.logger.error(f"Error refreshing layer display: {e}")
+                            # Update drawing_pad_settings with the active grid position
+                            if drawing_pad_settings:
+                                try:
+                                    self.update_drawing_pad_settings(
+                                        x_pos=x_pos, y_pos=y_pos
+                                    )
+                                except Exception as e:
+                                    self.logger.error(
+                                        f"Failed to update drawing pad settings position: {e}"
+                                    )
+
+                        # Apply canvas offset to position the item correctly in the current view
+                        canvas_offset = self.get_canvas_offset()
+                        visible_pos = QPointF(x_pos, y_pos) - canvas_offset
+                        layer_item.setPos(visible_pos)
+
+                        # Track original position for canvas recentering
+                        self.original_item_positions[layer_item] = QPointF(
+                            x_pos, y_pos
+                        )
+            else:
+                # Layer has no drawing pad settings with image, remove its item if it exists
+                if layer_id in self._layer_items:
+                    item = self._layer_items[layer_id]
+                    if item.scene():
+                        item.scene().removeItem(item)
+                    del self._layer_items[layer_id]
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
@@ -1860,13 +1844,14 @@ class CustomScene(
                 # Get the original position from DrawingPadSettings
                 if layer_item not in self.original_item_positions:
                     try:
-                        results = DrawingPadSettings.objects.filter_by(
-                            layer_id=layer_id
+                        drawing_pad_settings = (
+                            self._get_layer_specific_settings(
+                                DrawingPadSettings, layer_id=layer_id
+                            )
                         )
-                        settings = results[0] if results else None
-                        if settings:
-                            abs_x = settings.x_pos or 0
-                            abs_y = settings.y_pos or 0
+                        if drawing_pad_settings:
+                            abs_x = drawing_pad_settings.x_pos or 0
+                            abs_y = drawing_pad_settings.y_pos or 0
                         else:
                             abs_x = layer_item.pos().x()
                             abs_y = layer_item.pos().y()
