@@ -34,9 +34,6 @@ from airunner.components.llm.managers.agent.agents.tool_mixins.user_tools_mixin 
 from airunner.components.llm.managers.agent.agents.tool_mixins.search_tools_mixin import (
     SearchToolsMixin,
 )
-from airunner.components.llm.managers.agent.agents.tool_mixins.map_tools_mixin import (
-    MapToolsMixin,
-)
 
 __all__ = [
     "AnalysisToolsMixin",
@@ -51,5 +48,4 @@ __all__ = [
     "UserManagerMixin",
     "UserToolsMixin",
     "SearchToolsMixin",
-    "MapToolsMixin",
 ]

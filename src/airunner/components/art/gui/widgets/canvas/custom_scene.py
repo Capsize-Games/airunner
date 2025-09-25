@@ -1896,51 +1896,72 @@ class CustomScene(
                 scene_rect = self.item.mapRectToScene(rect)
                 self.update(scene_rect)
 
-        # Update layer items
-        from airunner.components.art.data.canvas_layer import CanvasLayer
-        from airunner.components.art.data.drawingpad_settings import (
-            DrawingPadSettings,
-        )
+        # Create a copy of items to iterate over, as we might modify the dict
+        layer_items_copy = list(self._layer_items.items())
 
-        for layer_id, layer_item in self._layer_items.items():
-            # Get the original position from DrawingPadSettings
-            if layer_item not in self.original_item_positions:
-                try:
-                    results = DrawingPadSettings.objects.filter_by(
-                        layer_id=layer_id
+        for layer_id, layer_item in layer_items_copy:
+            try:
+                # Get the original position from DrawingPadSettings
+                if layer_item not in self.original_item_positions:
+                    try:
+                        results = DrawingPadSettings.objects.filter_by(
+                            layer_id=layer_id
+                        )
+                        settings = results[0] if results else None
+                        if settings:
+                            abs_x = settings.x_pos or 0
+                            abs_y = settings.y_pos or 0
+                        else:
+                            abs_x = layer_item.pos().x()
+                            abs_y = layer_item.pos().y()
+
+                        self.original_item_positions[layer_item] = QPointF(
+                            abs_x, abs_y
+                        )
+                    except Exception as e:
+                        # Fallback to current position
+                        self.original_item_positions[layer_item] = (
+                            layer_item.pos()
+                        )
+
+                original_pos = self.original_item_positions[layer_item]
+                new_x = original_pos.x() - canvas_offset.x()
+                new_y = original_pos.y() - canvas_offset.y()
+
+                current_pos = layer_item.pos()
+                if (
+                    abs(current_pos.x() - new_x) > 1
+                    or abs(current_pos.y() - new_y) > 1
+                ):
+                    layer_item.prepareGeometryChange()
+                    layer_item.setPos(new_x, new_y)
+                    layer_item.setVisible(
+                        layer_item.isVisible()
+                    )  # Preserve visibility
+                    rect = layer_item.boundingRect().adjusted(-10, -10, 10, 10)
+                    scene_rect = layer_item.mapRectToScene(rect)
+                    self.update(scene_rect)
+
+            except RuntimeError as e:
+                if "Internal C++ object" in str(
+                    e
+                ) and "already deleted" in str(e):
+                    self.logger.warning(
+                        f"Layer item {layer_id} was already deleted during position update, removing from cache"
                     )
-                    settings = results[0] if results else None
-                    if settings:
-                        abs_x = settings.x_pos or 0
-                        abs_y = settings.y_pos or 0
-                    else:
-                        abs_x = layer_item.pos().x()
-                        abs_y = layer_item.pos().y()
-
-                    self.original_item_positions[layer_item] = QPointF(
-                        abs_x, abs_y
-                    )
-                except Exception as e:
-                    # Fallback to current position
-                    self.original_item_positions[layer_item] = layer_item.pos()
-
-            original_pos = self.original_item_positions[layer_item]
-            new_x = original_pos.x() - canvas_offset.x()
-            new_y = original_pos.y() - canvas_offset.y()
-
-            current_pos = layer_item.pos()
-            if (
-                abs(current_pos.x() - new_x) > 1
-                or abs(current_pos.y() - new_y) > 1
-            ):
-                layer_item.prepareGeometryChange()
-                layer_item.setPos(new_x, new_y)
-                layer_item.setVisible(
-                    layer_item.isVisible()
-                )  # Preserve visibility
-                rect = layer_item.boundingRect().adjusted(-10, -10, 10, 10)
-                scene_rect = layer_item.mapRectToScene(rect)
-                self.update(scene_rect)
+                    # Remove the invalid reference from our cache
+                    if layer_id in self._layer_items:
+                        del self._layer_items[layer_id]
+                    # Also clean up original_item_positions if it exists
+                    if layer_item in self.original_item_positions:
+                        del self.original_item_positions[layer_item]
+                else:
+                    # Re-raise unexpected RuntimeErrors
+                    raise
+            except Exception as e:
+                self.logger.warning(
+                    f"Error updating position for layer {layer_id}: {e}"
+                )
 
     def get_canvas_offset(self):
         if self.views() and hasattr(self.views()[0], "canvas_offset"):
