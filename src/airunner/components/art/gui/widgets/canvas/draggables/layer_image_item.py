@@ -70,6 +70,18 @@ class LayerImageItem(DraggablePixmap):
                 abs_y = 0
             self.initial_item_abs_pos = QPointF(abs_x, abs_y)
 
+            # Begin a history transaction for this layer's position change
+            try:
+                scene = self.scene()
+                if scene and hasattr(
+                    scene, "_begin_layer_history_transaction"
+                ):
+                    scene._begin_layer_history_transaction(  # type: ignore[attr-defined]
+                        self.layer_id, "position"
+                    )
+            except Exception:
+                pass
+
             # Store item-relative position for release check
             self.mouse_press_pos = event.pos()
             event.accept()
@@ -183,6 +195,28 @@ class LayerImageItem(DraggablePixmap):
 
                     # Signal image updated
                     self.api.art.canvas.image_updated()
+
+                    try:
+                        scene = self.scene()
+                        if scene and hasattr(
+                            scene, "_commit_layer_history_transaction"
+                        ):
+                            scene._commit_layer_history_transaction(  # type: ignore[attr-defined]
+                                self.layer_id, "position"
+                            )
+                    except Exception:
+                        pass
+            else:
+                try:
+                    scene = self.scene()
+                    if scene and hasattr(
+                        scene, "_cancel_layer_history_transaction"
+                    ):
+                        scene._cancel_layer_history_transaction(  # type: ignore[attr-defined]
+                            self.layer_id
+                        )
+                except Exception:
+                    pass
 
             # Accept the event
             event.accept()
