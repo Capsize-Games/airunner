@@ -100,13 +100,3 @@ class LLMAPIService(APIServiceBase):
         self.emit_signal(
             SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}
         )
-
-    def map_search(self, query: str) -> None:
-        """Send a map search request to the LLM generate worker.
-
-        Args:
-            query (str): The search query string from the map widget.
-        """
-        self.emit_signal(
-            SignalCode.MAP_SEARCH_REQUEST_SIGNAL, {"query": query}
-        )

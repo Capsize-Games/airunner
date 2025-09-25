@@ -13,7 +13,6 @@ This directory contains all LLM agent tool wrappers for the AI Runner project. E
 | `chat_engine_tool`       | `ChatEngineTool`            | Conversational Q&A                      | str             | Chat agent           |
 | `react_agent_tool`       | `ReActAgentTool`            | Reasoning + acting (multi-tool)         | varies          | ReAct agent          |
 | `weather_tool`           | `WeatherTool`               | Current weather info for a location     | str             | Weather queries      |
-| `map_tool`               | `MapTool`                   | Map/geocoding/POI actions (Nominatim)   | dict            | Map agent           |
 
 ## Tool Descriptions
 
@@ -44,10 +43,6 @@ This directory contains all LLM agent tool wrappers for the AI Runner project. E
 ### 7. WeatherTool
 - **Purpose:** Provides current weather information for a given location.
 - **Usage:** Used for weather queries via slash command or agent workflow.
-
-### 8. MapTool
-- **Purpose:** Provides map/geocoding/POI actions using Nominatim and Leaflet.
-- **Usage:** Used for geocoding, POI search, adding markers, and zooming to locations. Directions/routing is not supported by Nominatim. See `components/tools/map_tool.py` for API.
 
 ## How to Add a New Tool
 

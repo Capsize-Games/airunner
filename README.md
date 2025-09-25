@@ -243,9 +243,7 @@ Organize them under your local AI Runner data directory:
 
 ### Optional third-party services
 
-- **OpenStreetMap:** Map API
 - **OpenMeteo:** Weather API
-- **OpenStreetMaps (leaflet):** Maps
 
 </td>
 </tr>
@@ -508,51 +506,8 @@ AI Runner uses `pytest` for all automated testing. Test coverage is a priority, 
 - [NodeGraphQt Vendor Module](src/airunner/vendor/nodegraphqt/README.md)
 - [Xvfb-Required Tests](src/airunner/utils/tests/xvfb_required/README.md)
 - [ORM Models](src/airunner/components/data/models/README.md)
-- [Maps](src/airunner/components/map/README.md)
 
 For additional details, see the [Wiki](https://github.com/Capsize-Games/airunner/wiki).
-
-
-## Nominatim Geocoding API
-
-If you want to use OpenStreet maps completely offline you can run your own local [Nominatim instance](https://nominatim.org/release-docs/latest/admin/Installation/).
-
-```bash
-NOMINATIM_PATH=/some/path
-
-sudo mkdir -p $NOMINATIM_PATH/nominatim_data
-sudo mkdir -p $NOMINATIM_PATH/nominatim_flatnode
-
-docker run -it \
-    -e PBF_URL=https://download.geofabrik.de/north-america/us-latest.osm.pbf \
-    -e REPLICATION_URL=https://download.geofabrik.de/north-america/us-updates/ \
-    -p 8080:8080 \
-    -v nominatim-data:/var/lib/postgresql/data \
-    --shm-size=2g \
-    --name nominatim \
-    mediagis/nominatim:5.1
-```
-
-- **Start existing container:**
-  ```bash
-  docker start nominatim
-  ```
-- **With logs:**
-  ```bash
-  docker start nominatim && docker logs -f nominatim
-  ```
-- **Stop existing container:**
-  ```bash
-  docker stop nominatim
-  ```
-
-The server will take hours to setup if you are using the full US map. You can use a smaller region if you want to speed up the process.
-
-After the server is running, you can access it at `http://localhost:8080/`. Be sure to set the `AIRUNNER_NOMINATIM_URL` environment variable to point to your local Nominatim instance:
-
-```bash
-export AIRUNNER_NOMINATIM_URL=http://localhost:8080/
-```
 
 ## Sponsorship
 

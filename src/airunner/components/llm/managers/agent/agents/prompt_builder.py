@@ -94,12 +94,7 @@ class PromptBuilder:
                 prompt_parts.append("------")
 
         if include_system_instructions:
-            if self.agent.action is LLMActionType.MAP_TOOL:
-                mapping_instructions = "You are an LLM agent that will perform map-based actions such as geocoding, POI search, and directions. You can add markers to the map and zoom in/out. Always return results in a structured format."
-                prompt_parts.append(
-                    f"Always follow these mapping instructions:\n{mapping_instructions}"
-                )
-            elif (
+            if (
                 chatbot.use_system_instructions
                 and chatbot.system_instructions
                 and chatbot.system_instructions != ""
@@ -325,8 +320,6 @@ class PromptBuilder:
             return cls.chat_system_prompt(agent)
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
             return cls.rag_system_prompt(agent)
-        elif action is LLMActionType.MAP_TOOL:
-            return cls.map_system_prompt(agent)  # Use chat prompt for map tool
         elif action is LLMActionType.GENERATE_IMAGE:
             return cls.image_system_prompt(agent)
         else:

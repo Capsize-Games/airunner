@@ -184,7 +184,6 @@ class MainWindow(
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
         ("home", "home_button"),
-        ("map", "map_button"),
         ("radio", "visualizer_button"),
     ]
     _last_reload_time = 0
@@ -631,7 +630,6 @@ class MainWindow(
             "art_editor_button": self.ui.art_tab,
             "document_editor_button": self.ui.document_editor_tab,
             "workflow_editor_button": self.ui.agent_workflow_tab,
-            "map_button": self.ui.map_tab,
         }
 
     def _restore_tab(self):
@@ -653,7 +651,6 @@ class MainWindow(
             1: "art_editor_button",
             2: "workflow_editor_button",
             3: "document_editor_button",
-            4: "map_button",
         }
 
         if saved_index in buttons:
@@ -698,10 +695,6 @@ class MainWindow(
         self._set_current_button_and_tab(
             "workflow_editor_button", self.ui.agent_workflow_tab
         )
-
-    @Slot(bool)
-    def on_map_button_toggled(self, active: bool):
-        self._set_current_button_and_tab("map_button", self.ui.map_tab)
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):
