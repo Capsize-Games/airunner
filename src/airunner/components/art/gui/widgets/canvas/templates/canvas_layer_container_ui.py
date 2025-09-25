@@ -16,7 +16,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QPushButton,
-    QScrollArea, QSizePolicy, QWidget)
+    QScrollArea, QSizePolicy, QSpacerItem, QWidget)
 import airunner.feather_rc
 
 class Ui_canvas_layer_container(object):
@@ -26,20 +26,23 @@ class Ui_canvas_layer_container(object):
         canvas_layer_container.resize(400, 300)
         self.gridLayout = QGridLayout(canvas_layer_container)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.layer_list = QScrollArea(canvas_layer_container)
         self.layer_list.setObjectName(u"layer_list")
         self.layer_list.setWidgetResizable(True)
         self.layer_list_layout = QWidget()
         self.layer_list_layout.setObjectName(u"layer_list_layout")
-        self.layer_list_layout.setGeometry(QRect(0, 0, 380, 248))
+        self.layer_list_layout.setGeometry(QRect(0, 0, 398, 248))
         self.gridLayout_2 = QGridLayout(self.layer_list_layout)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(10, 10, 10, 10)
         self.layer_list.setWidget(self.layer_list_layout)
 
         self.gridLayout.addWidget(self.layer_list, 0, 0, 1, 1)
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(10, 10, 10, 10)
         self.add_layer = QPushButton(canvas_layer_container)
         self.add_layer.setObjectName(u"add_layer")
         self.add_layer.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -66,6 +69,10 @@ class Ui_canvas_layer_container(object):
         self.move_layer_down.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.move_layer_down)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
 
         self.delete_layer = QPushButton(canvas_layer_container)
         self.delete_layer.setObjectName(u"delete_layer")
