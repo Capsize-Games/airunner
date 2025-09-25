@@ -630,6 +630,7 @@ class MainWindow(
             "art_editor_button": self.ui.art_tab,
             "document_editor_button": self.ui.document_editor_tab,
             "workflow_editor_button": self.ui.agent_workflow_tab,
+            "visualizer_button": self.ui.visualizer_tab,
         }
 
     def _restore_tab(self):
