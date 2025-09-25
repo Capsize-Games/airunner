@@ -2,7 +2,8 @@ import io
 import os
 import subprocess
 import time
-from typing import Optional, Tuple, Dict, Any
+from dataclasses import asdict, is_dataclass
+from typing import Optional, Tuple, Dict, Any, Iterable, List
 
 import PIL
 from PIL import ImageQt, Image, ImageFilter
@@ -26,6 +27,13 @@ from line_profiler import profile
 
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.controlnet_settings import ControlnetSettings
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
+from airunner.components.art.data.outpaint_settings import OutpaintSettings
+from airunner.components.art.data.brush_settings import BrushSettings
+from airunner.components.art.data.metadata_settings import MetadataSettings
 
 import requests  # Added for HTTP(S) image download
 
@@ -93,6 +101,7 @@ class CustomScene(
         self.undo_history = []
         self.redo_history = []
         self._history_transactions: Dict[int | None, Dict[str, Any]] = {}
+        self._structure_history_transaction: Optional[Dict[str, Any]] = None
         self.right_mouse_button_pressed = False
         self.handling_event = False
         self._original_item_positions = {}  # Store original positions of items
@@ -202,6 +211,18 @@ class CustomScene(
             (
                 SignalCode.LAYERS_SHOW_SIGNAL,
                 self.on_layers_show_signal,
+            ),
+            (
+                SignalCode.LAYER_OPERATION_BEGIN,
+                self.on_layer_operation_begin,
+            ),
+            (
+                SignalCode.LAYER_OPERATION_COMMIT,
+                self.on_layer_operation_commit,
+            ),
+            (
+                SignalCode.LAYER_OPERATION_CANCEL,
+                self.on_layer_operation_cancel,
             ),
         ]:
             self.register(signal, handler)
@@ -641,7 +662,9 @@ class CustomScene(
             len(self.undo_history), len(self.redo_history)
         )
         if self.views():
-            self.views()[0].updateImagePositions()
+            view = self.views()[0]
+            if hasattr(view, "updateImagePositions"):
+                view.updateImagePositions()
 
     def on_action_redo_signal(self):
         if not self.redo_history:
@@ -653,9 +676,15 @@ class CustomScene(
             len(self.undo_history), len(self.redo_history)
         )
         if self.views():
-            self.views()[0].updateImagePositions()
+            view = self.views()[0]
+            if hasattr(view, "updateImagePositions"):
+                view.updateImagePositions()
 
     def _apply_history_entry(self, entry: Dict[str, Any], target: str):
+        entry_type = entry.get("type")
+        if entry_type in {"layer_create", "layer_delete", "layer_reorder"}:
+            self._apply_layer_structure(entry, target)
+            return
         layer_id = entry.get("layer_id")
         state = entry.get(target)
         if state is None:
@@ -725,13 +754,6 @@ class CustomScene(
             "before": self._capture_layer_state(layer_id),
         }
 
-    def _cancel_layer_history_transaction(
-        self, layer_id: Optional[int]
-    ) -> None:
-        if layer_id is None:
-            return
-        self._history_transactions.pop(layer_id, None)
-
     def _commit_layer_history_transaction(
         self, layer_id: Optional[int], change_type: Optional[str] = None
     ) -> None:
@@ -758,6 +780,272 @@ class CustomScene(
             self.api.art.canvas.update_history(
                 len(self.undo_history), len(self.redo_history)
             )
+
+    def _cancel_layer_history_transaction(
+        self, layer_id: Optional[int]
+    ) -> None:
+        if layer_id is None:
+            return
+        self._history_transactions.pop(layer_id, None)
+
+    def _serialize_record(self, obj: Any) -> Optional[Dict[str, Any]]:
+        if obj is None:
+            return None
+        if is_dataclass(obj):
+            return asdict(obj)
+        if hasattr(obj, "to_dict"):
+            try:
+                return obj.to_dict()
+            except Exception:
+                pass
+        if isinstance(obj, dict):
+            return dict(obj)
+        try:
+            return dict(vars(obj))
+        except Exception:
+            return None
+
+    def _capture_layer_orders(self) -> List[Dict[str, int]]:
+        layers = CanvasLayer.objects.all()
+        if not layers:
+            return []
+        sorted_layers = sorted(
+            layers, key=lambda layer: getattr(layer, "order", 0)
+        )
+        orders: List[Dict[str, int]] = []
+        for index, layer in enumerate(sorted_layers):
+            layer_id = getattr(layer, "id", None)
+            if layer_id is None:
+                continue
+            order_value = getattr(layer, "order", index)
+            orders.append({"layer_id": layer_id, "order": order_value})
+        return orders
+
+    def _capture_layers_state(
+        self, layer_ids: Iterable[int]
+    ) -> List[Dict[str, Any]]:
+        snapshots: List[Dict[str, Any]] = []
+        for layer_id in layer_ids:
+            layer_record = self._serialize_record(
+                CanvasLayer.objects.get(layer_id)
+            )
+            if layer_record is None:
+                continue
+            snapshot: Dict[str, Any] = {"layer": layer_record}
+            snapshot["drawing_pad"] = self._serialize_record(
+                DrawingPadSettings.objects.filter_by_first(layer_id=layer_id)
+            )
+            snapshot["controlnet"] = self._serialize_record(
+                ControlnetSettings.objects.filter_by_first(layer_id=layer_id)
+            )
+            snapshot["image_to_image"] = self._serialize_record(
+                ImageToImageSettings.objects.filter_by_first(layer_id=layer_id)
+            )
+            snapshot["outpaint"] = self._serialize_record(
+                OutpaintSettings.objects.filter_by_first(layer_id=layer_id)
+            )
+            snapshot["brush"] = self._serialize_record(
+                BrushSettings.objects.filter_by_first(layer_id=layer_id)
+            )
+            snapshot["metadata"] = self._serialize_record(
+                MetadataSettings.objects.filter_by_first(layer_id=layer_id)
+            )
+            snapshots.append(snapshot)
+        return snapshots
+
+    def _merge_model_from_dict(self, model_cls, data: Dict[str, Any]) -> None:
+        if not data:
+            return
+        try:
+            model_instance = model_cls(**data)
+            model_cls.objects.merge(model_instance)
+        except Exception as exc:
+            if hasattr(self, "logger"):
+                self.logger.error(
+                    "Failed to merge %s for layer operation: %s",
+                    model_cls.__name__,
+                    exc,
+                )
+
+    def _restore_layers_from_snapshots(
+        self, snapshots: List[Dict[str, Any]]
+    ) -> None:
+        for snapshot in snapshots:
+            layer_data = snapshot.get("layer")
+            if layer_data:
+                self._merge_model_from_dict(CanvasLayer, layer_data)
+            self._merge_model_from_dict(
+                DrawingPadSettings, snapshot.get("drawing_pad") or {}
+            )
+            self._merge_model_from_dict(
+                ControlnetSettings, snapshot.get("controlnet") or {}
+            )
+            self._merge_model_from_dict(
+                ImageToImageSettings, snapshot.get("image_to_image") or {}
+            )
+            self._merge_model_from_dict(
+                OutpaintSettings, snapshot.get("outpaint") or {}
+            )
+            self._merge_model_from_dict(
+                BrushSettings, snapshot.get("brush") or {}
+            )
+            self._merge_model_from_dict(
+                MetadataSettings, snapshot.get("metadata") or {}
+            )
+
+    def _remove_layers(self, layer_ids: Iterable[int]) -> None:
+        for layer_id in list(layer_ids):
+            layer_item = self._layer_items.pop(layer_id, None)
+            if layer_item is not None and layer_item.scene():
+                layer_item.scene().removeItem(layer_item)
+            self._history_transactions.pop(layer_id, None)
+            self._original_item_positions = {
+                item: pos
+                for item, pos in self._original_item_positions.items()
+                if getattr(item, "layer_id", None) != layer_id
+            }
+            DrawingPadSettings.objects.delete(layer_id=layer_id)
+            ControlnetSettings.objects.delete(layer_id=layer_id)
+            ImageToImageSettings.objects.delete(layer_id=layer_id)
+            OutpaintSettings.objects.delete(layer_id=layer_id)
+            BrushSettings.objects.delete(layer_id=layer_id)
+            MetadataSettings.objects.delete(layer_id=layer_id)
+            CanvasLayer.objects.delete(layer_id)
+
+    def _apply_layer_orders(self, orders: List[Dict[str, int]]) -> None:
+        for entry in orders:
+            layer_id = entry.get("layer_id")
+            order_value = entry.get("order")
+            if layer_id is None or order_value is None:
+                continue
+            CanvasLayer.objects.update(layer_id, order=order_value)
+
+    def _begin_layer_structure_transaction(
+        self, action: str, layer_ids: Iterable[int]
+    ) -> None:
+        if not action:
+            return
+        self._structure_history_transaction = {
+            "action": action,
+            "layer_ids": list(layer_ids),
+            "orders_before": self._capture_layer_orders(),
+        }
+        if action == "delete":
+            self._structure_history_transaction["layers_before"] = (
+                self._capture_layers_state(layer_ids)
+            )
+
+    def _commit_layer_structure_transaction(
+        self, action: str, layer_ids: Iterable[int]
+    ) -> None:
+        if self._structure_history_transaction is None:
+            return
+        transaction = self._structure_history_transaction
+        if transaction.get("action") != action:
+            self._structure_history_transaction = None
+            return
+
+        resolved_layer_ids = list(layer_ids)
+        if action == "create":
+            transaction["layer_ids"] = resolved_layer_ids
+        elif not resolved_layer_ids:
+            resolved_layer_ids = list(transaction.get("layer_ids", []))
+
+        orders_after = self._capture_layer_orders()
+        entry: Dict[str, Any] = {
+            "type": f"layer_{action}",
+            "layer_ids": resolved_layer_ids,
+            "orders_before": transaction.get("orders_before", []),
+            "orders_after": orders_after,
+        }
+
+        if action == "create":
+            entry["layers_after"] = self._capture_layers_state(
+                resolved_layer_ids
+            )
+        elif action == "delete":
+            entry["layers_before"] = transaction.get("layers_before", [])
+
+        if action == "reorder" and (
+            entry["orders_before"] == entry["orders_after"]
+        ):
+            self._structure_history_transaction = None
+            return
+
+        if action == "create" and not entry.get("layers_after"):
+            self._structure_history_transaction = None
+            return
+
+        if action == "delete" and not entry.get("layers_before"):
+            self._structure_history_transaction = None
+            return
+
+        self.undo_history.append(entry)
+        self.redo_history.clear()
+        self._structure_history_transaction = None
+        if self.api and hasattr(self.api, "art"):
+            self.api.art.canvas.update_history(
+                len(self.undo_history), len(self.redo_history)
+            )
+
+    def _cancel_layer_structure_transaction(self) -> None:
+        self._structure_history_transaction = None
+
+    def _apply_layer_structure(
+        self, entry: Dict[str, Any], target: str
+    ) -> None:
+        entry_type = entry.get("type")
+        if entry_type not in {
+            "layer_create",
+            "layer_delete",
+            "layer_reorder",
+        }:
+            return
+
+        layer_ids = entry.get("layer_ids", [])
+        orders = (
+            entry.get("orders_before", [])
+            if target == "before"
+            else entry.get("orders_after", [])
+        )
+
+        if entry_type == "layer_create":
+            if target == "before":
+                self._remove_layers(layer_ids)
+            else:
+                self._restore_layers_from_snapshots(
+                    entry.get("layers_after", [])
+                )
+        elif entry_type == "layer_delete":
+            if target == "before":
+                self._restore_layers_from_snapshots(
+                    entry.get("layers_before", [])
+                )
+            else:
+                self._remove_layers(layer_ids)
+        elif entry_type == "layer_reorder":
+            pass
+
+        if orders:
+            self._apply_layer_orders(orders)
+
+        self._refresh_layer_display()
+        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        if self.api and hasattr(self.api, "art"):
+            self.api.art.canvas.update_image_positions()
+
+    def on_layer_operation_begin(self, data: Dict[str, Any]) -> None:
+        action = data.get("action")
+        layer_ids = data.get("layer_ids") or []
+        self._begin_layer_structure_transaction(action, layer_ids)
+
+    def on_layer_operation_commit(self, data: Dict[str, Any]) -> None:
+        action = data.get("action")
+        layer_ids = data.get("layer_ids") or []
+        self._commit_layer_structure_transaction(action, layer_ids)
+
+    def on_layer_operation_cancel(self, data: Dict[str, Any]) -> None:
+        self._cancel_layer_structure_transaction()
 
     def showEvent(self, event):
         super().showEvent(event)

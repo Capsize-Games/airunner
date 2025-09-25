@@ -256,6 +256,9 @@ class SignalCode(Enum):
     LAYER_REORDERED = "layer_reordered_signal"
     LAYER_SELECTED = "layer_selected_signal"
     LAYER_SELECTION_CHANGED = "layer_selection_changed_signal"
+    LAYER_OPERATION_BEGIN = "layer_operation_begin_signal"
+    LAYER_OPERATION_COMMIT = "layer_operation_commit_signal"
+    LAYER_OPERATION_CANCEL = "layer_operation_cancel_signal"
 
 
 class EngineResponseCode(Enum):
