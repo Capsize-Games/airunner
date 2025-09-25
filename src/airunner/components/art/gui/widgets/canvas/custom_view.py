@@ -350,7 +350,7 @@ class CustomGraphicsView(
         # Create if it doesn't exist
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea()
-            self.active_grid_area.setZValue(10)  # Ensure high visibility
+            self.active_grid_area.setZValue(10000)
             self.scene.addItem(self.active_grid_area)
             # Connect the signal emitted by the updated update_position
             self.active_grid_area.register(

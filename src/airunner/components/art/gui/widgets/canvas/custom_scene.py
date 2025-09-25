@@ -2,7 +2,7 @@ import io
 import os
 import subprocess
 import time
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, Any
 
 import PIL
 from PIL import ImageQt, Image, ImageFilter
@@ -92,6 +92,7 @@ class CustomScene(
         self.generate_image_time = 0
         self.undo_history = []
         self.redo_history = []
+        self._history_transactions: Dict[int | None, Dict[str, Any]] = {}
         self.right_mouse_button_pressed = False
         self.handling_event = False
         self._original_item_positions = {}  # Store original positions of items
@@ -505,12 +506,13 @@ class CustomScene(
         self._load_image_from_object(image)
 
     def on_load_image_signal(self, image_path: str):
-        self._add_image_to_undo()
+        layer_id = self._add_image_to_undo()
         image = self._load_image(image_path)
         if self.application_settings.resize_on_paste:
             image = self._resize_image(image)
         self.current_active_image = image
         self.initialize_image(image)
+        self._commit_layer_history_transaction(layer_id, "image")
 
     def on_apply_filter_signal(self, message):
         self._apply_filter(message)
@@ -630,30 +632,132 @@ class CustomScene(
         self._rotate_90_counterclockwise()
 
     def on_action_undo_signal(self):
-        if len(self.undo_history) == 0:
+        if not self.undo_history:
             return
-        data = self.undo_history.pop()
-        self._add_image_to_redo()
-        self._history_set_image(data)
-        view = self.views()[0]
-        view.updateImagePositions()
+        entry = self.undo_history.pop()
+        self._apply_history_entry(entry, "before")
+        self.redo_history.append(entry)
+        self.api.art.canvas.update_history(
+            len(self.undo_history), len(self.redo_history)
+        )
+        if self.views():
+            self.views()[0].updateImagePositions()
 
     def on_action_redo_signal(self):
-        if len(self.redo_history) == 0:
+        if not self.redo_history:
             return
-        data = self.redo_history.pop()
-        self._add_image_to_undo()
-        self._history_set_image(data)
-        view = self.views()[0]
-        view.updateImagePositions()
+        entry = self.redo_history.pop()
+        self._apply_history_entry(entry, "after")
+        self.undo_history.append(entry)
+        self.api.art.canvas.update_history(
+            len(self.undo_history), len(self.redo_history)
+        )
+        if self.views():
+            self.views()[0].updateImagePositions()
 
-    def _history_set_image(self, data: Dict):
-        if data is not None:
-            if data["image"] is None:
-                self.delete_image()
-            else:
-                self.current_active_image = data["image"]
-                self.initialize_image(self.current_active_image)
+    def _apply_history_entry(self, entry: Dict[str, Any], target: str):
+        layer_id = entry.get("layer_id")
+        state = entry.get(target)
+        if state is None:
+            return
+        self._apply_layer_state(layer_id, state)
+        self._refresh_layer_display()
+        if self.api and hasattr(self.api, "art"):
+            self.api.art.canvas.update_image_positions()
+
+    def _capture_layer_state(
+        self, layer_id: Optional[int]
+    ) -> Dict[str, Optional[Any]]:
+        if layer_id is None:
+            settings = self.drawing_pad_settings
+        else:
+            settings = self._get_layer_specific_settings(
+                DrawingPadSettings, layer_id=layer_id
+            )
+
+        if settings is None:
+            return {"image": None, "mask": None, "x_pos": 0, "y_pos": 0}
+
+        return {
+            "image": getattr(settings, "image", None),
+            "mask": getattr(settings, "mask", None),
+            "x_pos": getattr(settings, "x_pos", 0) or 0,
+            "y_pos": getattr(settings, "y_pos", 0) or 0,
+        }
+
+    def _apply_layer_state(
+        self, layer_id: Optional[int], state: Dict[str, Optional[Any]]
+    ) -> None:
+        if layer_id is None:
+            return
+
+        updates: Dict[str, Optional[Any]] = {}
+        for key in ("image", "mask", "x_pos", "y_pos"):
+            if key in state:
+                updates[key] = state[key]
+
+        if updates:
+            self.update_drawing_pad_settings(layer_id=layer_id, **updates)
+
+        layer_item = self._layer_items.get(layer_id)
+        if layer_item is not None:
+            image_data = state.get("image")
+            if image_data is not None:
+                pil_image = convert_binary_to_image(image_data)
+                if pil_image is not None:
+                    layer_item.updateImage(ImageQt.ImageQt(pil_image))
+            x_pos = state.get("x_pos")
+            y_pos = state.get("y_pos")
+            if x_pos is not None and y_pos is not None:
+                canvas_offset = self.get_canvas_offset()
+                layer_item.setPos(QPointF(x_pos, y_pos) - canvas_offset)
+                self.original_item_positions[layer_item] = QPointF(
+                    x_pos, y_pos
+                )
+
+    def _begin_layer_history_transaction(
+        self, layer_id: Optional[int], change_type: str
+    ) -> None:
+        if layer_id is None:
+            return
+        self._history_transactions[layer_id] = {
+            "type": change_type,
+            "before": self._capture_layer_state(layer_id),
+        }
+
+    def _cancel_layer_history_transaction(
+        self, layer_id: Optional[int]
+    ) -> None:
+        if layer_id is None:
+            return
+        self._history_transactions.pop(layer_id, None)
+
+    def _commit_layer_history_transaction(
+        self, layer_id: Optional[int], change_type: Optional[str] = None
+    ) -> None:
+        if layer_id is None:
+            return
+        transaction = self._history_transactions.pop(layer_id, None)
+        if transaction is None:
+            return
+        if change_type is not None:
+            transaction["type"] = change_type
+        transaction["after"] = self._capture_layer_state(layer_id)
+        if transaction["before"] == transaction["after"]:
+            return
+
+        entry = {
+            "layer_id": layer_id,
+            "type": transaction.get("type", "image"),
+            "before": transaction["before"],
+            "after": transaction["after"],
+        }
+        self.undo_history.append(entry)
+        self.redo_history.clear()
+        if self.api and hasattr(self.api, "art"):
+            self.api.art.canvas.update_history(
+                len(self.undo_history), len(self.redo_history)
+            )
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -942,11 +1046,12 @@ class CustomScene(
                     img.verify()
                     # Reopen since verify() consumes the image
                     img = Image.open(io.BytesIO(data_bytes))
-                    self._add_image_to_undo()
+                    layer_id = self._add_image_to_undo()
                     if self.application_settings.resize_on_paste:
                         img = self._resize_image(img)
                     self.current_active_image = img
                     self.initialize_image(img)
+                    self._commit_layer_history_transaction(layer_id, "image")
                     handled = True
                     break
                 except Exception as e:
@@ -960,11 +1065,12 @@ class CustomScene(
                 url_str = url.toString()
                 img = self._load_image_from_url_or_file(url_str)
                 if img is not None:
-                    self._add_image_to_undo()
+                    layer_id = self._add_image_to_undo()
                     if self.application_settings.resize_on_paste:
                         img = self._resize_image(img)
                     self.current_active_image = img
                     self.initialize_image(img)
+                    self._commit_layer_history_transaction(layer_id, "image")
                     handled = True
                     break
                 # fallback: try as file path
@@ -972,11 +1078,14 @@ class CustomScene(
                 if path:
                     img = self._load_image_from_url_or_file(path)
                     if img is not None:
-                        self._add_image_to_undo()
+                        layer_id = self._add_image_to_undo()
                         if self.application_settings.resize_on_paste:
                             img = self._resize_image(img)
                         self.current_active_image = img
                         self.initialize_image(img)
+                        self._commit_layer_history_transaction(
+                            layer_id, "image"
+                        )
                         handled = True
                         break
         if handled:
@@ -1707,50 +1816,38 @@ class CustomScene(
     def rotate_image(self, angle: float):
         image = self.current_active_image
         if image is not None:
-            self._add_image_to_undo()
+            layer_id = self._add_image_to_undo()
             image = image.rotate(angle, expand=True)
             self.current_active_image = image
             self.initialize_image(image)
-
-    def _add_undo_history(self, data: Dict):
-        self.undo_history.append(data)
-
-    def _add_redo_history(self, data: Dict):
-        self.redo_history.append(data)
+            self._commit_layer_history_transaction(layer_id, "image")
 
     def _clear_history(self):
         self.undo_history = []
         self.redo_history = []
-        self.api.art.canvas.clear_history()
+        self._history_transactions.clear()
+        if self.api and hasattr(self.api, "art"):
+            self.api.art.canvas.clear_history()
 
     def _cut_image(self, image: Image = None) -> Image:
         image = self._copy_image(image)
         if image is not None:
-            self._add_image_to_undo(image)
+            layer_id = self._add_image_to_undo()
             self.delete_image()
+            self._commit_layer_history_transaction(layer_id, "image")
 
-    def _add_image_to_undo(self, image: Image = None):
-        if image is None:
-            # Use cached reference first to avoid database lookup during pending persistence
-            image = self._current_active_image_ref
-            if image is None:
-                # Fallback to property getter if no cached reference
-                image = self.current_active_image
-        self._add_undo_history({"image": image if image is not None else None})
-        self.api.art.canvas.update_history(
-            len(self.undo_history), len(self.redo_history)
-        )
-
-    def _add_image_to_redo(self):
-        # Use cached reference first to avoid database lookup during pending persistence
-        image = self._current_active_image_ref
-        if image is None:
-            # Fallback to property getter if no cached reference
-            image = self.current_active_image
-        self._add_redo_history({"image": image if image is not None else None})
-        self.api.art.canvas.update_history(
-            len(self.undo_history), len(self.redo_history)
-        )
+    def _add_image_to_undo(
+        self,
+        layer_id: Optional[int] = None,
+        change_type: str = "image",
+    ) -> Optional[int]:
+        target_layer_id = layer_id
+        if target_layer_id is None:
+            target_layer_id = self._get_current_selected_layer_id()
+        elif not isinstance(target_layer_id, int):
+            target_layer_id = self._get_current_selected_layer_id()
+        self._begin_layer_history_transaction(target_layer_id, change_type)
+        return target_layer_id
 
     def _handle_left_mouse_press(self, event):
         try:
@@ -1797,9 +1894,10 @@ class CustomScene(
     def _apply_filter(self, _filter_object: ImageFilter.Filter):
         if self.settings_key != "drawing_pad_settings":
             return
-        self._add_image_to_undo(self.image_backup)
+        layer_id = self._add_image_to_undo()
         self.previewing_filter = False
         self.image_backup = None
+        self._commit_layer_history_transaction(layer_id, "image")
 
     def _cancel_filter(self) -> Image:
         image = None

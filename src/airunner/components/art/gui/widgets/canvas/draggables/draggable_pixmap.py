@@ -23,15 +23,20 @@ class DraggablePixmap(
         qimage: Optional[QImage] = None,
         *,
         layer_id: Optional[int] = None,
+        use_layer_context: bool = True,
     ):
         self._layer_id_override: Optional[int] = layer_id
+        self._use_layer_context = use_layer_context
         super().__init__()
         self._qimage = qimage
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.last_pos = QPoint(0, 0)
         self.save = False
-        settings = self.drawing_pad_settings
-        pos = settings.pos if settings is not None else (0, 0)
+        if self._use_layer_context:
+            settings = self.drawing_pad_settings
+            pos = settings.pos if settings is not None else (0, 0)
+        else:
+            pos = (0, 0)
         self.settings = get_qsettings()
         # Threshold for snapping (percentage of cell size)
         self.snap_threshold = 0.5
@@ -54,11 +59,16 @@ class DraggablePixmap(
             return None
 
     def _resolve_layer_id(self) -> Optional[int]:
+        if not self._use_layer_context:
+            return None
         if self._layer_id_override is not None:
             return self._layer_id_override
         return self._get_current_selected_layer_id()
 
     def set_layer_context(self, layer_id: Optional[int]) -> None:
+        if not self._use_layer_context:
+            self._layer_id_override = None
+            return
         self._layer_id_override = layer_id
 
     @property
