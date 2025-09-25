@@ -129,6 +129,9 @@
               <height>35</height>
              </size>
             </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
             <property name="toolTip">
              <string>Home</string>
             </property>
@@ -314,6 +317,9 @@
               <height>35</height>
              </size>
             </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
             <property name="text">
              <string/>
             </property>
@@ -361,6 +367,9 @@
               <width>35</width>
               <height>35</height>
              </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="toolTip">
              <string>Chat</string>
