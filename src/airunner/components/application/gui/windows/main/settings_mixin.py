@@ -13,6 +13,7 @@ from airunner.components.art.data.ai_models import AIModels
 from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.controlnet_model import ControlnetModel
 from airunner.components.art.data.controlnet_settings import ControlnetSettings
+from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.data.embedding import Embedding
 from airunner.components.art.data.generator_settings import GeneratorSettings
@@ -285,6 +286,24 @@ class SettingsMixin:
             return min(
                 self._selected_layer_ids
             )  # Use the lowest ID for consistency
+        default_layer_id = self._get_first_layer_id()
+        if default_layer_id is not None:
+            self._selected_layer_ids.add(default_layer_id)
+        return default_layer_id
+
+    def _get_first_layer_id(self) -> Optional[int]:
+        """Return the ID for the first persisted layer ordered by `order`."""
+        try:
+            primary_layer = CanvasLayer.objects.filter_first(
+                CanvasLayer.order == 0
+            )
+            if primary_layer is None:
+                primary_layer = CanvasLayer.objects.first()
+            return primary_layer.id if primary_layer else None
+        except Exception as exc:
+            self.logger.warning(
+                "Unable to determine default layer id: %s", exc
+            )
         return None
 
     def _load_layer_settings_from_db(
