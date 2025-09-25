@@ -1,4 +1,5 @@
 import PIL
+from typing import Optional
 from PIL import ImageQt
 from PIL.Image import Image
 from PySide6.QtCore import Qt, QPointF
@@ -33,6 +34,7 @@ class BrushScene(CustomScene):
         self._is_drawing = False
         self._is_erasing = False
         self._do_generate_image = False
+        self._pending_brush_history_layer: Optional[int] = None
         self.register(
             SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.on_brush_color_changed
         )
@@ -269,7 +271,7 @@ class BrushScene(CustomScene):
         ):
             self._create_mask_image()
         if self.is_brush_or_eraser:
-            self._add_image_to_undo()
+            self._pending_brush_history_layer = self._add_image_to_undo()
         self._rebind_active_painter()
         return super()._handle_left_mouse_press(event)
 
@@ -315,6 +317,12 @@ class BrushScene(CustomScene):
         if self.drawing_pad_settings.mask_layer_enabled:
             self.initialize_image()
             self.api.art.canvas.mask_updated()
+
+        if self._pending_brush_history_layer is not None:
+            self._commit_layer_history_transaction(
+                self._pending_brush_history_layer, "image"
+            )
+            self._pending_brush_history_layer = None
 
     def set_mask(self):
         mask = None

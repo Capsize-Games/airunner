@@ -34,7 +34,7 @@ class ActiveGridArea(DraggablePixmap):
         self.mouse_press_pos = None
         self._current_snapped_pos: tuple[int, int] = (0, 0)
 
-        super().__init__(QPixmap())
+        super().__init__(QPixmap(), use_layer_context=False)
         self.render_fill()
         painter = self.draw_border()
         super().paint(painter, None, None)
@@ -42,6 +42,7 @@ class ActiveGridArea(DraggablePixmap):
         self.register(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.render_fill
         )
+        self.setZValue(10000)
 
     @property
     def rect(self):
