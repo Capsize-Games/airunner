@@ -384,6 +384,7 @@ class Ui_MainWindow(object):
         sizePolicy2.setHeightForWidth(self.center_tab_container.sizePolicy().hasHeightForWidth())
         self.center_tab_container.setSizePolicy(sizePolicy2)
         self.center_tab_container.setBaseSize(QSize(0, 0))
+        self.center_tab_container.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         self.center_tab_container.setDocumentMode(False)
         self.center_tab_container.setTabsClosable(False)
         self.center_tab_container.setMovable(False)

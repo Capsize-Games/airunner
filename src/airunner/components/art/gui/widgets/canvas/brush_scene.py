@@ -2,18 +2,15 @@ import PIL
 from PIL import ImageQt
 from PIL.Image import Image
 from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import QPainterPath
-from PySide6.QtGui import QPen, QPixmap, QPainter, QColor
+from PySide6.QtGui import QPen, QPixmap, QPainter, QColor, QPainterPath
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsLineItem
 
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.utils.image import (
     convert_binary_to_image,
     convert_image_to_binary,
 )
 from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
-import logging
 
 
 class BrushScene(CustomScene):
@@ -36,21 +33,29 @@ class BrushScene(CustomScene):
         self._is_drawing = False
         self._is_erasing = False
         self._do_generate_image = False
-
         self.register(
             SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.on_brush_color_changed
+        )
+        self.register(
+            SignalCode.LAYER_SELECTION_CHANGED, self.on_layer_selection_changed
         )
 
     @property
     def active_image(self):
         if self.drawing_pad_settings.mask_layer_enabled:
             return self.mask_image
+        layer_item = self._get_active_layer_item()
+        if layer_item is not None and getattr(layer_item, "qimage", None):
+            return layer_item.qimage
         return self.image
 
     @property
     def active_item(self):
         if self.drawing_pad_settings.mask_layer_enabled:
             return self.mask_item
+        layer_item = self._get_active_layer_item()
+        if layer_item is not None:
+            return layer_item
         return self.item
 
     @property
@@ -67,6 +72,16 @@ class BrushScene(CustomScene):
 
     def on_brush_color_changed(self, data):
         self._brush_color = QColor(data["color"])
+
+    def on_layer_selection_changed(self, data):
+        """Handle layer selection changes to update painter target."""
+        self.stop_painter()
+        self._rebind_active_painter()
+
+    def on_layers_show_signal(self, data=None):
+        super().on_layers_show_signal(data)
+        self.stop_painter()
+        self._rebind_active_painter()
 
     def on_canvas_clear_signal(self):
         self.update_drawing_pad_settings(mask=None)
@@ -95,20 +110,17 @@ class BrushScene(CustomScene):
         super().initialize_image(image, generated=generated)
         self.stop_painter()
         self.set_mask()
-        self.set_painter(
-            self.mask_image
-            if self.drawing_pad_settings.mask_layer_enabled
-            else self.image
-        )
+        self._rebind_active_painter()
 
     def drawBackground(self, painter, rect):
         if self.painter is None:
-            # Use cached reference first to avoid database lookup during pending persistence
-            image = self._current_active_image_ref
-            if image is None:
-                # Fallback to property getter if no cached reference
-                image = self.current_active_image
-            self.refresh_image(image)
+            # Attempt to bind to the current active image target first
+            self._rebind_active_painter()
+            if self.painter is None:
+                image = self._current_active_image_ref
+                if image is None:
+                    image = self.current_active_image
+                self.refresh_image(image)
         if self.painter is not None and self.painter.isActive():
             if self.last_pos and self.draw_button_down:
                 if self.current_tool is CanvasToolName.BRUSH:
@@ -140,6 +152,22 @@ class BrushScene(CustomScene):
         self._create_line(
             erasing=True, painter=painter, color=self.active_eraser_color
         )
+
+    def _rebind_active_painter(self):
+        target_image = None
+        if self.drawing_pad_settings.mask_layer_enabled:
+            target_image = self.mask_image
+        else:
+            layer_item = self._get_active_layer_item()
+            if layer_item and getattr(layer_item, "qimage", None):
+                target_image = layer_item.qimage
+            elif self.image is not None:
+                target_image = self.image
+
+        if target_image is not None:
+            self.set_painter(target_image)
+        else:
+            self.stop_painter()
 
     def _create_line(
         self,
@@ -240,8 +268,9 @@ class BrushScene(CustomScene):
             and self.mask_image is None
         ):
             self._create_mask_image()
-        elif self.is_brush_or_eraser:
+        if self.is_brush_or_eraser:
             self._add_image_to_undo()
+        self._rebind_active_painter()
         return super()._handle_left_mouse_press(event)
 
     def mouseMoveEvent(self, event):
@@ -251,7 +280,6 @@ class BrushScene(CustomScene):
 
     def _handle_left_mouse_release(self, event) -> bool:
         self.draw_button_down = False
-        drawing_pad_settings = DrawingPadSettings.objects.first()
 
         # First get the correct image
         if self.drawing_pad_settings.mask_layer_enabled:
@@ -263,7 +291,6 @@ class BrushScene(CustomScene):
             )
             base_64_image = convert_image_to_binary(mask_image)
             # Update both database object and in-memory settings with the same base64 image
-            drawing_pad_settings.mask = base_64_image
             self.update_drawing_pad_settings(mask=base_64_image)
         else:
             # For normal image layer
@@ -271,7 +298,6 @@ class BrushScene(CustomScene):
                 image = ImageQt.fromqimage(self.active_image)
                 base_64_image = convert_image_to_binary(image)
                 # Update both database object and in-memory settings with the same base64 image
-                drawing_pad_settings.image = base_64_image
                 self.update_drawing_pad_settings(image=base_64_image)
 
                 # CRITICAL: Update the cached reference to ensure consistency
