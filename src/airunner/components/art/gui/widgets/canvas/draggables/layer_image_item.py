@@ -9,9 +9,17 @@ from airunner.components.art.gui.widgets.canvas.draggables.draggable_pixmap impo
 
 
 class LayerImageItem(DraggablePixmap):
-    def __init__(self, pixmap, layer_image_data: Optional[Dict] = None):
+    def __init__(
+        self,
+        pixmap,
+        *,
+        layer_id: Optional[int] = None,
+        layer_image_data: Optional[Dict] = None,
+    ):
+        self._layer_id: Optional[int] = layer_id
         self.layer_image_data = layer_image_data or {}
-        super().__init__(pixmap)
+        super().__init__(pixmap, layer_id=layer_id)
+        self.set_layer_context(layer_id)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 
         # Add tracking variables for dragging, just like ActiveGridArea
@@ -19,6 +27,15 @@ class LayerImageItem(DraggablePixmap):
         self.initial_item_abs_pos = None
         self.mouse_press_pos = None
         self._current_snapped_pos = (0, 0)
+
+    @property
+    def layer_id(self) -> Optional[int]:
+        return self._layer_id
+
+    @layer_id.setter
+    def layer_id(self, value: Optional[int]) -> None:
+        self._layer_id = value
+        self.set_layer_context(value)
 
     def update_position(
         self,
@@ -29,7 +46,9 @@ class LayerImageItem(DraggablePixmap):
         super().update_position(x, y, save)
 
         if save:
-            self.update_drawing_pad_settings(x_pos=x, y_pos=y)
+            self.update_drawing_pad_settings(
+                x_pos=x, y_pos=y, layer_id=self.layer_id
+            )
 
     def mousePressEvent(self, event):
         if self.current_tool not in [
@@ -139,6 +158,7 @@ class LayerImageItem(DraggablePixmap):
                     self.update_drawing_pad_settings(
                         x_pos=int(self._current_snapped_pos[0]),
                         y_pos=int(self._current_snapped_pos[1]),
+                        layer_id=self.layer_id,
                     )
 
                     # Update layer image data
