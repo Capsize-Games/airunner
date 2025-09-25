@@ -240,8 +240,6 @@ class SettingsMixin:
         Returns:
             Instance of the settings model for the specified layer.
         """
-        from airunner.components.art.data.canvas_layer import CanvasLayer
-
         # If no layer_id provided, try to get the first selected layer
         if layer_id is None:
             layer_id = self._get_current_selected_layer_id()

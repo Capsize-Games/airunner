@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import List, Optional, Dict
 import time
 
 from PySide6.QtCore import (
@@ -18,6 +18,8 @@ from PySide6.QtWidgets import (
     QInputDialog,
 )
 
+from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.components.art.gui.widgets.canvas.grid_graphics_item import (
     GridGraphicsItem,
@@ -187,6 +189,10 @@ class CustomGraphicsView(
             CanvasType.BRUSH.value,
         )
 
+    @property
+    def layers(self) -> List[CanvasLayer]:
+        return CanvasLayer.objects.filter_by(visible=True, locked=False)
+
     def on_recenter_grid_signal(self):
         """Center the grid in the viewport with the active grid area's CENTER at the grid origin."""
         # 1. Calculate center of viewport
@@ -218,7 +224,38 @@ class CustomGraphicsView(
                 pos_x, pos_y
             )
 
-        # 6. Update all display positions based on new offset
+        # 6. Update all layer items to the same centered position
+        if self.scene and hasattr(self.scene, "_layer_items"):
+            for layer_id, layer_item in self.scene._layer_items.items():
+                # Update the original position tracking
+                self.scene.original_item_positions[layer_item] = QPointF(
+                    pos_x, pos_y
+                )
+
+                # Update the corresponding DrawingPadSettings in the database
+                try:
+                    from airunner.components.art.data.drawingpad_settings import (
+                        DrawingPadSettings,
+                    )
+
+                    results = DrawingPadSettings.objects.filter_by(
+                        layer_id=layer_id
+                    )
+                    if results:
+                        settings = results[0]
+                        # Update the database with the new centered position
+                        self.update_drawing_pad_settings(
+                            x_pos=int(pos_x), y_pos=int(pos_y)
+                        )
+                except Exception as e:
+                    print(
+                        f"Failed to update DrawingPadSettings for layer {layer_id}: {e}"
+                    )
+
+            # Trigger visual refresh of all layer positions
+            self.scene._refresh_layer_display()
+
+        # 7. Update all display positions based on new offset
         self.updateImagePositions()
         self.update_active_grid_area_position()
         self.update_drawing_pad_settings(x_pos=int(pos_x), y_pos=int(pos_y))
@@ -517,7 +554,7 @@ class CustomGraphicsView(
             self.show_active_grid_area()
             self.scene.initialize_image()
             self.updateImagePositions()
-            self._restore_text_items_from_db()  # Restore text items on load
+            # self._restore_text_items_from_db()  # Restore text items on load
             self._initialized = True
 
     def set_canvas_color(
@@ -563,43 +600,12 @@ class CustomGraphicsView(
 
     def updateImagePositions(self):
         """Update positions of all images in the scene based on canvas offset."""
-        if (
-            not self.scene
-            or not hasattr(self.scene, "item")
-            or not self.scene.item
-        ):
+        if not self.scene:
             return
 
-        # Get the main item directly
-        item = self.scene.item
-
-        # Make sure the item is visible
-        item.setVisible(True)
-
-        # Store original position if needed
-        if item not in self.scene.original_item_positions:
-            self.scene.original_item_positions[item] = item.pos()
-
-        # Get original position
-        original_pos = self.scene.original_item_positions[item]
-
-        # Calculate new position
-        new_x = original_pos.x() - self.canvas_offset.x()
-        new_y = original_pos.y() - self.canvas_offset.y()
-
-        # Set new position
-        item.setPos(new_x, new_y)
-
-        # Ensure image has high Z value for visibility
-        item.setZValue(5)
-
-        # Ensure the item's bounding rect is properly updated
-        item.prepareGeometryChange()
-
-        # Force the scene to update the entire viewport
-        self.scene.invalidate(
-            item.boundingRect(), QGraphicsScene.SceneLayer.ItemLayer
-        )
+        # Use the scene's update_image_position method which handles both
+        # the old single-item system and the new layer system
+        self.scene.update_image_position(self.canvas_offset)
 
         # Force entire viewport update to handle negative coordinates
         self.viewport().update()
@@ -786,6 +792,12 @@ class CustomGraphicsView(
             )
         # Store in application_settings (or replace with actual DB call)
         self.update_drawing_pad_settings(text_items=text_items_data)
+
+    def update_drawing_pad_settings(self, **kwargs):
+        for layer_item in self.layers:
+            super().update_drawing_pad_settings(
+                layer_id=layer_item.id, **kwargs
+            )
 
     def _restore_text_items_from_db(self):
         # Restore text items from the database (via application_settings or similar)

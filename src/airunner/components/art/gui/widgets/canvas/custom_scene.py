@@ -801,6 +801,34 @@ class CustomScene(
                             # Invert Z-order: lower order numbers should be on top
                             # Use a high base value and subtract the order
                             layer_item.setZValue(1000 - layer.order)
+
+                            # Update position if drawing_pad_settings has changed
+                            if drawing_pad_settings:
+                                if (
+                                    drawing_pad_settings.x_pos is not None
+                                    and drawing_pad_settings.y_pos is not None
+                                ):
+                                    new_pos = QPointF(
+                                        drawing_pad_settings.x_pos,
+                                        drawing_pad_settings.y_pos,
+                                    )
+                                    if (
+                                        layer_item
+                                        not in self.original_item_positions
+                                        or self.original_item_positions[
+                                            layer_item
+                                        ]
+                                        != new_pos
+                                    ):
+                                        self.original_item_positions[
+                                            layer_item
+                                        ] = new_pos
+                                        # Apply canvas offset to get current visible position
+                                        canvas_offset = (
+                                            self.get_canvas_offset()
+                                        )
+                                        visible_pos = new_pos - canvas_offset
+                                        layer_item.setPos(visible_pos)
                         else:
                             # Create new layer item
                             logger.debug(
@@ -816,20 +844,49 @@ class CustomScene(
                             self.addItem(layer_item)
                             self._layer_items[layer.id] = layer_item
 
-                            # Set position from DrawingPadSettings if available, otherwise use default
-                            if drawing_pad_settings:
-                                x_pos = drawing_pad_settings.x_pos or 0
-                                y_pos = drawing_pad_settings.y_pos or 0
-                                layer_item.setPos(x_pos, y_pos)
-                                # Track original position for canvas recentering
-                                self.original_item_positions[layer_item] = (
-                                    QPointF(x_pos, y_pos)
-                                )
+                            # Set position: prefer active grid settings for newly generated content,
+                            # fallback to drawing_pad_settings for existing content
+                            if (
+                                drawing_pad_settings
+                                and drawing_pad_settings.x_pos is not None
+                                and drawing_pad_settings.y_pos is not None
+                            ):
+                                # Use stored position from drawing_pad_settings
+                                x_pos = drawing_pad_settings.x_pos
+                                y_pos = drawing_pad_settings.y_pos
                             else:
-                                layer_item.setPos(0, 0)
-                                self.original_item_positions[layer_item] = (
-                                    QPointF(0, 0)
+                                # Use active grid settings position (for newly generated content)
+                                x_pos = (
+                                    self.active_grid_settings.pos_x
+                                    if hasattr(self, "active_grid_settings")
+                                    else 0
                                 )
+                                y_pos = (
+                                    self.active_grid_settings.pos_y
+                                    if hasattr(self, "active_grid_settings")
+                                    else 0
+                                )
+
+                                # Update drawing_pad_settings with the active grid position
+                                if drawing_pad_settings:
+                                    try:
+                                        self.update_drawing_pad_settings(
+                                            x_pos=x_pos, y_pos=y_pos
+                                        )
+                                    except Exception as e:
+                                        logger.debug(
+                                            f"Failed to update drawing pad settings position: {e}"
+                                        )
+
+                            # Apply canvas offset to position the item correctly in the current view
+                            canvas_offset = self.get_canvas_offset()
+                            visible_pos = QPointF(x_pos, y_pos) - canvas_offset
+                            layer_item.setPos(visible_pos)
+
+                            # Track original position for canvas recentering
+                            self.original_item_positions[layer_item] = QPointF(
+                                x_pos, y_pos
+                            )
                 else:
                     # Layer has no drawing pad settings with image, remove its item if it exists
                     if layer.id in self._layer_items:
