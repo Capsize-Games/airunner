@@ -14,6 +14,19 @@ from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import (
 )
 from airunner.utils.application import set_widget_state
 from airunner.utils.widgets import load_splitter_settings
+from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.drawingpad_settings import (
+    DrawingPadSettings,
+)
+from airunner.components.art.data.controlnet_settings import (
+    ControlnetSettings,
+)
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
+from airunner.components.art.data.outpaint_settings import OutpaintSettings
+from airunner.components.art.data.brush_settings import BrushSettings
+from airunner.components.art.data.metadata_settings import MetadataSettings
 
 
 class CanvasWidget(BaseWidget):
@@ -146,54 +159,8 @@ class CanvasWidget(BaseWidget):
 
     @Slot()
     def on_new_button_clicked(self):
-        self.api.art.canvas.clear()
+        self._reset_canvas_document()
 
-    @Slot()
-    def on_import_button_clicked(self):
-        # Allow user to pick a file and perform import under a temporary user override
-        # so the facehuggershield permits opening the explicitly selected file.
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Import Image", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
-        )
-        if not file_path:
-            return
-
-        # Use the facehuggershield user override if available to allow this explicit user action.
-        try:
-            from airunner.vendor.facehuggershield.darklock.restrict_os_access import (
-                RestrictOSAccess,
-            )
-
-            ros = RestrictOSAccess()
-            # Allow only the selected file for this thread while importing
-            with ros.user_override(paths=[file_path]):
-                # Send the explicit path to the canvas API so the scene can load it directly.
-                # Use image_from_path which emits a load-image signal with the path.
-                self.api.art.canvas.image_from_path(file_path)
-        except Exception as e:
-            # Log via existing logger available on BaseWidget
-            try:
-                self.logger.exception(e)
-            except Exception:
-                print(e)
-
-    @Slot()
-    def on_export_button_clicked(self):
-        self.api.art.canvas.export_image()
-
-    @Slot()
-    def on_undo_button_clicked(self):
-        self.api.art.canvas.undo()
-
-    @Slot()
-    def on_redo_button_clicked(self):
-        self.api.art.canvas.redo()
-
-    @Slot(bool)
-    def on_grid_button_toggled(self, val: bool):
-        self.update_grid_settings(show_grid=val)
-
-    @Slot(bool)
     def on_brush_button_toggled(self, val: bool):
         self.api.art.canvas.toggle_tool(CanvasToolName.BRUSH, val)
 
@@ -346,3 +313,100 @@ class CanvasWidget(BaseWidget):
         self.ui.canvas_container_size = (
             self.ui.canvas_container.viewport().size()
         )
+
+    def _reset_canvas_document(self) -> None:
+        self.api.art.canvas.clear()
+        self.images.clear()
+        self.current_image_index = 0
+        self.draggable_pixmaps_in_scene.clear()
+        self.active_grid_area_pivot_point = QPoint(0, 0)
+        self.active_grid_area_position = QPoint(0, 0)
+
+        layers = CanvasLayer.objects.order_by("order").all() or []
+        layer_ids = [layer.id for layer in layers]
+
+        if layer_ids:
+            self.api.art.canvas.begin_layer_operation("delete", layer_ids)
+            try:
+                for layer_id in layer_ids:
+                    self.emit_signal(
+                        SignalCode.LAYER_DELETED,
+                        {"layer_id": layer_id},
+                    )
+                    self._delete_layer_records(layer_id)
+                self.api.art.canvas.commit_layer_operation("delete", layer_ids)
+            except Exception as exc:  # pragma: no cover - protective guard
+                self.api.art.canvas.cancel_layer_operation("delete")
+                if hasattr(self, "logger"):
+                    self.logger.exception(exc)
+                return
+
+        self.api.art.canvas.begin_layer_operation("create")
+        new_layer = None
+        try:
+            new_layer = self._create_default_canvas_layer()
+            if new_layer is None:
+                raise RuntimeError("Failed to create default canvas layer")
+            self.api.art.canvas.commit_layer_operation(
+                "create", [new_layer.id]
+            )
+        except Exception as exc:  # pragma: no cover - protective guard
+            self.api.art.canvas.cancel_layer_operation("create")
+            if hasattr(self, "logger"):
+                self.logger.exception(exc)
+            return
+
+        self.api.art.canvas.show_layers()
+
+        if new_layer is not None:
+            self.emit_signal(
+                SignalCode.LAYER_SELECTION_CHANGED,
+                {"selected_layer_ids": [new_layer.id]},
+            )
+
+    def _delete_layer_records(self, layer_id: int) -> None:
+        CanvasLayer.objects.delete(layer_id)
+        DrawingPadSettings.objects.delete_by(layer_id=layer_id)
+        ControlnetSettings.objects.delete_by(layer_id=layer_id)
+        ImageToImageSettings.objects.delete_by(layer_id=layer_id)
+        OutpaintSettings.objects.delete_by(layer_id=layer_id)
+        BrushSettings.objects.delete_by(layer_id=layer_id)
+        MetadataSettings.objects.delete_by(layer_id=layer_id)
+
+    def _create_default_canvas_layer(self) -> Optional[CanvasLayer]:
+        layer = CanvasLayer.objects.create(
+            order=0,
+            name="Layer 1",
+            visible=True,
+            opacity=100,
+        )
+
+        if layer is None:
+            return None
+
+        self._initialize_layer_defaults(layer.id)
+        return layer
+
+    @staticmethod
+    def _initialize_layer_defaults(layer_id: int) -> None:
+        try:
+            if not DrawingPadSettings.objects.filter_by(layer_id=layer_id):
+                DrawingPadSettings.objects.create(layer_id=layer_id)
+
+            if not ControlnetSettings.objects.filter_by(layer_id=layer_id):
+                ControlnetSettings.objects.create(layer_id=layer_id)
+
+            if not ImageToImageSettings.objects.filter_by(layer_id=layer_id):
+                ImageToImageSettings.objects.create(layer_id=layer_id)
+
+            if not OutpaintSettings.objects.filter_by(layer_id=layer_id):
+                OutpaintSettings.objects.create(layer_id=layer_id)
+
+            if not BrushSettings.objects.filter_by(layer_id=layer_id):
+                BrushSettings.objects.create(layer_id=layer_id)
+
+            if not MetadataSettings.objects.filter_by(layer_id=layer_id):
+                MetadataSettings.objects.create(layer_id=layer_id)
+        except Exception:  # pragma: no cover - defensive fallback
+            # Logging occurs at manager level; no additional handling required
+            pass

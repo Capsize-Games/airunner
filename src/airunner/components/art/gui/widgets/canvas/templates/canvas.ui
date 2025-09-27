@@ -167,17 +167,69 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="toolTip">
-               <string>Clear canvas</string>
+               <string>New art document</string>
               </property>
               <property name="text">
                <string/>
               </property>
               <property name="icon">
                <iconset resource="../../../../../../gui/resources/feather.qrc">
-                <normaloff>:/light/icons/feather/light/loader.svg</normaloff>:/light/icons/feather/light/loader.svg</iconset>
+                <normaloff>:/light/icons/feather/light/file-plus.svg</normaloff>:/light/icons/feather/light/file-plus.svg</iconset>
               </property>
               <property name="flat">
                <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="open_art_document">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Open art document</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="save_art_document">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Save art document</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/save.svg</normaloff>:/light/icons/feather/light/save.svg</iconset>
               </property>
              </widget>
             </item>
@@ -199,14 +251,14 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="toolTip">
-               <string>Open image</string>
+               <string>Import image</string>
               </property>
               <property name="text">
                <string/>
               </property>
               <property name="icon">
                <iconset resource="../../../../../../gui/resources/feather.qrc">
-                <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
+                <normaloff>:/light/icons/feather/light/arrow-down.svg</normaloff>:/light/icons/feather/light/arrow-down.svg</iconset>
               </property>
               <property name="flat">
                <bool>false</bool>
@@ -231,14 +283,14 @@
                <cursorShape>PointingHandCursor</cursorShape>
               </property>
               <property name="toolTip">
-               <string>Save image</string>
+               <string>Export image</string>
               </property>
               <property name="text">
                <string/>
               </property>
               <property name="icon">
                <iconset resource="../../../../../../gui/resources/feather.qrc">
-                <normaloff>:/light/icons/feather/light/save.svg</normaloff>:/light/icons/feather/light/save.svg</iconset>
+                <normaloff>:/light/icons/feather/light/arrow-up.svg</normaloff>:/light/icons/feather/light/arrow-up.svg</iconset>
               </property>
               <property name="flat">
                <bool>false</bool>

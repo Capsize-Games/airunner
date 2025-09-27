@@ -332,12 +332,12 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                 self.layer_widgets.pop(layer_id, None)
                 self.selected_layers.discard(layer_id)
             CanvasLayer.objects.delete(layer_id)
-            DrawingPadSettings.objects.delete(layer_id=layer_id)
-            ControlnetSettings.objects.delete(layer_id=layer_id)
-            ImageToImageSettings.objects.delete(layer_id=layer_id)
-            OutpaintSettings.objects.delete(layer_id=layer_id)
-            BrushSettings.objects.delete(layer_id=layer_id)
-            MetadataSettings.objects.delete(layer_id=layer_id)
+            DrawingPadSettings.objects.delete_by(layer_id=layer_id)
+            ControlnetSettings.objects.delete_by(layer_id=layer_id)
+            ImageToImageSettings.objects.delete_by(layer_id=layer_id)
+            OutpaintSettings.objects.delete_by(layer_id=layer_id)
+            BrushSettings.objects.delete_by(layer_id=layer_id)
+            MetadataSettings.objects.delete_by(layer_id=layer_id)
 
     def on_layer_selected(self, data: dict):
         layer_id = data.get("layer_id")
