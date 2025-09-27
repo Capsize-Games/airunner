@@ -1,6 +1,11 @@
+import base64
+import json
+from pathlib import Path
+
 from PySide6.QtWidgets import QColorDialog
 from PySide6.QtWidgets import QFileDialog
-from typing import Optional, Dict
+from PySide6.QtWidgets import QMessageBox
+from typing import Optional, Dict, Any, List
 
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtCore import Slot
@@ -165,11 +170,65 @@ class CanvasWidget(BaseWidget):
 
     @Slot()
     def on_open_art_document_clicked(self):
-        print("on_open_art_document")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Document",
+            "",
+            "AI Runner Document (*.airunner)",
+        )
+        if not file_path:
+            return
+
+        path = Path(file_path)
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                document = json.load(handle)
+        except (OSError, json.JSONDecodeError) as exc:
+            self._show_error_message(
+                "Open Document Failed",
+                f"Unable to open the selected document.\n\n{exc}",
+            )
+            if hasattr(self, "logger"):
+                self.logger.exception(exc)
+            return
+
+        try:
+            self._load_canvas_document(document)
+        except Exception as exc:  # pragma: no cover - defensive UI feedback
+            self._show_error_message(
+                "Open Document Failed",
+                "The document could not be loaded.",
+            )
+            if hasattr(self, "logger"):
+                self.logger.exception(exc)
 
     @Slot()
     def on_save_art_document_clicked(self):
-        print("on_save_art_document")
+        document = self._serialize_canvas_document()
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Document",
+            "",
+            "AI Runner Document (*.airunner)",
+        )
+        if not file_path:
+            return
+
+        path = Path(file_path)
+        if path.suffix.lower() != ".airunner":
+            path = path.with_suffix(".airunner")
+
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("w", encoding="utf-8") as handle:
+                json.dump(document, handle, indent=2)
+        except Exception as exc:  # pragma: no cover - defensive UI feedback
+            self._show_error_message(
+                "Save Document Failed",
+                f"Unable to save the document.\n\n{exc}",
+            )
+            if hasattr(self, "logger"):
+                self.logger.exception(exc)
 
     @Slot(bool)
     def on_brush_button_toggled(self, val: bool):
@@ -328,31 +387,9 @@ class CanvasWidget(BaseWidget):
         )
 
     def _reset_canvas_document(self) -> None:
-        self.api.art.canvas.clear()
-        self.images.clear()
-        self.current_image_index = 0
-        self.draggable_pixmaps_in_scene.clear()
-        self.active_grid_area_pivot_point = QPoint(0, 0)
-        self.active_grid_area_position = QPoint(0, 0)
-
-        layers = CanvasLayer.objects.order_by("order").all() or []
-        layer_ids = [layer.id for layer in layers]
-
-        if layer_ids:
-            self.api.art.canvas.begin_layer_operation("delete", layer_ids)
-            try:
-                for layer_id in layer_ids:
-                    self.emit_signal(
-                        SignalCode.LAYER_DELETED,
-                        {"layer_id": layer_id},
-                    )
-                    self._delete_layer_records(layer_id)
-                self.api.art.canvas.commit_layer_operation("delete", layer_ids)
-            except Exception as exc:  # pragma: no cover - protective guard
-                self.api.art.canvas.cancel_layer_operation("delete")
-                if hasattr(self, "logger"):
-                    self.logger.exception(exc)
-                return
+        self._clear_canvas_state()
+        if not self._delete_all_layers():
+            return
 
         self.api.art.canvas.begin_layer_operation("create")
         new_layer = None
@@ -376,6 +413,240 @@ class CanvasWidget(BaseWidget):
                 SignalCode.LAYER_SELECTION_CHANGED,
                 {"selected_layer_ids": [new_layer.id]},
             )
+
+        self.api.art.canvas.update_image_positions()
+
+    def _clear_canvas_state(self) -> None:
+        """Clear the scene and reset widget-level caches."""
+
+        self.api.art.canvas.clear()
+        self.images.clear()
+        self.current_image_index = 0
+        self.draggable_pixmaps_in_scene.clear()
+        self.active_grid_area_pivot_point = QPoint(0, 0)
+        self.active_grid_area_position = QPoint(0, 0)
+
+    def _delete_all_layers(self) -> bool:
+        """Delete every canvas layer and its associated records."""
+
+        layers = CanvasLayer.objects.order_by("order").all() or []
+        layer_ids = [layer.id for layer in layers]
+
+        if not layer_ids:
+            return True
+
+        self.api.art.canvas.begin_layer_operation("delete", layer_ids)
+        try:
+            for layer_id in layer_ids:
+                self.emit_signal(
+                    SignalCode.LAYER_DELETED,
+                    {"layer_id": layer_id},
+                )
+                self._delete_layer_records(layer_id)
+            self.api.art.canvas.commit_layer_operation("delete", layer_ids)
+        except Exception as exc:  # pragma: no cover - protective guard
+            self.api.art.canvas.cancel_layer_operation("delete")
+            if hasattr(self, "logger"):
+                self.logger.exception(exc)
+            return False
+
+        return True
+
+    def _serialize_canvas_document(self) -> Dict[str, Any]:
+        """Create a serializable snapshot of all layers on the canvas."""
+
+        layers = CanvasLayer.objects.order_by("order").all() or []
+        document_layers: List[Dict[str, Any]] = []
+
+        indexed_layers = list(enumerate(layers))
+        ordered_layers = sorted(
+            indexed_layers,
+            key=lambda pair: (
+                getattr(pair[1], "order", pair[0]) or pair[0],
+                pair[0],
+            ),
+        )
+
+        for fallback_index, layer in ordered_layers:
+            document_layers.append(
+                {
+                    "name": layer.name,
+                    "order": (
+                        layer.order
+                        if layer.order is not None
+                        else fallback_index
+                    ),
+                    "visible": bool(layer.visible),
+                    "locked": bool(layer.locked),
+                    "opacity": (
+                        layer.opacity if layer.opacity is not None else 0
+                    ),
+                    "blend_mode": layer.blend_mode or "normal",
+                    "drawing_pad": self._serialize_drawing_pad_settings(
+                        layer.id
+                    ),
+                }
+            )
+
+        return {
+            "version": 1,
+            "layers": document_layers,
+        }
+
+    def _serialize_drawing_pad_settings(self, layer_id: int) -> Dict[str, Any]:
+        """Serialize drawing pad settings for persistence."""
+
+        settings = DrawingPadSettings.objects.filter_by_first(
+            layer_id=layer_id
+        )
+        if not settings:
+            return {}
+
+        return {
+            "x_pos": settings.x_pos or 0,
+            "y_pos": settings.y_pos or 0,
+            "image": self._encode_binary(settings.image),
+            "mask": self._encode_binary(settings.mask),
+        }
+
+    def _load_canvas_document(self, document: Dict[str, Any]) -> None:
+        """Restore layers from a serialized document."""
+
+        if not isinstance(document, dict):
+            raise ValueError("Invalid document format.")
+
+        version = document.get("version", 1)
+        if version != 1:
+            raise ValueError(f"Unsupported document version: {version}")
+
+        layers_data = document.get("layers", []) or []
+
+        self._clear_canvas_state()
+        if not self._delete_all_layers():
+            raise RuntimeError("Unable to clear existing layers.")
+
+        created_layer_ids: List[int] = []
+
+        if layers_data:
+            self.api.art.canvas.begin_layer_operation("create")
+            try:
+                indexed_layers = list(enumerate(layers_data))
+                ordered_layers = sorted(
+                    indexed_layers,
+                    key=lambda item: item[1].get("order", item[0]),
+                )
+                for fallback_index, snapshot in ordered_layers:
+                    layer = self._create_layer_from_snapshot(
+                        snapshot, fallback_index
+                    )
+                    if layer is None:
+                        raise RuntimeError(
+                            "Failed to create layer from document"
+                        )
+                    created_layer_ids.append(layer.id)
+                self.api.art.canvas.commit_layer_operation(
+                    "create", created_layer_ids
+                )
+            except Exception:
+                self.api.art.canvas.cancel_layer_operation("create")
+                raise
+        else:
+            self.api.art.canvas.begin_layer_operation("create")
+            try:
+                default_layer = self._create_default_canvas_layer()
+                if default_layer is None:
+                    raise RuntimeError("Failed to create default canvas layer")
+                created_layer_ids.append(default_layer.id)
+                self.api.art.canvas.commit_layer_operation(
+                    "create", created_layer_ids
+                )
+            except Exception:
+                self.api.art.canvas.cancel_layer_operation("create")
+                raise
+
+        self.api.art.canvas.show_layers()
+
+        if created_layer_ids:
+            self.emit_signal(
+                SignalCode.LAYER_SELECTION_CHANGED,
+                {"selected_layer_ids": [created_layer_ids[0]]},
+            )
+
+        self.api.art.canvas.update_image_positions()
+
+    def _create_layer_from_snapshot(
+        self, snapshot: Dict[str, Any], fallback_order: int
+    ) -> Optional[CanvasLayer]:
+        """Create a new layer using serialized snapshot data."""
+
+        layer_kwargs = {
+            "order": snapshot.get("order", fallback_order),
+            "name": snapshot.get("name") or f"Layer {fallback_order + 1}",
+            "visible": snapshot.get("visible", True),
+            "locked": snapshot.get("locked", False),
+            "opacity": snapshot.get("opacity", 100),
+            "blend_mode": snapshot.get("blend_mode", "normal"),
+        }
+
+        layer = CanvasLayer.objects.create(**layer_kwargs)
+        if layer is None:
+            return None
+
+        self._initialize_layer_defaults(layer.id)
+
+        drawing_snapshot = snapshot.get("drawing_pad") or {}
+        updates: Dict[str, Any] = {}
+
+        if "x_pos" in drawing_snapshot:
+            x_pos = drawing_snapshot.get("x_pos")
+            updates["x_pos"] = int(x_pos) if x_pos is not None else 0
+        if "y_pos" in drawing_snapshot:
+            y_pos = drawing_snapshot.get("y_pos")
+            updates["y_pos"] = int(y_pos) if y_pos is not None else 0
+
+        image_data = drawing_snapshot.get("image")
+        mask_data = drawing_snapshot.get("mask")
+
+        decoded_image = self._decode_binary(image_data)
+        decoded_mask = self._decode_binary(mask_data)
+
+        if decoded_image is not None:
+            updates["image"] = decoded_image
+        if decoded_mask is not None:
+            updates["mask"] = decoded_mask
+
+        if updates:
+            self.update_drawing_pad_settings(layer_id=layer.id, **updates)
+
+        return layer
+
+    @staticmethod
+    def _encode_binary(data: Optional[bytes]) -> Optional[str]:
+        """Encode binary data as a base64 string for storage."""
+
+        if not data:
+            return None
+        return base64.b64encode(data).decode("utf-8")
+
+    @staticmethod
+    def _decode_binary(value: Optional[str]) -> Optional[bytes]:
+        """Decode a base64 string into binary data."""
+
+        if not value:
+            return None
+        try:
+            return base64.b64decode(value)
+        except Exception:
+            return None
+
+    def _show_error_message(self, title: str, message: str) -> None:
+        """Display an error message to the user."""
+
+        try:
+            QMessageBox.critical(self, title, message)
+        except Exception:  # pragma: no cover - best effort logging fallback
+            if hasattr(self, "logger"):
+                self.logger.error(f"{title}: {message}")
 
     def _delete_layer_records(self, layer_id: int) -> None:
         CanvasLayer.objects.delete(layer_id)
