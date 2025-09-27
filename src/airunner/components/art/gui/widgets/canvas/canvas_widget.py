@@ -42,8 +42,8 @@ class CanvasWidget(BaseWidget):
     widget_class_ = Ui_canvas
     icons = [
         ("file-plus", "new_button"),
-        ("folder", "import_button"),
-        ("save", "export_button"),
+        ("arrow-down", "import_button"),
+        ("arrow-up", "export_button"),
         ("target", "recenter_button"),
         ("object-selected-icon", "active_grid_area_button"),
         ("pencil-icon", "brush_button"),
@@ -52,6 +52,8 @@ class CanvasWidget(BaseWidget):
         ("corner-up-left", "undo_button"),
         ("corner-up-right", "redo_button"),
         ("type", "text_button"),
+        ("folder", "open_art_document"),
+        ("save", "save_art_document"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -161,7 +163,17 @@ class CanvasWidget(BaseWidget):
     def on_new_button_clicked(self):
         self._reset_canvas_document()
 
+    @Slot()
+    def on_open_art_document_clicked(self):
+        print("on_open_art_document")
+
+    @Slot()
+    def on_save_art_document_clicked(self):
+        print("on_save_art_document")
+
+    @Slot(bool)
     def on_brush_button_toggled(self, val: bool):
+        print("ON BRUSH BUTTON TOGGLED")
         self.api.art.canvas.toggle_tool(CanvasToolName.BRUSH, val)
 
     @Slot(bool)
@@ -177,6 +189,7 @@ class CanvasWidget(BaseWidget):
         active = message.get("active", False)
         settings_data = {}
         settings_data["current_tool"] = tool.value if active else None
+        print(settings_data, tool, active)
         self.update_application_settings(**settings_data)
         # self.api.art.canvas.tool_changed(tool, active)
         self._update_action_buttons(tool, active)
