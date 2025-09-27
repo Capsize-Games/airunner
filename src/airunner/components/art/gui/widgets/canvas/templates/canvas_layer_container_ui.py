@@ -74,12 +74,20 @@ class Ui_canvas_layer_container(object):
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
+        self.merge_visible_layers = QPushButton(canvas_layer_container)
+        self.merge_visible_layers.setObjectName(u"merge_visible_layers")
+        icon3 = QIcon()
+        icon3.addFile(u":/dark/icons/feather/dark/arrow-down.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.merge_visible_layers.setIcon(icon3)
+
+        self.horizontalLayout.addWidget(self.merge_visible_layers)
+
         self.delete_layer = QPushButton(canvas_layer_container)
         self.delete_layer.setObjectName(u"delete_layer")
         self.delete_layer.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon3 = QIcon()
-        icon3.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.delete_layer.setIcon(icon3)
+        icon4 = QIcon()
+        icon4.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.delete_layer.setIcon(icon4)
 
         self.horizontalLayout.addWidget(self.delete_layer)
 
@@ -106,6 +114,10 @@ class Ui_canvas_layer_container(object):
         self.move_layer_down.setToolTip(QCoreApplication.translate("canvas_layer_container", u"Move selected layer down", None))
 #endif // QT_CONFIG(tooltip)
         self.move_layer_down.setText("")
+#if QT_CONFIG(tooltip)
+        self.merge_visible_layers.setToolTip(QCoreApplication.translate("canvas_layer_container", u"Merge visible", None))
+#endif // QT_CONFIG(tooltip)
+        self.merge_visible_layers.setText("")
 #if QT_CONFIG(tooltip)
         self.delete_layer.setToolTip(QCoreApplication.translate("canvas_layer_container", u"Delete selected layer", None))
 #endif // QT_CONFIG(tooltip)

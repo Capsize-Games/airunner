@@ -94,6 +94,10 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         return CanvasLayer.objects.get(layer.id)
 
     @Slot()
+    def on_merge_visible_layers_clicked(self):
+        pass
+
+    @Slot()
     def on_add_layer_clicked(self):
         self.api.art.canvas.begin_layer_operation("create")
         try:
