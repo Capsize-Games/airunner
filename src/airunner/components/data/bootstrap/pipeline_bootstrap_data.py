@@ -38,13 +38,6 @@ art_pipline_data = [
         "default": False,
     },
     {
-        "pipeline_action": "txt2img",
-        "version": "SD 3.5",
-        "category": "stablediffusion",
-        "classname": "diffusers.StableDiffusion3Pipeline",
-        "default": False,
-    },
-    {
         "pipeline_action": "outpaint",
         "version": "SDXL 1.0",
         "category": "stablediffusion",
@@ -126,13 +119,6 @@ art_pipline_data = [
         "version": "SD 1.5",
         "category": "stablediffusion",
         "classname": "transformers.AutoFeatureExtractor",
-        "default": False,
-    },
-    {
-        "pipeline_action": "txt2img",
-        "version": "Flux S",
-        "category": "stablediffusion",
-        "classname": "diffusers.FluxPipeline",
         "default": False,
     },
 ]
