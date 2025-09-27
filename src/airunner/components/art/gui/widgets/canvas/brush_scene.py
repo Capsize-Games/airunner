@@ -30,11 +30,11 @@ class BrushScene(CustomScene):
         )
         self.mask_item = None
         self.mask_image: ImageQt = None
-        self.path = None
         self._is_drawing = False
         self._is_erasing = False
         self._do_generate_image = False
         self._pending_brush_history_layer: Optional[int] = None
+        self._last_draw_scene_pos: Optional[QPointF] = None
         self.register(
             SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.on_brush_color_changed
         )
@@ -195,7 +195,7 @@ class BrushScene(CustomScene):
                 return
             needs_pen_setup = True
             if ensure_start or ensure_last:
-                self.path = None
+                self._last_draw_scene_pos = self.last_pos or self.start_pos
 
         new_stroke = False
         if drawing and not self._is_drawing:
@@ -210,7 +210,10 @@ class BrushScene(CustomScene):
         pen_color = self._brush_color if color is None else color
         pen_width = max(1, int(self.brush_settings.size))
 
-        if new_stroke or self.path is None or needs_pen_setup:
+        if new_stroke:
+            self._last_draw_scene_pos = self.start_pos
+
+        if needs_pen_setup or new_stroke or self.pen is None:
             self.pen = QPen(
                 pen_color,
                 pen_width,
@@ -233,35 +236,35 @@ class BrushScene(CustomScene):
         else:
             painter.setOpacity(1.0)
 
-        if new_stroke or self.path is None:
-            self.path = QPainterPath()
+        if self.last_pos is None:
+            return
 
-        if not self.start_pos:
+        if self._last_draw_scene_pos is None:
+            self._last_draw_scene_pos = self.last_pos
+            return
+
+        viewport_delta = self.last_pos - self._last_draw_scene_pos
+        if abs(viewport_delta.x()) < 0.01 and abs(viewport_delta.y()) < 0.01:
             return
 
         # Use scene coordinates minus image item position for image coordinates
         item_pos = (
             self.active_item.pos() if self.active_item else QPointF(0, 0)
         )
-        image_start_pos = self.start_pos - item_pos
+        image_start_pos = self._last_draw_scene_pos - item_pos
         image_last_pos = self.last_pos - item_pos
 
-        # Move to start position in image coordinates
-        self.path.moveTo(image_start_pos)
-
-        # Create control point in image coordinates
         control_point = QPointF(
             (image_start_pos.x() + image_last_pos.x()) * 0.5,
             (image_start_pos.y() + image_last_pos.y()) * 0.5,
         )
 
-        # Draw quadratic curve to end position in image coordinates
-        self.path.quadTo(control_point, image_last_pos)
+        segment_path = QPainterPath(image_start_pos)
+        segment_path.quadTo(control_point, image_last_pos)
 
-        # Draw the path
-        painter.drawPath(self.path)
+        painter.drawPath(segment_path)
 
-        # Update start position for next segment
+        self._last_draw_scene_pos = self.last_pos
         self.start_pos = self.last_pos
 
         # Create a QPixmap from the image and set it to the QGraphicsPixmapItem
@@ -312,6 +315,8 @@ class BrushScene(CustomScene):
         # Use scenePos() so this matches the scene's offset
         self.draw_button_down = True
         self.start_pos = event.scenePos()
+        self.last_pos = self.start_pos
+        self._last_draw_scene_pos = self.start_pos
         if self._ensure_draw_space(self.start_pos):
             self._rebind_active_painter()
         if (
@@ -374,6 +379,8 @@ class BrushScene(CustomScene):
                 self._pending_brush_history_layer, "image"
             )
             self._pending_brush_history_layer = None
+
+        self._last_draw_scene_pos = None
 
     def set_mask(self):
         mask = None
