@@ -383,8 +383,6 @@ class StableDiffusionVersion(Enum):
     SDXL_LIGHTNING = "SDXL Lightning"
     SDXL_HYPER = "SDXL Hyper"
     SD1_5 = "SD 1.5"
-    FLUX_S = "Flux S"
-    SD3_5 = "SD 3.5"
 
 
 class Language(Enum):
@@ -428,7 +426,6 @@ class ModelType(Enum):
     LORA = "Lora"
     EMBEDDINGS = "Embeddings"
     SD = "SD Model"
-    FLUX_MODEL = "Flux Model"
     SD_VAE = "SD VAE"
     SD_UNET = "SD UNet"
     SD_TOKENIZER = "SD Tokenizer"

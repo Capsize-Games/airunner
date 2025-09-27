@@ -2,18 +2,11 @@ import os
 from typing import Dict, Optional
 
 import torch
-from airunner.components.art.managers.flux.flux_model_manager import (
-    FluxModelManager,
-)
 from airunner.components.art.managers.stablediffusion.stable_diffusion_model_manager import (
     StableDiffusionModelManager,
 )
 from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
     SDXLModelManager,
-)
-
-from airunner.components.art.managers.stablediffusion.sd35_model_manager import (
-    SD35ModelManager,
 )
 
 from airunner.enums import (
@@ -39,8 +32,6 @@ class SDWorker(Worker):
     def __init__(self):
         self._sd: Optional[StableDiffusionModelManager] = None
         self._sdxl: Optional[SDXLModelManager] = None
-        self._sd35: Optional[SD35ModelManager] = None
-        self._flux: Optional[FluxModelManager] = None
         self._safety_checker = None
         self._model_manager = None
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE
@@ -102,10 +93,6 @@ class SDWorker(Worker):
                 StableDiffusionVersion.SDXL_HYPER,
             ):
                 self._model_manager = self.sdxl
-            elif version is StableDiffusionVersion.FLUX_S:
-                self._model_manager = self.flux
-            elif version is StableDiffusionVersion.SD3_5:
-                self._model_manager = self.sd35
             else:
                 raise ValueError(
                     f"Unsupported Stable Diffusion version: {version}"
@@ -127,18 +114,6 @@ class SDWorker(Worker):
         if self._sdxl is None:
             self._sdxl = SDXLModelManager()
         return self._sdxl
-
-    @property
-    def sd35(self):
-        if self._sd35 is None:
-            self._sd35 = SD35ModelManager()
-        return self._sd35
-
-    @property
-    def flux(self):
-        if self._flux is None:
-            self._flux = FluxModelManager()
-        return self._flux
 
     def on_load_safety_checker(self):
         if self.model_manager:
@@ -317,12 +292,6 @@ class SDWorker(Worker):
     def on_tokenizer_load_signal(self, data: Dict = None):
         if self.model_manager:
             self.model_manager.sd_load_tokenizer(data)
-
-    @property
-    def is_flux(self) -> bool:
-        return self.generator_settings.version in (
-            StableDiffusionVersion.FLUX_S.value,
-        )
 
     @staticmethod
     def on_sd_cancel_signal(_data=None):
