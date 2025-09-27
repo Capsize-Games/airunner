@@ -466,11 +466,20 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
     def on_visibility_toggled(self, data: dict):
         layer_id = data.get("layer_id")
         visible = data.get("visible")
-        layer = CanvasLayer.objects.get(layer_id)
-        if layer:
-            CanvasLayer.objects.update(layer.id, visible=visible)
-            # Emit signal to update canvas display
-            self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        CanvasLayer.objects.update(layer_id, visible=visible)
+
+        for cached_layer in self.layers:
+            if cached_layer.id == layer_id:
+                cached_layer.visible = visible
+                break
+
+        widget = self.layer_widgets.get(layer_id)
+        if widget:
+            widget.layer.visible = visible
+            widget.ui.visibility.blockSignals(True)
+            widget.ui.visibility.setChecked(visible)
+            widget.ui.visibility.blockSignals(False)
+            widget._update_visibility_icon()
 
     def on_layer_reordered(self, data: dict):
         source_layer_id = data.get("source_layer_id")
