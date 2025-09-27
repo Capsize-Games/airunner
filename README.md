@@ -224,7 +224,6 @@ Organize them under your local AI Runner data directory:
 │       │   ├── inpaint
 │       │   ├── lora
 │       │   └── txt2img
-│       ├── Flux (not supported yet)
 │       ├── SDXL 1.0
 │       │   ├── controlnet
 │       │   ├── embeddings
