@@ -93,30 +93,6 @@ SD_FILE_BOOTSTRAP_DATA = {
             "diffusion_pytorch_model.fp16.safetensors",
         ],
     },
-    "SD 3.5": {
-        "txt2img": [
-            "scheduler/scheduler_config.json",
-            "text_encoder/config.json",
-            "text_encoder_2/config.json",
-            "text_encoder_3/config.json",
-            "text_encoder_3/model.safetensors.index.fp16.json",
-            "tokenizer/merges.txt",
-            "tokenizer/special_tokens_map.json",
-            "tokenizer/tokenizer_config.json",
-            "tokenizer/vocab.json",
-            "tokenizer_2/merges.txt",
-            "tokenizer_2/special_tokens_map.json",
-            "tokenizer_2/tokenizer_config.json",
-            "tokenizer_2/vocab.json",
-            "tokenizer_3/special_tokens_map.json",
-            "tokenizer_3/spiece.model",
-            "tokenizer.json",
-            "tokenizer_config.json",
-            "transformer/config.json",
-            "vae/config.json",
-            "model_index.json",
-        ],
-    },
 }
 
 

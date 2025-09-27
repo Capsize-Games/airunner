@@ -31,9 +31,6 @@ from airunner.components.art.data.bootstrap.sd_file_bootstrap_data import (
 from airunner.components.tts.data.bootstrap.openvoice_bootstrap_data import (
     OPENVOICE_FILES,
 )
-from airunner.components.art.data.bootstrap.flux_file_bootstrap_data import (
-    FLUX_FILE_BOOTSTRAP_DATA,
-)
 from airunner.components.llm.data.bootstrap.llm_file_bootstrap_data import (
     LLM_FILE_BOOTSTRAP_DATA,
 )
@@ -290,47 +287,6 @@ class InstallWorker(
                 try:
                     self.hf_downloader.download_model(
                         requested_path=controlnet_model["path"],
-                        requested_file_name=filename,
-                        requested_file_path=requested_file_path,
-                        requested_callback=self._safe_progress_emit,
-                    )
-                except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
-
-    def download_flux(self):
-        self.parent.on_set_downloading_status_label(
-            {"label": "Downloading Flux files..."}
-        )
-
-        models = model_bootstrap_data
-
-        for model in models:
-            action = model["pipeline_action"]
-            try:
-                files = FLUX_FILE_BOOTSTRAP_DATA[model["version"]]
-            except KeyError:
-                continue
-            # Remove redundant total_steps increment - already counted in calculate_total_files()
-            self.total_models_in_current_step += len(files)
-        for model in models:
-            action = model["pipeline_action"]
-            try:
-                files = FLUX_FILE_BOOTSTRAP_DATA[model["version"]]
-            except KeyError:
-                continue
-            for filename in files:
-                requested_file_path = os.path.expanduser(
-                    os.path.join(
-                        self.path_settings.base_path,
-                        model["model_type"],
-                        "models",
-                        model["version"],
-                        action,
-                    )
-                )
-                try:
-                    self.hf_downloader.download_model(
-                        requested_path=model["path"],
                         requested_file_name=filename,
                         requested_file_path=requested_file_path,
                         requested_callback=self._safe_progress_emit,
