@@ -1,4 +1,5 @@
 import io
+import math
 import os
 import subprocess
 import time
@@ -133,6 +134,10 @@ class CustomScene(
             {}
         )  # Maps layer_id to LayerImageItem graphics items
         self._layers_initialized = False
+
+        # Dynamic canvas growth settings
+        self._surface_growth_step = 128
+        self._minimum_surface_size = 128
 
         for signal, handler in [
             (
@@ -1194,12 +1199,7 @@ class CustomScene(
                 layer_qimage = getattr(layer_item, "qimage", None)
 
             if layer_qimage is None:
-                layer_qimage = QImage(
-                    self.application_settings.working_width,
-                    self.application_settings.working_height,
-                    QImage.Format.Format_ARGB32,
-                )
-                layer_qimage.fill(Qt.GlobalColor.transparent)
+                layer_qimage = self._create_blank_surface()
 
             if layer_item is None:
                 layer_item = LayerImageItem(
@@ -1494,6 +1494,151 @@ class CustomScene(
             del self.item
         self.item = None
 
+    def _create_blank_surface(
+        self, width: Optional[int] = None, height: Optional[int] = None
+    ) -> QImage:
+        w = self._minimum_surface_size if width is None else max(1, width)
+        h = self._minimum_surface_size if height is None else max(1, height)
+        surface = QImage(w, h, QImage.Format.Format_ARGB32)
+        surface.fill(Qt.GlobalColor.transparent)
+        return surface
+
+    def _quantize_growth(self, value: int) -> int:
+        if value <= 0:
+            return 0
+        step = self._surface_growth_step
+        return max(step, int(math.ceil(value / step) * step))
+
+    def _persist_item_origin(self, item: DraggablePixmap, origin: QPointF):
+        try:
+            if isinstance(item, LayerImageItem) and item.layer_id is not None:
+                self.update_drawing_pad_settings(
+                    x_pos=int(origin.x()),
+                    y_pos=int(origin.y()),
+                    layer_id=item.layer_id,
+                )
+                if hasattr(item, "layer_image_data"):
+                    item.layer_image_data["pos_x"] = int(origin.x())
+                    item.layer_image_data["pos_y"] = int(origin.y())
+            elif item is self.item:
+                self.update_drawing_pad_settings(
+                    x_pos=int(origin.x()),
+                    y_pos=int(origin.y()),
+                )
+        except Exception as exc:
+            if hasattr(self, "logger"):
+                self.logger.warning(
+                    f"Failed to persist item origin update: {exc}"
+                )
+
+    def _expand_item_surface(
+        self,
+        item: DraggablePixmap,
+        grow_left: int,
+        grow_top: int,
+        grow_right: int,
+        grow_bottom: int,
+    ) -> bool:
+        if not any([grow_left, grow_top, grow_right, grow_bottom]):
+            return False
+
+        qimage = getattr(item, "qimage", None)
+        if qimage is None and item is self.item:
+            qimage = self.image
+
+        if qimage is None:
+            return False
+
+        new_width = qimage.width() + grow_left + grow_right
+        new_height = qimage.height() + grow_top + grow_bottom
+        if new_width <= 0 or new_height <= 0:
+            return False
+
+        image_format = qimage.format()
+        if image_format == QImage.Format.Format_Invalid:
+            image_format = QImage.Format.Format_ARGB32
+
+        new_image = QImage(new_width, new_height, image_format)
+        new_image.fill(Qt.GlobalColor.transparent)
+
+        self.stop_painter()
+
+        painter = QPainter(new_image)
+        painter.drawImage(grow_left, grow_top, qimage)
+        painter.end()
+
+        if hasattr(item, "updateImage"):
+            item.updateImage(new_image)
+        else:
+            return False
+
+        if item is self.item:
+            self.image = new_image
+
+        original_pos = self.original_item_positions.get(item)
+        if original_pos is None:
+            canvas_offset = self.get_canvas_offset()
+            original_pos = item.pos() + canvas_offset
+        new_origin = QPointF(
+            original_pos.x() - grow_left, original_pos.y() - grow_top
+        )
+        self.original_item_positions[item] = new_origin
+        self._persist_item_origin(item, new_origin)
+
+        canvas_offset = self.get_canvas_offset()
+        display_pos = QPointF(
+            new_origin.x() - canvas_offset.x(),
+            new_origin.y() - canvas_offset.y(),
+        )
+        item.setPos(display_pos)
+
+        # Clear caches that rely on stale dimensions
+        self._qimage_cache = None
+        self._qimage_cache_size = None
+        self._qimage_cache_hash = None
+        self._current_active_image_ref = None
+
+        return True
+
+    def _ensure_item_contains_scene_point(
+        self, item: DraggablePixmap, scene_point: QPointF, radius: float
+    ) -> bool:
+        if item is None:
+            return False
+        if not hasattr(item, "mapFromScene"):
+            return False
+
+        qimage = getattr(item, "qimage", None)
+        if qimage is None and item is self.item:
+            qimage = self.image
+
+        if qimage is None:
+            return False
+
+        local_point = item.mapFromScene(scene_point)
+        radius = float(max(radius, 0.0))
+
+        left_needed = self._quantize_growth(
+            int(math.ceil(radius - local_point.x()))
+        )
+        top_needed = self._quantize_growth(
+            int(math.ceil(radius - local_point.y()))
+        )
+        right_needed = self._quantize_growth(
+            int(math.ceil(local_point.x() + radius - qimage.width()))
+        )
+        bottom_needed = self._quantize_growth(
+            int(math.ceil(local_point.y() + radius - qimage.height()))
+        )
+
+        return self._expand_item_surface(
+            item,
+            max(0, left_needed),
+            max(0, top_needed),
+            max(0, right_needed),
+            max(0, bottom_needed),
+        )
+
     def set_image(self, pil_image: Image = None):
         base64image = None
         if not pil_image:
@@ -1526,12 +1671,9 @@ class CustomScene(
                 img = None
             self.image = img
         else:
-            self.image = QImage(
-                self.application_settings.working_width,
-                self.application_settings.working_height,
-                QImage.Format.Format_ARGB32,
-            )
-            self.image.fill(Qt.GlobalColor.transparent)
+            self.image = self._create_blank_surface()
+            self._current_active_image_ref = None
+            self._current_active_image_binary = None
 
     def set_item(
         self,

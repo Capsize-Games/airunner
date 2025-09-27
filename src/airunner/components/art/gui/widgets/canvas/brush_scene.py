@@ -178,30 +178,62 @@ class BrushScene(CustomScene):
         painter: QPainter = None,
         color: QColor = None,
     ):
-        if (drawing and not self._is_drawing) or (
-            erasing and not self._is_erasing
-        ):
-            self._is_drawing = drawing
-            self._is_erasing = erasing
+        ensure_start = ensure_last = False
+        if not self.drawing_pad_settings.mask_layer_enabled:
+            if self.start_pos is not None:
+                ensure_start = self._ensure_draw_space(self.start_pos)
+            if self.last_pos is not None:
+                ensure_last = self._ensure_draw_space(self.last_pos)
 
-            # set the size of the pen
-            self.pen.setWidth(self.brush_settings.size)
+        needs_pen_setup = painter is None
 
-            composition_mode = QPainter.CompositionMode.CompositionMode_Source
+        if ensure_start or ensure_last or painter is None:
+            previous_target = self._painter_target
+            self._rebind_active_painter()
+            painter = self.painter
+            if painter is None:
+                return
+            needs_pen_setup = True
+            if ensure_start or ensure_last:
+                self.path = None
 
-            self.pen.setColor(self._brush_color if color is None else color)
+        new_stroke = False
+        if drawing and not self._is_drawing:
+            self._is_drawing = True
+            self._is_erasing = False
+            new_stroke = True
+        elif erasing and not self._is_erasing:
+            self._is_erasing = True
+            self._is_drawing = False
+            new_stroke = True
 
-            # Set the pen to the painter
-            painter.setPen(self.pen)
+        pen_color = self._brush_color if color is None else color
+        pen_width = max(1, int(self.brush_settings.size))
 
-            # Set the CompositionMode to SourceOver
-            painter.setCompositionMode(composition_mode)
+        if new_stroke or self.path is None or needs_pen_setup:
+            self.pen = QPen(
+                pen_color,
+                pen_width,
+                Qt.PenStyle.SolidLine,
+                Qt.PenCapStyle.RoundCap,
+                Qt.PenJoinStyle.RoundJoin,
+            )
+        else:
+            self.pen.setColor(pen_color)
+            if self.pen.width() != pen_width:
+                self.pen.setWidth(pen_width)
 
-            # Set pen opacity to 50%
-            if self.drawing_pad_settings.mask_layer_enabled:
-                painter.setOpacity(0.5 if drawing else 0)
+        painter.setPen(self.pen)
+        painter.setCompositionMode(
+            QPainter.CompositionMode.CompositionMode_Source
+        )
 
-            # Create a QPainterPath object
+        if self.drawing_pad_settings.mask_layer_enabled:
+            painter.setOpacity(0.5 if drawing else 0)
+        else:
+            painter.setOpacity(1.0)
+
+        if new_stroke or self.path is None:
             self.path = QPainterPath()
 
         if not self.start_pos:
@@ -243,6 +275,21 @@ class BrushScene(CustomScene):
         elif hasattr(self.active_item, "updateImage"):
             self.active_item.updateImage(active_image)
 
+    def _ensure_draw_space(self, scene_point: QPointF) -> bool:
+        if scene_point is None:
+            return False
+        if self.drawing_pad_settings.mask_layer_enabled:
+            return False
+        item = self._get_active_layer_item()
+        if item is None and self.item is not None:
+            item = self.item
+        if item is None:
+            return False
+        radius = (self.brush_settings.size or 1) * 0.5 + 8
+        return self._ensure_item_contains_scene_point(
+            item, scene_point, radius
+        )
+
     def create_line(self, event):
         scene_pt = event.scenePos()
 
@@ -265,6 +312,8 @@ class BrushScene(CustomScene):
         # Use scenePos() so this matches the scene's offset
         self.draw_button_down = True
         self.start_pos = event.scenePos()
+        if self._ensure_draw_space(self.start_pos):
+            self._rebind_active_painter()
         if (
             self.drawing_pad_settings.mask_layer_enabled
             and self.mask_image is None
@@ -278,6 +327,8 @@ class BrushScene(CustomScene):
     def mouseMoveEvent(self, event):
         # Update last_pos with scenePos() for consistent drawing
         self.last_pos = event.scenePos()
+        if self._ensure_draw_space(self.last_pos):
+            self._rebind_active_painter()
         super().mouseMoveEvent(event)
 
     def _handle_left_mouse_release(self, event) -> bool:
