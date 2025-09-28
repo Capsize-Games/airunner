@@ -136,6 +136,20 @@
       </spacer>
      </item>
      <item>
+      <widget class="QPushButton" name="merge_visible_layers">
+       <property name="toolTip">
+        <string>Merge visible</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="../../../../../../gui/resources/feather.qrc">
+         <normaloff>:/dark/icons/feather/dark/arrow-down.svg</normaloff>:/dark/icons/feather/dark/arrow-down.svg</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="delete_layer">
        <property name="cursor">
         <cursorShape>PointingHandCursor</cursorShape>

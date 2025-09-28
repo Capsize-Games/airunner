@@ -94,6 +94,10 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         return CanvasLayer.objects.get(layer.id)
 
     @Slot()
+    def on_merge_visible_layers_clicked(self):
+        pass
+
+    @Slot()
     def on_add_layer_clicked(self):
         self.api.art.canvas.begin_layer_operation("create")
         try:
@@ -328,12 +332,12 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                 self.layer_widgets.pop(layer_id, None)
                 self.selected_layers.discard(layer_id)
             CanvasLayer.objects.delete(layer_id)
-            DrawingPadSettings.objects.delete(layer_id=layer_id)
-            ControlnetSettings.objects.delete(layer_id=layer_id)
-            ImageToImageSettings.objects.delete(layer_id=layer_id)
-            OutpaintSettings.objects.delete(layer_id=layer_id)
-            BrushSettings.objects.delete(layer_id=layer_id)
-            MetadataSettings.objects.delete(layer_id=layer_id)
+            DrawingPadSettings.objects.delete_by(layer_id=layer_id)
+            ControlnetSettings.objects.delete_by(layer_id=layer_id)
+            ImageToImageSettings.objects.delete_by(layer_id=layer_id)
+            OutpaintSettings.objects.delete_by(layer_id=layer_id)
+            BrushSettings.objects.delete_by(layer_id=layer_id)
+            MetadataSettings.objects.delete_by(layer_id=layer_id)
 
     def on_layer_selected(self, data: dict):
         layer_id = data.get("layer_id")
@@ -462,11 +466,20 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
     def on_visibility_toggled(self, data: dict):
         layer_id = data.get("layer_id")
         visible = data.get("visible")
-        layer = CanvasLayer.objects.get(layer_id)
-        if layer:
-            CanvasLayer.objects.update(layer.id, visible=visible)
-            # Emit signal to update canvas display
-            self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        CanvasLayer.objects.update(layer_id, visible=visible)
+
+        for cached_layer in self.layers:
+            if cached_layer.id == layer_id:
+                cached_layer.visible = visible
+                break
+
+        widget = self.layer_widgets.get(layer_id)
+        if widget:
+            widget.layer.visible = visible
+            widget.ui.visibility.blockSignals(True)
+            widget.ui.visibility.setChecked(visible)
+            widget.ui.visibility.blockSignals(False)
+            widget._update_visibility_icon()
 
     def on_layer_reordered(self, data: dict):
         source_layer_id = data.get("source_layer_id")

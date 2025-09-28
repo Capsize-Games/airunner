@@ -30,11 +30,11 @@ class BrushScene(CustomScene):
         )
         self.mask_item = None
         self.mask_image: ImageQt = None
-        self.path = None
         self._is_drawing = False
         self._is_erasing = False
         self._do_generate_image = False
         self._pending_brush_history_layer: Optional[int] = None
+        self._last_draw_scene_pos: Optional[QPointF] = None
         self.register(
             SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.on_brush_color_changed
         )
@@ -178,58 +178,93 @@ class BrushScene(CustomScene):
         painter: QPainter = None,
         color: QColor = None,
     ):
-        if (drawing and not self._is_drawing) or (
-            erasing and not self._is_erasing
-        ):
-            self._is_drawing = drawing
-            self._is_erasing = erasing
+        ensure_start = ensure_last = False
+        if not self.drawing_pad_settings.mask_layer_enabled:
+            if self.start_pos is not None:
+                ensure_start = self._ensure_draw_space(self.start_pos)
+            if self.last_pos is not None:
+                ensure_last = self._ensure_draw_space(self.last_pos)
 
-            # set the size of the pen
-            self.pen.setWidth(self.brush_settings.size)
+        needs_pen_setup = painter is None
 
-            composition_mode = QPainter.CompositionMode.CompositionMode_Source
+        if ensure_start or ensure_last or painter is None:
+            previous_target = self._painter_target
+            self._rebind_active_painter()
+            painter = self.painter
+            if painter is None:
+                return
+            needs_pen_setup = True
+            if ensure_start or ensure_last:
+                self._last_draw_scene_pos = self.last_pos or self.start_pos
 
-            self.pen.setColor(self._brush_color if color is None else color)
+        new_stroke = False
+        if drawing and not self._is_drawing:
+            self._is_drawing = True
+            self._is_erasing = False
+            new_stroke = True
+        elif erasing and not self._is_erasing:
+            self._is_erasing = True
+            self._is_drawing = False
+            new_stroke = True
 
-            # Set the pen to the painter
-            painter.setPen(self.pen)
+        pen_color = self._brush_color if color is None else color
+        pen_width = max(1, int(self.brush_settings.size))
 
-            # Set the CompositionMode to SourceOver
-            painter.setCompositionMode(composition_mode)
+        if new_stroke:
+            self._last_draw_scene_pos = self.start_pos
 
-            # Set pen opacity to 50%
-            if self.drawing_pad_settings.mask_layer_enabled:
-                painter.setOpacity(0.5 if drawing else 0)
+        if needs_pen_setup or new_stroke or self.pen is None:
+            self.pen = QPen(
+                pen_color,
+                pen_width,
+                Qt.PenStyle.SolidLine,
+                Qt.PenCapStyle.RoundCap,
+                Qt.PenJoinStyle.RoundJoin,
+            )
+        else:
+            self.pen.setColor(pen_color)
+            if self.pen.width() != pen_width:
+                self.pen.setWidth(pen_width)
 
-            # Create a QPainterPath object
-            self.path = QPainterPath()
+        painter.setPen(self.pen)
+        painter.setCompositionMode(
+            QPainter.CompositionMode.CompositionMode_Source
+        )
 
-        if not self.start_pos:
+        if self.drawing_pad_settings.mask_layer_enabled:
+            painter.setOpacity(0.5 if drawing else 0)
+        else:
+            painter.setOpacity(1.0)
+
+        if self.last_pos is None:
+            return
+
+        if self._last_draw_scene_pos is None:
+            self._last_draw_scene_pos = self.last_pos
+            return
+
+        viewport_delta = self.last_pos - self._last_draw_scene_pos
+        if abs(viewport_delta.x()) < 0.01 and abs(viewport_delta.y()) < 0.01:
             return
 
         # Use scene coordinates minus image item position for image coordinates
         item_pos = (
             self.active_item.pos() if self.active_item else QPointF(0, 0)
         )
-        image_start_pos = self.start_pos - item_pos
+        image_start_pos = self._last_draw_scene_pos - item_pos
         image_last_pos = self.last_pos - item_pos
 
-        # Move to start position in image coordinates
-        self.path.moveTo(image_start_pos)
-
-        # Create control point in image coordinates
         control_point = QPointF(
             (image_start_pos.x() + image_last_pos.x()) * 0.5,
             (image_start_pos.y() + image_last_pos.y()) * 0.5,
         )
 
-        # Draw quadratic curve to end position in image coordinates
-        self.path.quadTo(control_point, image_last_pos)
+        segment_path = QPainterPath(image_start_pos)
+        segment_path.quadTo(control_point, image_last_pos)
 
-        # Draw the path
-        painter.drawPath(self.path)
+        painter.drawPath(segment_path)
 
-        # Update start position for next segment
+        self._last_draw_scene_pos = self.last_pos
         self.start_pos = self.last_pos
 
         # Create a QPixmap from the image and set it to the QGraphicsPixmapItem
@@ -242,6 +277,35 @@ class BrushScene(CustomScene):
             self.active_item.setPixmap(pixmap)
         elif hasattr(self.active_item, "updateImage"):
             self.active_item.updateImage(active_image)
+
+    def _ensure_draw_space(self, scene_point: QPointF) -> bool:
+        if scene_point is None:
+            return False
+        if self.drawing_pad_settings.mask_layer_enabled:
+            return False
+        item = self._get_active_layer_item()
+        if item is None and self.item is not None:
+            item = self.item
+        if item is None:
+            return False
+        # Only ensure/expand draw space when the user is actively drawing
+        # with the brush or eraser. This prevents incidental expansion of
+        # layer surfaces during non-drawing actions like panning,
+        # recentring, or simple redraws which can otherwise trigger
+        # quantized growth (surface growth step) and cause images to
+        # become larger than their generated size.
+        if not self.draw_button_down:
+            return False
+        if self.current_tool not in [
+            CanvasToolName.BRUSH,
+            CanvasToolName.ERASER,
+        ]:
+            return False
+
+        radius = (self.brush_settings.size or 1) * 0.5 + 8
+        return self._ensure_item_contains_scene_point(
+            item, scene_point, radius
+        )
 
     def create_line(self, event):
         scene_pt = event.scenePos()
@@ -265,6 +329,10 @@ class BrushScene(CustomScene):
         # Use scenePos() so this matches the scene's offset
         self.draw_button_down = True
         self.start_pos = event.scenePos()
+        self.last_pos = self.start_pos
+        self._last_draw_scene_pos = self.start_pos
+        if self._ensure_draw_space(self.start_pos):
+            self._rebind_active_painter()
         if (
             self.drawing_pad_settings.mask_layer_enabled
             and self.mask_image is None
@@ -278,6 +346,8 @@ class BrushScene(CustomScene):
     def mouseMoveEvent(self, event):
         # Update last_pos with scenePos() for consistent drawing
         self.last_pos = event.scenePos()
+        if self._ensure_draw_space(self.last_pos):
+            self._rebind_active_painter()
         super().mouseMoveEvent(event)
 
     def _handle_left_mouse_release(self, event) -> bool:
@@ -323,6 +393,8 @@ class BrushScene(CustomScene):
                 self._pending_brush_history_layer, "image"
             )
             self._pending_brush_history_layer = None
+
+        self._last_draw_scene_pos = None
 
     def set_mask(self):
         mask = None
