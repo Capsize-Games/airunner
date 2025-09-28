@@ -748,7 +748,13 @@ class CustomScene(
             y_pos = state.get("y_pos")
             if x_pos is not None and y_pos is not None:
                 canvas_offset = self.get_canvas_offset()
-                layer_item.setPos(QPointF(x_pos, y_pos) - canvas_offset)
+                # QPointF does not support Python-level subtraction in all PySide6 builds.
+                # Compute visible position explicitly to avoid calling operator-.
+                layer_item.setPos(
+                    QPointF(
+                        x_pos - canvas_offset.x(), y_pos - canvas_offset.y()
+                    )
+                )
                 self.original_item_positions[layer_item] = QPointF(
                     x_pos, y_pos
                 )
@@ -1261,7 +1267,10 @@ class CustomScene(
                         )
 
             canvas_offset = self.get_canvas_offset()
-            visible_pos = QPointF(x_pos, y_pos) - canvas_offset
+            # Avoid using QPointF.__sub__ (not available in some PySide6 bindings).
+            visible_pos = QPointF(
+                x_pos - canvas_offset.x(), y_pos - canvas_offset.y()
+            )
             layer_item.setPos(visible_pos)
             self.original_item_positions[layer_item] = QPointF(x_pos, y_pos)
 
@@ -2480,3 +2489,4 @@ class CustomScene(
     def get_canvas_offset(self):
         if self.views() and hasattr(self.views()[0], "canvas_offset"):
             return self.views()[0].canvas_offset
+        return QPointF(0, 0)
