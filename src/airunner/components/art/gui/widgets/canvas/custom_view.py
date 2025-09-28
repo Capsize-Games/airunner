@@ -37,6 +37,7 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 from airunner.components.art.gui.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.utils.settings import get_qsettings
+from airunner.utils.application.get_logger import get_logger
 
 
 class CustomGraphicsView(
@@ -183,82 +184,98 @@ class CustomGraphicsView(
         )
 
     @property
-    def __can_draw_grid(self):
-        return self.grid_settings.show_grid and self.canvas_type in (
-            CanvasType.IMAGE.value,
-            CanvasType.BRUSH.value,
-        )
-
-    @property
     def layers(self) -> List[CanvasLayer]:
         return CanvasLayer.objects.filter_by(visible=True, locked=False)
 
     def on_recenter_grid_signal(self):
-        """Center the grid in the viewport with the active grid area's CENTER at the grid origin."""
-        # 1. Calculate center of viewport
+        """Center the grid and all layer images in the viewport."""
+        if not self.scene:
+            return
+
+        # Calculate viewport center
         viewport_size = self.viewport().size()
         viewport_center_x = viewport_size.width() / 2
         viewport_center_y = viewport_size.height() / 2
-
-        # 2. To center the grid origin (0,0) in the viewport, set canvas offset to negative viewport center
-        # This makes scene coordinate (0,0) appear at the center of the viewport
-        self.canvas_offset = QPointF(-viewport_center_x, -viewport_center_y)
-        self.save_canvas_offset()
-
-        # 3. Calculate the position needed to center the active grid area on the origin (0,0)
-        # We want the CENTER of the active grid area to be at (0,0), not its top-left corner
+        
+        # Calculate target absolute position to center the grid
         grid_width = self.application_settings.working_width
         grid_height = self.application_settings.working_height
 
-        # Position needs to be negative half-dimensions to center it
-        pos_x = -grid_width / 2
-        pos_y = -grid_height / 2
+        # For the active grid area, we want its top-left corner positioned so the grid appears centered
+        grid_target_x = int(viewport_center_x - grid_width / 2)
+        grid_target_y = int(viewport_center_y - grid_height / 2)
+        
+        # Clear canvas offset for clean centering
+        self.canvas_offset = QPointF(0, 0)
+        self.save_canvas_offset()
+        
+        # Update active grid area position
+        self.update_active_grid_settings(
+            pos_x=grid_target_x, pos_y=grid_target_y
+        )
+        
+        all_drawing_pads = DrawingPadSettings.objects.all()
+        
+        # Try to get a reasonable image size estimate for centering
+        # If we have layer items, use their size; otherwise use a default
+        image_width = 512  # Default assumption
+        image_height = 512  # Default assumption
 
-        # 4. Set active grid area to this centered position
-        self.update_active_grid_settings(pos_x=int(pos_x), pos_y=int(pos_y))
+        if hasattr(self.scene, "_layer_items") and self.scene._layer_items:
+            # Use the size of the first layer item as reference
+            first_item = next(iter(self.scene._layer_items.values()))
+            item_rect = first_item.boundingRect()
+            image_width = item_rect.width()
+            image_height = item_rect.height()
 
-        # 5. If there's an image in the scene, update its position to match the active grid area
-        if self.scene and hasattr(self.scene, "item") and self.scene.item:
-            # Store the same absolute position for the image as we did for the active grid area
-            self.scene.original_item_positions[self.scene.item] = QPointF(
-                pos_x, pos_y
+        # Calculate database position to center the image
+        db_center_x = int(viewport_center_x - image_width / 2)
+        db_center_y = int(viewport_center_y - image_height / 2)
+
+        for pad_setting in all_drawing_pads:
+            self.update_drawing_pad_settings(
+                layer_id=pad_setting.layer_id,
+                x_pos=db_center_x,
+                y_pos=db_center_y,
             )
 
-        # 6. Update all layer items to the same centered position
-        if self.scene and hasattr(self.scene, "_layer_items"):
-            for layer_id, layer_item in self.scene._layer_items.items():
-                # Update the original position tracking
-                self.scene.original_item_positions[layer_item] = QPointF(
-                    pos_x, pos_y
-                )
+        # Clear the scene's position cache completely
+        if hasattr(self.scene, "original_item_positions"):
+            self.scene.original_item_positions.clear()
 
-                # Update the corresponding DrawingPadSettings in the database
-                try:
-                    from airunner.components.art.data.drawingpad_settings import (
-                        DrawingPadSettings,
-                    )
-
-                    results = DrawingPadSettings.objects.filter_by(
-                        layer_id=layer_id
-                    )
-                    if results:
-                        settings = results[0]
-                        # Update the database with the new centered position
-                        self.update_drawing_pad_settings(
-                            x_pos=int(pos_x), y_pos=int(pos_y)
-                        )
-                except Exception as e:
-                    print(
-                        f"Failed to update DrawingPadSettings for layer {layer_id}: {e}"
-                    )
-
-            # Trigger visual refresh of all layer positions
+        # Force complete layer refresh from database
+        if hasattr(self.scene, "_refresh_layer_display"):
             self.scene._refresh_layer_display()
 
-        # 7. Update all display positions based on new offset
-        self.updateImagePositions()
+        # Also try to directly set positions of any existing layer items
+        if hasattr(self.scene, "_layer_items"):
+            for layer_id, layer_item in self.scene._layer_items.items():
+
+                # Get the actual size of this layer item
+                item_rect = layer_item.boundingRect()
+                item_width = item_rect.width()
+                item_height = item_rect.height()
+
+                # Calculate position to center the image in the viewport
+                # (viewport_center - image_size/2)
+                centered_x = int(viewport_center_x - item_width / 2)
+                centered_y = int(viewport_center_y - item_height / 2)
+                
+                # Set the layer item position to truly center it
+                layer_item.setPos(centered_x, centered_y)
+                new_pos = layer_item.pos()
+                
+                # Force the item to update its geometry and visibility
+                layer_item.prepareGeometryChange()
+                layer_item.update()
+
+        # Update display positions
         self.update_active_grid_area_position()
-        self.update_drawing_pad_settings(x_pos=int(pos_x), y_pos=int(pos_y))
+
+
+        self.updateImagePositions()
+
+        # Force complete redraw
         self.do_draw(force_draw=True)
 
     def on_mask_generator_worker_response_signal(self, message: dict):
@@ -601,6 +618,7 @@ class CustomGraphicsView(
     def updateImagePositions(self):
         """Update positions of all images in the scene based on canvas offset."""
         if not self.scene:
+            self.logger.error("No scene in updateImagePositions")
             return
 
         # Use the scene's update_image_position method which handles both
@@ -794,10 +812,20 @@ class CustomGraphicsView(
         self.update_drawing_pad_settings(text_items=text_items_data)
 
     def update_drawing_pad_settings(self, **kwargs):
-        for layer_item in self.layers:
+        # Extract layer_id if provided in kwargs
+        specific_layer_id = kwargs.pop("layer_id", None)
+
+        if specific_layer_id is not None:
+            # Update only the specific layer
             super().update_drawing_pad_settings(
-                layer_id=layer_item.id, **kwargs
+                layer_id=specific_layer_id, **kwargs
             )
+        else:
+            # Update all layers if no specific layer_id provided
+            for layer_item in self.layers:
+                super().update_drawing_pad_settings(
+                    layer_id=layer_item.id, **kwargs
+                )
 
     def _restore_text_items_from_db(self):
         # Restore text items from the database (via application_settings or similar)
