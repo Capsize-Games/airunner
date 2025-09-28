@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 import time
 
 from PySide6.QtCore import (
@@ -13,7 +13,6 @@ from PySide6.QtGui import QMouseEvent, QColor, QBrush, QFont
 from PySide6.QtWidgets import (
     QGraphicsView,
     QGraphicsItemGroup,
-    QGraphicsScene,
     QGraphicsTextItem,
     QInputDialog,
 )
@@ -38,6 +37,7 @@ from airunner.components.art.gui.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.utils.settings import get_qsettings
 from airunner.utils.application.get_logger import get_logger
+from airunner.utils.application.snap_to_grid import snap_to_grid
 
 
 class CustomGraphicsView(
@@ -62,9 +62,7 @@ class CustomGraphicsView(
         self._scene_is_active: bool = False
         self.last_pos: QPoint = self.zero_point
         self.zoom_handler: ZoomHandler = ZoomHandler()
-        self.canvas_offset = QPointF(
-            0, 0
-        )  # Explicitly use QPointF, not QPoint
+        self._canvas_offset = QPointF(0, 0)
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
         self.grid_item = None
@@ -115,11 +113,26 @@ class CustomGraphicsView(
         self._resize_timer.setSingleShot(False)
         self._resize_timer.timeout.connect(self._handle_deferred_resize)
         self._resize_timer.setInterval(1)
-        self._resize_data = None
         self._is_resizing = False
 
         self._cursor_cache = {}
         self._current_cursor = None
+
+    @property
+    def canvas_offset(self) -> QPointF:
+        return self._canvas_offset
+
+    @canvas_offset.setter
+    def canvas_offset(self, value: QPointF):
+        self._canvas_offset = value
+
+    @property
+    def canvas_offset_x(self) -> float:
+        return self.canvas_offset.x()
+
+    @property
+    def canvas_offset_y(self) -> float:
+        return self.canvas_offset.y()
 
     @property
     def zero_point(self) -> QPointF:
@@ -138,8 +151,8 @@ class CustomGraphicsView(
 
     def save_canvas_offset(self):
         """Save the canvas offset to QSettings."""
-        self.settings.setValue("canvas_offset_x", self.canvas_offset.x())
-        self.settings.setValue("canvas_offset_y", self.canvas_offset.y())
+        self.settings.setValue("canvas_offset_x", self.canvas_offset_x)
+        self.settings.setValue("canvas_offset_y", self.canvas_offset_y)
 
     @property
     def scene(self) -> Optional[CustomScene]:
@@ -187,93 +200,85 @@ class CustomGraphicsView(
     def layers(self) -> List[CanvasLayer]:
         return CanvasLayer.objects.filter_by(visible=True, locked=False)
 
+    @property
+    def viewport_center(self) -> QPointF:
+        viewport_size = self.viewport().size()
+        return QPointF(viewport_size.width() / 2, viewport_size.height() / 2)
+
+    def get_recentered_position(self, width, height) -> Tuple[int, int]:
+        viewport_center_x = self.viewport_center.x()
+        viewport_center_y = self.viewport_center.y()
+
+        item_center_x = width / 2
+        item_center_y = height / 2
+
+        target_x = viewport_center_x - item_center_x
+        target_y = viewport_center_y - item_center_y
+
+        snapped_gx, snapped_gy = snap_to_grid(
+            self.grid_settings,
+            target_x,
+            target_y,
+            use_floor=False,
+        )
+
+        return int(round(snapped_gx)), int(round(snapped_gy))
+
     def on_recenter_grid_signal(self):
+        self.canvas_offset = QPointF(0, 0)
+
         """Center the grid and all layer images in the viewport."""
         if not self.scene:
             return
 
-        # Calculate viewport center
-        viewport_size = self.viewport().size()
-        viewport_center_x = viewport_size.width() / 2
-        viewport_center_y = viewport_size.height() / 2
-        
-        # Calculate target absolute position to center the grid
-        grid_width = self.application_settings.working_width
-        grid_height = self.application_settings.working_height
-
-        # For the active grid area, we want its top-left corner positioned so the grid appears centered
-        grid_target_x = int(viewport_center_x - grid_width / 2)
-        grid_target_y = int(viewport_center_y - grid_height / 2)
-        
-        # Clear canvas offset for clean centering
-        self.canvas_offset = QPointF(0, 0)
-        self.save_canvas_offset()
-        
-        # Update active grid area position
-        self.update_active_grid_settings(
-            pos_x=grid_target_x, pos_y=grid_target_y
+        # Update active grid area absolute position in settings
+        pos_x, pos_y = self.get_recentered_position(
+            self.application_settings.working_width,
+            self.application_settings.working_height,
         )
-        
-        all_drawing_pads = DrawingPadSettings.objects.all()
-        
-        # Try to get a reasonable image size estimate for centering
-        # If we have layer items, use their size; otherwise use a default
-        image_width = 512  # Default assumption
-        image_height = 512  # Default assumption
+        self.update_active_grid_settings(
+            pos_x=pos_x,
+            pos_y=pos_y,
+        )
 
-        if hasattr(self.scene, "_layer_items") and self.scene._layer_items:
-            # Use the size of the first layer item as reference
-            first_item = next(iter(self.scene._layer_items.values()))
-            item_rect = first_item.boundingRect()
+        layers = CanvasLayer.objects.order_by("order").all()
+
+        # Clear the scene's position cache completely
+        # if hasattr(self.scene, "original_item_positions"):
+        #     self.scene.original_item_positions.clear()
+
+        original_item_positions = {}
+        for index, layer in enumerate(layers):
+            results = DrawingPadSettings.objects.filter_by(layer_id=layer.id)
+            if len(results) == 0:
+                continue
+
+            drawingpad_settings = results[0]
+            scene_item = self.scene._layer_items.get(layer.id)
+            item_rect = scene_item.boundingRect()
             image_width = item_rect.width()
             image_height = item_rect.height()
 
-        # Calculate database position to center the image
-        db_center_x = int(viewport_center_x - image_width / 2)
-        db_center_y = int(viewport_center_y - image_height / 2)
-
-        for pad_setting in all_drawing_pads:
-            self.update_drawing_pad_settings(
-                layer_id=pad_setting.layer_id,
-                x_pos=db_center_x,
-                y_pos=db_center_y,
+            pos_x, pos_y = self.get_recentered_position(
+                int(image_width), int(image_height)
             )
 
-        # Clear the scene's position cache completely
-        if hasattr(self.scene, "original_item_positions"):
-            self.scene.original_item_positions.clear()
+            DrawingPadSettings.objects.update(
+                drawingpad_settings.id,
+                x_pos=pos_x,
+                y_pos=pos_y,
+            )
+            self.scene._layer_items[layer.id].setPos(pos_x, pos_y)
+            original_item_positions[scene_item] = QPointF(pos_x, pos_y)
 
         # Force complete layer refresh from database
         if hasattr(self.scene, "_refresh_layer_display"):
             self.scene._refresh_layer_display()
 
-        # Also try to directly set positions of any existing layer items
-        if hasattr(self.scene, "_layer_items"):
-            for layer_id, layer_item in self.scene._layer_items.items():
-
-                # Get the actual size of this layer item
-                item_rect = layer_item.boundingRect()
-                item_width = item_rect.width()
-                item_height = item_rect.height()
-
-                # Calculate position to center the image in the viewport
-                # (viewport_center - image_size/2)
-                centered_x = int(viewport_center_x - item_width / 2)
-                centered_y = int(viewport_center_y - item_height / 2)
-                
-                # Set the layer item position to truly center it
-                layer_item.setPos(centered_x, centered_y)
-                new_pos = layer_item.pos()
-                
-                # Force the item to update its geometry and visibility
-                layer_item.prepareGeometryChange()
-                layer_item.update()
-
         # Update display positions
         self.update_active_grid_area_position()
 
-
-        self.updateImagePositions()
+        self.updateImagePositions(original_item_positions)
 
         # Force complete redraw
         self.do_draw(force_draw=True)
@@ -388,12 +393,12 @@ class CustomGraphicsView(
             # Calculate absolute position needed to appear centered with current offset
             absolute_x = (
                 viewport_center_x
-                + self.canvas_offset.x()
+                + self.canvas_offset_x
                 - (self.application_settings.working_width / 2)
             )
             absolute_y = (
                 viewport_center_y
-                + self.canvas_offset.y()
+                + self.canvas_offset_y
                 - (self.application_settings.working_height / 2)
             )
 
@@ -404,30 +409,9 @@ class CustomGraphicsView(
             self.settings.sync()
 
         # Calculate and set the display position
-        display_x = absolute_x - self.canvas_offset.x()
-        display_y = absolute_y - self.canvas_offset.y()
+        display_x = absolute_x - self.canvas_offset_x
+        display_y = absolute_y - self.canvas_offset_y
         self.active_grid_area.setPos(display_x, display_y)
-
-    def update_active_grid_area_position(
-        self, _message=None
-    ):  # Accept optional message from signal
-        if self.active_grid_area:
-            # Read the definitive absolute position from settings
-            absolute_x = self.active_grid_settings.pos_x
-            absolute_y = self.active_grid_settings.pos_y
-
-            # Handle potential None values (shouldn't happen after show_active_grid_area)
-            if absolute_x is None:
-                absolute_x = 0
-            if absolute_y is None:
-                absolute_y = 0
-
-            # Calculate the display position based on the current canvas offset
-            display_x = absolute_x - self.canvas_offset.x()
-            display_y = absolute_y - self.canvas_offset.y()
-
-            # Set the item's display position
-            self.active_grid_area.setPos(display_x, display_y)
 
     def on_zoom_level_changed_signal(self):
         transform = self.zoom_handler.on_zoom_level_changed()
@@ -467,17 +451,6 @@ class CustomGraphicsView(
             canvas_container_size.width(),
             canvas_container_size.height(),
         )
-        # Store resize data
-        self._resize_data = {
-            "new_size": self.viewport().size(),
-            "old_size": canvas_container_size,
-        }
-        # Center the grid in the viewport with the active grid area's CENTER at the grid origin.
-        viewport_size = self.viewport().size()
-        viewport_center_x = viewport_size.width() / 2
-        viewport_center_y = viewport_size.height() / 2
-        self.canvas_offset = QPointF(-viewport_center_x, -viewport_center_y)
-        self.save_canvas_offset()
         self.updateImagePositions()
         self.do_draw(force_draw=True)
 
@@ -560,7 +533,7 @@ class CustomGraphicsView(
         super().showEvent(event)
         if not self._initialized:
             # Load offset first
-            self.load_canvas_offset()
+            # self.load_canvas_offset()
 
             # Set up the scene (grid, etc.)
             self.do_draw(True)
@@ -610,12 +583,13 @@ class CustomGraphicsView(
     def update_active_grid_area_position(self):
         if self.active_grid_area:
             pos = self.active_grid_settings.pos
-            pos_x = pos[0] - self.canvas_offset.x()
-            pos_y = pos[1] - self.canvas_offset.y()
-            if self.active_grid_area:
-                self.active_grid_area.setPos(pos_x, pos_y)
+            pos_x = pos[0] - self.canvas_offset_x
+            pos_y = pos[1] - self.canvas_offset_y
+            self.active_grid_area.setPos(pos_x, pos_y)
 
-    def updateImagePositions(self):
+    def updateImagePositions(
+        self, original_item_positions: Dict[str, QPointF] = None
+    ):
         """Update positions of all images in the scene based on canvas offset."""
         if not self.scene:
             self.logger.error("No scene in updateImagePositions")
@@ -623,7 +597,9 @@ class CustomGraphicsView(
 
         # Use the scene's update_image_position method which handles both
         # the old single-item system and the new layer system
-        self.scene.update_image_position(self.canvas_offset)
+        self.scene.update_image_position(
+            self.canvas_offset, original_item_positions
+        )
 
         # Force entire viewport update to handle negative coordinates
         self.viewport().update()
