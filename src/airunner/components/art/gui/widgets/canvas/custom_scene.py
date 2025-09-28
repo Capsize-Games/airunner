@@ -1554,11 +1554,10 @@ class CustomScene(
         if new_width <= 0 or new_height <= 0:
             return False
 
-        image_format = qimage.format()
-        if image_format == QImage.Format.Format_Invalid:
-            image_format = QImage.Format.Format_ARGB32
-
-        new_image = QImage(new_width, new_height, image_format)
+        # Ensure the new surface supports alpha so any added margins remain
+        # transparent. Using the source image's format may pick a non-alpha
+        # format (eg. RGB32) which results in opaque white/black padding.
+        new_image = QImage(new_width, new_height, QImage.Format.Format_ARGB32)
         new_image.fill(Qt.GlobalColor.transparent)
 
         self.stop_painter()
@@ -1568,7 +1567,14 @@ class CustomScene(
         painter.end()
 
         if hasattr(item, "updateImage"):
-            item.updateImage(new_image)
+            try:
+                item.updateImage(new_image)
+            except Exception as e:
+                if hasattr(self, "logger"):
+                    self.logger.warning(
+                        f"Failed to update item image during expansion: {e}"
+                    )
+                return False
         else:
             return False
 
@@ -1582,7 +1588,17 @@ class CustomScene(
         new_origin = QPointF(
             original_pos.x() - grow_left, original_pos.y() - grow_top
         )
+        # Record new origin and log expansion for debugging
         self.original_item_positions[item] = new_origin
+        if hasattr(self, "logger"):
+            try:
+                old_w = qimage.width()
+                old_h = qimage.height()
+                self.logger.debug(
+                    f"Expanded item (layer_id={getattr(item, 'layer_id', None)}) from {old_w}x{old_h} to {new_width}x{new_height} (L{grow_left},T{grow_top},R{grow_right},B{grow_bottom})"
+                )
+            except Exception:
+                pass
         self._persist_item_origin(item, new_origin)
 
         canvas_offset = self.get_canvas_offset()
@@ -2405,9 +2421,8 @@ class CustomScene(
                         )
                     except Exception as e:
                         # Fallback to current position
-                        self.original_item_positions[layer_item] = (
-                            layer_item.pos()
-                        )
+                        current_pos = layer_item.pos()
+                        self.original_item_positions[layer_item] = current_pos
 
                 original_pos = self.original_item_positions[layer_item]
                 new_x = original_pos.x() - canvas_offset.x()

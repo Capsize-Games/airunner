@@ -288,6 +288,20 @@ class BrushScene(CustomScene):
             item = self.item
         if item is None:
             return False
+        # Only ensure/expand draw space when the user is actively drawing
+        # with the brush or eraser. This prevents incidental expansion of
+        # layer surfaces during non-drawing actions like panning,
+        # recentring, or simple redraws which can otherwise trigger
+        # quantized growth (surface growth step) and cause images to
+        # become larger than their generated size.
+        if not self.draw_button_down:
+            return False
+        if self.current_tool not in [
+            CanvasToolName.BRUSH,
+            CanvasToolName.ERASER,
+        ]:
+            return False
+
         radius = (self.brush_settings.size or 1) * 0.5 + 8
         return self._ensure_item_contains_scene_point(
             item, scene_point, radius
