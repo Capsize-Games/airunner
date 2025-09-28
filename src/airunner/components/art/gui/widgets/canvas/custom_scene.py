@@ -237,6 +237,10 @@ class CustomScene(
         """Returns the original positions of items in the scene."""
         return self._original_item_positions
 
+    @original_item_positions.setter
+    def original_item_positions(self, value: Dict[str, QPointF]):
+        self._original_item_positions = value
+
     @property
     def current_tool(self):
         return (
@@ -2366,10 +2370,19 @@ class CustomScene(
         filtered_image = filter_object.filter(image)
         return filtered_image
 
-    def update_image_position(self, canvas_offset):
+    def update_image_position(
+        self,
+        canvas_offset,
+        original_item_positions: Dict[str, QPointF] = None,
+    ):
+        original_item_positions = (
+            self.original_item_positions
+            if original_item_positions is None
+            else original_item_positions
+        )
         # Update the old drawing pad item if it exists
         if self.item:
-            if self.item not in self.original_item_positions:
+            if self.item not in original_item_positions:
                 abs_x = self.drawing_pad_settings.x_pos
                 abs_y = self.drawing_pad_settings.y_pos
 
@@ -2377,9 +2390,9 @@ class CustomScene(
                     abs_x = self.item.pos().x()
                     abs_y = self.item.pos().y()
 
-                self.original_item_positions[self.item] = QPointF(abs_x, abs_y)
+                original_item_positions[self.item] = QPointF(abs_x, abs_y)
 
-            original_pos = self.original_item_positions[self.item]
+            original_pos = original_item_positions[self.item]
 
             new_x = original_pos.x() - canvas_offset.x()
             new_y = original_pos.y() - canvas_offset.y()
@@ -2402,7 +2415,7 @@ class CustomScene(
         for layer_id, layer_item in layer_items_copy:
             try:
                 # Get the original position from DrawingPadSettings
-                if layer_item not in self.original_item_positions:
+                if layer_item not in original_item_positions:
                     try:
                         drawing_pad_settings = (
                             self._get_layer_specific_settings(
@@ -2416,15 +2429,15 @@ class CustomScene(
                             abs_x = layer_item.pos().x()
                             abs_y = layer_item.pos().y()
 
-                        self.original_item_positions[layer_item] = QPointF(
+                        original_item_positions[layer_item] = QPointF(
                             abs_x, abs_y
                         )
                     except Exception as e:
                         # Fallback to current position
                         current_pos = layer_item.pos()
-                        self.original_item_positions[layer_item] = current_pos
+                        original_item_positions[layer_item] = current_pos
 
-                original_pos = self.original_item_positions[layer_item]
+                original_pos = original_item_positions[layer_item]
                 new_x = original_pos.x() - canvas_offset.x()
                 new_y = original_pos.y() - canvas_offset.y()
 
@@ -2453,8 +2466,8 @@ class CustomScene(
                     if layer_id in self._layer_items:
                         del self._layer_items[layer_id]
                     # Also clean up original_item_positions if it exists
-                    if layer_item in self.original_item_positions:
-                        del self.original_item_positions[layer_item]
+                    if layer_item in original_item_positions:
+                        del original_item_positions[layer_item]
                 else:
                     # Re-raise unexpected RuntimeErrors
                     raise
@@ -2462,8 +2475,8 @@ class CustomScene(
                 self.logger.warning(
                     f"Error updating position for layer {layer_id}: {e}"
                 )
+        self.original_item_positions = original_item_positions
 
     def get_canvas_offset(self):
         if self.views() and hasattr(self.views()[0], "canvas_offset"):
             return self.views()[0].canvas_offset
-        return QPointF(0, 0)
