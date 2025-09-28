@@ -340,10 +340,21 @@ class NodePropEditorWidget(QtWidgets.QWidget):
         self.name_wgt = PropLineEdit()
         self.name_wgt.set_name("name")
         self.name_wgt.setToolTip("name\nSet the node name.")
-        self.name_wgt.set_value(node.name())
+        # support nodes that expose name as either attribute or callable
+        node_name = (
+            node.name()
+            if callable(getattr(node, "name", None))
+            else getattr(node, "name", "")
+        )
+        self.name_wgt.set_value(node_name)
         self.name_wgt.value_changed.connect(self._on_property_changed)
 
-        self.type_wgt = QtWidgets.QLabel(node.type_)
+        node_type = (
+            node.type_
+            if not callable(getattr(node, "type_", None))
+            else node.type_()
+        )
+        self.type_wgt = QtWidgets.QLabel(node_type)
         self.type_wgt.setAlignment(QtCore.Qt.AlignRight)
         self.type_wgt.setToolTip(
             "type_\nNode type identifier followed by the class name."
@@ -399,7 +410,7 @@ class NodePropEditorWidget(QtWidgets.QWidget):
         model = node.model
         graph_model = node.graph.model
 
-        common_props = graph_model.get_node_common_properties(node.type_)
+        common_props = graph_model.get_node_common_properties(node.type_) or {}
 
         # sort tabs and properties.
         tab_mapping = defaultdict(list)
@@ -844,6 +855,23 @@ class PropertiesBinWidget(QtWidgets.QWidget):
         item = QtWidgets.QTableWidgetItem(node.id)
         self._prop_list.setItem(0, 0, item)
         self._prop_list.selectRow(0)
+        # ensure the table row is tall enough to display the widget
+        try:
+            prop_widget.adjustSize()
+            h = (
+                prop_widget.sizeHint().height()
+                or prop_widget.minimumSizeHint().height()
+            )
+            # provide a sensible minimum so widgets aren't squashed
+            h = max(h, 48)
+            self._prop_list.setRowHeight(0, h)
+            # make sure header will respect the new size if needed
+            self._prop_list.verticalHeader().setSectionResizeMode(
+                QtWidgets.QHeaderView.Fixed
+            )
+        except Exception:
+            # be defensive: don't let sizing errors break the add flow
+            pass
 
     def remove_node(self, node):
         """

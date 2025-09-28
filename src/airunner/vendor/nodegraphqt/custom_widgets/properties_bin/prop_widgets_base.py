@@ -163,10 +163,12 @@ class PropComboBox(QtWidgets.QComboBox):
         return self.currentText()
 
     def set_value(self, value):
-        if value != self.get_value():
-            idx = self.findText(value, QtCore.Qt.MatchExactly)
-            self.setCurrentIndex(idx)
+        # ensure we pass a string to findText to avoid wrong overload
+        val_str = str(value)
+        if val_str != self.get_value():
+            idx = self.findText(val_str, QtCore.Qt.MatchExactly)
             if idx >= 0:
+                self.setCurrentIndex(idx)
                 self.value_changed.emit(self.get_name(), value)
 
 

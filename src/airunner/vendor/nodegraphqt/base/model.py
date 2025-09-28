@@ -225,11 +225,21 @@ class NodeModel(object):
             int: node property widget type.
         """
         model = self._graph_model
+        # if no graph model yet, return temporary mapping
         if model is None:
             return self._TEMP_property_widget_types.get(name)
-        return model.get_node_common_properties(self.type_)[name][
-            "widget_type"
-        ]
+
+        # get registered common properties for this node type
+        common = model.get_node_common_properties(self.type_)
+        if not common:
+            # fallback to temporary mapping or hidden
+            return self._TEMP_property_widget_types.get(name)
+
+        prop_attrs = common.get(name)
+        if not prop_attrs:
+            return self._TEMP_property_widget_types.get(name)
+
+        return prop_attrs.get("widget_type", NodePropWidgetEnum.HIDDEN.value)
 
     def get_tab_name(self, name):
         """
@@ -240,12 +250,29 @@ class NodeModel(object):
             str: name of the tab for the properties bin.
         """
         model = self._graph_model
+        # if no graph model yet, use temporary attrs
         if model is None:
             attrs = self._TEMP_property_attrs.get(name)
             if attrs:
-                return attrs[name].get("tab")
+                return attrs.get("tab")
             return
-        return model.get_node_common_properties(self.type_)[name]["tab"]
+
+        # try to get common properties from the graph model
+        common = model.get_node_common_properties(self.type_)
+        if not common:
+            attrs = self._TEMP_property_attrs.get(name)
+            if attrs:
+                return attrs.get("tab")
+            return
+
+        prop_attrs = common.get(name)
+        if not prop_attrs:
+            attrs = self._TEMP_property_attrs.get(name)
+            if attrs:
+                return attrs.get("tab")
+            return
+
+        return prop_attrs.get("tab")
 
     def add_port_accept_connection_type(
         self,

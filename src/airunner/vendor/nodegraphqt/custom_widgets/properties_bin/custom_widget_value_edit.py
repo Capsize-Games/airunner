@@ -1,6 +1,6 @@
 import re
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets, QtGui
 
 _NUMB_REGEX = re.compile(
     r"^((?:\-)*\d+)*([\.,])*(\d+(?:[eE](?:[\-\+])*\d+)*)*"
@@ -55,7 +55,7 @@ class _NumberValueMenu(QtWidgets.QMenu):
             self.setActiveAction(self.last_action)
 
     def _add_step_action(self, step):
-        action = QtWidgets.QAction(str(step), self)
+        action = QtGui.QAction(str(step), self)
         action.step = step
         self.addAction(action)
 
@@ -78,7 +78,8 @@ class _NumberValueMenu(QtWidgets.QMenu):
 
 class _NumberValueEdit(QtWidgets.QLineEdit):
 
-    value_changed = QtCore.Signal(object)
+    # emit (name, value) to match other property widgets
+    value_changed = QtCore.Signal(str, object)
 
     def __init__(self, parent=None, data_type=float):
         super(_NumberValueEdit, self).__init__(parent)
@@ -146,13 +147,16 @@ class _NumberValueEdit(QtWidgets.QLineEdit):
     def set_name(self, name):
         self._name = name
 
+    def get_name(self):
+        return getattr(self, "_name", None)
+
     # private
 
     def _reset_previous_x(self):
         self._previous_x = None
 
     def _on_mmb_mouse_move(self):
-        self.value_changed.emit(self.get_value())
+        self.value_changed.emit(self.get_name(), self.get_value())
 
     def _on_editing_finished(self):
         if self._data_type is float:
@@ -163,7 +167,9 @@ class _NumberValueEdit(QtWidgets.QLineEdit):
                     val1 = val1 or "0"
                     val2 = val2 or "0"
                     self.setText(val1 + point + val2)
-        self.value_changed.emit(self.get_value())
+
+        # emit finalized value when editing finishes
+        self.value_changed.emit(self.get_name(), self.get_value())
 
     def _convert_text(self, text):
         """
@@ -198,14 +204,16 @@ class _NumberValueEdit(QtWidgets.QLineEdit):
         """
         self._data_type = data_type
         if data_type is int:
-            regexp = QtCore.QRegExp(r"\d+")
-            validator = QtGui.QRegExpValidator(regexp, self)
+            regexp = QtCore.QRegularExpression(r"\d+")
+            validator = QtGui.QRegularExpressionValidator(regexp, self)
             steps = [1, 10, 100, 1000]
             self._min = None if self._min is None else int(self._min)
             self._max = None if self._max is None else int(self._max)
         elif data_type is float:
-            regexp = QtCore.QRegExp(r"\d+[\.,]\d+(?:[eE](?:[\-\+]|)\d+)*")
-            validator = QtGui.QRegExpValidator(regexp, self)
+            regexp = QtCore.QRegularExpression(
+                r"\d+[\.,]\d+(?:[eE](?:[\-\+]|)\d+)*"
+            )
+            validator = QtGui.QRegularExpressionValidator(regexp, self)
             steps = [0.001, 0.01, 0.1, 1]
             self._min = None if self._min is None else float(self._min)
             self._max = None if self._max is None else float(self._max)
