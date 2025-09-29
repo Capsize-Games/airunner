@@ -176,6 +176,10 @@ class CanvasWidget(BaseWidget):
     def on_new_button_clicked(self):
         self._reset_canvas_document()
 
+    @Slot(bool)
+    def on_grid_button_toggled(self, val: bool):
+        self.api.art.canvas.toggle_grid(val)
+
     @Slot()
     def on_open_art_document_clicked(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -263,7 +267,11 @@ class CanvasWidget(BaseWidget):
         self._update_cursor()
 
     def on_toggle_grid_signal(self, message: Dict):
-        self.ui.grid_button.setChecked(message.get("show_grid", True))
+        val = message.get("show_grid", True)
+        self.ui.grid_button.blockSignals(True)
+        self.ui.grid_button.setChecked(val)
+        self.ui.grid_button.blockSignals(False)
+        self.update_grid_settings(show_grid=val)
 
     def color_button_clicked(self):
         color = QColorDialog.getColor()
