@@ -403,9 +403,12 @@ class CustomScene(
         # Restart timer (150ms window)
         self._persist_timer.start(150)
         # Optionally notify lightweight listeners about in-memory change only
-        if self.settings_key == "drawing_pad_settings":
-            # Do not spam full image_updated if nothing rendered changes; here we allow it
-            self.api.art.canvas.image_updated()
+        if image:
+            # _update_current_settings requires a bytes-like object not PIL.Image
+            self._update_current_settings("image", binary_image)
+            if self.settings_key == "drawing_pad_settings":
+                # Do not spam full image_updated if nothing rendered changes; here we allow it
+                self.api.art.canvas.image_updated()
 
     def _flush_pending_image(self):
         """Persist the most recent pending image binary to settings (debounced)."""
@@ -512,7 +515,7 @@ class CustomScene(
         )
 
         # Emit signal to refresh the layer container to show the new layer
-        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        self.api.art.canvas.show_layers()
 
         # Refresh the canvas display to show the new layer
         self._refresh_layer_display()
@@ -923,9 +926,6 @@ class CustomScene(
             ControlnetSettings.objects.delete(layer_id=layer_id)
             ImageToImageSettings.objects.delete(layer_id=layer_id)
             OutpaintSettings.objects.delete(layer_id=layer_id)
-            BrushSettings.objects.delete(layer_id=layer_id)
-            MetadataSettings.objects.delete(layer_id=layer_id)
-            CanvasLayer.objects.delete(layer_id)
 
     def _apply_layer_orders(self, orders: List[Dict[str, int]]) -> None:
         for entry in orders:
@@ -1045,7 +1045,7 @@ class CustomScene(
             self._apply_layer_orders(orders)
 
         self._refresh_layer_display()
-        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        self.api.art.canvas.show_layers()
         if self.api and hasattr(self.api, "art"):
             self.api.art.canvas.update_image_positions()
 
@@ -1132,9 +1132,6 @@ class CustomScene(
             finally:
                 # Always remove from our tracking dictionary
                 del self._layer_items[layer_id]
-                self.logger.info(
-                    f"Removed layer {layer_id} from canvas display"
-                )
 
     def on_layer_reordered(self, data: Dict):
         """Handle layer reordering by updating z-values."""
@@ -1370,7 +1367,6 @@ class CustomScene(
                     if self.application_settings.resize_on_paste:
                         img = self._resize_image(img)
                     self.current_active_image = img
-                    self.initialize_image(img)
                     self._commit_layer_history_transaction(layer_id, "image")
                     handled = True
                     break
@@ -1751,18 +1747,16 @@ class CustomScene(
 
     def initialize_image(self, image: Image = None, generated: bool = False):
         self.stop_painter()
+        self.current_active_image = image
         self.set_image(image)
 
-        if generated:
-            self.update_drawing_pad_settings(
-                x_pos=self.active_grid_settings.pos_x,
-                y_pos=self.active_grid_settings.pos_y,
-            )
-            x = self.active_grid_settings.pos_x
-            y = self.active_grid_settings.pos_y
-        else:
-            x = self.drawing_pad_settings.x_pos
-            y = self.drawing_pad_settings.y_pos
+        x = self.active_grid_settings.pos_x
+        y = self.active_grid_settings.pos_y
+
+        self.update_drawing_pad_settings(
+            x_pos=x,
+            y_pos=y,
+        )
 
         self.set_item(self.image, x=x, y=y)
         self.set_painter(self.image)
@@ -1773,9 +1767,11 @@ class CustomScene(
             self._refresh_layer_display()
 
         self.update()
+
         for view in self.views():
             view.viewport().update()
             view.update()
+            view.do_draw(force_draw=True)
         self.update_image_position(self.get_canvas_offset())
 
     def stop_painter(self):
@@ -2129,12 +2125,12 @@ class CustomScene(
         if not self.item:
             self.current_active_image = image
             self.initialize_image(image, generated=generated)
-            if self.item:
-                self.original_item_positions[self.item] = QPointF(
-                    root_point.x(), root_point.y()
-                )
-                self.update_image_position(self.get_canvas_offset())
-            self.update()
+            # if self.item:
+            #     self.original_item_positions[self.item] = QPointF(
+            #         root_point.x(), root_point.y()
+            #     )
+            #     self.update_image_position(self.get_canvas_offset())
+            # self.update()
             return
 
         # Existing item: avoid full initialize_image (expensive duplicate work)

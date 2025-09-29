@@ -1,3 +1,4 @@
+from typing import Dict, List, Optional
 from airunner.components.application.api.api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 from PySide6.QtCore import QPoint
@@ -114,6 +115,24 @@ class CanvasAPIService(APIServiceBase):
 
     def zoom_level_changed(self):
         self.emit_signal(SignalCode.CANVAS_ZOOM_LEVEL_CHANGED)
+
+    def layer_deleted(self, layer_id: int):
+        self.emit_signal(
+            SignalCode.LAYER_DELETED,
+            {"layer_id": layer_id},
+        )
+
+    def layer_selection_changed(self, selected_layer_ids: List[int]):
+        self.emit_signal(
+            SignalCode.LAYER_SELECTION_CHANGED,
+            {"selected_layer_ids": selected_layer_ids},
+        )
+
+    def update_grid_info(self, data: Dict):
+        self.emit_signal(
+            SignalCode.CANVAS_UPDATE_GRID_INFO,
+            data,
+        )
 
     def interrupt_image_generation(self):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)

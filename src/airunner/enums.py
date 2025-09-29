@@ -85,6 +85,7 @@ class SignalCode(Enum):
     SCENE_DO_DRAW_SIGNAL = "scene_do_draw_signal"
     CANVAS_CLEAR_LINES_SIGNAL = "canvas_clear_lines_signal"  # No listeners
     CANVAS_UPDATE_CURSOR = "canvas_update_cursor"
+    CANVAS_UPDATE_GRID_INFO = "canvas_update_grid_info"
     CANVAS_ZOOM_LEVEL_CHANGED = "zoom_level_changed"
     CANVAS_CLEAR = "clear_canvas"
     CANVAS_PASTE_IMAGE_SIGNAL = "canvas_paste_image_signal"
@@ -362,6 +363,7 @@ class CanvasToolName(Enum):
     SELECTION = "selection"
     GRID = "grid"
     TEXT = "text"
+    MOVE = "move"
     NONE = "none"
 
 

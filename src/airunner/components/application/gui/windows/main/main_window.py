@@ -178,6 +178,7 @@ class MainWindow(
         ("message-square", "chat_button"),
         ("home", "home_button"),
         ("radio", "visualizer_button"),
+        ("arrow-down-circle", "actionDownload_Model"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0

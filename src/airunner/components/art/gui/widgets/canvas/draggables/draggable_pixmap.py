@@ -103,7 +103,7 @@ class DraggablePixmap(
 
     def mouseMoveEvent(self, event):
         if self.current_tool not in [
-            CanvasToolName.ACTIVE_GRID_AREA,
+            CanvasToolName.MOVE,
         ]:
             return
         super().mouseMoveEvent(event)
@@ -111,7 +111,7 @@ class DraggablePixmap(
 
     def mouseReleaseEvent(self, event):
         if self.current_tool in [
-            CanvasToolName.ACTIVE_GRID_AREA,
+            CanvasToolName.MOVE,
         ]:
             # Pass the current position for saving instead of None values
             current_x = int(self.x())
