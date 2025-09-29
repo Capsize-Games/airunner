@@ -335,6 +335,13 @@ class MainWindow(
                 # Set the first panel to a minimum size, effectively hiding it
                 splitter.setSizes([0, splitter.size().width()])
 
+    def on_splitter_changed_sizes(self):
+        self.ui.chat_button.blockSignals(True)
+        self.ui.chat_button.setChecked(
+            self.ui.main_window_splitter.sizes()[0] > 0
+        )
+        self.ui.chat_button.blockSignals(False)
+
     @Slot()
     def on_actionQuit_triggered(self):
         self.handle_close()
@@ -909,6 +916,10 @@ class MainWindow(
         self.settings_window = None
         self.hide_center_tab_header()
         self._load_plugins()
+
+        self.ui.main_window_splitter.splitterMoved.connect(
+            self.on_splitter_changed_sizes
+        )
 
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
