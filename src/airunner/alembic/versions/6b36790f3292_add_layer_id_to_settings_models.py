@@ -10,16 +10,12 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from airunner.utils.db.column import add_column, drop_column
-from airunner.utils.db.foreign_key import create_foreign_key
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.components.art.data.controlnet_settings import ControlnetSettings
 from airunner.components.art.data.image_to_image_settings import (
     ImageToImageSettings,
 )
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
-from airunner.components.art.data.brush_settings import BrushSettings
-from airunner.components.art.data.metadata_settings import MetadataSettings
 
 
 # revision identifiers, used by Alembic.
@@ -37,8 +33,6 @@ def upgrade() -> None:
         ControlnetSettings,
         ImageToImageSettings,
         OutpaintSettings,
-        BrushSettings,
-        MetadataSettings,
     ]
 
     for model in settings_models:
@@ -68,8 +62,6 @@ def downgrade() -> None:
         ControlnetSettings,
         ImageToImageSettings,
         OutpaintSettings,
-        BrushSettings,
-        MetadataSettings,
     ]
 
     for model in settings_models:

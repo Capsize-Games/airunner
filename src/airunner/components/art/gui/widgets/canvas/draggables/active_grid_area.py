@@ -158,9 +158,6 @@ class ActiveGridArea(DraggablePixmap):
             # Also store item-relative position for release check
             self.mouse_press_pos = event.pos()
             event.accept()
-        else:
-            # Not dragging this item, let base class handle
-            super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         # Only handle drag if we initiated one on this item
@@ -200,9 +197,6 @@ class ActiveGridArea(DraggablePixmap):
 
             # Accept the event to prevent further processing
             event.accept()
-        else:
-            # Not our drag, let base class handle
-            super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if (
@@ -262,6 +256,3 @@ class ActiveGridArea(DraggablePixmap):
 
             # Accept the event
             event.accept()
-        else:
-            # Not our drag, let base class handle
-            super().mouseReleaseEvent(event)

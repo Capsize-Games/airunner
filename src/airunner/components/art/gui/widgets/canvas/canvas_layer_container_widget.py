@@ -336,8 +336,6 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             ControlnetSettings.objects.delete_by(layer_id=layer_id)
             ImageToImageSettings.objects.delete_by(layer_id=layer_id)
             OutpaintSettings.objects.delete_by(layer_id=layer_id)
-            BrushSettings.objects.delete_by(layer_id=layer_id)
-            MetadataSettings.objects.delete_by(layer_id=layer_id)
 
     def on_layer_selected(self, data: dict):
         layer_id = data.get("layer_id")

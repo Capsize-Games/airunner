@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String
 
 from airunner.components.data.models.base import BaseModel
 from airunner.settings import (
@@ -11,11 +10,6 @@ from airunner.settings import (
 class BrushSettings(BaseModel):
     __tablename__ = "brush_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    layer_id = Column(
-        Integer,
-        ForeignKey("canvas_layer.id", ondelete="CASCADE"),
-        nullable=True,
-    )
     size = Column(Integer, default=75)
     primary_color = Column(
         String, default=AIRUNNER_DEFAULT_BRUSH_PRIMARY_COLOR

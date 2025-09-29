@@ -52,7 +52,7 @@ class LayerImageItem(DraggablePixmap):
 
     def mousePressEvent(self, event):
         if self.current_tool not in [
-            CanvasToolName.ACTIVE_GRID_AREA,
+            CanvasToolName.MOVE,
         ]:
             super().mousePressEvent(event)
             return
@@ -91,7 +91,7 @@ class LayerImageItem(DraggablePixmap):
 
     def mouseMoveEvent(self, event):
         if self.current_tool not in [
-            CanvasToolName.ACTIVE_GRID_AREA,
+            CanvasToolName.MOVE,
         ]:
             super().mouseMoveEvent(event)
             return
@@ -139,7 +139,7 @@ class LayerImageItem(DraggablePixmap):
 
     def mouseReleaseEvent(self, event):
         if self.current_tool not in [
-            CanvasToolName.ACTIVE_GRID_AREA,
+            CanvasToolName.MOVE,
         ]:
             super().mouseReleaseEvent(event)
             return
