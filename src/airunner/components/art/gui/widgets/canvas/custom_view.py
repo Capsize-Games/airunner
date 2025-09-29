@@ -307,7 +307,7 @@ class CustomGraphicsView(
                 self.set_canvas_color(self.scene, self._canvas_color)
 
             if self.grid_settings.show_grid:
-                self.do_draw()
+                self.do_draw(force_draw=True)
             else:
                 self.clear_lines()
 
