@@ -224,29 +224,8 @@ class CustomGraphicsView(
 
         return int(round(snapped_gx)), int(round(snapped_gy))
 
-    def on_recenter_grid_signal(self):
-        self.canvas_offset = QPointF(0, 0)
-
-        """Center the grid and all layer images in the viewport."""
-        if not self.scene:
-            return
-
-        # Update active grid area absolute position in settings
-        pos_x, pos_y = self.get_recentered_position(
-            self.application_settings.working_width,
-            self.application_settings.working_height,
-        )
-        self.update_active_grid_settings(
-            pos_x=pos_x,
-            pos_y=pos_y,
-        )
-
+    def original_item_positions(self) -> Dict[str, QPointF]:
         layers = CanvasLayer.objects.order_by("order").all()
-
-        # Clear the scene's position cache completely
-        # if hasattr(self.scene, "original_item_positions"):
-        #     self.scene.original_item_positions.clear()
-
         original_item_positions = {}
         for index, layer in enumerate(layers):
             results = DrawingPadSettings.objects.filter_by(layer_id=layer.id)
@@ -270,6 +249,35 @@ class CustomGraphicsView(
             )
             self.scene._layer_items[layer.id].setPos(pos_x, pos_y)
             original_item_positions[scene_item] = QPointF(pos_x, pos_y)
+        return original_item_positions
+
+    def on_recenter_grid_signal(self):
+        self.canvas_offset = QPointF(0, 0)
+
+        """Center the grid and all layer images in the viewport."""
+        if not self.scene:
+            return
+
+        # Update active grid area absolute position in settings
+        pos_x, pos_y = self.get_recentered_position(
+            self.application_settings.working_width,
+            self.application_settings.working_height,
+        )
+        self.update_active_grid_settings(
+            pos_x=pos_x,
+            pos_y=pos_y,
+        )
+
+        # Clear the scene's position cache completely
+        # if hasattr(self.scene, "original_item_positions"):
+        #     self.scene.original_item_positions.clear()
+
+        self.api.art.canvas.update_grid_info(
+            {
+                "offset_x": self.canvas_offset_x,
+                "offset_y": self.canvas_offset_y,
+            }
+        )
 
         # Force complete layer refresh from database
         if hasattr(self.scene, "_refresh_layer_display"):
@@ -278,7 +286,7 @@ class CustomGraphicsView(
         # Update display positions
         self.update_active_grid_area_position()
 
-        self.updateImagePositions(original_item_positions)
+        self.updateImagePositions(self.original_item_positions())
 
         # Force complete redraw
         self.do_draw(force_draw=True)
@@ -513,6 +521,12 @@ class CustomGraphicsView(
             delta = event.pos() - self.last_pos
             self.canvas_offset -= delta
             self.last_pos = event.pos()
+            self.api.art.canvas.update_grid_info(
+                {
+                    "offset_x": self.canvas_offset_x,
+                    "offset_y": self.canvas_offset_y,
+                }
+            )
             if not self._pan_update_timer.isActive():
                 self._pan_update_timer.start(1)
             else:
@@ -542,7 +556,7 @@ class CustomGraphicsView(
 
             # Show the active grid area using loaded offset
             self.show_active_grid_area()
-            self.scene.initialize_image()
+            # self.scene.initialize_image()
             self.updateImagePositions()
             # self._restore_text_items_from_db()  # Restore text items on load
             self._initialized = True
@@ -567,18 +581,6 @@ class CustomGraphicsView(
 
     def toggle_drag_mode(self):
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
-
-    def handle_pan_canvas(self, event: QMouseEvent):
-        if self._middle_mouse_pressed:
-            delta = event.pos() - self.last_pos
-
-            self.canvas_offset -= delta
-            self.last_pos = event.pos()
-
-            # Update display positions based on the NEW offset
-            self.update_active_grid_area_position()
-            self.updateImagePositions()
-            self.draw_grid()
 
     def update_active_grid_area_position(self):
         if self.active_grid_area:
@@ -626,11 +628,11 @@ class CustomGraphicsView(
         """Handler for when images are updated or added to the canvas.
         Ensures that newly generated images respect the current pan position.
         """
-        # Update image positions based on current canvas offset
-        self.updateImagePositions()
+        # Force complete layer refresh from database
+        if hasattr(self.scene, "_refresh_layer_display"):
+            self.scene._refresh_layer_display()
 
-        # Ensure the scene updates to show the new image correctly
-        self.update_scene()
+        self.do_draw(force_draw=True)
 
     def get_cached_cursor(self, tool, size):
         key = (tool, size)
@@ -662,7 +664,10 @@ class CustomGraphicsView(
                 cursor = self.get_cached_cursor(current_tool, size)
             elif current_tool is CanvasToolName.TEXT:
                 cursor = Qt.CursorShape.IBeamCursor
-            elif current_tool is CanvasToolName.ACTIVE_GRID_AREA:
+            elif current_tool in (
+                CanvasToolName.ACTIVE_GRID_AREA,
+                CanvasToolName.MOVE,
+            ):
                 if (
                     event
                     and hasattr(event, "buttons")

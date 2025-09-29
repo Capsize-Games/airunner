@@ -864,6 +864,12 @@
      <addaction name="actionSafety_Checker"/>
      <addaction name="actionToggle_Stable_Diffusion"/>
      <addaction name="actionToggle_Controlnet"/>
+     <addaction name="actionDownload_Model"/>
+    </widget>
+    <widget class="QMenu" name="menu">
+     <property name="title">
+      <string/>
+     </property>
     </widget>
     <addaction name="menuStable_Diffusion"/>
     <addaction name="separator"/>
@@ -875,7 +881,6 @@
     <addaction name="separator"/>
     <addaction name="actionRun_setup_wizard_2"/>
     <addaction name="separator"/>
-    <addaction name="actionDownload_Model"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -1285,6 +1290,10 @@
    </property>
   </action>
   <action name="actionDownload_Model">
+   <property name="icon">
+    <iconset resource="../../../../../../gui/resources/feather.qrc">
+     <normaloff>:/light/icons/feather/light/arrow-down-circle.svg</normaloff>:/light/icons/feather/light/arrow-down-circle.svg</iconset>
+   </property>
    <property name="text">
     <string>Download Model</string>
    </property>
