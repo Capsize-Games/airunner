@@ -165,6 +165,14 @@ class CanvasWidget(BaseWidget):
         self.api.art.canvas.recenter_grid()
 
     @Slot()
+    def on_undo_button_clicked(self):
+        self.api.art.canvas.undo()
+
+    @Slot()
+    def on_redo_button_clicked(self):
+        self.api.art.canvas.redo()
+
+    @Slot()
     def on_new_button_clicked(self):
         self._reset_canvas_document()
 
