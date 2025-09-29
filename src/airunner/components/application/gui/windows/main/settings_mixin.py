@@ -541,11 +541,11 @@ class SettingsMixin:
 
     @property
     def brush_settings(self) -> BrushSettings:
-        return self._get_layer_specific_settings(BrushSettings)
+        return self._get_or_cache_settings(BrushSettings)
 
     @property
     def metadata_settings(self) -> MetadataSettings:
-        return self._get_layer_specific_settings(MetadataSettings)
+        return self._get_or_cache_settings(MetadataSettings)
 
     @property
     def grid_settings(self) -> GridSettings:

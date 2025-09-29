@@ -59,6 +59,8 @@ class CanvasWidget(BaseWidget):
         ("type", "text_button"),
         ("folder", "open_art_document"),
         ("save", "save_art_document"),
+        ("link-2", "snap_to_grid_button"),
+        ("move", "move_button"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -76,6 +78,8 @@ class CanvasWidget(BaseWidget):
             SignalCode.TOGGLE_TOOL: self.on_toggle_tool_signal,
             SignalCode.TOGGLE_GRID: self.on_toggle_grid_signal,
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
+            SignalCode.CANVAS_UPDATE_GRID_INFO: self.update_grid_info,
+            SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.update_grid_info,
         }
         self._initialized: bool = False
         self._splitters = ["canvas_splitter"]
@@ -110,9 +114,25 @@ class CanvasWidget(BaseWidget):
         self.ui.grid_button.setChecked(show_grid)
         self.ui.grid_button.blockSignals(False)
 
+        self.ui.snap_to_grid_button.blockSignals(True)
+        self.ui.snap_to_grid_button.setChecked(self.grid_settings.snap_to_grid)
+        self.ui.snap_to_grid_button.blockSignals(False)
+
+        self.update_grid_info(
+            {
+                "offset_x": 0,
+                "offset_y": 0,
+            }
+        )
+
         set_widget_state(
             self.ui.grid_button,
-            current_tool is CanvasToolName.ACTIVE_GRID_AREA,
+            current_tool
+            in (CanvasToolName.ACTIVE_GRID_AREA, CanvasToolName.MOVE),
+        )
+        set_widget_state(
+            self.ui.move_button,
+            current_tool is CanvasToolName.MOVE,
         )
         set_widget_state(
             self.ui.brush_button, current_tool is CanvasToolName.BRUSH
@@ -126,6 +146,33 @@ class CanvasWidget(BaseWidget):
         set_widget_state(self.ui.grid_button, show_grid is True)
 
         self.set_button_color()
+
+    _offset_x = 0
+    _offset_y = 0
+
+    @property
+    def offset_x(self):
+        return self._offset_x
+
+    @offset_x.setter
+    def offset_x(self, value):
+        self._offset_x = value
+
+    @property
+    def offset_y(self):
+        return self._offset_y
+
+    @offset_y.setter
+    def offset_y(self, value):
+        self._offset_y = value
+
+    def update_grid_info(self, data: Dict):
+        self.offset_x = data.get("offset_x", self.offset_x)
+        self.offset_y = data.get("offset_y", self.offset_y)
+        zoom_level = round(self.grid_settings.zoom_level * 100, 2)
+        self.ui.grid_info.setText(
+            f"X: {self.offset_x}, Y: {self.offset_y}, Zoom: {zoom_level}%"
+        )
 
     @property
     def current_tool(self):
@@ -175,6 +222,22 @@ class CanvasWidget(BaseWidget):
     @Slot()
     def on_new_button_clicked(self):
         self._reset_canvas_document()
+
+    @Slot(bool)
+    def on_grid_button_toggled(self, val: bool):
+        self.api.art.canvas.toggle_grid(val)
+
+    @Slot(bool)
+    def on_snap_to_grid_button_toggled(self, val: bool):
+        self.update_grid_settings(snap_to_grid=val)
+
+    @Slot()
+    def on_import_button_clicked(self):
+        self.api.art.canvas.import_image()
+
+    @Slot()
+    def on_export_button_clicked(self):
+        self.api.art.canvas.export_image()
 
     @Slot()
     def on_open_art_document_clicked(self):
@@ -251,6 +314,10 @@ class CanvasWidget(BaseWidget):
     def on_active_grid_area_button_toggled(self, val: bool):
         self.api.art.canvas.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, val)
 
+    @Slot(bool)
+    def on_move_button_toggled(self, val: bool):
+        self.api.art.canvas.toggle_tool(CanvasToolName.MOVE, val)
+
     def on_toggle_tool_signal(self, message: Dict):
         tool = message.get("tool", None)
         active = message.get("active", False)
@@ -263,7 +330,11 @@ class CanvasWidget(BaseWidget):
         self._update_cursor()
 
     def on_toggle_grid_signal(self, message: Dict):
-        self.ui.grid_button.setChecked(message.get("show_grid", True))
+        val = message.get("show_grid", True)
+        self.ui.grid_button.blockSignals(True)
+        self.ui.grid_button.setChecked(val)
+        self.ui.grid_button.blockSignals(False)
+        self.update_grid_settings(show_grid=val)
 
     def color_button_clicked(self):
         color = QColorDialog.getColor()
@@ -283,9 +354,11 @@ class CanvasWidget(BaseWidget):
         self.ui.eraser_button.blockSignals(True)
         self.ui.text_button.blockSignals(True)
         self.ui.grid_button.blockSignals(True)
+        self.ui.move_button.blockSignals(True)
         self.ui.active_grid_area_button.setChecked(
             tool is CanvasToolName.ACTIVE_GRID_AREA and active
         )
+        self.ui.move_button.setChecked(tool is CanvasToolName.MOVE and active)
         self.ui.brush_button.setChecked(
             tool is CanvasToolName.BRUSH and active
         )
@@ -299,6 +372,7 @@ class CanvasWidget(BaseWidget):
         self.ui.eraser_button.blockSignals(False)
         self.ui.text_button.blockSignals(False)
         self.ui.grid_button.blockSignals(False)
+        self.ui.move_button.blockSignals(False)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -361,7 +435,10 @@ class CanvasWidget(BaseWidget):
                     Qt.GlobalColor.transparent,
                     self.brush_settings.size,
                 )
-            elif current_tool is CanvasToolName.ACTIVE_GRID_AREA:
+            elif current_tool in (
+                CanvasToolName.ACTIVE_GRID_AREA,
+                CanvasToolName.MOVE,
+            ):
                 # For enterEvent (event is None) or events without left button pressed
                 if (
                     event
@@ -394,36 +471,6 @@ class CanvasWidget(BaseWidget):
             self.ui.canvas_container.viewport().size()
         )
 
-    def _reset_canvas_document(self) -> None:
-        self._clear_canvas_state()
-        if not self._delete_all_layers():
-            return
-
-        self.api.art.canvas.begin_layer_operation("create")
-        new_layer = None
-        try:
-            new_layer = self._create_default_canvas_layer()
-            if new_layer is None:
-                raise RuntimeError("Failed to create default canvas layer")
-            self.api.art.canvas.commit_layer_operation(
-                "create", [new_layer.id]
-            )
-        except Exception as exc:  # pragma: no cover - protective guard
-            self.api.art.canvas.cancel_layer_operation("create")
-            if hasattr(self, "logger"):
-                self.logger.exception(exc)
-            return
-
-        self.api.art.canvas.show_layers()
-
-        if new_layer is not None:
-            self.emit_signal(
-                SignalCode.LAYER_SELECTION_CHANGED,
-                {"selected_layer_ids": [new_layer.id]},
-            )
-
-        self.api.art.canvas.update_image_positions()
-
     def _clear_canvas_state(self) -> None:
         """Clear the scene and reset widget-level caches."""
 
@@ -446,19 +493,13 @@ class CanvasWidget(BaseWidget):
         self.api.art.canvas.begin_layer_operation("delete", layer_ids)
         try:
             for layer_id in layer_ids:
-                self.emit_signal(
-                    SignalCode.LAYER_DELETED,
-                    {"layer_id": layer_id},
-                )
+                self.api.art.canvas.layer_deleted(layer_id)
                 self._delete_layer_records(layer_id)
             self.api.art.canvas.commit_layer_operation("delete", layer_ids)
         except Exception as exc:  # pragma: no cover - protective guard
             self.api.art.canvas.cancel_layer_operation("delete")
             if hasattr(self, "logger"):
                 self.logger.exception(exc)
-            return False
-
-        return True
 
     def _serialize_canvas_document(self) -> Dict[str, Any]:
         """Create a serializable snapshot of all layers on the canvas."""
@@ -517,6 +558,40 @@ class CanvasWidget(BaseWidget):
             "mask": self._encode_binary(settings.mask),
         }
 
+    def _clear_canvas(self):
+        self._clear_canvas_state()
+        self._delete_all_layers()
+        DrawingPadSettings.objects.delete_all()
+        ControlnetSettings.objects.delete_all()
+        ImageToImageSettings.objects.delete_all()
+        OutpaintSettings.objects.delete_all()
+        self.api.art.canvas.clear_history()
+
+    def _reset_canvas_document(self) -> None:
+        self._clear_canvas()
+
+        self.api.art.canvas.begin_layer_operation("create")
+        new_layer = None
+        try:
+            new_layer = self._create_default_canvas_layer()
+            if new_layer is None:
+                raise RuntimeError("Failed to create default canvas layer")
+            self.api.art.canvas.commit_layer_operation(
+                "create", [new_layer.id]
+            )
+        except Exception as exc:  # pragma: no cover - protective guard
+            self.api.art.canvas.cancel_layer_operation("create")
+            if hasattr(self, "logger"):
+                self.logger.exception(exc)
+            return
+
+        self.api.art.canvas.show_layers()
+
+        if new_layer is not None:
+            self.api.art.canvas.layer_selection_changed([new_layer.id])
+
+        self.api.art.canvas.update_image_positions()
+
     def _load_canvas_document(self, document: Dict[str, Any]) -> None:
         """Restore layers from a serialized document."""
 
@@ -529,9 +604,7 @@ class CanvasWidget(BaseWidget):
 
         layers_data = document.get("layers", []) or []
 
-        self._clear_canvas_state()
-        if not self._delete_all_layers():
-            raise RuntimeError("Unable to clear existing layers.")
+        self._clear_canvas()
 
         created_layer_ids: List[int] = []
 
@@ -575,10 +648,7 @@ class CanvasWidget(BaseWidget):
         self.api.art.canvas.show_layers()
 
         if created_layer_ids:
-            self.emit_signal(
-                SignalCode.LAYER_SELECTION_CHANGED,
-                {"selected_layer_ids": [created_layer_ids[0]]},
-            )
+            self.api.art.canvas.layer_selection_changed([created_layer_ids[0]])
 
         self.api.art.canvas.update_image_positions()
 
@@ -662,8 +732,6 @@ class CanvasWidget(BaseWidget):
         ControlnetSettings.objects.delete_by(layer_id=layer_id)
         ImageToImageSettings.objects.delete_by(layer_id=layer_id)
         OutpaintSettings.objects.delete_by(layer_id=layer_id)
-        BrushSettings.objects.delete_by(layer_id=layer_id)
-        MetadataSettings.objects.delete_by(layer_id=layer_id)
 
     def _create_default_canvas_layer(self) -> Optional[CanvasLayer]:
         layer = CanvasLayer.objects.create(

@@ -7,11 +7,6 @@ from airunner.components.data.models.base import BaseModel
 class MetadataSettings(BaseModel):
     __tablename__ = "metadata_settings"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    layer_id = Column(
-        Integer,
-        ForeignKey("canvas_layer.id", ondelete="CASCADE"),
-        nullable=True,
-    )
     image_export_metadata_prompt = Column(Boolean, default=True)
     image_export_metadata_negative_prompt = Column(Boolean, default=True)
     image_export_metadata_scale = Column(Boolean, default=True)
