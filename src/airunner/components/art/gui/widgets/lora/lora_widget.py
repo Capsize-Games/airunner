@@ -29,15 +29,15 @@ class LoraWidget(BaseWidget):
         trigger_word = self.current_lora.trigger_word
 
         # Block signals for batch updates
-        self.ui.enabledCheckbox.blockSignals(True)
+        self.ui.enabled_checkbox.blockSignals(True)
         self.ui.trigger_word_edit.blockSignals(True)
 
-        self.ui.enabledCheckbox.setText(name)
-        self.ui.enabledCheckbox.setChecked(enabled)
+        self.ui.enabled_checkbox.setText(name)
+        self.ui.enabled_checkbox.setChecked(enabled)
         self.ui.trigger_word_edit.setText(trigger_word)
 
         # Unblock signals after batch updates
-        self.ui.enabledCheckbox.blockSignals(False)
+        self.ui.enabled_checkbox.blockSignals(False)
         self.ui.trigger_word_edit.blockSignals(False)
 
         # Defer the creation of trigger word widgets
@@ -46,21 +46,21 @@ class LoraWidget(BaseWidget):
         self.ui.scale_slider.setProperty("table_id", self.current_lora.id)
 
     def disable_lora_widget(self):
-        self.ui.enabledCheckbox.setEnabled(False)
+        self.ui.enabled_checkbox.setEnabled(False)
         self.ui.delete_button.setEnabled(False)
         self.ui.scale_slider.setEnabled(False)
 
     def enable_lora_widget(self):
-        self.ui.enabledCheckbox.setEnabled(True)
+        self.ui.enabled_checkbox.setEnabled(True)
         self.ui.delete_button.setEnabled(True)
         self.ui.scale_slider.setEnabled(True)
 
     @Slot(bool)
     def on_enabled_checkbox_toggled(self, val):
         self.current_lora.enabled = val
-        self.ui.enabledCheckbox.blockSignals(True)
-        self.ui.enabledCheckbox.setChecked(val)
-        self.ui.enabledCheckbox.blockSignals(False)
+        self.ui.enabled_checkbox.blockSignals(True)
+        self.ui.enabled_checkbox.setChecked(val)
+        self.ui.enabled_checkbox.blockSignals(False)
         self.update_lora(self.current_lora)
         self.api.art.lora.status_changed()
 
