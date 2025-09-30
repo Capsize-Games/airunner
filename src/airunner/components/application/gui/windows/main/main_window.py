@@ -337,6 +337,9 @@ class MainWindow(
                 splitter.setSizes([0, splitter.size().width()])
 
     def on_splitter_changed_sizes(self):
+        self.set_chat_button_checked()
+
+    def set_chat_button_checked(self):
         self.ui.chat_button.blockSignals(True)
         self.ui.chat_button.setChecked(
             self.ui.main_window_splitter.sizes()[0] > 0
@@ -921,6 +924,7 @@ class MainWindow(
         self.ui.main_window_splitter.splitterMoved.connect(
             self.on_splitter_changed_sizes
         )
+        self.set_chat_button_checked()
 
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
