@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>542</width>
-    <height>73</height>
+    <height>83</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,20 +26,41 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <property name="horizontalSpacing">
+   <property name="spacing">
     <number>10</number>
    </property>
-   <property name="verticalSpacing">
-    <number>0</number>
-   </property>
-   <item row="0" column="0">
-    <widget class="QCheckBox" name="enabledCheckbox">
+   <item row="3" column="0" colspan="2">
+    <layout class="QVBoxLayout" name="trigger_word_container">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+    </layout>
+   </item>
+   <item row="1" column="0" colspan="2">
+    <widget class="QCheckBox" name="enabled_checkbox">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
      <property name="text">
       <string>enabledCheckbox</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item row="2" column="1">
+    <widget class="QPushButton" name="delete_button">
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../../../../gui/resources/feather.qrc">
+       <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
     <widget class="QLineEdit" name="trigger_word_edit">
      <property name="font">
       <font>
@@ -54,36 +75,25 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
-    <widget class="QPushButton" name="delete_button">
-     <property name="text">
-      <string/>
+   <item row="0" column="0" colspan="2">
+    <widget class="Line" name="line">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
      </property>
-     <property name="icon">
-      <iconset theme="user-trash"/>
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../../../../../gui/resources/feather.qrc"/>
+ </resources>
  <connections>
-  <connection>
-   <sender>delete_button</sender>
-   <signal>clicked()</signal>
-   <receiver>embedding</receiver>
-   <slot>action_clicked_button_deleted()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>530</x>
-     <y>46</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>446</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>trigger_word_edit</sender>
    <signal>textChanged(QString)</signal>
@@ -97,22 +107,6 @@
     <hint type="destinationlabel">
      <x>215</x>
      <y>14</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enabledCheckbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>embedding</receiver>
-   <slot>action_toggled_embedding(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>67</x>
-     <y>18</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>86</x>
-     <y>0</y>
     </hint>
    </hints>
   </connection>

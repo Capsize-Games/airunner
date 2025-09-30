@@ -1,4 +1,5 @@
 from PySide6.QtCore import QTimer, Slot
+from PySide6.QtWidgets import QMessageBox
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.data.lora import Lora
@@ -55,7 +56,7 @@ class LoraWidget(BaseWidget):
         self.ui.scale_slider.setEnabled(True)
 
     @Slot(bool)
-    def action_toggled_lora_enabled(self, val):
+    def on_enabled_checkbox_toggled(self, val):
         self.current_lora.enabled = val
         self.ui.enabledCheckbox.blockSignals(True)
         self.ui.enabledCheckbox.setChecked(val)
@@ -69,8 +70,21 @@ class LoraWidget(BaseWidget):
         self.update_lora(self.current_lora)
 
     @Slot()
-    def action_clicked_button_deleted(self):
-        self.api.art.lora.delete(self)
+    def on_delete_button_clicked(self):
+        """Ask user to confirm deletion before calling the API.
+
+        Only proceed with deletion when the user clicks Yes.
+        """
+        name = getattr(self.current_lora, "name", "this lora")
+        reply = QMessageBox.question(
+            self,
+            "Delete Lora",
+            f"Are you sure you want to delete '{name}'?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply == QMessageBox.Yes:
+            self.api.art.lora.delete(self)
 
     def create_trigger_word_widgets(self, lora, defer=False):
         if defer:
@@ -82,15 +96,15 @@ class LoraWidget(BaseWidget):
             self._create_trigger_word_widgets(lora)
 
     def _create_trigger_word_widgets(self, lora):
-        for i in reversed(range(self.ui.lora_container.layout().count())):
-            widget = self.ui.lora_container.layout().itemAt(i).widget()
+        for i in reversed(range(self.ui.trigger_word_container.count())):
+            widget = self.ui.trigger_word_container.itemAt(i).widget()
             if isinstance(widget, LoraTriggerWordWidget):
                 widget.deleteLater()
         for word in lora.trigger_word.split(","):
             if word.strip() == "":
                 continue
             widget = LoraTriggerWordWidget(trigger_word=word)
-            self.ui.lora_container.layout().addWidget(widget)
+            self.ui.trigger_word_container.addWidget(widget)
 
     def action_changed_trigger_words(self, val):
         self.current_lora.trigger_word = val

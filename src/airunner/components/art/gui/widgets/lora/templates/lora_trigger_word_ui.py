@@ -22,9 +22,11 @@ class Ui_lora_trigger_word(object):
     def setupUi(self, lora_trigger_word):
         if not lora_trigger_word.objectName():
             lora_trigger_word.setObjectName(u"lora_trigger_word")
-        lora_trigger_word.resize(345, 43)
+        lora_trigger_word.resize(345, 44)
         self.horizontalLayout = QHBoxLayout(lora_trigger_word)
+        self.horizontalLayout.setSpacing(5)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.trigger_word = QLabel(lora_trigger_word)
         self.trigger_word.setObjectName(u"trigger_word")
 
@@ -33,13 +35,7 @@ class Ui_lora_trigger_word(object):
         self.button_to_prompt = QPushButton(lora_trigger_word)
         self.button_to_prompt.setObjectName(u"button_to_prompt")
         self.button_to_prompt.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon = QIcon()
-        iconThemeName = u"edit-paste"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon = QIcon.fromTheme(iconThemeName)
-        else:
-            icon.addFile(u".", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
+        icon = QIcon(QIcon.fromTheme(u"edit-paste"))
         self.button_to_prompt.setIcon(icon)
 
         self.horizontalLayout.addWidget(self.button_to_prompt)

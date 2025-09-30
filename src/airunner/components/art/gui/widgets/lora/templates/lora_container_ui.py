@@ -48,7 +48,7 @@ class Ui_lora_container(object):
         self.lora_scroll_area.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 563, 652))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 563, 674))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setHorizontalSpacing(0)
@@ -61,7 +61,7 @@ class Ui_lora_container(object):
         self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setSpacing(10)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(0, 0, 10, 10)
+        self.verticalLayout.setContentsMargins(0, 0, 10, 0)
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.horizontalLayout_2.setContentsMargins(-1, -1, 0, -1)
@@ -139,13 +139,6 @@ class Ui_lora_container(object):
 
 
         self.verticalLayout.addLayout(self.horizontalLayout)
-
-        self.line_2 = QFrame(lora_container)
-        self.line_2.setObjectName(u"line_2")
-        self.line_2.setFrameShape(QFrame.Shape.HLine)
-        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.verticalLayout.addWidget(self.line_2)
 
 
         self.gridLayout.addLayout(self.verticalLayout, 2, 0, 1, 1)
