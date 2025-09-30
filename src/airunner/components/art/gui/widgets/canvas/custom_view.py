@@ -602,6 +602,16 @@ class CustomGraphicsView(
             self.show_active_grid_area()
             # self.scene.initialize_image()
             self.updateImagePositions()
+            # Run the deferred resize handling now that the view is visible so
+            # that items maintain their on-screen positions when the view is
+            # first shown.
+            try:
+                self._recent_event_size = self.viewport().size()
+                self._handle_deferred_resize()
+            except Exception:
+                self.logger.exception(
+                    "Error running deferred resize on showEvent"
+                )
             # self._restore_text_items_from_db()  # Restore text items on load
             self._initialized = True
 
