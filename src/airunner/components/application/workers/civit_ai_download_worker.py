@@ -12,7 +12,9 @@ class CivitAIDownloadWorker(MediatorMixin, QObject):
     Worker class for downloading files from CivitAI with progress tracking and cancellation support.
     """
 
-    progress = Signal(int, int)  # current, total
+    # Use object-typed signals for progress so very large byte counts do
+    # not raise OverflowError when converted to C integers by PySide.
+    progress = Signal(object, object)  # current, total
     finished = Signal()
     failed = Signal(Exception)
 
