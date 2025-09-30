@@ -17,7 +17,6 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import (
     Ui_canvas,
 )
-from airunner.utils.application import set_widget_state
 from airunner.utils.widgets import load_splitter_settings
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.drawingpad_settings import (
@@ -32,6 +31,9 @@ from airunner.components.art.data.image_to_image_settings import (
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
+from airunner.utils.widgets.save_splitter_settings import (
+    save_splitter_settings,
+)
 
 
 class CanvasWidget(BaseWidget):
@@ -61,6 +63,8 @@ class CanvasWidget(BaseWidget):
         ("save", "save_art_document"),
         ("link-2", "snap_to_grid_button"),
         ("move", "move_button"),
+        ("message-square", "prompt_editor_button"),
+        ("tool", "art_tools_button"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -81,20 +85,21 @@ class CanvasWidget(BaseWidget):
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
             SignalCode.CANVAS_UPDATE_GRID_INFO: self.update_grid_info,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.update_grid_info,
+            SignalCode.SAVE_STATE: self.save_state,
         }
         self._initialized: bool = False
-        self._splitters = ["canvas_splitter"]
+        self._splitters = ["splitter"]
         self._default_splitter_settings_applied = False
         super().__init__(*args, **kwargs)
 
-        # Configure default splitter sizes for canvas_splitter
+        # Configure default splitter sizes for splitter
         # Assuming the main canvas area is the second panel (index 1)
         default_canvas_splitter_config = {
-            "canvas_splitter": {"index_to_maximize": 1, "min_other_size": 50}
+            "splitter": {"index_to_maximize": 1, "min_other_size": 50}
         }
         load_splitter_settings(
             self.ui,
-            self._splitters,  # self._splitters is ["canvas_splitter"]
+            self._splitters,  # self._splitters is ["splitter"]
             default_maximize_config=default_canvas_splitter_config,
         )
 
@@ -112,12 +117,13 @@ class CanvasWidget(BaseWidget):
         self._active_grid_settings = {}
 
         self.ui.grid_button.blockSignals(True)
-        self.ui.grid_button.setChecked(show_grid)
-        self.ui.grid_button.blockSignals(False)
-
         self.ui.snap_to_grid_button.blockSignals(True)
+        self.ui.grid_button.setChecked(show_grid)
         self.ui.snap_to_grid_button.setChecked(self.grid_settings.snap_to_grid)
+        self.ui.grid_button.blockSignals(False)
         self.ui.snap_to_grid_button.blockSignals(False)
+
+        self.ui.splitter.splitterMoved.connect(self.on_splitter_changed_sizes)
 
         self.update_grid_info(
             {
@@ -180,6 +186,30 @@ class CanvasWidget(BaseWidget):
         settings.pivot_point_y = value.y()
         self.update_application_settings(pivot_point_x=value.x())
         self.update_application_settings(pivot_point_y=value.y())
+
+    @Slot(bool)
+    def on_prompt_editor_button_clicked(self, val: bool):
+        self._toggle_splitter_section(val, 0, self.ui.splitter)
+
+    @Slot(bool)
+    def on_art_tools_button_clicked(self, val: bool):
+        self._toggle_splitter_section(val, 2, self.ui.splitter, 300)
+
+    def on_splitter_changed_sizes(self):
+        self.set_prompt_editor_button_checked()
+        self.set_art_tools_button_checked()
+
+    def set_prompt_editor_button_checked(self):
+        self.ui.prompt_editor_button.blockSignals(True)
+        self.ui.prompt_editor_button.setChecked(
+            self.ui.splitter.sizes()[0] > 0
+        )
+        self.ui.prompt_editor_button.blockSignals(False)
+
+    def set_art_tools_button_checked(self):
+        self.ui.art_tools_button.blockSignals(True)
+        self.ui.art_tools_button.setChecked(self.ui.splitter.sizes()[2] > 0)
+        self.ui.art_tools_button.blockSignals(False)
 
     @Slot()
     def on_brush_color_button_clicked(self):
@@ -311,6 +341,9 @@ class CanvasWidget(BaseWidget):
         self._update_action_buttons(tool, active)
         self._update_cursor()
 
+    def save_state(self):
+        save_splitter_settings(self.ui, ["splitter"])
+
     def on_toggle_grid_signal(self, message: Dict):
         val = message.get("show_grid", True)
         self.ui.grid_button.blockSignals(True)
@@ -369,6 +402,9 @@ class CanvasWidget(BaseWidget):
             self._apply_default_splitter_settings()
             self._default_splitter_settings_applied = True
 
+        self.set_prompt_editor_button_checked()
+        self.set_art_tools_button_checked()
+
         if not self._initialized:
             self._initialized = True
             self._update_cursor()
@@ -384,7 +420,7 @@ class CanvasWidget(BaseWidget):
         if hasattr(self, "ui") and self.ui is not None:
             QApplication.processEvents()  # Ensure pending layout events are processed
             default_canvas_splitter_config = {
-                "canvas_splitter": {
+                "splitter": {
                     "index_to_maximize": 1,
                     "min_other_size": 50,
                 }
@@ -397,7 +433,7 @@ class CanvasWidget(BaseWidget):
         else:
             # This case should ideally not happen if __init__ completed successfully.
             # Consider logging if a logger is available and configured for this class.
-            print(
+            self.logger.error(
                 f"Error in CanvasWidget: UI not available when attempting to apply default splitter settings."
             )
 
