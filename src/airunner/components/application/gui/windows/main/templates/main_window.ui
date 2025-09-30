@@ -399,6 +399,44 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="knowledgebase_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/book.svg</normaloff>:/light/icons/feather/light/book.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="settings_button">
             <property name="minimumSize">
              <size>
@@ -865,11 +903,6 @@
      <addaction name="actionToggle_Stable_Diffusion"/>
      <addaction name="actionToggle_Controlnet"/>
      <addaction name="actionDownload_Model"/>
-    </widget>
-    <widget class="QMenu" name="menu">
-     <property name="title">
-      <string/>
-     </property>
     </widget>
     <addaction name="menuStable_Diffusion"/>
     <addaction name="separator"/>
