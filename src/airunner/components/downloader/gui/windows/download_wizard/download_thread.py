@@ -3,7 +3,8 @@ from airunner.utils.network.huggingface_downloader import HuggingfaceDownloader
 
 
 class DownloadThread(QThread):
-    progress_updated = Signal(int, int)
+    # Use object-typed signal to avoid OverflowError for very large values
+    progress_updated = Signal(object, object)
     download_finished = Signal()
     file_download_finished = Signal()
 

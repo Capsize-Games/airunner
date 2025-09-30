@@ -13,7 +13,9 @@ class BackgroundWorker(QThread):
 
     # Define signals
     taskFinished = Signal(dict)
-    progressUpdate = Signal(int)
+    # Use object-typed signal to avoid OverflowError for very large values and
+    # keep consistency across progress signals in the project.
+    progressUpdate = Signal(object)
     statusUpdate = Signal(str)
 
     def __init__(

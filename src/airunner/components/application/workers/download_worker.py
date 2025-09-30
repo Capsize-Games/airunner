@@ -19,7 +19,9 @@ class DownloadWorker(Worker):
         failed(Exception): Emitted on error.
     """
 
-    progress = Signal(int, int)  # current, total (legacy)
+    # Use object-typed signal to avoid OverflowError when emitting very
+    # large byte counts. Receivers should accept Python ints (unbounded).
+    progress = Signal(object, object)  # current, total (legacy)
     finished = Signal(dict)
     failed = Signal(Exception)
     running = False
