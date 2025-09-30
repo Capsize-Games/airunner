@@ -1087,6 +1087,26 @@ class CustomScene(
                 # Check if the Qt object is still valid before using it
                 layer_item.setVisible(visible)
                 self.logger.info(f"Updated layer item visibility: {visible}")
+                # Also toggle any text items associated with this layer in
+                # the first view attached to this scene. The view maintains
+                # a mapping of text items to layer ids so we can update their
+                # visibility to match the layer without reparenting items.
+                try:
+                    views = self.views()
+                    if views:
+                        view = views[0]
+                        # _text_item_layer_map may not exist for non-canvas views
+                        text_map = getattr(view, "_text_item_layer_map", None)
+                        if text_map:
+                            for item, lid in list(text_map.items()):
+                                try:
+                                    if lid == layer_id:
+                                        item.setVisible(visible)
+                                except Exception:
+                                    # Item may have been deleted; ignore
+                                    continue
+                except Exception:
+                    pass
             except RuntimeError as e:
                 if "Internal C++ object" in str(
                     e
