@@ -18,6 +18,10 @@ class BrushScene(CustomScene):
     settings_key = "drawing_pad_settings"
 
     def __init__(self, canvas_type: str):
+        self.signal_handlers = {
+            SignalCode.BRUSH_COLOR_CHANGED_SIGNAL: self.on_brush_color_changed,
+            SignalCode.LAYER_SELECTION_CHANGED: self.on_layer_selection_changed,
+        }
         super().__init__(canvas_type)
         brush_color = self.brush_settings.primary_color
         self._brush_color = QColor(brush_color)
@@ -35,12 +39,6 @@ class BrushScene(CustomScene):
         self._do_generate_image = False
         self._pending_brush_history_layer: Optional[int] = None
         self._last_draw_scene_pos: Optional[QPointF] = None
-        self.register(
-            SignalCode.BRUSH_COLOR_CHANGED_SIGNAL, self.on_brush_color_changed
-        )
-        self.register(
-            SignalCode.LAYER_SELECTION_CHANGED, self.on_layer_selection_changed
-        )
 
     @property
     def active_image(self):

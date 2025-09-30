@@ -77,10 +77,7 @@ class LayerItemWidget(BaseWidget, PipelineMixin):
 
     @Slot()
     def on_delete_layer_clicked(self):
-        self.emit_signal(
-            SignalCode.LAYER_DELETED,
-            {"layer_id": self.layer.id, "layer_item": self},
-        )
+        self.api.art.canvas.layer_deleted(self.layer.id)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
