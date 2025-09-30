@@ -9,6 +9,9 @@ from PySide6.QtWidgets import (
     QPushButton,
     QInputDialog,
     QMessageBox,
+    QScrollArea,
+    QWidget,
+    QSizePolicy,
     QProgressDialog,
 )
 from PySide6.QtCore import Qt, QThread
@@ -65,6 +68,11 @@ class DownloadModelDialog(QDialog):
     def __init__(self, parent, path_settings, application_settings):
         super().__init__(parent)
         self.setWindowTitle("CivitAI Model Details")
+        # Start at a sensible size so very long descriptions don't grow the
+        # dialog off-screen. The dialog remains resizable so the user can
+        # expand it if they wish.
+        self.resize(700, 520)
+        self.setMinimumSize(520, 340)
         self.path_settings = path_settings
         self.application_settings = application_settings
         self.model_info: Optional[Dict[str, Any]] = None
@@ -81,15 +89,45 @@ class DownloadModelDialog(QDialog):
         self._current_model_type: Optional[str] = None
         self._current_file_info: Optional[Dict[str, Any]] = None
 
+        # Widgets we may need to update on resize so text wraps instead of
+        # causing horizontal scrollbars.
+        self._desc_scroll: Optional[QScrollArea] = None
+        self._desc_label: Optional[QLabel] = None
+
         self._setup_ui()
 
     def _setup_ui(self) -> None:
         self.layout = QVBoxLayout(self)
         self.list_widget = QListWidget(self)
+        # allow the list to expand within the dialog and to show its own
+        # scrollbars when needed
+        self.list_widget.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding
+        )
         self.download_btn = QPushButton("Download Selected Version", self)
         self.layout.addWidget(self.list_widget)
         self.layout.addWidget(self.download_btn)
         self.download_btn.clicked.connect(self._start_download)
+
+    def resizeEvent(self, event) -> None:
+        """Ensure the description label wraps to the current viewport width.
+
+        QLabel will otherwise try to expand horizontally which can cause a
+        horizontal scrollbar to appear. By updating the label's maximum width
+        to match the scroll viewport we force word-wrapping.
+        """
+        try:
+            super().resizeEvent(event)
+        except Exception:
+            pass
+        try:
+            if self._desc_scroll and self._desc_label:
+                vw = self._desc_scroll.viewport().width()
+                # leave a small margin
+                self._desc_label.setMaximumWidth(max(40, vw - 4))
+        except Exception:
+            # don't let resize issues crash the UI
+            pass
 
     def fetch_and_display(self, url: str) -> None:
         """Fetch model info from CivitAI and populate the UI (async)."""
@@ -128,9 +166,46 @@ class DownloadModelDialog(QDialog):
         self.model_info = data
         name = data.get("name", "Unknown")
         desc = data.get("description", "")
-        self.layout.insertWidget(0, QLabel(f"<b>{name}</b>"))
+        # Insert the model name as a label (rich text allowed)
+        name_label = QLabel(f"<b>{name}</b>")
+        name_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.layout.insertWidget(0, name_label)
+
+        # Description can be very long — place it into a scroll area so the
+        # dialog doesn't expand to fit the entire text. The scroll area is
+        # given a reasonable maximum height and the label inside it will
+        # word-wrap.
         if desc:
-            self.layout.insertWidget(1, QLabel(desc))
+            desc_label = QLabel(desc)
+            desc_label.setWordWrap(True)
+            desc_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            desc_label.setSizePolicy(
+                QSizePolicy.Preferred, QSizePolicy.Preferred
+            )
+
+            desc_container = QWidget()
+            desc_container_layout = QVBoxLayout(desc_container)
+            desc_container_layout.setContentsMargins(0, 0, 0, 0)
+            desc_container_layout.addWidget(desc_label)
+
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setWidget(desc_container)
+            # Limit initial height so the dialog stays on-screen; user can
+            # expand the dialog to see more.
+            scroll.setMaximumHeight(220)
+            self.layout.insertWidget(1, scroll)
+
+            # Keep references so we can adjust maximum width on resize and
+            # avoid horizontal scrollbars. Update immediately to match the
+            # current size.
+            self._desc_scroll = scroll
+            self._desc_label = desc_label
+            try:
+                vw = scroll.viewport().width()
+                self._desc_label.setMaximumWidth(max(40, vw - 4))
+            except Exception:
+                pass
         self.layout.insertWidget(2, QLabel("Select a version to download:"))
         self.list_widget.clear()
         for v in data.get("modelVersions", []):
