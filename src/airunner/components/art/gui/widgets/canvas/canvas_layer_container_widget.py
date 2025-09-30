@@ -313,12 +313,19 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if layer_id not in self.selected_layers:
             return  # Not selected
 
+        if len(self.selected_layers) == 1:
+            return
+
         self.selected_layers.remove(layer_id)
         if layer_id in self.layer_widgets:
             self.layer_widgets[layer_id].set_selected(False)
 
-        # Emit selection changed signal to notify settings system
-        self.api.art.canvas.layer_selection_changed(list(self.selected_layers))
+        if len(self.selected_layers) == 0:
+            self.select_first_layer()
+        else:
+            self.api.art.canvas.layer_selection_changed(
+                list(self.selected_layers)
+            )
 
     def clear_selected_layers(self):
         for widget in self.layer_widgets.values():

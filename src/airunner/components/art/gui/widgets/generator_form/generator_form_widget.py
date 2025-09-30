@@ -127,18 +127,6 @@ class GeneratorForm(BaseWidget):
             self.ui.secondary_negative_prompt.toPlainText(),
         )
 
-    def handle_prompt_changed(self):
-        pass
-
-    def handle_negative_prompt_changed(self):
-        pass
-
-    def handle_second_prompt_changed(self):
-        pass
-
-    def handle_second_negative_prompt_changed(self):
-        pass
-
     @Slot()
     def handle_interrupt_button_clicked(self):
         self.api.art.interrupt_generate()
