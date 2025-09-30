@@ -277,12 +277,6 @@ class DocumentEditorContainerWidget(BaseWidget):
                 # Attempt to save using existing helper; if user cancels save-as, abort close
                 prev_tab_count = self.ui.documents.count()
                 self._save_tab(widget)
-                # if tab count unchanged and widget still exists at index, assume save cancelled
-                if (
-                    self.ui.documents.count() == prev_tab_count
-                    and self.ui.documents.widget(index) is widget
-                ):
-                    return
 
         # Remove the tab and schedule the widget for deletion
         self.ui.documents.removeTab(index)
