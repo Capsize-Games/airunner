@@ -150,6 +150,65 @@
              <number>1</number>
             </property>
             <item>
+             <widget class="QPushButton" name="prompt_editor_button">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/message-square.svg</normaloff>:/light/icons/feather/light/message-square.svg</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="art_tools_button">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../../../../gui/resources/feather.qrc">
+                <normaloff>:/light/icons/feather/light/tool.svg</normaloff>:/light/icons/feather/light/tool.svg</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="Line" name="line_7">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="new_button">
               <property name="minimumSize">
                <size>

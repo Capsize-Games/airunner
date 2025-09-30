@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from PySide6.QtWidgets import QSplitter
+
 from airunner.enums import TemplateName
 from airunner.utils.settings import get_qsettings
 
@@ -52,3 +54,25 @@ class StylesMixin:
             self.icon_manager.set_icons()
         else:
             print("Icon manager not set, skipping icon update")
+
+    def _toggle_splitter_section(
+        self,
+        val: bool,
+        panel_id: int,
+        splitter: QSplitter,
+        min_size: Optional[int] = None,
+    ):
+        if val:
+            min_size = (
+                min_size
+                if min_size is not None
+                else splitter.widget(panel_id).minimumWidth()
+            )
+            sizes = splitter.sizes()
+            sizes[panel_id] = min_size
+            splitter.setSizes(sizes)
+        else:
+            # collapse the panel
+            sizes = splitter.sizes()
+            sizes[panel_id] = 0
+            splitter.setSizes(sizes)

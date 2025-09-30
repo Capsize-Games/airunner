@@ -251,6 +251,22 @@ class DocumentEditorContainerWidget(BaseWidget):
         if widget is None:
             return
 
+        # Determine the editor's associated file path (if any)
+        try:
+            if hasattr(widget, "file_path") and callable(
+                getattr(widget, "file_path")
+            ):
+                try:
+                    editor_path = widget.file_path()
+                except Exception:
+                    editor_path = None
+            else:
+                editor_path = getattr(
+                    widget, "current_file_path", None
+                ) or getattr(widget, "file_path", None)
+        except Exception:
+            editor_path = None
+
         # If the widget exposes an is_modified() API, use it to decide whether to prompt
         try:
             modified = False
@@ -262,27 +278,60 @@ class DocumentEditorContainerWidget(BaseWidget):
             modified = False
 
         if modified:
-            # Ask the user whether to save changes
-            resp = QMessageBox.question(
-                self,
-                "Save changes?",
-                "The document has unsaved changes. Do you want to save them?",
-                QMessageBox.StandardButton.Yes
-                | QMessageBox.StandardButton.No
-                | QMessageBox.StandardButton.Cancel,
-            )
-            if resp == QMessageBox.StandardButton.Cancel:
-                return
-            if resp == QMessageBox.StandardButton.Yes:
-                # Attempt to save using existing helper; if user cancels save-as, abort close
-                prev_tab_count = self.ui.documents.count()
-                self._save_tab(widget)
-                # if tab count unchanged and widget still exists at index, assume save cancelled
-                if (
-                    self.ui.documents.count() == prev_tab_count
-                    and self.ui.documents.widget(index) is widget
-                ):
+            # If the editor has an associated file, auto-save to that file without prompting.
+            if editor_path:
+                try:
+                    if hasattr(widget, "save_file") and callable(
+                        getattr(widget, "save_file")
+                    ):
+                        ok = widget.save_file()
+                        # If save_file returns False or failed, abort close
+                        if ok is False:
+                            return
+                    else:
+                        # Fallback: write contents directly
+                        try:
+                            content = None
+                            if hasattr(widget, "editor") and hasattr(
+                                widget.editor, "toPlainText"
+                            ):
+                                content = widget.editor.toPlainText()
+                            elif hasattr(widget, "toPlainText"):
+                                content = widget.toPlainText()
+                            else:
+                                content = ""
+                            with open(editor_path, "w", encoding="utf-8") as f:
+                                f.write(content)
+                        except Exception as e:
+                            QMessageBox.warning(
+                                self,
+                                "Error",
+                                f"Error saving file {editor_path}: {e}",
+                            )
+                            return
+                except Exception:
+                    QMessageBox.warning(
+                        self,
+                        "Error",
+                        "Failed to autosave document before closing.",
+                    )
                     return
+            else:
+                # No associated file: ask the user whether to save changes
+                resp = QMessageBox.question(
+                    self,
+                    "Save changes?",
+                    "The document has unsaved changes. Do you want to save them?",
+                    QMessageBox.StandardButton.Yes
+                    | QMessageBox.StandardButton.No
+                    | QMessageBox.StandardButton.Cancel,
+                )
+                if resp == QMessageBox.StandardButton.Cancel:
+                    return
+                if resp == QMessageBox.StandardButton.Yes:
+                    # Attempt to save using existing helper; if user cancels save-as, abort close
+                    prev_tab_count = self.ui.documents.count()
+                    self._save_tab(widget)
 
         # Remove the tab and schedule the widget for deletion
         self.ui.documents.removeTab(index)
