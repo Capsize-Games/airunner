@@ -7,13 +7,28 @@
     <x>0</x>
     <y>0</y>
     <width>345</width>
-    <height>43</height>
+    <height>44</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
+   <property name="spacing">
+    <number>5</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item>
     <widget class="QLabel" name="trigger_word">
      <property name="text">
@@ -33,8 +48,7 @@
       <string>Prompt</string>
      </property>
      <property name="icon">
-      <iconset theme="edit-paste">
-       <normaloff>.</normaloff>.</iconset>
+      <iconset theme="edit-paste"/>
      </property>
     </widget>
    </item>
@@ -50,8 +64,7 @@
       <string>Negative</string>
      </property>
      <property name="icon">
-      <iconset theme="edit-paste">
-       <normaloff>.</normaloff>.</iconset>
+      <iconset theme="edit-paste"/>
      </property>
     </widget>
    </item>

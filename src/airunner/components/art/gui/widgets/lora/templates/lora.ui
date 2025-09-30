@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>518</width>
-    <height>80</height>
+    <height>105</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -51,7 +51,10 @@
      <property name="horizontalSpacing">
       <number>0</number>
      </property>
-     <item row="0" column="0" rowspan="2">
+     <property name="verticalSpacing">
+      <number>10</number>
+     </property>
+     <item row="1" column="0" rowspan="2">
       <widget class="QWidget" name="lora_container" native="true">
        <layout class="QGridLayout" name="gridLayout_3">
         <property name="leftMargin">
@@ -66,58 +69,9 @@
         <property name="bottomMargin">
          <number>0</number>
         </property>
-        <property name="horizontalSpacing">
-         <number>5</number>
-        </property>
-        <property name="verticalSpacing">
+        <property name="spacing">
          <number>10</number>
         </property>
-        <item row="0" column="0">
-         <widget class="QCheckBox" name="enabledCheckbox">
-          <property name="text">
-           <string>enabledCheckbox</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLineEdit" name="trigger_word_edit">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="placeholderText">
-           <string>Trigger words (comma separated)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="2">
-         <widget class="QPushButton" name="delete_button">
-          <property name="minimumSize">
-           <size>
-            <width>24</width>
-            <height>24</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>24</width>
-            <height>24</height>
-           </size>
-          </property>
-          <property name="cursor">
-           <cursorShape>PointingHandCursor</cursorShape>
-          </property>
-          <property name="toolTip">
-           <string>Delete model</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="icon">
-           <iconset resource="../../../resources/feather.qrc">
-            <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="0" colspan="3">
          <widget class="SliderWidget" name="scale_slider" native="true">
           <property name="sizePolicy">
@@ -170,7 +124,73 @@
           </property>
          </widget>
         </item>
+        <item row="2" column="0">
+         <widget class="QLineEdit" name="trigger_word_edit">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Some LoRA require a trigger word to activate.&lt;/p&gt;&lt;p&gt;Make a note here for your records.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="placeholderText">
+           <string>Trigger words (comma separated)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="enabled_checkbox">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>enabledCheckbox</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QPushButton" name="delete_button">
+          <property name="minimumSize">
+           <size>
+            <width>24</width>
+            <height>24</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>24</width>
+            <height>24</height>
+           </size>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="toolTip">
+           <string>Delete model</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../../../../gui/resources/feather.qrc">
+            <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
+          </property>
+         </widget>
+        </item>
        </layout>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <layout class="QVBoxLayout" name="trigger_word_container">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+      </layout>
+     </item>
+     <item row="0" column="0">
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
       </widget>
      </item>
     </layout>
@@ -186,7 +206,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../resources/feather.qrc"/>
+  <include location="../../../../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
   <connection>
@@ -202,38 +222,6 @@
     <hint type="destinationlabel">
      <x>404</x>
      <y>-14</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enabledCheckbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>lora</receiver>
-   <slot>action_toggled_lora_enabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>99</x>
-     <y>2</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>88</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>delete_button</sender>
-   <signal>clicked()</signal>
-   <receiver>lora</receiver>
-   <slot>action_clicked_button_deleted()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>508</x>
-     <y>62</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>520</x>
-     <y>12</y>
     </hint>
    </hints>
   </connection>
