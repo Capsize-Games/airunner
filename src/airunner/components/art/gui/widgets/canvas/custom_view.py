@@ -732,7 +732,13 @@ class CustomGraphicsView(
                 self.logger.exception(
                     "Error running deferred resize on showEvent"
                 )
-            # self._restore_text_items_from_db()  # Restore text items on load
+            # Restore text items on load
+            try:
+                self._restore_text_items_from_db()
+            except Exception:
+                self.logger.exception(
+                    "Failed to restore text items on showEvent"
+                )
             self._initialized = True
 
     def set_canvas_color(
@@ -779,6 +785,13 @@ class CustomGraphicsView(
 
         # Force entire viewport update to handle negative coordinates
         self.viewport().update()
+        # After images/positions update, restore any text items persisted to DB
+        try:
+            self._restore_text_items_from_db()
+        except Exception:
+            self.logger.exception(
+                "Failed to restore text items after updateImagePositions"
+            )
 
     def enterEvent(self, event: QEvent) -> None:
         """
