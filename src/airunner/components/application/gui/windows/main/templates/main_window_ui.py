@@ -342,6 +342,20 @@ class Ui_MainWindow(object):
 
         self.action_sidebar.addWidget(self.chat_button)
 
+        self.knowledgebase_button = QPushButton(self.actionsidebar)
+        self.knowledgebase_button.setObjectName(u"knowledgebase_button")
+        self.knowledgebase_button.setMinimumSize(QSize(35, 35))
+        self.knowledgebase_button.setMaximumSize(QSize(35, 35))
+        self.knowledgebase_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon35 = QIcon()
+        icon35.addFile(u":/light/icons/feather/light/book.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.knowledgebase_button.setIcon(icon35)
+        self.knowledgebase_button.setIconSize(QSize(20, 20))
+        self.knowledgebase_button.setCheckable(True)
+        self.knowledgebase_button.setFlat(True)
+
+        self.action_sidebar.addWidget(self.knowledgebase_button)
+
         self.settings_button = QPushButton(self.actionsidebar)
         self.settings_button.setObjectName(u"settings_button")
         self.settings_button.setMinimumSize(QSize(35, 35))
@@ -522,8 +536,6 @@ class Ui_MainWindow(object):
         self.menuStable_Diffusion = QMenu(self.menuTools)
         self.menuStable_Diffusion.setObjectName(u"menuStable_Diffusion")
         self.menuStable_Diffusion.setIcon(icon17)
-        self.menu = QMenu(self.menuTools)
-        self.menu.setObjectName(u"menu")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -700,6 +712,7 @@ class Ui_MainWindow(object):
         self.chat_button.setToolTip(QCoreApplication.translate("MainWindow", u"Chat", None))
 #endif // QT_CONFIG(tooltip)
         self.chat_button.setText("")
+        self.knowledgebase_button.setText("")
 #if QT_CONFIG(tooltip)
         self.settings_button.setToolTip(QCoreApplication.translate("MainWindow", u"Settings", None))
 #endif // QT_CONFIG(tooltip)
@@ -719,7 +732,6 @@ class Ui_MainWindow(object):
         self.menuView.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
         self.menuTools.setTitle(QCoreApplication.translate("MainWindow", u"Tools", None))
         self.menuStable_Diffusion.setTitle(QCoreApplication.translate("MainWindow", u"Stable Diffusion", None))
-        self.menu.setTitle("")
         self.model_toolbar.setWindowTitle(QCoreApplication.translate("MainWindow", u"toolBar_2", None))
     # retranslateUi
 

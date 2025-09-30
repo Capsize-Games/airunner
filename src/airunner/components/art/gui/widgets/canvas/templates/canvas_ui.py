@@ -344,6 +344,7 @@ class Ui_canvas(object):
         self.layoutWidget.setObjectName(u"layoutWidget")
         self.gridLayout_3 = QGridLayout(self.layoutWidget)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_3.setVerticalSpacing(0)
         self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
         self.canvas_container = CustomGraphicsView(self.layoutWidget)
         self.canvas_container.setObjectName(u"canvas_container")

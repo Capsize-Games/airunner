@@ -618,25 +618,14 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
         self.api.art.send_request(image_request=image_request)
 
-    def action_clicked_button_save_prompts(self):
+    @Slot()
+    def on_save_prompts_button_clicked(self):
         self.api.art.save_prompt(
             prompt=self.ui.prompt.toPlainText(),
             negative_prompt=self.ui.negative_prompt.toPlainText(),
             secondary_prompt=self.ui.secondary_prompt.toPlainText(),
             secondary_negative_prompt=self.ui.secondary_negative_prompt.toPlainText(),
         )
-
-    def handle_prompt_changed(self):
-        pass
-
-    def handle_negative_prompt_changed(self):
-        pass
-
-    def handle_second_prompt_changed(self):
-        pass
-
-    def handle_second_negative_prompt_changed(self):
-        pass
 
     def handle_generate_button_clicked(self, data=None):
         self.start_progress_bar()

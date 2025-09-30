@@ -176,7 +176,7 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pushButton">
+                 <widget class="QPushButton" name="save_prompts_button">
                   <property name="text">
                    <string>Save Prompts</string>
                   </property>
@@ -570,7 +570,7 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset resource="../../../resources/feather.qrc">
+                  <iconset resource="../../../../../../gui/resources/feather.qrc">
                    <normaloff>:/light/icons/feather/light/circle.svg</normaloff>:/light/icons/feather/light/circle.svg</iconset>
                  </property>
                  <property name="checkable">
@@ -650,7 +650,7 @@
            <string/>
           </property>
           <property name="icon">
-           <iconset resource="../../../resources/feather.qrc">
+           <iconset resource="../../../../../../gui/resources/feather.qrc">
             <normaloff>:/light/icons/feather/light/chevron-up.svg</normaloff>:/light/icons/feather/light/chevron-up.svg</iconset>
           </property>
          </widget>
@@ -685,7 +685,7 @@
            <string/>
           </property>
           <property name="icon">
-           <iconset resource="../../../resources/feather.qrc">
+           <iconset resource="../../../../../../gui/resources/feather.qrc">
             <normaloff>:/light/icons/feather/light/x.svg</normaloff>:/light/icons/feather/light/x.svg</iconset>
           </property>
          </widget>
@@ -727,29 +727,13 @@
   <tabstop>negative_crops_coord_top_left_y</tabstop>
   <tabstop>generate_button</tabstop>
   <tabstop>interrupt_button</tabstop>
-  <tabstop>pushButton</tabstop>
+  <tabstop>save_prompts_button</tabstop>
   <tabstop>stable_diffusion_generator_form</tabstop>
  </tabstops>
  <resources>
-  <include location="../../../resources/feather.qrc"/>
+  <include location="../../../../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
-  <connection>
-   <sender>pushButton</sender>
-   <signal>clicked()</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>action_clicked_button_save_prompts()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>573</x>
-     <y>32</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>416</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>image_presets</sender>
    <signal>currentTextChanged(QString)</signal>
@@ -779,70 +763,6 @@
     <hint type="destinationlabel">
      <x>-3</x>
      <y>434</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>prompt</sender>
-   <signal>textChanged()</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_prompt_changed()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>127</x>
-     <y>91</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-3</x>
-     <y>62</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>secondary_prompt</sender>
-   <signal>textChanged()</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_second_prompt_changed()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>394</x>
-     <y>99</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-3</x>
-     <y>97</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>negative_prompt</sender>
-   <signal>textChanged()</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_negative_prompt_changed()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>144</x>
-     <y>383</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-4</x>
-     <y>328</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>secondary_negative_prompt</sender>
-   <signal>textChanged()</signal>
-   <receiver>stablediffusion_generator_form</receiver>
-   <slot>handle_second_negative_prompt_changed()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>503</x>
-     <y>381</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>589</x>
-     <y>294</y>
     </hint>
    </hints>
   </connection>
