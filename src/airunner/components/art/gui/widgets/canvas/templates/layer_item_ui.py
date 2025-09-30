@@ -26,7 +26,9 @@ class Ui_layer_item(object):
         layer_item.resize(400, 132)
         layer_item.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.horizontalLayout = QHBoxLayout(layer_item)
+        self.horizontalLayout.setSpacing(5)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.label = QLabel(layer_item)
         self.label.setObjectName(u"label")
 
