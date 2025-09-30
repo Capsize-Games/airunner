@@ -9,6 +9,16 @@ Follows project conventions for widget structure and documentation.
 """
 
 from typing import Optional
+import logging
+import os
+
+try:
+    import fcntl  # POSIX advisory locks
+
+    _HAS_FCNTL = True
+except Exception:
+    fcntl = None
+    _HAS_FCNTL = False
 from PySide6.QtCore import (
     Qt,
     QRect,
@@ -16,7 +26,9 @@ from PySide6.QtCore import (
     QRegularExpression,
     QFile,
     QTextStream,
-    QFileInfo, Slot,
+    QFileInfo,
+    QTimer,
+    Slot,
 )
 from PySide6.QtGui import (
     QColor,
@@ -313,6 +325,23 @@ class DocumentEditorWidget(BaseWidget):
         self.editor = CodeEditor(self)
         self.highlighter = PythonSyntaxHighlighter(self.editor.document())
         self.current_file_path = None
+        # Autosave timer (debounced)
+        self._autosave_delay_ms = 1500
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.setSingleShot(True)
+        self._autosave_timer.timeout.connect(self._perform_autosave)
+        self._logger = logging.getLogger(__name__)
+        # Track modification state reliably via the document's signal
+        self._modified = False
+        try:
+            self.editor.document().modificationChanged.connect(
+                self._on_modification_changed
+            )
+        except Exception:
+            # Older Qt bindings or unexpected state; fall back to querying document
+            self._logger.exception(
+                "Failed to connect modificationChanged signal"
+            )
         # Replace the auto-generated editor with our custom one
         self.ui.gridLayout.replaceWidget(self.ui.editor, self.editor)
         self.ui.editor.deleteLater()
@@ -324,28 +353,139 @@ class DocumentEditorWidget(BaseWidget):
         self.ui.gridLayout.setColumnStretch(1, 1)
         self.ui.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.ui.gridLayout.setSpacing(0)
+        # Start listening for content changes to trigger autosave
+        # Use the document's contentsChanged signal so we debounce on typing
+        self.editor.document().contentsChanged.connect(
+            self._on_document_contents_changed
+        )
 
     @Slot()
     def on_run_button_clicked(self):
-        self.emit_signal(SignalCode.RUN_SCRIPT, {
-            "document_path": self.current_file_path,
-        })
+        self.emit_signal(
+            SignalCode.RUN_SCRIPT,
+            {
+                "document_path": self.current_file_path,
+            },
+        )
+
+    def _on_document_contents_changed(self):
+        """Debounce document changes and trigger autosave after idle period.
+
+        Does nothing when there's no current file path (unsaved/new documents).
+        """
+        if not self.current_file_path:
+            return
+        try:
+            # restart the single-shot timer
+            self._autosave_timer.start(self._autosave_delay_ms)
+        except Exception:
+            self._logger.exception("Failed to start autosave timer")
+
+    def _on_modification_changed(self, modified: bool):
+        """Update internal flag when QTextDocument reports modification changes."""
+        try:
+            self._modified = bool(modified)
+            self._logger.debug(
+                "Document modificationChanged -> %s", self._modified
+            )
+        except Exception:
+            self._logger.exception("Error in _on_modification_changed handler")
+
+    def _clear_modified(self):
+        """Clear both the QTextDocument's modified flag and the internal flag."""
+        try:
+            doc = self.editor.document()
+            # Temporarily block signals to avoid re-entrant handlers
+            try:
+                prev_block = doc.blockSignals(True)
+            except Exception:
+                prev_block = False
+            try:
+                # Disable undo/redo while clearing the flag to avoid
+                # side-effects from the undo stack that can re-mark the doc
+                try:
+                    prev_undo = doc.isUndoRedoEnabled()
+                    doc.setUndoRedoEnabled(False)
+                except Exception:
+                    prev_undo = None
+                try:
+                    doc.setModified(False)
+                finally:
+                    try:
+                        if prev_undo is not None:
+                            doc.setUndoRedoEnabled(prev_undo)
+                    except Exception:
+                        pass
+            finally:
+                try:
+                    doc.blockSignals(prev_block)
+                except Exception:
+                    pass
+            self._modified = False
+        except Exception:
+            self._logger.exception("Failed to clear modified flag")
+
+    def _perform_autosave(self):
+        """Called when autosave timer fires; saves if the document is modified."""
+        if not self.current_file_path:
+            return
+        try:
+            if not self.is_modified():
+                return
+            ok = self.save_file()
+            if ok:
+                self._logger.debug("Autosaved %s", self.current_file_path)
+            else:
+                self._logger.warning(
+                    "Autosave failed for %s", self.current_file_path
+                )
+        except Exception:
+            self._logger.exception(
+                "Unexpected error during autosave for %s",
+                self.current_file_path,
+            )
 
     def load_file(self, file_path: str) -> bool:
         self.current_file_path = file_path
         try:
-            q_file = QFile(file_path)
-            if not q_file.open(
-                QFile.OpenModeFlag.ReadOnly | QFile.OpenModeFlag.Text
-            ):
+            # Use python file operations with advisory locking when available
+            data = None
+            try:
+                with open(file_path, "r", encoding="utf-8") as fh:
+                    if _HAS_FCNTL:
+                        try:
+                            fcntl.flock(fh.fileno(), fcntl.LOCK_SH)
+                        except Exception:
+                            self._logger.exception(
+                                "Failed to acquire shared lock for %s",
+                                file_path,
+                            )
+                    data = fh.read()
+                    if _HAS_FCNTL:
+                        try:
+                            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+                        except Exception:
+                            self._logger.exception(
+                                "Failed to release shared lock for %s",
+                                file_path,
+                            )
+            except FileNotFoundError:
                 QMessageBox.warning(
-                    self, "Error", f"Cannot open file: {q_file.errorString()}"
+                    self, "Error", f"File not found: {file_path}"
                 )
                 return False
-            stream = QTextStream(q_file)
-            self.editor.setPlainText(stream.readAll())
-            q_file.close()
-            self.editor.document().setModified(False)
+            except Exception as ex:
+                QMessageBox.warning(self, "Error", f"Cannot open file: {ex}")
+                return False
+
+            self.editor.setPlainText(data or "")
+            # Clear modification state after programmatic load
+            self._clear_modified()
+            # Stop any pending autosave when a file is explicitly loaded
+            try:
+                self._autosave_timer.stop()
+            except Exception:
+                pass
             self.update_syntax_highlighter(file_path)
             return True
         except Exception as e:
@@ -380,25 +520,75 @@ class DocumentEditorWidget(BaseWidget):
         return self.current_file_path
 
     def is_modified(self) -> bool:
-        return self.editor.document().isModified()
+        # Prefer the QTextDocument's authoritative state; fall back to
+        # internal flag if needed.
+        try:
+            return bool(self.editor.document().isModified()) or bool(
+                self._modified
+            )
+        except Exception:
+            return bool(self._modified)
 
     def save_file(self, save_as_path: str = None) -> bool:
         path = save_as_path or self.current_file_path
         if not path:
             return False
         try:
-            q_file = QFile(path)
-            if not q_file.open(
-                QFile.OpenModeFlag.WriteOnly | QFile.OpenModeFlag.Text
-            ):
-                QMessageBox.warning(
-                    self, "Error", f"Cannot save file: {q_file.errorString()}"
-                )
-                return False
-            stream = QTextStream(q_file)
-            stream << self.editor.toPlainText()
-            q_file.close()
-            self.editor.document().setModified(False)
+            # Perform an atomic write using a temp file in the same directory
+            dirpath = os.path.dirname(path) or "."
+            basename = os.path.basename(path)
+            tmp_name = os.path.join(dirpath, f".{basename}.airunner_tmp")
+            written = False
+            try:
+                with open(tmp_name, "w", encoding="utf-8") as fh:
+                    if _HAS_FCNTL:
+                        try:
+                            fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+                        except Exception:
+                            self._logger.exception(
+                                "Failed to acquire exclusive lock for temp file %s",
+                                tmp_name,
+                            )
+                    fh.write(self.editor.toPlainText())
+                    fh.flush()
+                    try:
+                        os.fsync(fh.fileno())
+                    except Exception:
+                        # fsync may fail on some filesystems; log and continue
+                        self._logger.exception("fsync failed for %s", tmp_name)
+                    if _HAS_FCNTL:
+                        try:
+                            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+                        except Exception:
+                            self._logger.exception(
+                                "Failed to release exclusive lock for temp file %s",
+                                tmp_name,
+                            )
+                # Atomically replace target
+                os.replace(tmp_name, path)
+                written = True
+            finally:
+                # Cleanup temp file if not replaced
+                if not written and os.path.exists(tmp_name):
+                    try:
+                        os.remove(tmp_name)
+                    except Exception:
+                        self._logger.exception(
+                            "Failed to remove temp file %s", tmp_name
+                        )
+
+            # Defensively clear modification flags on the document and our
+            # internal flag. Use a singleShot to handle any race from
+            # background formatting/highlighting that may mark the doc.
+            self._clear_modified()
+            try:
+                QTimer.singleShot(0, self._clear_modified)
+            except Exception:
+                pass
+            try:
+                self._autosave_timer.stop()
+            except Exception:
+                pass
             return True
         except Exception as e:
             QMessageBox.warning(
