@@ -1,3 +1,4 @@
+from typing import Optional
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
@@ -58,14 +59,7 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             )  # Add to row i, column 0
 
         # Select the first layer by default
-        if self.layers:
-            self.selected_layers.add(self.layers[0].id)
-            self.layer_widgets[self.layers[0].id].set_selected(True)
-            # Emit selection changed signal to notify settings system
-            self.emit_signal(
-                SignalCode.LAYER_SELECTION_CHANGED,
-                {"selected_layer_ids": list(self.selected_layers)},
-            )
+        self.select_first_layer()
 
         # add a vertical spacer
         self.spacer = QSpacerItem(
@@ -91,7 +85,33 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         OutpaintSettings.objects.create(layer_id=layer.id)
         BrushSettings.objects.create(layer_id=layer.id)
         MetadataSettings.objects.create(layer_id=layer.id)
-        return CanvasLayer.objects.get(layer.id)
+        layer = CanvasLayer.objects.get(layer.id)
+
+        if not layer:
+            self.api.art.canvas.cancel_layer_operation("create")
+            return
+
+        # Initialize default settings for the new layer
+        self._initialize_layer_default_settings(layer.id)
+
+        self.layers.append(layer)
+        item = LayerItemWidget(layer_id=layer.id)
+        self.layer_widgets[layer.id] = item
+
+        # Remove spacer, add new widget, then add spacer back
+        self.ui.layer_list_layout.layout().removeItem(self.spacer)
+        self.ui.layer_list_layout.layout().addWidget(
+            item, len(self.layers) - 1, 0
+        )
+        self.ui.layer_list_layout.layout().addItem(
+            self.spacer, len(self.layers), 0
+        )
+
+        self.clear_selected_layers()
+        self.select_layer(layer.id, item)
+
+        self.api.art.canvas.commit_layer_operation("create", [layer.id])
+        self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     @Slot()
     def on_merge_visible_layers_clicked(self):
@@ -101,44 +121,7 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
     def on_add_layer_clicked(self):
         self.api.art.canvas.begin_layer_operation("create")
         try:
-            layer = self.create_layer()
-            if not layer:
-                self.api.art.canvas.cancel_layer_operation("create")
-                return
-
-            # Initialize default settings for the new layer
-            self._initialize_layer_default_settings(layer.id)
-
-            self.layers.append(layer)
-            item = LayerItemWidget(layer_id=layer.id)
-            self.layer_widgets[layer.id] = item
-
-            # Remove spacer, add new widget, then add spacer back
-            self.ui.layer_list_layout.layout().removeItem(self.spacer)
-            self.ui.layer_list_layout.layout().addWidget(
-                item, len(self.layers) - 1, 0
-            )
-            self.ui.layer_list_layout.layout().addItem(
-                self.spacer, len(self.layers), 0
-            )
-
-            # Select the newly created layer
-            # Clear previous selections
-            for lid in self.selected_layers:
-                self.layer_widgets[lid].set_selected(False)
-
-            self.selected_layers.clear()
-            self.selected_layers.add(layer.id)
-            item.set_selected(True)
-
-            # Emit selection changed signal to notify settings system
-            self.emit_signal(
-                SignalCode.LAYER_SELECTION_CHANGED,
-                {"selected_layer_ids": list(self.selected_layers)},
-            )
-
-            self.api.art.canvas.commit_layer_operation("create", [layer.id])
-            self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+            self.create_layer()
         except Exception:
             self.api.art.canvas.cancel_layer_operation("create")
             raise
@@ -279,34 +262,8 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                 if widget:
                     self.ui.layer_list_layout.layout().removeWidget(widget)
                     widget.deleteLater()
-
-                # Emit layer deleted signal for canvas to handle
-                self.emit_signal(
-                    SignalCode.LAYER_DELETED,
-                    {"layer_id": layer.id},
-                )
-                CanvasLayer.objects.delete(layer.id)
+                self.api.art.canvas.layer_deleted(layer.id)
                 deleted_any = True
-
-            # Clear selection
-            self.selected_layers.clear()
-
-            # Reorder remaining layers
-            for i, layer in enumerate(self.layers):
-                layer.order = i
-                CanvasLayer.objects.update(layer.id, order=i)
-
-            # Select the first remaining layer
-            if self.layers:
-                self.selected_layers.add(self.layers[0].id)
-                self.layer_widgets[self.layers[0].id].set_selected(True)
-                # Emit selection changed signal to notify settings system
-                self.emit_signal(
-                    SignalCode.LAYER_SELECTION_CHANGED,
-                    {"selected_layer_ids": list(self.selected_layers)},
-                )
-
-            self._refresh_layer_display()
         except Exception:
             self.api.art.canvas.cancel_layer_operation("delete")
             raise
@@ -318,6 +275,7 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             self.api.art.canvas.cancel_layer_operation("delete")
 
     def on_layer_deleted(self, data: dict):
+        self.clear_selected_layers()
         layer_id = data.get("layer_id")
         layer_item = data.get("layer_item")
         if layer_id:
@@ -337,6 +295,89 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             ImageToImageSettings.objects.delete_by(layer_id=layer_id)
             OutpaintSettings.objects.delete_by(layer_id=layer_id)
 
+        # Reorder remaining layers
+        for i, layer in enumerate(self.layers):
+            layer.order = i
+            CanvasLayer.objects.update(layer.id, order=i)
+
+        if len(CanvasLayer.objects.all()) == 0:
+            self.create_layer(order=0, name="Layer 1")
+            self.layers = CanvasLayer.objects.order_by("order").all()
+
+        self.select_first_layer()
+
+        self._refresh_layer_display()
+
+    def deselect_layer(self, layer_id: int):
+        """Deselect a specific layer by its ID."""
+        if layer_id not in self.selected_layers:
+            return  # Not selected
+
+        self.selected_layers.remove(layer_id)
+        if layer_id in self.layer_widgets:
+            self.layer_widgets[layer_id].set_selected(False)
+
+        # Emit selection changed signal to notify settings system
+        self.api.art.canvas.layer_selection_changed(list(self.selected_layers))
+
+    def clear_selected_layers(self):
+        for widget in self.layer_widgets.values():
+            widget.set_selected(False)
+        self.selected_layers.clear()
+        self.update()
+
+    def select_range_of_layers(self, min_order: int, max_order: int):
+        self.logger.info(
+            f"Selecting layers in range {min_order} to {max_order}"
+        )
+        self.clear_selected_layers()
+        layer_ids = []
+        items = []
+        for layer in self.layers:
+            if min_order <= layer.order <= max_order:
+                layer_ids.append(layer.id)
+                items.append(self.layer_widgets.get(layer.id))
+
+        self.select_layers(layer_ids, items)
+
+    def select_layers(
+        self,
+        layer_ids: list[int],
+        items: Optional[list[LayerItemWidget]] = None,
+    ):
+        for i, layer_id in enumerate(layer_ids):
+            item = items[i] if items and i < len(items) else None
+            self.select_layer(layer_id, item, False)
+        self.api.art.canvas.layer_selection_changed(list(self.selected_layers))
+
+    def select_layer(
+        self,
+        layer_id: int,
+        item: Optional[LayerItemWidget] = None,
+        emit_signal: bool = True,
+    ):
+        """Select a specific layer by its ID."""
+        if layer_id in self.selected_layers:
+            return
+
+        self.selected_layers.add(layer_id)
+        if item:
+            item.set_selected(True)
+            self.update()
+        elif layer_id in self.layer_widgets:
+            self.layer_widgets[layer_id].set_selected(True)
+
+        # Emit selection changed signal to notify settings system
+        if emit_signal:
+            self.api.art.canvas.layer_selection_changed(
+                list(self.selected_layers)
+            )
+
+    def select_first_layer(self):
+        layer = CanvasLayer.objects.first()
+        if layer:
+            self.select_layer(layer.id, self.layer_widgets.get(layer.id))
+
     def on_layer_selected(self, data: dict):
         layer_id = data.get("layer_id")
         modifiers = data.get("modifiers", Qt.KeyboardModifier.NoModifier)
@@ -344,13 +385,9 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if modifiers & Qt.KeyboardModifier.ControlModifier:
             # Ctrl+Click: Toggle individual selection
             if layer_id in self.selected_layers:
-                # Don't allow deselecting if it's the only selected layer
-                if len(self.selected_layers) > 1:
-                    self.selected_layers.remove(layer_id)
-                    self.layer_widgets[layer_id].set_selected(False)
+                self.deselect_layer(layer_id)
             else:
-                self.selected_layers.add(layer_id)
-                self.layer_widgets[layer_id].set_selected(True)
+                self.select_layer(layer_id, self.layer_widgets.get(layer_id))
 
         elif modifiers & Qt.KeyboardModifier.ShiftModifier:
             # Shift+Click: Select range
@@ -368,36 +405,17 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                 if clicked_layer:
                     min_order = min(selected_orders + [clicked_layer.order])
                     max_order = max(selected_orders + [clicked_layer.order])
-
-                    # Clear current selection visual
-                    for lid in self.selected_layers:
-                        self.layer_widgets[lid].set_selected(False)
-
-                    # Select range
-                    self.selected_layers.clear()
-                    for layer in self.layers:
-                        if min_order <= layer.order <= max_order:
-                            self.selected_layers.add(layer.id)
-                            self.layer_widgets[layer.id].set_selected(True)
+                    self.clear_selected_layers()
+                    self.select_range_of_layers(min_order, max_order)
             else:
                 # No previous selection, just select this layer
-                self.selected_layers.add(layer_id)
-                self.layer_widgets[layer_id].set_selected(True)
+                self.select_layer(layer_id, self.layer_widgets.get(layer_id))
         else:
-            # Normal click: Select only this layer
-            # Clear previous selections
-            for lid in self.selected_layers:
-                self.layer_widgets[lid].set_selected(False)
-
-            self.selected_layers.clear()
-            self.selected_layers.add(layer_id)
-            self.layer_widgets[layer_id].set_selected(True)
+            self.clear_selected_layers()
+            self.select_layer(layer_id, self.layer_widgets.get(layer_id))
 
         # Emit selection changed signal
-        self.emit_signal(
-            SignalCode.LAYER_SELECTION_CHANGED,
-            {"selected_layer_ids": list(self.selected_layers)},
-        )
+        self.api.art.canvas.layer_selection_changed(list(self.selected_layers))
 
     def _refresh_layer_display(self):
         """Refresh the layer display order after reordering."""
@@ -445,15 +463,6 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
 
         self.layers = db_layers
         self._refresh_layer_display()
-
-        # Ensure selection remains valid
-        self.selected_layers = {
-            layer_id
-            for layer_id in self.selected_layers
-            if layer_id in db_layer_ids
-        }
-        if not self.selected_layers and self.layers:
-            self.selected_layers.add(self.layers[0].id)
 
         for layer_id, widget in self.layer_widgets.items():
             widget.set_selected(layer_id in self.selected_layers)
