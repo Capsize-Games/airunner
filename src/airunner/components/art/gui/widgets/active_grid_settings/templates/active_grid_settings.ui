@@ -15,16 +15,16 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="leftMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="horizontalSpacing">
     <number>0</number>
@@ -48,8 +48,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>724</width>
-        <height>294</height>
+        <width>704</width>
+        <height>274</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_3">
@@ -467,72 +467,7 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections>
-  <connection>
-   <sender>active_grid_area_checkbox</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>active_grid_settings_widget</receiver>
-   <slot>action_clicked_checkbox_toggle_active_grid_area(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>29</x>
-     <y>22</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-3</x>
-     <y>7</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>size_lock_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>active_grid_settings_widget</receiver>
-   <slot>size_lock_toggled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>362</x>
-     <y>65</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>-15</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>border_choose_color_button</sender>
-   <signal>clicked()</signal>
-   <receiver>active_grid_settings_widget</receiver>
-   <slot>action_choose_border_color_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>710</x>
-     <y>122</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-1</x>
-     <y>94</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>fill_choose_color_button</sender>
-   <signal>clicked()</signal>
-   <receiver>active_grid_settings_widget</receiver>
-   <slot>action_choose_fill_color_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>710</x>
-     <y>178</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-4</x>
-     <y>188</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>action_clicked_checkbox_toggle_active_grid_border(bool)</slot>
   <slot>action_clicked_checkbox_toggle_active_grid_fill(bool)</slot>

@@ -74,7 +74,7 @@ class ActiveGridArea(DraggablePixmap):
 
         fill_color = (
             self.get_fill_color()
-            if self._do_render_fill
+            if self._do_render_fill and self._active_grid_settings_enabled
             else QColor(0, 0, 0, 1)
         )
         self.image.fill(fill_color)

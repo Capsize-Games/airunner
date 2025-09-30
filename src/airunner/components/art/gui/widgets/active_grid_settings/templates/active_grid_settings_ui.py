@@ -30,7 +30,7 @@ class Ui_active_grid_settings_widget(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout.setContentsMargins(10, 10, 10, 10)
         self.scrollArea = QScrollArea(active_grid_settings_widget)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setFrameShape(QFrame.Shape.NoFrame)
@@ -38,7 +38,7 @@ class Ui_active_grid_settings_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 724, 294))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 704, 274))
         self.gridLayout_3 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.gridLayout_3.setHorizontalSpacing(0)
@@ -213,10 +213,6 @@ class Ui_active_grid_settings_widget(object):
 
 
         self.retranslateUi(active_grid_settings_widget)
-        self.active_grid_area_checkbox.clicked["bool"].connect(active_grid_settings_widget.action_clicked_checkbox_toggle_active_grid_area)
-        self.size_lock_button.toggled.connect(active_grid_settings_widget.size_lock_toggled)
-        self.border_choose_color_button.clicked.connect(active_grid_settings_widget.action_choose_border_color_clicked)
-        self.fill_choose_color_button.clicked.connect(active_grid_settings_widget.action_choose_fill_color_clicked)
 
         QMetaObject.connectSlotsByName(active_grid_settings_widget)
     # setupUi
