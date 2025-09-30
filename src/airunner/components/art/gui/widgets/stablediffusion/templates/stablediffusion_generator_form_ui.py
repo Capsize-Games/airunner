@@ -106,10 +106,10 @@ class Ui_stablediffusion_generator_form(object):
 
         self.horizontalLayout_6.addItem(self.horizontalSpacer)
 
-        self.pushButton = QPushButton(self.layoutWidget)
-        self.pushButton.setObjectName(u"pushButton")
+        self.save_prompts_button = QPushButton(self.layoutWidget)
+        self.save_prompts_button.setObjectName(u"save_prompts_button")
 
-        self.horizontalLayout_6.addWidget(self.pushButton)
+        self.horizontalLayout_6.addWidget(self.save_prompts_button)
 
 
         self.prompt_container_layout.addLayout(self.horizontalLayout_6, 0, 1, 1, 1)
@@ -440,17 +440,12 @@ class Ui_stablediffusion_generator_form(object):
         QWidget.setTabOrder(self.negative_crops_coord_top_left_x, self.negative_crops_coord_top_left_y)
         QWidget.setTabOrder(self.negative_crops_coord_top_left_y, self.generate_button)
         QWidget.setTabOrder(self.generate_button, self.interrupt_button)
-        QWidget.setTabOrder(self.interrupt_button, self.pushButton)
-        QWidget.setTabOrder(self.pushButton, self.stable_diffusion_generator_form)
+        QWidget.setTabOrder(self.interrupt_button, self.save_prompts_button)
+        QWidget.setTabOrder(self.save_prompts_button, self.stable_diffusion_generator_form)
 
         self.retranslateUi(stablediffusion_generator_form)
-        self.pushButton.clicked.connect(stablediffusion_generator_form.action_clicked_button_save_prompts)
         self.image_presets.currentTextChanged.connect(stablediffusion_generator_form.handle_image_presets_changed)
         self.quality_effects.currentTextChanged.connect(stablediffusion_generator_form.handle_quality_effects_changed)
-        self.prompt.textChanged.connect(stablediffusion_generator_form.handle_prompt_changed)
-        self.secondary_prompt.textChanged.connect(stablediffusion_generator_form.handle_second_prompt_changed)
-        self.negative_prompt.textChanged.connect(stablediffusion_generator_form.handle_negative_prompt_changed)
-        self.secondary_negative_prompt.textChanged.connect(stablediffusion_generator_form.handle_second_negative_prompt_changed)
 
         QMetaObject.connectSlotsByName(stablediffusion_generator_form)
     # setupUi
@@ -461,7 +456,7 @@ class Ui_stablediffusion_generator_form(object):
         self.label.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Prompt", None))
         self.prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Prompt", None))
         self.secondary_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Second prompt", None))
-        self.pushButton.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Save Prompts", None))
+        self.save_prompts_button.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Save Prompts", None))
         self.negative_prompt_label.setText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative Prompt", None))
         self.negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Negative prompt", None))
         self.secondary_negative_prompt.setPlaceholderText(QCoreApplication.translate("stablediffusion_generator_form", u"Second negative prompt", None))
