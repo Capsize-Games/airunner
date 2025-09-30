@@ -569,7 +569,8 @@ class DocumentsWidget(
 
         class DownloadWorker(QObject):
             finished = Signal(bool, object)
-            progress = Signal(int)
+            # Use object type for consistency across download progress signals.
+            progress = Signal(object)
 
             def __init__(self, url, save_path):
                 super().__init__()

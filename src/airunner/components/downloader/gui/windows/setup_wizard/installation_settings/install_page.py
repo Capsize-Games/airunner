@@ -112,7 +112,9 @@ class InstallWorker(
     QObject,
 ):
     file_download_finished = Signal()
-    progress_updated = Signal(int, int)
+    # Use object-typed signal to avoid potential overflow when emitting large
+    # byte counts. Values emitted will typically be Python ints.
+    progress_updated = Signal(object, object)
 
     def __init__(self, parent, models_enabled: List[str], initialize_gui=True):
         super().__init__()
