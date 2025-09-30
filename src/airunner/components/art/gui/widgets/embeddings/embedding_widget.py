@@ -27,12 +27,12 @@ class EmbeddingWidget(BaseWidget):
         name = self.embedding.name
         enabled = self.embedding.active
         trigger_word = self.embedding.trigger_word
-        self.ui.enabledCheckbox.blockSignals(True)
+        self.ui.enabled_checkbox.blockSignals(True)
         self.ui.trigger_word_edit.blockSignals(True)
-        self.ui.enabledCheckbox.setChecked(enabled)
+        self.ui.enabled_checkbox.setChecked(enabled)
         self.ui.trigger_word_edit.setText(trigger_word)
-        self.ui.enabledCheckbox.setText(name)
-        self.ui.enabledCheckbox.blockSignals(False)
+        self.ui.enabled_checkbox.setText(name)
+        self.ui.enabled_checkbox.blockSignals(False)
         self.ui.trigger_word_edit.blockSignals(False)
         self.create_trigger_word_widgets(self.embedding)
 
@@ -66,9 +66,9 @@ class EmbeddingWidget(BaseWidget):
     @Slot(bool)
     def on_enabled_checkbox_toggled(self, val: bool):
         self.embedding.active = val
-        self.ui.enabledCheckbox.blockSignals(True)
-        self.ui.enabledCheckbox.setChecked(val)
-        self.ui.enabledCheckbox.blockSignals(False)
+        self.ui.enabled_checkbox.blockSignals(True)
+        self.ui.enabled_checkbox.setChecked(val)
+        self.ui.enabled_checkbox.blockSignals(False)
         self.update_embedding(self.embedding)
         self.api.art.embeddings.status_changed()
 
@@ -90,9 +90,9 @@ class EmbeddingWidget(BaseWidget):
         self.update_embedding(self.embedding)
 
     def enable_embedding_widget(self):
-        self.ui.enabledCheckbox.setEnabled(True)
+        self.ui.enabled_checkbox.setEnabled(True)
         self.ui.delete_button.setEnabled(True)
 
     def disable_embedding_widget(self):
-        self.ui.enabledCheckbox.setEnabled(False)
+        self.ui.enabled_checkbox.setEnabled(False)
         self.ui.delete_button.setEnabled(False)
