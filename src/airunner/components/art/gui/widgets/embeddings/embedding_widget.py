@@ -1,4 +1,5 @@
 from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QMessageBox
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.data.embedding import Embedding
@@ -18,6 +19,7 @@ class EmbeddingWidget(BaseWidget):
     """
 
     widget_class_ = Ui_embedding
+    icons = (("trash-2", "delete_button"),)
 
     def __init__(self, *args, **kwargs):
         self.embedding: Embedding = kwargs.pop("embedding")
@@ -35,8 +37,21 @@ class EmbeddingWidget(BaseWidget):
         self.create_trigger_word_widgets(self.embedding)
 
     @Slot()
-    def action_clicked_button_deleted(self):
-        self.api.art.embeddings.delete(self)
+    def on_delete_button_clicked(self):
+        """Ask user to confirm deletion before calling the API.
+
+        Only proceed with deletion when the user clicks Yes.
+        """
+        name = getattr(self.embedding, "name", "this embedding")
+        reply = QMessageBox.question(
+            self,
+            "Delete Embedding",
+            f"Are you sure you want to delete '{name}'?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply == QMessageBox.Yes:
+            self.api.art.embeddings.delete(self)
 
     def update_embedding(self, embedding: Embedding):
         Embedding.objects.update(
@@ -49,7 +64,7 @@ class EmbeddingWidget(BaseWidget):
         )
 
     @Slot(bool)
-    def action_toggled_embedding(self, val, _emit_signal=True):
+    def on_enabled_checkbox_toggled(self, val: bool):
         self.embedding.active = val
         self.ui.enabledCheckbox.blockSignals(True)
         self.ui.enabledCheckbox.setChecked(val)
@@ -58,15 +73,15 @@ class EmbeddingWidget(BaseWidget):
         self.api.art.embeddings.status_changed()
 
     def create_trigger_word_widgets(self, embedding: Embedding):
-        for i in reversed(range(self.ui.gridLayout.layout().count())):
-            widget = self.ui.gridLayout.layout().itemAt(i).widget()
+        for i in reversed(range(self.ui.trigger_word_container.count())):
+            widget = self.ui.trigger_word_container.itemAt(i).widget()
             if isinstance(widget, EmbeddingTriggerWordWidget):
                 widget.deleteLater()
         for word in embedding.trigger_word.split(","):
             if word.strip() == "":
                 continue
             widget = EmbeddingTriggerWordWidget(trigger_word=word)
-            self.ui.gridLayout.layout().addWidget(widget)
+            self.ui.trigger_word_container.addWidget(widget)
 
     @Slot(str)
     def action_changed_trigger_word(self, val):

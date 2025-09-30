@@ -22,9 +22,11 @@ class Ui_embedding_trigger_word(object):
     def setupUi(self, embedding_trigger_word):
         if not embedding_trigger_word.objectName():
             embedding_trigger_word.setObjectName(u"embedding_trigger_word")
-        embedding_trigger_word.resize(345, 43)
+        embedding_trigger_word.resize(345, 44)
         self.horizontalLayout = QHBoxLayout(embedding_trigger_word)
+        self.horizontalLayout.setSpacing(5)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.trigger_word = QLabel(embedding_trigger_word)
         self.trigger_word.setObjectName(u"trigger_word")
 
