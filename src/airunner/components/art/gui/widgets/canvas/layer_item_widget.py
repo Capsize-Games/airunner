@@ -64,13 +64,13 @@ class LayerItemWidget(BaseWidget, PipelineMixin):
         settings = get_qsettings()
         theme = settings.value("theme", TemplateName.SYSTEM_DEFAULT.value)
         theme_name = theme.lower().replace(" ", "_")
+        self.icons[0] = (
+            "eye" if self.layer.visible else "eye-off",
+            "visibility",
+        )
 
-        if self.layer.visible:
-            icon = self.icon_manager.get_icon("eye", theme_name)
-            tooltip = "Hide layer"
-        else:
-            icon = self.icon_manager.get_icon("eye-off", theme_name)
-            tooltip = "Show layer"
+        icon = self.icon_manager.get_icon(self.icons[0][0], theme_name)
+        tooltip = "Hide Layer" if self.layer.visible else "Show Layer"
 
         self.ui.visibility.setIcon(icon)
         self.ui.visibility.setToolTip(tooltip)

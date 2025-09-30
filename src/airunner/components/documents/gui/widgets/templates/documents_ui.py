@@ -31,12 +31,6 @@ class Ui_documents(object):
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.progressBar = QProgressBar(documents)
-        self.progressBar.setObjectName(u"progressBar")
-        self.progressBar.setValue(0)
-
-        self.gridLayout.addWidget(self.progressBar, 5, 0, 1, 1)
-
         self.tabWidget = QTabWidget(documents)
         self.tabWidget.setObjectName(u"tabWidget")
         self.tabDocuments = QWidget()
@@ -144,6 +138,18 @@ class Ui_documents(object):
         self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.gridLayout.addWidget(self.line, 3, 0, 1, 1)
+
+        self.verticalLayout_2 = QVBoxLayout()
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(10, 0, 10, 10)
+        self.progressBar = QProgressBar(documents)
+        self.progressBar.setObjectName(u"progressBar")
+        self.progressBar.setValue(0)
+
+        self.verticalLayout_2.addWidget(self.progressBar)
+
+
+        self.gridLayout.addLayout(self.verticalLayout_2, 5, 0, 1, 1)
 
 
         self.retranslateUi(documents)
