@@ -570,7 +570,7 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset resource="../../../resources/feather.qrc">
+                  <iconset resource="../../../../../../gui/resources/feather.qrc">
                    <normaloff>:/light/icons/feather/light/circle.svg</normaloff>:/light/icons/feather/light/circle.svg</iconset>
                  </property>
                  <property name="checkable">
@@ -650,7 +650,7 @@
            <string/>
           </property>
           <property name="icon">
-           <iconset resource="../../../resources/feather.qrc">
+           <iconset resource="../../../../../../gui/resources/feather.qrc">
             <normaloff>:/light/icons/feather/light/chevron-up.svg</normaloff>:/light/icons/feather/light/chevron-up.svg</iconset>
           </property>
          </widget>
@@ -685,7 +685,7 @@
            <string/>
           </property>
           <property name="icon">
-           <iconset resource="../../../resources/feather.qrc">
+           <iconset resource="../../../../../../gui/resources/feather.qrc">
             <normaloff>:/light/icons/feather/light/x.svg</normaloff>:/light/icons/feather/light/x.svg</iconset>
           </property>
          </widget>
@@ -731,7 +731,7 @@
   <tabstop>stable_diffusion_generator_form</tabstop>
  </tabstops>
  <resources>
-  <include location="../../../resources/feather.qrc"/>
+  <include location="../../../../../../gui/resources/feather.qrc"/>
  </resources>
  <connections>
   <connection>

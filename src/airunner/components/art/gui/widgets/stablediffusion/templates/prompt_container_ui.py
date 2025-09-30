@@ -17,6 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QPlainTextEdit,
     QPushButton, QSizePolicy, QSpacerItem, QWidget)
+import airunner.feather_rc
 
 class Ui_prompt_container_widget(object):
     def setupUi(self, prompt_container_widget):
@@ -41,12 +42,13 @@ class Ui_prompt_container_widget(object):
 
         self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 2)
 
-        self.pushButton = QPushButton(prompt_container_widget)
-        self.pushButton.setObjectName(u"pushButton")
-        icon = QIcon(QIcon.fromTheme(u"user-trash"))
-        self.pushButton.setIcon(icon)
+        self.delete_prompt_button = QPushButton(prompt_container_widget)
+        self.delete_prompt_button.setObjectName(u"delete_prompt_button")
+        icon = QIcon()
+        icon.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.delete_prompt_button.setIcon(icon)
 
-        self.gridLayout.addWidget(self.pushButton, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.delete_prompt_button, 1, 0, 1, 1)
 
         self.horizontalSpacer = QSpacerItem(396, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
@@ -54,7 +56,6 @@ class Ui_prompt_container_widget(object):
 
 
         self.retranslateUi(prompt_container_widget)
-        self.pushButton.clicked.connect(prompt_container_widget.handle_delete_prompt_clicked)
 
         QMetaObject.connectSlotsByName(prompt_container_widget)
     # setupUi
@@ -63,6 +64,6 @@ class Ui_prompt_container_widget(object):
         prompt_container_widget.setWindowTitle(QCoreApplication.translate("prompt_container_widget", u"Form", None))
         self.prompt.setPlaceholderText(QCoreApplication.translate("prompt_container_widget", u"Enter prompt", None))
         self.secondary_prompt.setPlaceholderText(QCoreApplication.translate("prompt_container_widget", u"Enter optional second prompt", None))
-        self.pushButton.setText("")
+        self.delete_prompt_button.setText("")
     # retranslateUi
 
