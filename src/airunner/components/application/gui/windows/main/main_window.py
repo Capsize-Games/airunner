@@ -185,6 +185,7 @@ class MainWindow(
     _reload_debounce_seconds = 1.0
 
     def __init__(self, *args, **kwargs):
+        self.quitting = False
         self._state_restored = None
         self.ui = self.ui_class_()
         self.qsettings = get_qsettings()
@@ -319,25 +320,11 @@ class MainWindow(
 
     @Slot(bool)
     def on_chat_button_toggled(self, val: bool):
-        self._toggle_splitter_section(val, 0)
+        self._toggle_splitter_section(val, 0, self.ui.main_window_splitter, 50)
 
     @Slot(bool)
     def on_knowledgebase_button_toggled(self, val: bool):
-        self._toggle_splitter_section(val, 2)
-    
-    def _toggle_splitter_section(self, val: bool, panel_id: int):
-        if val:
-            splitter = self.ui.main_window_splitter
-            min_size = 50
-            sizes = splitter.sizes()
-            sizes[panel_id] = min_size
-            splitter.setSizes(sizes)
-        else:
-            # collapse the panel
-            splitter = self.ui.main_window_splitter
-            sizes = splitter.sizes()
-            sizes[panel_id] = 0
-            splitter.setSizes(sizes)
+        self._toggle_splitter_section(val, 2, self.ui.main_window_splitter, 50)
 
     def on_splitter_changed_sizes(self):
         self.set_chat_button_checked()
@@ -1045,6 +1032,9 @@ class MainWindow(
         self.quit()
 
     def quit(self):
+        if self.quitting:
+            return
+        self.quitting = True
         self.logger.debug("Quitting")
         self.save_state()
         if not self.api:
@@ -1052,7 +1042,8 @@ class MainWindow(
                 "MainWindow: self.api is missing. Cannot quit application."
             )
             return
-        self.api.quit_application()
+        self.emit_signal(SignalCode.SAVE_STATE, {})
+        self.emit_signal(SignalCode.QUIT_APPLICATION, {})
 
     def handle_quit_application_signal(self):
         self.hide()
