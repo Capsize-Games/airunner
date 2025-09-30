@@ -1,4 +1,11 @@
-from sqlalchemy import Column, Integer, Boolean, LargeBinary, ForeignKey
+from sqlalchemy import (
+    Column,
+    Integer,
+    Boolean,
+    LargeBinary,
+    ForeignKey,
+    String,
+)
 from sqlalchemy.orm import relationship
 
 from airunner.components.data.models.base import BaseModel
@@ -19,6 +26,10 @@ class DrawingPadSettings(BaseModel):
     mask_layer_enabled = Column(Boolean, default=False)
     x_pos = Column(Integer, default=0)
     y_pos = Column(Integer, default=0)
+
+    # Store text items for this drawing pad as a JSON string
+    # Format: JSON-serialized list of dicts with keys: text,x,y,color,font
+    text_items = Column(String, nullable=True)
 
     # Relationship to CanvasLayer temporarily commented out
     # TODO: Re-enable after fixing SQLAlchemy relationship mapping
