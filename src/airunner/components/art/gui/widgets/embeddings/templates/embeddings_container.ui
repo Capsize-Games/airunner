@@ -54,7 +54,7 @@
         <x>0</x>
         <y>0</y>
         <width>459</width>
-        <height>413</height>
+        <height>435</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
@@ -96,7 +96,7 @@
       <number>10</number>
      </property>
      <property name="bottomMargin">
-      <number>10</number>
+      <number>0</number>
      </property>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -180,13 +180,6 @@
         </widget>
        </item>
       </layout>
-     </item>
-     <item>
-      <widget class="Line" name="line_2">
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-      </widget>
      </item>
     </layout>
    </item>
