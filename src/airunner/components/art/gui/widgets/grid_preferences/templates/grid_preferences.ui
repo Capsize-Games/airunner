@@ -15,16 +15,16 @@
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
    <property name="leftMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="spacing">
     <number>0</number>
@@ -39,8 +39,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>809</width>
-        <height>372</height>
+        <width>789</width>
+        <height>352</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -48,7 +48,7 @@
         <number>0</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>5</number>
        </property>
        <property name="rightMargin">
         <number>10</number>
@@ -60,19 +60,19 @@
         <number>0</number>
        </property>
        <property name="verticalSpacing">
-        <number>10</number>
+        <number>15</number>
        </property>
        <item row="3" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
-          <widget class="QPushButton" name="gridLineColorButton">
+          <widget class="QPushButton" name="grid_line_color_button">
            <property name="text">
             <string>Line Color</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="canvas_color">
+          <widget class="QPushButton" name="canvas_color_button">
            <property name="text">
             <string>Canvas Color</string>
            </property>
@@ -199,8 +199,8 @@
    <slot>grid_size_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>37</x>
-     <y>41</y>
+     <x>60</x>
+     <y>101</y>
     </hint>
     <hint type="destinationlabel">
      <x>20</x>
@@ -215,76 +215,12 @@
    <slot>line_width_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>98</x>
-     <y>104</y>
+     <x>513</x>
+     <y>127</y>
     </hint>
     <hint type="destinationlabel">
      <x>94</x>
      <y>-11</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>gridLineColorButton</sender>
-   <signal>clicked()</signal>
-   <receiver>grid_preferences</receiver>
-   <slot>action_button_clicked_grid_line_color()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>236</x>
-     <y>137</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>227</x>
-     <y>-11</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>canvas_color</sender>
-   <signal>clicked()</signal>
-   <receiver>grid_preferences</receiver>
-   <slot>action_button_clicked_canvas_color()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>262</x>
-     <y>165</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>294</x>
-     <y>5</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>show_grid_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>grid_preferences</receiver>
-   <slot>action_toggled_show_grid(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>45</x>
-     <y>190</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>175</x>
-     <y>4</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>snap_to_grid_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>grid_preferences</receiver>
-   <slot>action_toggled_snap_to_grid(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>87</x>
-     <y>221</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>140</x>
-     <y>0</y>
     </hint>
    </hints>
   </connection>

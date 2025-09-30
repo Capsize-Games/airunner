@@ -24,7 +24,7 @@
     <number>0</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="rightMargin">
     <number>0</number>
@@ -36,7 +36,7 @@
     <number>0</number>
    </property>
    <property name="verticalSpacing">
-    <number>10</number>
+    <number>15</number>
    </property>
    <item row="2" column="0">
     <widget class="QScrollArea" name="scrollArea">
@@ -49,7 +49,7 @@
         <x>0</x>
         <y>0</y>
         <width>409</width>
-        <height>921</height>
+        <height>906</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
