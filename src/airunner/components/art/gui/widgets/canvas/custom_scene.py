@@ -724,6 +724,8 @@ class CustomScene(
             "mask": getattr(settings, "mask", None),
             "x_pos": getattr(settings, "x_pos", 0) or 0,
             "y_pos": getattr(settings, "y_pos", 0) or 0,
+            # Capture text_items so text changes are included in undo/redo
+            "text_items": getattr(settings, "text_items", None),
         }
 
     def _apply_layer_state(

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QGraphicsView,
     QGraphicsItemGroup,
     QGraphicsTextItem,
+    QMenu,
 )
 import json
 
@@ -88,6 +89,69 @@ class DraggableTextItem(QGraphicsTextItem):
             self.mouse_press_pos = event.pos()
             event.accept()
         else:
+            # Show a simple context menu on right-click to delete the text
+            if event.button() == Qt.MouseButton.RightButton:
+                try:
+                    menu = QMenu()
+                    delete_action = menu.addAction(self.tr("Delete"))
+                    chosen = menu.exec_(event.screenPos())
+                    if chosen == delete_action:
+                        view = getattr(self, "_view", None)
+                        # Remove from scene and inform view to persist
+                        try:
+                            # Begin history transaction for associated layer
+                            try:
+                                layer_id = None
+                                if view is not None and hasattr(
+                                    view, "_text_item_layer_map"
+                                ):
+                                    layer_id = view._text_item_layer_map.get(
+                                        self
+                                    )
+                                if self.scene() and layer_id is not None:
+                                    if (
+                                        layer_id
+                                        not in self.scene._history_transactions
+                                    ):
+                                        self.scene._begin_layer_history_transaction(
+                                            layer_id, "text"
+                                        )
+                            except Exception:
+                                pass
+
+                            if self.scene():
+                                self.scene().removeItem(self)
+                        except Exception:
+                            pass
+                        try:
+                            if view is not None:
+                                if self in view._text_items:
+                                    view._text_items.remove(self)
+                                if self in view._text_item_layer_map:
+                                    del view._text_item_layer_map[self]
+                                view._save_text_items_to_db()
+                                # Commit transaction for this layer
+                                try:
+                                    layer_id = None
+                                    if hasattr(view, "_text_item_layer_map"):
+                                        layer_id = (
+                                            view._text_item_layer_map.get(self)
+                                        )
+                                    if view.scene and layer_id is not None:
+                                        view.scene._commit_layer_history_transaction(
+                                            layer_id, "text"
+                                        )
+                                except Exception:
+                                    pass
+                        except Exception:
+                            try:
+                                # best-effort fallback
+                                self._view._save_text_items_to_db()
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+                return
             return QGraphicsTextItem.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
@@ -650,7 +714,25 @@ class CustomGraphicsView(
                 return
             else:
                 # Add new inline text item at click position
+                # Begin a history transaction for this layer so the add is undoable
+                layer_id = self._get_current_selected_layer_id()
+                try:
+                    if self.scene and layer_id is not None:
+                        if layer_id not in self.scene._history_transactions:
+                            self.scene._begin_layer_history_transaction(
+                                layer_id, "text"
+                            )
+                except Exception:
+                    pass
                 self._add_text_item_inline(scene_pos)
+                # Commit the transaction after saving
+                try:
+                    if self.scene and layer_id is not None:
+                        self.scene._commit_layer_history_transaction(
+                            layer_id, "text"
+                        )
+                except Exception:
+                    pass
                 return
         # If not text tool, ensure all text items are not movable/editable
         self._set_text_items_interaction(False)
@@ -698,6 +780,59 @@ class CustomGraphicsView(
             event.accept()
             return
         super().mouseMoveEvent(event)
+
+    def keyPressEvent(self, event):
+        # Support Delete key to remove selected text items from the canvas
+        if event.key() == Qt.Key.Key_Delete:
+            # Collect selected text items
+            to_remove = [it for it in self._text_items if it.isSelected()]
+            if to_remove:
+                # Group by layer and begin a transaction per layer
+                layers = {}
+                for item in to_remove:
+                    layer_id = self._text_item_layer_map.get(item)
+                    layers.setdefault(layer_id, []).append(item)
+
+                for layer_id, items in layers.items():
+                    try:
+                        if self.scene and layer_id is not None:
+                            if (
+                                layer_id
+                                not in self.scene._history_transactions
+                            ):
+                                self.scene._begin_layer_history_transaction(
+                                    layer_id, "text"
+                                )
+                    except Exception:
+                        pass
+
+                    for item in items:
+                        try:
+                            if item.scene():
+                                item.scene().removeItem(item)
+                        except Exception:
+                            pass
+                        if item in self._text_items:
+                            self._text_items.remove(item)
+                        if item in self._text_item_layer_map:
+                            del self._text_item_layer_map[item]
+
+                    try:
+                        # Save changes for this layer and commit transaction
+                        self._save_text_items_to_db()
+                    except Exception:
+                        self.logger.exception(
+                            "Failed saving text items after delete"
+                        )
+                    try:
+                        if self.scene and layer_id is not None:
+                            self.scene._commit_layer_history_transaction(
+                                layer_id, "text"
+                            )
+                    except Exception:
+                        pass
+                return
+        super().keyPressEvent(event)
 
     def _do_pan_update(self):
         self.update_active_grid_area_position()
@@ -885,8 +1020,32 @@ class CustomGraphicsView(
         Persist the current text items state.
         """
         # Save changes for the current text item(s)
+        # Begin a history transaction for the affected layer(s)
         try:
+            # Determine layers affected by currently selected text items
+            selected = [t for t in self._text_items if t.isSelected()]
+            layer_ids = set(self._text_item_layer_map.get(t) for t in selected)
+            for lid in layer_ids:
+                try:
+                    if self.scene and lid is not None:
+                        if lid not in self.scene._history_transactions:
+                            self.scene._begin_layer_history_transaction(
+                                lid, "text"
+                            )
+                except Exception:
+                    pass
+
             self._save_text_items_to_db()
+
+            # Commit transactions for affected layers
+            for lid in layer_ids:
+                try:
+                    if self.scene and lid is not None:
+                        self.scene._commit_layer_history_transaction(
+                            lid, "text"
+                        )
+                except Exception:
+                    pass
         except Exception:
             self.logger.exception(
                 "Failed to save text items after inspector change"
@@ -984,12 +1143,31 @@ class CustomGraphicsView(
     def _make_text_key_press_handler(self, item):
         def handler(event):
             if event.key() == Qt.Key.Key_Delete:
+                # Wrap deletion in a history transaction for the item's layer
+                layer_id = self._text_item_layer_map.get(item)
+                try:
+                    if self.scene and layer_id is not None:
+                        if layer_id not in self.scene._history_transactions:
+                            self.scene._begin_layer_history_transaction(
+                                layer_id, "text"
+                            )
+                except Exception:
+                    pass
+
                 self.scene.removeItem(item)
                 if item in self._text_items:
                     self._text_items.remove(item)
                 if item in self._text_item_layer_map:
                     del self._text_item_layer_map[item]
                 self._save_text_items_to_db()
+                # Commit transaction
+                try:
+                    if self.scene and layer_id is not None:
+                        self.scene._commit_layer_history_transaction(
+                            layer_id, "text"
+                        )
+                except Exception:
+                    pass
                 self._editing_text_item = None
             else:
                 QGraphicsTextItem.keyPressEvent(item, event)
