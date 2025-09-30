@@ -232,15 +232,68 @@ class DownloadModelDialog(QDialog):
     def _cleanup_download(self) -> None:
         """Stop thread, clear references, and close progress dialog if needed."""
         try:
+            # Close and hide the progress UI immediately so further progress
+            # updates can't make it reappear.
             if self._progress_dialog is not None:
-                self._progress_dialog.close()
+                try:
+                    self._progress_dialog.close()
+                except Exception:
+                    pass
         except Exception:
             pass
+
+        # Try to stop the worker thread cleanly. Avoid calling terminate()
+        # because it can crash the application (abort). Instead request the
+        # worker cancel and quit the thread, then wait a short time.
         if self._download_thread is not None:
             try:
-                self._download_thread.quit()
+                # Disconnect worker signals so they can't call back into this
+                # dialog after we've closed the UI.
+                try:
+                    if self._download_worker is not None:
+                        try:
+                            self._download_worker.progress.disconnect()
+                        except Exception:
+                            pass
+                        try:
+                            self._download_worker.finished.disconnect()
+                        except Exception:
+                            pass
+                        try:
+                            self._download_worker.error.disconnect()
+                        except Exception:
+                            pass
+                        try:
+                            self._download_worker.canceled.disconnect()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+                try:
+                    # Ask the thread to quit; the worker should notice the
+                    # cancel flag and exit its loop. Wait briefly for it to
+                    # finish.
+                    self._download_thread.quit()
+                    try:
+                        self._download_thread.wait(2000)
+                    except Exception:
+                        # If wait isn't available, just continue — don't
+                        # attempt to forcefully terminate the thread.
+                        logger.debug(
+                            "Thread wait not available", exc_info=True
+                        )
+                except Exception:
+                    logger.debug("Thread quit failed", exc_info=True)
             except Exception:
-                logger.debug("Thread quit failed", exc_info=True)
+                # Protect against any unexpected errors while disconnecting
+                # or quitting the thread; we don't want this to crash the app.
+                logger.debug(
+                    "Error while cleaning up download thread", exc_info=True
+                )
+
+        # Drop the reference to the progress dialog so progress handlers
+        # return early and cannot re-show it.
         self._progress_dialog = None
 
     def _on_download_progress(self, current: int, total: int) -> None:
@@ -316,10 +369,32 @@ class DownloadModelDialog(QDialog):
 
         try:
             if self._download_worker:
-                self._download_worker.cancel()
+                # Request worker cancel; this sets the worker flag but may not
+                # stop a blocking network call immediately. Call cancel first
+                # then run cleanup which will escalate if the thread doesn't
+                # stop in a short time.
+                try:
+                    self._download_worker.cancel()
+                except Exception:
+                    logger.debug("Worker cancel call failed", exc_info=True)
         except Exception:
             logger.debug("Cancel call failed", exc_info=True)
+        # Perform cleanup (close dialog, stop thread). After cleanup, try to
+        # remove any partial file the worker may have left behind.
         self._cleanup_download()
+        try:
+            sp = getattr(self._download_worker, "save_path", None)
+            if sp and os.path.exists(sp):
+                try:
+                    os.remove(sp)
+                except Exception:
+                    logger.debug(
+                        "Failed to remove partial download %s",
+                        sp,
+                        exc_info=True,
+                    )
+        except Exception:
+            logger.debug("Post-cancel cleanup failed", exc_info=True)
 
     def _start_download(self) -> None:
         selected = self.list_widget.currentItem()
@@ -407,7 +482,13 @@ class DownloadModelDialog(QDialog):
         self._download_worker.finished.connect(self._on_download_finished)
         self._download_worker.error.connect(self._on_download_failed_str)
         self._download_worker.canceled.connect(self._on_download_canceled)
-        self._progress_dialog.canceled.connect(self._download_worker.cancel)
+        # Use a local handler so we can close the progress dialog and
+        # perform cleanup immediately when the user presses Cancel. If we
+        # simply call the worker.cancel() the worker may be blocked and
+        # continue emitting progress, which can cause the dialog to reappear.
+        self._progress_dialog.canceled.connect(
+            self._on_progress_dialog_canceled
+        )
 
         # Ensure thread cleans up non-blocking
         self._download_thread.finished.connect(self._on_thread_finished)
@@ -419,6 +500,116 @@ class DownloadModelDialog(QDialog):
         self._download_thread.started.connect(self._download_worker.run)
         self._download_thread.start()
         self._progress_dialog.show()
+
+    def _on_progress_dialog_canceled(self) -> None:
+        """Handle user pressing Cancel on the QProgressDialog.
+
+        Request worker cancellation and perform immediate cleanup so the
+        progress dialog cannot be re-shown by in-flight progress updates.
+        """
+        try:
+            if self._download_worker:
+                try:
+                    self._download_worker.cancel()
+                except Exception:
+                    logger.debug("Worker cancel failed", exc_info=True)
+        except Exception:
+            logger.debug("Error requesting worker cancel", exc_info=True)
+
+        # Immediately cleanup UI state so progress updates won't re-show
+        # the dialog. We also attempt to remove any partial file right
+        # away to respect the user's cancellation intent.
+        try:
+            sp = getattr(self._download_worker, "save_path", None)
+        except Exception:
+            sp = None
+
+        self._cleanup_download()
+
+        # Try to remove partial file if present
+        try:
+            if sp and os.path.exists(sp):
+                try:
+                    os.remove(sp)
+                except Exception:
+                    logger.debug(
+                        "Failed to remove partial download %s",
+                        sp,
+                        exc_info=True,
+                    )
+        except Exception:
+            logger.debug(
+                "Post-cancel partial file removal failed", exc_info=True
+            )
+
+    def closeEvent(self, event) -> None:
+        """Ensure we don't destroy a running QThread when the dialog closes.
+
+        If a download is running, request cancellation and wait briefly. If
+        the thread is still running after a short timeout, reparent it so it
+        isn't destroyed with the dialog and inform the user the download will
+        continue in the background.
+        """
+        try:
+            if (
+                self._download_thread is not None
+                and self._download_thread.isRunning()
+            ):
+                # Ask worker to cancel cooperatively
+                try:
+                    if self._download_worker is not None:
+                        self._download_worker.cancel()
+                except Exception:
+                    logger.debug(
+                        "Failed to request worker cancel", exc_info=True
+                    )
+
+                # Try to quit the thread and wait shortly
+                try:
+                    self._download_thread.quit()
+                    try:
+                        self._download_thread.wait(2000)
+                    except Exception:
+                        logger.debug(
+                            "Thread wait not available or interrupted",
+                            exc_info=True,
+                        )
+                except Exception:
+                    logger.debug("Thread quit failed", exc_info=True)
+
+                # If still running, detach the thread from this dialog to avoid
+                # Qt complaining about destruction while running.
+                if self._download_thread.isRunning():
+                    try:
+                        # Reparent the thread to the application so it won't be
+                        # deleted when this dialog is destroyed.
+                        self._download_thread.setParent(None)
+                    except Exception:
+                        logger.debug(
+                            "Failed to reparent download thread", exc_info=True
+                        )
+
+                    # Let the user know the download will continue in background
+                    try:
+                        QMessageBox.information(
+                            self,
+                            "Download Continuing",
+                            "The download will continue in the background. You can monitor downloads from the main application.",
+                        )
+                    except Exception:
+                        pass
+
+                # Clear local references so the dialog can be destroyed safely.
+                self._download_thread = None
+                self._download_worker = None
+        except Exception:
+            logger.debug("Error during dialog close handling", exc_info=True)
+
+        # Proceed with normal close
+        try:
+            super().closeEvent(event)
+        except Exception:
+            event.accept()
 
 
 def show_download_model_dialog(parent, path_settings, application_settings):
