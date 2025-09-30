@@ -439,26 +439,70 @@ class CustomGraphicsView(
             self._resize_timer.start()
 
     def _handle_deferred_resize(self):
+        # If there is no pending resize event, stop the timer after a short
+        # idle period and return.
         if self._recent_event_size is None:
             if time.time() - self._time_since_last_resize >= 1:
                 self._resize_timer.stop()
             return
+
+        # Consume the most recent resize event
         size = self._recent_event_size
         self._recent_event_size = None
+
+        # New viewport size
         width = size.width()
         height = size.height()
+
+        # Calculate how the viewport center moved compared to the last
+        # recorded viewport size. We will compensate the canvas_offset by
+        # this delta so that items retain their on-screen positions.
+        try:
+            old_size = self._last_viewport_size or self.viewport().size()
+            old_center = QPointF(old_size.width() / 2, old_size.height() / 2)
+            new_center = QPointF(width / 2, height / 2)
+            center_delta = QPointF(
+                new_center.x() - old_center.x(),
+                new_center.y() - old_center.y(),
+            )
+
+            # Subtract center_delta from canvas_offset to keep scene items
+            # visually stationary in the viewport.
+            self.canvas_offset -= center_delta
+        except Exception:
+            # If anything goes wrong computing the compensation, proceed
+            # without changing canvas_offset (best-effort behavior).
+            self.logger.exception("Error computing center delta during resize")
+
+        # Update last viewport size to the current viewport dimensions
         canvas_container_size = self.viewport().size()
-        screen_size = self.screen().availableGeometry().size()
-        screen_width = screen_size.width() - 64
-        screen_height = screen_size.height() - 160
-        x = (screen_width - width) / 2
-        y = (screen_height - height) / 2
-        self.scene.setSceneRect(
-            x,
-            y,
-            canvas_container_size.width(),
-            canvas_container_size.height(),
-        )
+        self._last_viewport_size = canvas_container_size
+
+        # Set the scene rect to match the viewport. Keep origin at (0,0)
+        # so offsets and negative coordinates behave consistently.
+        if self.scene:
+            self.scene.setSceneRect(
+                0,
+                0,
+                canvas_container_size.width(),
+                canvas_container_size.height(),
+            )
+
+        # Update the active grid and image positions and force a redraw.
+        # Inform the API about the new offset (best-effort - ignore API
+        # failures during early init).
+        try:
+            self.api.art.canvas.update_grid_info(
+                {
+                    "offset_x": self.canvas_offset_x,
+                    "offset_y": self.canvas_offset_y,
+                }
+            )
+        except Exception:
+            self.logger.exception("Failed to update grid info during resize")
+
+        # Move active grid area and all images to account for the new offset
+        self.update_active_grid_area_position()
         self.updateImagePositions()
         self.do_draw(force_draw=True)
 
