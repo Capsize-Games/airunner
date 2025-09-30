@@ -179,6 +179,7 @@ class MainWindow(
         ("home", "home_button"),
         ("radio", "visualizer_button"),
         ("arrow-down-circle", "actionDownload_Model"),
+        ("book", "knowledgebase_button"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0
@@ -318,26 +319,29 @@ class MainWindow(
 
     @Slot(bool)
     def on_chat_button_toggled(self, val: bool):
+        self._toggle_splitter_section(val, 0)
+
+    @Slot(bool)
+    def on_knowledgebase_button_toggled(self, val: bool):
+        self._toggle_splitter_section(val, 2)
+    
+    def _toggle_splitter_section(self, val: bool, panel_id: int):
         if val:
-            self.ui.center_tab_container.setCurrentIndex(
-                self.ui.center_tab_container.indexOf(self.ui.generator_widget)
-            )
-            # Expand the first panel of main_window_splitter to its minimum size
             splitter = self.ui.main_window_splitter
-            if splitter.count() >= 2:
-                min_size = splitter.widget(0).minimumSizeHint().width()
-                total = splitter.size().width()
-                # Assign minimum to first, rest to second
-                splitter.setSizes([min_size, max(0, total - min_size)])
+            min_size = 50
+            sizes = splitter.sizes()
+            sizes[panel_id] = min_size
+            splitter.setSizes(sizes)
         else:
             # collapse the panel
             splitter = self.ui.main_window_splitter
-            if splitter.count() >= 2:
-                # Set the first panel to a minimum size, effectively hiding it
-                splitter.setSizes([0, splitter.size().width()])
+            sizes = splitter.sizes()
+            sizes[panel_id] = 0
+            splitter.setSizes(sizes)
 
     def on_splitter_changed_sizes(self):
         self.set_chat_button_checked()
+        self.set_knowledgebase_button_checked()
 
     def set_chat_button_checked(self):
         self.ui.chat_button.blockSignals(True)
@@ -345,6 +349,14 @@ class MainWindow(
             self.ui.main_window_splitter.sizes()[0] > 0
         )
         self.ui.chat_button.blockSignals(False)
+
+    def set_knowledgebase_button_checked(self):
+        panel_id = 2
+        self.ui.knowledgebase_button.blockSignals(True)
+        self.ui.knowledgebase_button.setChecked(
+            self.ui.main_window_splitter.sizes()[panel_id] > 0
+        )
+        self.ui.knowledgebase_button.blockSignals(False)
 
     @Slot()
     def on_actionQuit_triggered(self):
@@ -925,6 +937,7 @@ class MainWindow(
             self.on_splitter_changed_sizes
         )
         self.set_chat_button_checked()
+        self.set_knowledgebase_button_checked()
 
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
