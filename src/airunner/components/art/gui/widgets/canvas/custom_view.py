@@ -604,6 +604,48 @@ class CustomGraphicsView(
         display_x = absolute_x - self.canvas_offset_x
         display_y = absolute_y - self.canvas_offset_y
         self.active_grid_area.setPos(display_x, display_y)
+        # Ensure active grid mouse acceptance matches current tool
+        try:
+            self._update_active_grid_mouse_acceptance()
+        except Exception:
+            pass
+
+    def _update_active_grid_mouse_acceptance(self):
+        """Make the active grid area ignore mouse events while the MOVE tool is active.
+
+        When the MOVE tool is selected users need to be able to interact with items
+        beneath the active grid area. Setting accepted mouse buttons to NoButton
+        makes the item transparent to mouse events so clicks fall through.
+        """
+        if not self.active_grid_area:
+            return
+
+        try:
+            # If MOVE tool is active, let clicks pass through the active grid area
+            if self.current_tool is CanvasToolName.MOVE:
+                self.active_grid_area.setAcceptedMouseButtons(
+                    Qt.MouseButton.NoButton
+                )
+                # Also disable hover events so hover cursors don't block underlying items
+                try:
+                    self.active_grid_area.setAcceptHoverEvents(False)
+                except Exception:
+                    pass
+            else:
+                # Restore acceptance for left/right buttons when not moving
+                accepted = (
+                    Qt.MouseButton.LeftButton | Qt.MouseButton.RightButton
+                )
+                self.active_grid_area.setAcceptedMouseButtons(accepted)
+                try:
+                    self.active_grid_area.setAcceptHoverEvents(True)
+                except Exception:
+                    pass
+        except Exception:
+            # Best-effort; do not break flow if ActiveGridArea doesn't support these methods
+            self.logger.exception(
+                "Failed updating active grid mouse acceptance"
+            )
 
     def on_zoom_level_changed_signal(self):
         transform = self.zoom_handler.on_zoom_level_changed()
@@ -893,6 +935,11 @@ class CustomGraphicsView(
         # Update text item interaction flags based on tool
         is_text = self.current_tool is CanvasToolName.TEXT
         self._set_text_items_interaction(is_text)
+        # Ensure active grid area doesn't block item interaction while moving
+        try:
+            self._update_active_grid_mouse_acceptance()
+        except Exception:
+            pass
 
     def toggle_drag_mode(self):
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
