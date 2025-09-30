@@ -208,6 +208,7 @@ class SignalCode(Enum):
 
     TOGGLE_TOOL = "toggle_tool"
     TOGGLE_GRID = "toggle_grid"
+    TOGGLE_GRID_SNAP = "toggle_grid_snap"
 
     SECTION_CHANGED = "section_changed"
 

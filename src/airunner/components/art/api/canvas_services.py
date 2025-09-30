@@ -14,6 +14,9 @@ class CanvasAPIService(APIServiceBase):
     def toggle_grid(self, val):
         self.emit_signal(SignalCode.TOGGLE_GRID, {"show_grid": val})
 
+    def toggle_grid_snap(self, val):
+        self.emit_signal(SignalCode.TOGGLE_GRID_SNAP, {"snap_to_grid": val})
+
     def generate_mask(self):
         self.emit_signal(SignalCode.GENERATE_MASK)
 

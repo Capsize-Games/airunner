@@ -69,7 +69,7 @@ class ActiveGridSettingsWidget(BaseWidget):
         )
 
     @Slot(bool)
-    def size_lock_toggled(self, val):
+    def on_size_lock_button_toggled(self, val: bool):
         self.update_application_settings(active_grid_size_lock=val)
 
     def update_size(self, _message: dict):
@@ -95,21 +95,26 @@ class ActiveGridSettingsWidget(BaseWidget):
             self.update_application_settings(working_width=width)
             self.update_application_settings(working_height=height)
 
-    def action_clicked_checkbox_toggle_active_grid_border(self, checked):
+    @Slot(bool)
+    def on_active_grid_border_groupbox_toggled(self, checked: bool):
         self.update_active_grid_settings(render_border=checked)
 
-    def action_clicked_checkbox_toggle_active_grid_fill(self, checked):
+    @Slot(bool)
+    def on_active_grid_fill_groupbox_toggled(self, checked: bool):
         self.update_active_grid_settings(render_fill=checked)
 
-    def action_clicked_checkbox_toggle_active_grid_area(self, checked):
+    @Slot(bool)
+    def on_active_grid_area_checkbox_toggled(self, checked):
         self.update_active_grid_settings(enabled=checked)
 
-    def action_choose_border_color_clicked(self):
+    @Slot()
+    def on_border_choose_color_button_clicked(self):
         color = QColorDialog.getColor()
         if color.isValid():
             self.update_active_grid_settings(border_color=color.name())
 
-    def action_choose_fill_color_clicked(self):
+    @Slot()
+    def on_fill_choose_color_button_clicked(self):
         color = QColorDialog.getColor()
         if color.isValid():
             self.update_active_grid_settings(fill_color=color.name())
