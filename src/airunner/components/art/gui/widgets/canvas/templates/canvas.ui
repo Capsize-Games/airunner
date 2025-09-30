@@ -790,6 +790,9 @@
         </widget>
         <widget class="QWidget" name="layoutWidget">
          <layout class="QGridLayout" name="gridLayout_3">
+          <property name="verticalSpacing">
+           <number>0</number>
+          </property>
           <item row="0" column="0">
            <widget class="CustomGraphicsView" name="canvas_container">
             <property name="sizePolicy">

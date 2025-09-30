@@ -11,6 +11,7 @@ from airunner.enums import SignalCode, StableDiffusionVersion
 class PromptContainerWidget(BaseWidget):
     widget_class_ = Ui_prompt_container_widget
     prompt_id: int = None
+    icons = (("trash-2", "delete_prompt_button"),)
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {
@@ -28,7 +29,7 @@ class PromptContainerWidget(BaseWidget):
         )
 
     @Slot()
-    def handle_delete_prompt_clicked(self):
+    def on_delete_prompt_button_clicked(self):
         self.api.delete_prompt(self.prompt_id)
 
     def on_widget_element_changed(self, data: Dict):

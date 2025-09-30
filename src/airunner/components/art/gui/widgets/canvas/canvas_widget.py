@@ -125,26 +125,7 @@ class CanvasWidget(BaseWidget):
                 "offset_y": 0,
             }
         )
-
-        set_widget_state(
-            self.ui.grid_button,
-            current_tool
-            in (CanvasToolName.ACTIVE_GRID_AREA, CanvasToolName.MOVE),
-        )
-        set_widget_state(
-            self.ui.move_button,
-            current_tool is CanvasToolName.MOVE,
-        )
-        set_widget_state(
-            self.ui.brush_button, current_tool is CanvasToolName.BRUSH
-        )
-        set_widget_state(
-            self.ui.eraser_button, current_tool is CanvasToolName.ERASER
-        )
-        set_widget_state(
-            self.ui.text_button, current_tool is CanvasToolName.TEXT
-        )
-        set_widget_state(self.ui.grid_button, show_grid is True)
+        self._update_action_buttons(self.current_tool, True)
 
         self.set_button_color()
 
@@ -172,7 +153,7 @@ class CanvasWidget(BaseWidget):
         self.offset_y = data.get("offset_y", self.offset_y)
         zoom_level = round(self.grid_settings.zoom_level * 100, 2)
         self.ui.grid_info.setText(
-            f"X: {self.offset_x}, Y: {self.offset_y}, Zoom: {zoom_level}%"
+            f"{self.offset_x}, {self.offset_y}, {zoom_level}%"
         )
 
     @property
@@ -336,7 +317,7 @@ class CanvasWidget(BaseWidget):
         self.ui.grid_button.setChecked(val)
         self.ui.grid_button.blockSignals(False)
         self.update_grid_settings(show_grid=val)
-    
+
     def on_toggle_grid_snap_signal(self, message: Dict):
         val = message.get("snap_to_grid", True)
         self.ui.snap_to_grid_button.blockSignals(True)
