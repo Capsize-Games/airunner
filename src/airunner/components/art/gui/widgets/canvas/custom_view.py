@@ -8,19 +8,24 @@ from PySide6.QtCore import (
     QEvent,
     QSize,
     QTimer,
+    QRectF,
 )
-from PySide6.QtGui import QMouseEvent, QColor, QBrush, QFont
+from PySide6.QtGui import QMouseEvent, QColor, QBrush, QFont, QPen
 from PySide6.QtWidgets import (
     QApplication,
     QGraphicsView,
     QGraphicsItemGroup,
     QGraphicsTextItem,
+    QGraphicsRectItem,
     QMenu,
 )
 import json
 
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.gui.widgets.canvas.resizable_text_item import (
+    ResizableTextItem,
+)
 from airunner.enums import CanvasToolName, SignalCode, CanvasType
 from airunner.components.art.gui.widgets.canvas.grid_graphics_item import (
     GridGraphicsItem,
@@ -38,7 +43,6 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 from airunner.components.art.gui.widgets.canvas.zoom_handler import ZoomHandler
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.utils.settings import get_qsettings
-from airunner.utils.application.get_logger import get_logger
 from airunner.utils.application.snap_to_grid import snap_to_grid
 from airunner.components.art.gui.widgets.canvas.text_inspector import (
     TextInspector,
@@ -221,6 +225,10 @@ class CustomGraphicsView(
 ):
     def __init__(self, *args, **kwargs):
         super().__init__()
+        # state for text-area drag/creation
+        self._text_dragging = False
+        self._text_drag_start = None
+        self._temp_rubberband = None
         self._recent_event_size = None
         self.setMouseTracking(True)
         self._initialized = False
@@ -301,6 +309,12 @@ class CustomGraphicsView(
 
         # mapping of text item -> layer id
         self._text_item_layer_map = {}
+
+        # State for view-coordinated area resize
+        self._active_resizer_area = None
+        self._active_resizer_anchor = None
+        self._active_resizer_start = None
+        self._active_resizer_initial_rect = None
 
     @property
     def canvas_offset(self) -> QPointF:
@@ -749,33 +763,48 @@ class CustomGraphicsView(
         # Only handle text tool logic if tool is TEXT
         if self.current_tool is CanvasToolName.TEXT:
             scene_pos = self.mapToScene(event.pos())
-            item = self._find_text_item_at(scene_pos)
-            if item:
-                # Select and edit existing text item inline
-                self._edit_text_item(item)
+            # If the user clicked on an existing item (text, area, handle),
+            # let that item receive the event instead of starting a
+            # rubberband/drag-to-create operation.
+            try:
+                items = self.scene.items(scene_pos)
+            except Exception:
+                items = []
+
+            # If any item is under the cursor, let the scene/item receive the
+            # event so that child items (handles, inner text) can decide how to
+            # respond (for example the inner text forwards border clicks to
+            # parent to initiate resize). Previously we preemptively started
+            # editing which swallowed those events.
+            if items:
+                super().mousePressEvent(event)
                 return
-            else:
-                # Add new inline text item at click position
-                # Begin a history transaction for this layer so the add is undoable
-                layer_id = self._get_current_selected_layer_id()
-                try:
-                    if self.scene and layer_id is not None:
-                        if layer_id not in self.scene._history_transactions:
-                            self.scene._begin_layer_history_transaction(
-                                layer_id, "text"
-                            )
-                except Exception:
-                    pass
-                self._add_text_item_inline(scene_pos)
-                # Commit the transaction after saving
-                try:
-                    if self.scene and layer_id is not None:
-                        self.scene._commit_layer_history_transaction(
+
+            # No existing item under cursor: begin drag-to-create
+            self._text_dragging = True
+            self._text_drag_start = scene_pos
+            try:
+                rb = QGraphicsRectItem(QRectF(scene_pos, scene_pos))
+                pen = QPen(QColor("white"))
+                pen.setStyle(Qt.PenStyle.DashLine)
+                rb.setPen(pen)
+                rb.setZValue(3000)
+                self.scene.addItem(rb)
+                self._temp_rubberband = rb
+            except Exception:
+                self._temp_rubberband = None
+
+            # Begin history transaction for the layer so the add is undoable
+            layer_id = self._get_current_selected_layer_id()
+            try:
+                if self.scene and layer_id is not None:
+                    if layer_id not in self.scene._history_transactions:
+                        self.scene._begin_layer_history_transaction(
                             layer_id, "text"
                         )
-                except Exception:
-                    pass
-                return
+            except Exception:
+                pass
+            return
         # If not text tool, ensure all text items are not movable/editable
         self._set_text_items_interaction(False)
         super().mousePressEvent(event)
@@ -802,6 +831,94 @@ class CustomGraphicsView(
 
             event.accept()
             return
+        # If a view-coordinated area resize is active, end it on left-button release
+        if (
+            event.button() == Qt.MouseButton.LeftButton
+            and getattr(self, "_active_resizer_area", None) is not None
+        ):
+            try:
+                scene_pos = self.mapToScene(event.pos())
+                self._end_area_resize(scene_pos)
+            except Exception:
+                self.logger.exception(
+                    "Error ending area resize on mouse release"
+                )
+            event.accept()
+            return
+        # Handle completing a text-area drag
+        if self.current_tool is CanvasToolName.TEXT and self._text_dragging:
+            end_pos = self.mapToScene(event.pos())
+            start = self._text_drag_start
+            rb = self._temp_rubberband
+            # remove the temporary rubberband
+            try:
+                if rb and rb.scene() == self.scene:
+                    self.scene.removeItem(rb)
+            except Exception:
+                pass
+            self._temp_rubberband = None
+            self._text_dragging = False
+
+            # If the drag was very small, create inline text at the click
+            if start is None:
+                return
+            dx = abs(end_pos.x() - start.x())
+            dy = abs(end_pos.y() - start.y())
+            layer_id = self._get_current_selected_layer_id()
+            try:
+                if dx < 6 and dy < 6:
+                    # create inline text
+                    self._add_text_item_inline(start)
+                else:
+                    # create a resizable text area
+                    left = min(start.x(), end_pos.x())
+                    top = min(start.y(), end_pos.y())
+                    w = abs(end_pos.x() - start.x())
+                    h = abs(end_pos.y() - start.y())
+                    rect = QRectF(left, top, w, h)
+                    area = ResizableTextItem(self, rect)
+                    area.setZValue(2000)
+                    # Focus the internal text for editing
+                    try:
+                        area.text_item.setFocus()
+                        # Bind inspector to child text item
+                        if self._text_inspector:
+                            self._text_inspector.bind_to(area.text_item)
+                    except Exception:
+                        pass
+                    # add to scene and tracking lists
+                    try:
+                        self.scene.addItem(area)
+                        self._text_items.append(area)
+                        self._text_item_layer_map[area] = layer_id
+                        self._editing_text_item = area.text_item
+                        # make child handlers
+                        area.text_item.focusOutEvent = (
+                            self._make_text_focus_out_handler(area.text_item)
+                        )
+                        area.text_item.keyPressEvent = (
+                            self._make_text_key_press_handler(area.text_item)
+                        )
+                        area.text_item.itemChange = (
+                            self._make_text_item_change_handler(area.text_item)
+                        )
+                        # ensure the text width is set so it wraps
+                        area.text_item.setTextWidth(area.rect().width())
+                        # Persist
+                        self._save_text_items_to_db()
+                    except Exception:
+                        self.logger.exception("Failed creating text area")
+
+            finally:
+                # Commit the transaction after saving
+                try:
+                    if self.scene and layer_id is not None:
+                        self.scene._commit_layer_history_transaction(
+                            layer_id, "text"
+                        )
+                except Exception:
+                    pass
+            return
         super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -821,7 +938,218 @@ class CustomGraphicsView(
                 self._pending_pan_event = True
             event.accept()
             return
+        # Update rubberband during text drag
+        if self.current_tool is CanvasToolName.TEXT and self._text_dragging:
+            if not self._temp_rubberband:
+                return
+            scene_pos = self.mapToScene(event.pos())
+            start = self._text_drag_start
+            if start is None:
+                return
+            left = min(start.x(), scene_pos.x())
+            top = min(start.y(), scene_pos.y())
+            w = abs(scene_pos.x() - start.x())
+            h = abs(scene_pos.y() - start.y())
+            try:
+                self._temp_rubberband.setRect(QRectF(left, top, w, h))
+            except Exception:
+                pass
+            event.accept()
+            return
+        # If an area resize is active, let the view coordinate the resize so
+        # move events are reliably processed even if handle mouse grab fails.
+        if self._active_resizer_area is not None:
+            try:
+                scene_pos = self.mapToScene(event.pos())
+                self._do_area_resize(scene_pos, event)
+            except Exception as e:
+                self.logger.error("Error during area resize " + str(e))
+            event.accept()
+            return
         super().mouseMoveEvent(event)
+
+    # --- View-coordinated area resizing helpers ---
+    def _begin_area_resize(self, area, anchor: str, scene_pos: QPointF):
+        self._active_resizer_area = area
+        self._active_resizer_anchor = anchor
+        self._active_resizer_start = scene_pos
+        self._active_resizer_initial_rect = QRectF(area.rect())
+
+    def _do_area_resize(self, scene_pos: QPointF, event=None):
+        if not self._active_resizer_area:
+            return
+        delta = scene_pos - self._active_resizer_start
+        r = QRectF(self._active_resizer_initial_rect)
+        a = self._active_resizer_anchor
+
+        # SHIFT -> constrain aspect ratio based on initial aspect
+        shift = False
+        try:
+            if event and hasattr(event, "modifiers"):
+                shift = bool(
+                    event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+                )
+        except Exception:
+            pass
+
+        if "l" in a:
+            r.setLeft(r.left() + delta.x())
+        if "r" in a:
+            r.setRight(r.right() + delta.x())
+        if "t" in a:
+            r.setTop(r.top() + delta.y())
+        if "b" in a:
+            r.setBottom(r.bottom() + delta.y())
+
+        # apply shift constraint: maintain initial aspect ratio
+        if shift:
+            init = self._active_resizer_initial_rect
+            if init.height() > 0:
+                aspect = init.width() / init.height()
+                # derive width/height from the dominant delta
+                w = r.width()
+                h = int(round(w / aspect))
+                # adjust bottom based on new height, keep top if 't' in anchor
+                if "t" in a:
+                    r.setTop(r.bottom() - h)
+                else:
+                    r.setBottom(r.top() + h)
+
+        # Snap to grid if enabled
+        try:
+            if (
+                getattr(self, "grid_settings", None)
+                and self.grid_settings.snap_to_grid
+            ):
+                # compute absolute coords, snap, then convert back to local
+                abs_x = r.x() + self.canvas_offset_x
+                abs_y = r.y() + self.canvas_offset_y
+                snapped_x, snapped_y = snap_to_grid(
+                    self.grid_settings, abs_x, abs_y
+                )
+                # Note: we only snap position here; snapping width/height to grid
+                # could be added as needed.
+                r.moveTo(
+                    snapped_x - self.canvas_offset_x,
+                    snapped_y - self.canvas_offset_y,
+                )
+        except Exception:
+            pass
+
+        # enforce minimum size
+        min_w, min_h = 20, 20
+        if r.width() < min_w:
+            r.setRight(r.left() + min_w)
+        if r.height() < min_h:
+            r.setBottom(r.top() + min_h)
+
+        # apply to area
+        try:
+            self._active_resizer_area.setRect(r)
+            self._active_resizer_area.text_item.setPos(r.topLeft())
+            self._active_resizer_area.text_item.setTextWidth(r.width())
+            # reposition its handles if the area has that method
+            try:
+                self._active_resizer_area._reposition_handles()
+            except Exception:
+                pass
+        except Exception:
+            self.logger.exception("Failed applying area resize")
+
+    def _end_area_resize(self, scene_pos: QPointF):
+        if not self._active_resizer_area:
+            return
+        # finalize one last time
+        try:
+            self._do_area_resize(scene_pos)
+        except Exception:
+            pass
+        # persist
+        try:
+            self._active_resizer_area._resizing = False
+            self._active_resizer_area.text_item.setTextInteractionFlags(
+                Qt.TextEditorInteraction
+            )
+        except Exception:
+            pass
+        # ensure the area and its handles/text are deselected and unfocused
+        try:
+            try:
+                # clear selection so handles (which may draw when selected)
+                # are not left visible after finishing resize
+                self._active_resizer_area.setSelected(False)
+            except Exception:
+                pass
+            try:
+                # clear focus from inner text and editing state
+                self._active_resizer_area.text_item.clearFocus()
+                if (
+                    getattr(self, "_editing_text_item", None)
+                    is self._active_resizer_area.text_item
+                ):
+                    self._editing_text_item = None
+            except Exception:
+                pass
+        except Exception:
+            # best-effort: if anything fails clearing selection/focus, continue
+            pass
+        # persist changes
+        try:
+            self._save_text_items_to_db()
+        except Exception:
+            self.logger.exception(
+                "Failed to save text items after area resize"
+            )
+        # clear any selection in the scene so handles/selection visuals are removed
+        try:
+            if getattr(self, "scene", None):
+                try:
+                    self.scene.clearSelection()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        # Ensure any mouse grab is released (handle or scene-level grabber)
+        try:
+            # If area and anchor exist, try to ungrab the associated handle
+            try:
+                area = self._active_resizer_area
+                anchor = self._active_resizer_anchor
+                if area is not None and anchor is not None:
+                    try:
+                        h = getattr(area, "_handles", {}).get(anchor)
+                        if h is not None:
+                            try:
+                                h.ungrabMouse()
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+            # Fallback: if the scene has a mouse grabber item, ungrab it
+            try:
+                grabber = None
+                if getattr(self, "scene", None):
+                    try:
+                        grabber = self.scene.mouseGrabberItem()
+                    except Exception:
+                        grabber = None
+                if grabber is not None:
+                    try:
+                        grabber.ungrabMouse()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        except Exception:
+            pass
+        # clear state
+        self._active_resizer_area = None
+        self._active_resizer_anchor = None
+        self._active_resizer_start = None
+        self._active_resizer_initial_rect = None
 
     def keyPressEvent(self, event):
         # Support Delete key to remove selected text items from the canvas
@@ -1021,82 +1349,45 @@ class CustomGraphicsView(
             current_tool = self.current_tool
         cursor = None
         if apply_cursor:
-            if (
-                event
-                and hasattr(event, "button")
-                and event.button() == Qt.MouseButton.MiddleButton
-            ):
-                cursor = Qt.CursorShape.ClosedHandCursor
-            elif current_tool in (CanvasToolName.BRUSH, CanvasToolName.ERASER):
-                size = getattr(self, "brush_settings", None)
-                size = size.size if size else 32
-                cursor = self.get_cached_cursor(current_tool, size)
-            elif current_tool is CanvasToolName.TEXT:
-                cursor = Qt.CursorShape.IBeamCursor
-            elif current_tool in (
-                CanvasToolName.ACTIVE_GRID_AREA,
-                CanvasToolName.MOVE,
-            ):
+            try:
                 if (
                     event
-                    and hasattr(event, "buttons")
-                    and event.buttons() == Qt.MouseButton.LeftButton
+                    and hasattr(event, "button")
+                    and event.button() == Qt.MouseButton.MiddleButton
                 ):
                     cursor = Qt.CursorShape.ClosedHandCursor
-                else:
-                    cursor = Qt.CursorShape.OpenHandCursor
-            elif current_tool is CanvasToolName.NONE:
-                cursor = Qt.CursorShape.ArrowCursor
-        else:
-            cursor = Qt.CursorShape.ArrowCursor
-        if self._current_cursor != cursor:
-            self.setCursor(cursor)
-            self._current_cursor = cursor
+                elif current_tool in (
+                    CanvasToolName.BRUSH,
+                    CanvasToolName.ERASER,
+                ):
+                    size = getattr(self, "brush_settings", None)
+                    size = size.size if size else 32
+                    cursor = self.get_cached_cursor(current_tool, size)
+                elif current_tool is CanvasToolName.TEXT:
+                    cursor = Qt.CursorShape.IBeamCursor
+                elif current_tool in (
+                    CanvasToolName.ACTIVE_GRID_AREA,
+                    CanvasToolName.MOVE,
+                ):
+                    if (
+                        event
+                        and hasattr(event, "buttons")
+                        and event.buttons() == Qt.MouseButton.LeftButton
+                    ):
+                        cursor = Qt.CursorShape.ClosedHandCursor
+                    else:
+                        cursor = Qt.CursorShape.OpenHandCursor
+                elif current_tool is CanvasToolName.NONE:
+                    cursor = Qt.CursorShape.ArrowCursor
+            except Exception:
+                self.logger.exception("Failed to determine cursor")
 
-    def on_undo_button_clicked(self):
-        self.api.art.canvas.undo()
-        # Do not sync image to grid area; keep image at its last location
-
-    def on_redo_button_clicked(self):
-        self.api.art.canvas.redo()
-        # Do not sync image to grid area; keep image at its last location
-
-    def on_inspector_changed(self):
-        """Called by TextInspector when user changes font/size/color.
-
-        Persist the current text items state.
-        """
-        # Save changes for the current text item(s)
-        # Begin a history transaction for the affected layer(s)
+        # Apply cursor if determined
         try:
-            # Determine layers affected by currently selected text items
-            selected = [t for t in self._text_items if t.isSelected()]
-            layer_ids = set(self._text_item_layer_map.get(t) for t in selected)
-            for lid in layer_ids:
-                try:
-                    if self.scene and lid is not None:
-                        if lid not in self.scene._history_transactions:
-                            self.scene._begin_layer_history_transaction(
-                                lid, "text"
-                            )
-                except Exception:
-                    pass
-
-            self._save_text_items_to_db()
-
-            # Commit transactions for affected layers
-            for lid in layer_ids:
-                try:
-                    if self.scene and lid is not None:
-                        self.scene._commit_layer_history_transaction(
-                            lid, "text"
-                        )
-                except Exception:
-                    pass
+            if cursor is not None:
+                self.setCursor(cursor)
         except Exception:
-            self.logger.exception(
-                "Failed to save text items after inspector change"
-            )
+            pass
 
     def _find_text_item_at(self, pos):
         if not self.scene:
@@ -1243,20 +1534,51 @@ class CustomGraphicsView(
             layer_id = self._text_item_layer_map.get(item)
             if layer_id not in layer_buckets:
                 layer_buckets[layer_id] = []
-            # Store absolute positions so they persist independently of the
-            # current canvas offset. When restoring we will subtract the
-            # canvas_offset to get the on-screen/display position.
-            abs_x = int(item.pos().x() + self.canvas_offset_x)
-            abs_y = int(item.pos().y() + self.canvas_offset_y)
-            layer_buckets[layer_id].append(
-                {
-                    "text": item.toPlainText(),
-                    "x": abs_x,
-                    "y": abs_y,
-                    "color": item.defaultTextColor().name(),
-                    "font": item.font().toString(),
-                }
-            )
+            # Two kinds of items: inline QGraphicsTextItem or ResizableTextItem
+            try:
+                if isinstance(item, ResizableTextItem):
+                    d = item.to_persist_dict()
+                    layer_buckets[layer_id].append(d)
+                elif isinstance(item, QGraphicsTextItem):
+                    abs_x = int(item.pos().x() + self.canvas_offset_x)
+                    abs_y = int(item.pos().y() + self.canvas_offset_y)
+                    layer_buckets[layer_id].append(
+                        {
+                            "type": "inline",
+                            "text": item.toPlainText(),
+                            "x": abs_x,
+                            "y": abs_y,
+                            "color": item.defaultTextColor().name(),
+                            "font": item.font().toString(),
+                        }
+                    )
+                else:
+                    # Unknown item type: try best-effort extraction
+                    abs_x = int(item.pos().x() + self.canvas_offset_x)
+                    abs_y = int(item.pos().y() + self.canvas_offset_y)
+                    text = getattr(item, "toPlainText", lambda: "")()
+                    color = "white"
+                    try:
+                        color = item.defaultTextColor().name()
+                    except Exception:
+                        pass
+                    font = ""
+                    try:
+                        font = item.font().toString()
+                    except Exception:
+                        pass
+                    layer_buckets[layer_id].append(
+                        {
+                            "type": "inline",
+                            "text": text,
+                            "x": abs_x,
+                            "y": abs_y,
+                            "color": color,
+                            "font": font,
+                        }
+                    )
+            except Exception:
+                self.logger.exception("Failed serializing text item for DB")
 
         # Persist each layer's text items JSON into DrawingPadSettings.text_items
         for layer_id, items in layer_buckets.items():
@@ -1316,35 +1638,68 @@ class CustomGraphicsView(
                         font.fromString(data.get("font", ""))
                     except Exception:
                         font = self._get_default_text_font()
-
-                    text_item = DraggableTextItem(self)
-                    text_item.setPlainText(text)
-                    # Stored x/y are absolute coordinates; convert to display
-                    # position by subtracting the current canvas offset.
-                    display_x = x - int(self.canvas_offset_x)
-                    display_y = y - int(self.canvas_offset_y)
-                    text_item.setPos(QPointF(display_x, display_y))
-                    text_item.setDefaultTextColor(color)
-                    text_item.setFont(font)
-                    text_item.setFlag(QGraphicsTextItem.ItemIsMovable, True)
-                    text_item.setFlag(QGraphicsTextItem.ItemIsSelectable, True)
-                    text_item.setFlag(QGraphicsTextItem.ItemIsFocusable, True)
-                    text_item.setFlag(
-                        QGraphicsTextItem.ItemSendsGeometryChanges, True
-                    )
-                    text_item.setZValue(2000)
-                    text_item.focusOutEvent = (
-                        self._make_text_focus_out_handler(text_item)
-                    )
-                    text_item.keyPressEvent = (
-                        self._make_text_key_press_handler(text_item)
-                    )
-                    text_item.itemChange = self._make_text_item_change_handler(
-                        text_item
-                    )
-                    self.scene.addItem(text_item)
-                    self._text_items.append(text_item)
-                    self._text_item_layer_map[text_item] = layer.id
+                    # Distinguish between inline and area types
+                    item_type = data.get("type", "inline")
+                    if item_type == "area":
+                        # Restore a ResizableTextItem with provided w/h
+                        w = data.get("w", 100)
+                        h = data.get("h", 40)
+                        display_x = x - int(self.canvas_offset_x)
+                        display_y = y - int(self.canvas_offset_y)
+                        rect = QRectF(display_x, display_y, w, h)
+                        area = ResizableTextItem(self, rect)
+                        area.text_item.setPlainText(text)
+                        area.text_item.setDefaultTextColor(color)
+                        area.text_item.setFont(font)
+                        area.setZValue(2000)
+                        # Bind handlers to the text child so focus/keys persist
+                        area.text_item.focusOutEvent = (
+                            self._make_text_focus_out_handler(area.text_item)
+                        )
+                        area.text_item.keyPressEvent = (
+                            self._make_text_key_press_handler(area.text_item)
+                        )
+                        area.text_item.itemChange = (
+                            self._make_text_item_change_handler(area.text_item)
+                        )
+                        self.scene.addItem(area)
+                        self._text_items.append(area)
+                        self._text_item_layer_map[area] = layer.id
+                    else:
+                        text_item = DraggableTextItem(self)
+                        text_item.setPlainText(text)
+                        # Stored x/y are absolute coordinates; convert to display
+                        # position by subtracting the current canvas offset.
+                        display_x = x - int(self.canvas_offset_x)
+                        display_y = y - int(self.canvas_offset_y)
+                        text_item.setPos(QPointF(display_x, display_y))
+                        text_item.setDefaultTextColor(color)
+                        text_item.setFont(font)
+                        text_item.setFlag(
+                            QGraphicsTextItem.ItemIsMovable, True
+                        )
+                        text_item.setFlag(
+                            QGraphicsTextItem.ItemIsSelectable, True
+                        )
+                        text_item.setFlag(
+                            QGraphicsTextItem.ItemIsFocusable, True
+                        )
+                        text_item.setFlag(
+                            QGraphicsTextItem.ItemSendsGeometryChanges, True
+                        )
+                        text_item.setZValue(2000)
+                        text_item.focusOutEvent = (
+                            self._make_text_focus_out_handler(text_item)
+                        )
+                        text_item.keyPressEvent = (
+                            self._make_text_key_press_handler(text_item)
+                        )
+                        text_item.itemChange = (
+                            self._make_text_item_change_handler(text_item)
+                        )
+                        self.scene.addItem(text_item)
+                        self._text_items.append(text_item)
+                        self._text_item_layer_map[text_item] = layer.id
         except Exception:
             self.logger.exception("Failed to restore text items from DB")
 
@@ -1360,9 +1715,22 @@ class CustomGraphicsView(
         # Enable/disable moving/editing for all text items
         for item in self._text_items:
             if enable:
-                item.setFlag(QGraphicsTextItem.ItemIsMovable, True)
-                item.setFlag(QGraphicsTextItem.ItemIsSelectable, True)
+                item.setFlag(
+                    QGraphicsTextItem.GraphicsItemFlag.ItemIsMovable, True
+                )
+                item.setFlag(
+                    QGraphicsTextItem.GraphicsItemFlag.ItemIsSelectable, True
+                )
             else:
-                item.setFlag(QGraphicsTextItem.ItemIsMovable, False)
-                item.setFlag(QGraphicsTextItem.ItemIsSelectable, False)
-                item.setTextInteractionFlags(Qt.NoTextInteraction)
+                item.setFlag(
+                    QGraphicsTextItem.GraphicsItemFlag.ItemIsMovable, False
+                )
+                item.setFlag(
+                    QGraphicsTextItem.GraphicsItemFlag.ItemIsSelectable, False
+                )
+                try:
+                    item.setTextInteractionFlags(
+                        Qt.TextInteractionFlag.NoTextInteraction
+                    )
+                except AttributeError:
+                    pass
