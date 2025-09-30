@@ -1771,7 +1771,6 @@ class CustomScene(
         for view in self.views():
             view.viewport().update()
             view.update()
-            view.do_draw(force_draw=True)
         self.update_image_position(self.get_canvas_offset())
 
     def stop_painter(self):

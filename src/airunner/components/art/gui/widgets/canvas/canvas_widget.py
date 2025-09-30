@@ -77,6 +77,7 @@ class CanvasWidget(BaseWidget):
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_toggle_tool_signal,
             SignalCode.TOGGLE_TOOL: self.on_toggle_tool_signal,
             SignalCode.TOGGLE_GRID: self.on_toggle_grid_signal,
+            SignalCode.TOGGLE_GRID_SNAP: self.on_toggle_grid_snap_signal,
             SignalCode.CANVAS_UPDATE_CURSOR: self.on_canvas_update_cursor_signal,
             SignalCode.CANVAS_UPDATE_GRID_INFO: self.update_grid_info,
             SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.update_grid_info,
@@ -229,7 +230,7 @@ class CanvasWidget(BaseWidget):
 
     @Slot(bool)
     def on_snap_to_grid_button_toggled(self, val: bool):
-        self.update_grid_settings(snap_to_grid=val)
+        self.api.art.canvas.toggle_grid_snap(val)
 
     @Slot()
     def on_import_button_clicked(self):
@@ -335,6 +336,13 @@ class CanvasWidget(BaseWidget):
         self.ui.grid_button.setChecked(val)
         self.ui.grid_button.blockSignals(False)
         self.update_grid_settings(show_grid=val)
+    
+    def on_toggle_grid_snap_signal(self, message: Dict):
+        val = message.get("snap_to_grid", True)
+        self.ui.snap_to_grid_button.blockSignals(True)
+        self.ui.snap_to_grid_button.setChecked(val)
+        self.ui.snap_to_grid_button.blockSignals(False)
+        self.update_grid_settings(snap_to_grid=val)
 
     def color_button_clicked(self):
         color = QColorDialog.getColor()
