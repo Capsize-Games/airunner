@@ -85,7 +85,11 @@ class FileDownloadWorker(QObject):
         canceled(): emitted when user canceled and worker stopped
     """
 
-    progress = Signal(int, int)
+    # Use object for the signal payload so very large byte counts (>
+    # 32-bit) don't raise OverflowError when PySide converts Python ints to
+    # C 'int'. Emitting Python objects avoids the C conversion and lets the
+    # receiver handle large integers safely.
+    progress = Signal(object, object)
     finished = Signal(str)
     error = Signal(str)
     canceled = Signal()
