@@ -581,9 +581,9 @@ class CustomScene(
                 pass
 
         if self.settings_key == "drawing_pad_settings":
-            self.api.art.stop_progress_bar()
             if callback:
                 callback(data)
+            self.api.art.stop_progress_bar()
 
     @profile
     def _handle_image_generated_signal(self, data: Dict):
