@@ -501,24 +501,24 @@ class CustomScene(
             return
         self.on_load_image_signal(file_path)
 
-    def on_send_image_to_canvas_signal(self, data: Dict):
+    def handle_cached_send_image_to_canvas(self):
+        image_response = self.cached_send_image_to_canvas
+        if image_response:
+            self.on_send_image_to_canvas_signal(
+                {"image_response": image_response}
+            )
+
+    def on_send_image_to_canvas_signal(self, data: Optional[Dict] = None):
         """Handle generated image by creating a new layer."""
-        image_response: ImageResponse = data.get("image_response")
+        image_response = data.get("image_response")
+        self.cached_send_image_to_canvas = None
+
         if not image_response or not image_response.images:
             return
 
         image = image_response.images[0]
-
-        # Create a new layer from the generated image
-        layer_id = self.layer_compositor.create_layer_from_image(
-            image=image, name="Generated Image"
-        )
-
-        # Emit signal to refresh the layer container to show the new layer
-        self.api.art.canvas.show_layers()
-
-        # Refresh the canvas display to show the new layer
-        self._refresh_layer_display()
+        
+        self._load_image_from_object(image=image)
 
     def on_paste_image_from_clipboard(self):
         image = self._paste_image_from_clipboard()
@@ -1064,14 +1064,14 @@ class CustomScene(
     def on_layer_operation_cancel(self, data: Dict[str, Any]) -> None:
         self._cancel_layer_structure_transaction()
 
-    def showEvent(self, event):
-        super().showEvent(event)
-        if not self._image_initialized:
-            self._image_initialized = True
-            self.initialize_image()
-        if not self._layers_initialized:
-            self._layers_initialized = True
-            self._refresh_layer_display()
+    def show_event(self):
+        self.handle_cached_send_image_to_canvas()
+        # if not self._image_initialized:
+        #     self._image_initialized = True
+        #     self.initialize_image()
+        # if not self._layers_initialized:
+        #     self._layers_initialized = True
+        #     self._refresh_layer_display()
 
     # Layer management signal handlers
     def on_layer_visibility_toggled(self, data: Dict):
