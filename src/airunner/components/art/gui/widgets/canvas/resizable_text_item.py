@@ -1,445 +1,188 @@
-from PySide6.QtCore import (
-    QPointF,
-    Qt,
-    QRectF,
-)
-from PySide6.QtGui import QColor, QBrush, QPen, QPainter
+from __future__ import annotations
+
+from typing import Optional, Set, TYPE_CHECKING
+
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
-    QGraphicsTextItem,
     QGraphicsRectItem,
+    QGraphicsTextItem,
+    QMenu,
 )
 
 from airunner.enums import CanvasToolName
+from airunner.utils.application.snap_to_grid import snap_to_grid
 
-# Forward reference for type hints
-try:
+if TYPE_CHECKING:
     from airunner.components.art.gui.widgets.canvas.custom_view import (
         CustomGraphicsView,
     )
-except Exception:
+else:  # pragma: no cover - avoid hard dependency during import cycles
     CustomGraphicsView = object
 
 
 class ResizableTextItem(QGraphicsRectItem):
-    """A rectangular text area that contains a QGraphicsTextItem child.
+    """Rectangular text area that keeps text clipped and supports resizing."""
 
-    The rectangle clips its children so overflow is hidden. Supports resizing
-    by dragging edges/corners and moves when MOVE tool is active.
-    """
+    MIN_WIDTH = 40.0
+    MIN_HEIGHT = 40.0
+    BORDER_MARGIN = 8.0
 
-    HANDLE_SIZE = 8
+    _ANCHOR_TO_EDGES = {
+        "left": {"left"},
+        "right": {"right"},
+        "top": {"top"},
+        "bottom": {"bottom"},
+        "top-left": {"top", "left"},
+        "top-right": {"top", "right"},
+        "bottom-left": {"bottom", "left"},
+        "bottom-right": {"bottom", "right"},
+    }
 
-    def __init__(self, view: "CustomGraphicsView", rect: QRectF):
-        super().__init__(rect)
+    def __init__(self, view: CustomGraphicsView, rect: QRectF):
+        width = max(rect.width(), self.MIN_WIDTH)
+        height = max(rect.height(), self.MIN_HEIGHT)
+        super().__init__(QRectF(0.0, 0.0, width, height))
+
         self._view = view
-        self.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
-        self.setFlag(QGraphicsRectItem.ItemIsMovable, True)
-        # Accept hover events to show resize cursors
-        try:
-            self.setAcceptHoverEvents(True)
-        except Exception:
-            pass
-        # Clip children to this rect
-        try:
-            self.setFlag(QGraphicsRectItem.ItemClipsChildrenToShape, True)
-        except Exception:
-            # Some PySide6 versions don't expose this flag on QGraphicsRectItem;
-            # fallback to setting the flag on the instance if possible.
-            pass
+        self.setPos(rect.topLeft())
+        self.setZValue(2000)
+        self.setPen(QPen(QColor("white")))
+        self.setFlag(QGraphicsRectItem.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsRectItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(
+            QGraphicsRectItem.GraphicsItemFlag.ItemSendsGeometryChanges, True
+        )
+        self.setFlag(
+            QGraphicsRectItem.GraphicsItemFlag.ItemClipsChildrenToShape, True
+        )
+        self.setAcceptHoverEvents(True)
 
-        # Visual
-        pen = QPen(QColor("white"))
-        pen.setStyle(Qt.PenStyle.SolidLine)
-        self.setPen(pen)
-
-        # Create text child (custom class to forward border clicks)
-        class _InnerTextItem(QGraphicsTextItem):
-            def __init__(self, parent_area: "ResizableTextItem"):
-                super().__init__(parent_area)
-                self._parent_area = parent_area
-
-            def mousePressEvent(self, event):
-                # If click is near parent's border, forward to parent to begin resize
-                try:
-                    local = self._parent_area.mapFromScene(event.scenePos())
-                    left, right, top, bottom = self._parent_area._is_on_border(
-                        local, tol=self._parent_area.HANDLE_SIZE
-                    )
-                    if any((left, right, top, bottom)):
-                        # Delegate to parent
-                        self._parent_area.mousePressEvent(event)
-                        return
-                except Exception:
-                    pass
-                return QGraphicsTextItem.mousePressEvent(self, event)
-
-        self.text_item = _InnerTextItem(self)
+        self.text_item = QGraphicsTextItem(self)
         self.text_item.setDefaultTextColor(QColor("white"))
-        self.text_item.setFont(self._view._get_default_text_font())
+        try:
+            self.text_item.setFont(self._view._get_default_text_font())
+        except Exception:
+            pass
         self.text_item.setTextInteractionFlags(Qt.TextEditorInteraction)
-        self.text_item.setPos(self.rect().topLeft())
-        self.text_item.setTextWidth(self.rect().width())
-        # Keep text child above the rect so it can be edited; mouse presses
-        # on the text will be forwarded to parent when appropriate.
+        self.text_item.setPos(QPointF(0.0, 0.0))
+        self.text_item.setTextWidth(width)
         self.text_item.setZValue(self.zValue() + 1)
 
-        # Internal state for dragging/resizing
-        # Increase handle size for better hit-testing/visibility
-        self.HANDLE_SIZE = 12
         self._resizing = False
-        self._moving = False
-        self._resize_anchor = None
-        self._press_pos = None
-        self._initial_rect = QRectF(self.rect())
-
-        # Create explicit handle items so they receive mouse events
-        self._handles = {}
-
-        class _HandleItem(QGraphicsRectItem):
-            def __init__(self, parent_area: "ResizableTextItem", anchor: str):
-                super().__init__(parent_area)
-                self._parent_area = parent_area
-                self._anchor = anchor
-                self.setZValue(parent_area.zValue() + 100)
-                # Make handles visible (white fill, black outline)
-                self.setBrush(QBrush(QColor("white")))
-                self.setPen(QPen(QColor("black")))
-                # Only accept left-button clicks
-                try:
-                    self.setAcceptedMouseButtons(Qt.MouseButton.LeftButton)
-                except Exception:
-                    pass
-                # Ensure handles don't move/select themselves
-                try:
-                    self.setFlag(QGraphicsRectItem.ItemIsMovable, False)
-                    self.setFlag(QGraphicsRectItem.ItemIsSelectable, False)
-                except Exception:
-                    pass
-                try:
-                    self.setAcceptHoverEvents(True)
-                except Exception:
-                    pass
-
-            def hoverMoveEvent(self, event):
-                # set appropriate cursor for this handle
-                a = self._anchor
-                if a in ("tl", "br"):
-                    self.setCursor(Qt.CursorShape.SizeFDiagCursor)
-                elif a in ("tr", "bl"):
-                    self.setCursor(Qt.CursorShape.SizeBDiagCursor)
-                elif a in ("l", "r"):
-                    self.setCursor(Qt.CursorShape.SizeHorCursor)
-                else:
-                    self.setCursor(Qt.CursorShape.SizeVerCursor)
-                QGraphicsRectItem.hoverMoveEvent(self, event)
-
-            def mousePressEvent(self, event):
-                # Start a resize operation on the parent
-                try:
-                    # Grab the mouse so subsequent move events are delivered
-                    try:
-                        self.grabMouse()
-                    except Exception:
-                        pass
-                    self._parent_area._start_resize(
-                        self._anchor, event.scenePos()
-                    )
-                    event.accept()
-                except Exception:
-                    QGraphicsRectItem.mousePressEvent(self, event)
-
-            def mouseMoveEvent(self, event):
-                try:
-                    self._parent_area._do_resize(event.scenePos())
-                    event.accept()
-                except Exception:
-                    QGraphicsRectItem.mouseMoveEvent(self, event)
-
-            def mouseReleaseEvent(self, event):
-                try:
-                    self._parent_area._end_resize(event.scenePos())
-                    try:
-                        self.ungrabMouse()
-                    except Exception:
-                        pass
-                    event.accept()
-                except Exception:
-                    QGraphicsRectItem.mouseReleaseEvent(self, event)
-
-        # Create handles for corners and edges
-        anchors = ["tl", "tr", "bl", "br", "t", "b", "l", "r"]
-        for a in anchors:
-            h = _HandleItem(self, a)
-            self._handles[a] = h
-        # Position handles according to current rect
-        self._reposition_handles()
+        self._resize_anchor: Optional[str] = None
+        self._initial_geometry: tuple[float, float, float, float] = (
+            rect.left(),
+            rect.top(),
+            rect.left() + width,
+            rect.top() + height,
+        )
+        self._start_scene_pos = QPointF(rect.topLeft())
+        self._initial_aspect = width / height if height > 0 else None
 
     @property
-    def current_tool(self):
+    def current_tool(self) -> Optional[CanvasToolName]:
         try:
             return self._view.current_tool
         except Exception:
             return None
 
-    def _is_on_border(self, pos: QPointF, tol: int = 6):
-        r = self.rect()
-        x, y = pos.x(), pos.y()
-        left = abs(x - r.left()) <= tol
-        right = abs(x - r.right()) <= tol
-        top = abs(y - r.top()) <= tol
-        bottom = abs(y - r.bottom()) <= tol
-        return left, right, top, bottom
+    def setText(self, text: str) -> None:
+        self.text_item.setPlainText(text)
 
-    def _reposition_handles(self):
-        """Place handle rects in local coordinates around the current rect."""
-        r = self.rect()
-        hs = self.HANDLE_SIZE
-        coords = {
-            "tl": (r.left(), r.top()),
-            "tr": (r.right(), r.top()),
-            "bl": (r.left(), r.bottom()),
-            "br": (r.right(), r.bottom()),
-            "t": ((r.left() + r.right()) / 2, r.top()),
-            "b": ((r.left() + r.right()) / 2, r.bottom()),
-            "l": (r.left(), (r.top() + r.bottom()) / 2),
-            "r": (r.right(), (r.top() + r.bottom()) / 2),
-        }
-        for k, h in self._handles.items():
-            cx, cy = coords[k]
-            h.setRect(cx - hs / 2, cy - hs / 2, hs, hs)
-
-    def _start_resize(self, anchor: str, scene_pos: QPointF):
-        # Delegate resizing to the view so mouse move events are handled
-        # reliably even if the handle doesn't retain the grab in some
-        # environments. The view will call back into the area's _do_resize
-        # and _end_resize methods as needed.
-        try:
-            # disable text interaction while resizing to avoid selection
-            try:
-                self.text_item.setTextInteractionFlags(Qt.NoTextInteraction)
-            except Exception:
-                pass
-            if hasattr(self._view, "_begin_area_resize"):
-                self._view._begin_area_resize(self, anchor, scene_pos)
-                return
-        except Exception:
-            pass
-        # Fallback to local behavior
-        self._resizing = True
-        self._resize_anchor = anchor
-        self._press_pos = scene_pos
-        self._initial_rect = QRectF(self.rect())
-
-    def _do_resize(self, scene_pos: QPointF):
-        # Prefer view-driven resize if active
-        try:
-            if (
-                hasattr(self._view, "_do_area_resize")
-                and getattr(self._view, "_active_resizer_area", None) is self
-            ):
-                # view handles calling back into this area's _do_resize_local
-                return
-        except Exception:
-            pass
-        # Fallback local resize behavior
-        if not self._resizing or not self._press_pos:
-            return
-        delta = scene_pos - self._press_pos
-        r = QRectF(self._initial_rect)
-        a = self._resize_anchor
-        if "l" in a:
-            r.setLeft(r.left() + delta.x())
-        if "r" in a:
-            r.setRight(r.right() + delta.x())
-        if "t" in a:
-            r.setTop(r.top() + delta.y())
-        if "b" in a:
-            r.setBottom(r.bottom() + delta.y())
-        min_w, min_h = 20, 20
-        if r.width() < min_w:
-            r.setRight(r.left() + min_w)
-        if r.height() < min_h:
-            r.setBottom(r.top() + min_h)
-        self.setRect(r)
-        self.text_item.setPos(r.topLeft())
-        self.text_item.setTextWidth(r.width())
-        self._reposition_handles()
-
-    def _end_resize(self, scene_pos: QPointF):
-        # If the view is coordinating the resize, let it finish. Otherwise
-        # finish locally.
-        try:
-            if (
-                hasattr(self._view, "_end_area_resize")
-                and getattr(self._view, "_active_resizer_area", None) is self
-            ):
-                return
-        except Exception:
-            pass
-        if not self._resizing:
-            return
-        self._resizing = False
-        # re-enable text interaction
-        try:
-            self.text_item.setTextInteractionFlags(Qt.TextEditorInteraction)
-        except Exception:
-            pass
-        # persist
-        try:
-            self._view._save_text_items_to_db()
-        except Exception:
-            pass
+    def set_interaction_enabled(self, enable: bool) -> None:
+        self.setFlag(QGraphicsRectItem.GraphicsItemFlag.ItemIsMovable, enable)
+        self.setFlag(
+            QGraphicsRectItem.GraphicsItemFlag.ItemIsSelectable, enable
+        )
+        self.text_item.setTextInteractionFlags(
+            Qt.TextEditorInteraction if enable else Qt.NoTextInteraction
+        )
 
     def hoverMoveEvent(self, event):
-        # Change the cursor when hovering near borders/corners
-        local = self.mapFromScene(event.scenePos())
-        left, right, top, bottom = self._is_on_border(
-            local, tol=self.HANDLE_SIZE
-        )
-        cursor = None
-        if left and top or right and bottom:
-            cursor = Qt.CursorShape.SizeFDiagCursor
-        elif left and bottom or right and top:
-            cursor = Qt.CursorShape.SizeBDiagCursor
-        elif left or right:
-            cursor = Qt.CursorShape.SizeHorCursor
-        elif top or bottom:
-            cursor = Qt.CursorShape.SizeVerCursor
-        else:
-            # Default depending on tool
-            if self.current_tool is CanvasToolName.MOVE:
-                cursor = Qt.CursorShape.OpenHandCursor
-            else:
-                cursor = Qt.CursorShape.IBeamCursor
-
-        # Only set when changed to avoid thrash
-        try:
+        anchor = self._detect_anchor(self.mapFromScene(event.scenePos()))
+        cursor = self._cursor_for_anchor(anchor)
+        if cursor is not None:
             self.setCursor(cursor)
-        except Exception:
-            pass
-        QGraphicsRectItem.hoverMoveEvent(self, event)
+        else:
+            self.unsetCursor()
+        super().hoverMoveEvent(event)
 
     def hoverLeaveEvent(self, event):
-        # reset cursor to default when leaving
-        try:
-            # Let the view set its cursor based on current tool
-            self.unsetCursor()
-        except Exception:
-            pass
-        QGraphicsRectItem.hoverLeaveEvent(self, event)
-
-    def paint(self, painter: QPainter, option, widget=None):
-        # Default rectangle paint
-        QGraphicsRectItem.paint(self, painter, option, widget)
-        # Draw small handles when selected
-        if not self.isSelected():
-            return
-        r = self.rect()
-        hs = self.HANDLE_SIZE
-        handles = [
-            QRectF(r.left() - hs / 2, r.top() - hs / 2, hs, hs),
-            QRectF(r.right() - hs / 2, r.top() - hs / 2, hs, hs),
-            QRectF(r.left() - hs / 2, r.bottom() - hs / 2, hs, hs),
-            QRectF(r.right() - hs / 2, r.bottom() - hs / 2, hs, hs),
-        ]
-        painter.save()
-        painter.setPen(QPen(QColor("white")))
-        painter.setBrush(QBrush(QColor("white")))
-        for h in handles:
-            painter.drawRect(h)
-        painter.restore()
+        self.unsetCursor()
+        super().hoverLeaveEvent(event)
 
     def mousePressEvent(self, event):
-        # If move tool is active, allow moving via normal mechanism
-        if (
-            self.current_tool is CanvasToolName.MOVE
-            and event.button() == Qt.MouseButton.LeftButton
-        ):
-            # Record move start
-            self._moving = True
-            self._press_pos = event.scenePos()
-            self._initial_rect = QRectF(self.rect())
+        if event.button() == Qt.MouseButton.RightButton:
+            self._open_delete_menu(event)
+            return
+
+        if event.button() != Qt.MouseButton.LeftButton:
+            super().mousePressEvent(event)
+            return
+
+        anchor = self._detect_anchor(self.mapFromScene(event.scenePos()))
+        if anchor is not None:
+            self._begin_resize(anchor, event.scenePos())
             event.accept()
             return
 
-        if event.button() == Qt.MouseButton.LeftButton:
-            # Map to local rect coordinates
-            local = self.mapFromScene(event.scenePos())
-            left, right, top, bottom = self._is_on_border(local)
-            if any((left, right, top, bottom)):
-                # Begin resize; record anchor
-                self._resizing = True
-                self._press_pos = event.scenePos()
-                self._initial_rect = QRectF(self.rect())
-                # store which edges are being dragged
-                self._resize_anchor = (left, right, top, bottom)
-                event.accept()
-                return
-
-        # Default: forward to child text item (for editing)
-        QGraphicsRectItem.mousePressEvent(self, event)
+        if self.current_tool != CanvasToolName.MOVE:
+            self.text_item.setFocus()
+        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self._resizing and self._press_pos is not None:
-            # compute delta in scene coords and adjust rect
-            delta = event.scenePos() - self._press_pos
-            r = QRectF(self._initial_rect)
-            left, right, top, bottom = self._resize_anchor
-            if left:
-                r.setLeft(r.left() + delta.x())
-            if right:
-                r.setRight(r.right() + delta.x())
-            if top:
-                r.setTop(r.top() + delta.y())
-            if bottom:
-                r.setBottom(r.bottom() + delta.y())
-            # enforce minimum size
-            min_w, min_h = 20, 20
-            if r.width() < min_w:
-                r.setRight(r.left() + min_w)
-            if r.height() < min_h:
-                r.setBottom(r.top() + min_h)
-            self.setRect(r)
-            self.text_item.setPos(r.topLeft())
-            self.text_item.setTextWidth(r.width())
+        if self._resizing and self._resize_anchor:
+            self._apply_resize(event.scenePos(), event.modifiers())
             event.accept()
             return
-
-        if self._moving and self._press_pos is not None:
-            delta = event.scenePos() - self._press_pos
-            self.setPos(self.pos() + delta)
-            self._press_pos = event.scenePos()
-            event.accept()
-            return
-
-        QGraphicsRectItem.mouseMoveEvent(self, event)
+        super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if self._resizing:
-            self._resizing = False
-            # Persist changes
-            try:
-                self._view._save_text_items_to_db()
-            except Exception:
-                pass
+            self._finish_resize(event.scenePos())
             event.accept()
             return
-        if self._moving:
-            self._moving = False
-            try:
-                self._view._save_text_items_to_db()
-            except Exception:
-                pass
-            event.accept()
+        super().mouseReleaseEvent(event)
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._persist_geometry()
+
+    def itemChange(self, change, value):
+        if change == QGraphicsRectItem.GraphicsItemChange.ItemPositionChange:
+            value = self._snap_position_if_needed(value)
+        elif (
+            change
+            == QGraphicsRectItem.GraphicsItemChange.ItemPositionHasChanged
+        ):
+            self._persist_geometry()
+        return super().itemChange(change, value)
+
+    def paint(self, painter: QPainter, option, widget=None):
+        super().paint(painter, option, widget)
+        if not self.isSelected():
             return
+        size = 6.0
+        rect = self.rect()
+        painter.save()
+        painter.setPen(QPen(QColor("white")))
+        painter.setBrush(QColor("white"))
+        handle_rects = [
+            QRectF(rect.left() - size / 2, rect.top() - size / 2, size, size),
+            QRectF(rect.right() - size / 2, rect.top() - size / 2, size, size),
+            QRectF(
+                rect.left() - size / 2, rect.bottom() - size / 2, size, size
+            ),
+            QRectF(
+                rect.right() - size / 2, rect.bottom() - size / 2, size, size
+            ),
+        ]
+        for handle_rect in handle_rects:
+            painter.drawRect(handle_rect)
+        painter.restore()
 
-        QGraphicsRectItem.mouseReleaseEvent(self, event)
+    def to_persist_dict(self) -> dict:
+        """Return a JSON-serializable representation of this item."""
 
-    def setText(self, text: str):
-        self.text_item.setPlainText(text)
-
-    def to_persist_dict(self):
-        # return a dict suitable for JSON persistence
         abs_x = int(self.scenePos().x() + self._view.canvas_offset_x)
         abs_y = int(self.scenePos().y() + self._view.canvas_offset_y)
         return {
@@ -452,3 +195,256 @@ class ResizableTextItem(QGraphicsRectItem):
             "w": int(self.rect().width()),
             "h": int(self.rect().height()),
         }
+
+    def _persist_geometry(self) -> None:
+        if self._view is not None:
+            try:
+                self._view._save_text_items_to_db()
+            except Exception:
+                pass
+
+    def _begin_resize(self, anchor: str, scene_pos: QPointF) -> None:
+        self._resizing = True
+        self._resize_anchor = anchor
+        self._start_scene_pos = QPointF(scene_pos)
+        self._capture_initial_geometry()
+        self.text_item.setTextInteractionFlags(Qt.NoTextInteraction)
+
+    def _apply_resize(
+        self, scene_pos: QPointF, modifiers: Qt.KeyboardModifiers
+    ) -> None:
+        if not self._resizing or self._resize_anchor is None:
+            return
+
+        edges = self._ANCHOR_TO_EDGES[self._resize_anchor]
+        delta = scene_pos - self._start_scene_pos
+        left, top, right, bottom = self._initial_geometry
+
+        if "left" in edges:
+            left += delta.x()
+        if "right" in edges:
+            right += delta.x()
+        if "top" in edges:
+            top += delta.y()
+        if "bottom" in edges:
+            bottom += delta.y()
+
+        left, right = self._enforce_min_width(edges, left, right)
+        top, bottom = self._enforce_min_height(edges, top, bottom)
+
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            left, right, top, bottom = self._apply_aspect_constraint(
+                edges, left, right, top, bottom
+            )
+
+        left, right, top, bottom = self._apply_grid_snapping(
+            edges, left, right, top, bottom
+        )
+
+        width = max(self.MIN_WIDTH, right - left)
+        height = max(self.MIN_HEIGHT, bottom - top)
+
+        self.prepareGeometryChange()
+        self.setRect(QRectF(0.0, 0.0, width, height))
+        self.setPos(QPointF(left, top))
+        self.text_item.setTextWidth(width)
+
+    def _finish_resize(self, scene_pos: QPointF) -> None:
+        self._apply_resize(scene_pos, Qt.KeyboardModifier.NoModifier)
+        self._resizing = False
+        self._resize_anchor = None
+        self.text_item.setTextInteractionFlags(Qt.TextEditorInteraction)
+        self._persist_geometry()
+
+    def _capture_initial_geometry(self) -> None:
+        rect = self.rect()
+        pos = self.scenePos()
+        self._initial_geometry = (
+            pos.x(),
+            pos.y(),
+            pos.x() + rect.width(),
+            pos.y() + rect.height(),
+        )
+        height = rect.height()
+        self._initial_aspect = rect.width() / height if height > 0 else None
+
+    def _apply_aspect_constraint(
+        self,
+        edges: Set[str],
+        left: float,
+        right: float,
+        top: float,
+        bottom: float,
+    ) -> tuple[float, float, float, float]:
+        if not self._initial_aspect:
+            return left, right, top, bottom
+
+        width = max(self.MIN_WIDTH, right - left)
+        height = max(self.MIN_HEIGHT, bottom - top)
+        target_height = width / self._initial_aspect
+        target_width = height * self._initial_aspect
+        anchor = self._resize_anchor or ""
+
+        if anchor in {"left", "right"}:
+            height = target_height
+            if "top" in edges and "bottom" not in edges:
+                top = bottom - height
+            else:
+                bottom = top + height
+        elif anchor in {"top", "bottom"}:
+            width = target_width
+            if "left" in edges and "right" not in edges:
+                left = right - width
+            else:
+                right = left + width
+        else:
+            width_change = abs(
+                width - (self._initial_geometry[2] - self._initial_geometry[0])
+            )
+            height_change = abs(
+                height
+                - (self._initial_geometry[3] - self._initial_geometry[1])
+            )
+            if width_change >= height_change:
+                height = target_height
+                if "top" in edges and "bottom" not in edges:
+                    top = bottom - height
+                else:
+                    bottom = top + height
+            else:
+                width = target_width
+                if "left" in edges and "right" not in edges:
+                    left = right - width
+                else:
+                    right = left + width
+
+        return left, right, top, bottom
+
+    def _apply_grid_snapping(
+        self,
+        edges: Set[str],
+        left: float,
+        right: float,
+        top: float,
+        bottom: float,
+    ) -> tuple[float, float, float, float]:
+        grid = getattr(self._view, "grid_settings", None)
+        if not grid or not getattr(grid, "snap_to_grid", False):
+            return left, right, top, bottom
+
+        offset_x = self._view.canvas_offset_x
+        offset_y = self._view.canvas_offset_y
+
+        if "left" in edges or "top" in edges:
+            snapped_left, snapped_top = snap_to_grid(
+                grid, left + offset_x, top + offset_y, False
+            )
+            if "left" in edges:
+                left = snapped_left - offset_x
+            if "top" in edges:
+                top = snapped_top - offset_y
+
+        if "right" in edges or "bottom" in edges:
+            snapped_right, snapped_bottom = snap_to_grid(
+                grid, right + offset_x, bottom + offset_y, False
+            )
+            if "right" in edges:
+                right = snapped_right - offset_x
+            if "bottom" in edges:
+                bottom = snapped_bottom - offset_y
+
+        return left, right, top, bottom
+
+    def _enforce_min_width(
+        self, edges: Set[str], left: float, right: float
+    ) -> tuple[float, float]:
+        width = right - left
+        if width >= self.MIN_WIDTH:
+            return left, right
+        if "left" in edges and "right" not in edges:
+            left = right - self.MIN_WIDTH
+        else:
+            right = left + self.MIN_WIDTH
+        return left, right
+
+    def _enforce_min_height(
+        self, edges: Set[str], top: float, bottom: float
+    ) -> tuple[float, float]:
+        height = bottom - top
+        if height >= self.MIN_HEIGHT:
+            return top, bottom
+        if "top" in edges and "bottom" not in edges:
+            top = bottom - self.MIN_HEIGHT
+        else:
+            bottom = top + self.MIN_HEIGHT
+        return top, bottom
+
+    def _open_delete_menu(self, event) -> None:
+        menu = QMenu()
+        delete_action = menu.addAction(self.tr("Delete"))
+        chosen = menu.exec_(event.screenPos())
+        if chosen != delete_action:
+            return
+
+        view = getattr(self, "_view", None)
+        if view is not None:
+            try:
+                view._remove_text_item(self)
+            except Exception:
+                pass
+
+    def _detect_anchor(self, local_pos: QPointF) -> Optional[str]:
+        rect = self.rect()
+        margin = self.BORDER_MARGIN
+        left = abs(local_pos.x() - rect.left()) <= margin
+        right = abs(local_pos.x() - rect.right()) <= margin
+        top = abs(local_pos.y() - rect.top()) <= margin
+        bottom = abs(local_pos.y() - rect.bottom()) <= margin
+
+        if left and top:
+            return "top-left"
+        if right and top:
+            return "top-right"
+        if left and bottom:
+            return "bottom-left"
+        if right and bottom:
+            return "bottom-right"
+        if left:
+            return "left"
+        if right:
+            return "right"
+        if top:
+            return "top"
+        if bottom:
+            return "bottom"
+        return None
+
+    @staticmethod
+    def _cursor_for_anchor(anchor: Optional[str]):
+        if anchor in {"top-left", "bottom-right"}:
+            return Qt.CursorShape.SizeFDiagCursor
+        if anchor in {"top-right", "bottom-left"}:
+            return Qt.CursorShape.SizeBDiagCursor
+        if anchor in {"left", "right"}:
+            return Qt.CursorShape.SizeHorCursor
+        if anchor in {"top", "bottom"}:
+            return Qt.CursorShape.SizeVerCursor
+        return None
+
+    def _snap_position_if_needed(self, value):
+        if not isinstance(value, QPointF):
+            return value
+        if self.current_tool != CanvasToolName.MOVE:
+            return value
+
+        grid = getattr(self._view, "grid_settings", None)
+        if not grid or not getattr(grid, "snap_to_grid", False):
+            return value
+
+        abs_x = value.x() + self._view.canvas_offset_x
+        abs_y = value.y() + self._view.canvas_offset_y
+        snapped_x, snapped_y = snap_to_grid(grid, abs_x, abs_y, False)
+        return QPointF(
+            snapped_x - self._view.canvas_offset_x,
+            snapped_y - self._view.canvas_offset_y,
+        )
