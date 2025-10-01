@@ -904,6 +904,7 @@ class MainWindow(
             self.ui,
             ["main_window_splitter"],
             default_maximize_config=default_splitter_config,
+            
         )
 
         self.status_widget = StatusWidget()
@@ -1196,7 +1197,7 @@ class MainWindow(
             self.ui.center_tab_container.currentIndex(),
         )
         self.qsettings.endGroup()
-        save_splitter_settings(self.ui, ["main_window_splitter"])
+        save_splitter_settings(self.ui, ["main_window_splitter"], "MainWindow")
 
         # Save canvas offset for all canvas views
         try:

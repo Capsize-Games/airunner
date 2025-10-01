@@ -13,7 +13,8 @@ def load_splitter_settings(
     ui: object,
     splitters: List[str],
     orientations: dict = None,
-    default_maximize_config: dict = None,  # NEW PARAMETER
+    default_maximize_config: dict = None,
+    namespace: str = "splitters",
 ):
     """
     Load the state of splitter widgets from PySide6 application settings.
@@ -47,7 +48,9 @@ def load_splitter_settings(
         splitter_state = None
         if not running_in_docker and settings:
             # Retrieve the splitter state from application settings
-            splitter_state = settings.value(f"splitters/{splitter_name}", None)
+            splitter_state = settings.value(
+                f"{namespace}/{splitter_name}", None
+            )
 
         # Attempt to restore state if available and not in Docker
         if splitter_state and not running_in_docker:
