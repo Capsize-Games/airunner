@@ -7,7 +7,7 @@ from airunner.components.nodegraph.gui.widgets.nodes.math.base_math_node import 
 
 
 class RandomNumberNode(BaseMathNode):
-    NODE_NAME = "Random Number Generator"
+    NODE_NAME = "RND Number"
     has_exec_in_port = False
     has_exec_out_port = False
     _input_ports = [
