@@ -12,7 +12,11 @@ from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from airunner.settings import CONTENT_WIDGETS_BASE_PATH, LOCAL_SERVER_HOST, LOCAL_SERVER_PORT
+from airunner.settings import (
+    CONTENT_WIDGETS_BASE_PATH,
+    LOCAL_SERVER_HOST,
+    LOCAL_SERVER_PORT,
+)
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import create_worker
 from airunner.utils.widgets import (
@@ -62,6 +66,7 @@ class BaseWidget(AbstractBaseWidget):
     _splitter_debounce_ms = 300
 
     def __init__(self, *args, **kwargs):
+        self.splitter_namespace = self.__class__.__name__
         self.icon_manager: Optional[IconManager] = None
         self.signal_handlers = self.signal_handlers or {}
         self.signal_handlers.update(
@@ -217,13 +222,13 @@ class BaseWidget(AbstractBaseWidget):
         """
         Called on close and saves the state of all splitter widgets
         """
-        save_splitter_settings(self.ui, self.splitters)
+        self._save_splitter_state()
 
     def restore_state(self):
         """
         Restore the state of the widget.
         """
-        load_splitter_settings(self.ui, self.splitters)
+        self.load_splitter_settings()
 
     def handle_close(self):
         """
@@ -327,7 +332,16 @@ class BaseWidget(AbstractBaseWidget):
         self._splitter_debounce_timer.start(self._splitter_debounce_ms)
 
     def _save_splitter_state(self):
-        save_splitter_settings(self.ui, self.splitters)
+        save_splitter_settings(
+            self.ui, self.splitters, self.splitter_namespace
+        )
+
+    def load_splitter_settings(self, **kwargs):
+        data = {
+            "namespace": self.splitter_namespace,
+        }
+        data.update(kwargs)
+        load_splitter_settings(self.ui, self.splitters, **data)
 
     def _render_template(self, element, template_name: str, **kwargs):
         """

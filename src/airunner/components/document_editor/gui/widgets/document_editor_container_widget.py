@@ -28,7 +28,7 @@ class DocumentEditorContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self._script_process = None
-        self.splitters = ["splitter", "vertical_splitter"]
+        self._splitters = ["vertical_splitter", "splitter"]
         self.signal_handlers = {
             SignalCode.FILE_EXPLORER_OPEN_FILE: self.open_file_in_new_tab,
             SignalCode.RUN_SCRIPT: self.run_script,
