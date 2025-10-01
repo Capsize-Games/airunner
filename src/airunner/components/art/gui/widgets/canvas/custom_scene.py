@@ -517,7 +517,7 @@ class CustomScene(
             return
 
         image = image_response.images[0]
-        
+
         self._load_image_from_object(image=image)
 
     def on_paste_image_from_clipboard(self):
@@ -1165,7 +1165,13 @@ class CustomScene(
         self._refresh_layer_display()
 
     def _refresh_layer_display(self):
-        """Refresh the display of all visible layers on the canvas."""
+        """Refresh the display of all visible layers on the canvas.
+
+        Only the main drawing pad scene should render global layers; auxiliary scenes
+        (like input image previews) manage a single image item themselves.
+        """
+        if getattr(self, "canvas_type", None) != "drawing_pad":
+            return
         # Get all layers ordered by their order property
         layers = CanvasLayer.objects.order_by("order").all()
 
@@ -1783,10 +1789,11 @@ class CustomScene(
         self.set_item(self.image, x=x, y=y)
         self.set_painter(self.image)
 
-        # Initialize layers on first image initialization
-        if not self._layers_initialized:
-            self._layers_initialized = True
-            self._refresh_layer_display()
+        # Initialize layers only for the main drawing pad scene
+        if getattr(self, "canvas_type", None) == "drawing_pad":
+            if not self._layers_initialized:
+                self._layers_initialized = True
+                self._refresh_layer_display()
 
         self.update()
 

@@ -13,7 +13,7 @@ class InputImageContainer(BaseWidget):
         self.signal_handlers = {
             SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
             SignalCode.MASK_UPDATED: self.on_mask_generator_worker_response_signal,
-            # SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL: self.on_load_image_from_grid_signal,
+            SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL: self.on_canvas_image_updated_signal,
         }
         super().__init__(*args, **kwargs)
         self.input_image = None
@@ -28,9 +28,30 @@ class InputImageContainer(BaseWidget):
         if self.mask_image:
             self.mask_image.on_mask_generator_worker_response_signal()
 
-    def on_load_image_from_grid_signal(self):
-        if self.input_image:
-            self.input_image.load_image_from_grid()
+    def on_canvas_image_updated_signal(self, *_args):
+        # When the main canvas image updates, refresh input image if linked
+        try:
+            if self.input_image and getattr(
+                self.input_image.current_settings,
+                "use_grid_image_as_input",
+                False,
+            ):
+                self.input_image.load_image_from_grid()
+            if self.generated_image and getattr(
+                self.generated_image.current_settings,
+                "use_grid_image_as_input",
+                False,
+            ):
+                self.generated_image.load_image_from_grid()
+            if self.mask_image and getattr(
+                self.mask_image.current_settings,
+                "use_grid_image_as_input",
+                False,
+            ):
+                self.mask_image.load_image_from_grid()
+        except Exception:
+            # Non-fatal; UI will refresh on next explicit action
+            pass
 
     def showEvent(self, event):
         settings_key = self.settings_key
