@@ -607,7 +607,7 @@ class CanvasWidget(BaseWidget):
         except Exception as exc:  # pragma: no cover - protective guard
             self.api.art.canvas.cancel_layer_operation("create")
             if hasattr(self, "logger"):
-                self.logger.exception(exc)
+                self.logger.error(exc)
             return
 
         self.api.art.canvas.show_layers()

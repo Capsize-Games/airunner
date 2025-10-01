@@ -43,6 +43,17 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         self.selected_layers = set()  # Track selected layer IDs
         self.layer_widgets = {}  # Map layer_id to widget
         super().__init__(*args, **kwargs)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # clear the items from the layout
+        for i in reversed(range(self.ui.layer_list_layout.layout().count())):
+            item = self.ui.layer_list_layout.layout().itemAt(i)
+            if item and item.widget():
+                widget = item.widget()
+                if type(widget) is LayerItemWidget:
+                    self.ui.layer_list_layout.layout().removeWidget(widget)
+                    widget.deleteLater()
         self.layers = CanvasLayer.objects.order_by("order").all()
         if not self.layers or len(self.layers) == 0:
             layer = self.create_layer(order=0, name="Layer 1")
@@ -78,18 +89,8 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
 
         if "order" not in kwargs:
             kwargs["order"] = len(self.layers)
-        layer = CanvasLayer.objects.create(**kwargs)
-        DrawingPadSettings.objects.create(layer_id=layer.id)
-        ControlnetSettings.objects.create(layer_id=layer.id)
-        ImageToImageSettings.objects.create(layer_id=layer.id)
-        OutpaintSettings.objects.create(layer_id=layer.id)
-        BrushSettings.objects.create(layer_id=layer.id)
-        MetadataSettings.objects.create(layer_id=layer.id)
+        layer = self.api.art.canvas.create_new_layer(**kwargs)
         layer = CanvasLayer.objects.get(layer.id)
-
-        if not layer:
-            self.api.art.canvas.cancel_layer_operation("create")
-            return
 
         # Initialize default settings for the new layer
         self._initialize_layer_default_settings(layer.id)
@@ -109,8 +110,6 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
 
         self.clear_selected_layers()
         self.select_layer(layer.id, item)
-
-        self.api.art.canvas.commit_layer_operation("create", [layer.id])
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     @Slot()

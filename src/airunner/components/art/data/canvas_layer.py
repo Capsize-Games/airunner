@@ -9,7 +9,7 @@ class CanvasLayer(BaseModel):
     order = Column(Integer, default=0)
     visible = Column(Boolean, default=True)
     locked = Column(Boolean, default=False)
-    name = Column(String, default="Layer")
+    name = Column(String, default="Layer", unique=True)
     opacity = Column(Integer, default=100)
     blend_mode = Column(String, default="normal")
 
