@@ -2,6 +2,10 @@ import os
 from typing import List, Type, Optional, Dict, Any
 
 from sqlalchemy.orm import joinedload
+from airunner.components.data.session_manager import session_scope
+from sqlalchemy.orm import joinedload
+from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.orm import make_transient
 
 from PySide6.QtWidgets import QApplication
 
@@ -92,11 +96,11 @@ class SettingsMixinSharedInstance:
         # Cache for layer-specific settings instances keyed by string keys
         self._settings_cache_by_key: Dict[str, Any] = {}
         self._cached_send_image_to_canvas: List[Dict] = []
-    
+
     @property
     def cached_send_image_to_canvas(self) -> List[Dict]:
         return self._cached_send_image_to_canvas
-    
+
     @cached_send_image_to_canvas.setter
     def cached_send_image_to_canvas(self, value: List[Dict]) -> None:
         self._cached_send_image_to_canvas = value
@@ -193,10 +197,12 @@ class SettingsMixin:
     @property
     def cached_send_image_to_canvas(self) -> List[Dict]:
         return self.settings_mixin_shared_instance._cached_send_image_to_canvas
-    
+
     @cached_send_image_to_canvas.setter
     def cached_send_image_to_canvas(self, value: List[Dict]) -> None:
-        self.settings_mixin_shared_instance._cached_send_image_to_canvas = value
+        self.settings_mixin_shared_instance._cached_send_image_to_canvas = (
+            value
+        )
 
     @property
     def user_web_dir(self) -> str:
@@ -216,6 +222,11 @@ class SettingsMixin:
     @property
     def logger(self):
         return self.settings_mixin_shared_instance.logger
+
+    def clear_cache_settings(self):
+        """Clear all cached settings instances."""
+        self.settings_mixin_shared_instance._settings_cache.clear()
+        self.settings_mixin_shared_instance._settings_cache_by_key.clear()
 
     def _get_or_cache_settings(
         self, model_class_: Type[Any], eager_load: Optional[List[str]] = None
@@ -339,9 +350,6 @@ class SettingsMixin:
         Returns:
             Instance of the settings model for the specified layer.
         """
-        from airunner.components.data.session_manager import session_scope
-        from sqlalchemy.orm import joinedload
-
         try:
             with session_scope() as session:
                 query = session.query(model_class_).filter(
@@ -1059,9 +1067,6 @@ class SettingsMixin:
                 if settings_instance:
                     # Force-load all scalar attributes and make the instance transient
                     try:
-                        from sqlalchemy import inspect as sa_inspect
-                        from sqlalchemy.orm import make_transient
-
                         mapper = sa_inspect(model_class_)
                         for attr in mapper.column_attrs:
                             _ = getattr(settings_instance, attr.key)
@@ -1145,8 +1150,6 @@ class SettingsMixin:
             return self.update_settings(model_class_, updates)
 
         try:
-            from airunner.components.data.session_manager import session_scope
-
             with session_scope() as session:
                 # Find existing layer-specific settings
                 setting = (
@@ -1287,8 +1290,6 @@ class SettingsMixin:
     @staticmethod
     def create_chatbot(chatbot_name) -> Chatbot:
         # Check for existing chatbot with this name before creating
-        from airunner.components.llm.data.chatbot import Chatbot
-
         try:
             existing = Chatbot.objects.filter_by_first(name=chatbot_name)
             if existing:

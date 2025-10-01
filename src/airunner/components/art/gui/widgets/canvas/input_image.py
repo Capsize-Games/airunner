@@ -190,25 +190,25 @@ class InputImage(BaseWidget):
         self.update_current_settings("enabled", val)
 
     @Slot(bool)
-    def lock_input_image(self, val):
+    def on_lock_input_image_button_toggled(self, val: bool):
         self.update_current_settings("lock_input_image", val)
 
-    @Slot(bool)
-    def refresh_input_image_from_grid(self):
+    @Slot()
+    def on_refresh_button_clicked(self):
         self.load_image_from_grid(forced=True)
 
     @Slot(bool)
-    def use_grid_image_as_input_toggled(self, val):
+    def on_link_to_grid_image_button_toggled(self, val: bool):
         self.update_current_settings("use_grid_image_as_input", val)
         if val is True:
             self.load_image_from_grid()
 
     @Slot()
-    def import_clicked(self):
+    def on_import_button_clicked(self):
         self.import_image()
 
     @Slot()
-    def delete_clicked(self):
+    def on_delete_button_clicked(self):
         self.delete_image()
 
     def import_image(self):
@@ -251,6 +251,7 @@ class InputImage(BaseWidget):
             )
 
     def load_image_from_grid(self, forced=False):
+        print("LOAD_IMAGE_FROM GRID")
         # Explicitly clear cache before reading settings to ensure lock status is fresh
         settings_property_name = None
         if self.settings_key == "image_to_image_settings":
@@ -296,7 +297,9 @@ class InputImage(BaseWidget):
         # If not locked and use_grid is true, proceed with update
         self.logger.debug(f"Updating {self.settings_key} image from grid.")
         self.update_current_settings("image", self.drawing_pad_settings.image)
-        self.load_image_from_settings()
+        if self.drawing_pad_settings.image:
+            image = convert_binary_to_image(self.drawing_pad_settings.image)
+            self.load_image_from_object(image)
 
     def load_image_from_settings(self):
         if self.settings_key == "outpaint_settings":
@@ -327,25 +330,53 @@ class InputImage(BaseWidget):
             self.logger.warning("Image is None, unable to add to scene")
             return
 
+        print(
+            f"load_image_from_object: image size={image.size}, mode={image.mode}"
+        )
+
         # Convert PIL image to QImage
         qimage = ImageQt(image)
+        print(
+            f"load_image_from_object: qimage size={qimage.size()}, format={qimage.format()}"
+        )
 
         # If we have our scene, update its image
         if hasattr(self, "_scene") and self._scene:
-            # Update the image in the scene
-            if self._scene.image != qimage:
-                # Update with the new image
-                self._scene.image = qimage
-                self._scene.initialize_image(
-                    image
-                )  # Pass the original PIL image
+            print(
+                f"load_image_from_object: scene exists, scene.item={self._scene.item}"
+            )
+
+            # Update the image in the scene - always call initialize_image to properly update
+            self._scene.image = qimage
+            self._scene.initialize_image(image)  # Pass the original PIL image
+
+            # Force update the graphics item if it exists
+            if self._scene.item and hasattr(self._scene.item, "updateImage"):
+                print(
+                    "load_image_from_object: calling updateImage on scene.item"
+                )
+                self._scene.item.updateImage(qimage)
+
             # Always set scene rect to image
             if self._scene.item and hasattr(self._scene.item, "boundingRect"):
                 rect = self._scene.item.boundingRect()
                 self._scene.setSceneRect(rect)
+                print(f"load_image_from_object: scene rect set to {rect}")
+
+            # Force scene and view updates
+            self._scene.update()
+            self._scene.invalidate()
+
+            # Update all views
+            for view in self._scene.views():
+                view.viewport().update()
+                view.update()
+
             self.fit_image_to_view()
+            print("load_image_from_object: using scene - updates complete")
         else:
             # Legacy fallback if somehow scene isn't set up
+            print("load_image_from_object: using legacy fallback")
             qpixmap = QPixmap.fromImage(QImage(qimage))
             scene = QGraphicsScene()
             scene.clear()
@@ -358,6 +389,8 @@ class InputImage(BaseWidget):
             pen.setWidth(3)
             scene.addRect(0, 0, qpixmap.width(), qpixmap.height(), pen)
             self.fit_image_to_view()
+
+        self.update()
 
     def delete_image(self):
         if self.settings_key == "outpaint_settings" and self.is_mask:

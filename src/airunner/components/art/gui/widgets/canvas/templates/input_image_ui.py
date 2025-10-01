@@ -180,11 +180,6 @@ class Ui_input_image(object):
 
 
         self.retranslateUi(input_image)
-        self.import_button.clicked.connect(input_image.import_clicked)
-        self.delete_button.clicked.connect(input_image.delete_clicked)
-        self.link_to_grid_image_button.toggled.connect(input_image.use_grid_image_as_input_toggled)
-        self.lock_input_image_button.toggled.connect(input_image.lock_input_image)
-        self.refresh_button.clicked.connect(input_image.refresh_input_image_from_grid)
 
         QMetaObject.connectSlotsByName(input_image)
     # setupUi
