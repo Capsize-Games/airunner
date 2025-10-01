@@ -17,7 +17,6 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import (
     Ui_canvas,
 )
-from airunner.utils.widgets import load_splitter_settings
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.drawingpad_settings import (
     DrawingPadSettings,
@@ -97,13 +96,10 @@ class CanvasWidget(BaseWidget):
         default_canvas_splitter_config = {
             "splitter": {"index_to_maximize": 1, "min_other_size": 50}
         }
-        load_splitter_settings(
-            self.ui,
-            self._splitters,  # self._splitters is ["splitter"]
-            default_maximize_config=default_canvas_splitter_config,
+        self.load_splitter_settings(
+            default_maximize_config=default_canvas_splitter_config
         )
 
-        current_tool = self.current_tool
         show_grid = self.grid_settings.show_grid
 
         self._startPos = QPoint(0, 0)
@@ -342,7 +338,7 @@ class CanvasWidget(BaseWidget):
         self._update_cursor()
 
     def save_state(self):
-        save_splitter_settings(self.ui, ["splitter"])
+        self._save_splitter_state()
 
     def on_toggle_grid_signal(self, message: Dict):
         val = message.get("show_grid", True)
@@ -425,9 +421,7 @@ class CanvasWidget(BaseWidget):
                     "min_other_size": 50,
                 }
             }
-            load_splitter_settings(
-                self.ui,
-                self._splitters,  # Uses self._splitters defined in __init__
+            self.load_splitter_settings(
                 default_maximize_config=default_canvas_splitter_config,
             )
         else:

@@ -17,7 +17,6 @@ from airunner.enums import (
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.utils.application import create_worker
-from airunner.utils.widgets import load_splitter_settings
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.workers.llm_response_worker import (
     LLMResponseWorker,
@@ -102,9 +101,7 @@ class ChatPromptWidget(BaseWidget):
                     "min_other_size": 50,
                 }
             }
-            load_splitter_settings(
-                self.ui,
-                self._splitters,
+            self.load_splitter_settings(
                 orientations={"chat_prompt_splitter": Qt.Orientation.Vertical},
                 default_maximize_config=default_chat_splitter_config,
             )
