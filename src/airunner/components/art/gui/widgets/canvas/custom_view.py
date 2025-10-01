@@ -205,6 +205,9 @@ class CustomGraphicsView(
         self.grid_item = None
         self._text_items = []  # Store references to QGraphicsTextItem
         self._editing_text_item = None
+        self._is_restoring_state = (
+            False  # Flag to disable resize compensation during restoration
+        )
 
         # Add settings to handle negative coordinates properly
         self.setAlignment(
@@ -291,17 +294,21 @@ class CustomGraphicsView(
         """Load the canvas offset from QSettings."""
         x = self.settings.value("canvas_offset_x", 0.0)  # Default to 0
         y = self.settings.value("canvas_offset_y", 0.0)  # Default to 0
-        self.canvas_offset = QPointF(float(x), float(y))
+        loaded_offset = QPointF(float(x), float(y))
+        self.canvas_offset = loaded_offset
 
-        # Update positions after loading offset
-        self.update_active_grid_area_position()
-        self.updateImagePositions()
-        self.do_draw()
+        self.logger.debug(f"Loaded canvas offset from settings: ({x}, {y})")
+
+        # DO NOT call update methods here - let the caller decide when to update
+        # This prevents the offset from being modified during load
 
     def save_canvas_offset(self):
         """Save the canvas offset to QSettings."""
         self.settings.setValue("canvas_offset_x", self.canvas_offset_x)
         self.settings.setValue("canvas_offset_y", self.canvas_offset_y)
+        self.logger.debug(
+            f"Saved canvas offset: ({self.canvas_offset_x}, {self.canvas_offset_y})"
+        )
 
     @property
     def scene(self) -> Optional[CustomScene]:
@@ -421,6 +428,8 @@ class CustomGraphicsView(
         # if hasattr(self.scene, "original_item_positions"):
         #     self.scene.original_item_positions.clear()
 
+        self.save_canvas_offset()
+        
         self.api.art.canvas.update_grid_info(
             {
                 "offset_x": self.canvas_offset_x,
@@ -648,22 +657,28 @@ class CustomGraphicsView(
         # Calculate how the viewport center moved compared to the last
         # recorded viewport size. We will compensate the canvas_offset by
         # this delta so that items retain their on-screen positions.
-        try:
-            old_size = self._last_viewport_size or self.viewport().size()
-            old_center = QPointF(old_size.width() / 2, old_size.height() / 2)
-            new_center = QPointF(width / 2, height / 2)
-            center_delta = QPointF(
-                new_center.x() - old_center.x(),
-                new_center.y() - old_center.y(),
-            )
+        # ONLY do this compensation for interactive resizes, not during state restoration.
+        if not self._is_restoring_state:
+            try:
+                old_size = self._last_viewport_size or self.viewport().size()
+                old_center = QPointF(
+                    old_size.width() / 2, old_size.height() / 2
+                )
+                new_center = QPointF(width / 2, height / 2)
+                center_delta = QPointF(
+                    new_center.x() - old_center.x(),
+                    new_center.y() - old_center.y(),
+                )
 
-            # Subtract center_delta from canvas_offset to keep scene items
-            # visually stationary in the viewport.
-            self.canvas_offset -= center_delta
-        except Exception:
-            # If anything goes wrong computing the compensation, proceed
-            # without changing canvas_offset (best-effort behavior).
-            self.logger.exception("Error computing center delta during resize")
+                # Subtract center_delta from canvas_offset to keep scene items
+                # visually stationary in the viewport.
+                self.canvas_offset -= center_delta
+            except Exception:
+                # If anything goes wrong computing the compensation, proceed
+                # without changing canvas_offset (best-effort behavior).
+                self.logger.exception(
+                    "Error computing center delta during resize"
+                )
 
         # Update last viewport size to the current viewport dimensions
         canvas_container_size = self.viewport().size()
@@ -836,12 +851,8 @@ class CustomGraphicsView(
 
                 # Remove from scene layer mapping
                 try:
-                    if self.scene and hasattr(
-                        self.scene, "_layer_items"
-                    ):
-                        for k, v in list(
-                            self.scene._layer_items.items()
-                        ):
+                    if self.scene and hasattr(self.scene, "_layer_items"):
+                        for k, v in list(self.scene._layer_items.items()):
                             if v is target:
                                 del self.scene._layer_items[k]
                                 break
@@ -860,13 +871,13 @@ class CustomGraphicsView(
 
                         # Verify it was cleared
                         try:
-                            settings = DrawingPadSettings.objects.filter_by_first(
-                                layer_id=layer_id
+                            settings = (
+                                DrawingPadSettings.objects.filter_by_first(
+                                    layer_id=layer_id
+                                )
                             )
                             if settings:
-                                has_image = (
-                                    settings.image is not None
-                                )
+                                has_image = settings.image is not None
                                 self.logger.info(
                                     f"After clearing: layer {layer_id} still has image: {has_image}"
                                 )
@@ -885,10 +896,7 @@ class CustomGraphicsView(
                         f"Failed to clear persisted image: {e}"
                     )
             # If it's the scene's primary item, use scene.delete_image()
-            elif (
-                self.scene
-                and getattr(self.scene, "item", None) is target
-            ):
+            elif self.scene and getattr(self.scene, "item", None) is target:
                 try:
                     self.scene.delete_image()
                 except Exception:
@@ -1094,28 +1102,54 @@ class CustomGraphicsView(
     def showEvent(self, event):
         super().showEvent(event)
         if not self._initialized:
-            # Load offset first
-            # self.load_canvas_offset()
+            # Set restoration flag to prevent resize compensation during initial load
+            self._is_restoring_state = True
 
-            # Set up the scene (grid, etc.)
+            # Load offset first - this ONLY sets the canvas_offset to the saved value
+            self.load_canvas_offset()
+
+            # Store the loaded offset to restore it after any operations
+            loaded_offset = QPointF(
+                self.canvas_offset.x(), self.canvas_offset.y()
+            )
+
+            self.logger.debug(
+                f"Initial canvas offset loaded: ({loaded_offset.x()}, {loaded_offset.y()})"
+            )
+
+            # Set up the scene (grid, etc.) - DO NOT let these change the offset
             self.do_draw(True)
             self.toggle_drag_mode()
             self.set_canvas_color(self.scene)
 
+            # Restore the offset after do_draw
+            self.canvas_offset = loaded_offset
+            self.logger.debug(
+                f"Canvas offset after do_draw: ({self.canvas_offset.x()}, {self.canvas_offset.y()})"
+            )
+
             # Show the active grid area using loaded offset
             self.show_active_grid_area()
-            # self.scene.initialize_image()
+
+            # Restore the offset after show_active_grid_area
+            self.canvas_offset = loaded_offset
+            self.logger.debug(
+                f"Canvas offset after show_active_grid_area: ({self.canvas_offset.x()}, {self.canvas_offset.y()})"
+            )
+
+            # Update viewport size tracking without adjusting offset
+            self._last_viewport_size = self.viewport().size()
+
+            # Now update positions with the restored offset
+            self.update_active_grid_area_position()
             self.updateImagePositions()
-            # Run the deferred resize handling now that the view is visible so
-            # that items maintain their on-screen positions when the view is
-            # first shown.
-            try:
-                self._recent_event_size = self.viewport().size()
-                self._handle_deferred_resize()
-            except Exception:
-                self.logger.exception(
-                    "Error running deferred resize on showEvent"
-                )
+
+            # FORCE the offset back to loaded value after position updates
+            self.canvas_offset = loaded_offset
+            self.logger.debug(
+                f"Canvas offset after position updates: ({self.canvas_offset.x()}, {self.canvas_offset.y()})"
+            )
+
             # Restore text items on load
             try:
                 self._restore_text_items_from_db()
@@ -1123,7 +1157,36 @@ class CustomGraphicsView(
                 self.logger.exception(
                     "Failed to restore text items on showEvent"
                 )
+
+            # Final offset restoration
+            self.canvas_offset = loaded_offset
+            self.logger.debug(
+                f"Final canvas offset after full init: ({self.canvas_offset.x()}, {self.canvas_offset.y()})"
+            )
+
             self._initialized = True
+
+            # Use a short delay to allow the window to fully settle before
+            # re-enabling resize compensation
+            QTimer.singleShot(500, self._finish_state_restoration)
+
+    def _finish_state_restoration(self):
+        """Called after a delay to finish state restoration and re-enable resize compensation."""
+        self._is_restoring_state = False
+
+        # Reload and reapply the canvas offset one final time to ensure it's correct
+        x = self.settings.value("canvas_offset_x", 0.0)
+        y = self.settings.value("canvas_offset_y", 0.0)
+        final_offset = QPointF(float(x), float(y))
+        self.canvas_offset = final_offset
+
+        # Update positions one final time
+        self.update_active_grid_area_position()
+        self.updateImagePositions()
+
+        self.logger.debug(
+            f"Canvas state restoration complete - final offset: ({final_offset.x()}, {final_offset.y()})"
+        )
 
     def set_canvas_color(
         self,
