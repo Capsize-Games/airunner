@@ -3,13 +3,15 @@ import math
 import os
 import subprocess
 import time
+import weakref
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, is_dataclass
 from typing import Optional, Tuple, Dict, Any, Iterable, List
 
 import PIL
 from PIL import ImageQt, Image, ImageFilter
 from PySide6.QtGui import QImage
-from PySide6.QtCore import Qt, QPoint, QRect, QPointF
+from PySide6.QtCore import Qt, QPoint, QRect, QPointF, QMetaObject, Slot, Q_ARG
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import (
@@ -35,6 +37,7 @@ from airunner.components.art.data.image_to_image_settings import (
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
+from airunner.components.data.session_manager import session_scope
 
 import requests  # Added for HTTP(S) image download
 
@@ -64,6 +67,117 @@ from airunner.components.art.managers.stablediffusion.image_response import (
 )
 from airunner.components.art.utils.layer_compositor import LayerCompositor
 from airunner.utils.settings.get_qsettings import get_qsettings
+
+
+_PERSIST_EXECUTOR = ThreadPoolExecutor(max_workers=1)
+
+_SETTINGS_PERSISTENCE_MAP: Dict[str, Tuple[type, bool]] = {
+    "drawing_pad_settings": (DrawingPadSettings, True),
+    "controlnet_settings": (ControlnetSettings, True),
+    "image_to_image_settings": (ImageToImageSettings, True),
+    "outpaint_settings": (OutpaintSettings, True),
+}
+
+
+def _persist_image_worker(
+    settings_key: str,
+    layer_id: Optional[int],
+    column_name: str,
+    pil_image: Optional[Image.Image],
+    binary_data: Optional[bytes],
+    raw_storage_enabled: bool,
+    generation: int,
+) -> Dict[str, Any]:
+    model_entry = _SETTINGS_PERSISTENCE_MAP.get(settings_key)
+    if model_entry is None:
+        return {
+            "error": f"unsupported_settings_key:{settings_key}",
+            "generation": generation,
+        }
+
+    model_class, layer_scoped = model_entry
+    image_binary = binary_data
+
+    if image_binary is None and pil_image is not None:
+        try:
+            if raw_storage_enabled:
+                rgba_image = (
+                    pil_image
+                    if pil_image.mode == "RGBA"
+                    else pil_image.convert("RGBA")
+                )
+                width, height = rgba_image.size
+                header = (
+                    b"AIRAW1"
+                    + width.to_bytes(4, "big")
+                    + height.to_bytes(4, "big")
+                )
+                image_binary = header + rgba_image.tobytes()
+            else:
+                image_binary = convert_image_to_binary(pil_image)
+        except Exception:
+            try:
+                image_binary = convert_image_to_binary(
+                    pil_image.convert("RGBA")
+                )
+            except Exception as exc:
+                return {
+                    "error": f"image_conversion_failed:{exc}",
+                    "generation": generation,
+                }
+
+    if image_binary is None:
+        return {"error": "empty_binary", "generation": generation}
+
+    try:
+        with session_scope() as session:
+            if layer_scoped:
+                query = session.query(model_class)
+                if layer_id is not None:
+                    query = query.filter(model_class.layer_id == layer_id)
+                setting = query.first()
+                if setting is None:
+                    setting = model_class(layer_id=layer_id)
+                    session.add(setting)
+                setattr(setting, column_name, image_binary)
+            else:
+                setting = (
+                    session.query(model_class)
+                    .order_by(model_class.id.desc())
+                    .first()
+                )
+                if setting is None:
+                    setting = model_class()
+                    session.add(setting)
+                setattr(setting, column_name, image_binary)
+    except Exception as exc:
+        return {"error": f"db_error:{exc}", "generation": generation}
+
+    return {
+        "generation": generation,
+        "table_name": model_class.__tablename__,
+        "column_name": column_name,
+        "binary": image_binary,
+        "settings_key": settings_key,
+        "layer_id": layer_id,
+    }
+
+
+def _dispatch_persist_result(scene_ref, future):
+    scene = scene_ref()
+    if scene is None:
+        return
+    try:
+        payload = future.result()
+    except Exception as exc:  # pragma: no cover - defensive
+        payload = {"error": f"worker_exception:{exc}", "generation": 0}
+
+    QMetaObject.invokeMethod(
+        scene,
+        "_handle_persist_result",
+        Qt.QueuedConnection,
+        Q_ARG(object, payload),
+    )
 
 
 class CustomScene(
@@ -111,9 +225,10 @@ class CustomScene(
         self._persist_timer.setSingleShot(True)
         self._persist_timer.timeout.connect(self._flush_pending_image)
         self._pending_image_binary = None
-        self._pending_image_generation = (
-            0  # monotonic counter to ensure latest wins
-        )
+        self._pending_image_ref = None  # defer heavy conversion to flush
+        self._persist_delay_ms = 1000
+        self._active_persist_future = None
+        self._persist_generation = 0
         # Performance feature flags / caches
         self._raw_image_storage_enabled = (
             True  # Re-enable raw RGBA storage for speed
@@ -125,6 +240,8 @@ class CustomScene(
         # Cache for expensive database settings queries
         self._active_grid_cache = None
         self._active_grid_cache_time = 0
+        # Track user interaction state to avoid blocking UI while drawing/panning
+        self._is_user_interacting = False
 
         # Add viewport rectangle that includes negative space
         self._extended_viewport_rect = QRect(-2000, -2000, 4000, 4000)
@@ -325,12 +442,10 @@ class CustomScene(
 
     @current_active_image.setter
     def current_active_image(self, image: Image):
-        """Set the current active image, avoiding unnecessary DB writes.
+        """Set the current active image and schedule a debounced persist.
 
-        The original implementation always converted and persisted the image.
-        This adds a small optimization: skip the DB update if the incoming
-        image (after conversion) matches what is already stored. This helps
-        when UI paths redundantly reassign the same image object.
+        Heavy work (converting to bytes and writing to DB) is deferred to
+        a QTimer tick to keep the UI responsive immediately after image load.
         """
         if image is not None and not isinstance(image, Image.Image):
             return
@@ -351,73 +466,111 @@ class CustomScene(
                     self.api.art.canvas.image_updated()
             return
 
-        # Convert to binary for comparison & persistence
-        settings = self.current_settings  # cache
-
         # Fast identity check: same object reference -> skip
         if image is self._current_active_image_ref:
             return
-
-        # Quick size/mode change check before expensive conversion
-        if self._current_active_image_ref is not None:
-            if (
-                image.size == self._current_active_image_ref.size
-                and image.mode == self._current_active_image_ref.mode
-            ):
-                # Same size/mode - check if it's actually the same data
-                try:
-                    if (
-                        image.tobytes()
-                        == self._current_active_image_ref.tobytes()
-                    ):
-                        return  # Identical image data, skip update
-                except:
-                    pass  # Fall through to normal processing if tobytes fails
-
-        # Raw storage path (faster than PNG) else fallback
-        if self._raw_image_storage_enabled:
-            try:
-                rgba = image if image.mode == "RGBA" else image.convert("RGBA")
-                w, h = rgba.size
-                header = (
-                    b"AIRAW1" + w.to_bytes(4, "big") + h.to_bytes(4, "big")
-                )
-                binary_image = header + rgba.tobytes()
-            except Exception:
-                # Raw encoding failed, fallback to PNG
-                binary_image = convert_image_to_binary(image)
-        else:
-            binary_image = convert_image_to_binary(image)
-
-        if self._current_active_image_binary == binary_image:
-            self._current_active_image_ref = image
-            return
-
+        # Update in-memory ref; binary will be produced during flush
         self._current_active_image_ref = image
-        self._current_active_image_binary = binary_image
+        self._current_active_image_binary = None
+        self._pending_image_ref = image
+        self._pending_image_binary = None
 
-        # Debounced persistence: schedule DB update rather than immediate commit.
-        self._pending_image_binary = binary_image
-        self._pending_image_generation += 1
-        generation = self._pending_image_generation
-        # Restart timer (150ms window)
-        self._persist_timer.start(150)
-        # Optionally notify lightweight listeners about in-memory change only
-        if image:
-            # _update_current_settings requires a bytes-like object not PIL.Image
-            self._update_current_settings("image", binary_image)
-            # Avoid emitting image_updated here to prevent duplicate bursts; rendering paths will emit.
+        # Restart timer with configured debounce window
+        self._persist_timer.start(self._persist_delay_ms)
 
     def _flush_pending_image(self):
-        """Persist the most recent pending image binary to settings (debounced)."""
-        if self._pending_image_binary is None:
+        """Persist pending image data asynchronously to avoid UI stalls."""
+        if self._is_user_interacting or getattr(
+            self, "draw_button_down", False
+        ):
+            self._persist_timer.start(self._persist_delay_ms)
             return
-        # If already persisted, skip
-        if self.current_settings.image == self._pending_image_binary:
-            self._pending_image_binary = None
+
+        has_pending_image = self._pending_image_ref is not None
+        has_pending_binary = self._pending_image_binary is not None
+        if not has_pending_image and not has_pending_binary:
             return
-        self._update_current_settings("image", self._pending_image_binary)
+
+        image_obj = self._pending_image_ref
+        binary = self._pending_image_binary
+
+        self._pending_image_ref = None
         self._pending_image_binary = None
+
+        if binary is not None and binary == self._current_active_image_binary:
+            return
+
+        if binary is not None:
+            self._current_active_image_binary = binary
+
+        image_payload = None
+        if has_pending_image and isinstance(image_obj, Image.Image):
+            image_payload = image_obj
+
+        if binary is None and image_payload is None:
+            return
+
+        try:
+            layer_id = self._get_current_selected_layer_id()
+        except Exception:
+            layer_id = None
+
+        self._persist_generation += 1
+        generation = self._persist_generation
+
+        future = _PERSIST_EXECUTOR.submit(
+            _persist_image_worker,
+            self.settings_key,
+            layer_id,
+            "image",
+            image_payload,
+            binary,
+            self._raw_image_storage_enabled,
+            generation,
+        )
+        self._active_persist_future = future
+        future.add_done_callback(
+            lambda fut, scene_ref=weakref.ref(self): _dispatch_persist_result(
+                scene_ref, fut
+            )
+        )
+
+    @Slot(object)
+    def _handle_persist_result(self, payload: object):
+        if not isinstance(payload, dict):
+            return
+
+        generation = payload.get("generation", 0)
+        if generation < self._persist_generation:
+            return
+
+        self._active_persist_future = None
+
+        error = payload.get("error")
+        if error:
+            if hasattr(self, "logger") and self.logger:
+                self.logger.error(f"Image persistence failed: {error}")
+            return
+
+        binary = payload.get("binary")
+        if binary is not None:
+            self._current_active_image_binary = binary
+
+        table_name = payload.get("table_name")
+        column_name = payload.get("column_name")
+
+        if table_name and column_name:
+            try:
+                self._SettingsMixin__settings_updated(
+                    table_name,
+                    column_name,
+                    binary,
+                )
+            except Exception as exc:  # pragma: no cover - defensive
+                if hasattr(self, "logger") and self.logger:
+                    self.logger.error(
+                        f"Failed to notify settings update for {table_name}.{column_name}: {exc}"
+                    )
 
     def _binary_to_pil_fast(self, binary_data: bytes) -> Optional[Image.Image]:
         """Fast inverse for raw storage format; fallback to existing converter.
@@ -2335,9 +2488,18 @@ class CustomScene(
             self.start_pos = event.scenePos()
         except AttributeError:
             pass
+        # Mark that user is interacting (drawing)
+        self._persist_timer.stop()
+        self._is_user_interacting = True
 
     def _handle_left_mouse_release(self, event):
-        pass
+        # Stroke finished; allow persistence after a short grace period
+        self._is_user_interacting = False
+        if (
+            self._pending_image_ref is not None
+            or self._pending_image_binary is not None
+        ):
+            self._persist_timer.start(self._persist_delay_ms)
 
     def _handle_cursor(self, event, apply_cursor: bool = True):
         if hasattr(self, "_last_cursor_state"):

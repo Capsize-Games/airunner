@@ -265,16 +265,20 @@ class BrushScene(CustomScene):
         self._last_draw_scene_pos = self.last_pos
         self.start_pos = self.last_pos
 
-        # Create a QPixmap from the image and set it to the QGraphicsPixmapItem
+        # Push the updated pixels directly into the active item without forcing
+        # an intermediate QPixmap conversion. This keeps the pipeline GPU-friendly
+        # when the view is backed by QOpenGLWidget and avoids redundant copies.
         active_image = self.active_image
 
-        pixmap = QPixmap.fromImage(active_image)
-
-        # save the image - use updateImage if setPixmap is not available
-        if hasattr(self.active_item, "setPixmap"):
-            self.active_item.setPixmap(pixmap)
-        elif hasattr(self.active_item, "updateImage"):
+        if hasattr(self.active_item, "updateImage"):
             self.active_item.updateImage(active_image)
+            # Force scene/viewport update to ensure GL texture refresh
+            if self.active_item.scene():
+                self.active_item.scene().update(
+                    self.active_item.sceneBoundingRect()
+                )
+        elif hasattr(self.active_item, "setPixmap"):
+            self.active_item.setPixmap(QPixmap.fromImage(active_image))
 
     def _ensure_draw_space(self, scene_point: QPointF) -> bool:
         if scene_point is None:
@@ -365,14 +369,27 @@ class BrushScene(CustomScene):
         else:
             # For normal image layer
             if self.active_image is not None:
-                image = ImageQt.fromqimage(self.active_image)
-                base_64_image = convert_image_to_binary(image)
-                # Update both database object and in-memory settings with the same base64 image
-                self.update_drawing_pad_settings(image=base_64_image)
+                pil_image = ImageQt.fromqimage(self.active_image).copy()
+                self.current_active_image = pil_image
 
-                # CRITICAL: Update the cached reference to ensure consistency
-                self._current_active_image_ref = image
-                self._current_active_image_binary = base_64_image
+                rgba_image = (
+                    pil_image
+                    if pil_image.mode == "RGBA"
+                    else pil_image.convert("RGBA")
+                )
+                width, height = rgba_image.size
+                raw_binary = (
+                    b"AIRAW1"
+                    + width.to_bytes(4, "big")
+                    + height.to_bytes(4, "big")
+                    + rgba_image.tobytes()
+                )
+
+                self.drawing_pad_settings.image = raw_binary
+                if self._raw_image_storage_enabled:
+                    self._pending_image_binary = raw_binary
+                else:
+                    self._pending_image_binary = None
 
                 if self.current_tool and (
                     self.current_tool is CanvasToolName.BRUSH
