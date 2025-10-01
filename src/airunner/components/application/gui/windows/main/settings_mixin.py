@@ -91,6 +91,15 @@ class SettingsMixinSharedInstance:
         self._settings_cache: Dict[Type[Any], Any] = {}
         # Cache for layer-specific settings instances keyed by string keys
         self._settings_cache_by_key: Dict[str, Any] = {}
+        self._cached_send_image_to_canvas: List[Dict] = []
+    
+    @property
+    def cached_send_image_to_canvas(self) -> List[Dict]:
+        return self._cached_send_image_to_canvas
+    
+    @cached_send_image_to_canvas.setter
+    def cached_send_image_to_canvas(self, value: List[Dict]) -> None:
+        self._cached_send_image_to_canvas = value
 
     def get_cached_setting(self, model_class: Type[Any]) -> Optional[Any]:
         """Return a cached settings instance if present."""
@@ -180,6 +189,14 @@ class SettingsMixin:
         app = QApplication.instance()
         if app:
             self.api = getattr(app, "api", None)
+
+    @property
+    def cached_send_image_to_canvas(self) -> List[Dict]:
+        return self.settings_mixin_shared_instance._cached_send_image_to_canvas
+    
+    @cached_send_image_to_canvas.setter
+    def cached_send_image_to_canvas(self, value: List[Dict]) -> None:
+        self.settings_mixin_shared_instance._cached_send_image_to_canvas = value
 
     @property
     def user_web_dir(self) -> str:

@@ -1008,74 +1008,54 @@ class CustomGraphicsView(
 
     def showEvent(self, event):
         super().showEvent(event)
-        if not self._initialized:
-            # Set restoration flag to prevent resize compensation during initial load
-            self._is_restoring_state = True
+        # if not self._initialized:
+        # Set restoration flag to prevent resize compensation during initial load
+        self._is_restoring_state = True
 
-            # Load offset first - this ONLY sets the canvas_offset to the saved value
-            self.load_canvas_offset()
+        # Load offset first - this ONLY sets the canvas_offset to the saved value
+        self.load_canvas_offset()
 
-            # Store the loaded offset to restore it after any operations
-            loaded_offset = QPointF(
-                self.canvas_offset.x(), self.canvas_offset.y()
-            )
+        # Store the loaded offset to restore it after any operations
+        loaded_offset = QPointF(self.canvas_offset.x(), self.canvas_offset.y())
 
-            self.logger.debug(
-                f"Initial canvas offset loaded: ({loaded_offset.x()}, {loaded_offset.y()})"
-            )
+        # Set up the scene (grid, etc.) - DO NOT let these change the offset
+        self.do_draw(True)
+        self.toggle_drag_mode()
+        self.set_canvas_color(self.scene)
 
-            # Set up the scene (grid, etc.) - DO NOT let these change the offset
-            self.do_draw(True)
-            self.toggle_drag_mode()
-            self.set_canvas_color(self.scene)
+        # Restore the offset after do_draw
+        self.canvas_offset = loaded_offset
 
-            # Restore the offset after do_draw
-            self.canvas_offset = loaded_offset
-            self.logger.debug(
-                f"Canvas offset after do_draw: ({self.canvas_offset.x()}, {self.canvas_offset.y()})"
-            )
+        # Show the active grid area using loaded offset
+        self.show_active_grid_area()
 
-            # Show the active grid area using loaded offset
-            self.show_active_grid_area()
+        # Restore the offset after show_active_grid_area
+        self.canvas_offset = loaded_offset
 
-            # Restore the offset after show_active_grid_area
-            self.canvas_offset = loaded_offset
-            self.logger.debug(
-                f"Canvas offset after show_active_grid_area: ({self.canvas_offset.x()}, {self.canvas_offset.y()})"
-            )
+        # Update viewport size tracking without adjusting offset
+        self._last_viewport_size = self.viewport().size()
 
-            # Update viewport size tracking without adjusting offset
-            self._last_viewport_size = self.viewport().size()
+        # Now update positions with the restored offset
+        self.update_active_grid_area_position()
+        self.updateImagePositions()
 
-            # Now update positions with the restored offset
-            self.update_active_grid_area_position()
-            self.updateImagePositions()
+        # FORCE the offset back to loaded value after position updates
+        self.canvas_offset = loaded_offset
 
-            # FORCE the offset back to loaded value after position updates
-            self.canvas_offset = loaded_offset
-            self.logger.debug(
-                f"Canvas offset after position updates: ({self.canvas_offset.x()}, {self.canvas_offset.y()})"
-            )
+        # Restore text items on load
+        try:
+            self._restore_text_items_from_db()
+        except Exception:
+            self.logger.exception("Failed to restore text items on showEvent")
 
-            # Restore text items on load
-            try:
-                self._restore_text_items_from_db()
-            except Exception:
-                self.logger.exception(
-                    "Failed to restore text items on showEvent"
-                )
+        # Final offset restoration
+        self.canvas_offset = loaded_offset
 
-            # Final offset restoration
-            self.canvas_offset = loaded_offset
-            self.logger.debug(
-                f"Final canvas offset after full init: ({self.canvas_offset.x()}, {self.canvas_offset.y()})"
-            )
+        self._initialized = True
 
-            self._initialized = True
-
-            # Use a short delay to allow the window to fully settle before
-            # re-enabling resize compensation
-            QTimer.singleShot(500, self._finish_state_restoration)
+        # Use a short delay to allow the window to fully settle before
+        # re-enabling resize compensation
+        QTimer.singleShot(500, self._finish_state_restoration)
 
     def _finish_state_restoration(self):
         """Called after a delay to finish state restoration and re-enable resize compensation."""
@@ -1094,6 +1074,7 @@ class CustomGraphicsView(
         self.logger.debug(
             f"Canvas state restoration complete - final offset: ({final_offset.x()}, {final_offset.y()})"
         )
+        self.scene.show_event()
 
     def set_canvas_color(
         self,

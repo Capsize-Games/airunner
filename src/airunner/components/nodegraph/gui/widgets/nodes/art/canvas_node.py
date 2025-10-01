@@ -1,7 +1,11 @@
+from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.components.nodegraph.gui.widgets.nodes.art.base_art_node import (
     BaseArtNode,
 )
-from airunner.enums import SignalCode
+from airunner.utils.image.convert_image_to_binary import (
+    convert_image_to_binary,
+)
 
 
 class CanvasNode(BaseArtNode):
@@ -15,7 +19,8 @@ class CanvasNode(BaseArtNode):
 
     def execute(self, input_data):
         image_response = self.get_input_data("image_response", input_data)
-        # # Return empty dict as this node primarily displays data
-        # # Execution flow is handled by the graph executor via exec ports
         self.api.art.canvas.send_image_to_canvas(image_response)
-        return {}
+
+        return {
+            "image_response_out": image_response,
+        }
