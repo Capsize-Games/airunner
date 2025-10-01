@@ -1,5 +1,14 @@
 from typing import Dict, List, Optional
 from airunner.components.application.api.api_service_base import APIServiceBase
+from airunner.components.art.data.brush_settings import BrushSettings
+from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.components.art.data.controlnet_settings import ControlnetSettings
+from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
+from airunner.components.art.data.metadata_settings import MetadataSettings
+from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.enums import SignalCode
 from PySide6.QtCore import QPoint
 from airunner.components.art.managers.stablediffusion.image_response import (
@@ -141,6 +150,7 @@ class CanvasAPIService(APIServiceBase):
         self.emit_signal(SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL)
 
     def send_image_to_canvas(self, image_response: ImageResponse):
+        self.cached_send_image_to_canvas = image_response
         self.emit_signal(
             SignalCode.SEND_IMAGE_TO_CANVAS_SIGNAL,
             {"image_response": image_response},
@@ -154,6 +164,22 @@ class CanvasAPIService(APIServiceBase):
 
     def update_image_positions(self):
         self.emit_signal(SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS)
+
+    def create_new_layer(self, **kwargs) -> CanvasLayer:
+        self.begin_layer_operation("create")
+        layer = CanvasLayer.objects.create(**kwargs)
+        data = {"layer_id": layer.id}
+        DrawingPadSettings.objects.create(**data)
+        ControlnetSettings.objects.create(**data)
+        ImageToImageSettings.objects.create(**data)
+        OutpaintSettings.objects.create(**data)
+        BrushSettings.objects.create(**data)
+        MetadataSettings.objects.create(**data)
+        if not layer:
+            self.cancel_layer_operation("create")
+            return
+        self.commit_layer_operation("create", [layer.id])
+        return layer
 
     def begin_layer_operation(
         self, action: str, layer_ids: list[int] | None = None
