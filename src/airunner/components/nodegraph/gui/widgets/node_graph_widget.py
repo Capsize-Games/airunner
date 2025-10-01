@@ -883,7 +883,50 @@ class NodeGraphWidget(BaseWidget):
     def _extract_node_properties(self, node):
         """Extract and filter properties of a node for saving."""
         properties_to_save = {}
+
+        # Debug: Check model._custom_prop directly FIRST
+        if hasattr(node, "model") and hasattr(node.model, "_custom_prop"):
+            custom_prop_dict = node.model._custom_prop
+            self.logger.info(
+                f"[DEBUG] Node {node.name()} model._custom_prop has {len(custom_prop_dict)} properties"
+            )
+            if custom_prop_dict and node.type_ == "Art.ImageRequestNode":
+                # Show first few properties for ImageRequestNode
+                sample_keys = list(custom_prop_dict.keys())[:5]
+                self.logger.info(
+                    f"[DEBUG] Sample custom property keys: {sample_keys}"
+                )
+                if "clip_skip" in custom_prop_dict:
+                    self.logger.info(
+                        f"[DEBUG] clip_skip value in model: {custom_prop_dict['clip_skip']}"
+                    )
+
         raw_properties = node.properties()
+
+        # Debug logging
+        self.logger.info(
+            f"[DEBUG] Extracting properties for node {node.name()} (type: {node.type_})"
+        )
+        self.logger.info(
+            f"[DEBUG] Raw properties keys: {list(raw_properties.keys())}"
+        )
+        if "custom" in raw_properties:
+            custom_dict = raw_properties["custom"]
+            self.logger.info(
+                f"[DEBUG] Custom properties dict has {len(custom_dict)} items"
+            )
+            if (
+                node.type_ == "Art.ImageRequestNode"
+                and "clip_skip" in custom_dict
+            ):
+                self.logger.info(
+                    f"[DEBUG] clip_skip in raw_properties['custom']: {custom_dict['clip_skip']}"
+                )
+        else:
+            self.logger.info(
+                f"[DEBUG] NO 'custom' key found in raw properties!"
+            )
+
         for key, value in raw_properties.items():
             if key not in IGNORED_NODE_PROPERTIES:
                 # Skip internal properties that reference the node itself or other non-serializable objects
@@ -891,6 +934,32 @@ class NodeGraphWidget(BaseWidget):
                     self.logger.info(
                         f"  Skipping non-serializable property: {key}"
                     )
+                    continue
+
+                # Special handling for 'custom' dict - convert enums to their values
+                if key == "custom" and isinstance(value, dict):
+                    serializable_custom = {}
+                    for custom_key, custom_value in value.items():
+                        # Convert enums to their values
+                        if hasattr(custom_value, "value"):
+                            serializable_custom[custom_key] = (
+                                custom_value.value
+                            )
+                        elif hasattr(custom_value, "name"):
+                            serializable_custom[custom_key] = custom_value.name
+                        else:
+                            serializable_custom[custom_key] = custom_value
+
+                    try:
+                        json.dumps(serializable_custom)
+                        properties_to_save[key] = serializable_custom
+                        self.logger.info(
+                            f"  [CUSTOM] Saved {len(serializable_custom)} custom properties with enum conversion"
+                        )
+                    except (TypeError, OverflowError) as e:
+                        self.logger.warning(
+                            f"  Custom properties still not serializable after enum conversion: {e}"
+                        )
                     continue
 
                 # Try to filter out other non-serializable values
@@ -903,6 +972,38 @@ class NodeGraphWidget(BaseWidget):
                         f"  Skipping non-serializable property: {key} with type {type(value).__name__}"
                     )
                     continue
+
+        # CRITICAL FIX: Ensure custom properties are explicitly included
+        # If the raw_properties dict doesn't have 'custom' but the model does have _custom_prop,
+        # manually add it to properties_to_save
+        if (
+            "custom" not in properties_to_save
+            and hasattr(node, "model")
+            and hasattr(node.model, "_custom_prop")
+        ):
+            custom_props = node.model._custom_prop
+            if custom_props:
+                # Convert enums to their values before serialization
+                serializable_custom = {}
+                for custom_key, custom_value in custom_props.items():
+                    if hasattr(custom_value, "value"):
+                        serializable_custom[custom_key] = custom_value.value
+                    elif hasattr(custom_value, "name"):
+                        serializable_custom[custom_key] = custom_value.name
+                    else:
+                        serializable_custom[custom_key] = custom_value
+
+                try:
+                    # Verify it's JSON serializable
+                    json.dumps(serializable_custom)
+                    properties_to_save["custom"] = serializable_custom
+                    self.logger.info(
+                        f"  [FIX] Manually added {len(serializable_custom)} custom properties (fallback)"
+                    )
+                except (TypeError, OverflowError) as e:
+                    self.logger.warning(
+                        f"  Custom properties not JSON serializable even after conversion: {e}"
+                    )
 
         # Explicitly save the names of dynamically added ports
         # Check if the node is an instance of our base class that supports dynamic ports
