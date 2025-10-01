@@ -87,9 +87,21 @@ class DraggablePixmap(
 
     def updateImage(self, qimage: QImage):
         """Update the image data directly without conversion to pixmap"""
+        if qimage is None:
+            return
         self.prepareGeometryChange()
         self._qimage = qimage
         self.update()  # Schedule a repaint of this item
+
+        # With QOpenGLWidget viewports, item.update() may not always
+        # trigger a viewport repaint. Force an explicit update.
+        if self.scene():
+            rect = self.sceneBoundingRect()
+            self.scene().update(rect)
+            # Also notify all views to update their viewport
+            for view in self.scene().views():
+                if view.viewport():
+                    view.viewport().update()
 
     @property
     def qimage(self) -> Optional[QImage]:
