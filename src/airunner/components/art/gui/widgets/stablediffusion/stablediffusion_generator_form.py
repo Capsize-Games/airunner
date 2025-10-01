@@ -129,6 +129,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         ("x", "interrupt_button"),
         ("circle", "infinite_images_button"),
     ]
+    _splitters = ["generator_form_splitter"]
 
     def __init__(self, *args, **kwargs):
         self._pending_llm_image = None
@@ -820,8 +821,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
             self.set_form_values()
             self.initialized = True
             self.thread.start()
-
-            load_splitter_settings(self.ui, ["generator_form_splitter"])
 
             # Restore prompt containers when widget is shown
             self.restore_prompt_containers_from_settings()

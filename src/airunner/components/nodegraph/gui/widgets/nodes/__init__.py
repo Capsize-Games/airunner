@@ -19,6 +19,9 @@ from airunner.components.nodegraph.gui.widgets.nodes.art.image_request_node impo
 from airunner.components.nodegraph.gui.widgets.nodes.math.random_number_node import (
     RandomNumberNode,
 )
+from airunner.components.nodegraph.gui.widgets.nodes.math.max_rnd import (
+    MaxRND,
+)
 from airunner.components.nodegraph.gui.widgets.nodes.logic.reverse_for_each_loop_node import (
     ReverseForEachLoopNode,
 )
@@ -91,6 +94,7 @@ __all__ = [
     "ImageDisplayNode",
     "ImageRequestNode",
     "RandomNumberNode",
+    "MaxRND",
     "ReverseForEachLoopNode",
     "RunLLMNode",
     "StartNode",
