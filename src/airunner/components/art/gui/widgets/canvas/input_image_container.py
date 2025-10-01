@@ -4,6 +4,7 @@ from airunner.components.art.gui.widgets.canvas.templates.input_image_container_
     Ui_input_image_container,
 )
 from airunner.components.art.gui.widgets.canvas.input_image import InputImage
+from PySide6.QtCore import QTimer
 
 
 class InputImageContainer(BaseWidget):
@@ -19,6 +20,11 @@ class InputImageContainer(BaseWidget):
         self.input_image = None
         self.mask_image = None
         self.generated_image = None
+        # Debounce timer to coalesce multiple grid updates
+        self._grid_refresh_timer = QTimer(self)
+        self._grid_refresh_timer.setSingleShot(True)
+        self._grid_refresh_timer.setInterval(50)
+        self._grid_refresh_timer.timeout.connect(self._do_grid_refresh)
 
     @property
     def settings_key(self):
@@ -29,7 +35,10 @@ class InputImageContainer(BaseWidget):
             self.mask_image.on_mask_generator_worker_response_signal()
 
     def on_canvas_image_updated_signal(self, *_args):
-        # When the main canvas image updates, refresh input image if linked
+        # Debounce refresh to avoid multiple back-to-back updates causing visible delay
+        self._grid_refresh_timer.start()
+
+    def _do_grid_refresh(self):
         try:
             if self.input_image and getattr(
                 self.input_image.current_settings,

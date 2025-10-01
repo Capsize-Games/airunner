@@ -406,9 +406,7 @@ class CustomScene(
         if image:
             # _update_current_settings requires a bytes-like object not PIL.Image
             self._update_current_settings("image", binary_image)
-            if self.settings_key == "drawing_pad_settings":
-                # Do not spam full image_updated if nothing rendered changes; here we allow it
-                self.api.art.canvas.image_updated()
+            # Avoid emitting image_updated here to prevent duplicate bursts; rendering paths will emit.
 
     def _flush_pending_image(self):
         """Persist the most recent pending image binary to settings (debounced)."""
