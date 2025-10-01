@@ -1034,9 +1034,9 @@ class MainWindow(
     def quit(self):
         if self.quitting:
             return
-        self.quitting = True
         self.logger.debug("Quitting")
         self.save_state()
+        self.quitting = True
         if not self.api:
             self.logger.warning(
                 "MainWindow: self.api is missing. Cannot quit application."
@@ -1157,9 +1157,6 @@ class MainWindow(
                 self.emit_signal(unload_signal, data)
 
     def save_state(self):
-        if self.quitting:
-            return
-        self.quitting = True
         self.logger.debug("Saving window state")
 
         self.qsettings.beginGroup("window_settings")
@@ -1171,19 +1168,28 @@ class MainWindow(
         self.qsettings.setValue("is_maximized", is_maximized)
         self.qsettings.setValue("is_fullscreen", is_fullscreen)
 
-        # Only save normal geometry if not maximized/fullscreen
-        if not is_maximized and not is_fullscreen:
-            width = self.width()
-            height = self.height()
-            x_pos = self.pos().x()
-            y_pos = self.pos().y()
-            self.logger.debug(
-                f"Saving normal geometry - width: {width}, height: {height}, x: {x_pos}, y: {y_pos}"
-            )
-            self.qsettings.setValue("width", width)
-            self.qsettings.setValue("height", height)
-            self.qsettings.setValue("x_pos", x_pos)
-            self.qsettings.setValue("y_pos", y_pos)
+        # Always save current geometry and position
+        width = self.width()
+        height = self.height()
+        x_pos = self.pos().x()
+        y_pos = self.pos().y()
+        self.logger.debug(
+            f"Saving geometry - width: {width}, height: {height}, x: {x_pos}, y: {y_pos}"
+        )
+        self.qsettings.setValue("width", width)
+        self.qsettings.setValue("height", height)
+        self.qsettings.setValue("x_pos", x_pos)
+        self.qsettings.setValue("y_pos", y_pos)
+
+        # Save which screen the window is on
+        try:
+            screen = self.screen()
+            if screen:
+                screen_name = screen.name()
+                self.qsettings.setValue("screen_name", screen_name)
+                self.logger.debug(f"Saving screen: {screen_name}")
+        except Exception:
+            self.logger.exception("Failed to save screen information")
 
         self.qsettings.setValue(
             "active_main_tab_index",
@@ -1191,6 +1197,15 @@ class MainWindow(
         )
         self.qsettings.endGroup()
         save_splitter_settings(self.ui, ["main_window_splitter"])
+
+        # Save canvas offset for all canvas views
+        try:
+            if hasattr(self.ui, "image_canvas"):
+                self.ui.image_canvas.save_canvas_offset()
+            if hasattr(self.ui, "brush_canvas"):
+                self.ui.brush_canvas.save_canvas_offset()
+        except Exception:
+            self.logger.exception("Failed to save canvas offset")
 
     def restore_state(self):
         """
@@ -1203,28 +1218,101 @@ class MainWindow(
         height = self.qsettings.value("height", 768, type=int)
         x_pos = self.qsettings.value("x_pos", 100, type=int)
         y_pos = self.qsettings.value("y_pos", 100, type=int)
+        screen_name = self.qsettings.value("screen_name", None, type=str)
         self.qsettings.endGroup()
 
-        # Force normal state first
-        self.showNormal()
+        self.logger.debug(
+            f"Restoring state - maximized: {is_maximized}, fullscreen: {is_fullscreen}, "
+            f"geometry: {width}x{height} at ({x_pos}, {y_pos}), screen: {screen_name}"
+        )
 
-        # Set geometry
+        # Try to restore to the same screen
+        target_screen = None
+        if screen_name:
+            try:
+                from PySide6.QtGui import QGuiApplication
+
+                for screen in QGuiApplication.screens():
+                    if screen.name() == screen_name:
+                        target_screen = screen
+                        self.logger.debug(
+                            f"Found target screen: {screen_name}"
+                        )
+                        break
+                if not target_screen:
+                    self.logger.warning(
+                        f"Could not find screen: {screen_name}, using primary"
+                    )
+            except Exception:
+                self.logger.exception("Error finding target screen")
+
+        # If we found a target screen, set it BEFORE positioning/showing the window
+        if target_screen:
+            try:
+                self.create()  # Ensure native window is created
+                if self.windowHandle():
+                    self.windowHandle().setScreen(target_screen)
+
+                    # Calculate position relative to the target screen
+                    screen_geometry = target_screen.geometry()
+                    if is_maximized or is_fullscreen:
+                        # For maximized/fullscreen, move to screen's top-left
+                        self.move(screen_geometry.x(), screen_geometry.y())
+                    else:
+                        # For normal windows, ensure saved position is on the target screen
+                        # If saved position is outside target screen, center it
+                        if not screen_geometry.contains(x_pos, y_pos):
+                            centered_x = (
+                                screen_geometry.x()
+                                + (screen_geometry.width() - width) // 2
+                            )
+                            centered_y = (
+                                screen_geometry.y()
+                                + (screen_geometry.height() - height) // 2
+                            )
+                            self.move(centered_x, centered_y)
+                        else:
+                            self.move(x_pos, y_pos)
+            except Exception:
+                self.logger.exception("Error setting window screen")
+        else:
+            # No target screen found, use saved position
+            self.move(x_pos, y_pos)
+
+        # Set size
         self.resize(width, height)
-        self.move(x_pos, y_pos)
         self.setMinimumSize(512, 512)
+
+        # Force the screen again right before showing (Qt sometimes resets it)
+        if target_screen:
+            try:
+                if self.windowHandle():
+                    self.windowHandle().setScreen(target_screen)
+            except Exception:
+                self.logger.exception(
+                    "Error re-setting window screen before show"
+                )
+
+        # Mark that state has been restored BEFORE showing to prevent _initialize_window from overriding
+        self._state_restored = True
 
         # Now apply special states if needed
         if is_maximized:
             self.logger.info("Applying maximized state")
+            # Move to screen one more time right before maximizing
+            if target_screen:
+                screen_geometry = target_screen.geometry()
+                self.move(screen_geometry.x(), screen_geometry.y())
             self.showMaximized()
         elif is_fullscreen:
             self.logger.info("Applying fullscreen state")
+            if target_screen:
+                screen_geometry = target_screen.geometry()
+                self.move(screen_geometry.x(), screen_geometry.y())
             self.showFullScreen()
         else:
             self.logger.info("Window restored to normal state")
-
-        # Mark that state has been restored to prevent _initialize_window from overriding
-        self._state_restored = True
+            self.showNormal()
 
         # Raise the window to the top of the stack
         self.raise_()

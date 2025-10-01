@@ -350,15 +350,45 @@ class App(MediatorMixin, SettingsMixin, QObject):
         if self.no_splash:
             return
 
+        # Try to use the saved screen preference, otherwise use primary screen
         screens = QGuiApplication.screens()
+        target_screen = None
+
+        # Load saved screen preference
         try:
-            screen = screens.at(0)
-        except AttributeError:
-            screen = screens[0]
+            from airunner.utils.settings import get_qsettings
+
+            qsettings = get_qsettings()
+            qsettings.beginGroup("window_settings")
+            saved_screen_name = qsettings.value("screen_name", None, type=str)
+            qsettings.endGroup()
+
+            # Try to find screen by name
+            if saved_screen_name:
+                for s in screens:
+                    if s.name() == saved_screen_name:
+                        target_screen = s
+                        break
+        except Exception:
+            pass
+
+        # Fallback to primary screen if no saved screen found
+        if not target_screen:
+            try:
+                target_screen = QGuiApplication.primaryScreen()
+            except Exception:
+                pass
+
+        # Final fallback to first screen
+        if not target_screen:
+            try:
+                target_screen = screens.at(0)
+            except AttributeError:
+                target_screen = screens[0]
 
         base_dir = Path(os.path.dirname(os.path.realpath(__file__)))
         image_path = base_dir / "gui" / "images" / "splashscreen.png"
-        splash = SplashScreen(screen, image_path)
+        splash = SplashScreen(target_screen, image_path)
         splash.show_message("Loading AI Runner")
         app.processEvents()
         return splash
