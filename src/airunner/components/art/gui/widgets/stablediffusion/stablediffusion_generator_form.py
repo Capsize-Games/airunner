@@ -777,9 +777,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def handle_progress_bar(self, message):
         step = message.get("step")
         total = message.get("total")
-        if step == total:
-            self.stop_progress_bar()
-            return
+        # if step == total:
+        #     self.stop_progress_bar()
+        #     return
 
         if step == 0 and total == 0:
             current = 0
@@ -788,7 +788,11 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 current = step / total
             except ZeroDivisionError:
                 current = 0
-        self.set_progress_bar_value(int(current * 100))
+        value = int(current * 100)
+        if value >= 100:
+            self.ui.progress_bar.setFormat("Processing")
+        else:
+            self.set_progress_bar_value(value)
 
     def set_progress_bar_value(self, value):
         progressbar = self.ui.progress_bar
@@ -800,9 +804,11 @@ class StableDiffusionGeneratorForm(BaseWidget):
         QApplication.processEvents()
 
     def start_progress_bar(self):
-        self.ui.progress_bar.setFormat("Generating %p%")
-        self.ui.progress_bar.setRange(0, 0)
-        self.ui.progress_bar.show()
+        progressbar = self.ui.progress_bar
+        progressbar.setFormat("Generating %p%")
+        progressbar.setRange(0, 0)
+        progressbar.show()
+        QApplication.processEvents()
 
     def on_model_status_changed_signal(self, data):
         if data["model"] is ModelType.SD:
