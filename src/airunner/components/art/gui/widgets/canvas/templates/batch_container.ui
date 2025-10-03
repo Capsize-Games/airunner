@@ -14,27 +14,22 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="0">
-    <widget class="QScrollArea" name="scrollArea">
-     <property name="widgetResizable">
-      <bool>true</bool>
-     </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>460</width>
-        <height>124</height>
-       </rect>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_2"/>
-     </widget>
-    </widget>
-   </item>
    <item row="0" column="0">
     <widget class="QComboBox" name="image_folders"/>
    </item>
+    <item row="1" column="0">
+     <widget class="QPushButton" name="backButton">
+      <property name="text">
+      <string>← Back to date folder</string>
+      </property>
+      <property name="visible">
+      <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QListView" name="galleryView"/>
+    </item>
   </layout>
  </widget>
  <resources/>
