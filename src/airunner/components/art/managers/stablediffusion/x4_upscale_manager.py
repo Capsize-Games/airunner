@@ -78,14 +78,35 @@ class X4UpscaleManager(BaseDiffusersModelManager):
             self.logger.info(
                 "Loading x4 upscaler pipeline from %s", self.model_path
             )
-            self._pipe = StableDiffusionUpscalePipeline.from_pretrained(
-                self.model_path,
-                torch_dtype=self.data_type,
-                use_safetensors=True,
-                variant="fp16",
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            )
+            # If CUDA is available we can request fp16 variants; on CPU
+            # avoid forcing fp16 variant to prevent incorrect weight loading
+            # or computation issues.
+            if torch.cuda.is_available():
+                self._pipe = StableDiffusionUpscalePipeline.from_pretrained(
+                    self.model_path,
+                    torch_dtype=self.data_type,
+                    use_safetensors=True,
+                    variant="fp16",
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                )
+            else:
+                self._pipe = StableDiffusionUpscalePipeline.from_pretrained(
+                    self.model_path,
+                    torch_dtype=self.data_type,
+                    use_safetensors=True,
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                )
             self._configure_pipeline()
+            try:
+                # Debug: log pipeline device and some component dtypes
+                dev = getattr(self._pipe, "device", None)
+                self.logger.info(
+                    "x4 upscaler loaded on device=%s dtype=%s",
+                    dev,
+                    self.data_type,
+                )
+            except Exception:
+                pass
             self.change_model_status(ModelType.UPSCALER, ModelStatus.LOADED)
         except Exception as exc:
             self._pipe = None
@@ -148,6 +169,19 @@ class X4UpscaleManager(BaseDiffusersModelManager):
             return None
 
         source_image = self._ensure_image(source_image)
+        # Save the input image to the preview directory for debugging/comparison
+        try:
+            os.makedirs(self.preview_dir, exist_ok=True)
+            in_fname = datetime.now().strftime(
+                "input_for_upscale_%Y%m%d_%H%M%S.png"
+            )
+            in_path = os.path.join(self.preview_dir, in_fname)
+            try:
+                source_image.convert("RGB").save(in_path)
+            except Exception:
+                source_image.save(in_path)
+        except Exception:
+            pass
 
         request = data.get("image_request")
         if request is not None and not isinstance(request, ImageRequest):
@@ -270,7 +304,17 @@ class X4UpscaleManager(BaseDiffusersModelManager):
             with autocast_ctx:
                 result = self._pipe(**kwargs)
         images = self._extract_images(result)
-        final_image = images[0].convert("RGB")
+        final_image = images[0]
+        # Composite onto white if image has alpha to avoid black transparency
+        try:
+            if "A" in final_image.getbands():
+                rgba = final_image.convert("RGBA")
+                bg = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+                final_image = Image.alpha_composite(bg, rgba).convert("RGB")
+            else:
+                final_image = final_image.convert("RGB")
+        except Exception:
+            final_image = final_image.convert("RGB")
         self._emit_progress(steps, steps)
         return final_image
 
@@ -287,9 +331,11 @@ class X4UpscaleManager(BaseDiffusersModelManager):
         tile_batch_size: int,
     ) -> Image.Image:
         width, height = image.size
+        # Use white background so transparent regions don't appear black
         output = Image.new(
             "RGB",
             (width * self.SCALE_FACTOR, height * self.SCALE_FACTOR),
+            (255, 255, 255),
         )
         current_tile_size = tile_size
         current_batch_size = tile_batch_size
@@ -325,9 +371,184 @@ class X4UpscaleManager(BaseDiffusersModelManager):
                 with torch.inference_mode():
                     with autocast_ctx:
                         result = self._pipe(**kwargs)
+                # Extract images (PIL) from pipeline result
                 upscaled_tiles = self._extract_images(result)
+
+                # If pipeline returned all-black tiles, fall back to bicubic
+                # upscaling of the input crops and log model dir for debugging.
+                try:
+                    all_black = True
+                    for img in upscaled_tiles:
+                        arr = np.asarray(img)
+                        if arr.size and int(arr.max()) > 0:
+                            all_black = False
+                            break
+                except Exception:
+                    all_black = False
+
+                if all_black:
+                    try:
+                        # Log model directory to help diagnose missing/corrupt files
+                        try:
+                            files = os.listdir(self.model_path)
+                        except Exception:
+                            files = []
+                        dbg_txt = os.path.join(
+                            self.preview_dir, "preview_debug.txt"
+                        )
+                        with open(dbg_txt, "a") as f:
+                            f.write(
+                                f"{datetime.now().isoformat()} all_black_output_detected model_path={self.model_path} files={files}\n"
+                            )
+                    except Exception:
+                        pass
+
+                    # Use bicubic resize fallback for each input crop
+                    try:
+                        fallback_tiles = []
+                        for crop in batch_images:
+                            try:
+                                w, h = crop.size
+                                fw, fh = (
+                                    w * self.SCALE_FACTOR,
+                                    h * self.SCALE_FACTOR,
+                                )
+                                up = crop.convert("RGB").resize(
+                                    (fw, fh), resample=Image.BICUBIC
+                                )
+                                fallback_tiles.append(up)
+                            except Exception:
+                                # give a white tile if anything fails
+                                fallback_tiles.append(
+                                    Image.new(
+                                        "RGB",
+                                        (
+                                            w * self.SCALE_FACTOR,
+                                            h * self.SCALE_FACTOR,
+                                        ),
+                                        (255, 255, 255),
+                                    )
+                                )
+                        upscaled_tiles = fallback_tiles
+                        # Save a note and the fallback tiles
+                        try:
+                            for i, t in enumerate(upscaled_tiles[:4]):
+                                t.save(
+                                    os.path.join(
+                                        self.preview_dir,
+                                        f"dbg_fallback_tile_{processed_tiles + i}.png",
+                                    )
+                                )
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+
+                # Debug: save raw pipeline outputs and corresponding input crops
+                try:
+                    os.makedirs(self.preview_dir, exist_ok=True)
+                    raw_images = None
+                    try:
+                        with open(
+                            os.path.join(
+                                self.preview_dir, "preview_debug.txt"
+                            ),
+                            "a",
+                        ) as f:
+                            f.write(
+                                f"{datetime.now().isoformat()} pipeline_result_type={type(result)} repr={repr(result)[:200]}\n"
+                            )
+                    except Exception:
+                        pass
+                    if isinstance(result, dict) and "images" in result:
+                        raw_images = result["images"]
+                    elif hasattr(result, "images"):
+                        raw_images = result.images
+                    else:
+                        raw_images = result
+                    # Log detailed info about raw_images elements
+                    try:
+                        dbg_txt = os.path.join(
+                            self.preview_dir, "preview_debug.txt"
+                        )
+                        with open(dbg_txt, "a") as f:
+                            for i, item in enumerate(
+                                raw_images
+                                if hasattr(raw_images, "__len__")
+                                else [raw_images]
+                            ):
+                                try:
+                                    if torch.is_tensor(item):
+                                        t = item.detach().cpu()
+                                        f.write(
+                                            f"{datetime.now().isoformat()} raw[{i}]=torch tensor shape={tuple(t.shape)} dtype={t.dtype} min={float(t.min()):.6f} max={float(t.max()):.6f}\n"
+                                        )
+                                    else:
+                                        arr = np.asarray(item)
+                                        f.write(
+                                            f"{datetime.now().isoformat()} raw[{i}]=np/ndarray shape={arr.shape} dtype={arr.dtype} min={arr.min() if arr.size else 'NA'} max={arr.max() if arr.size else 'NA'}\n"
+                                        )
+                                except Exception:
+                                    try:
+                                        f.write(
+                                            f"{datetime.now().isoformat()} raw[{i}]=repr={repr(item)[:200]}\n"
+                                        )
+                                    except Exception:
+                                        pass
+                    except Exception:
+                        pass
+                    # Save up to the first 4 tiles of this batch for inspection
+                    for dbg_idx in range(min(4, len(upscaled_tiles))):
+                        try:
+                            tile_img = upscaled_tiles[dbg_idx]
+                            tile_fname = datetime.now().strftime(
+                                f"dbg_upscaled_tile_%Y%m%d_%H%M%S_{processed_tiles + dbg_idx}.png"
+                            )
+                            tile_path = os.path.join(
+                                self.preview_dir, tile_fname
+                            )
+                            tile_img.convert("RGB").save(tile_path)
+                        except Exception:
+                            try:
+                                # try saving raw image via ensure
+                                img = self._ensure_image(raw_images[dbg_idx])
+                                img.convert("RGB").save(tile_path)
+                            except Exception:
+                                pass
+                    # Save the input crops for the batch as well
+                    for crop_idx, crop_img in enumerate(batch_images[:4]):
+                        try:
+                            crop_fname = datetime.now().strftime(
+                                f"dbg_input_crop_%Y%m%d_%H%M%S_{processed_tiles + crop_idx}.png"
+                            )
+                            crop_path = os.path.join(
+                                self.preview_dir, crop_fname
+                            )
+                            crop_img.convert("RGB").save(crop_path)
+                        except Exception:
+                            pass
+                    # Write min/max/dtype info for tiles
+                    try:
+                        dbg_txt = os.path.join(
+                            self.preview_dir, "preview_debug.txt"
+                        )
+                        with open(dbg_txt, "a") as f:
+                            for info_idx, img in enumerate(upscaled_tiles[:8]):
+                                try:
+                                    arr = np.asarray(img)
+                                    f.write(
+                                        f"{datetime.now().isoformat()} tile_index={processed_tiles + info_idx} shape={arr.shape} dtype={arr.dtype} min={arr.min()} max={arr.max()}\n"
+                                    )
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
                 for idx, tile_dict in enumerate(batch):
-                    tile_image = upscaled_tiles[idx].convert("RGB")
+                    # Preserve the tile's alpha if present; _paste_tile will
+                    # handle compositing/masking.
+                    tile_image = upscaled_tiles[idx]
                     self._paste_tile(
                         output,
                         tile_image,
@@ -369,6 +590,7 @@ class X4UpscaleManager(BaseDiffusersModelManager):
                                 width * self.SCALE_FACTOR,
                                 height * self.SCALE_FACTOR,
                             ),
+                            (255, 255, 255),
                         )
                         self._emit_progress(0, total_tiles)
                         continue
@@ -417,7 +639,30 @@ class X4UpscaleManager(BaseDiffusersModelManager):
             right * scale_factor,
             bottom * scale_factor,
         )
-        canvas.paste(tile, dest_box)
+        try:
+            # If tile has an alpha channel, composite it over white first.
+            if "A" in tile.getbands():
+                try:
+                    tile_rgba = tile.convert("RGBA")
+                    white_bg = Image.new(
+                        "RGBA", tile_rgba.size, (255, 255, 255, 255)
+                    )
+                    composed = Image.alpha_composite(
+                        white_bg, tile_rgba
+                    ).convert("RGB")
+                    canvas.paste(composed, dest_box)
+                except Exception:
+                    # Fallback to mask-based paste if alpha_composite fails
+                    mask = tile.split()[-1]
+                    canvas.paste(tile.convert("RGBA"), dest_box, mask)
+            else:
+                canvas.paste(tile.convert("RGB"), dest_box)
+        except Exception:
+            # Best-effort paste; fallback to a naive paste on error.
+            try:
+                canvas.paste(tile, dest_box)
+            except Exception:
+                pass
 
     def _should_tile(self, image: Image.Image) -> bool:
         return max(image.size) >= self.LARGE_INPUT_THRESHOLD
@@ -464,27 +709,80 @@ class X4UpscaleManager(BaseDiffusersModelManager):
             images = result
         if isinstance(images, (Image.Image, np.ndarray, torch.Tensor)):
             images = [images]
+
         return [self._ensure_image(img) for img in images]
 
     def _ensure_image(
         self, value: Union[Image.Image, np.ndarray, torch.Tensor]
     ) -> Image.Image:
+        # Pass-through for PIL images
         if isinstance(value, Image.Image):
             return value
+
+        # Handle torch tensors
         if torch.is_tensor(value):
             tensor = value.detach().cpu()
-            if tensor.ndim == 3 and tensor.shape[0] in (1, 3):
+            # Move channel-first to HWC if necessary
+            if tensor.ndim == 3 and tensor.shape[0] in (1, 3, 4):
                 tensor = tensor.permute(1, 2, 0)
-            array = tensor.clamp(0, 1).mul(255).round().to(torch.uint8).numpy()
+
+            # Determine numeric range and convert to uint8 0..255
+            if tensor.dtype.is_floating_point:
+                try:
+                    tmin = float(tensor.min())
+                    tmax = float(tensor.max())
+                except Exception:
+                    tmin, tmax = 0.0, 1.0
+                # If values appear to be in [-1,1], shift to [0,1]
+                if tmin < 0.0 or tmax <= 1.0:
+                    # handle [-1,1] and [0,1]
+                    if tmin < 0.0:
+                        tensor = (tensor + 1.0) / 2.0
+                    tensor = tensor.clamp(0.0, 1.0)
+                    array = (tensor * 255.0).round().to(torch.uint8).numpy()
+                else:
+                    # assume already in 0..255 float
+                    array = (
+                        tensor.clamp(0.0, 255.0)
+                        .round()
+                        .to(torch.uint8)
+                        .numpy()
+                    )
+            else:
+                array = tensor.to(torch.uint8).numpy()
+
+            # If grayscale, promote to 3 channels
+            if array.ndim == 2:
+                array = np.stack([array] * 3, axis=-1)
             return Image.fromarray(array)
+
+        # Handle numpy arrays
         array = np.asarray(value)
-        if array.ndim == 3 and array.shape[0] in (1, 3):
+        if array.ndim == 3 and array.shape[0] in (1, 3, 4):
+            # channel-first -> HWC
             array = np.moveaxis(array, 0, -1)
-        if array.dtype != np.uint8:
-            array = np.clip(array, 0, 1) * 255
-            array = array.astype(np.uint8)
+
+        # If image is float, detect range and normalize
+        if np.issubdtype(array.dtype, np.floating):
+            a_min = float(np.nanmin(array)) if array.size else 0.0
+            a_max = float(np.nanmax(array)) if array.size else 1.0
+            if a_min < 0.0:
+                # assume range [-1,1]
+                array = (array + 1.0) / 2.0
+            if a_max <= 1.5:
+                array = np.clip(array, 0.0, 1.0) * 255.0
+            else:
+                array = np.clip(array, 0.0, 255.0)
+            array = np.rint(array).astype(np.uint8)
+
+        # If integer but not uint8, convert/clamp
+        if np.issubdtype(array.dtype, np.integer) and array.dtype != np.uint8:
+            array = np.clip(array, 0, 255).astype(np.uint8)
+
+        # If single channel, expand to RGB
         if array.ndim == 2:
             array = np.stack([array] * 3, axis=-1)
+
         return Image.fromarray(array)
 
     def _build_request_from_payload(
@@ -654,7 +952,18 @@ class X4UpscaleManager(BaseDiffusersModelManager):
     def _save_preview_image(self, image: Image.Image):
         try:
             os.makedirs(self.preview_dir, exist_ok=True)
-            image.convert("RGB").save(self.preview_path)
+            # If image has alpha, composite onto a white background to avoid
+            # black/transparent saved previews.
+            try:
+                if "A" in image.getbands():
+                    bg = Image.new("RGB", image.size, (255, 255, 255))
+                    bg.paste(image, mask=image.split()[-1])
+                    bg.save(self.preview_path)
+                else:
+                    image.convert("RGB").save(self.preview_path)
+            except Exception:
+                # Fallback generic save
+                image.convert("RGB").save(self.preview_path)
         except Exception:
             pass
 
@@ -663,7 +972,15 @@ class X4UpscaleManager(BaseDiffusersModelManager):
             os.makedirs(self.preview_dir, exist_ok=True)
             filename = datetime.now().strftime("upscaled_%Y%m%d_%H%M%S.png")
             path = os.path.join(self.preview_dir, filename)
-            image.convert("RGB").save(path)
+            try:
+                if "A" in image.getbands():
+                    bg = Image.new("RGB", image.size, (255, 255, 255))
+                    bg.paste(image, mask=image.split()[-1])
+                    bg.save(path)
+                else:
+                    image.convert("RGB").save(path)
+            except Exception:
+                image.convert("RGB").save(path)
             return path
         except Exception as exc:
             self.logger.warning("Unable to save upscaled image: %s", exc)
