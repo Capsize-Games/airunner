@@ -93,6 +93,25 @@ SD_FILE_BOOTSTRAP_DATA = {
             "diffusion_pytorch_model.fp16.safetensors",
         ],
     },
+    "Upscaler": {
+        "x4": [
+            "low_res_scheduler/scheduler_config.json",
+            "scheduler/scheduler_config.json",
+            "text_encoder/config.json",
+            "text_encoder/model.fp16.safetensors",
+            "tokenizer/merges.txt",
+            "tokenizer/special_tokens_map.json",
+            "tokenizer/tokenizer_config.json",
+            "tokenizer/vocab.json",
+            "unet/config.json",
+            "unet/diffusion_typtorch_model.fp16.safetensors",
+            "vae/config.json",
+            "vae/diffusion_pytorch_model.fp16.safetensors",
+            "model_index/model_index.json",
+            "model_index.json",
+            "x4-upscaler-ema.safetensors",
+        ],
+    },
 }
 
 
