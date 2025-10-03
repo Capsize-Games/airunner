@@ -241,6 +241,31 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="upscale_x4">
+              <property name="minimumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>x4</string>
+              </property>
+              <property name="toolTip">
+               <string>Upscale x4</string>
+              </property>
+              <property name="flat">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="open_art_document">
               <property name="minimumSize">
                <size>

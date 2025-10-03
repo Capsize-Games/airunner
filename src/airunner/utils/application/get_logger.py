@@ -55,6 +55,9 @@ class Logger:
         extra = self._get_caller_info()
         self.logger.error(message, extra=extra, *args, **kwargs)
 
+    def exception(self, message: str, *args, **kwargs):
+        self.error(message, *args, **kwargs)
+
     def info(self, message: str, *args, **kwargs):
         extra = self._get_caller_info()
         self.logger.info(message, extra=extra, *args, **kwargs)
