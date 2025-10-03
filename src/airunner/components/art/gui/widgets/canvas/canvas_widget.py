@@ -30,6 +30,10 @@ from airunner.components.art.data.image_to_image_settings import (
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
+from airunner.components.art.managers.stablediffusion.image_request import (
+    ImageRequest,
+)
+from airunner.utils.image import convert_binary_to_image
 from airunner.utils.widgets.save_splitter_settings import (
     save_splitter_settings,
 )
@@ -231,6 +235,81 @@ class CanvasWidget(BaseWidget):
     def on_new_button_clicked(self):
         self._reset_canvas_document()
 
+    @Slot()
+    def on_upscale_x4_clicked(self):
+        """User requested an x4 upscale for the current canvas/image."""
+        binary_data = self.drawing_pad_settings.image
+        image = convert_binary_to_image(binary_data)
+        if image is None:
+            self.logger.warning("No image available on canvas for x4 upscale")
+            return
+        image = image.convert("RGB")
+
+        settings = getattr(self, "generator_settings", None)
+        prompt = getattr(settings, "prompt", "") or ""
+        negative_prompt = getattr(settings, "negative_prompt", "") or ""
+
+        steps = getattr(settings, "steps", 30) or 30
+        try:
+            steps = max(1, int(steps))
+        except (TypeError, ValueError):
+            steps = 30
+
+        scale_raw = getattr(settings, "scale", None)
+        guidance_scale = 7.5
+        if scale_raw is not None:
+            try:
+                scale_value = float(scale_raw)
+                guidance_scale = (
+                    scale_value / 100 if scale_value > 20 else scale_value
+                )
+            except (TypeError, ValueError):
+                guidance_scale = 7.5
+
+        seed = getattr(settings, "seed", 42)
+        try:
+            seed = int(seed)
+        except (TypeError, ValueError):
+            seed = 42
+
+        request_defaults = ImageRequest()
+
+        request = ImageRequest(
+            pipeline_action="upscale_x4",
+            generator_name=getattr(
+                settings, "generator_name", "stablediffusion"
+            ),
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            random_seed=getattr(settings, "random_seed", True),
+            model_path=getattr(settings, "model_name", ""),
+            custom_path=getattr(settings, "custom_path", ""),
+            scheduler=getattr(
+                settings, "scheduler", request_defaults.scheduler
+            ),
+            version=getattr(settings, "version", request_defaults.version),
+            use_compel=getattr(settings, "use_compel", True),
+            steps=steps,
+            ddim_eta=getattr(settings, "ddim_eta", 0.5),
+            scale=guidance_scale,
+            seed=seed,
+            strength=(getattr(settings, "strength", 100) or 100) / 100,
+            n_samples=1,
+            images_per_batch=1,
+            clip_skip=getattr(settings, "clip_skip", 0),
+            width=image.width,
+            height=image.height,
+        )
+
+        payload = {
+            "image": image,
+            "image_request": request,
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+        }
+
+        self.api.art.canvas.upscale_x4(payload)
+
     @Slot(bool)
     def on_grid_button_toggled(self, val: bool):
         self.api.art.canvas.toggle_grid(val)
@@ -279,7 +358,7 @@ class CanvasWidget(BaseWidget):
                 "The document could not be loaded.",
             )
             if hasattr(self, "logger"):
-                self.logger.exception(exc)
+                self.logger.error(exc)
 
     @Slot()
     def on_save_art_document_clicked(self):

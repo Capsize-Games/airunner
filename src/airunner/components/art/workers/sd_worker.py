@@ -22,6 +22,10 @@ from airunner.components.art.managers.stablediffusion.image_request import (
 from airunner.components.art.data.ai_models import AIModels
 from airunner.enums import StableDiffusionVersion
 from airunner.components.application.exceptions import PipeNotLoadedException
+from airunner.components.art.managers.stablediffusion.x4_upscale_manager import (
+    X4UpscaleManager,
+)
+
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -54,6 +58,7 @@ class SDWorker(Worker):
             SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL: self.delete_missing_embeddings,
             SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_load_safety_checker,
             SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.on_unload_safety_checker,
+            SignalCode.UPSCALE_REQUEST: self.on_upscale_request,
         }
         self._current_model = None
         self._current_version = None
@@ -65,6 +70,58 @@ class SDWorker(Worker):
         self.__requested_action = ModelAction.NONE
         self._threads = []
         self._workers = []
+
+    def on_upscale_request(self, data: Dict = None):
+        """
+        Handle a UI request to perform an x4 upscale of the current image.
+        For now, unload any currently loaded models and prepare to load the X4UpscaleManager.
+        The actual manager will be responsible for loading the upscaler pipeline and performing the upscale.
+        """
+        # Unload any loaded SD/SDXL and associated resources to ensure a clean state
+        # Unload controlnet and safety checker first
+        try:
+            if self.model_manager:
+                self._unload_controlnet()
+                self._unload_safety_checker()
+        except Exception:
+            pass
+
+        # Unload primary model manager
+        try:
+            if self._model_manager is not None:
+                self._model_manager.unload()
+        except Exception:
+            pass
+
+        # Also attempt to unload any LLMs via application-level signals if present
+        try:
+            self.emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
+        except Exception:
+            pass
+
+        # Notify UI that upscale is starting
+        try:
+            self.emit_signal(SignalCode.UPSCALE_STARTED, {})
+        except Exception:
+            pass
+
+        self._upscale_manager = X4UpscaleManager(mediator=self.mediator)
+        try:
+            self._upscale_manager.handle_upscale_request(data or {})
+        except Exception as exc:
+            self.logger.exception("x4 upscale request failed: %s", exc)
+            try:
+                self.emit_signal(
+                    SignalCode.UPSCALE_FAILED, {"error": str(exc)}
+                )
+            except Exception:
+                pass
+        finally:
+            try:
+                self._upscale_manager.unload()
+            except Exception:
+                pass
+            self._upscale_manager = None
 
     @property
     def version(self) -> StableDiffusionVersion:

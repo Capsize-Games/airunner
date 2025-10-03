@@ -477,7 +477,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def data_type(self) -> torch.dtype:
-        return torch.float16
+        return torch.float16 if torch.cuda.is_available() else torch.float32
 
     @property
     def use_safety_checker(self) -> bool:

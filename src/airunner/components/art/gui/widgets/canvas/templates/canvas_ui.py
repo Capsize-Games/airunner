@@ -118,6 +118,14 @@ class Ui_canvas(object):
 
         self.horizontalLayout_2.addWidget(self.new_button)
 
+        self.upscale_x4 = QPushButton(self.widget1)
+        self.upscale_x4.setObjectName(u"upscale_x4")
+        self.upscale_x4.setMinimumSize(QSize(30, 30))
+        self.upscale_x4.setMaximumSize(QSize(30, 30))
+        self.upscale_x4.setFlat(False)
+
+        self.horizontalLayout_2.addWidget(self.upscale_x4)
+
         self.open_art_document = QPushButton(self.widget1)
         self.open_art_document.setObjectName(u"open_art_document")
         self.open_art_document.setMinimumSize(QSize(30, 30))
@@ -441,6 +449,10 @@ class Ui_canvas(object):
         self.new_button.setToolTip(QCoreApplication.translate("canvas", u"New art document", None))
 #endif // QT_CONFIG(tooltip)
         self.new_button.setText("")
+        self.upscale_x4.setText(QCoreApplication.translate("canvas", u"x4", None))
+#if QT_CONFIG(tooltip)
+        self.upscale_x4.setToolTip(QCoreApplication.translate("canvas", u"Upscale x4", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
         self.open_art_document.setToolTip(QCoreApplication.translate("canvas", u"Open art document", None))
 #endif // QT_CONFIG(tooltip)

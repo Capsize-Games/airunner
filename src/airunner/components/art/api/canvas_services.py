@@ -100,6 +100,17 @@ class CanvasAPIService(APIServiceBase):
             SignalCode.TOGGLE_TOOL, {"tool": tool, "active": active}
         )
 
+    def upscale_x4(self, payload: Dict = {}):
+        """
+        Request an x4 upscale operation from the application layer.
+        Emits SignalCode.UPSCALE_REQUEST so workers or managers can respond.
+        """
+        # Allow callers to pass an image and optional prompt. Keep a
+        # backwards-compatible no-arg behavior that emits an empty dict.
+        # Callers (e.g., UI widgets) should pass the current canvas image
+        # when available so the worker can perform an immediate upscale.
+        self.emit_signal(SignalCode.UPSCALE_REQUEST, payload)
+
     def tool_changed(self, tool, active):
         self.emit_signal(
             SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL,

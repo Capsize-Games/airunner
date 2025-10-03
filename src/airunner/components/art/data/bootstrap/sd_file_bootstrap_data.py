@@ -104,7 +104,7 @@ SD_FILE_BOOTSTRAP_DATA = {
             "tokenizer/tokenizer_config.json",
             "tokenizer/vocab.json",
             "unet/config.json",
-            "unet/diffusion_typtorch_model.fp16.safetensors",
+            "unet/diffusion_pytorch_model.fp16.safetensors",
             "vae/config.json",
             "vae/diffusion_pytorch_model.fp16.safetensors",
             "model_index/model_index.json",
