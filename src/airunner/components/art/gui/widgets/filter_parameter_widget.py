@@ -43,6 +43,8 @@ class FilterParameterWidget(QWidget):
         # Label
         label_text = self.filter_value.name.replace("_", " ").title()
         label = QLabel(label_text)
+        # Ensure label text is visible on dark backgrounds
+        label.setStyleSheet("color: #FFFFFF;")
         layout.addWidget(label)
 
         # Control based on type
@@ -63,6 +65,25 @@ class FilterParameterWidget(QWidget):
             else bool(self.filter_value.value)
         )
         self.checkbox.setChecked(current_value)
+
+        # Apply stylesheet so the indicator is visible on dark backgrounds
+        # Use light border and white fill when checked
+        self.checkbox.setStyleSheet(
+            """
+QCheckBox { color: #FFFFFF; }
+QCheckBox::indicator {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #CCCCCC;
+    border-radius: 3px;
+    background: transparent;
+}
+QCheckBox::indicator:checked {
+    background-color: #FFFFFF;
+    border: 1px solid #FFFFFF;
+}
+"""
+        )
 
         if self.on_value_changed:
             self.checkbox.stateChanged.connect(

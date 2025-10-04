@@ -8,8 +8,11 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QWidget,
     QApplication,
+    QCheckBox,
+    QHBoxLayout,
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPalette, QColor
 
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.utils.image_filter_utils import (
@@ -35,6 +38,22 @@ class FilterListWindow(QDialog):
             pass
         self._list = QListWidget(self)
         self._list.setSelectionMode(QListWidget.NoSelection)
+        # Inherit the application's stylesheet (if any) so dialog visuals
+        # match the rest of the app. Fall back to parent's stylesheet first
+        # then to the QApplication stylesheet.
+        try:
+            app = QApplication.instance()
+            parent_ss = None
+            if parent is not None and hasattr(parent, "styleSheet"):
+                parent_ss = parent.styleSheet()
+            if parent_ss:
+                self.setStyleSheet(parent_ss)
+            elif app is not None and app.styleSheet():
+                self.setStyleSheet(app.styleSheet())
+        except Exception:
+            pass
+
+        # Styling is provided by the app theme QSS (inherited above).
 
         self._buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
@@ -58,14 +77,42 @@ class FilterListWindow(QDialog):
         self._list.clear()
         filters = ImageFilter.objects.all() or []
         for f in filters:
-            item = QListWidgetItem(f.display_name or f.name)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked if f.auto_apply else Qt.Unchecked)
-            # store id for later
+            # Create an empty list item and a widget containing a real QCheckBox
+            item = QListWidgetItem()
+            container = QWidget()
+            row_layout = QHBoxLayout(container)
+            row_layout.setContentsMargins(4, 2, 4, 2)
+            row_layout.setSpacing(8)
+
+            checkbox = QCheckBox(f.display_name or f.name, container)
+            checkbox.setChecked(bool(f.auto_apply))
+
+            # Connect directly to update DB when toggled so we don't rely on
+            # QListWidget's itemChanged which may not trigger QCheckBox styling.
+            def _on_checkbox_state_changed(state, fid=f.id):
+                try:
+                    ImageFilter.objects.update(
+                        fid, auto_apply=(state == Qt.Checked)
+                    )
+                except Exception:
+                    pass
+
+            checkbox.stateChanged.connect(_on_checkbox_state_changed)
+
+            row_layout.addWidget(checkbox)
+            row_layout.addStretch(1)
+
+            item.setSizeHint(container.sizeHint())
+            # store id for later if needed
             item.setData(Qt.UserRole, f.id)
             self._list.addItem(item)
+            self._list.setItemWidget(item, container)
 
-        self._list.itemChanged.connect(self._on_item_changed)
+        # Keep legacy handler for any other item changes (defensive)
+        try:
+            self._list.itemChanged.connect(self._on_item_changed)
+        except Exception:
+            pass
 
     def _on_item_changed(self, item: QListWidgetItem):
         try:
