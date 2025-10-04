@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette, QColor
 
+import logging
+
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.utils.image_filter_utils import (
     build_filter_object_from_model,
@@ -76,6 +78,7 @@ class FilterListWindow(QDialog):
     def _load_filters(self):
         self._list.clear()
         filters = ImageFilter.objects.all() or []
+        logger = logging.getLogger(__name__)
         for f in filters:
             # Create an empty list item and a widget containing a real QCheckBox
             item = QListWidgetItem()
@@ -91,11 +94,19 @@ class FilterListWindow(QDialog):
             # QListWidget's itemChanged which may not trigger QCheckBox styling.
             def _on_checkbox_state_changed(state, fid=f.id):
                 try:
-                    ImageFilter.objects.update(
+                    logger.debug(
+                        "Updating ImageFilter id=%s auto_apply=%s",
+                        fid,
+                        state == Qt.Checked,
+                    )
+                    success = ImageFilter.objects.update(
                         fid, auto_apply=(state == Qt.Checked)
                     )
+                    logger.debug("ImageFilter update success=%s", success)
                 except Exception:
-                    pass
+                    logger.exception(
+                        "Failed to update ImageFilter(id=%s) auto_apply", fid
+                    )
 
             checkbox.stateChanged.connect(_on_checkbox_state_changed)
 
@@ -108,11 +119,11 @@ class FilterListWindow(QDialog):
             self._list.addItem(item)
             self._list.setItemWidget(item, container)
 
-        # Keep legacy handler for any other item changes (defensive)
-        try:
-            self._list.itemChanged.connect(self._on_item_changed)
-        except Exception:
-            pass
+        # We use embedded QCheckBox widgets and connect their stateChanged
+        # signals directly to the DB update. Avoid connecting the legacy
+        # QListWidget.itemChanged handler because it reads the
+        # QListWidgetItem.checkState() and can overwrite updates when the
+        # list item isn't actually used as the checkbox owner.
 
     def _on_item_changed(self, item: QListWidgetItem):
         try:
@@ -123,7 +134,9 @@ class FilterListWindow(QDialog):
             # are for auto-applying to future generated images. The DB update
             # above is sufficient.
         except Exception:
-            pass
+            logging.getLogger(__name__).exception(
+                "Error handling itemChanged for ImageFilter id=%s", fid
+            )
 
     def accept(self):
         super().accept()
