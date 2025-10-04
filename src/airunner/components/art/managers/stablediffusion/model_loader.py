@@ -178,7 +178,6 @@ def load_controlnet_model(
         return model
     except Exception as e:
         logger.error(f"Error loading ControlNet model: {e}")
-        print("PATH", controlnet_path)
         return None
 
 

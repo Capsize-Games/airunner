@@ -2,21 +2,21 @@ import gc
 import os
 from contextlib import nullcontext
 from datetime import datetime
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
 from diffusers import StableDiffusionUpscalePipeline
 from PIL import Image
 
-from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
-    BaseDiffusersModelManager,
-)
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
+)
+from airunner.components.art.managers.stablediffusion.stable_diffusion_model_manager import (
+    StableDiffusionModelManager,
 )
 from airunner.enums import (
     EngineResponseCode,
@@ -28,8 +28,12 @@ from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner.utils.memory import clear_memory
 
 
-class X4UpscaleManager(BaseDiffusersModelManager):
+class X4UpscaleManager(StableDiffusionModelManager):
     """Manager for the ``stabilityai/stable-diffusion-x4-upscaler`` pipeline."""
+
+    _pipeline_class = StableDiffusionUpscalePipeline
+    model_type: ModelType = ModelType.UPSCALER
+    _model_status = {}
 
     MODEL_REPO = "stabilityai/stable-diffusion-x4-upscaler"
     SCALE_FACTOR = 4
@@ -44,23 +48,12 @@ class X4UpscaleManager(BaseDiffusersModelManager):
     MIN_TILE_SIZE = 128
     MAX_TILE_REDUCTIONS = 3
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.model_type = ModelType.UPSCALER
-        if ModelType.UPSCALER not in self._model_status:
-            self._model_status[ModelType.UPSCALER] = ModelStatus.UNLOADED
-        self._pipe: Optional[StableDiffusionUpscalePipeline] = None
-
     def handle_generate_signal(self, message: Optional[Dict] = None):
-        """
-        Standard interface for image generation - called by the worker.
-        For upscaling, we need a source image from the canvas or image request.
-        """
+        """Handle image generation request for upscaling."""
         self.image_request = message.get("image_request", None)
         if not self.image_request:
             raise ValueError("ImageRequest is None for upscale")
 
-        # Get the source image from the canvas or image_request
         source_image = (
             self.image_request.image
             if hasattr(self.image_request, "image")
@@ -68,12 +61,11 @@ class X4UpscaleManager(BaseDiffusersModelManager):
         )
 
         if source_image is None:
-            message = "No source image available for upscaling"
-            self.logger.error(message)
-            self._emit_failure(message)
+            error_msg = "No source image available for upscaling"
+            self.logger.error(error_msg)
+            self._emit_failure(error_msg)
             return
 
-        # Perform the upscale using the existing implementation
         try:
             result = self.handle_upscale_request(source_image)
             self.image_request = None
@@ -84,11 +76,8 @@ class X4UpscaleManager(BaseDiffusersModelManager):
             raise
 
     @property
-    def model_path(self) -> str:
-        return os.path.join(
-            os.path.expanduser(self.path_settings.base_path),
-            "art/models/upscaler/x4-upscaler",
-        )
+    def use_compel(self) -> bool:
+        return False
 
     @property
     def preview_dir(self) -> str:
@@ -102,6 +91,21 @@ class X4UpscaleManager(BaseDiffusersModelManager):
     def preview_path(self) -> str:
         return os.path.join(self.preview_dir, self.PREVIEW_FILENAME)
 
+    @property
+    def use_from_single_file(self) -> bool:
+        return False
+
+    @property
+    def pipeline_map(
+        self,
+    ) -> Dict[str, Any]:
+        return {"x4-upscaler": StableDiffusionUpscalePipeline}
+
+    def is_loaded(self) -> bool:
+        return (
+            self._pipe is not None and self.model_status == ModelStatus.LOADED
+        )
+
     def load(self):
         if self.is_loaded():
             return
@@ -113,20 +117,15 @@ class X4UpscaleManager(BaseDiffusersModelManager):
             # If CUDA is available we can request fp16 variants; on CPU
             # avoid forcing fp16 variant to prevent incorrect weight loading
             # or computation issues.
+            file_directory = os.path.dirname(self.model_path)
+            data = self._prepare_pipe_data()
             if torch.cuda.is_available():
                 self._pipe = StableDiffusionUpscalePipeline.from_pretrained(
-                    self.model_path,
-                    torch_dtype=self.data_type,
-                    use_safetensors=True,
-                    variant="fp16",
-                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                    file_directory, **data
                 )
             else:
                 self._pipe = StableDiffusionUpscalePipeline.from_pretrained(
-                    self.model_path,
-                    torch_dtype=self.data_type,
-                    use_safetensors=True,
-                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                    file_directory, **data
                 )
             self._configure_pipeline()
             try:
@@ -172,22 +171,27 @@ class X4UpscaleManager(BaseDiffusersModelManager):
         except Exception:
             pass
 
-    def unload(self):
-        if self._pipe is not None:
-            try:
-                if hasattr(self._pipe, "to"):
-                    self._pipe.to("cpu")
-            except Exception:
-                pass
-        self._pipe = None
-        self.change_model_status(ModelType.UPSCALER, ModelStatus.UNLOADED)
-        clear_memory()
+    def _prepare_data(self, active_rect=None) -> Dict:
+        data = super()._prepare_data(active_rect)
+        del data["width"]
+        del data["height"]
+        del data["clip_skip"]
+        data["callback"] = data["callback_on_step_end"]
+        del data["callback_on_step_end"]
+        data["guidance_scale"] = self.image_request.scale
+        data["noise_level"] = self.DEFAULT_NOISE_LEVEL
+        return data
 
-    def is_loaded(self) -> bool:
-        return (
-            self._pipe is not None
-            and self.model_status.get(ModelType.UPSCALER) is ModelStatus.LOADED
-        )
+    def _prepare_pipe_data(self) -> Dict[str, Any]:
+        data = {
+            "torch_dtype": self.data_type,
+            "use_safetensors": True,
+            "variant": "fp16",
+            "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
+            "device": self._device,
+        }
+
+        return data
 
     def handle_upscale_request(
         self, source_image: Image.Image
@@ -343,8 +347,8 @@ class X4UpscaleManager(BaseDiffusersModelManager):
         overlap: int,
         tile_batch_size: int,
     ) -> Image.Image:
+        """Upscale image using tiled approach to manage VRAM usage."""
         width, height = image.size
-        # Use white background so transparent regions don't appear black
         output = Image.new(
             "RGB",
             (width * self.SCALE_FACTOR, height * self.SCALE_FACTOR),
@@ -365,6 +369,7 @@ class X4UpscaleManager(BaseDiffusersModelManager):
             ]
             if not batch:
                 break
+
             batch_images = [tile["crop"] for tile in batch]
             kwargs = self._build_pipeline_kwargs(
                 image=batch_images,
@@ -375,202 +380,37 @@ class X4UpscaleManager(BaseDiffusersModelManager):
                 noise_level=noise_level,
             )
             self._empty_cache()
+
             autocast_ctx = (
                 torch.autocast("cuda", dtype=self.data_type)
                 if torch.cuda.is_available()
                 else nullcontext()
             )
+
             try:
                 with torch.inference_mode():
                     with autocast_ctx:
                         result = self._pipe(**kwargs)
-                # Extract images (PIL) from pipeline result
+
                 upscaled_tiles = self._extract_images(result)
 
-                # If pipeline returned all-black tiles, fall back to bicubic
-                # upscaling of the input crops and log model dir for debugging.
-                try:
-                    all_black = True
-                    for img in upscaled_tiles:
-                        arr = np.asarray(img)
-                        if arr.size and int(arr.max()) > 0:
-                            all_black = False
-                            break
-                except Exception:
-                    all_black = False
+                # Fallback to bicubic if all-black output detected
+                if self._is_all_black(upscaled_tiles):
+                    upscaled_tiles = self._bicubic_fallback(batch_images)
 
-                if all_black:
-                    try:
-                        # Log model directory to help diagnose missing/corrupt files
-                        try:
-                            files = os.listdir(self.model_path)
-                        except Exception:
-                            files = []
-                        dbg_txt = os.path.join(
-                            self.preview_dir, "preview_debug.txt"
-                        )
-                        with open(dbg_txt, "a") as f:
-                            f.write(
-                                f"{datetime.now().isoformat()} all_black_output_detected model_path={self.model_path} files={files}\n"
-                            )
-                    except Exception:
-                        pass
-
-                    # Use bicubic resize fallback for each input crop
-                    try:
-                        fallback_tiles = []
-                        for crop in batch_images:
-                            try:
-                                w, h = crop.size
-                                fw, fh = (
-                                    w * self.SCALE_FACTOR,
-                                    h * self.SCALE_FACTOR,
-                                )
-                                up = crop.convert("RGB").resize(
-                                    (fw, fh), resample=Image.BICUBIC
-                                )
-                                fallback_tiles.append(up)
-                            except Exception:
-                                # give a white tile if anything fails
-                                fallback_tiles.append(
-                                    Image.new(
-                                        "RGB",
-                                        (
-                                            w * self.SCALE_FACTOR,
-                                            h * self.SCALE_FACTOR,
-                                        ),
-                                        (255, 255, 255),
-                                    )
-                                )
-                        upscaled_tiles = fallback_tiles
-                        # Save a note and the fallback tiles
-                        try:
-                            for i, t in enumerate(upscaled_tiles[:4]):
-                                t.save(
-                                    os.path.join(
-                                        self.preview_dir,
-                                        f"dbg_fallback_tile_{processed_tiles + i}.png",
-                                    )
-                                )
-                        except Exception:
-                            pass
-                    except Exception:
-                        pass
-
-                # Debug: save raw pipeline outputs and corresponding input crops
-                try:
-                    os.makedirs(self.preview_dir, exist_ok=True)
-                    raw_images = None
-                    try:
-                        with open(
-                            os.path.join(
-                                self.preview_dir, "preview_debug.txt"
-                            ),
-                            "a",
-                        ) as f:
-                            f.write(
-                                f"{datetime.now().isoformat()} pipeline_result_type={type(result)} repr={repr(result)[:200]}\n"
-                            )
-                    except Exception:
-                        pass
-                    if isinstance(result, dict) and "images" in result:
-                        raw_images = result["images"]
-                    elif hasattr(result, "images"):
-                        raw_images = result.images
-                    else:
-                        raw_images = result
-                    # Log detailed info about raw_images elements
-                    try:
-                        dbg_txt = os.path.join(
-                            self.preview_dir, "preview_debug.txt"
-                        )
-                        with open(dbg_txt, "a") as f:
-                            for i, item in enumerate(
-                                raw_images
-                                if hasattr(raw_images, "__len__")
-                                else [raw_images]
-                            ):
-                                try:
-                                    if torch.is_tensor(item):
-                                        t = item.detach().cpu()
-                                        f.write(
-                                            f"{datetime.now().isoformat()} raw[{i}]=torch tensor shape={tuple(t.shape)} dtype={t.dtype} min={float(t.min()):.6f} max={float(t.max()):.6f}\n"
-                                        )
-                                    else:
-                                        arr = np.asarray(item)
-                                        f.write(
-                                            f"{datetime.now().isoformat()} raw[{i}]=np/ndarray shape={arr.shape} dtype={arr.dtype} min={arr.min() if arr.size else 'NA'} max={arr.max() if arr.size else 'NA'}\n"
-                                        )
-                                except Exception:
-                                    try:
-                                        f.write(
-                                            f"{datetime.now().isoformat()} raw[{i}]=repr={repr(item)[:200]}\n"
-                                        )
-                                    except Exception:
-                                        pass
-                    except Exception:
-                        pass
-                    # Save up to the first 4 tiles of this batch for inspection
-                    for dbg_idx in range(min(4, len(upscaled_tiles))):
-                        try:
-                            tile_img = upscaled_tiles[dbg_idx]
-                            tile_fname = datetime.now().strftime(
-                                f"dbg_upscaled_tile_%Y%m%d_%H%M%S_{processed_tiles + dbg_idx}.png"
-                            )
-                            tile_path = os.path.join(
-                                self.preview_dir, tile_fname
-                            )
-                            tile_img.convert("RGB").save(tile_path)
-                        except Exception:
-                            try:
-                                # try saving raw image via ensure
-                                img = self._ensure_image(raw_images[dbg_idx])
-                                img.convert("RGB").save(tile_path)
-                            except Exception:
-                                pass
-                    # Save the input crops for the batch as well
-                    for crop_idx, crop_img in enumerate(batch_images[:4]):
-                        try:
-                            crop_fname = datetime.now().strftime(
-                                f"dbg_input_crop_%Y%m%d_%H%M%S_{processed_tiles + crop_idx}.png"
-                            )
-                            crop_path = os.path.join(
-                                self.preview_dir, crop_fname
-                            )
-                            crop_img.convert("RGB").save(crop_path)
-                        except Exception:
-                            pass
-                    # Write min/max/dtype info for tiles
-                    try:
-                        dbg_txt = os.path.join(
-                            self.preview_dir, "preview_debug.txt"
-                        )
-                        with open(dbg_txt, "a") as f:
-                            for info_idx, img in enumerate(upscaled_tiles[:8]):
-                                try:
-                                    arr = np.asarray(img)
-                                    f.write(
-                                        f"{datetime.now().isoformat()} tile_index={processed_tiles + info_idx} shape={arr.shape} dtype={arr.dtype} min={arr.min()} max={arr.max()}\n"
-                                    )
-                                except Exception:
-                                    pass
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
+                # Paste tiles into output canvas
                 for idx, tile_dict in enumerate(batch):
-                    # Preserve the tile's alpha if present; _paste_tile will
-                    # handle compositing/masking.
-                    tile_image = upscaled_tiles[idx]
                     self._paste_tile(
                         output,
-                        tile_image,
+                        upscaled_tiles[idx],
                         tile_dict["box"],
                         self.SCALE_FACTOR,
                     )
                     processed_tiles += 1
                     self._emit_progress(processed_tiles, total_tiles)
+
                 self._save_preview_image(output)
+
             except Exception as exc:
                 if self._is_out_of_memory(exc):
                     if current_batch_size > 1:
@@ -607,6 +447,7 @@ class X4UpscaleManager(BaseDiffusersModelManager):
                         )
                         self._emit_progress(0, total_tiles)
                         continue
+
                 self.logger.exception(
                     "Tile batch failed at index %d: %s", processed_tiles, exc
                 )
@@ -619,6 +460,37 @@ class X4UpscaleManager(BaseDiffusersModelManager):
         self._save_preview_image(output)
         self._emit_progress(steps, steps)
         return output.convert("RGB")
+
+    def _is_all_black(self, images: List[Image.Image]) -> bool:
+        """Check if all images in a list are completely black."""
+        try:
+            for img in images:
+                arr = np.asarray(img)
+                if arr.size and int(arr.max()) > 0:
+                    return False
+            return True
+        except Exception:
+            return False
+
+    def _bicubic_fallback(
+        self, images: List[Image.Image]
+    ) -> List[Image.Image]:
+        """Fallback to bicubic upscaling when pipeline produces black output."""
+        fallback_tiles = []
+        for crop in images:
+            try:
+                w, h = crop.size
+                fw, fh = w * self.SCALE_FACTOR, h * self.SCALE_FACTOR
+                up = crop.convert("RGB").resize(
+                    (fw, fh), resample=Image.BICUBIC
+                )
+                fallback_tiles.append(up)
+            except Exception:
+                # White tile on error
+                fallback_tiles.append(
+                    Image.new("RGB", (fw, fh), (255, 255, 255))
+                )
+        return fallback_tiles
 
     def _build_tiles(
         self, image: Image.Image, tile_size: int, overlap: int

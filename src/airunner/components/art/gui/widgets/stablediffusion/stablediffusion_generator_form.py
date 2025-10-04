@@ -18,6 +18,7 @@ from airunner.components.application.data import ShortcutKeys
 from airunner.components.art.data.ai_models import AIModels
 from airunner.enums import (
     QualityEffects,
+    Scheduler,
     SignalCode,
     GeneratorSection,
     ImagePreset,
@@ -573,14 +574,17 @@ class StableDiffusionGeneratorForm(BaseWidget):
         binary_image = None
         image = None
         mask = None
+        scheduler = self.generator_settings.scheduler
         if (
             self.generator_settings.pipeline_action
             == GeneratorSection.UPSCALER.value
         ):
             binary_image = self.drawing_pad_settings.image
+            scheduler = Scheduler.DDIM.value
 
         if binary_image is not None:
             image = convert_binary_to_image(binary_image)
+            image = image.convert("RGB")
 
         image_request = ImageRequest(
             prompt=data.get("prompt", self.ui.prompt.toPlainText()),
@@ -600,7 +604,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             generator_name=self.generator_name,
             random_seed=self.generator_settings.random_seed,
             model_path=model_path,
-            scheduler=self.generator_settings.scheduler,
+            scheduler=scheduler,
             version=self.generator_settings.version,
             use_compel=self.generator_settings.use_compel,
             steps=self.generator_settings.steps,

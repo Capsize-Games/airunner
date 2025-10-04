@@ -410,7 +410,6 @@ class CanvasWidget(BaseWidget):
 
     @Slot(bool)
     def on_brush_button_toggled(self, val: bool):
-        print("ON BRUSH BUTTON TOGGLED")
         self.api.art.canvas.toggle_tool(CanvasToolName.BRUSH, val)
 
     @Slot(bool)
