@@ -123,6 +123,12 @@ class SignalCode(Enum):
     LORA_UPDATED_SIGNAL = "lora_updated_signal"
     LORA_DELETE_SIGNAL = "delete_lora_signal"
     EMBEDDING_UPDATED_SIGNAL = "embedding_updated_signal"
+    # Signal emitted when an upscale x4 operation is requested from the UI
+    UPSCALE_REQUEST = "upscale_request_signal"
+    UPSCALE_STARTED = "upscale_started_signal"
+    UPSCALE_PROGRESS = "upscale_progress_signal"
+    UPSCALE_COMPLETED = "upscale_completed_signal"
+    UPSCALE_FAILED = "upscale_failed_signal"
     EMBEDDING_DELETE_SIGNAL = "delete_embedding_signal"
     SET_CANVAS_COLOR_SIGNAL = "set_canvas_color_signal"
     UPDATE_SCENE_SIGNAL = "update_scene_signal"
@@ -378,6 +384,7 @@ class GeneratorSection(Enum):
     IMG2IMG = "img2img"
     INPAINT = "inpaint"
     OUTPAINT = "outpaint"
+    UPSCALER = "x4-upscaler"
 
 
 class StableDiffusionVersion(Enum):
@@ -387,6 +394,7 @@ class StableDiffusionVersion(Enum):
     SDXL_LIGHTNING = "SDXL Lightning"
     SDXL_HYPER = "SDXL Hyper"
     SD1_5 = "SD 1.5"
+    X4_UPSCALER = "x4-upscaler"
 
 
 class Language(Enum):
@@ -448,6 +456,7 @@ class ModelType(Enum):
     CONTROLNET_PROCESSOR = "SD Controlnet Processor"
     SAFETY_CHECKER = "SD Safety Checker"
     FEATURE_EXTRACTOR = "SD Feature Extractor"
+    UPSCALER = "Upscaler"
     SCHEDULER = "SD Scheduler"
     LLM = "LLM Model"
     LLM_TOKENIZER = "LLM Tokenizer"

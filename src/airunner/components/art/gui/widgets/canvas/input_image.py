@@ -1,10 +1,10 @@
 import os
+from typing import Optional
 
 from PIL import Image
-from PIL.ImageQt import fromqimage
+from PIL.ImageQt import ImageQt
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QFileDialog, QGraphicsScene
-from PIL.ImageQt import ImageQt
 from PySide6.QtGui import QPixmap, QImage, QPen, QPainter
 
 from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
@@ -43,20 +43,18 @@ class InputImage(BaseWidget):
         self.ui.strength_slider_widget.setProperty(
             f"{self.settings_key}.strength", self.current_settings.strength
         )
-        self._scene = None
+        self._scene: Optional[InputImageScene] = None
         self.setup_scene()
         self.load_image_from_settings()
 
     def setup_scene(self):
-        """Set up the custom scene for drawing on input images"""
-        # Create our custom scene for drawing
+        """Set up the custom scene for drawing on input images."""
         self._scene = InputImageScene(
             canvas_type="input_image",
             settings_key=self.settings_key,
             is_mask=self.is_mask,
         )
 
-        # Set the drawing capabilities on the scene
         if hasattr(self._scene, "use_generated_image"):
             self._scene.use_generated_image = self.use_generated_image
 
@@ -141,7 +139,6 @@ class InputImage(BaseWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self._patch_scene_for_persistence()
         if self.settings_key == "controlnet_settings":
             self.ui.strength_slider_widget.hide()
             self.ui.controlnet_settings.show()
@@ -190,25 +187,25 @@ class InputImage(BaseWidget):
         self.update_current_settings("enabled", val)
 
     @Slot(bool)
-    def lock_input_image(self, val):
+    def on_lock_input_image_button_toggled(self, val: bool):
         self.update_current_settings("lock_input_image", val)
 
-    @Slot(bool)
-    def refresh_input_image_from_grid(self):
+    @Slot()
+    def on_refresh_button_clicked(self):
         self.load_image_from_grid(forced=True)
 
     @Slot(bool)
-    def use_grid_image_as_input_toggled(self, val):
+    def on_link_to_grid_image_button_toggled(self, val: bool):
         self.update_current_settings("use_grid_image_as_input", val)
         if val is True:
             self.load_image_from_grid()
 
     @Slot()
-    def import_clicked(self):
+    def on_import_button_clicked(self):
         self.import_image()
 
     @Slot()
-    def delete_clicked(self):
+    def on_delete_button_clicked(self):
         self.delete_image()
 
     def import_image(self):
@@ -250,7 +247,7 @@ class InputImage(BaseWidget):
                 "image", convert_image_to_binary(image)
             )
 
-    def load_image_from_grid(self, forced=False):
+    def load_image_from_grid(self, forced: bool = False):
         # Explicitly clear cache before reading settings to ensure lock status is fresh
         settings_property_name = None
         if self.settings_key == "image_to_image_settings":
@@ -259,7 +256,6 @@ class InputImage(BaseWidget):
             settings_property_name = "controlnet_settings"
         elif self.settings_key == "outpaint_settings":
             settings_property_name = "outpaint_settings"
-        # Add other relevant settings keys if necessary
 
         if settings_property_name:
             prop = getattr(type(self), settings_property_name, None)
@@ -270,33 +266,29 @@ class InputImage(BaseWidget):
             ):
                 try:
                     prop.fget.cache_clear()
-                    self.logger.debug(
-                        f"Cleared cache for {settings_property_name} before check"
-                    )
-                except Exception as e:
-                    self.logger.error(
-                        f"Failed to clear cache for {settings_property_name}: {e}"
-                    )
+                except Exception:
+                    pass
 
-        # Check lock *before* updating settings
-        current_settings = (
-            self.current_settings
-        )  # Read potentially fresh settings
+        # Check lock and link flags
+        current_settings = self.current_settings
         if not forced and current_settings.lock_input_image:
-            self.logger.debug(
-                f"Input image locked for {self.settings_key}, skipping update from grid."
-            )
             return
         if not forced and not current_settings.use_grid_image_as_input:
-            self.logger.debug(
-                f"use_grid_image_as_input is false for {self.settings_key}, skipping update from grid."
-            )
             return
 
-        # If not locked and use_grid is true, proceed with update
-        self.logger.debug(f"Updating {self.settings_key} image from grid.")
-        self.update_current_settings("image", self.drawing_pad_settings.image)
-        self.load_image_from_settings()
+        # Avoid redundant updates if content is identical
+        grid_image = self.drawing_pad_settings.image
+        if (
+            not forced
+            and getattr(self.current_settings, "image", None) is not None
+            and grid_image == getattr(self.current_settings, "image", None)
+        ):
+            return
+
+        self.update_current_settings("image", grid_image)
+        if grid_image:
+            image = convert_binary_to_image(grid_image)
+            self.load_image_from_object(image)
 
     def load_image_from_settings(self):
         if self.settings_key == "outpaint_settings":
@@ -327,25 +319,35 @@ class InputImage(BaseWidget):
             self.logger.warning("Image is None, unable to add to scene")
             return
 
-        # Convert PIL image to QImage
-        qimage = ImageQt(image)
-
-        # If we have our scene, update its image
+        # Prefer the scene's optimized path when available
         if hasattr(self, "_scene") and self._scene:
-            # Update the image in the scene
-            if self._scene.image != qimage:
-                # Update with the new image
+            try:
+                # Use optimized pipeline (avoids extra conversions/signals)
+                self._scene._add_image_to_scene(
+                    image=image, is_outpaint=False, generated=False
+                )
+            except Exception:
+                # Fallback to initialize path
+                qimage = ImageQt(image)
                 self._scene.image = qimage
-                self._scene.initialize_image(
-                    image
-                )  # Pass the original PIL image
-            # Always set scene rect to image
+                self._scene.initialize_image(image)
+
+            # Adjust scene rect to the item bounds if present
             if self._scene.item and hasattr(self._scene.item, "boundingRect"):
                 rect = self._scene.item.boundingRect()
                 self._scene.setSceneRect(rect)
+
+            # Force scene and view updates
+            self._scene.update()
+            self._scene.invalidate()
+            for view in self._scene.views():
+                view.viewport().update()
+                view.update()
+
             self.fit_image_to_view()
         else:
             # Legacy fallback if somehow scene isn't set up
+            qimage = ImageQt(image)
             qpixmap = QPixmap.fromImage(QImage(qimage))
             scene = QGraphicsScene()
             scene.clear()
@@ -359,6 +361,8 @@ class InputImage(BaseWidget):
             scene.addRect(0, 0, qpixmap.width(), qpixmap.height(), pen)
             self.fit_image_to_view()
 
+        self.update()
+
     def delete_image(self):
         if self.settings_key == "outpaint_settings" and self.is_mask:
             self.update_drawing_pad_settings(mask=None)
@@ -369,46 +373,3 @@ class InputImage(BaseWidget):
             self._scene.clear()
         else:
             self.ui.image_container.setScene(None)
-
-    # --- Persistence fix: save after drawing ---
-    def save_current_image(self):
-        # Save the current image in the scene to the correct settings/database
-        if (
-            hasattr(self, "_scene")
-            and self._scene
-            and hasattr(self._scene, "active_image")
-        ):
-            if self._scene.active_image is not None:
-                image = fromqimage(self._scene.active_image)
-                base_64_image = convert_image_to_binary(image)
-
-                if self.is_mask:
-                    self.update_drawing_pad_settings(mask=base_64_image)
-                elif (
-                    self.settings_key == "controlnet_settings"
-                    and hasattr(self, "use_generated_image")
-                    and self.use_generated_image
-                ):
-                    self.update_controlnet_settings(
-                        generated_image=base_64_image
-                    )
-                elif self.settings_key == "outpaint_settings":
-                    self.update_outpaint_settings(image=base_64_image)
-                elif self.settings_key == "image_to_image_settings":
-                    self.update_image_to_image_settings(image=base_64_image)
-                else:
-                    self.update_current_settings("image", base_64_image)
-                # After saving, reload to ensure UI is in sync
-                self.load_image_from_settings()
-
-    # Patch InputImageScene to call save after drawing
-    def _patch_scene_for_persistence(self):
-        if self._scene:
-            orig_release = self._scene._handle_left_mouse_release
-
-            def new_release(event):
-                result = orig_release(event)
-                self.save_current_image()
-                return result
-
-            self._scene._handle_left_mouse_release = new_release

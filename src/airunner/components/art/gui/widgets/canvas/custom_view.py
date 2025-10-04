@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QGraphicsRectItem,
     QMenu,
 )
+from PySide6.QtCore import QThread
 import json
 
 from airunner.components.art.data.canvas_layer import CanvasLayer
@@ -213,8 +214,9 @@ class CustomGraphicsView(
             Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
         )  # Set once here
         self._last_viewport_size = self.viewport().size()  # Track last size
+        # Use SmartViewportUpdate to ensure proper repaints when items mutate in place
         self.setViewportUpdateMode(
-            QGraphicsView.ViewportUpdateMode.BoundingRectViewportUpdate
+            QGraphicsView.ViewportUpdateMode.SmartViewportUpdate
         )
 
         # Use setOptimizationFlags directly instead of the enum that doesn't exist in your PySide6 version
@@ -222,6 +224,7 @@ class CustomGraphicsView(
             QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing
             | QGraphicsView.OptimizationFlag.DontSavePainterState
         )
+        self.setFrameShape(QGraphicsView.Shape.NoFrame)
 
         # register signal handlers
         signal_handlers = {
@@ -379,6 +382,9 @@ class CustomGraphicsView(
 
             drawingpad_settings = results[0]
             scene_item = self.scene._layer_items.get(layer.id)
+            if scene_item is None:
+                # Layer may not have been materialized yet; skip safely
+                continue
             item_rect = scene_item.boundingRect()
             image_width = item_rect.width()
             image_height = item_rect.height()
@@ -392,7 +398,7 @@ class CustomGraphicsView(
                 x_pos=pos_x,
                 y_pos=pos_y,
             )
-            self.scene._layer_items[layer.id].setPos(pos_x, pos_y)
+            scene_item.setPos(pos_x, pos_y)
             original_item_positions[scene_item] = QPointF(pos_x, pos_y)
         return original_item_positions
 

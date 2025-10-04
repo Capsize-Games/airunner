@@ -18,6 +18,7 @@ from airunner.components.application.data import ShortcutKeys
 from airunner.components.art.data.ai_models import AIModels
 from airunner.enums import (
     QualityEffects,
+    Scheduler,
     SignalCode,
     GeneratorSection,
     ImagePreset,
@@ -42,6 +43,7 @@ from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
+from airunner.utils.image import convert_binary_to_image
 from airunner.utils.widgets import load_splitter_settings
 
 
@@ -552,22 +554,56 @@ class StableDiffusionGeneratorForm(BaseWidget):
             for _prompt_id, container in self._prompt_containers.items()
         ]
 
+        # Get fresh generator settings from DB to avoid using stale cached values
+        # (cache may not be invalidated yet when version/model changes happen)
+        from airunner.components.art.data.generator_settings import (
+            GeneratorSettings,
+        )
+
+        fresh_generator_settings = GeneratorSettings.objects.first()
+
         model_path = ""
-        model_id = self.generator_settings.model
+        model_id = fresh_generator_settings.model
         if model_id is not None:
             aimodel = AIModels.objects.get(model_id)
             if aimodel is not None:
-                model_path = model_path
+                model_path = aimodel.path
 
         if model_path == "":
-            if self.generator_settings.model is not None:
-                aimodel = AIModels.objects.get(self.generator_settings.model)
+            if fresh_generator_settings.model is not None:
+                aimodel = AIModels.objects.get(fresh_generator_settings.model)
             else:
                 aimodel = AIModels.objects.first()
 
             if aimodel is not None:
                 model_path = aimodel.path
-                self.update_generator_settings(model=aimodel.id)
+
+        # Debug logging for model selection
+        try:
+            self.logger.debug(
+                "do_generate model selection: version=%s pipeline_action=%s model_id=%s resolved_model_path=%s",
+                fresh_generator_settings.version,
+                fresh_generator_settings.pipeline_action,
+                fresh_generator_settings.model,
+                model_path,
+            )
+        except Exception:
+            pass
+
+        binary_image = None
+        image = None
+        mask = None
+        scheduler = fresh_generator_settings.scheduler
+        if (
+            fresh_generator_settings.pipeline_action
+            == GeneratorSection.UPSCALER.value
+        ):
+            binary_image = self.drawing_pad_settings.image
+            scheduler = Scheduler.DDIM.value
+
+        if binary_image is not None:
+            image = convert_binary_to_image(binary_image)
+            image = image.convert("RGB")
 
         image_request = ImageRequest(
             prompt=data.get("prompt", self.ui.prompt.toPlainText()),
@@ -581,40 +617,42 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 "second_negative_prompt",
                 self.ui.secondary_negative_prompt.toPlainText(),
             ),
-            crops_coords_top_left=self.generator_settings.crops_coords_top_left,
-            negative_crops_coords_top_left=self.generator_settings.negative_crops_coords_top_left,
-            pipeline_action=self.generator_settings.pipeline_action,
+            crops_coords_top_left=fresh_generator_settings.crops_coords_top_left,
+            negative_crops_coords_top_left=fresh_generator_settings.negative_crops_coords_top_left,
+            pipeline_action=fresh_generator_settings.pipeline_action,
             generator_name=self.generator_name,
-            random_seed=self.generator_settings.random_seed,
+            random_seed=fresh_generator_settings.random_seed,
             model_path=model_path,
-            scheduler=self.generator_settings.scheduler,
-            version=self.generator_settings.version,
-            use_compel=self.generator_settings.use_compel,
-            steps=self.generator_settings.steps,
-            ddim_eta=self.generator_settings.ddim_eta,
-            scale=self.generator_settings.scale / 100,
+            scheduler=scheduler,
+            version=fresh_generator_settings.version,
+            use_compel=fresh_generator_settings.use_compel,
+            steps=fresh_generator_settings.steps,
+            ddim_eta=fresh_generator_settings.ddim_eta,
+            scale=fresh_generator_settings.scale / 100,
             seed=self.seed,
-            strength=self.generator_settings.strength / 100,
-            n_samples=self.generator_settings.n_samples,
-            images_per_batch=self.generator_settings.images_per_batch,
-            generate_infinite_images=self.generator_settings.generate_infinite_images,
-            clip_skip=self.generator_settings.clip_skip,
+            strength=fresh_generator_settings.strength / 100,
+            n_samples=fresh_generator_settings.n_samples,
+            images_per_batch=fresh_generator_settings.images_per_batch,
+            generate_infinite_images=fresh_generator_settings.generate_infinite_images,
+            clip_skip=fresh_generator_settings.clip_skip,
             width=self.application_settings.working_width,
             height=self.application_settings.working_height,
-            target_size=self.generator_settings.target_size,
-            original_size=self.generator_settings.original_size,
-            negative_target_size=self.generator_settings.negative_target_size,
-            negative_original_size=self.generator_settings.negative_original_size,
-            lora_scale=self.generator_settings.lora_scale,
+            target_size=fresh_generator_settings.target_size,
+            original_size=fresh_generator_settings.original_size,
+            negative_target_size=fresh_generator_settings.negative_target_size,
+            negative_original_size=fresh_generator_settings.negative_original_size,
+            lora_scale=fresh_generator_settings.lora_scale,
             additional_prompts=additional_prompts,
             callback=callback,
-            image_preset=ImagePreset(self.generator_settings.image_preset),
+            image_preset=ImagePreset(fresh_generator_settings.image_preset),
             quality_effects=(
-                QualityEffects(self.generator_settings.quality_effects)
-                if self.generator_settings.quality_effects != ""
-                and self.generator_settings.quality_effects is not None
+                QualityEffects(fresh_generator_settings.quality_effects)
+                if fresh_generator_settings.quality_effects != ""
+                and fresh_generator_settings.quality_effects is not None
                 else QualityEffects.STANDARD
             ),
+            image=image,
+            mask=mask,
         )
 
         self.api.art.send_request(image_request=image_request)
@@ -777,9 +815,9 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def handle_progress_bar(self, message):
         step = message.get("step")
         total = message.get("total")
-        if step == total:
-            self.stop_progress_bar()
-            return
+        # if step == total:
+        #     self.stop_progress_bar()
+        #     return
 
         if step == 0 and total == 0:
             current = 0
@@ -788,7 +826,11 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 current = step / total
             except ZeroDivisionError:
                 current = 0
-        self.set_progress_bar_value(int(current * 100))
+        value = int(current * 100)
+        if value >= 100:
+            self.ui.progress_bar.setFormat("Processing")
+        else:
+            self.set_progress_bar_value(value)
 
     def set_progress_bar_value(self, value):
         progressbar = self.ui.progress_bar
@@ -800,9 +842,11 @@ class StableDiffusionGeneratorForm(BaseWidget):
         QApplication.processEvents()
 
     def start_progress_bar(self):
-        self.ui.progress_bar.setFormat("Generating %p%")
-        self.ui.progress_bar.setRange(0, 0)
-        self.ui.progress_bar.show()
+        progressbar = self.ui.progress_bar
+        progressbar.setFormat("Generating %p%")
+        progressbar.setRange(0, 0)
+        progressbar.show()
+        QApplication.processEvents()
 
     def on_model_status_changed_signal(self, data):
         if data["model"] is ModelType.SD:

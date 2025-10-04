@@ -22,6 +22,10 @@ from airunner.components.art.managers.stablediffusion.image_request import (
 from airunner.components.art.data.ai_models import AIModels
 from airunner.enums import StableDiffusionVersion
 from airunner.components.application.exceptions import PipeNotLoadedException
+from airunner.components.art.managers.stablediffusion.x4_upscale_manager import (
+    X4UpscaleManager,
+)
+
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -32,6 +36,7 @@ class SDWorker(Worker):
     def __init__(self):
         self._sd: Optional[StableDiffusionModelManager] = None
         self._sdxl: Optional[SDXLModelManager] = None
+        self._x4_upscaler: Optional[X4UpscaleManager] = None
         self._safety_checker = None
         self._model_manager = None
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE
@@ -93,6 +98,8 @@ class SDWorker(Worker):
                 StableDiffusionVersion.SDXL_HYPER,
             ):
                 self._model_manager = self.sdxl
+            elif version is StableDiffusionVersion.X4_UPSCALER:
+                self._model_manager = self.x4_upscaler
             else:
                 raise ValueError(
                     f"Unsupported Stable Diffusion version: {version}"
@@ -114,6 +121,12 @@ class SDWorker(Worker):
         if self._sdxl is None:
             self._sdxl = SDXLModelManager()
         return self._sdxl
+
+    @property
+    def x4_upscaler(self):
+        if self._x4_upscaler is None:
+            self._x4_upscaler = X4UpscaleManager(mediator=self.mediator)
+        return self._x4_upscaler
 
     def on_load_safety_checker(self):
         if self.model_manager:
@@ -203,10 +216,29 @@ class SDWorker(Worker):
 
         return model_path
 
+    def _debug_log_model_path_resolution(
+        self, image_request: Optional[ImageRequest], model_path: Optional[str]
+    ):
+        try:
+            self.logger.debug(
+                "Model path resolution: image_request.model_path=%s generator_settings.model=%s generator_settings.custom_path=%s resolved=%s",
+                getattr(image_request, "model_path", None),
+                getattr(self.generator_settings, "model", None),
+                getattr(self.generator_settings, "custom_path", None),
+                model_path,
+            )
+        except Exception:
+            pass
+
     def _process_image_request(self, data: Dict) -> Dict:
         settings = self.generator_settings
         image_request = data.get("image_request", None)
         model_path = self._get_model_path_from_image_request(image_request)
+        # Log resolution for debugging
+        try:
+            self._debug_log_model_path_resolution(image_request, model_path)
+        except Exception:
+            pass
 
         if image_request is not None:
             version = image_request.version
@@ -254,11 +286,31 @@ class SDWorker(Worker):
         data["settings"] = self.generator_settings
         data = self._process_image_request(data)
         do_reload = data.get("do_reload", False)
-        if self.model_manager:
+        # Ensure the model manager is instantiated before we try to set the image_request
+        mm = self.model_manager
+        image_request = data.get("image_request")
+        # Attach the image_request to the model manager BEFORE loading so model_path property
+        # resolves to the ImageRequest.model_path instead of falling back to stale generator_settings.model
+        if mm and image_request is not None:
+            try:
+                mm.image_request = image_request
+            except Exception:
+                pass
+        if mm:
             if do_reload:
-                self.model_manager.reload()
-            elif not self.model_manager.sd_is_loaded:
-                self.model_manager.load()
+                mm.reload()
+            elif not mm.model_is_loaded:
+                mm.load()
+            # Debug: log which path will be used
+            try:
+                self.logger.debug(
+                    "Pre-load state: image_request.model_path=%s generator_settings.model=%s resolved_manager_model_path=%s",
+                    getattr(image_request, "model_path", None),
+                    getattr(self.generator_settings, "model", None),
+                    getattr(mm, "model_path", None),
+                )
+            except Exception:
+                pass
         if data:
             callback = data.get("callback", None)
             if callback is not None:

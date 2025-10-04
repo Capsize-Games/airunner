@@ -103,16 +103,18 @@ from airunner.components.art.managers.stablediffusion import (
 
 
 class BaseDiffusersModelManager(BaseModelManager):
+    model_type: ModelType = ModelType.SD
+    _model_status = {
+        ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
+        ModelType.CONTROLNET: ModelStatus.UNLOADED,
+        ModelType.LORA: ModelStatus.UNLOADED,
+        ModelType.EMBEDDINGS: ModelStatus.UNLOADED,
+    }
+
     def __init__(self, *args, **kwargs):
         self._scheduler = None
-        self._model_status = {
-            ModelType.SD: ModelStatus.UNLOADED,
-            ModelType.SAFETY_CHECKER: ModelStatus.UNLOADED,
-            ModelType.CONTROLNET: ModelStatus.UNLOADED,
-            ModelType.LORA: ModelStatus.UNLOADED,
-            ModelType.EMBEDDINGS: ModelStatus.UNLOADED,
-        }
         super().__init__(*args, **kwargs)
+        self._initialize_model_status()
         self._pipeline: Optional[str] = None
         self._scheduler_name: Optional[str] = None
         self._scheduler: Type[SchedulerMixin]
@@ -120,7 +122,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._controlnet_model = None
         self._controlnet: Optional[ControlNetModel] = None
         self._controlnet_processor: Any = None
-        self.model_type = ModelType.SD
         self._safety_checker: Optional[StableDiffusionSafetyChecker] = None
         self._feature_extractor: Optional[CLIPFeatureExtractor] = None
         self._memory_settings_flags: dict = {
@@ -174,6 +175,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._current_memory_settings = None
 
         self.image_export_worker = create_worker(ImageExportWorker)
+
+    def _initialize_model_status(self):
+        self._model_status[self.model_type] = ModelStatus.UNLOADED
 
     def settings_changed(self):
         if self._pipe and self._pipe.__class__ is not self._pipeline_class:
@@ -477,7 +481,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def data_type(self) -> torch.dtype:
-        return torch.float16
+        return torch.float16 if torch.cuda.is_available() else torch.float32
 
     @property
     def use_safety_checker(self) -> bool:
@@ -507,15 +511,15 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def sd_is_loading(self):
-        return self.model_status[ModelType.SD] is ModelStatus.LOADING
+        return self.model_status[self.model_type] is ModelStatus.LOADING
 
     @property
-    def sd_is_loaded(self):
-        return self.model_status[ModelType.SD] is ModelStatus.LOADED
+    def model_is_loaded(self):
+        return self.model_status[self.model_type] is ModelStatus.LOADED
 
     @property
     def sd_is_unloaded(self):
-        return self.model_status[ModelType.SD] is ModelStatus.UNLOADED
+        return self.model_status[self.model_type] is ModelStatus.UNLOADED
 
     @property
     def _device_index(self):
@@ -527,6 +531,10 @@ class BaseDiffusersModelManager(BaseModelManager):
     @property
     def _device(self):
         return get_torch_device(self._device_index)
+
+    @property
+    def use_from_single_file(self) -> bool:
+        return True
 
     @property
     def pipeline_map(
@@ -753,11 +761,11 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.load()
 
     def load(self):
-        if self.sd_is_loading or self.sd_is_loaded:
+        if self.sd_is_loading or self.model_is_loaded:
             return
         if self.model_path is None or self.model_path == "":
             self.logger.error("No model selected")
-            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
+            self.change_model_status(self.model_type, ModelStatus.FAILED)
             return
         self._load_safety_checker()
 
@@ -791,7 +799,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         ):
             self.interrupt_image_generation()
             self.requested_action = ModelAction.CLEAR
-        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
+        self.change_model_status(self.model_type, ModelStatus.LOADING)
         self._unload_safety_checker()
         self._unload_scheduler()
         self._unload_controlnet()
@@ -804,7 +812,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._send_pipeline_loaded_signal()
         self._clear_memory_efficient_settings()
         clear_memory()
-        self.change_model_status(ModelType.SD, ModelStatus.UNLOADED)
+        self.change_model_status(self.model_type, ModelStatus.UNLOADED)
 
     def handle_generate_signal(self, message: Optional[Dict] = None):
         self.image_request = message.get("image_request", None)
@@ -832,7 +840,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def reload_lora(self):
         if self.model_status[
-            ModelType.SD
+            self.model_type
         ] is not ModelStatus.LOADED or self._current_state in (
             HandlerState.PREPARING_TO_GENERATE,
             HandlerState.GENERATING,
@@ -846,7 +854,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def reload_embeddings(self):
         if self.model_status[
-            ModelType.SD
+            self.model_type
         ] is not ModelStatus.LOADED or self._current_state in (
             HandlerState.PREPARING_TO_GENERATE,
             HandlerState.GENERATING,
@@ -866,6 +874,13 @@ class BaseDiffusersModelManager(BaseModelManager):
             HandlerState.GENERATING,
         ):
             self.do_interrupt_image_generation = True
+            try:
+                self.logger.debug(
+                    "interrupt_image_generation called: setting do_interrupt_image_generation=True for %s",
+                    getattr(self, "model_type", None),
+                )
+            except Exception:
+                pass
 
     def _clear_cached_properties(self):
         self._outpaint_image = None
@@ -1030,20 +1045,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._controlnet = None
         # Add further cleanup if needed
 
-    def _load_scheduler(self, scheduler_name: Optional[str] = None):
-        if not scheduler_name:
-            return
-        self.scheduler = model_loader.load_scheduler(
-            scheduler_name,
-            self.path_settings,
-            self.version,
-            self.logger,
-        )
-        if self.scheduler:
-            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
-        else:
-            self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
-
     def _load_lora(self):
         self.logger.debug("Loading LORA weights")
         enabled_lora = Lora.objects.filter_by(
@@ -1201,7 +1202,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 base_path,
                 "art/models",
                 scheduler_version,
-                "txt2img",
+                self.pipeline,
                 "scheduler",
                 "scheduler_config.json",
             )
@@ -1233,11 +1234,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self._pipe:
             self._pipe.scheduler = self.scheduler
 
-    def _load_pipe(self) -> bool:
-        self.logger.debug(
-            f"Loading pipe {self._pipeline_class} for {self.section}"
-        )
-        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
+    def _prepare_pipe_data(self) -> Dict[str, Any]:
         data = {
             "torch_dtype": self.data_type,
             "use_safetensors": True,
@@ -1250,12 +1247,18 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self.controlnet_enabled:
             data["controlnet"] = self.controlnet
 
-        if data is None:
-            return
+        return data
+
+    def _load_pipe(self) -> bool:
+        self.logger.debug(
+            f"Loading pipe {self._pipeline_class} for {self.section}"
+        )
+        self.change_model_status(self.model_type, ModelStatus.LOADING)
+        data = self._prepare_pipe_data()
 
         try:
             self._set_pipe(self.config_path, data)
-            self.change_model_status(ModelType.SD, ModelStatus.LOADED)
+            self.change_model_status(self.model_type, ModelStatus.LOADED)
         except (
             FileNotFoundError,
             EnvironmentError,
@@ -1271,7 +1274,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
             self.logger.error(error_message)
             self.api.worker_response(code, response)
-            self.change_model_status(ModelType.SD, ModelStatus.FAILED)
+            self.change_model_status(self.model_type, ModelStatus.FAILED)
             return False
         return True
 
@@ -1280,12 +1283,20 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.logger.info(
             f"Loading {pipeline_class_.__class__} from {self.model_path}"
         )
-        self._pipe = pipeline_class_.from_single_file(
-            self.model_path,
-            config=config_path,
-            add_watermarker=False,
-            **data,
-        )
+        if self.use_from_single_file:
+            self._pipe = pipeline_class_.from_single_file(
+                self.model_path,
+                config=config_path,
+                add_watermarker=False,
+                **data,
+            )
+        else:
+            file_directory = os.path.dirname(self.model_path)
+            self._pipe = pipeline_class_.from_pretrained(
+                file_directory,
+                config=config_path,
+                **data,
+            )
 
     def _send_pipeline_loaded_signal(self):
         pipeline_type = None
@@ -1807,7 +1818,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     def _unload_pipe(self):
         self.logger.debug("Unloading pipe")
-        self.change_model_status(ModelType.SD, ModelStatus.LOADING)
+        self.change_model_status(self.model_type, ModelStatus.LOADING)
         del self._pipe
         self._pipe = None
 
@@ -1931,6 +1942,8 @@ class BaseDiffusersModelManager(BaseModelManager):
             new_image = PIL.Image.new("RGBA", (width, height), (0, 0, 0, 255))
             new_image.paste(cropped_image, (0, 0))
             image = new_image.convert("RGB")
+        elif self.image_request.image is not None:
+            image = self.image_request.image
 
         data["guidance_scale"] = self.image_request.scale
 

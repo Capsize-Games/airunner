@@ -264,12 +264,6 @@ class Ui_stable_diffusion_settings_widget(object):
 
 
         self.retranslateUi(stable_diffusion_settings_widget)
-        self.version.currentTextChanged.connect(stable_diffusion_settings_widget.handle_version_changed)
-        self.pipeline.currentTextChanged.connect(stable_diffusion_settings_widget.handle_pipeline_changed)
-        self.use_compel.toggled.connect(stable_diffusion_settings_widget.toggled_use_compel)
-        self.scheduler.currentTextChanged.connect(stable_diffusion_settings_widget.handle_scheduler_changed)
-        self.model.currentTextChanged.connect(stable_diffusion_settings_widget.handle_model_changed)
-        self.custom_model.textEdited.connect(stable_diffusion_settings_widget.on_custom_model_textChanged)
 
         QMetaObject.connectSlotsByName(stable_diffusion_settings_widget)
     # setupUi

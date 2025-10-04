@@ -5,6 +5,7 @@ from sqlalchemy.inspection import inspect
 from airunner.components.data.session_manager import session_scope
 from airunner.utils.application.get_logger import get_logger
 from airunner.settings import AIRUNNER_LOG_LEVEL
+import traceback
 
 _T = TypeVar("_T", bound=Any)
 
@@ -215,6 +216,23 @@ class BaseManager:
         with session_scope() as session:
             try:
                 obj = session.query(self.cls).filter(self.cls.id == pk).first()
+                # Debug: log GeneratorSettings updates to help trace unexpected overwrites
+                try:
+                    if (
+                        getattr(self.cls, "__name__", "")
+                        == "GeneratorSettings"
+                    ):
+                        self.logger.debug(
+                            "GeneratorSettings.update called: pk=%s kwargs=%s",
+                            pk,
+                            kwargs,
+                        )
+                        self.logger.debug(
+                            "Stack for GeneratorSettings.update:\n%s",
+                            "".join(traceback.format_stack()),
+                        )
+                except Exception:
+                    pass
                 if obj:
                     for key, value in kwargs.items():
                         setattr(obj, key, value)
