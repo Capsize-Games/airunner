@@ -874,6 +874,13 @@ class BaseDiffusersModelManager(BaseModelManager):
             HandlerState.GENERATING,
         ):
             self.do_interrupt_image_generation = True
+            try:
+                self.logger.debug(
+                    "interrupt_image_generation called: setting do_interrupt_image_generation=True for %s",
+                    getattr(self, "model_type", None),
+                )
+            except Exception:
+                pass
 
     def _clear_cached_properties(self):
         self._outpaint_image = None
