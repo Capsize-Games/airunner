@@ -92,15 +92,15 @@ class FilterListWindow(QDialog):
 
             # Connect directly to update DB when toggled so we don't rely on
             # QListWidget's itemChanged which may not trigger QCheckBox styling.
-            def _on_checkbox_state_changed(state, fid=f.id):
+            def _on_checkbox_toggled(checked: bool, fid=f.id):
                 try:
                     logger.debug(
                         "Updating ImageFilter id=%s auto_apply=%s",
                         fid,
-                        state == Qt.Checked,
+                        checked,
                     )
                     success = ImageFilter.objects.update(
-                        fid, auto_apply=(state == Qt.Checked)
+                        fid, auto_apply=bool(checked)
                     )
                     logger.debug("ImageFilter update success=%s", success)
                 except Exception:
@@ -108,7 +108,10 @@ class FilterListWindow(QDialog):
                         "Failed to update ImageFilter(id=%s) auto_apply", fid
                     )
 
-            checkbox.stateChanged.connect(_on_checkbox_state_changed)
+            # Use toggled(bool) for a clear boolean value and to avoid any
+            # tri-state or integer/enum mismatch that can occur with
+            # stateChanged(int).
+            checkbox.toggled.connect(_on_checkbox_toggled)
 
             row_layout.addWidget(checkbox)
             row_layout.addStretch(1)
