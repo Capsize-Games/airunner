@@ -358,11 +358,36 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 version=generator_settings.version,
                 pipeline_action=generator_settings.pipeline_action,
             )
+        else:
+            # Fallback: if no model matches current pipeline, try TXT2IMG variant
+            fallback_model = AIModels.objects.filter_first(
+                AIModels.version == val,
+                AIModels.pipeline_action == GeneratorSection.TXT2IMG.value,
+                AIModels.enabled.is_(True),
+                AIModels.is_default.is_(False),
+            )
+            if fallback_model is not None:
+                generator_settings.model = fallback_model.id
+                generator_settings.pipeline_action = (
+                    GeneratorSection.TXT2IMG.value
+                )
+                GeneratorSettings.objects.update(
+                    pk=generator_settings.id,
+                    model=generator_settings.model,
+                    version=generator_settings.version,
+                    pipeline_action=generator_settings.pipeline_action,
+                )
 
         self._load_models_combobox()
 
         if model is not None:
             self.api.art.model_changed(model=model.id, version=val)
+        elif "fallback_model" in locals() and fallback_model is not None:
+            self.api.art.model_changed(
+                model=fallback_model.id,
+                version=val,
+                pipeline=GeneratorSection.TXT2IMG.value,
+            )
 
     def _load_pipelines_combobox(self):
         self.ui.pipeline.blockSignals(True)
@@ -381,9 +406,14 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 f"{GeneratorSection.TXT2IMG.value} / {GeneratorSection.IMG2IMG.value}",
                 f"{GeneratorSection.INPAINT.value} / {GeneratorSection.OUTPAINT.value}",
             ]
-            self.update_generator_settings(
-                pipeline_action=GeneratorSection.TXT2IMG.value
-            )
+            # Do not force-overwrite pipeline action unless coming from upscaler
+            if (
+                self.generator_settings.pipeline_action
+                == GeneratorSection.UPSCALER.value
+            ):
+                self.update_generator_settings(
+                    pipeline_action=GeneratorSection.TXT2IMG.value
+                )
 
         current_pipeline = self.generator_settings.pipeline_action
         if current_pipeline != "":
