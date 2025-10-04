@@ -71,6 +71,7 @@ class CanvasWidget(BaseWidget):
         ("move", "move_button"),
         ("message-square", "prompt_editor_button"),
         ("tool", "art_tools_button"),
+        ("filter", "filter_button"),
     ]
 
     def __init__(self, *args, **kwargs):
