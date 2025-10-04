@@ -1506,6 +1506,14 @@ class SettingsMixin:
     ):
         # Update/invalidate local settings cache first
         try:
+            # Debug: log generator settings updates to trace unexpected overwrites
+            try:
+                if setting_name == "generator_settings":
+                    self.logger.debug(
+                        f"__settings_updated called for generator_settings: {column_name} = {val}"
+                    )
+            except Exception:
+                pass
             self.settings_mixin_shared_instance.on_settings_updated(
                 setting_name, column_name, val
             )

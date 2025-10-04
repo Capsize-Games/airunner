@@ -559,7 +559,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
         if model_id is not None:
             aimodel = AIModels.objects.get(model_id)
             if aimodel is not None:
-                model_path = model_path
+                model_path = aimodel.path
 
         if model_path == "":
             if self.generator_settings.model is not None:
@@ -569,7 +569,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
             if aimodel is not None:
                 model_path = aimodel.path
-                self.update_generator_settings(model=aimodel.id)
 
         binary_image = None
         image = None

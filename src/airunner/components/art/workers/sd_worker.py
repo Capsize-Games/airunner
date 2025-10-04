@@ -216,10 +216,29 @@ class SDWorker(Worker):
 
         return model_path
 
+    def _debug_log_model_path_resolution(
+        self, image_request: Optional[ImageRequest], model_path: Optional[str]
+    ):
+        try:
+            self.logger.debug(
+                "Model path resolution: image_request.model_path=%s generator_settings.model=%s generator_settings.custom_path=%s resolved=%s",
+                getattr(image_request, "model_path", None),
+                getattr(self.generator_settings, "model", None),
+                getattr(self.generator_settings, "custom_path", None),
+                model_path,
+            )
+        except Exception:
+            pass
+
     def _process_image_request(self, data: Dict) -> Dict:
         settings = self.generator_settings
         image_request = data.get("image_request", None)
         model_path = self._get_model_path_from_image_request(image_request)
+        # Log resolution for debugging
+        try:
+            self._debug_log_model_path_resolution(image_request, model_path)
+        except Exception:
+            pass
 
         if image_request is not None:
             version = image_request.version
