@@ -1529,6 +1529,11 @@ class CustomScene(
                     self.current_active_image = img
                     self.initialize_image(img)
                     self._commit_layer_history_transaction(layer_id, "image")
+                    # Ensure UI refresh for layers and views
+                    try:
+                        self.api.art.canvas.image_updated()
+                    except Exception:
+                        pass
                     handled = True
                     break
                 except Exception as e:
@@ -1546,7 +1551,18 @@ class CustomScene(
                     if self.application_settings.resize_on_paste:
                         img = self._resize_image(img)
                     self.current_active_image = img
+                    # Ensure the scene displays the newly dropped image
+                    # immediately (matching other paste/drop flows).
+                    try:
+                        self.initialize_image(img)
+                    except Exception:
+                        # Fall back to setting current_active_image only
+                        pass
                     self._commit_layer_history_transaction(layer_id, "image")
+                    try:
+                        self.api.art.canvas.image_updated()
+                    except Exception:
+                        pass
                     handled = True
                     break
                 # fallback: try as file path
@@ -1562,6 +1578,10 @@ class CustomScene(
                         self._commit_layer_history_transaction(
                             layer_id, "image"
                         )
+                        try:
+                            self.api.art.canvas.image_updated()
+                        except Exception:
+                            pass
                         handled = True
                         break
         if handled:
