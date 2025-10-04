@@ -286,11 +286,31 @@ class SDWorker(Worker):
         data["settings"] = self.generator_settings
         data = self._process_image_request(data)
         do_reload = data.get("do_reload", False)
-        if self.model_manager:
+        # Ensure the model manager is instantiated before we try to set the image_request
+        mm = self.model_manager
+        image_request = data.get("image_request")
+        # Attach the image_request to the model manager BEFORE loading so model_path property
+        # resolves to the ImageRequest.model_path instead of falling back to stale generator_settings.model
+        if mm and image_request is not None:
+            try:
+                mm.image_request = image_request
+            except Exception:
+                pass
+        if mm:
             if do_reload:
-                self.model_manager.reload()
-            elif not self.model_manager.model_is_loaded:
-                self.model_manager.load()
+                mm.reload()
+            elif not mm.model_is_loaded:
+                mm.load()
+            # Debug: log which path will be used
+            try:
+                self.logger.debug(
+                    "Pre-load state: image_request.model_path=%s generator_settings.model=%s resolved_manager_model_path=%s",
+                    getattr(image_request, "model_path", None),
+                    getattr(self.generator_settings, "model", None),
+                    getattr(mm, "model_path", None),
+                )
+            except Exception:
+                pass
         if data:
             callback = data.get("callback", None)
             if callback is not None:

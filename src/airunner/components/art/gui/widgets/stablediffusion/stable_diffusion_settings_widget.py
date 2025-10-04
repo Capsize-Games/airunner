@@ -299,67 +299,70 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             val = GeneratorSection.UPSCALER.value
 
         generator_settings = GeneratorSettings.objects.first()
-        do_reload = False
+        updated_kwargs = {"pipeline_action": val}
+        selected_model_id = generator_settings.model
         if val == GeneratorSection.TXT2IMG.value:
             model = AIModels.objects.filter_first(
-                AIModels.id == generator_settings.model
+                AIModels.id == selected_model_id
             )
-            if model.pipeline_action == GeneratorSection.INPAINT.value:
-                model = AIModels.objects.filter_first(
+            if (
+                model
+                and model.pipeline_action == GeneratorSection.INPAINT.value
+            ):
+                # Need a compatible txt2img model for current version
+                new_model = AIModels.objects.filter_first(
                     AIModels.version == generator_settings.version,
                     AIModels.pipeline_action == val,
-                    AIModels.enabled is True,
-                    AIModels.is_default is False,
+                    AIModels.enabled.is_(True),
+                    AIModels.is_default.is_(False),
                 )
-                if model is not None:
-                    generator_settings.model = model.id
-                else:
-                    generator_settings.model = None
-                do_reload = True
+                selected_model_id = new_model.id if new_model else None
+                updated_kwargs["model"] = selected_model_id
         elif val == GeneratorSection.UPSCALER.value:
-            # Force version to x4-upscaler for upscaling
             from airunner.enums import StableDiffusionVersion
 
-            generator_settings.version = (
+            updated_kwargs["version"] = (
                 StableDiffusionVersion.X4_UPSCALER.value
             )
-
-        generator_settings.pipeline_action = val
-
-        GeneratorSettings.objects.update(
-            pk=generator_settings.id,
-            model=generator_settings.model,
-            pipeline_action=generator_settings.pipeline_action,
+            # When switching to upscaler we clear model so it reselects properly
+            updated_kwargs["model"] = None
+        self.logger.debug(
+            "Pipeline change -> version=%s pipeline=%s model(before)=%s model(after)=%s",
+            generator_settings.version,
+            val,
+            generator_settings.model,
+            selected_model_id,
         )
-
+        self.update_generator_settings(**updated_kwargs)
         self._load_models_combobox()
-        self.api.art.model_changed(val)
+        # Notify with explicit model id if known.
+        self.api.art.model_changed(model=selected_model_id, pipeline=val)
 
     @Slot(str)
     def on_version_currentTextChanged(self, val):
+        # Record previous for logging
+        prev_version = self.generator_settings.version
+        prev_pipeline = self.generator_settings.pipeline_action
+        prev_model = self.generator_settings.model
+        # First update version in settings (does not touch model/pipeline yet)
         self.update_generator_settings(version=val)
         self.api.widget_element_changed("sd_version", "version", val)
         self._load_pipelines_combobox()
-
         generator_settings = GeneratorSettings.objects.first()
+        pipeline = generator_settings.pipeline_action
+        # Try to find a model matching current pipeline
         model = AIModels.objects.filter_first(
             AIModels.version == val,
-            AIModels.pipeline_action == generator_settings.pipeline_action,
+            AIModels.pipeline_action == pipeline,
             AIModels.enabled.is_(True),
             AIModels.is_default.is_(False),
         )
-        generator_settings.version = val
-
+        chosen_model_id = None
+        chosen_pipeline = pipeline
         if model is not None:
-            generator_settings.model = model.id
-            GeneratorSettings.objects.update(
-                pk=generator_settings.id,
-                model=generator_settings.model,
-                version=generator_settings.version,
-                pipeline_action=generator_settings.pipeline_action,
-            )
+            chosen_model_id = model.id
         else:
-            # Fallback: if no model matches current pipeline, try TXT2IMG variant
+            # fallback to txt2img
             fallback_model = AIModels.objects.filter_first(
                 AIModels.version == val,
                 AIModels.pipeline_action == GeneratorSection.TXT2IMG.value,
@@ -367,27 +370,25 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                 AIModels.is_default.is_(False),
             )
             if fallback_model is not None:
-                generator_settings.model = fallback_model.id
-                generator_settings.pipeline_action = (
-                    GeneratorSection.TXT2IMG.value
-                )
-                GeneratorSettings.objects.update(
-                    pk=generator_settings.id,
-                    model=generator_settings.model,
-                    version=generator_settings.version,
-                    pipeline_action=generator_settings.pipeline_action,
-                )
-
+                chosen_model_id = fallback_model.id
+                chosen_pipeline = GeneratorSection.TXT2IMG.value
+        # Apply combined update once
+        self.update_generator_settings(
+            model=chosen_model_id, pipeline_action=chosen_pipeline
+        )
+        self.logger.debug(
+            "Version change prev(version=%s pipeline=%s model=%s) -> new(version=%s pipeline=%s model=%s)",
+            prev_version,
+            prev_pipeline,
+            prev_model,
+            val,
+            chosen_pipeline,
+            chosen_model_id,
+        )
         self._load_models_combobox()
-
-        if model is not None:
-            self.api.art.model_changed(model=model.id, version=val)
-        elif "fallback_model" in locals() and fallback_model is not None:
-            self.api.art.model_changed(
-                model=fallback_model.id,
-                version=val,
-                pipeline=GeneratorSection.TXT2IMG.value,
-            )
+        self.api.art.model_changed(
+            model=chosen_model_id, version=val, pipeline=chosen_pipeline
+        )
 
     def _load_pipelines_combobox(self):
         self.ui.pipeline.blockSignals(True)
