@@ -40,6 +40,9 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             SignalCode.LAYER_SELECTED: self.on_layer_selected,
             SignalCode.LAYERS_SHOW_SIGNAL: self.on_layers_show_signal,
         }
+        self.spacer = QSpacerItem(
+            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+        )
         self.selected_layers = set()  # Track selected layer IDs
         self.layer_widgets = {}  # Map layer_id to widget
         super().__init__(*args, **kwargs)
@@ -73,9 +76,6 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         self.select_first_layer()
 
         # add a vertical spacer
-        self.spacer = QSpacerItem(
-            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
-        )
         self.ui.layer_list_layout.layout().addItem(
             self.spacer, len(self.layers), 0
         )

@@ -270,7 +270,7 @@ class SDWorker(Worker):
         if self.model_manager:
             if do_reload:
                 self.model_manager.reload()
-            elif not self.model_manager.sd_is_loaded:
+            elif not self.model_manager.model_is_loaded:
                 self.model_manager.load()
         if data:
             callback = data.get("callback", None)

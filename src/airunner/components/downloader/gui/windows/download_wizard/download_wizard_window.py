@@ -91,7 +91,6 @@ class DownloadWizardWindow(
             print(f"Exception creating InstallSuccessPage: {e}")
         failed = False
         if failed:
-            print("Setting InstallFailedPage")
             self.setPage(1, InstallFailedPage(self))
 
     def on_page_changed(self, id):

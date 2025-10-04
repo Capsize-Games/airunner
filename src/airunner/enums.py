@@ -384,7 +384,7 @@ class GeneratorSection(Enum):
     IMG2IMG = "img2img"
     INPAINT = "inpaint"
     OUTPAINT = "outpaint"
-    UPSCALER = "upscaler"
+    UPSCALER = "x4-upscaler"
 
 
 class StableDiffusionVersion(Enum):
