@@ -125,14 +125,34 @@ class NodeGraphWorker(Worker):
             f"Received execution completed signal from node {node_id}, result: {result}"
         )
 
-        # Find the node in our graph
-        node = self._node_map.get(node_id)  # Use the map if available
+        # Find the node in our graph. Be defensive: self.graph or
+        # self._node_map may be None if workflows are not initialized or
+        # if the worker received a stray signal. Avoid raising exceptions
+        # and just warn/ignore in that case.
+        node = None
+        node_map = getattr(self, "_node_map", None)
+        if node_map:
+            node = node_map.get(node_id)
+
         if not node:
-            # Try finding it in the graph if map isn't populated yet
-            for n in self.graph.all_nodes():
-                if n.id == node_id:
-                    node = n
-                    break
+            # If we don't have a valid graph, we can't resolve the node; log
+            # a warning and return early instead of raising an AttributeError.
+            if not getattr(self, "graph", None):
+                self.logger.warning(
+                    f"NodeGraphWorker.handle_message: graph/_node_map not initialized; cannot resolve node {node_id}"
+                )
+                return
+
+            try:
+                for n in self.graph.all_nodes():
+                    if n.id == node_id:
+                        node = n
+                        break
+            except Exception as e:
+                self.logger.warning(
+                    f"Error iterating graph nodes while resolving node {node_id}: {e}"
+                )
+
             if not node:
                 self.logger.warning(f"Could not find node with ID {node_id}")
                 return

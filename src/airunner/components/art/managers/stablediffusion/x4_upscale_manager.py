@@ -23,7 +23,9 @@ from airunner.enums import (
     ModelStatus,
     ModelType,
     SignalCode,
+    HandlerState,
 )
+from airunner.components.application.exceptions import InterruptedException
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner.utils.memory import clear_memory
 
@@ -66,14 +68,39 @@ class X4UpscaleManager(StableDiffusionModelManager):
             self._emit_failure(error_msg)
             return
 
+        # Mark manager as generating so interrupt requests can set the
+        # interrupt flag via interrupt_image_generation().
+        prev_state = getattr(self, "_current_state", None)
         try:
-            result = self.handle_upscale_request(source_image)
-            self.image_request = None
-            return result
-        except Exception as exc:
-            self.logger.exception("Upscale failed: %s", exc)
-            self._emit_failure(str(exc))
-            raise
+            self._current_state = HandlerState.GENERATING
+            try:
+                result = self.handle_upscale_request(source_image)
+                return result
+            except InterruptedException:
+                # Upscale was interrupted by user action; notify and cleanup.
+                self.logger.debug("Upscale interrupted by user")
+                try:
+                    self.api.worker_response(
+                        code=EngineResponseCode.INTERRUPTED,
+                        message="Upscale interrupted",
+                    )
+                except Exception:
+                    pass
+                return None
+            except Exception as exc:
+                self.logger.exception("Upscale failed: %s", exc)
+                self._emit_failure(str(exc))
+                raise
+        finally:
+            # Clear generating state and reset interrupt flag
+            try:
+                self._current_state = prev_state or HandlerState.READY
+            except Exception:
+                self._current_state = HandlerState.READY
+            try:
+                self.do_interrupt_image_generation = False
+            except Exception:
+                pass
 
     @property
     def use_compel(self) -> bool:
@@ -247,6 +274,12 @@ class X4UpscaleManager(StableDiffusionModelManager):
             self._notify_worker(EngineResponseCode.IMAGE_GENERATED, response)
             self._emit_completed(saved_path, steps)
             return response
+        except InterruptedException as ie:
+            # User-initiated interrupt: avoid noisy error logs and worker ERROR
+            # emissions. Let the caller/outer handler emit an INTERRUPTED code
+            # and perform cleanup.
+            self.logger.debug("Upscale operation interrupted by user: %s", ie)
+            raise
         except Exception as exc:
             self.logger.exception("Upscale operation failed: %s", exc)
             self._emit_failure(str(exc))
@@ -308,6 +341,18 @@ class X4UpscaleManager(StableDiffusionModelManager):
             guidance_scale=guidance_scale,
             noise_level=noise_level,
         )
+        # Ensure the pipeline receives our interrupt callback so cancel actions
+        # set via interrupt_image_generation() are honored during long-running
+        # upscaling steps. BaseDiffusersModelManager defines a name-mangled
+        # interrupt callback; access it if present.
+        interrupt_cb = getattr(
+            self, "_BaseDiffusersModelManager__interrupt_callback", None
+        )
+        if interrupt_cb is not None:
+            kwargs["callback"] = interrupt_cb
+            # Many diffusers pipelines support callback_steps to control
+            # frequency of callback invocation; default to 1 (every step)
+            kwargs.setdefault("callback_steps", 1)
         self._empty_cache()
         autocast_ctx = (
             torch.autocast("cuda", dtype=self.data_type)
@@ -395,6 +440,29 @@ class X4UpscaleManager(StableDiffusionModelManager):
                 batch_count = len(batch)
 
                 def _batch_progress_callback(*cb_args, **cb_kwargs):
+                    # Honor global interrupt flag used by the application.
+                    # If set, raise InterruptedException to abort the pipeline.
+                    try:
+                        is_interrupt = getattr(
+                            self, "do_interrupt_image_generation", False
+                        )
+                        self.logger.debug(
+                            "x4_upscale_manager: batch callback invoked, do_interrupt=%s",
+                            is_interrupt,
+                        )
+                        if is_interrupt:
+                            # Resetting the flag is handled by the manager's
+                            # higher-level interrupt logic when catching this exception.
+                            raise InterruptedException()
+                    except InterruptedException:
+                        # Re-raise so the outer logic can catch and handle it.
+                        self.logger.debug(
+                            "x4_upscale_manager: raising InterruptedException from batch callback"
+                        )
+                        raise
+                    except Exception:
+                        # Non-fatal check failure; continue to progress handling.
+                        pass
                     """Flexible callback wrapper for different diffusers callback signatures.
 
                     The pipeline may call the callback with signatures like
@@ -462,6 +530,17 @@ class X4UpscaleManager(StableDiffusionModelManager):
                     self._emit_progress(progress_percent, 100)
 
             except Exception as exc:
+                # If this was a user interrupt, avoid logging as an error
+                # and simply re-raise so the higher-level handler can
+                # translate it into an INTERRUPTED response.
+                if isinstance(exc, InterruptedException):
+                    self.logger.debug(
+                        "Tile batch interrupted at index %d: %s",
+                        processed_tiles,
+                        exc,
+                    )
+                    raise
+
                 if self._is_out_of_memory(exc):
                     if current_batch_size > 1:
                         current_batch_size = max(1, current_batch_size // 2)
