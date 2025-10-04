@@ -37,6 +37,9 @@ from airunner.utils.image import convert_binary_to_image
 from airunner.utils.widgets.save_splitter_settings import (
     save_splitter_settings,
 )
+from airunner.components.art.gui.windows.filter_list_window.filter_list_window import (
+    FilterListWindow,
+)
 
 
 class CanvasWidget(BaseWidget):
@@ -68,6 +71,7 @@ class CanvasWidget(BaseWidget):
         ("move", "move_button"),
         ("message-square", "prompt_editor_button"),
         ("tool", "art_tools_button"),
+        ("filter", "filter_button"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -407,6 +411,31 @@ class CanvasWidget(BaseWidget):
             )
             if hasattr(self, "logger"):
                 self.logger.exception(exc)
+
+    @Slot()
+    def on_filter_button_clicked(self):
+        try:
+            # Keep the dialog attached to the widget so it is not garbage
+            # collected immediately by Python.
+            if getattr(self, "_filter_list_window", None) is None:
+                self._filter_list_window = FilterListWindow(parent=self)
+                try:
+                    # Clear the cached ref when the dialog is closed so it
+                    # can be recreated the next time the button is clicked.
+                    self._filter_list_window.finished.connect(
+                        lambda _code: setattr(
+                            self, "_filter_list_window", None
+                        )
+                    )
+                except Exception:
+                    pass
+            else:
+                try:
+                    self._filter_list_window.raise_()
+                except Exception:
+                    pass
+        except Exception as exc:
+            self.logger.exception("Failed to open FilterListWindow: %s", exc)
 
     @Slot(bool)
     def on_brush_button_toggled(self, val: bool):
