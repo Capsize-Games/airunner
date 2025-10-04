@@ -70,6 +70,9 @@ from airunner.components.nodegraph.gui.widgets.nodes.core.set_node import (
 from airunner.components.nodegraph.gui.widgets.nodes.art.generate_image_node import (
     GenerateImageNode,
 )
+from airunner.components.nodegraph.gui.widgets.nodes.art.filter_node import (
+    ImageFilterNode,
+)
 from airunner.components.nodegraph.gui.widgets.nodes.video.framepack_node import (
     FramePackNode,
 )
@@ -111,6 +114,7 @@ __all__ = [
     "LLMBranchNode",
     "SetNode",
     "GenerateImageNode",
+    "ImageFilterNode",
     "FramePackNode",
     "VideoNode",
     # "Gemma3Node",

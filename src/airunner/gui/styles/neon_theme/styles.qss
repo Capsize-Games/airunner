@@ -179,6 +179,17 @@ QTabBar::tab:hover {
     background-color: #ff00ff;
 }
 
+/* Ensure QListWidget indicators use the same check icon and sizing as QCheckBox */
+QListWidget::indicator {
+    border-radius: 0;
+}
+
+QListWidget::indicator:checked {
+    image: url(:/light/icons/feather/light/check.svg);
+    width: 12px;
+    height: 12px;
+}
+
 GeneratorTabWidget#generator_widget QTabWidget QWidget#tab_stablediffusion {}
 GeneratorTabWidget#generator_widget GeneratorForm QWidget#scrollAreaWidgetContents {}
 QFrame#button_menu {}

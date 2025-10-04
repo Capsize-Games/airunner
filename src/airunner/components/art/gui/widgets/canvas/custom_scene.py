@@ -67,6 +67,10 @@ from airunner.components.art.managers.stablediffusion.image_response import (
 )
 from airunner.components.art.utils.layer_compositor import LayerCompositor
 from airunner.utils.settings.get_qsettings import get_qsettings
+from airunner.components.art.data.image_filter import ImageFilter
+from airunner.components.art.utils.image_filter_utils import (
+    build_filter_object_from_model,
+)
 
 
 _PERSIST_EXECUTOR = ThreadPoolExecutor(max_workers=1)
@@ -699,7 +703,13 @@ class CustomScene(
         self._commit_layer_history_transaction(layer_id, "image")
 
     def on_apply_filter_signal(self, message):
-        self._apply_filter(message)
+        # The image_filter service emits a dict payload: {"filter_object": <instance>}
+        # Ensure we pass the actual filter instance to the internal applier.
+        if isinstance(message, dict) and "filter_object" in message:
+            filter_object = message["filter_object"]
+        else:
+            filter_object = message
+        self._apply_filter(filter_object)
 
     def on_cancel_filter_signal(self):
         image = self._cancel_filter()
@@ -729,6 +739,24 @@ class CustomScene(
             pass
         elif code is EngineResponseCode.IMAGE_GENERATED:
             self._handle_image_generated_signal(data)
+            # Auto-apply filters flagged in the DB. These filters are applied
+            # to the canvas via the existing image_filter service.
+            try:
+                auto_filters = (
+                    ImageFilter.objects.filter_by(auto_apply=True) or []
+                )
+                for f in auto_filters:
+                    try:
+                        filter_obj = build_filter_object_from_model(f)
+                        if filter_obj is not None:
+                            self.api.art.image_filter.apply(filter_obj)
+                    except Exception:
+                        self.logger.exception(
+                            "Failed to auto-apply filter %s",
+                            getattr(f, "name", "<unknown>"),
+                        )
+            except Exception:
+                self.logger.exception("Error while applying auto filters")
         else:
             if self.settings_key == "drawing_pad_settings":
                 pass
@@ -2554,13 +2582,38 @@ class CustomScene(
         image = Image.open(image_path)
         return image
 
-    def _apply_filter(self, _filter_object: ImageFilter.Filter):
+    def _apply_filter(self, _filter_object: Any):
         if self.settings_key != "drawing_pad_settings":
             return
-        layer_id = self._add_image_to_undo()
-        self.previewing_filter = False
-        self.image_backup = None
-        self._commit_layer_history_transaction(layer_id, "image")
+        try:
+            # Preserve undo state
+            layer_id = self._add_image_to_undo()
+
+            # Ensure we have an image to operate on
+            current = self.current_active_image
+            if current is None:
+                return
+
+            # Apply the filter (filter_object.filter returns a PIL Image)
+            try:
+                filtered_image = _filter_object.filter(current)
+            except Exception:
+                # If the filter fails, log and abort applying
+                if hasattr(self, "logger") and self.logger:
+                    self.logger.exception("Filter application failed")
+                return
+
+            # Replace the active image and persist
+            self.previewing_filter = False
+            self.image_backup = None
+            self._load_image_from_object(image=filtered_image)
+
+            # Force persistence and history commit
+            self._flush_pending_image()
+            self._commit_layer_history_transaction(layer_id, "image")
+        except Exception:
+            if hasattr(self, "logger") and self.logger:
+                self.logger.exception("Unexpected error applying filter")
 
     def _cancel_filter(self) -> Image:
         image = None
@@ -2570,7 +2623,7 @@ class CustomScene(
         self.previewing_filter = False
         return image
 
-    def _preview_filter(self, image: Image, filter_object: ImageFilter.Filter):
+    def _preview_filter(self, image: Image, filter_object: Any):
         if self.settings_key != "drawing_pad_settings":
             return
         if not image:
