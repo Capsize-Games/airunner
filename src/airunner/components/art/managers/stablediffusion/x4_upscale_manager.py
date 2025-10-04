@@ -197,19 +197,6 @@ class X4UpscaleManager(StableDiffusionModelManager):
         self, source_image: Image.Image
     ) -> Optional[ImageResponse]:
         source_image = self._ensure_image(source_image)
-        # Save the input image to the preview directory for debugging/comparison
-        try:
-            os.makedirs(self.preview_dir, exist_ok=True)
-            in_fname = datetime.now().strftime(
-                "input_for_upscale_%Y%m%d_%H%M%S.png"
-            )
-            in_path = os.path.join(self.preview_dir, in_fname)
-            try:
-                source_image.convert("RGB").save(in_path)
-            except Exception:
-                source_image.save(in_path)
-        except Exception:
-            pass
 
         request = self.image_request
         prompt = request.prompt
@@ -218,7 +205,12 @@ class X4UpscaleManager(StableDiffusionModelManager):
         guidance_scale = request.scale
         noise_level = self.DEFAULT_NOISE_LEVEL
 
-        self._emit_progress(0, steps)
+        # Initialize progress at 0 and reset internal last-percent tracker
+        # so that progress doesn't appear to go backwards during tiled
+        # upscaling when step-based callbacks and per-tile emissions
+        # interleave.
+        self._last_progress_percent = -1
+        self._emit_progress(0, 100)
 
         try:
             self.load()
@@ -261,6 +253,11 @@ class X4UpscaleManager(StableDiffusionModelManager):
             raise
         finally:
             clear_memory()
+            # Reset the progress tracker so future operations start fresh
+            try:
+                self._last_progress_percent = None
+            except Exception:
+                pass
 
     def _run_upscale(
         self,
@@ -332,7 +329,8 @@ class X4UpscaleManager(StableDiffusionModelManager):
                 final_image = final_image.convert("RGB")
         except Exception:
             final_image = final_image.convert("RGB")
-        self._emit_progress(steps, steps)
+        # Report 100% progress on completion
+        self._emit_progress(100, 100)
         return final_image
 
     def _tile_upscale(
@@ -361,7 +359,8 @@ class X4UpscaleManager(StableDiffusionModelManager):
         tiles = self._build_tiles(image, current_tile_size, overlap)
         total_tiles = len(tiles)
         processed_tiles = 0
-        self._emit_progress(0, max(total_tiles, steps))
+        # Progress: 0-100%, report in percentages
+        self._emit_progress(0, 100)
 
         while processed_tiles < total_tiles:
             batch = tiles[
@@ -388,6 +387,55 @@ class X4UpscaleManager(StableDiffusionModelManager):
             )
 
             try:
+                # Provide a per-batch callback so we can emit continuous
+                # progress updates while the pipeline runs. Map the
+                # pipeline's step progress into the overall tile progress
+                # range covered by this batch.
+                start_tiles = processed_tiles
+                batch_count = len(batch)
+
+                def _batch_progress_callback(*cb_args, **cb_kwargs):
+                    """Flexible callback wrapper for different diffusers callback signatures.
+
+                    The pipeline may call the callback with signatures like
+                    (pipe, i, t, callback_kwargs) or (i, t, callback_kwargs).
+                    Accept any form and try to extract the step index.
+                    """
+                    try:
+                        # Prefer common patterns where step index is the second arg
+                        step_index = None
+                        if len(cb_args) >= 3 and isinstance(cb_args[1], int):
+                            step_index = cb_args[1]
+                        elif len(cb_args) >= 2 and isinstance(cb_args[0], int):
+                            step_index = cb_args[0]
+                        else:
+                            # try kwargs if present
+                            if "step" in cb_kwargs and isinstance(
+                                cb_kwargs["step"], int
+                            ):
+                                step_index = cb_kwargs["step"]
+
+                        if step_index is None:
+                            return
+
+                        # step_index is zero-based; map to 1..steps
+                        inner_frac = float(step_index + 1) / max(1, steps)
+                        overall_frac = (
+                            start_tiles + inner_frac * batch_count
+                        ) / max(1, total_tiles)
+                        pct = int(overall_frac * 100)
+                        # Emit normalized progress (0..100)
+                        self._emit_progress(pct, 100)
+                    except Exception:
+                        # Swallow any callback errors to avoid interrupting the
+                        # main pipeline; progress is best-effort.
+                        return
+
+                # Attach callback to kwargs so diffusers will call it each step
+                kwargs["callback"] = _batch_progress_callback
+                # Request callback every step to keep updates frequent
+                kwargs["callback_steps"] = 1
+
                 with torch.inference_mode():
                     with autocast_ctx:
                         result = self._pipe(**kwargs)
@@ -407,9 +455,11 @@ class X4UpscaleManager(StableDiffusionModelManager):
                         self.SCALE_FACTOR,
                     )
                     processed_tiles += 1
-                    self._emit_progress(processed_tiles, total_tiles)
-
-                self._save_preview_image(output)
+                    # Report progress as percentage: processed/total * 100
+                    progress_percent = int(
+                        (processed_tiles / total_tiles) * 100
+                    )
+                    self._emit_progress(progress_percent, 100)
 
             except Exception as exc:
                 if self._is_out_of_memory(exc):
@@ -457,8 +507,8 @@ class X4UpscaleManager(StableDiffusionModelManager):
                 gc.collect()
                 self._empty_cache()
 
-        self._save_preview_image(output)
-        self._emit_progress(steps, steps)
+        # Report 100% completion
+        self._emit_progress(100, 100)
         return output.convert("RGB")
 
     def _is_all_black(self, images: List[Image.Image]) -> bool:
@@ -873,10 +923,46 @@ class X4UpscaleManager(StableDiffusionModelManager):
 
     def _emit_progress(self, current: int, total: int):
         try:
-            percent = 0.0 if total == 0 else current / total
+            # Normalize to a 0..1 percentage value. callers may pass either
+            # a (current, total) where total==100 (percent) or tile counts.
+            percent = 0.0 if total == 0 else float(current) / float(total)
+            percent = max(0.0, min(1.0, percent))
+
+            # Emit upscale-specific progress for any listeners that expect
+            # raw values (current/total and a normalized percent).
             self.emit_signal(
                 SignalCode.UPSCALE_PROGRESS,
                 {"current": current, "total": total, "percent": percent},
+            )
+
+            # Also emit the generic SD progress signal the UI listens to.
+            # The UI expects a (step, total) pair and computes step/total to
+            # derive a percent. Provide a 0-100 range so it will display as
+            # an integer percentage consistently.
+            try:
+                step = int(percent * 100)
+            except Exception:
+                step = 0
+
+            # Clamp progress so it never goes backwards during an upscale
+            # operation where per-step callbacks and final per-tile
+            # emissions can interleave. Use an internal tracker set on
+            # upscale start/reset in handle_upscale_request.
+            try:
+                last = getattr(self, "_last_progress_percent", None)
+                if last is None:
+                    # not tracking, emit as-is
+                    emit_step = step
+                else:
+                    emit_step = max(int(last), step)
+                    # store updated value
+                    self._last_progress_percent = emit_step
+            except Exception:
+                emit_step = step
+
+            self.emit_signal(
+                SignalCode.SD_PROGRESS_SIGNAL,
+                {"step": emit_step, "total": 100},
             )
         except Exception:
             pass
