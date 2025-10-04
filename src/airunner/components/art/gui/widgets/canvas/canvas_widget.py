@@ -134,6 +134,26 @@ class CanvasWidget(BaseWidget):
         self._update_action_buttons(self.current_tool, True)
 
         self.set_button_color()
+        # Ensure toolbar buttons use pointing hand cursor where applicable
+        try:
+            for btn_name in (
+                "upscale_x4",
+                "new_button",
+                "import_button",
+                "export_button",
+                "recenter_button",
+                "active_grid_area_button",
+                "brush_button",
+                "eraser_button",
+                "grid_button",
+                "undo_button",
+                "redo_button",
+            ):
+                btn = getattr(self.ui, btn_name, None)
+                if btn is not None:
+                    btn.setCursor(Qt.PointingHandCursor)
+        except Exception:
+            pass
 
     _offset_x = 0
     _offset_y = 0

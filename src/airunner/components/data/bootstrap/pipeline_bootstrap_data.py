@@ -116,7 +116,7 @@ art_pipline_data = [
     },
     {
         "pipeline_action": "upscaler",
-        "version": "x4",
+        "version": "x4-upscaler",
         "category": "stablediffusion",
         "classname": "transformers.CLIPTextModel",
         "default": False,
