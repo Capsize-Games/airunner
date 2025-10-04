@@ -116,7 +116,13 @@ class InstallWorker(
     # byte counts. Values emitted will typically be Python ints.
     progress_updated = Signal(object, object)
 
-    def __init__(self, parent, models_enabled: List[str], initialize_gui=True):
+    def __init__(
+        self,
+        parent,
+        models_enabled: List[str],
+        initialize_gui=True,
+        debug_queue: bool = False,
+    ):
         super().__init__()
         self._installation_finalized = None
         self._openvoice_unidic_extraction_complete = None
@@ -137,6 +143,8 @@ class InstallWorker(
             self._safe_progress_emit,
             initialize_gui=initialize_gui,
         )
+        # Optional debug flag to emit/log each queued download (helps trace unwanted downloads)
+        self._debug_queue = debug_queue
         self._openvoice_zip_urls = [
             "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_1226.zip",
             "https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip",
@@ -205,6 +213,13 @@ class InstallWorker(
                 action_key = model["pipeline_action"]
             if not self.models_enabled.get(action, True):
                 continue
+            # Skip files if this SD version group or its core files are disabled
+            sd_flag = f"sd_{model['version']}"
+            core_flag = f"core_{model['version']}"
+            if not self.models_enabled.get(sd_flag, True):
+                continue
+            if not self.models_enabled.get(core_flag, True):
+                continue
             try:
                 files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
             except KeyError:
@@ -221,6 +236,13 @@ class InstallWorker(
                 action = model["pipeline_action"]
                 action_key = model["pipeline_action"]
             if not self.models_enabled.get(action, True):
+                continue
+            # Skip downloading if this SD version group or its core files are disabled
+            sd_flag = f"sd_{model['version']}"
+            core_flag = f"core_{model['version']}"
+            if not self.models_enabled.get(sd_flag, True):
+                continue
+            if not self.models_enabled.get(core_flag, True):
                 continue
             try:
                 files = SD_FILE_BOOTSTRAP_DATA[model["version"]][action_key]
@@ -244,6 +266,20 @@ class InstallWorker(
                 )
                 total_attempted_files += 1
                 try:
+                    if self._debug_queue:
+                        try:
+                            msg = f"Queueing SD model file: {model.get('path','<no-path>')} / {filename} -> {requested_file_path}"
+                        except Exception:
+                            msg = f"Queueing SD model file: {filename} -> {requested_file_path}"
+                        # Log and push to parent UI log if available
+                        self.logger.debug(msg)
+                        if hasattr(self.parent, "update_download_log"):
+                            try:
+                                self.parent.update_download_log(
+                                    {"message": msg}
+                                )
+                            except Exception:
+                                pass
                     self.hf_downloader.download_model(
                         requested_path=model["path"],
                         requested_file_name=filename,
@@ -254,6 +290,51 @@ class InstallWorker(
                 except Exception as e:
                     total_failed += 1
 
+        # Download Upscaler x4 files if enabled
+        try:
+            if self.models_enabled.get("upscaler_x4", False):
+                upscaler_files = SD_FILE_BOOTSTRAP_DATA.get(
+                    "Upscaler", {}
+                ).get("x4", [])
+                if upscaler_files:
+                    # Place upscaler under art/models/x4-upscaler
+                    requested_file_path = os.path.expanduser(
+                        os.path.join(
+                            self.path_settings.base_path,
+                            "art",
+                            "models",
+                            "x4-upscaler",
+                        )
+                    )
+                    self.total_models_in_current_step += len(upscaler_files)
+                    for filename in upscaler_files:
+                        try:
+                            if self._debug_queue:
+                                msg = f"Queueing Upscaler file: stabilityai/stable-diffusion-x4-upscaler / {filename} -> {requested_file_path}"
+                                self.logger.debug(msg)
+                                if hasattr(self.parent, "update_download_log"):
+                                    try:
+                                        self.parent.update_download_log(
+                                            {"message": msg}
+                                        )
+                                    except Exception:
+                                        pass
+                            self.hf_downloader.download_model(
+                                requested_path="stabilityai/stable-diffusion-x4-upscaler",
+                                requested_file_name=filename,
+                                requested_file_path=requested_file_path,
+                                requested_callback=self._safe_progress_emit,
+                            )
+                        except Exception as e:
+                            self.logger.exception(
+                                "Failed to download upscaler file %s: %s",
+                                filename,
+                                str(e),
+                            )
+        except Exception:
+            # Non-fatal: proceed with other downloads
+            pass
+
     def download_controlnet(self):
         if not self.models_enabled["stable_diffusion"]:
             self.set_page()
@@ -261,40 +342,84 @@ class InstallWorker(
         self.parent.on_set_downloading_status_label(
             {"label": "Downloading Controlnet models..."}
         )
-        for controlnet_model in controlnet_bootstrap_data:
-            if not self.models_enabled.get(controlnet_model["name"], True):
+        from collections import defaultdict
+
+        version_group = defaultdict(list)
+        for cn in controlnet_bootstrap_data:
+            version_group[cn["version"]].append(cn)
+
+        # First, tally totals for models that will be downloaded (already counted in calculate_total_files, but keep step tracking)
+        for version, models in version_group.items():
+            # Skip entire SD version if its master group is disabled
+            sd_flag = f"sd_{version}"
+            if not self.models_enabled.get(sd_flag, True):
                 continue
-            files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]][
-                "controlnet"
-            ]
-            # Remove redundant total_steps increment - already counted in calculate_total_files()
-            self.total_models_in_current_step += len(files)
-        for controlnet_model in controlnet_bootstrap_data:
-            if not self.models_enabled.get(controlnet_model["name"], True):
+            controlnet_flag = f"controlnet_{version}"
+            if not self.models_enabled.get(controlnet_flag, True):
                 continue
-            files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]][
-                "controlnet"
-            ]
-            for filename in files:
-                requested_file_path = os.path.expanduser(
-                    os.path.join(
-                        self.path_settings.base_path,
-                        "art",
-                        "models",
-                        controlnet_model["version"],
-                        "controlnet",
-                        controlnet_model["path"],
-                    )
-                )
+            for controlnet_model in models:
+                if not self.models_enabled.get(controlnet_model["name"], True):
+                    continue
                 try:
-                    self.hf_downloader.download_model(
-                        requested_path=controlnet_model["path"],
-                        requested_file_name=filename,
-                        requested_file_path=requested_file_path,
-                        requested_callback=self._safe_progress_emit,
+                    files = SD_FILE_BOOTSTRAP_DATA[
+                        controlnet_model["version"]
+                    ]["controlnet"]
+                    self.total_models_in_current_step += len(files)
+                except KeyError:
+                    continue
+
+        # Now download the files honoring the version and per-model toggles
+        for version, models in version_group.items():
+            # Skip entire SD version if its master group is disabled
+            sd_flag = f"sd_{version}"
+            if not self.models_enabled.get(sd_flag, True):
+                continue
+            controlnet_flag = f"controlnet_{version}"
+            if not self.models_enabled.get(controlnet_flag, True):
+                # Skip entire version
+                continue
+            for controlnet_model in models:
+                if not self.models_enabled.get(controlnet_model["name"], True):
+                    continue
+                try:
+                    files = SD_FILE_BOOTSTRAP_DATA[
+                        controlnet_model["version"]
+                    ]["controlnet"]
+                except KeyError:
+                    continue
+                for filename in files:
+                    requested_file_path = os.path.expanduser(
+                        os.path.join(
+                            self.path_settings.base_path,
+                            "art",
+                            "models",
+                            controlnet_model["version"],
+                            "controlnet",
+                            controlnet_model["path"],
+                        )
                     )
-                except Exception as e:
-                    print(f"Error downloading {filename}: {e}")
+                    try:
+                        if self._debug_queue:
+                            try:
+                                msg = f"Queueing ControlNet file: {controlnet_model.get('path','<no-path>')} / {filename} -> {requested_file_path}"
+                            except Exception:
+                                msg = f"Queueing ControlNet file: {filename} -> {requested_file_path}"
+                            self.logger.debug(msg)
+                            if hasattr(self.parent, "update_download_log"):
+                                try:
+                                    self.parent.update_download_log(
+                                        {"message": msg}
+                                    )
+                                except Exception:
+                                    pass
+                        self.hf_downloader.download_model(
+                            requested_path=controlnet_model["path"],
+                            requested_file_name=filename,
+                            requested_file_path=requested_file_path,
+                            requested_callback=self._safe_progress_emit,
+                        )
+                    except Exception as e:
+                        print(f"Error downloading {filename}: {e}")
 
     def download_controlnet_processors(self):
         if not self.models_enabled["stable_diffusion"]:
@@ -1172,6 +1297,8 @@ class InstallPage(BaseWizard):
         self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["txt2img"])
         self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["SD 1.5"]["inpaint"])
 
+        self.total_steps += len(SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"])
+
         # Determine total controlnet models being downloaded
         if self.models_enabled["safety_checker"]:
             self.total_steps += len(
@@ -1190,12 +1317,17 @@ class InstallPage(BaseWizard):
                 "feature_extractor",
             ):
                 continue
-            if self.models_enabled[model["name"]]:
-                self.total_steps += len(
-                    SD_FILE_BOOTSTRAP_DATA[model["version"]][
-                        model["pipeline_action"]
-                    ]
-                )
+            # Use .get to avoid KeyError for model names that aren't present in models_enabled
+            if self.models_enabled.get(model["name"], True):
+                try:
+                    self.total_steps += len(
+                        SD_FILE_BOOTSTRAP_DATA[model["version"]][
+                            model["pipeline_action"]
+                        ]
+                    )
+                except KeyError:
+                    # If file data for this model isn't present, skip it
+                    continue
 
         # Increase total number of LLMs downloaded
         if self.models_enabled["mistral"]:
@@ -1238,8 +1370,12 @@ class InstallPage(BaseWizard):
 
         # Create and configure worker thread
         self.thread = QThread()
+        # Enable debug_queue=True temporarily to trace queued downloads
         self.worker = InstallWorker(
-            self, models_enabled=self.models_enabled, initialize_gui=False
+            self,
+            models_enabled=self.models_enabled,
+            initialize_gui=False,
+            debug_queue=True,
         )
         self.worker.moveToThread(self.thread)
 
@@ -1325,6 +1461,13 @@ class InstallPage(BaseWizard):
                     action_key = model["pipeline_action"]
                 if not self.models_enabled.get(action, True):
                     continue
+                # Skip files for this model if its SD version group or core files for that version are disabled
+                sd_flag = f"sd_{model['version']}"
+                core_flag = f"core_{model['version']}"
+                if not self.models_enabled.get(sd_flag, True):
+                    continue
+                if not self.models_enabled.get(core_flag, True):
+                    continue
                 try:
                     files = SD_FILE_BOOTSTRAP_DATA[model["version"]][
                         action_key
@@ -1332,14 +1475,38 @@ class InstallPage(BaseWizard):
                     self.total_files += len(files)
                 except KeyError:
                     continue
-            for controlnet_model in controlnet_bootstrap_data:
-                if not self.models_enabled.get(controlnet_model["name"], True):
+            # Count controlnet files grouped by version only when that version's controlnet is enabled
+            from collections import defaultdict
+
+            version_group = defaultdict(list)
+            for cn in controlnet_bootstrap_data:
+                version_group[cn["version"]].append(cn)
+
+            for version, models in version_group.items():
+                controlnet_flag = f"controlnet_{version}"
+                if not self.models_enabled.get(controlnet_flag, True):
                     continue
-                files = SD_FILE_BOOTSTRAP_DATA[controlnet_model["version"]][
-                    "controlnet"
-                ]
-                self.total_files += len(files)
+                for controlnet_model in models:
+                    if not self.models_enabled.get(
+                        controlnet_model["name"], True
+                    ):
+                        continue
+                    try:
+                        files = SD_FILE_BOOTSTRAP_DATA[
+                            controlnet_model["version"]
+                        ]["controlnet"]
+                        self.total_files += len(files)
+                    except KeyError:
+                        continue
             self.total_files += len(controlnet_processor_files)
+            # Upscaler (x4) files
+            if self.models_enabled.get("upscaler_x4", False):
+                try:
+                    self.total_files += len(
+                        SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"]
+                    )
+                except Exception:
+                    pass
         if self.models_enabled["mistral"]:
             models = []
             for model in model_bootstrap_data:
@@ -1366,6 +1533,16 @@ class InstallPage(BaseWizard):
             self.total_files += 2
             # Add unidic zip file
             self.total_files += 1
+        # Add upscaler files to total_files when enabled (if not already counted)
+        if self.models_enabled.get(
+            "upscaler_x4", False
+        ) and not self.models_enabled.get("stable_diffusion", False):
+            try:
+                self.total_files += len(
+                    SD_FILE_BOOTSTRAP_DATA["Upscaler"]["x4"]
+                )
+            except Exception:
+                pass
 
     def start(self):
         """Start the installation process and ensure Next button is disabled"""

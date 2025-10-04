@@ -152,7 +152,6 @@ class DocumentEditorContainerWidget(BaseWidget):
         self.ui.documents.setCurrentWidget(editor)
 
     def _new_tab(self):
-        print("NEW TAB PRESSED")
         editor = DocumentEditorWidget()
         # Leave editor.current_file_path as the source of truth; do not set an attribute
         self.ui.documents.addTab(editor, "Untitled")

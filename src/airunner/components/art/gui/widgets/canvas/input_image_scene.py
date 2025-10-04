@@ -120,6 +120,7 @@ class InputImageScene(BrushScene):
         return True  # Event handled
 
     def _handle_image_generated_signal(self, data: Dict):
+        # Avoid automatically overwriting input images on generation if locked
         if self.current_settings.lock_input_image:
             return
         super()._handle_image_generated_signal(data)

@@ -10,8 +10,6 @@ def save_splitter_settings(
     """
     settings = get_qsettings()
 
-    print("SAVING SPLITTERS", splitter_name_space)
-
     for splitter_name in splitters:
         widget = getattr(ui, splitter_name)
         splitter_state = widget.saveState()

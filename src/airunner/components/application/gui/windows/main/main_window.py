@@ -904,7 +904,7 @@ class MainWindow(
             self.ui,
             ["main_window_splitter"],
             default_maximize_config=default_splitter_config,
-            
+            namespace="MainWindow"
         )
 
         self.status_widget = StatusWidget()

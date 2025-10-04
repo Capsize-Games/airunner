@@ -115,6 +115,13 @@ art_pipline_data = [
         "default": False,
     },
     {
+        "pipeline_action": "upscaler",
+        "version": "x4-upscaler",
+        "category": "stablediffusion",
+        "classname": "transformers.CLIPTextModel",
+        "default": False,
+    },
+    {
         "pipeline_action": "feature_extractor",
         "version": "SD 1.5",
         "category": "stablediffusion",
