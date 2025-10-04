@@ -51,11 +51,43 @@ class X4UpscaleManager(BaseDiffusersModelManager):
             self._model_status[ModelType.UPSCALER] = ModelStatus.UNLOADED
         self._pipe: Optional[StableDiffusionUpscalePipeline] = None
 
+    def handle_generate_signal(self, message: Optional[Dict] = None):
+        """
+        Standard interface for image generation - called by the worker.
+        For upscaling, we need a source image from the canvas or image request.
+        """
+        self.image_request = message.get("image_request", None)
+        if not self.image_request:
+            raise ValueError("ImageRequest is None for upscale")
+
+        # Get the source image from the canvas or image_request
+        source_image = (
+            self.image_request.image
+            if hasattr(self.image_request, "image")
+            else None
+        )
+
+        if source_image is None:
+            message = "No source image available for upscaling"
+            self.logger.error(message)
+            self._emit_failure(message)
+            return
+
+        # Perform the upscale using the existing implementation
+        try:
+            result = self.handle_upscale_request(source_image)
+            self.image_request = None
+            return result
+        except Exception as exc:
+            self.logger.exception("Upscale failed: %s", exc)
+            self._emit_failure(str(exc))
+            raise
+
     @property
     def model_path(self) -> str:
         return os.path.join(
             os.path.expanduser(self.path_settings.base_path),
-            "art/models/x4-upscaler",
+            "art/models/upscaler/x4-upscaler",
         )
 
     @property
@@ -158,16 +190,8 @@ class X4UpscaleManager(BaseDiffusersModelManager):
         )
 
     def handle_upscale_request(
-        self, data: Optional[Dict] = None
+        self, source_image: Image.Image
     ) -> Optional[ImageResponse]:
-        data = data or {}
-        source_image = data.get("image")
-        if source_image is None:
-            message = "No image provided for x4 upscale request"
-            self.logger.error(message)
-            self._emit_failure(message)
-            return None
-
         source_image = self._ensure_image(source_image)
         # Save the input image to the preview directory for debugging/comparison
         try:
@@ -183,23 +207,12 @@ class X4UpscaleManager(BaseDiffusersModelManager):
         except Exception:
             pass
 
-        request = data.get("image_request")
-        if request is not None and not isinstance(request, ImageRequest):
-            try:
-                request = ImageRequest(**request)
-            except Exception:
-                request = None
-        if request is None:
-            request = self._build_request_from_payload(data, source_image)
-        self.image_request = request
-
-        prompt = request.prompt or data.get("prompt", "")
-        negative_prompt = request.negative_prompt or data.get(
-            "negative_prompt", ""
-        )
+        request = self.image_request
+        prompt = request.prompt
+        negative_prompt = request.negative_prompt
         steps = max(1, request.steps or self.DEFAULT_NUM_STEPS)
-        guidance_scale = request.scale or self.DEFAULT_GUIDANCE_SCALE
-        noise_level = data.get("noise_level", self.DEFAULT_NOISE_LEVEL)
+        guidance_scale = request.scale
+        noise_level = self.DEFAULT_NOISE_LEVEL
 
         self._emit_progress(0, steps)
 

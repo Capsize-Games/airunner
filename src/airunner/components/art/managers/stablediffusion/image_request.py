@@ -1,6 +1,8 @@
 from typing import Dict, List, Optional
 from dataclasses import dataclass, asdict
 
+from PIL import Image
+
 from airunner.settings import AIRUNNER_DEFAULT_SCHEDULER
 from airunner.enums import ImagePreset, QualityEffects
 
@@ -41,6 +43,8 @@ class ImageRequest:
     image_preset: ImagePreset = ImagePreset.NONE
     quality_effects: QualityEffects = QualityEffects.STANDARD
     node_id: Optional[str] = None
+    image: Optional[Image.Image] = None
+    mask: Optional[Image.Image] = None
 
     additional_prompts: Optional[List[Dict[str, str]]] = None
 

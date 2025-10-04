@@ -527,104 +527,7 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections>
-  <connection>
-   <sender>version</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>stable_diffusion_settings_widget</receiver>
-   <slot>handle_version_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>89</x>
-     <y>97</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>59</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pipeline</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>stable_diffusion_settings_widget</receiver>
-   <slot>handle_pipeline_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>110</x>
-     <y>175</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>121</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>use_compel</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>stable_diffusion_settings_widget</receiver>
-   <slot>toggled_use_compel(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>42</x>
-     <y>536</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>2</x>
-     <y>353</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>scheduler</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>stable_diffusion_settings_widget</receiver>
-   <slot>handle_scheduler_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>208</x>
-     <y>406</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>177</x>
-     <y>4</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>model</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>stable_diffusion_settings_widget</receiver>
-   <slot>handle_model_changed(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>223</x>
-     <y>253</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>202</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>custom_model</sender>
-   <signal>textEdited(QString)</signal>
-   <receiver>stable_diffusion_settings_widget</receiver>
-   <slot>on_custom_model_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>58</x>
-     <y>312</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-3</x>
-     <y>27</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>image_to_canvas()</slot>
   <slot>similar_image()</slot>
@@ -635,6 +538,7 @@
   <slot>cancel_delete()</slot>
   <slot>export_image()</slot>
   <slot>upscale_2x_clicked()</slot>
+  <slot>upscale_x4_clicked()</slot>
   <slot>reset_prompt_clicked()</slot>
   <slot>reset_negative_prompt_clicked()</slot>
   <slot>handle_controlnet_changed(QString)</slot>

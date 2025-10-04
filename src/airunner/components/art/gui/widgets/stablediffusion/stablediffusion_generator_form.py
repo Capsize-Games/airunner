@@ -42,6 +42,7 @@ from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
+from airunner.utils.image import convert_binary_to_image
 from airunner.utils.widgets import load_splitter_settings
 
 
@@ -569,6 +570,18 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 model_path = aimodel.path
                 self.update_generator_settings(model=aimodel.id)
 
+        binary_image = None
+        image = None
+        mask = None
+        if (
+            self.generator_settings.pipeline_action
+            == GeneratorSection.UPSCALER.value
+        ):
+            binary_image = self.drawing_pad_settings.image
+
+        if binary_image is not None:
+            image = convert_binary_to_image(binary_image)
+
         image_request = ImageRequest(
             prompt=data.get("prompt", self.ui.prompt.toPlainText()),
             negative_prompt=data.get(
@@ -615,6 +628,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
                 and self.generator_settings.quality_effects is not None
                 else QualityEffects.STANDARD
             ),
+            image=image,
+            mask=mask,
         )
 
         self.api.art.send_request(image_request=image_request)

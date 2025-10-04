@@ -384,6 +384,7 @@ class GeneratorSection(Enum):
     IMG2IMG = "img2img"
     INPAINT = "inpaint"
     OUTPAINT = "outpaint"
+    UPSCALER = "upscaler"
 
 
 class StableDiffusionVersion(Enum):
@@ -393,6 +394,7 @@ class StableDiffusionVersion(Enum):
     SDXL_LIGHTNING = "SDXL Lightning"
     SDXL_HYPER = "SDXL Hyper"
     SD1_5 = "SD 1.5"
+    X4_UPSCALER = "x4-upscaler"
 
 
 class Language(Enum):
