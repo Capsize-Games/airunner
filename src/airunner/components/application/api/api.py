@@ -271,8 +271,34 @@ class API(App):
         Emit a signal indicating an application error.
         :param message: The error message.
         """
+        # Don't treat user-initiated interrupts as application errors.
         if exception is not None:
+            # If the exception is an InterruptedException, ignore it.
+            try:
+                from airunner.components.application.exceptions import (
+                    InterruptedException,
+                )
+
+                if isinstance(exception, InterruptedException):
+                    self.logger.debug(
+                        "Ignored InterruptedException in application_error"
+                    )
+                    return
+            except Exception:
+                # If we can't import or check, fall through to default handling
+                pass
             message = str(exception)
+
+        if (
+            isinstance(message, str)
+            and message.strip().lower() == "interrupted"
+        ):
+            # Silent ignore for user cancelations
+            self.logger.debug(
+                "Ignored Interrupted message in application_error: %s", message
+            )
+            return
+
         self.logger.error({"message": message})
         self.emit_signal(
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,

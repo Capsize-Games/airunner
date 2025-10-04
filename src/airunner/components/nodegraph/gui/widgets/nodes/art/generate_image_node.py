@@ -6,6 +6,9 @@ from airunner.components.nodegraph.gui.widgets.nodes.art.base_art_node import (
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
+from airunner.components.art.managers.stablediffusion.image_response import (
+    ImageResponse,
+)
 from airunner.enums import SignalCode
 from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 
@@ -47,13 +50,23 @@ class GenerateImageNode(BaseArtNode):
         self.api.art.send_request(image_request)
 
     def _on_image_generated(self, data: Dict):
-        image_response = data.get("message", None)
-        if image_response is None:
-            self.api.nodegraph.node_executed(
-                node_id=data.get("node_id", self.id),
-                result=self.EXEC_OUT_PORT_NAME,
-                data={"image_response": None, "image": None},
-            )
+        code = data.get("code", None)
+        msg = data.get("message", None)
+
+        # If the worker returned an ImageResponse, handle normally.
+        if isinstance(msg, ImageResponse):
+            image_response = msg
+        else:
+            # Non-image responses (error strings, interrupted notifications)
+            # should be treated as a failed/aborted generation for this node.
+            try:
+                self.api.nodegraph.node_executed(
+                    node_id=data.get("node_id", self.id),
+                    result=self.EXEC_OUT_PORT_NAME,
+                    data={"image_response": None, "image": None},
+                )
+            except Exception:
+                pass
             self._pending_request = False
             return
 
