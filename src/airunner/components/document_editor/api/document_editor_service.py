@@ -7,3 +7,6 @@ class DocumentEditorService(APIServiceBase):
         self.emit_signal(
             SignalCode.RUN_SCRIPT, {"document_path": document_path}
         )
+
+    def new_document(self):
+        self.emit_signal(SignalCode.NEW_DOCUMENT, {})
