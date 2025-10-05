@@ -39,6 +39,7 @@ from PySide6.QtGui import (
     QTextCharFormat,
 )
 from PySide6.QtWidgets import QWidget, QPlainTextEdit, QMessageBox
+from tempfile import NamedTemporaryFile
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.document_editor.gui.templates.document_editor_ui import (
     Ui_Form,
@@ -361,13 +362,42 @@ class DocumentEditorWidget(BaseWidget):
 
     @Slot()
     def on_run_button_clicked(self):
-        self.save_file()
-        self.emit_signal(
-            SignalCode.RUN_SCRIPT,
-            {
-                "document_path": self.current_file_path,
-            },
-        )
+        # Run the current buffer. For saved documents, persist current
+        # contents first. For unsaved/new documents, write the buffer to a
+        # temporary .py file and run that, so the user doesn't need to
+        # explicitly save.
+        if self.current_file_path:
+            # Try to save current contents to the existing path. If saving
+            # fails, abort running.
+            ok = self.save_file()
+            if not ok:
+                return
+            self.emit_signal(
+                SignalCode.RUN_SCRIPT,
+                {"document_path": self.current_file_path, "temp_file": False},
+            )
+            return
+
+        # Unsaved buffer -> write to a temporary file and run it.
+        try:
+            # Use NamedTemporaryFile to ensure a unique path; don't delete on
+            # close so the runner process can read it. Use a .py suffix so
+            # external tools treat it as Python.
+            tmp = NamedTemporaryFile(
+                delete=False, suffix=".py", prefix="airunner_run_"
+            )
+            try:
+                content = self.editor.toPlainText()
+                tmp.write(content.encode("utf-8"))
+                tmp.flush()
+            finally:
+                tmp.close()
+            self.emit_signal(
+                SignalCode.RUN_SCRIPT,
+                {"document_path": tmp.name, "temp_file": True},
+            )
+        except Exception:
+            self._logger.exception("Failed to write temporary run file")
 
     def _on_document_contents_changed(self):
         """Debounce document changes and trigger autosave after idle period.
