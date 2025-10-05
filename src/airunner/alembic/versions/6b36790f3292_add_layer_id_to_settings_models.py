@@ -34,12 +34,28 @@ def upgrade() -> None:
         ImageToImageSettings,
         OutpaintSettings,
     ]
+    # Get inspector to check existing schema so this migration is idempotent
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
 
     for model in settings_models:
+        table_name = model.__tablename__
+
+        # If the column already exists, skip modifying this table
+        try:
+            existing_cols = [
+                c["name"] for c in inspector.get_columns(table_name)
+            ]
+        except Exception:
+            # Table might not exist yet; let the batch operation handle it
+            existing_cols = []
+
+        if "layer_id" in existing_cols:
+            # Column already present; skip to avoid re-creating tables
+            continue
+
         # Add layer_id column with batch operation for SQLite compatibility
-        with op.batch_alter_table(
-            model.__tablename__, recreate="always"
-        ) as batch_op:
+        with op.batch_alter_table(table_name, recreate="always") as batch_op:
             # Add the layer_id column (nullable for existing records)
             batch_op.add_column(
                 sa.Column("layer_id", sa.Integer, nullable=True)
@@ -47,7 +63,7 @@ def upgrade() -> None:
 
             # Add foreign key constraint
             batch_op.create_foreign_key(
-                f"fk_{model.__tablename__}_layer_id",
+                f"fk_{table_name}_layer_id",
                 "canvas_layer",
                 ["layer_id"],
                 ["id"],
@@ -63,15 +79,36 @@ def downgrade() -> None:
         ImageToImageSettings,
         OutpaintSettings,
     ]
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
 
     for model in settings_models:
-        with op.batch_alter_table(
-            model.__tablename__, recreate="always"
-        ) as batch_op:
-            # Drop foreign key constraint first
-            batch_op.drop_constraint(
-                f"fk_{model.__tablename__}_layer_id", type_="foreignkey"
-            )
+        table_name = model.__tablename__
+
+        # If the table/column doesn't exist, skip
+        try:
+            existing_cols = [
+                c["name"] for c in inspector.get_columns(table_name)
+            ]
+        except Exception:
+            existing_cols = []
+
+        if "layer_id" not in existing_cols:
+            continue
+
+        with op.batch_alter_table(table_name, recreate="always") as batch_op:
+            # Drop foreign key constraint first (if present)
+            try:
+                batch_op.drop_constraint(
+                    f"fk_{table_name}_layer_id", type_="foreignkey"
+                )
+            except Exception:
+                # Constraint might not exist; ignore
+                pass
 
             # Drop the layer_id column
-            batch_op.drop_column("layer_id")
+            try:
+                batch_op.drop_column("layer_id")
+            except Exception:
+                # Column might have been removed already; ignore
+                pass
