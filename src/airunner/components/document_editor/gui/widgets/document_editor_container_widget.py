@@ -28,6 +28,9 @@ class DocumentEditorContainerWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         self._script_process = None
+        # Track temporary files created for running unsaved buffers so they
+        # can be removed after execution.
+        self._temp_run_files = set()
         self._splitters = ["vertical_splitter", "splitter"]
         self.signal_handlers = {
             SignalCode.FILE_EXPLORER_OPEN_FILE: self.open_file_in_new_tab,
@@ -61,6 +64,19 @@ class DocumentEditorContainerWidget(BaseWidget):
 
     def run_script(self, data: Dict) -> None:
         document_path = data.get("document_path")
+        temp_file_flag = bool(data.get("temp_file", False))
+        # Defensive: if no document_path provided (e.g., unsaved new doc),
+        # warn the user and abort instead of passing None to os.path
+        if not document_path:
+            try:
+                QMessageBox.warning(
+                    self,
+                    "Run Error",
+                    "No file to run. Please save the document before running.",
+                )
+            except Exception:
+                pass
+            return
         if os.path.exists(document_path) and os.path.isfile(document_path):
             suffix = os.path.splitext(document_path)[1].lower()
             if suffix in [".py"]:
@@ -74,6 +90,11 @@ class DocumentEditorContainerWidget(BaseWidget):
                 self.ui.terminal.clear()
                 process = QProcess(self)
                 self._script_process = process
+                if temp_file_flag:
+                    try:
+                        self._temp_run_files.add(document_path)
+                    except Exception:
+                        pass
                 script_dir = os.path.dirname(document_path)
                 python_exe = sys.executable
                 process.setProgram(python_exe)
@@ -90,11 +111,13 @@ class DocumentEditorContainerWidget(BaseWidget):
                 )
                 process.finished.connect(
                     lambda code, status: self._on_process_finished(
-                        code, status
+                        code, status, document_path if temp_file_flag else None
                     )
                 )
                 process.errorOccurred.connect(
-                    lambda err: self._on_process_error(err)
+                    lambda err: self._on_process_error(
+                        err, document_path if temp_file_flag else None
+                    )
                 )
                 process.start()
 
@@ -106,15 +129,40 @@ class DocumentEditorContainerWidget(BaseWidget):
         if err:
             self.ui.terminal.appendPlainText(err)
 
-    def _on_process_finished(self, exit_code: int, exit_status) -> None:
+    def _on_process_finished(
+        self, exit_code: int, exit_status, temp_path: str | None = None
+    ) -> None:
         self.ui.terminal.appendPlainText(
             f"\n[Process finished with exit code {exit_code}]"
         )
         self._script_process = None
+        # Cleanup temporary run file if one was used
+        if temp_path:
+            try:
+                if temp_path in self._temp_run_files:
+                    self._temp_run_files.discard(temp_path)
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+            except Exception:
+                # Don't block on cleanup failures; log to terminal
+                self.ui.terminal.appendPlainText(
+                    f"\n[Warning: failed to remove temp file {temp_path}]"
+                )
 
-    def _on_process_error(self, error) -> None:
+    def _on_process_error(self, error, temp_path: str | None = None) -> None:
         self.ui.terminal.appendPlainText(f"\n[Process error: {error}]")
         self._script_process = None
+        # Attempt to remove temp file on error as well
+        if temp_path:
+            try:
+                if temp_path in self._temp_run_files:
+                    self._temp_run_files.discard(temp_path)
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+            except Exception:
+                self.ui.terminal.appendPlainText(
+                    f"\n[Warning: failed to remove temp file {temp_path}]"
+                )
 
     def _open_file_tab(self, file_path: str):
         if not file_path:
