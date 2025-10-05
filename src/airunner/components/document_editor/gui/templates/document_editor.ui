@@ -62,6 +62,9 @@
          <height>30</height>
         </size>
        </property>
+       <property name="cursor">
+        <cursorShape>PointingHandCursor</cursorShape>
+       </property>
        <property name="toolTip">
         <string>Run script</string>
        </property>

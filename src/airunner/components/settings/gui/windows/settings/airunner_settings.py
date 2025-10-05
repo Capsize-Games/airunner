@@ -28,6 +28,9 @@ from airunner.components.llm.gui.widgets.bot_preferences import (
 from airunner.components.llm.gui.widgets.prompt_templates_widget import (
     PromptTemplatesWidget,
 )
+from airunner.components.settings.gui.widgets.document_preferences_widget import (
+    DocumentPreferencesWidget,
+)
 from airunner.components.settings.gui.widgets.export_preferences.export_preferences_widget import (
     ExportPreferencesWidget,
 )
@@ -154,6 +157,8 @@ class SettingsWindow(BaseWindow):
             return UserSettingsWidget
         elif name == "export_preferences":
             return ExportPreferencesWidget
+        elif name == "document_preferences":
+            return DocumentPreferencesWidget
         elif name == "sound_settings":
             return SoundSettingsWidget
         elif name == "huggingface_settings":
@@ -187,6 +192,16 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "export_preferences",
                         "display_name": "Export Preferences",
+                        "checkable": False,
+                    }
+                ],
+            },
+            {
+                "section": "Document Preferences",
+                "files": [
+                    {
+                        "name": "document_preferences",
+                        "display_name": "Document Preferences",
                         "checkable": False,
                     }
                 ],

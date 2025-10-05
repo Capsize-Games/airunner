@@ -47,6 +47,7 @@ class Ui_Form(object):
         self.run_button.setObjectName(u"run_button")
         self.run_button.setMinimumSize(QSize(30, 30))
         self.run_button.setMaximumSize(QSize(30, 30))
+        self.run_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon = QIcon()
         icon.addFile(u":/dark/icons/feather/dark/play.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.run_button.setIcon(icon)
