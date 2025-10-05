@@ -21,6 +21,20 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade():
     # Add a nullable text_items column to drawing_pad_settings
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
+    try:
+        existing_cols = [
+            c["name"] for c in inspector.get_columns("drawing_pad_settings")
+        ]
+    except Exception:
+        existing_cols = []
+
+    if "text_items" in existing_cols:
+        # Column already exists; nothing to do
+        return
+
     with op.batch_alter_table(
         "drawing_pad_settings", recreate="auto"
     ) as batch_op:
@@ -29,6 +43,19 @@ def upgrade():
 
 def downgrade():
     # Remove the text_items column if present
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
+    try:
+        existing_cols = [
+            c["name"] for c in inspector.get_columns("drawing_pad_settings")
+        ]
+    except Exception:
+        existing_cols = []
+
+    if "text_items" not in existing_cols:
+        return
+
     with op.batch_alter_table(
         "drawing_pad_settings", recreate="auto"
     ) as batch_op:
