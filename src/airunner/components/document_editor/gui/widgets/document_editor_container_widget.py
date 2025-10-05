@@ -32,6 +32,7 @@ class DocumentEditorContainerWidget(BaseWidget):
         self.signal_handlers = {
             SignalCode.FILE_EXPLORER_OPEN_FILE: self.open_file_in_new_tab,
             SignalCode.RUN_SCRIPT: self.run_script,
+            SignalCode.NEW_DOCUMENT: self.handle_new_document_signal,
         }
         super().__init__(*args, **kwargs)
         # Ensure the tab close signal is connected to our handler. Some UI auto-connect
@@ -44,6 +45,9 @@ class DocumentEditorContainerWidget(BaseWidget):
             # If the UI isn't fully constructed or the documents widget doesn't exist,
             # just ignore; auto-connect may still work.
             pass
+
+    def handle_new_document_signal(self, data: Dict):
+        self._new_tab()
 
     def setup_tab_manager(self, *args, **kwargs):
         # Remove 'parent' from kwargs if present, since TabManagerMixin does not accept it

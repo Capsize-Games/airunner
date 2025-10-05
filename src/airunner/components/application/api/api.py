@@ -7,6 +7,9 @@ from airunner.app import App
 from airunner.components.art.managers.stablediffusion.image_request import (
     ImageRequest,
 )
+from airunner.components.document_editor.api.document_editor_service import (
+    DocumentEditorService,
+)
 from airunner.enums import (
     EngineResponseCode,
     ModelStatus,
@@ -151,6 +154,7 @@ class API(App):
         self._initialized = True
         self.llm = LLMAPIService(emit_signal=self.emit_signal)
         self.art = ARTAPIService(emit_signal=self.emit_signal)
+        self.document = DocumentEditorService(emit_signal=self.emit_signal)
         self.tts = TTSAPIService(emit_signal=self.emit_signal)
         self.stt = STTAPIService(emit_signal=self.emit_signal)
         self.video = VideoAPIService(emit_signal=self.emit_signal)

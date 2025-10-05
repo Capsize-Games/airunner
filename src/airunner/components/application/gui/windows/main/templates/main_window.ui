@@ -834,15 +834,29 @@
      <addaction name="workflow_actionEdit"/>
      <addaction name="workflow_actionOpen"/>
     </widget>
+    <widget class="QMenu" name="menuDocuments">
+     <property name="title">
+      <string>Documents</string>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../../../../gui/resources/feather.qrc">
+       <normaloff>:/light/icons/feather/light/file-text.svg</normaloff>:/light/icons/feather/light/file-text.svg</iconset>
+     </property>
+     <addaction name="actionNew_File"/>
+     <addaction name="actionSave_File"/>
+    </widget>
     <addaction name="menuArt"/>
     <addaction name="separator"/>
     <addaction name="menuChat"/>
     <addaction name="separator"/>
     <addaction name="menuWorkflow"/>
     <addaction name="separator"/>
+    <addaction name="menuDocuments"/>
+    <addaction name="separator"/>
     <addaction name="actionReset_Settings_2"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -1329,6 +1343,16 @@
    </property>
    <property name="text">
     <string>Download Model</string>
+   </property>
+  </action>
+  <action name="actionNew_File">
+   <property name="text">
+    <string>New File</string>
+   </property>
+  </action>
+  <action name="actionSave_File">
+   <property name="text">
+    <string>Save File</string>
    </property>
   </action>
  </widget>

@@ -180,6 +180,7 @@ class MainWindow(
         ("radio", "visualizer_button"),
         ("arrow-down-circle", "actionDownload_Model"),
         ("book", "knowledgebase_button"),
+        ("file-text", "menuDocuments"),
     ]
     _last_reload_time = 0
     _reload_debounce_seconds = 1.0
@@ -199,7 +200,6 @@ class MainWindow(
         self.negative_prompt = None
         self.image_path = None
         self.token_signal = Signal(str)
-        self.api = None
         self.input_event_manager = None
         self.tqdm_callback_triggered = False
         self.action = GeneratorSection.TXT2IMG.value
@@ -344,6 +344,10 @@ class MainWindow(
             self.ui.main_window_splitter.sizes()[panel_id] > 0
         )
         self.ui.knowledgebase_button.blockSignals(False)
+
+    @Slot()
+    def on_actionNew_File_triggered(self):
+        self.api.document.new_document()
 
     @Slot()
     def on_actionQuit_triggered(self):
@@ -904,7 +908,7 @@ class MainWindow(
             self.ui,
             ["main_window_splitter"],
             default_maximize_config=default_splitter_config,
-            namespace="MainWindow"
+            namespace="MainWindow",
         )
 
         self.status_widget = StatusWidget()
