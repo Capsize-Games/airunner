@@ -23,20 +23,6 @@ Each service module provides a class for interacting with a specific domain via 
 - **tts_services.py**: Text-to-speech (TTS) playback and control.
 - **video_services.py**: Video generation and progress updates.
 
-## Usage
-
-- **For full application integration:**
-  ```python
-  from airunner.components.application.api.api import API
-  api = API()
-  api.llm.send_request(prompt="Hello!")
-  ```
-- **For decoupled/service-only usage:**
-  ```python
-  from airunner.components.application.api.api_manager import APIManager
-  api_manager = APIManager(emit_signal=None)
-  api_manager.tts.play_audio("Hello!")
-  ```
 
 ## Testing
 
