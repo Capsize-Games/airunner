@@ -35,6 +35,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"
     NEW_DOCUMENT = "new_document_signal"
     SAVE_STATE = "save_state_signal"
     RUN_SCRIPT = "run_script_signal"

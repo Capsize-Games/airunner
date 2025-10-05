@@ -931,6 +931,21 @@ class MainWindow(
         self.set_chat_button_checked()
         self.set_knowledgebase_button_checked()
 
+        # Keyboard shortcut: Ctrl+N -> placeholder handler using QAction
+        try:
+            action_new_shortcut = QAction(self)
+            action_new_shortcut.setShortcut(QKeySequence("Ctrl+N"))
+            action_new_shortcut.triggered.connect(self._on_ctrl_n_pressed)
+            # add to window so the shortcut is active
+            self.addAction(action_new_shortcut)
+            self._action_new_shortcut = action_new_shortcut
+        except Exception:
+            # Fail silently if QAction creation fails
+            try:
+                self.logger.debug("Could not create Ctrl+N QAction shortcut")
+            except Exception:
+                pass
+
     def _disable_aiart_gui_elements(self):
         self.ui.center_widget.hide()
         self.ui.menuImage.hide()
@@ -1005,6 +1020,30 @@ class MainWindow(
             if shortcutkey.name == key_name:
                 return shortcutkey.text
         return ""
+    
+    @property
+    def current_active_tab_index(self) -> int:
+        """Get the current active main tab index from QSettings."""
+        self.qsettings.beginGroup("window_settings")
+        index = self.qsettings.value("active_main_tab_index", 0, type=int)
+        self.qsettings.endGroup()
+        return index
+
+    @Slot()
+    def _on_ctrl_n_pressed(self):
+        """Placeholder handler for Ctrl+N keyboard shortcut.
+
+        Currently this is a stub that logs the event and updates the status
+        bar. Replace with desired behavior (e.g. create new document) as needed.
+        """
+        current_active_tab_index = self.current_active_tab_index
+        if current_active_tab_index == 1:
+            self.api.art.canvas.new_document()
+        elif current_active_tab_index == 2:
+            self.api.nodegraph.new_document()
+        elif current_active_tab_index == 3:
+            self.api.document.new_document()
+        self.api.llm.clear_history()
 
     def on_save_stablediffusion_prompt_signal(self, data: Dict):
         self.create_saved_prompt(

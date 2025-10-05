@@ -1,7 +1,9 @@
 from airunner.components.application.api.api_service_base import APIServiceBase
 from airunner.enums import SignalCode
 from airunner.components.nodegraph.data.workflow import Workflow
-from airunner.components.nodegraph.gui.widgets.custom_node_graph import CustomNodeGraph
+from airunner.components.nodegraph.gui.widgets.custom_node_graph import (
+    CustomNodeGraph,
+)
 
 
 class NodegraphAPIService(APIServiceBase):
@@ -44,6 +46,9 @@ class NodegraphAPIService(APIServiceBase):
             SignalCode.WORKFLOW_LOAD_SIGNAL,
             {"workflow": workflow, "callback": callback},
         )
+
+    def new_document(self):
+        self.clear_workflow(None)
 
     def clear_workflow(self, callback):
         self.emit_signal(

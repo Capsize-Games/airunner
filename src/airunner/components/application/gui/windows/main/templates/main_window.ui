@@ -1209,9 +1209,6 @@
    <property name="text">
     <string>New</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+N</string>
-   </property>
   </action>
   <action name="actionImport_image">
    <property name="icon">

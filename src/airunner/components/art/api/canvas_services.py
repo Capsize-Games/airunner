@@ -56,6 +56,9 @@ class CanvasAPIService(APIServiceBase):
             SignalCode.CANVAS_LOAD_IMAGE_FROM_PATH_SIGNAL, {"image_path": path}
         )
 
+    def new_document(self):
+        self.clear()
+
     def clear(self):
         self.emit_signal(SignalCode.CANVAS_CLEAR, {})
 
