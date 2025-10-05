@@ -115,17 +115,6 @@ QCheckBox:indicator:disabled {
     border: 1px solid #2e8c6a;
 }
 
-/* Ensure QListWidget indicators use the same check icon and sizing as QCheckBox */
-QListWidget::indicator {
-    border-radius: 0;
-}
-
-QListWidget::indicator:checked {
-    image: url(:/light/icons/feather/light/check.svg);
-    width: 12px;
-    height: 12px;
-}
-
 QPushButton {
     border-radius: none;
     padding: 4px 4px 3px 4px;

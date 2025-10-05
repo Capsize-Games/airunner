@@ -107,21 +107,6 @@ QCheckBox:indicator:checked {
     height: 12px;
 }
 
-/* Ensure QListWidget item indicators (when using embedded QCheckBox widgets)
-   follow the same accent color and icon as standalone QCheckBox controls. */
-QListWidget::indicator {
-    border-radius: 0;
-    border: 1px solid rgba(0, 132, 185, 255);
-}
-
-QListWidget::indicator:checked {
-    background-color: rgba(0, 132, 185, 255);
-    border-color: rgba(0, 132, 185, 255);
-    image: url(:/light/icons/feather/light/check.svg);
-    width: 12px;
-    height: 12px;
-}
-
 QCheckBox:disabled {
     color: #333;
 }
