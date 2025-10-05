@@ -309,18 +309,6 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
             }
         )
 
-        for key in [
-            "crops_coords_top_left",
-            "negative_crops_coords_top_left",
-        ]:
-            val = getattr(self.image_request, key, None)
-            if (
-                val
-                and val.get("x", None) is not None
-                and val.get("y", None) is not None
-            ):
-                data.update({key: (val["x"], val["y"])})
-
         if (
             self.image_request.quality_effects
             is QualityEffects.HIGH_RESOLUTION
@@ -400,6 +388,18 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
                 "negative_target_size",
                 "negative_original_size",
             ]:
+                for key in [
+                    "crops_coords_top_left",
+                    "negative_crops_coords_top_left",
+                ]:
+                    val = getattr(self.image_request, key, None)
+                    if (
+                        val
+                        and val.get("x", None) is not None
+                        and val.get("y", None) is not None
+                    ):
+                        data.update({key: (val["x"], val["y"])})
+
                 val = getattr(self.image_request, key, None)
                 if (
                     val
