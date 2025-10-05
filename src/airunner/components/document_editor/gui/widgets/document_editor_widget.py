@@ -8,9 +8,11 @@ Implements a QPlainTextEdit-based code editor with a custom line number area and
 Follows project conventions for widget structure and documentation.
 """
 
-from typing import Optional
+from typing import Dict, Optional
 import logging
 import os
+
+from airunner.utils.settings import get_qsettings
 
 try:
     import fcntl  # POSIX advisory locks
@@ -39,6 +41,7 @@ from PySide6.QtGui import (
     QTextCharFormat,
 )
 from PySide6.QtWidgets import QWidget, QPlainTextEdit, QMessageBox
+from tempfile import NamedTemporaryFile
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.document_editor.gui.templates.document_editor_ui import (
     Ui_Form,
@@ -315,18 +318,21 @@ class DocumentEditorWidget(BaseWidget):
     """Code editor widget with line numbers and syntax highlighting."""
 
     widget_class_ = Ui_Form
-
     icons = [
         ("play", "run_button"),
     ]
 
     def __init__(self, *args, **kwargs):
+        self._signal_handlers = {
+            SignalCode.DOCUMENT_PREFERENCES_CHANGED: self.handle_document_preferences_changed,
+        }
         super().__init__(*args, **kwargs)
         self.editor = CodeEditor(self)
         self.highlighter = PythonSyntaxHighlighter(self.editor.document())
         self.current_file_path = None
-        # Autosave timer (debounced)
-        self._autosave_delay_ms = 1500
+        # no local close shortcut; container manages Ctrl+W for closing tabs
+        # Autosave timer (debounced) - reduced delay for snappier autosave
+        self._autosave_delay_ms = 500
         self._autosave_timer = QTimer(self)
         self._autosave_timer.setSingleShot(True)
         self._autosave_timer.timeout.connect(self._perform_autosave)
@@ -359,21 +365,85 @@ class DocumentEditorWidget(BaseWidget):
             self._on_document_contents_changed
         )
 
+    def handle_document_preferences_changed(self, data: Dict):
+        """Handle changes to document preferences, such as autosave settings."""
+        try:
+            autosave_enabled = bool(data.get("autosave_enabled", False))
+            if not autosave_enabled:
+                try:
+                    self._autosave_timer.stop()
+                except Exception:
+                    pass
+            else:
+                if self.current_file_path and self.is_modified():
+                    try:
+                        self._autosave_timer.start(self._autosave_delay_ms)
+                    except Exception:
+                        self._logger.exception(
+                            "Failed to start autosave timer"
+                        )
+        except Exception:
+            self._logger.exception(
+                "Error handling document preferences change: %s", data
+            )
+
     @Slot()
     def on_run_button_clicked(self):
-        self.save_file()
-        self.emit_signal(
-            SignalCode.RUN_SCRIPT,
-            {
-                "document_path": self.current_file_path,
-            },
-        )
+        # Run the current buffer. For saved documents, persist current
+        # contents first. For unsaved/new documents, write the buffer to a
+        # temporary .py file and run that, so the user doesn't need to
+        # explicitly save.
+        if self.current_file_path:
+            # Try to save current contents to the existing path. If saving
+            # fails, abort running.
+            ok = self.save_file()
+            if not ok:
+                return
+            self.emit_signal(
+                SignalCode.RUN_SCRIPT,
+                {"document_path": self.current_file_path, "temp_file": False},
+            )
+            return
+
+        # Unsaved buffer -> write to a temporary file and run it.
+        try:
+            # Use NamedTemporaryFile to ensure a unique path; don't delete on
+            # close so the runner process can read it. Use a .py suffix so
+            # external tools treat it as Python.
+            tmp = NamedTemporaryFile(
+                delete=False, suffix=".py", prefix="airunner_run_"
+            )
+            try:
+                content = self.editor.toPlainText()
+                tmp.write(content.encode("utf-8"))
+                tmp.flush()
+            finally:
+                tmp.close()
+            self.emit_signal(
+                SignalCode.RUN_SCRIPT,
+                {"document_path": tmp.name, "temp_file": True},
+            )
+        except Exception:
+            self._logger.exception("Failed to write temporary run file")
 
     def _on_document_contents_changed(self):
         """Debounce document changes and trigger autosave after idle period.
 
         Does nothing when there's no current file path (unsaved/new documents).
         """
+        # Only autosave when a file path exists and the autosave checkbox is enabled
+        qsettings = get_qsettings()
+        qsettings.beginGroup("document_editor")
+        autosave_enabled = qsettings.value(
+            "autosave_enabled", False, type=bool
+        )
+        if not autosave_enabled:
+            # ensure no pending autosave
+            try:
+                self._autosave_timer.stop()
+            except Exception:
+                pass
+            return
         if not self.current_file_path:
             return
         try:
@@ -578,12 +648,41 @@ class DocumentEditorWidget(BaseWidget):
                             "Failed to remove temp file %s", tmp_name
                         )
 
-            # Defensively clear modification flags on the document and our
-            # internal flag. Use a singleShot to handle any race from
-            # background formatting/highlighting that may mark the doc.
-            self._clear_modified()
+                # Defensively clear modification flags on the document and our
+                # internal flag. We clear immediately (blocking signals) to avoid
+                # re-entrant handlers, then schedule a non-blocking setModified(False)
+                # so that QTextDocument.modificationChanged is emitted and UI (tab
+                # indicators) can update.
+                # Clear our internal modified flag and ensure the QTextDocument
+                # reports unmodified while leaving signals enabled so that
+                # modificationChanged(False) is emitted and UI (tab indicator)
+                # updates accordingly.
+                try:
+                    self._modified = False
+                except Exception:
+                    pass
+                try:
+                    doc = self.editor.document()
+                    # setModified(False) will emit modificationChanged(False) if
+                    # the state changed, allowing the container to remove the star.
+                    doc.setModified(False)
+                except Exception:
+                    try:
+                        # Fallback: schedule a non-blocking setModified
+                        QTimer.singleShot(
+                            0,
+                            lambda: self.editor.document().setModified(False),
+                        )
+                    except Exception:
+                        pass
+                try:
+                    self._autosave_timer.stop()
+                except Exception:
+                    pass
             try:
-                QTimer.singleShot(0, self._clear_modified)
+                QTimer.singleShot(
+                    0, lambda: self.editor.document().setModified(False)
+                )
             except Exception:
                 pass
             try:
