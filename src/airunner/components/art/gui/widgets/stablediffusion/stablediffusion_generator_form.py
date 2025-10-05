@@ -811,6 +811,10 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.target_size_height.setEnabled(enabled)
         self.ui.negative_target_size_width.setEnabled(enabled)
         self.ui.negative_target_size_height.setEnabled(enabled)
+        self.ui.crops_coords_top_left_x.setEnabled(enabled)
+        self.ui.crops_coords_top_left_y.setEnabled(enabled)
+        self.ui.negative_crops_coord_top_left_x.setEnabled(enabled)
+        self.ui.negative_crops_coord_top_left_y.setEnabled(enabled)
 
     def handle_progress_bar(self, message):
         step = message.get("step")
