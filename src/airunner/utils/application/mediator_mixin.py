@@ -50,8 +50,22 @@ class MediatorMixin:
 
         self.mediator = mediator
 
-        self.register_signals()
+        # Ensure QObject initialization happens before we try to access signals
         super().__init__(*args, **kwargs)
+
+        # Register signals for this instance
+        self.register_signals()
+
+        # If this is a QObject, connect its destroyed signal to cleanup
+        try:
+            # Connect to the Qt destroyed signal to unregister handlers when the
+            # object is being deleted.
+            if hasattr(self, "destroyed"):
+                # destroyed is an overloaded signal; connect the no-arg version
+                self.destroyed.connect(lambda: self.unregister_signals())
+        except Exception:
+            # If we can't connect, continue without automatic unregistration
+            pass
 
     @property
     def signal_handlers(self) -> Dict:
@@ -87,3 +101,13 @@ class MediatorMixin:
         :return:
         """
         self.mediator.register(code, slot_function)
+
+    def unregister_signals(self):
+        """
+        Unregister all signal handlers that were registered by this instance.
+        """
+        for code, handler in list(self.signal_handlers.items()):
+            try:
+                self.mediator.unregister(code, handler)
+            except Exception:
+                pass
