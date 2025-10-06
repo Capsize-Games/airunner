@@ -669,9 +669,11 @@ class CustomScene(
 
     def on_send_image_to_canvas_signal(self, data: Optional[Dict] = None):
         """Handle generated image by creating a new layer."""
+        if data is None:
+            return
+
         image_response = data.get("image_response")
         self.cached_send_image_to_canvas = None
-
         if not image_response or not image_response.images:
             return
 
@@ -680,8 +682,8 @@ class CustomScene(
         # Get the current selected layer for the generated image
         layer_id = self._add_image_to_undo()
 
-        # Load the image to the scene
-        self._load_image_from_object(image=image)
+        # Load the image to the scene (mark as generated for proper positioning)
+        self._load_image_from_object(image=image, generated=True)
 
         # Persist the image to the database
         try:
@@ -709,8 +711,20 @@ class CustomScene(
         # Refresh the layer display
         try:
             self._refresh_layer_display()
-        except Exception:
-            pass
+        except Exception as e:
+            if hasattr(self, "logger"):
+                self.logger.error(
+                    f"Failed to refresh layer display after image generation: {e}",
+                    exc_info=True,
+                )
+
+        # Notify other components that the canvas image changed (matches drop/paste flow)
+        try:
+            if self.api and hasattr(self.api, "art"):
+                self.api.art.canvas.image_updated()
+        except Exception as e:
+            if hasattr(self, "logger"):
+                self.logger.debug(f"image_updated notification failed: {e}")
 
     def on_paste_image_from_clipboard(self):
         image = self._paste_image_from_clipboard()
@@ -1466,8 +1480,13 @@ class CustomScene(
             and hasattr(self, "item")
             and self.item is not None
         ):
-            if self.item.scene():
-                self.removeItem(self.item)
+            try:
+                if self.item.scene():
+                    self.removeItem(self.item)
+            except (RuntimeError, AttributeError) as e:
+                # Item was already deleted or invalid
+                if hasattr(self, "logger"):
+                    self.logger.debug(f"Could not remove legacy item: {e}")
             self.item = None
 
         # Remove any layer items that no longer exist
@@ -2209,8 +2228,12 @@ class CustomScene(
         elif self.settings_key == "drawing_pad_settings":
             self.update_drawing_pad_settings(**{key: value})
 
-    def _load_image_from_object(self, image: Image, is_outpaint: bool = False):
-        self._add_image_to_scene(is_outpaint=is_outpaint, image=image)
+    def _load_image_from_object(
+        self, image: Image, is_outpaint: bool = False, generated: bool = False
+    ):
+        self._add_image_to_scene(
+            is_outpaint=is_outpaint, image=image, generated=generated
+        )
 
     def _load_image_from_url_or_file(
         self, url_or_path: str
