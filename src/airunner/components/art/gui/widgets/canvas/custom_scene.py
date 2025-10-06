@@ -1210,6 +1210,22 @@ class CustomScene(
                 for item, pos in self._original_item_positions.items()
                 if getattr(item, "layer_id", None) != layer_id
             }
+
+            # Clear layer-specific cache entries to prevent stale data
+            cache_by_key = (
+                self.settings_mixin_shared_instance._settings_cache_by_key
+            )
+            for model_class in [
+                DrawingPadSettings,
+                ControlnetSettings,
+                ImageToImageSettings,
+                OutpaintSettings,
+                BrushSettings,
+                MetadataSettings,
+            ]:
+                cache_key = f"{model_class.__name__}_layer_{layer_id}"
+                cache_by_key.pop(cache_key, None)
+
             DrawingPadSettings.objects.delete(layer_id=layer_id)
             ControlnetSettings.objects.delete(layer_id=layer_id)
             ImageToImageSettings.objects.delete(layer_id=layer_id)

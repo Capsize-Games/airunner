@@ -291,6 +291,22 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
                 # Remove from tracking
                 self.layer_widgets.pop(layer_id, None)
                 self.selected_layers.discard(layer_id)
+
+            # Clear layer-specific cache entries to prevent stale data
+            cache_by_key = (
+                self.settings_mixin_shared_instance._settings_cache_by_key
+            )
+            for model_class in [
+                DrawingPadSettings,
+                ControlnetSettings,
+                ImageToImageSettings,
+                OutpaintSettings,
+                BrushSettings,
+                MetadataSettings,
+            ]:
+                cache_key = f"{model_class.__name__}_layer_{layer_id}"
+                cache_by_key.pop(cache_key, None)
+
             CanvasLayer.objects.delete(layer_id)
             DrawingPadSettings.objects.delete_by(layer_id=layer_id)
             ControlnetSettings.objects.delete_by(layer_id=layer_id)
