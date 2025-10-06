@@ -273,11 +273,20 @@ class SettingsMixin:
         if layer_id is None:
             layer_id = self._get_current_selected_layer_id()
 
-        # If still no layer_id, fall back to global settings (for backwards compatibility)
+        # If still no layer_id, get the first available layer
+        # DO NOT fall back to global settings - this caused stale image data to persist across layer deletions
         if layer_id is None:
-            return self._get_or_cache_settings(
-                model_class_, eager_load=eager_load
-            )
+            from airunner.components.art.data.canvas_layer import CanvasLayer
+
+            first_layer = CanvasLayer.objects.first()
+            if first_layer:
+                layer_id = first_layer.id
+                self._selected_layer_ids.add(layer_id)
+
+        # If we STILL don't have a layer_id, return an empty instance
+        # This prevents using stale global settings (layer_id=NULL) that may have old image data
+        if layer_id is None:
+            return model_class_()
 
         # Check cache first with layer-specific key
         cache_key = f"{model_class_.__name__}_layer_{layer_id}"
