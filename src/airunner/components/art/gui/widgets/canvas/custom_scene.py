@@ -884,6 +884,12 @@ class CustomScene(
         self._refresh_layer_display()
         if self.api and hasattr(self.api, "art"):
             self.api.art.canvas.update_image_positions()
+        # Force scene update to refresh visuals
+        self.update()
+        # Also update all views
+        for view in self.views():
+            view.viewport().update()
+            view.update()
 
     def _capture_layer_state(
         self, layer_id: Optional[int]
@@ -898,9 +904,34 @@ class CustomScene(
         if settings is None:
             return {"image": None, "mask": None, "x_pos": 0, "y_pos": 0}
 
+        # Prefer in-memory pending/current binary for the image when available.
+        # Persistence of image data is done asynchronously; relying solely on
+        # the DB here can miss recent edits (mask updates are synchronous).
+        image_val = None
+        try:
+            current_selected = self._get_current_selected_layer_id()
+        except Exception:
+            current_selected = None
+
+        # If this capture is for the currently selected layer (or global),
+        # prefer the pending/current binary if present.
+        if layer_id is None or layer_id == current_selected:
+            if getattr(self, "_pending_image_binary", None) is not None:
+                image_val = self._pending_image_binary
+            elif (
+                getattr(self, "_current_active_image_binary", None) is not None
+            ):
+                image_val = self._current_active_image_binary
+
+        # Fall back to stored DB/cached settings value if no in-memory binary is present
+        if image_val is None:
+            image_val = getattr(settings, "image", None)
+
+        mask_val = getattr(settings, "mask", None)
+
         return {
-            "image": getattr(settings, "image", None),
-            "mask": getattr(settings, "mask", None),
+            "image": image_val,
+            "mask": mask_val,
             "x_pos": getattr(settings, "x_pos", 0) or 0,
             "y_pos": getattr(settings, "y_pos", 0) or 0,
             # Capture text_items so text changes are included in undo/redo
@@ -914,20 +945,42 @@ class CustomScene(
             return
 
         updates: Dict[str, Optional[Any]] = {}
+        # Only include keys that have non-None values OR are explicitly needed
+        # to be set to None (like clearing position)
         for key in ("image", "mask", "x_pos", "y_pos"):
             if key in state:
-                updates[key] = state[key]
+                value = state[key]
+                # Always include image/mask in updates, even if None/empty
+                # This allows undo to properly clear images
+                updates[key] = value
 
         if updates:
             self.update_drawing_pad_settings(layer_id=layer_id, **updates)
 
+            # Update in-memory cache for the current layer
+            image_data = state.get("image")
+            try:
+                current_layer = self._get_current_selected_layer_id()
+                if layer_id == current_layer:
+                    # Update cache even when clearing (None or empty)
+                    self._pending_image_binary = image_data
+                    self._current_active_image_binary = image_data
+            except Exception:
+                pass
+
         layer_item = self._layer_items.get(layer_id)
         if layer_item is not None:
             image_data = state.get("image")
-            if image_data is not None:
+            # Handle both setting an image and clearing it (None or empty)
+            if image_data is not None and len(image_data) > 0:
                 pil_image = convert_binary_to_image(image_data)
                 if pil_image is not None:
-                    layer_item.updateImage(ImageQt.ImageQt(pil_image))
+                    qimage = ImageQt.ImageQt(pil_image)
+                    layer_item.updateImage(qimage)
+            else:
+                # Clear the layer by setting it to a blank/transparent image
+                blank_qimage = self._create_blank_surface()
+                layer_item.updateImage(blank_qimage)
             x_pos = state.get("x_pos")
             y_pos = state.get("y_pos")
             if x_pos is not None and y_pos is not None:
@@ -950,9 +1003,10 @@ class CustomScene(
         # drawing pad (no specific layer). Record the "before" state so
         # that drawing on a blank canvas (layer_id is None) is captured
         # in the undo history.
+        before_state = self._capture_layer_state(layer_id)
         self._history_transactions[layer_id] = {
             "type": change_type,
-            "before": self._capture_layer_state(layer_id),
+            "before": before_state,
         }
 
     def _commit_layer_history_transaction(
@@ -964,7 +1018,9 @@ class CustomScene(
             return
         if change_type is not None:
             transaction["type"] = change_type
-        transaction["after"] = self._capture_layer_state(layer_id)
+        after_state = self._capture_layer_state(layer_id)
+        transaction["after"] = after_state
+
         if transaction["before"] == transaction["after"]:
             return
 
@@ -1346,10 +1402,11 @@ class CustomScene(
     def _refresh_layer_display(self):
         """Refresh the display of all visible layers on the canvas.
 
-        Only the main drawing pad scene should render global layers; auxiliary scenes
-        (like input image previews) manage a single image item themselves.
+        Only the main drawing pad scene and brush scene should render global layers;
+        auxiliary scenes (like input image previews) manage a single image item themselves.
         """
-        if getattr(self, "canvas_type", None) != "drawing_pad":
+        canvas_type = getattr(self, "canvas_type", None)
+        if canvas_type not in ("drawing_pad", "brush"):
             return
         # Get all layers ordered by their order property
         layers = CanvasLayer.objects.order_by("order").all()
@@ -1556,6 +1613,29 @@ class CustomScene(
                         img = self._resize_image(img)
                     self.current_active_image = img
                     self.initialize_image(img)
+
+                    # Ensure image is persisted synchronously before commit
+                    # so that future undo transactions can capture it
+                    try:
+                        rgba_image = (
+                            img if img.mode == "RGBA" else img.convert("RGBA")
+                        )
+                        width, height = rgba_image.size
+                        raw_binary = (
+                            b"AIRAW1"
+                            + width.to_bytes(4, "big")
+                            + height.to_bytes(4, "big")
+                            + rgba_image.tobytes()
+                        )
+                        current_layer = self._get_current_selected_layer_id()
+                        self.update_drawing_pad_settings(
+                            layer_id=current_layer, image=raw_binary
+                        )
+                        self._pending_image_binary = raw_binary
+                        self._current_active_image_binary = raw_binary
+                    except Exception:
+                        pass
+
                     self._commit_layer_history_transaction(layer_id, "image")
                     # Ensure UI refresh for layers and views
                     try:
@@ -1586,6 +1666,28 @@ class CustomScene(
                     except Exception:
                         # Fall back to setting current_active_image only
                         pass
+
+                    # Ensure image is persisted synchronously before commit
+                    try:
+                        rgba_image = (
+                            img if img.mode == "RGBA" else img.convert("RGBA")
+                        )
+                        width, height = rgba_image.size
+                        raw_binary = (
+                            b"AIRAW1"
+                            + width.to_bytes(4, "big")
+                            + height.to_bytes(4, "big")
+                            + rgba_image.tobytes()
+                        )
+                        current_layer = self._get_current_selected_layer_id()
+                        self.update_drawing_pad_settings(
+                            layer_id=current_layer, image=raw_binary
+                        )
+                        self._pending_image_binary = raw_binary
+                        self._current_active_image_binary = raw_binary
+                    except Exception:
+                        pass
+
                     self._commit_layer_history_transaction(layer_id, "image")
                     try:
                         self.api.art.canvas.image_updated()
@@ -1603,6 +1705,32 @@ class CustomScene(
                             img = self._resize_image(img)
                         self.current_active_image = img
                         self.initialize_image(img)
+
+                        # Ensure image is persisted synchronously before commit
+                        try:
+                            rgba_image = (
+                                img
+                                if img.mode == "RGBA"
+                                else img.convert("RGBA")
+                            )
+                            width, height = rgba_image.size
+                            raw_binary = (
+                                b"AIRAW1"
+                                + width.to_bytes(4, "big")
+                                + height.to_bytes(4, "big")
+                                + rgba_image.tobytes()
+                            )
+                            current_layer = (
+                                self._get_current_selected_layer_id()
+                            )
+                            self.update_drawing_pad_settings(
+                                layer_id=current_layer, image=raw_binary
+                            )
+                            self._pending_image_binary = raw_binary
+                            self._current_active_image_binary = raw_binary
+                        except Exception:
+                            pass
+
                         self._commit_layer_history_transaction(
                             layer_id, "image"
                         )
