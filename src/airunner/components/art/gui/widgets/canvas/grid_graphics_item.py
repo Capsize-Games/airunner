@@ -23,8 +23,17 @@ class GridGraphicsItem(QGraphicsItem):
         pen = QPen(color, self.view.grid_settings.line_width)
         painter.setPen(pen)
         visible_rect = self.boundingRect()
-        offset_x = self.view.canvas_offset.x()
-        offset_y = self.view.canvas_offset.y()
+
+        # Combine canvas offset (user pan) with grid compensation (viewport adjustments)
+        offset_x = (
+            self.view.canvas_offset.x()
+            - self.view.grid_compensation_offset.x()
+        )
+        offset_y = (
+            self.view.canvas_offset.y()
+            - self.view.grid_compensation_offset.y()
+        )
+
         left = int(visible_rect.left())
         right = int(visible_rect.right())
         top = int(visible_rect.top())
