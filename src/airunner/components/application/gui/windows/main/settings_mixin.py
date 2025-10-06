@@ -302,6 +302,18 @@ class SettingsMixin:
         """Handle layer selection changes from the canvas layer container."""
         selected_layer_ids = data.get("selected_layer_ids", [])
         self._selected_layer_ids = set(selected_layer_ids)
+        # Persist selected layer to QSettings
+        if not hasattr(self, "_qsettings_cache"):
+            from airunner.utils.settings.get_qsettings import get_qsettings
+
+            self._qsettings_cache = get_qsettings()
+
+        if selected_layer_ids:
+            self._qsettings_cache.setValue(
+                "selected_layer_id", int(min(selected_layer_ids))
+            )
+        else:
+            self._qsettings_cache.remove("selected_layer_id")
 
     def _get_current_selected_layer_id(self) -> Optional[int]:
         """Get the first selected layer ID from the current UI state.
@@ -314,6 +326,20 @@ class SettingsMixin:
             return min(
                 self._selected_layer_ids
             )  # Use the lowest ID for consistency
+
+        # If no in-memory selection, try to load from QSettings
+        if not hasattr(self, "_qsettings_cache"):
+            from airunner.utils.settings.get_qsettings import get_qsettings
+
+            self._qsettings_cache = get_qsettings()
+
+        saved_layer_id = self._qsettings_cache.value(
+            "selected_layer_id", None, type=int
+        )
+        if saved_layer_id is not None:
+            self._selected_layer_ids.add(saved_layer_id)
+            return saved_layer_id
+
         default_layer_id = self._get_first_layer_id()
         if default_layer_id is not None:
             self._selected_layer_ids.add(default_layer_id)
