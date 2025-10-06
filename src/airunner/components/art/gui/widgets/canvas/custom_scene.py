@@ -1866,24 +1866,40 @@ class CustomScene(
 
         if self.painter and self.painter.isActive():
             self.painter.end()
-
+        # Accessing Qt objects can raise RuntimeError if the underlying
+        # C++ object was deleted elsewhere. Catch both AttributeError
+        # and RuntimeError to be defensive and avoid crashes.
+        item_scene = None
         try:
-            item_scene = self.item.scene()
-        except AttributeError:
+            if hasattr(self, "item") and self.item is not None:
+                item_scene = self.item.scene()
+        except (AttributeError, RuntimeError):
             item_scene = None
+
         if item_scene is not None:
-            item_scene.removeItem(self.item)
+            try:
+                item_scene.removeItem(self.item)
+            except (RuntimeError, AttributeError):
+                # Item was deleted or invalid; ignore and continue
+                pass
         self.initialize_image(image)
         view.setSceneRect(current_viewport_rect)
 
     def delete_image(self):
         # Safely remove the image item from the scene (if present)
+        item_scene = None
         try:
-            item_scene = self.item.scene()
-        except AttributeError:
+            if hasattr(self, "item") and self.item is not None:
+                item_scene = self.item.scene()
+        except (AttributeError, RuntimeError):
             item_scene = None
+
         if item_scene is not None:
-            item_scene.removeItem(self.item)
+            try:
+                item_scene.removeItem(self.item)
+            except (RuntimeError, AttributeError):
+                # If the C++ object has already been deleted, skip removal
+                pass
 
         # Properly end and reset the painter so drawBackground can reinitialize
         self.stop_painter()
