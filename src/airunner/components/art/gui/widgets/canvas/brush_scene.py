@@ -355,6 +355,10 @@ class BrushScene(CustomScene):
     def _handle_left_mouse_release(self, event) -> bool:
         self.draw_button_down = False
 
+        # Ensure painter is flushed before capturing the image
+        if self.painter and self.painter.isActive():
+            self.painter.end()
+
         # First get the correct image
         if self.drawing_pad_settings.mask_layer_enabled:
             # For mask layer
@@ -385,17 +389,23 @@ class BrushScene(CustomScene):
                     + rgba_image.tobytes()
                 )
 
-                self.drawing_pad_settings.image = raw_binary
-                if self._raw_image_storage_enabled:
-                    self._pending_image_binary = raw_binary
-                else:
-                    self._pending_image_binary = None
+                # Store in-memory for undo/redo and cache
+                self._pending_image_binary = raw_binary
+                self._current_active_image_binary = raw_binary
 
-                if self.current_tool and (
-                    self.current_tool is CanvasToolName.BRUSH
-                    or self.current_tool is CanvasToolName.ERASER
-                ):
-                    self.api.art.canvas.generate_mask()
+                # Persist to database to ensure undo captures it
+                try:
+                    layer_id = self._get_current_selected_layer_id()
+                    self.update_drawing_pad_settings(
+                        layer_id=layer_id, image=raw_binary
+                    )
+                except Exception:
+                    # Fallback to setting on cached object if layer_id lookup fails
+                    self.drawing_pad_settings.image = raw_binary
+
+                # Note: We don't auto-generate masks during regular drawing.
+                # Mask generation is only for specific inpainting workflows.
+                # Removed: self.api.art.canvas.generate_mask()
 
         # Emit signals to refresh related UI
         self.api.art.canvas.image_updated()
