@@ -1020,7 +1020,7 @@ class MainWindow(
             if shortcutkey.name == key_name:
                 return shortcutkey.text
         return ""
-    
+
     @property
     def current_active_tab_index(self) -> int:
         """Get the current active main tab index from QSettings."""

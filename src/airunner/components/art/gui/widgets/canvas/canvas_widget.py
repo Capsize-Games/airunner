@@ -444,6 +444,7 @@ class CanvasWidget(BaseWidget):
     @Slot(bool)
     def on_eraser_button_toggled(self, val: bool):
         self.api.art.canvas.toggle_tool(CanvasToolName.ERASER, val)
+        self._update_cursor()
 
     @Slot(bool)
     def on_active_grid_area_button_toggled(self, val: bool):
@@ -458,7 +459,6 @@ class CanvasWidget(BaseWidget):
         active = message.get("active", False)
         settings_data = {}
         settings_data["current_tool"] = tool.value if active else None
-        print(settings_data, tool, active)
         self.update_application_settings(**settings_data)
         # self.api.art.canvas.tool_changed(tool, active)
         self._update_action_buttons(tool, active)
