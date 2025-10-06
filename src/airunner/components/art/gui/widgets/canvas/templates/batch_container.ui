@@ -17,21 +17,58 @@
    <item row="0" column="0">
     <widget class="QComboBox" name="image_folders"/>
    </item>
-    <item row="1" column="0">
-     <widget class="QPushButton" name="backButton">
-      <property name="text">
-      <string>← Back to date folder</string>
-      </property>
-      <property name="visible">
+   <item row="1" column="0">
+    <widget class="QPushButton" name="backButton">
+     <property name="visible">
       <bool>false</bool>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QListView" name="galleryView"/>
-    </item>
+     </property>
+     <property name="text">
+      <string>← Back to date folder</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QPushButton" name="browse_to_folder_button">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>30</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>30</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="toolTip">
+      <string>Open path in file explorer</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../../../../../gui/resources/feather.qrc">
+       <normaloff>:/light/icons/feather/light/folder.svg</normaloff>:/light/icons/feather/light/folder.svg</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0" colspan="2">
+    <widget class="QListView" name="galleryView"/>
+   </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../../../../../gui/resources/feather.qrc"/>
+ </resources>
  <connections/>
 </ui>
