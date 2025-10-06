@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QApplication
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from airunner.components.data.session_manager import Session
 from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import (
     Ui_canvas,
 )
@@ -635,17 +636,26 @@ class CanvasWidget(BaseWidget):
 
         if not layer_ids:
             return True
-
+        # Start a grouped delete operation and perform direct DB deletes.
+        # Relying on the UI signal handler to perform DB deletes can fail
+        # if the UI isn't listening; delete directly to ensure a clean
+        # state when creating a new document.
         self.api.art.canvas.begin_layer_operation("delete", layer_ids)
         try:
             for layer_id in layer_ids:
-                self.api.art.canvas.layer_deleted(layer_id)
                 self._delete_layer_records(layer_id)
+
             self.api.art.canvas.commit_layer_operation("delete", layer_ids)
+
+            # Notify other components to refresh their layer displays
+            # after the DB-level deletion.
+            self.api.art.canvas.show_layers()
+            return True
         except Exception as exc:  # pragma: no cover - protective guard
             self.api.art.canvas.cancel_layer_operation("delete")
             if hasattr(self, "logger"):
                 self.logger.exception(exc)
+            return False
 
     def _serialize_canvas_document(self) -> Dict[str, Any]:
         """Create a serializable snapshot of all layers on the canvas."""
@@ -716,6 +726,16 @@ class CanvasWidget(BaseWidget):
     def _reset_canvas_document(self) -> None:
         self._clear_canvas()
 
+        # Ensure any previous scoped session state is cleared (e.g. after a
+        # rolled-back transaction). This prevents "Session's transaction has
+        # been rolled back" errors when creating new rows with UNIQUE
+        # constraints (e.g. layer names).
+        try:
+            Session.remove()
+        except Exception:
+            # Non-fatal; continue to begin operation regardless
+            pass
+
         self.api.art.canvas.begin_layer_operation("create")
         new_layer = None
         try:
@@ -755,6 +775,10 @@ class CanvasWidget(BaseWidget):
         created_layer_ids: List[int] = []
 
         if layers_data:
+            try:
+                Session.remove()
+            except Exception:
+                pass
             self.api.art.canvas.begin_layer_operation("create")
             try:
                 indexed_layers = list(enumerate(layers_data))
@@ -778,6 +802,10 @@ class CanvasWidget(BaseWidget):
                 self.api.art.canvas.cancel_layer_operation("create")
                 raise
         else:
+            try:
+                Session.remove()
+            except Exception:
+                pass
             self.api.art.canvas.begin_layer_operation("create")
             try:
                 default_layer = self._create_default_canvas_layer()
@@ -873,16 +901,31 @@ class CanvasWidget(BaseWidget):
                 self.logger.error(f"{title}: {message}")
 
     def _delete_layer_records(self, layer_id: int) -> None:
-        CanvasLayer.objects.delete(layer_id)
         DrawingPadSettings.objects.delete_by(layer_id=layer_id)
         ControlnetSettings.objects.delete_by(layer_id=layer_id)
         ImageToImageSettings.objects.delete_by(layer_id=layer_id)
         OutpaintSettings.objects.delete_by(layer_id=layer_id)
+        CanvasLayer.objects.delete(layer_id)
 
     def _create_default_canvas_layer(self) -> Optional[CanvasLayer]:
+        # Ensure any previous scoped session state is cleared
+        try:
+            Session.remove()
+        except Exception:
+            pass
+
+        # Pick a non-conflicting default name (Layer 1, Layer 2, ...)
+        base = "Layer"
+        index = 1
+        name = f"{base} {index}"
+        # Loop until we find an unused name
+        while CanvasLayer.objects.filter_by(name=name):
+            index += 1
+            name = f"{base} {index}"
+
         layer = CanvasLayer.objects.create(
             order=0,
-            name="Layer 1",
+            name=name,
             visible=True,
             opacity=100,
         )
