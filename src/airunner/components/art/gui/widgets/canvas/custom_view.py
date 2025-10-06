@@ -200,6 +200,9 @@ class CustomGraphicsView(
         self.last_pos: QPoint = self.zero_point
         self.zoom_handler: ZoomHandler = ZoomHandler()
         self._canvas_offset = QPointF(0, 0)
+        self._grid_compensation_offset = QPointF(
+            0, 0
+        )  # Tracks viewport compensation for grid alignment
         self.settings = get_qsettings()
         self._middle_mouse_pressed: bool = False
         self.grid_item = None
@@ -281,6 +284,11 @@ class CustomGraphicsView(
     @property
     def zero_point(self) -> QPointF:
         return QPointF(0, 0)  # Return QPointF instead of QPoint
+
+    @property
+    def grid_compensation_offset(self) -> QPointF:
+        """Accumulated viewport compensation offset for grid alignment."""
+        return self._grid_compensation_offset
 
     def load_canvas_offset(self):
         """Load the canvas offset from QSettings."""
@@ -404,6 +412,9 @@ class CustomGraphicsView(
 
     def on_recenter_grid_signal(self):
         self.canvas_offset = QPointF(0, 0)
+        self._grid_compensation_offset = QPointF(
+            0, 0
+        )  # Reset grid compensation when recentering
 
         """Center the grid and all layer images in the viewport."""
         if not self.scene:
@@ -1081,6 +1092,104 @@ class CustomGraphicsView(
             f"Canvas state restoration complete - final offset: ({final_offset.x()}, {final_offset.y()})"
         )
         self.scene.show_event()
+
+    def resizeEvent(self, event):
+        """Handle viewport resize to keep canvas centered without changing offset values.
+
+        When the viewport resizes, the visual center shifts but the canvas offset
+        (which represents the user's pan position) should remain unchanged. We compensate
+        by adjusting the stored absolute positions of items to account for the viewport
+        center change.
+        """
+        super().resizeEvent(event)
+
+        # Skip compensation during initial state restoration
+        if self._is_restoring_state or not self._initialized:
+            self._last_viewport_size = self.viewport().size()
+            return
+
+        # Calculate the change in viewport center
+        old_size = self._last_viewport_size
+        new_size = self.viewport().size()
+
+        # If size hasn't actually changed, no need to update
+        if old_size == new_size:
+            return
+
+        # Calculate the shift in viewport center
+        old_center_x = old_size.width() / 2
+        old_center_y = old_size.height() / 2
+        new_center_x = new_size.width() / 2
+        new_center_y = new_size.height() / 2
+
+        center_shift_x = new_center_x - old_center_x
+        center_shift_y = new_center_y - old_center_y
+
+        # Apply the compensation by adjusting the stored absolute positions
+        # This keeps the canvas_offset unchanged while shifting the visual positions
+        self._apply_viewport_compensation(center_shift_x, center_shift_y)
+
+        # Update the tracked viewport size for next resize
+        self._last_viewport_size = new_size
+
+        # Redraw the grid with new viewport size
+        self.draw_grid()
+
+    def _apply_viewport_compensation(self, shift_x: float, shift_y: float):
+        """Apply viewport center compensation by adjusting stored absolute positions.
+
+        This method shifts the absolute positions of items so they appear to stay
+        centered relative to the viewport, without changing the canvas_offset value.
+        """
+        if not self.scene:
+            return
+
+        # Skip if the shift is negligible
+        if abs(shift_x) < 0.5 and abs(shift_y) < 0.5:
+            return
+
+        # Adjust the grid compensation offset
+        # This shifts the grid origin to maintain alignment with the viewport center
+        self._grid_compensation_offset = QPointF(
+            self._grid_compensation_offset.x() + shift_x,
+            self._grid_compensation_offset.y() + shift_y,
+        )
+
+        # Adjust the active grid area absolute position
+        if self.active_grid_area:
+            current_abs_x = self.active_grid_settings.pos_x or 0
+            current_abs_y = self.active_grid_settings.pos_y or 0
+            new_abs_x = current_abs_x + shift_x
+            new_abs_y = current_abs_y + shift_y
+            self.update_active_grid_settings(pos_x=new_abs_x, pos_y=new_abs_y)
+
+        # Adjust layer absolute positions
+        layers = CanvasLayer.objects.order_by("order").all()
+        for layer in layers:
+            drawing_pad = DrawingPadSettings.objects.filter_by_first(
+                layer_id=layer.id
+            )
+            if drawing_pad:
+                current_x = drawing_pad.x_pos or 0
+                current_y = drawing_pad.y_pos or 0
+                new_x = current_x + shift_x
+                new_y = current_y + shift_y
+                self.update_drawing_pad_settings(
+                    layer_id=layer.id, x_pos=new_x, y_pos=new_y
+                )
+
+        # Update the scene's cached original positions to match
+        if hasattr(self.scene, "original_item_positions"):
+            updated_positions = {}
+            for item, old_pos in self.scene.original_item_positions.items():
+                updated_positions[item] = QPointF(
+                    old_pos.x() + shift_x, old_pos.y() + shift_y
+                )
+            self.scene.original_item_positions = updated_positions
+
+        # Now update the visual positions (these use canvas_offset which hasn't changed)
+        self.update_active_grid_area_position()
+        self.updateImagePositions()
 
     def set_canvas_color(
         self,
