@@ -30,7 +30,7 @@ from PySide6.QtCore import (
     Signal,
     QUrl,
 )
-from PySide6.QtGui import QIcon, QImage, QPixmap
+from PySide6.QtGui import QIcon, QImage, QPixmap, QBrush, QColor
 
 
 @dataclass(slots=True)
@@ -165,6 +165,11 @@ class ThumbnailListModel(QAbstractListModel):
         parent=None,
     ) -> None:
         super().__init__(parent)
+
+        # set background to transparent (stored as QColor)
+        self._background_color: Optional[QColor] = None
+        self.set_background_color(Qt.transparent)
+
         self._entries: List[GalleryEntry] = list(entries or [])
         self.thumb_size = thumb_size
         self._placeholder = self._make_placeholder()
@@ -172,6 +177,24 @@ class ThumbnailListModel(QAbstractListModel):
         self._active_requests: set[str] = set()
         self._thread_pool = QThreadPool.globalInstance()
         self.cache_dir = Path(cache_dir) if cache_dir else None
+
+    def set_background_color(self, color) -> None:
+        """Set the background color used by the model for items.
+
+        Accepts a QColor, a Qt.GlobalColor, or None to clear.
+        """
+        if color is None:
+            self._background_color = None
+            return
+        if isinstance(color, QColor):
+            self._background_color = color
+            return
+        try:
+            # QColor can accept Qt.GlobalColor values or color names
+            self._background_color = QColor(color)
+        except Exception:
+            # fallback to transparent
+            self._background_color = QColor(Qt.transparent)
 
     def rowCount(
         self, parent: QModelIndex = QModelIndex()
@@ -186,6 +209,10 @@ class ThumbnailListModel(QAbstractListModel):
 
         if role == Qt.DisplayRole:
             return entry.display
+        if role == Qt.BackgroundRole:
+            if self._background_color is None:
+                return None
+            return QBrush(self._background_color)
         if role == Qt.DecorationRole:
             return QIcon(self._pixmap_for_entry(entry))
         if role == Qt.ToolTipRole:

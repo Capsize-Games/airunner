@@ -1,10 +1,18 @@
 import datetime
 import os
 import re
+import subprocess
+import sys
 from typing import Dict, List, Optional
 
-from PySide6.QtCore import QModelIndex, QTimer, QSize
-from PySide6.QtWidgets import QAbstractItemView, QListView
+from PySide6.QtCore import Slot
+from PySide6.QtCore import QModelIndex, QTimer, QSize, Qt, QPoint
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QListView,
+    QMenu,
+    QMessageBox,
+)
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.art.gui.widgets.canvas.templates.batch_container_ui import (
@@ -20,6 +28,8 @@ from airunner.utils.image.export_image import get_today_folder
 
 class BatchContainer(BaseWidget):
     """Widget that displays generated images grouped by date and batch."""
+
+    icons = [("folder", "browse_to_folder_button")]
 
     widget_class_ = Ui_batch_conatiner
 
@@ -43,6 +53,30 @@ class BatchContainer(BaseWidget):
         self._configure_gallery_view()
         self.setup_ui_connections()
         self._set_back_button_visible(False)
+
+    @Slot()
+    def on_browse_to_folder_button_clicked(self):
+        # Open a file explorer window on the operating system which opens
+        # to the current date folder in the image path.
+        if self.current_date_folder and os.path.exists(
+            self.current_date_folder
+        ):
+            path_to_open = self.current_date_folder
+        else:
+            path_to_open = self.path_settings.image_path
+
+        # Open the file explorer window
+        self.open_file_explorer(path_to_open)
+
+    def open_file_explorer(self, path: str):
+        """Open the file explorer at the specified path."""
+        if os.name == "nt":  # Windows
+            os.startfile(path)
+        elif os.name == "posix":
+            if sys.platform == "darwin":  # macOS
+                subprocess.run(["open", path])
+            else:  # Linux and other Unix-like systems
+                subprocess.run(["xdg-open", path])
 
     def setup_ui_connections(self):
         """Set up UI signal connections."""
@@ -70,6 +104,22 @@ class BatchContainer(BaseWidget):
         view.setDragDropMode(QAbstractItemView.DragOnly)
         view.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         view.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+
+        # Enable custom context menu for right-click actions
+        view.setContextMenuPolicy(Qt.CustomContextMenu)
+        view.customContextMenuRequested.connect(self.on_gallery_context_menu)
+        # Make the view and its viewport transparent so item background roles
+        # (including transparent) are visible instead of a grey default.
+        try:
+            view.setStyleSheet("background: transparent;")
+            view.setAutoFillBackground(False)
+            view.setAttribute(Qt.WA_TranslucentBackground, True)
+            if view.viewport() is not None:
+                view.viewport().setAttribute(Qt.WA_TranslucentBackground, True)
+                view.viewport().setStyleSheet("background: transparent;")
+        except Exception:
+            # If any of these operations fail on an exotic platform, ignore.
+            pass
 
     def showEvent(self, event):  # noqa: N802
         super().showEvent(event)
@@ -170,6 +220,84 @@ class BatchContainer(BaseWidget):
 
     def _handle_item_activated(self, index: QModelIndex) -> None:
         self._handle_item_clicked(index)
+
+    def on_gallery_context_menu(self, point: QPoint) -> None:
+        """Show a context menu for deleting images or batches."""
+
+        view = self.ui.galleryView
+        index = view.indexAt(point)
+        if not index.isValid():
+            return
+
+        entry = self._model.entry_at(index.row())
+        if entry is None:
+            return
+
+        menu = QMenu(view)
+
+        # Allow deleting single images and whole batches
+        if entry.is_batch:
+            delete_action = menu.addAction("Delete batch")
+        else:
+            delete_action = menu.addAction("Delete image")
+
+        action = menu.exec_(view.mapToGlobal(point))
+        if action is None:
+            return
+
+        if action == delete_action:
+            if entry.is_batch and entry.batch_folder:
+                name = os.path.basename(entry.batch_folder)
+                prompt = f"Delete batch '{name}' and all contained images?"
+                details = entry.batch_folder
+            elif entry.path:
+                name = os.path.basename(entry.path)
+                prompt = f"Delete image '{name}' from disk?"
+                details = entry.path
+            else:
+                return
+
+            resp = QMessageBox.question(
+                self,
+                "Confirm delete",
+                f"{prompt}\n\n{details}",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+
+            if resp != QMessageBox.Yes:
+                return
+
+            # Perform deletion
+            try:
+                if entry.is_batch and entry.batch_folder:
+                    # remove files inside batch
+                    images = self.find_batch_images(entry.batch_folder)
+                    for img in images:
+                        try:
+                            if os.path.exists(img):
+                                os.remove(img)
+                        except OSError:
+                            # ignore individual removal errors
+                            pass
+                    # try to remove the batch directory if empty
+                    try:
+                        if os.path.isdir(entry.batch_folder):
+                            os.rmdir(entry.batch_folder)
+                    except OSError:
+                        # directory not empty or cannot be removed
+                        pass
+                else:
+                    if entry.path and os.path.exists(entry.path):
+                        os.remove(entry.path)
+            except Exception as exc:  # noqa: BLE001 - surface friendly error
+                QMessageBox.warning(
+                    self,
+                    "Delete failed",
+                    f"Failed to delete: {str(exc)}",
+                )
+
+            # Refresh view after deletion
+            self.populate_current_folder()
 
     def _set_back_button_visible(self, visible: bool) -> None:
         self.ui.backButton.setVisible(visible)
