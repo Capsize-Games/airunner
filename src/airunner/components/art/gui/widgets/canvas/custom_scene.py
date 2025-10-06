@@ -319,6 +319,10 @@ class CustomScene(
             (SignalCode.CANVAS_CLEAR, self.on_canvas_clear_signal),
             (SignalCode.MASK_LAYER_TOGGLED, self.on_mask_layer_toggled),
             (
+                SignalCode.LAYER_SELECTION_CHANGED,
+                self._on_layer_selection_changed,
+            ),
+            (
                 SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL,
                 self.on_settings_changed,
             ),
@@ -673,7 +677,40 @@ class CustomScene(
 
         image = image_response.images[0]
 
+        # Get the current selected layer for the generated image
+        layer_id = self._add_image_to_undo()
+
+        # Load the image to the scene
         self._load_image_from_object(image=image)
+
+        # Persist the image to the database
+        try:
+            rgba_image = (
+                image if image.mode == "RGBA" else image.convert("RGBA")
+            )
+            width, height = rgba_image.size
+            raw_binary = (
+                b"AIRAW1"
+                + width.to_bytes(4, "big")
+                + height.to_bytes(4, "big")
+                + rgba_image.tobytes()
+            )
+            self.update_drawing_pad_settings(
+                layer_id=layer_id, image=raw_binary
+            )
+            self._pending_image_binary = raw_binary
+            self._current_active_image_binary = raw_binary
+        except Exception:
+            pass
+
+        # Commit to undo history
+        self._commit_layer_history_transaction(layer_id, "image")
+
+        # Refresh the layer display
+        try:
+            self._refresh_layer_display()
+        except Exception:
+            pass
 
     def on_paste_image_from_clipboard(self):
         image = self._paste_image_from_clipboard()
@@ -1627,9 +1664,9 @@ class CustomScene(
                             + height.to_bytes(4, "big")
                             + rgba_image.tobytes()
                         )
-                        current_layer = self._get_current_selected_layer_id()
+                        # Use the same layer_id for both persistence and undo
                         self.update_drawing_pad_settings(
-                            layer_id=current_layer, image=raw_binary
+                            layer_id=layer_id, image=raw_binary
                         )
                         self._pending_image_binary = raw_binary
                         self._current_active_image_binary = raw_binary
@@ -1679,9 +1716,9 @@ class CustomScene(
                             + height.to_bytes(4, "big")
                             + rgba_image.tobytes()
                         )
-                        current_layer = self._get_current_selected_layer_id()
+                        # Use the same layer_id for both persistence and undo
                         self.update_drawing_pad_settings(
-                            layer_id=current_layer, image=raw_binary
+                            layer_id=layer_id, image=raw_binary
                         )
                         self._pending_image_binary = raw_binary
                         self._current_active_image_binary = raw_binary
@@ -1720,11 +1757,9 @@ class CustomScene(
                                 + height.to_bytes(4, "big")
                                 + rgba_image.tobytes()
                             )
-                            current_layer = (
-                                self._get_current_selected_layer_id()
-                            )
+                            # Use the same layer_id for both persistence and undo
                             self.update_drawing_pad_settings(
-                                layer_id=current_layer, image=raw_binary
+                                layer_id=layer_id, image=raw_binary
                             )
                             self._pending_image_binary = raw_binary
                             self._current_active_image_binary = raw_binary
@@ -1831,24 +1866,40 @@ class CustomScene(
 
         if self.painter and self.painter.isActive():
             self.painter.end()
-
+        # Accessing Qt objects can raise RuntimeError if the underlying
+        # C++ object was deleted elsewhere. Catch both AttributeError
+        # and RuntimeError to be defensive and avoid crashes.
+        item_scene = None
         try:
-            item_scene = self.item.scene()
-        except AttributeError:
+            if hasattr(self, "item") and self.item is not None:
+                item_scene = self.item.scene()
+        except (AttributeError, RuntimeError):
             item_scene = None
+
         if item_scene is not None:
-            item_scene.removeItem(self.item)
+            try:
+                item_scene.removeItem(self.item)
+            except (RuntimeError, AttributeError):
+                # Item was deleted or invalid; ignore and continue
+                pass
         self.initialize_image(image)
         view.setSceneRect(current_viewport_rect)
 
     def delete_image(self):
         # Safely remove the image item from the scene (if present)
+        item_scene = None
         try:
-            item_scene = self.item.scene()
-        except AttributeError:
+            if hasattr(self, "item") and self.item is not None:
+                item_scene = self.item.scene()
+        except (AttributeError, RuntimeError):
             item_scene = None
+
         if item_scene is not None:
-            item_scene.removeItem(self.item)
+            try:
+                item_scene.removeItem(self.item)
+            except (RuntimeError, AttributeError):
+                # If the C++ object has already been deleted, skip removal
+                pass
 
         # Properly end and reset the painter so drawBackground can reinitialize
         self.stop_painter()
@@ -2453,7 +2504,13 @@ class CustomScene(
                     self.set_painter(self.image)
                 except Exception:
                     pass
-                self.item.setZValue(0)
+                # Check if item is still valid before using it
+                try:
+                    if self.item is not None:
+                        self.item.setZValue(0)
+                except (RuntimeError, AttributeError):
+                    # Item was deleted or is no longer valid
+                    pass
             else:
                 if hasattr(self, "logger"):
                     self.logger.warning(
@@ -2464,17 +2521,21 @@ class CustomScene(
             pass
 
         if self.item:
-            absolute_pos = QPointF(root_point.x(), root_point.y())
-            self.original_item_positions[self.item] = absolute_pos
+            try:
+                absolute_pos = QPointF(root_point.x(), root_point.y())
+                self.original_item_positions[self.item] = absolute_pos
 
-            visible_pos_x = absolute_pos.x() - canvas_offset.x()
-            visible_pos_y = absolute_pos.y() - canvas_offset.y()
-            current_pos = self.item.pos()
-            if (
-                abs(current_pos.x() - visible_pos_x) > 0.5
-                or abs(current_pos.y() - visible_pos_y) > 0.5
-            ):
-                self.item.setPos(visible_pos_x, visible_pos_y)
+                visible_pos_x = absolute_pos.x() - canvas_offset.x()
+                visible_pos_y = absolute_pos.y() - canvas_offset.y()
+                current_pos = self.item.pos()
+                if (
+                    abs(current_pos.x() - visible_pos_x) > 0.5
+                    or abs(current_pos.y() - visible_pos_y) > 0.5
+                ):
+                    self.item.setPos(visible_pos_x, visible_pos_y)
+            except (RuntimeError, AttributeError):
+                # Item was deleted or is no longer valid
+                pass
 
         # For new items we need full initialization.
         if not self.item:
@@ -2521,7 +2582,8 @@ class CustomScene(
 
                         # Restart painter with new image
                         self.set_painter(self.image)
-                    except Exception:
+                    except (RuntimeError, AttributeError):
+                        # Item was deleted or is no longer valid
                         pass
             except Exception:
                 if hasattr(self, "logger"):
@@ -2529,10 +2591,14 @@ class CustomScene(
                         "Retry RGBA->QImage failed; image update skipped."
                     )
         # Update stored absolute origin then reposition
-        self.original_item_positions[self.item] = QPointF(
-            root_point.x(), root_point.y()
-        )
-        self.update_image_position(self.get_canvas_offset())
+        try:
+            self.original_item_positions[self.item] = QPointF(
+                root_point.x(), root_point.y()
+            )
+            self.update_image_position(self.get_canvas_offset())
+        except (RuntimeError, AttributeError):
+            # Item was deleted or is no longer valid
+            pass
         self.update()
 
     def _handle_outpaint(
@@ -2791,17 +2857,21 @@ class CustomScene(
             new_x = original_pos.x() - canvas_offset.x()
             new_y = original_pos.y() - canvas_offset.y()
 
-            current_pos = self.item.pos()
-            if (
-                abs(current_pos.x() - new_x) > 1
-                or abs(current_pos.y() - new_y) > 1
-            ):
-                self.item.prepareGeometryChange()
-                self.item.setPos(new_x, new_y)
-                self.item.setVisible(True)
-                rect = self.item.boundingRect().adjusted(-10, -10, 10, 10)
-                scene_rect = self.item.mapRectToScene(rect)
-                self.update(scene_rect)
+            try:
+                current_pos = self.item.pos()
+                if (
+                    abs(current_pos.x() - new_x) > 1
+                    or abs(current_pos.y() - new_y) > 1
+                ):
+                    self.item.prepareGeometryChange()
+                    self.item.setPos(new_x, new_y)
+                    self.item.setVisible(True)
+                    rect = self.item.boundingRect().adjusted(-10, -10, 10, 10)
+                    scene_rect = self.item.mapRectToScene(rect)
+                    self.update(scene_rect)
+            except (RuntimeError, AttributeError):
+                # Item was deleted or is no longer valid
+                pass
 
         # Create a copy of items to iterate over, as we might modify the dict
         layer_items_copy = list(self._layer_items.items())
