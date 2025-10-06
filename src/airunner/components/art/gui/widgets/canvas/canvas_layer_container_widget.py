@@ -278,6 +278,9 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         layer_id = data.get("layer_id")
         layer_item = data.get("layer_item")
         if layer_id:
+            # Defensive check: ensure self.layers exists
+            if not hasattr(self, "layers") or self.layers is None:
+                self.layers = []
             layer = next((l for l in self.layers if l.id == layer_id), None)
             if layer:
                 self.layers.remove(layer)
