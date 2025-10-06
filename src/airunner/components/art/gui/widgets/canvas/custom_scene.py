@@ -946,8 +946,10 @@ class CustomScene(
     def _begin_layer_history_transaction(
         self, layer_id: Optional[int], change_type: str
     ) -> None:
-        if layer_id is None:
-            return
+        # Allow None as a valid key here - None represents the global
+        # drawing pad (no specific layer). Record the "before" state so
+        # that drawing on a blank canvas (layer_id is None) is captured
+        # in the undo history.
         self._history_transactions[layer_id] = {
             "type": change_type,
             "before": self._capture_layer_state(layer_id),
@@ -956,8 +958,7 @@ class CustomScene(
     def _commit_layer_history_transaction(
         self, layer_id: Optional[int], change_type: Optional[str] = None
     ) -> None:
-        if layer_id is None:
-            return
+        # Allow committing transactions keyed by None (global drawing pad)
         transaction = self._history_transactions.pop(layer_id, None)
         if transaction is None:
             return
@@ -983,8 +984,7 @@ class CustomScene(
     def _cancel_layer_history_transaction(
         self, layer_id: Optional[int]
     ) -> None:
-        if layer_id is None:
-            return
+        # Allow cancelling transactions keyed by None (global drawing pad)
         self._history_transactions.pop(layer_id, None)
 
     def _serialize_record(self, obj: Any) -> Optional[Dict[str, Any]]:
