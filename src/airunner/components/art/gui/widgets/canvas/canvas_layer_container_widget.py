@@ -1,5 +1,5 @@
 from typing import Optional
-from PySide6.QtCore import Slot, Qt
+from PySide6.QtCore import Slot, Qt, QTimer
 from PySide6.QtWidgets import QSpacerItem, QSizePolicy
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.windows.main.pipeline_mixin import (
@@ -64,13 +64,14 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             self._initialize_layer_default_settings(layer.id)
             self.layers = [layer]
 
-        # Add layers to the grid layout
-        for i, layer in enumerate(self.layers):
+        # Add layers to the grid layout (display in reverse order so
+        # highest-order layers appear at the top)
+        for display_index, layer in enumerate(reversed(self.layers)):
             item = LayerItemWidget(layer_id=layer.id)
             self.layer_widgets[layer.id] = item
             self.ui.layer_list_layout.layout().addWidget(
-                item, i, 0
-            )  # Add to row i, column 0
+                item, display_index, 0
+            )
 
         # Select the first layer by default
         self.select_first_layer()
@@ -82,6 +83,15 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
 
         # Enable drag and drop for the container
         self.setAcceptDrops(True)
+        # Ensure other components (scenes) refresh their layer displays
+        # now that the UI has been populated. Delay the signal emission
+        # slightly to ensure the scene and views are fully initialized
+        # and ready to render the correct z-order. Without this delay,
+        # the scene may not be ready to process the signal, causing
+        # stale z-values to persist until a later visibility toggle.
+        QTimer.singleShot(
+            100, lambda: self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+        )
 
     def create_layer(self, **kwargs) -> CanvasLayer:
         if "name" not in kwargs:
@@ -95,21 +105,18 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         # Initialize default settings for the new layer
         self._initialize_layer_default_settings(layer.id)
 
+        # Update internal model and widget mapping
         self.layers.append(layer)
         item = LayerItemWidget(layer_id=layer.id)
         self.layer_widgets[layer.id] = item
 
-        # Remove spacer, add new widget, then add spacer back
-        self.ui.layer_list_layout.layout().removeItem(self.spacer)
-        self.ui.layer_list_layout.layout().addWidget(
-            item, len(self.layers) - 1, 0
-        )
-        self.ui.layer_list_layout.layout().addItem(
-            self.spacer, len(self.layers), 0
-        )
+        # Refresh the displayed list (we render in reverse order so
+        # the new, highest-order layer appears at the top)
+        self._refresh_layer_display()
 
+        # Select the new layer
         self.clear_selected_layers()
-        self.select_layer(layer.id, item)
+        self.select_layer(layer.id, self.layer_widgets[layer.id])
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
 
     @Slot()
@@ -129,17 +136,20 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
     def on_move_layer_up_clicked(self):
         if not self.selected_layers:
             return
-
-        selected_layer_ids = sorted(self.selected_layers)
+        # Visual 'up' is towards the top of the UI. Since we render the
+        # UI in reversed order, visual 'up' corresponds to increasing
+        # the model order. Process selected layers from highest to
+        # lowest order to avoid clobbering.
+        selected_layer_ids = sorted(self.selected_layers, reverse=True)
         selected_layers = [
             l for l in self.layers if l.id in selected_layer_ids
         ]
 
-        # Find the minimum order among selected layers
-        min_order = min(layer.order for layer in selected_layers)
+        # Find the maximum order among selected layers; can't move up if
+        # any selected layer is already at the highest order
+        max_order = max(layer.order for layer in selected_layers)
 
-        # Can't move up if already at the top
-        if min_order == 0:
+        if max_order >= len(self.layers) - 1:
             return
 
         self.api.art.canvas.begin_layer_operation(
@@ -148,11 +158,11 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         changed = False
 
         try:
-            # Move each selected layer up by one position
+            # Move each selected layer up by one position (increase order)
             for layer in selected_layers:
-                # Find the layer above this one
+                # Find the layer above (higher order value)
                 layer_above = next(
-                    (l for l in self.layers if l.order == layer.order - 1),
+                    (l for l in self.layers if l.order == layer.order + 1),
                     None,
                 )
                 if layer_above and layer_above.id not in selected_layer_ids:
@@ -183,17 +193,18 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
     def on_move_layer_down_clicked(self):
         if not self.selected_layers:
             return
-
-        selected_layer_ids = sorted(self.selected_layers, reverse=True)
+        # Visual 'down' corresponds to decreasing model order. Process
+        # from lowest to highest to avoid collisions.
+        selected_layer_ids = sorted(self.selected_layers)
         selected_layers = [
             l for l in self.layers if l.id in selected_layer_ids
         ]
 
-        # Find the maximum order among selected layers
-        max_order = max(layer.order for layer in selected_layers)
+        # Find the minimum order among selected layers; can't move down if
+        # any selected layer is already at the lowest order
+        min_order = min(layer.order for layer in selected_layers)
 
-        # Can't move down if already at the bottom
-        if max_order >= len(self.layers) - 1:
+        if min_order == 0:
             return
 
         self.api.art.canvas.begin_layer_operation(
@@ -202,11 +213,11 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         changed = False
 
         try:
-            # Move each selected layer down by one position
+            # Move each selected layer down by one position (decrease order)
             for layer in selected_layers:
-                # Find the layer below this one
+                # Find the layer below (lower order value)
                 layer_below = next(
-                    (l for l in self.layers if l.order == layer.order + 1),
+                    (l for l in self.layers if l.order == layer.order - 1),
                     None,
                 )
                 if layer_below and layer_below.id not in selected_layer_ids:
@@ -456,11 +467,14 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if self.spacer:
             self.ui.layer_list_layout.layout().removeItem(self.spacer)
 
-        # Re-add widgets in new order
-        for i, layer in enumerate(self.layers):
+        # Re-add widgets in display order (reverse so highest-order
+        # layers are shown at the top)
+        for display_index, layer in enumerate(reversed(self.layers)):
             widget = self.layer_widgets.get(layer.id)
             if widget:
-                self.ui.layer_list_layout.layout().addWidget(widget, i, 0)
+                self.ui.layer_list_layout.layout().addWidget(
+                    widget, display_index, 0
+                )
 
         # Add spacer back
         self.ui.layer_list_layout.layout().addItem(
@@ -560,19 +574,31 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
             )
 
             if source_widget and target_widget:
-                # Update the layers list order
+                # Update the layers list order.
+                # The visual layout displays layers in reversed order
+                # (highest-order at the top). When a user drops a layer
+                # onto a target widget they expect the source to appear
+                # above the target in the UI. Since self.layers is in
+                # model order (ascending), we need to insert the source
+                # after the target in the model list so it appears above
+                # the target in the reversed display.
                 self.layers.remove(source_layer)
                 target_index = self.layers.index(target_layer)
-                self.layers.insert(target_index, source_layer)
+                insert_index = target_index + 1
+                # Clamp to end if necessary
+                if insert_index > len(self.layers):
+                    insert_index = len(self.layers)
+                self.layers.insert(insert_index, source_layer)
                 changed = True
 
-                # Re-add widgets in new order
-                for i, layer in enumerate(self.layers):
+                # Re-add widgets in display order (reverse so highest-order
+                # layers are shown at the top)
+                for display_index, layer in enumerate(reversed(self.layers)):
                     widget = next(
                         (w for w in widgets if w.layer.id == layer.id), None
                     )
                     if widget:
-                        layout.addWidget(widget, i, 0)
+                        layout.addWidget(widget, display_index, 0)
 
                 # Add spacer back at the end
                 layout.addItem(self.spacer, len(self.layers), 0)
