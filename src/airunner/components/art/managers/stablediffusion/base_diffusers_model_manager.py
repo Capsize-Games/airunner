@@ -964,6 +964,15 @@ class BaseDiffusersModelManager(BaseModelManager):
                         node_id=self.image_request.node_id,
                     )
                     code = EngineResponseCode.IMAGE_GENERATED
+
+                    # Send image to canvas for layer support (if not a node-based generation)
+                    if response.node_id is None and hasattr(self.api, "art"):
+                        try:
+                            self.api.art.canvas.send_image_to_canvas(response)
+                        except Exception as e:
+                            self.logger.debug(
+                                f"Failed to send image to canvas: {e}"
+                            )
                 except PipeNotLoadedException as e:
                     self.logger.error(e)
                 except InterruptedException as e:
