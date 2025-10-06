@@ -30,7 +30,13 @@ class IconManager:
 
     def update_icons(self, theme):
         """Update the icons for the given theme."""
+        # icon_cache may contain both metadata dicts (created in __init__)
+        # and QIcon instances (created by get_icon). Only process the
+        # metadata dict entries which contain the widget and icon name.
         for key, data in self.icon_cache.items():
+            if not isinstance(data, dict):
+                # Skip cached QIcon or unexpected entries
+                continue
             icon_name = data["icon_name"]
             widget = data["widget"]
             icon = QtGui.QIcon()
