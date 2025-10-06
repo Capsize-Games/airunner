@@ -1565,7 +1565,12 @@ class CustomScene(
 
             layer_item.setVisible(layer_info["visible"])
             layer_item.setOpacity(layer_info["opacity"] / 100.0)
-            layer_item.setZValue(1000 - layer_info["order"])
+            # Use a base z-value and add the layer order so that
+            # higher-order layers render on top of lower-order ones.
+            # Previously this subtracted the order which inverted the
+            # stacking; switching to addition aligns model order with
+            # visual stacking (larger order => higher z).
+            layer_item.setZValue(1000 + layer_info["order"])
 
             # Determine position for the layer item
             if (
@@ -1617,6 +1622,28 @@ class CustomScene(
                 if layer_item.scene():
                     layer_item.scene().removeItem(layer_item)
                 del self._layer_items[layer_id]
+
+        # Force a repaint of the scene and all attached views so that
+        # z-values and visibility changes are immediately applied. On
+        # some viewport backends (OpenGL) the stacking/visibility can
+        # remain stale until an explicit update is requested; toggling
+        # visibility later effectively did this, which is why users saw
+        # the correct result after toggling. Do the explicit update here
+        # to ensure correct rendering on startup.
+        try:
+            # Update the QGraphicsScene
+            self.update()
+            # Update each view's viewport
+            for v in self.views():
+                try:
+                    if v.viewport():
+                        v.viewport().update()
+                    v.update()
+                except Exception:
+                    # Non-fatal - continue updating other views
+                    continue
+        except Exception:
+            pass
 
     def _get_active_layer_item(self) -> Optional[LayerImageItem]:
         """Return the currently selected layer item, falling back to top-most."""
