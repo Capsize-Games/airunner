@@ -1357,7 +1357,7 @@
   <customwidget>
    <class>GeneratorForm</class>
    <extends>QWidget</extends>
-   <header>airunner/components/art/gui/widgets/generator_form/generator_form_widget</header>
+   <header>airunner/components/llm/gui/widgets/generator_form/generator_form_widget</header>
    <container>1</container>
   </customwidget>
   <customwidget>

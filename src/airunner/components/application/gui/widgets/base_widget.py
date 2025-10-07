@@ -71,11 +71,7 @@ class BaseWidget(AbstractBaseWidget):
         self.icon_manager: Optional[IconManager] = None
         # Ensure each instance has its own signal_handlers dict rather than
         # sharing a class-level mutable default.
-        self.signal_handlers = (
-            {}
-            if not getattr(self, "signal_handlers", None)
-            else dict(self.signal_handlers)
-        )
+        self.signal_handlers = {} if not getattr(self, "signal_handlers", None) else dict(self.signal_handlers)
         self.signal_handlers.update(
             {
                 SignalCode.QUIT_APPLICATION: self.handle_close,

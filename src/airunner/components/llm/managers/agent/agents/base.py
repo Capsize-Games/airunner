@@ -537,6 +537,40 @@ class BaseAgent(
             )
         return self._streaming_stopping_criteria
 
+    def do_interrupt_process(self) -> bool:
+        """Return True when an external interrupt has been requested.
+
+        This is used by ExternalConditionStoppingCriteria to determine whether
+        a running generation should stop. Default implementation reads the
+        ``do_interrupt`` flag defined on the agent instance.
+        """
+        return bool(getattr(self, "do_interrupt", False))
+
+    def interrupt_process(self) -> None:
+        """Request interruption of the current process/stream.
+
+        Default implementation sets the agent's ``do_interrupt`` flag and
+        will attempt to call a lower-level ``interrupt_process`` on the
+        underlying LLm if present (best-effort and swallow exceptions).
+        Agents that implement more specific cancellation should override
+        this method (see OllamaQObject/OpenRouter implementations).
+        """
+        try:
+            # Signal the stopping criteria to return True
+            setattr(self, "do_interrupt", True)
+            # If underlying llm supports immediate cancel, call it
+            if getattr(self, "_llm", None) and hasattr(
+                self._llm, "interrupt_process"
+            ):
+                try:
+                    self._llm.interrupt_process()
+                except Exception:
+                    # Best-effort: ignore errors from underlying interrupt
+                    pass
+        except Exception:
+            # Keep this method safe to call from signal handlers
+            return
+
     @property
     def chat_engine(self) -> RefreshSimpleChatEngine:
         """

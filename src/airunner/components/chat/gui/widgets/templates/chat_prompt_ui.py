@@ -223,17 +223,17 @@ class Ui_chat_prompt(object):
 
         self.horizontalLayout_2.addWidget(self.send_button)
 
-        self.pushButton = QPushButton(self.footer_container)
-        self.pushButton.setObjectName(u"pushButton")
-        sizePolicy4.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
-        self.pushButton.setSizePolicy(sizePolicy4)
-        self.pushButton.setMinimumSize(QSize(30, 30))
-        self.pushButton.setMaximumSize(QSize(30, 30))
+        self.stop_button = QPushButton(self.footer_container)
+        self.stop_button.setObjectName(u"stop_button")
+        sizePolicy4.setHeightForWidth(self.stop_button.sizePolicy().hasHeightForWidth())
+        self.stop_button.setSizePolicy(sizePolicy4)
+        self.stop_button.setMinimumSize(QSize(30, 30))
+        self.stop_button.setMaximumSize(QSize(30, 30))
         icon4 = QIcon()
         icon4.addFile(u":/light/icons/feather/light/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pushButton.setIcon(icon4)
+        self.stop_button.setIcon(icon4)
 
-        self.horizontalLayout_2.addWidget(self.pushButton)
+        self.horizontalLayout_2.addWidget(self.stop_button)
 
 
         self.horizontalLayout.addWidget(self.footer_container)
@@ -245,7 +245,6 @@ class Ui_chat_prompt(object):
         self.retranslateUi(chat_prompt)
         self.action.currentTextChanged.connect(chat_prompt.llm_action_changed)
         self.send_button.clicked.connect(chat_prompt.action_button_clicked_send)
-        self.pushButton.clicked.connect(chat_prompt.interrupt_button_clicked)
         self.prompt.textChanged.connect(chat_prompt.prompt_text_changed)
 
         self.tabWidget.setCurrentIndex(0)
@@ -276,8 +275,8 @@ class Ui_chat_prompt(object):
 #endif // QT_CONFIG(tooltip)
         self.send_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.pushButton.setToolTip(QCoreApplication.translate("chat_prompt", u"Cancel message", None))
+        self.stop_button.setToolTip(QCoreApplication.translate("chat_prompt", u"Cancel message", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton.setText("")
+        self.stop_button.setText("")
     # retranslateUi
 
