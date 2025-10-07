@@ -168,7 +168,6 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._img2img_image = None
         self._controlnet_settings = None
         self._controlnet_image_settings = None
-        self._application_settings = None
         self._drawing_pad_settings = None
         self._outpaint_settings = None
         self._path_settings = None
@@ -189,8 +188,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         active_rect = Rect(
             pos[0],
             pos[1],
-            self.application_settings.working_width,
-            self.application_settings.working_height,
+            self.image_request.width,
+            self.image_request.height,
         )
         drawing_pad_pos = self.drawing_pad_settings.pos
         active_rect.translate(
@@ -247,10 +246,12 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def use_compel(self) -> bool:
-        compel = self.image_request.use_compel if self.image_request else None
-        if compel is None:
-            compel = self.generator_settings.use_compel
-        return compel
+        use_compel = (
+            self.image_request.use_compel if self.image_request else None
+        )
+        if use_compel is None:
+            use_compel = self.generator_settings.use_compel
+        return use_compel
 
     @property
     def generator(self) -> torch.Generator:
@@ -305,10 +306,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def controlnet_image(self) -> Image:
-        img = self.controlnet_settings.image
-        if img is not None:
-            img = convert_binary_to_image(img)
-        return img
+        return self.image_request.controlnet_image
 
     @property
     def controlnet_model(self) -> Optional[ControlnetModel]:
@@ -316,32 +314,31 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._controlnet_model is None
             or self._controlnet_model.version != self.version
             or self._controlnet_model.display_name
-            != self.controlnet_settings.controlnet
+            != self.image_request.controlnet
         ):
             self.logger.debug(
-                f"Loading controlnet model from database {self.controlnet_settings.controlnet} {self.version}"
+                f"Loading controlnet model from database {self.image_request.controlnet} {self.version}"
             )
             self._controlnet_model = ControlnetModel.objects.filter_by_first(
-                display_name=self.controlnet_settings.controlnet,
+                display_name=self.image_request.controlnet,
                 version=self.version,
             )
         return self._controlnet_model
 
     @property
     def controlnet_enabled(self) -> bool:
+        if self.image_request:
+            controlnet_enabled = self.image_request.controlnet_enabled
+            if controlnet_enabled is not None:
+                return controlnet_enabled
         return (
             self.controlnet_settings.enabled
-            and self.application_settings.controlnet_enabled
             and self.controlnet_settings.image is not None
         )
 
     @property
-    def controlnet_strength(self) -> int:
-        return self.controlnet_settings.strength
-
-    @property
     def controlnet_conditioning_scale(self) -> int:
-        return self.controlnet_settings.conditioning_scale
+        return self.image_request.controlnet_conditioning_scale
 
     @property
     def controlnet_is_loading(self) -> bool:
@@ -349,7 +346,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def pipeline(self) -> str:
-        return self.generator_settings.pipeline_action
+        return self.image_request.pipeline_action
 
     @property
     def operation_type(self) -> str:
@@ -397,6 +394,9 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def section(self) -> GeneratorSection:
+        if self.image_request is not None:
+            return self.image_request.generator_section
+
         # Check if we have an inpaint model selected, prioritize that
         if (
             self.generator_settings.pipeline_action
@@ -405,10 +405,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             return GeneratorSection.INPAINT
 
         section = GeneratorSection.TXT2IMG
-        if (
-            self.img2img_image_cached is not None
-            and self.image_to_image_settings.enabled
-        ):
+        if self.image_to_image_settings.enabled:
             section = GeneratorSection.IMG2IMG
         if (
             self.drawing_pad_settings.image is not None
@@ -431,25 +428,17 @@ class BaseDiffusersModelManager(BaseModelManager):
             # Check if the expanded path exists
             if os.path.exists(expanded_path):
                 return expanded_path
-        return None  # Return None if path is None, empty, or doesn't exist
+        return None
 
     @property
     def model_path(
         self,
     ) -> Optional[str]:  # Changed return type to Optional[str]
-        custom_path = (
-            self.custom_path
-        )  # Use the property which already checks existence
+        custom_path = self.custom_path
         if custom_path is not None:
             return custom_path
 
         path = self.image_request.model_path if self.image_request else None
-        if path is None or path == "":
-            model_id = self.generator_settings.model
-            if model_id is not None:
-                model = AIModels.objects.get(model_id)
-                if model is not None:
-                    path = model.path
 
         # Ensure the final path exists if it's not None or empty
         if path and path != "":
@@ -485,7 +474,9 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def use_safety_checker(self) -> bool:
-        return self.application_settings.nsfw_filter
+        nsfw_filter = self.image_request.nsfw_filter
+        if nsfw_filter is None:
+            nsfw_filter = self.application_settings.nsfw_filter
 
     @property
     def is_txt2img(self) -> bool:
@@ -557,7 +548,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def mask_blur(self) -> int:
-        return self.outpaint_settings.mask_blur
+        return self.image_request.outpaint_mask_blur
 
     @property
     def do_join_prompts(self) -> bool:
@@ -1011,10 +1002,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                     total += 1
 
     def _load_safety_checker(self):
-        if (
-            not self.application_settings.nsfw_filter
-            or self.safety_checker_is_loading
-        ):
+        if not self.use_safety_checker or self.safety_checker_is_loading:
             return
         self._safety_checker = model_loader.load_safety_checker(
             self.application_settings, self.path_settings, self.data_type
@@ -1876,8 +1864,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._set_seed()
 
         data = {
-            "width": int(self.application_settings.working_width),
-            "height": int(self.application_settings.working_height),
+            "width": int(self.image_request.width),
+            "height": int(self.image_request.height),
             "clip_skip": int(self.image_request.clip_skip),
             "num_inference_steps": int(self.image_request.steps),
             "callback_on_step_end": self.__interrupt_callback,
@@ -1905,8 +1893,8 @@ class BaseDiffusersModelManager(BaseModelManager):
                 }
             )
 
-        width = int(self.application_settings.working_width)
-        height = int(self.application_settings.working_height)
+        width = int(self.image_request.width)
+        height = int(self.image_request.height)
         image = None
         mask = None
 
@@ -1992,34 +1980,20 @@ class BaseDiffusersModelManager(BaseModelManager):
                 )
             data["mask_image"] = mask
 
+        data.update(
+            {
+                "strength": self.image_request.strength,
+            }
+        )
+
         if self.controlnet_enabled:
             data.update(
                 {
-                    "guess_mode": False,
-                    "control_guidance_start": 0.0,
-                    "control_guidance_end": 1.0,
-                    "strength": self.controlnet_strength / 100.0,
+                    "guess_mode": self.image_request.controlnet_guess_mode,
+                    "control_guidance_start": self.image_request.control_guidance_start,
+                    "control_guidance_end": self.image_request.control_guidance_end,
                     "guidance_scale": self.image_request.scale,
-                    "controlnet_conditioning_scale": self.controlnet_conditioning_scale
-                    / 100.0,
-                }
-            )
-        elif self.is_inpaint:
-            data.update(
-                {
-                    "strength": self.outpaint_settings.strength / 100.0,
-                }
-            )
-        elif self.is_outpaint:
-            data.update(
-                {
-                    "strength": self.outpaint_settings.strength / 100.0,
-                }
-            )
-        elif self.is_img2img:
-            data.update(
-                {
-                    "strength": self.image_to_image_settings.strength / 100.0,
+                    "controlnet_conditioning_scale": self.image_request.controlnet_conditioning_scale,
                 }
             )
         return data

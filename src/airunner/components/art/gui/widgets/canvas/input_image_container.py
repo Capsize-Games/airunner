@@ -40,22 +40,47 @@ class InputImageContainer(BaseWidget):
 
     def _do_grid_refresh(self):
         try:
-            if self.input_image and getattr(
-                self.input_image.current_settings,
-                "use_grid_image_as_input",
-                False,
+            # Respect lock_input_image: if locked, do not auto-load from grid
+            if (
+                self.input_image
+                and getattr(
+                    self.input_image.current_settings,
+                    "use_grid_image_as_input",
+                    False,
+                )
+                and not getattr(
+                    self.input_image.current_settings,
+                    "lock_input_image",
+                    False,
+                )
             ):
                 self.input_image.load_image_from_grid()
-            if self.generated_image and getattr(
-                self.generated_image.current_settings,
-                "use_grid_image_as_input",
-                False,
+
+            if (
+                self.generated_image
+                and getattr(
+                    self.generated_image.current_settings,
+                    "use_grid_image_as_input",
+                    False,
+                )
+                and not getattr(
+                    self.generated_image.current_settings,
+                    "lock_input_image",
+                    False,
+                )
             ):
                 self.generated_image.load_image_from_grid()
-            if self.mask_image and getattr(
-                self.mask_image.current_settings,
-                "use_grid_image_as_input",
-                False,
+
+            if (
+                self.mask_image
+                and getattr(
+                    self.mask_image.current_settings,
+                    "use_grid_image_as_input",
+                    False,
+                )
+                and not getattr(
+                    self.mask_image.current_settings, "lock_input_image", False
+                )
             ):
                 self.mask_image.load_image_from_grid()
         except Exception:

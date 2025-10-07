@@ -474,6 +474,13 @@ class CustomScene(
                     self.api.art.canvas.image_updated()
             return
 
+        # Check lock before persisting any changes
+        if getattr(self.current_settings, "lock_input_image", False):
+            # User has locked the input image; do not persist changes
+            # Still update in-memory reference for display but skip DB write
+            self._current_active_image_ref = image
+            return
+
         # Fast identity check: same object reference -> skip
         if image is self._current_active_image_ref:
             return
@@ -2445,6 +2452,15 @@ class CustomScene(
     ):
         if image is None:
             return
+
+        # Check lock before updating the visual display with generated images
+        # (but allow user-initiated imports and pastes)
+        if generated and getattr(
+            self.current_settings, "lock_input_image", False
+        ):
+            # User has locked the input image; do not update the visual scene
+            return
+
         # NOTE: Major hotspot previously (line profiler ~44% time) was the
         # second attribute access to drawing_pad_settings.* which triggered
         # another full settings DB load. Cache the settings object locally

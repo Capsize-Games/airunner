@@ -16,6 +16,9 @@ from PySide6.QtWidgets import QApplication, QWidget
 
 from airunner.components.application.data import ShortcutKeys
 from airunner.components.art.data.ai_models import AIModels
+from airunner.components.art.data.image_to_image_settings import (
+    ImageToImageSettings,
+)
 from airunner.enums import (
     QualityEffects,
     Scheduler,
@@ -182,6 +185,48 @@ class StableDiffusionGeneratorForm(BaseWidget):
         )
         self.ui.quality_effects.blockSignals(False)
         self.ui.infinite_images_button.blockSignals(False)
+
+    @property
+    def controlnet_enabled(self) -> bool:
+        return (
+            self.controlnet_settings.enabled
+            and self.controlnet_settings.image is not None
+        )
+
+    @property
+    def section(self) -> GeneratorSection:
+        # Check if we have an inpaint model selected, prioritize that
+        if (
+            self.generator_settings.pipeline_action
+            == GeneratorSection.INPAINT.value
+        ):
+            return GeneratorSection.INPAINT
+
+        section = GeneratorSection.TXT2IMG
+        if self.image_to_image_settings.enabled:
+            section = GeneratorSection.IMG2IMG
+        if (
+            self.drawing_pad_settings.image is not None
+            and self.outpaint_settings.enabled
+        ):
+            section = GeneratorSection.OUTPAINT
+        return section
+
+    @property
+    def is_txt2img(self) -> bool:
+        return self.section is GeneratorSection.TXT2IMG
+
+    @property
+    def is_img2img(self) -> bool:
+        return self.section is GeneratorSection.IMG2IMG
+
+    @property
+    def is_outpaint(self) -> bool:
+        return self.section is GeneratorSection.OUTPAINT
+
+    @property
+    def is_inpaint(self) -> bool:
+        return self.section is GeneratorSection.INPAINT
 
     @property
     def is_sd_xl_or_turbo(self) -> bool:
@@ -562,6 +607,16 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
         fresh_generator_settings = GeneratorSettings.objects.first()
 
+        # Determine strength based on whether we are doing img2img or txt2img
+        if self.controlnet_enabled:
+            strength = self.controlnet_settings.strength
+        elif self.is_inpaint or self.is_outpaint:
+            strength = self.outpaint_settings.strength
+        elif self.is_img2img:
+            strength = self.image_to_image_settings.strength
+        else:
+            strength = fresh_generator_settings.strength
+
         model_path = ""
         model_id = fresh_generator_settings.model
         if model_id is not None:
@@ -594,7 +649,11 @@ class StableDiffusionGeneratorForm(BaseWidget):
         image = None
         mask = None
         scheduler = fresh_generator_settings.scheduler
-        if (
+
+        # Get image from ImageToImageSettings if img2img
+        if self.is_img2img:
+            binary_image = self.image_to_image_settings.image
+        elif (
             fresh_generator_settings.pipeline_action
             == GeneratorSection.UPSCALER.value
         ):
@@ -604,6 +663,16 @@ class StableDiffusionGeneratorForm(BaseWidget):
         if binary_image is not None:
             image = convert_binary_to_image(binary_image)
             image = image.convert("RGB")
+
+        controlnet_image = None
+        if self.controlnet_enabled:
+            controlnet_binary_image = self.controlnet_settings.image
+            controlnet_image = convert_binary_to_image(controlnet_binary_image)
+            controlnet_image = controlnet_image.convert("RGB")
+
+        custom_path = self.generator_settings.custom_path
+        if type(custom_path) is tuple:
+            custom_path = None
 
         image_request = ImageRequest(
             prompt=data.get("prompt", self.ui.prompt.toPlainText()),
@@ -630,7 +699,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
             ddim_eta=fresh_generator_settings.ddim_eta,
             scale=fresh_generator_settings.scale / 100,
             seed=self.seed,
-            strength=fresh_generator_settings.strength / 100,
+            strength=strength / 100,
             n_samples=fresh_generator_settings.n_samples,
             images_per_batch=fresh_generator_settings.images_per_batch,
             generate_infinite_images=fresh_generator_settings.generate_infinite_images,
@@ -653,6 +722,15 @@ class StableDiffusionGeneratorForm(BaseWidget):
             ),
             image=image,
             mask=mask,
+            controlnet_conditioning_scale=self.controlnet_settings.conditioning_scale
+            / 100.0,
+            generator_section=self.section,
+            custom_path=custom_path,
+            controlnet_enabled=self.controlnet_enabled,
+            controlnet=self.controlnet_settings.controlnet,
+            nsfw_filter=self.application_settings.nsfw_filter,
+            outpaint_mask_blur=self.outpaint_settings.mask_blur,
+            controlnet_image=controlnet_image,
         )
 
         self.api.art.send_request(image_request=image_request)

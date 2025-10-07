@@ -131,7 +131,6 @@ class MainWindow(
     _window_title = f"AI Runner"
     icons = [
         ("settings", "actionSettings"),
-        ("crosshair", "actionToggle_Controlnet"),
         ("cpu", "actionToggle_LLM"),
         ("mic", "actionToggle_Speech_to_Text"),
         ("image", "actionToggle_Stable_Diffusion"),
@@ -566,18 +565,6 @@ class MainWindow(
     def on_actionAbout_triggered(self):
         AboutWindow()
 
-    @Slot(bool)
-    def on_actionToggle_Controlnet_toggled(self, val: bool):
-        self.update_controlnet_settings(enabled=val)
-        self._update_action_button(
-            ModelType.CONTROLNET,
-            self.ui.actionToggle_Controlnet,
-            val,
-            SignalCode.CONTROLNET_LOAD_SIGNAL,
-            SignalCode.CONTROLNET_UNLOAD_SIGNAL,
-            "controlnet_enabled",
-        )
-
     @Slot()
     def on_actionNew_Conversation_triggered(self):
         if not self.api or not hasattr(self.api, "llm"):
@@ -955,7 +942,6 @@ class MainWindow(
 
         self.ui.center_widget.deleteLater()
         self.ui.actionToggle_Stable_Diffusion.deleteLater()
-        self.ui.actionToggle_Controlnet.deleteLater()
         self.ui.menuImage.deleteLater()
         self.ui.menuFilters.deleteLater()
         self.ui.menuStable_Diffusion.deleteLater()
@@ -995,10 +981,6 @@ class MainWindow(
             (
                 self.ui.actionToggle_Stable_Diffusion,
                 self.application_settings.sd_enabled,
-            ),
-            (
-                self.ui.actionToggle_Controlnet,
-                self.application_settings.controlnet_enabled,
             ),
         ):
             item[0].blockSignals(True)
@@ -1636,12 +1618,6 @@ class MainWindow(
             )
             if status is ModelStatus.FAILED:
                 self.ui.actionToggle_Stable_Diffusion.setChecked(False)
-        elif model is ModelType.CONTROLNET:
-            self.ui.actionToggle_Controlnet.setDisabled(
-                status is ModelStatus.LOADING
-            )
-            if status is ModelStatus.FAILED:
-                self.ui.actionToggle_Controlnet.setChecked(False)
         elif model is ModelType.LLM:
             self.ui.actionToggle_LLM.setDisabled(status is ModelStatus.LOADING)
             if status is ModelStatus.FAILED:

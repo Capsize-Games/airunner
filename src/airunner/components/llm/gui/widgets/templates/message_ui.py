@@ -15,7 +15,6 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
     QLabel, QPushButton, QSizePolicy, QSpacerItem,
     QWidget)
@@ -98,8 +97,8 @@ class Ui_message(object):
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.content_container.sizePolicy().hasHeightForWidth())
         self.content_container.setSizePolicy(sizePolicy1)
-        self.content_container.setFrameShape(QFrame.StyledPanel)
-        self.content_container.setFrameShadow(QFrame.Raised)
+        self.content_container.setFrameShape(QFrame.Shape.StyledPanel)
+        self.content_container.setFrameShadow(QFrame.Shadow.Raised)
 
         self.gridLayout.addWidget(self.content_container, 1, 0, 1, 1)
 
