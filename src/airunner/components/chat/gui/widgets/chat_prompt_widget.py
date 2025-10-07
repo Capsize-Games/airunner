@@ -132,6 +132,15 @@ class ChatPromptWidget(BaseWidget):
     def on_send_button_clicked(self):
         self.do_generate()
 
+    @Slot()
+    def action_button_clicked_send(self):
+        """Compatibility alias for UI slot generated name.
+
+        Some .ui templates connect to chat_prompt.action_button_clicked_send();
+        provide a small alias so those generated bindings succeed.
+        """
+        self.on_send_button_clicked()
+
     def _find_parent_tab_widget(self):
         """Find the parent QTabWidget containing this widget."""
         parent = self.parent()
