@@ -915,7 +915,6 @@
      </property>
      <addaction name="actionSafety_Checker"/>
      <addaction name="actionToggle_Stable_Diffusion"/>
-     <addaction name="actionToggle_Controlnet"/>
      <addaction name="actionDownload_Model"/>
     </widget>
     <addaction name="menuStable_Diffusion"/>
@@ -971,7 +970,6 @@
    <addaction name="actionToggle_Text_to_Speech"/>
    <addaction name="actionToggle_LLM"/>
    <addaction name="separator"/>
-   <addaction name="actionToggle_Controlnet"/>
    <addaction name="actionToggle_Stable_Diffusion"/>
   </widget>
   <action name="actionCopy">
@@ -1184,21 +1182,6 @@
    </property>
    <property name="text">
     <string>Toggle Stable Diffusion</string>
-   </property>
-  </action>
-  <action name="actionToggle_Controlnet">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>false</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="../../../../../../gui/resources/feather.qrc">
-     <normaloff>:/light/icons/feather/light/crosshair.svg</normaloff>:/light/icons/feather/light/crosshair.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Toggle Controlnet</string>
    </property>
   </action>
   <action name="artActionNew">
