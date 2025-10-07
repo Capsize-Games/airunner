@@ -8,6 +8,8 @@ class ChatBridge(QObject):
     scrollRequested = Signal()
     contentHeightChanged = Signal(int)
     deleteMessageRequested = Signal(object)  # Accepts int or str
+    copyMessageRequested = Signal(object)
+    newChatRequested = Signal()
 
     @Slot(list)
     def set_messages(self, messages):
@@ -33,3 +35,12 @@ class ChatBridge(QObject):
     @Slot(str)
     def deleteMessage(self, message_id):
         self.deleteMessageRequested.emit(message_id)
+
+    @Slot(int)
+    @Slot(str)
+    def copyMessage(self, message_id):
+        self.copyMessageRequested.emit(message_id)
+
+    @Slot()
+    def newChat(self):
+        self.newChatRequested.emit()
