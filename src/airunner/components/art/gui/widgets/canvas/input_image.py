@@ -56,7 +56,12 @@ class InputImage(BaseWidget):
         )
 
         if hasattr(self._scene, "use_generated_image"):
-            self._scene.use_generated_image = self.use_generated_image
+            # Only allow the scene to consume generated images when the
+            # current settings do not have the input image locked.
+            allow_generated = self.use_generated_image and not getattr(
+                self.current_settings, "lock_input_image", False
+            )
+            self._scene.use_generated_image = allow_generated
 
         # Connect the scene to the graphics view
         self.ui.image_container.setScene(self._scene)
@@ -136,6 +141,16 @@ class InputImage(BaseWidget):
             self.update_drawing_pad_settings(**{key: value})
 
         self.api.art.canvas.input_image_changed(self.settings_key, key, value)
+        # If lock_input_image changed programmatically, ensure the scene honors it
+        if key == "lock_input_image":
+            try:
+                if self._scene and hasattr(self._scene, "use_generated_image"):
+                    self._scene.use_generated_image = (
+                        self.use_generated_image and not bool(value)
+                    )
+            except Exception:
+                # Defensive: don't let UI updates raise
+                pass
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -176,6 +191,18 @@ class InputImage(BaseWidget):
         )
         self.ui.link_to_grid_image_button.blockSignals(False)
         self.ui.lock_input_image_button.blockSignals(False)
+
+        # Ensure the scene reflects the current lock state when the widget is shown.
+        try:
+            if self._scene and hasattr(self._scene, "use_generated_image"):
+                self._scene.use_generated_image = (
+                    self.use_generated_image
+                    and not getattr(
+                        self.current_settings, "lock_input_image", False
+                    )
+                )
+        except Exception:
+            pass
         if self.current_settings.use_grid_image_as_input:
             self.load_image_from_grid()
             return
@@ -189,6 +216,14 @@ class InputImage(BaseWidget):
     @Slot(bool)
     def on_lock_input_image_button_toggled(self, val: bool):
         self.update_current_settings("lock_input_image", val)
+        # Immediately update the scene so generated images are ignored when locked.
+        try:
+            if self._scene and hasattr(self._scene, "use_generated_image"):
+                self._scene.use_generated_image = (
+                    self.use_generated_image and not val
+                )
+        except Exception:
+            pass
 
     @Slot()
     def on_refresh_button_clicked(self):
@@ -291,6 +326,14 @@ class InputImage(BaseWidget):
             self.load_image_from_object(image)
 
     def load_image_from_settings(self):
+        # If the input image is locked, do not load any new images from settings
+        # (unless it's the initial load with no scene content yet)
+        is_locked = getattr(self.current_settings, "lock_input_image", False)
+        if is_locked and self._scene and self._scene.item is not None:
+            # User has locked the input image and there's already content displayed
+            # Do not replace the visual display
+            return
+
         if self.settings_key == "outpaint_settings":
             if self.is_mask:
                 image = self.drawing_pad_settings.mask
