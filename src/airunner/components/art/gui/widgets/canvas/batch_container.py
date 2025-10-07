@@ -240,6 +240,12 @@ class BatchContainer(BaseWidget):
             delete_action = menu.addAction("Delete batch")
         else:
             delete_action = menu.addAction("Delete image")
+        # Option to load generator settings from the image's embedded metadata
+        load_settings_action = None
+        if not entry.is_batch and entry.path:
+            load_settings_action = menu.addAction(
+                "Load settings from metadata"
+            )
 
         action = menu.exec_(view.mapToGlobal(point))
         if action is None:
@@ -298,6 +304,236 @@ class BatchContainer(BaseWidget):
 
             # Refresh view after deletion
             self.populate_current_folder()
+        elif load_settings_action and action == load_settings_action:
+            # Load metadata from the image and apply to generator settings
+            try:
+                # Open image via PIL and read metadata
+                from PIL import Image
+                import json
+
+                if isinstance(entry.path, Image.Image):
+                    image = entry.path
+                else:
+                    image = Image.open(entry.path)
+
+                metadata = {}
+                try:
+                    from airunner.utils.image.load_metadata_from_image import (
+                        load_metadata_from_image,
+                    )
+
+                    metadata = load_metadata_from_image(image) or {}
+                except Exception:
+                    # fallback: try to read info dict directly
+                    try:
+                        metadata = getattr(image, "info", {}) or {}
+                    except Exception:
+                        metadata = {}
+
+                # If 'generator_settings' key exists and is JSON, use it directly
+                updates = {}
+                gen_settings_raw = metadata.get(
+                    "generator_settings"
+                ) or metadata.get("generatorSettings")
+                if gen_settings_raw:
+                    if isinstance(gen_settings_raw, str):
+                        try:
+                            updates = json.loads(gen_settings_raw)
+                        except Exception:
+                            # not JSON, skip
+                            updates = {}
+                    elif isinstance(gen_settings_raw, dict):
+                        updates = gen_settings_raw
+
+                # Otherwise, try to map known keys from flat metadata
+                if not updates:
+                    # First, handle multiple prompts: prompt, prompt_2, prompt_3, ...
+                    import re
+
+                    prompt_keys = [
+                        k
+                        for k in metadata.keys()
+                        if re.match(r"^prompt(_\d+)?$", k)
+                    ]
+                    # also accept alternate names
+                    alt_prompt_keys = [
+                        k
+                        for k in metadata.keys()
+                        if k in ("second_prompt", "secondary_prompt")
+                    ]
+                    all_prompt_keys = sorted(
+                        prompt_keys,
+                        key=lambda name: (
+                            int(re.search(r"_(\d+)$", name).group(1))
+                            if re.search(r"_(\d+)$", name)
+                            else 1
+                        ),
+                    )
+                    # include alternates after numbered prompts if present
+                    all_prompt_keys.extend(
+                        [
+                            k
+                            for k in alt_prompt_keys
+                            if k not in all_prompt_keys
+                        ]
+                    )
+
+                    if all_prompt_keys:
+                        prompts = []
+                        for k in all_prompt_keys:
+                            v = metadata.get(k)
+                            if isinstance(v, str):
+                                try:
+                                    v_decoded = json.loads(v)
+                                    v = v_decoded
+                                except Exception:
+                                    pass
+                            if v is None:
+                                continue
+                            prompts.append(str(v))
+
+                        if prompts:
+                            updates["prompt"] = prompts[0]
+                            # Join any remaining prompts into second_prompt (preserve order)
+                            if len(prompts) > 1:
+                                updates["second_prompt"] = "\n\n".join(
+                                    prompts[1:]
+                                )
+
+                    # Negative prompts: negative_prompt, negative_prompt_2, etc.
+                    neg_keys = [
+                        k
+                        for k in metadata.keys()
+                        if re.match(r"^negative_prompt(_\d+)?$", k)
+                    ]
+                    alt_neg_keys = [
+                        k
+                        for k in metadata.keys()
+                        if k
+                        in (
+                            "second_negative_prompt",
+                            "secondary_negative_prompt",
+                        )
+                    ]
+                    all_neg_keys = sorted(
+                        neg_keys,
+                        key=lambda name: (
+                            int(re.search(r"_(\d+)$", name).group(1))
+                            if re.search(r"_(\d+)$", name)
+                            else 1
+                        ),
+                    )
+                    all_neg_keys.extend(
+                        [k for k in alt_neg_keys if k not in all_neg_keys]
+                    )
+
+                    if all_neg_keys:
+                        negatives = []
+                        for k in all_neg_keys:
+                            v = metadata.get(k)
+                            if isinstance(v, str):
+                                try:
+                                    v_decoded = json.loads(v)
+                                    v = v_decoded
+                                except Exception:
+                                    pass
+                            if v is None:
+                                continue
+                            negatives.append(str(v))
+
+                        if negatives:
+                            updates["negative_prompt"] = negatives[0]
+                            if len(negatives) > 1:
+                                updates["second_negative_prompt"] = (
+                                    "\n\n".join(negatives[1:])
+                                )
+
+                    # Other simple scalar keys to consider
+                    candidate_keys = [
+                        "pipeline_action",
+                        "generator_name",
+                        "model_name",
+                        "custom_path",
+                        "vae",
+                        "scheduler",
+                        "version",
+                        "steps",
+                        "ddim_eta",
+                        "scale",
+                        "seed",
+                        "n_samples",
+                        "images_per_batch",
+                        "strength",
+                        "clip_skip",
+                    ]
+                    for k in candidate_keys:
+                        if k in metadata and k not in updates:
+                            v = metadata.get(k)
+                            # try to decode JSON values stored as strings
+                            if isinstance(v, str):
+                                try:
+                                    v_decoded = json.loads(v)
+                                    v = v_decoded
+                                except Exception:
+                                    pass
+                            updates[k] = v
+
+                if not updates:
+                    QMessageBox.information(
+                        self,
+                        "Load settings",
+                        "No generator settings were found in the image metadata.",
+                    )
+                else:
+                    # Apply updates via SettingsMixin helper
+                    try:
+                        # coerce simple numeric strings to numbers where appropriate
+                        coerced_updates = {}
+                        for k, v in updates.items():
+                            # simple coercion rules
+                            if isinstance(v, str):
+                                # booleans
+                                low = v.lower()
+                                if low in ("true", "false"):
+                                    coerced_updates[k] = low == "true"
+                                    continue
+                                # numbers
+                                try:
+                                    if "." in v:
+                                        coerced_updates[k] = float(v)
+                                        continue
+                                    else:
+                                        coerced_updates[k] = int(v)
+                                        continue
+                                except Exception:
+                                    pass
+                            coerced_updates[k] = v
+
+                        # call provided updater
+                        self.update_generator_settings(**coerced_updates)
+                        # Notify generator form/widgets to refresh their UI
+                        try:
+                            if hasattr(self, "api") and getattr(self, "api"):
+                                self.api.art.update_generator_form_values()
+                        except Exception:
+                            pass
+                        QMessageBox.information(
+                            self,
+                            "Load settings",
+                            "Generator settings loaded from image metadata and applied.",
+                        )
+                    except Exception as exc:
+                        QMessageBox.warning(
+                            self,
+                            "Load settings failed",
+                            f"Failed to apply settings: {exc}",
+                        )
+            except Exception as exc:
+                QMessageBox.warning(
+                    self,
+                    "Load settings failed",
+                    f"Failed to read metadata: {exc}",
+                )
 
     def _set_back_button_visible(self, visible: bool) -> None:
         self.ui.backButton.setVisible(visible)
