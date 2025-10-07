@@ -77,6 +77,8 @@ class ConversationWidget(BaseWidget):
         self._chat_bridge = ChatBridge()
         self._chat_bridge.scrollRequested.connect(self._handle_scroll_request)
         self._chat_bridge.deleteMessageRequested.connect(self.deleteMessage)
+        self._chat_bridge.copyMessageRequested.connect(self.copyMessage)
+        self._chat_bridge.newChatRequested.connect(self.newChat)
         self._web_channel.registerObject("chatBridge", self._chat_bridge)
         self.ui.stage.page().setWebChannel(self._web_channel)
 
@@ -541,6 +543,46 @@ class ConversationWidget(BaseWidget):
         Conversation.objects.update(pk=conversation.id, value=new_messages)
         self._conversation.value = new_messages
         self.set_conversation_widgets(new_messages)
+
+    def copyMessage(self, message_id):
+        """Copy the message content to the clipboard.
+
+        Attempts to find the message by id in the current conversation and
+        places its visible text on the system clipboard.
+        """
+        try:
+            msgs = self._streamed_messages or (
+                self.conversation.value
+                if self.conversation and hasattr(self.conversation, "value")
+                else []
+            )
+            idx = next(
+                (
+                    i
+                    for i, m in enumerate(msgs)
+                    if int(m.get("id", -1)) == int(message_id)
+                ),
+                None,
+            )
+            if idx is None:
+                return
+            content = msgs[idx].get("content", "")
+            # Use QApplication clipboard
+            QApplication.clipboard().setText(content)
+        except Exception:
+            return
+
+    def newChat(self):
+        """Start a new chat by clearing history via API."""
+        try:
+            if hasattr(self.api, "llm") and hasattr(
+                self.api.llm, "clear_history"
+            ):
+                self.api.llm.clear_history()
+            # Also clear local UI state
+            self._clear_conversation()
+        except Exception:
+            return
 
     def _handle_sequenced_token(self, llm_response):
         """

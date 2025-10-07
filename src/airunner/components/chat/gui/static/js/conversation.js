@@ -95,31 +95,100 @@ function createMessageElement(msg) {
     contentDiv.className = 'content';
     contentDiv.innerHTML = sanitizeContent(msg.content);
     messageDiv.appendChild(contentDiv);
-    if (!msg.is_bot) {
-        // Create actions container if not present
-        let headerDiv = messageDiv.querySelector('.header');
-        if (!headerDiv) {
-            headerDiv = document.createElement('div');
-            headerDiv.className = 'header';
-            headerDiv.appendChild(senderDiv);
-            messageDiv.insertBefore(headerDiv, contentDiv);
-        }
-        let actionsDiv = document.createElement('div');
-        actionsDiv.className = 'actions';
-        // Create delete button with inline SVG
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'delete-button';
-        deleteButton.title = 'Delete';
-        deleteButton.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
-        deleteButton.onclick = function (e) {
-            e.preventDefault();
-            if (window.chatBridge && typeof window.chatBridge.deleteMessage === 'function') {
-                window.chatBridge.deleteMessage(msg.id);
-            }
-        };
-        actionsDiv.appendChild(deleteButton);
-        headerDiv.appendChild(actionsDiv);
+    // Attach context menu handler to both user and assistant messages
+    let headerDiv = messageDiv.querySelector('.header');
+    if (!headerDiv) {
+        headerDiv = document.createElement('div');
+        headerDiv.className = 'header';
+        headerDiv.appendChild(senderDiv);
+        messageDiv.insertBefore(headerDiv, contentDiv);
     }
+
+    messageDiv.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        // Remove any existing custom menu
+        const existing = document.getElementById('chat-context-menu');
+        if (existing) existing.remove();
+
+        const menu = document.createElement('div');
+        menu.id = 'chat-context-menu';
+        menu.className = 'chat-context-menu';
+        menu.style.position = 'fixed';
+        menu.style.zIndex = 99999;
+        menu.style.left = e.clientX + 'px';
+        menu.style.top = e.clientY + 'px';
+        menu.style.background = 'var(--background, #222)';
+        menu.style.border = '1px solid rgba(255,255,255,0.08)';
+        menu.style.padding = '4px';
+        menu.style.borderRadius = '6px';
+        menu.style.minWidth = '140px';
+
+        function addItem(label, onClick) {
+            const item = document.createElement('div');
+            item.className = 'chat-context-menu-item';
+            item.style.padding = '6px 10px';
+            item.style.cursor = 'pointer';
+            item.style.color = 'var(--text, #eee)';
+            item.textContent = label;
+            item.addEventListener('click', function () {
+                onClick();
+                menu.remove();
+            });
+            item.addEventListener('mouseover', () => item.style.background = 'rgba(255,255,255,0.03)');
+            item.addEventListener('mouseout', () => item.style.background = 'transparent');
+            menu.appendChild(item);
+        }
+
+        // Copy is available for all messages
+        addItem('Copy', function () {
+            if (window.chatBridge && typeof window.chatBridge.copyMessage === 'function') {
+                window.chatBridge.copyMessage(msg.id);
+            } else {
+                // Fallback: copy visible text
+                const text = contentDiv ? contentDiv.innerText : (msg.content || '');
+                if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(() => { });
+            }
+        });
+
+        if (!msg.is_bot) {
+            addItem('Delete', function () {
+                if (window.chatBridge && typeof window.chatBridge.deleteMessage === 'function') {
+                    window.chatBridge.deleteMessage(msg.id);
+                }
+            });
+            // divider
+            const hr = document.createElement('div');
+            hr.style.height = '1px';
+            hr.style.background = 'rgba(255,255,255,0.04)';
+            hr.style.margin = '6px 0';
+            menu.appendChild(hr);
+            addItem('New chat', function () {
+                if (window.chatBridge && typeof window.chatBridge.newChat === 'function') {
+                    window.chatBridge.newChat();
+                }
+            });
+        } else {
+            // assistant messages: only Copy, divider, New chat
+            const hr = document.createElement('div');
+            hr.style.height = '1px';
+            hr.style.background = 'rgba(255,255,255,0.04)';
+            hr.style.margin = '6px 0';
+            menu.appendChild(hr);
+            addItem('New chat', function () {
+                if (window.chatBridge && typeof window.chatBridge.newChat === 'function') {
+                    window.chatBridge.newChat();
+                }
+            });
+        }
+
+        document.body.appendChild(menu);
+
+        function onDocClick(ev) {
+            if (!menu.contains(ev.target)) menu.remove();
+        }
+
+        setTimeout(() => document.addEventListener('click', onDocClick), 0);
+    });
     if (msg.timestamp) {
         const timestampDiv = document.createElement('div');
         timestampDiv.className = 'timestamp';
