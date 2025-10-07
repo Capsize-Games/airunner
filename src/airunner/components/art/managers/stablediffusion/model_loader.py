@@ -337,6 +337,28 @@ def load_lora(path=None):
     return SomeLoraClass(path)
 
 
+def load_embedding(path: str):
+    """Stub loader for embedding files used in tests. Returns a simple
+    object that mirrors the requested path so callers can inspect it.
+    """
+
+    class Emb:
+        def __init__(self, p):
+            self.path = p
+
+    return Emb(path)
+
+
+def unload_embeddings(pipe: Any, logger: logging.Logger) -> None:
+    """No-op unload for embeddings to keep tests simple and idempotent."""
+    try:
+        if pipe is not None and hasattr(pipe, "embeddings"):
+            del pipe.embeddings
+            logger.info("Unloaded embeddings from pipeline.")
+    except Exception as e:
+        logger.warning(f"Failed to unload embeddings: {e}")
+
+
 def load_compel(*args, **kwargs):
     return SomeCompelClass(*args, **kwargs)
 

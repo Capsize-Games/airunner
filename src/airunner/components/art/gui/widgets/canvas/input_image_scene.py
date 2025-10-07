@@ -55,6 +55,11 @@ class InputImageScene(BrushScene):
     @current_active_image.setter
     def current_active_image(self, image: Image):
         if image is not None:
+            # Check lock before persisting any changes
+            if getattr(self.current_settings, "lock_input_image", False):
+                # User has locked the input image; do not persist changes
+                return
+
             image_binary = convert_image_to_binary(image)
 
             if self._is_mask:
@@ -78,6 +83,14 @@ class InputImageScene(BrushScene):
 
         # Get the correct image based on our settings
         if self.is_brush_or_eraser:
+            # Check lock before persisting brush/eraser changes
+            if getattr(self.current_settings, "lock_input_image", False):
+                # User has locked the input image; do not persist drawing changes
+                # Clear drawing state and return
+                self._is_drawing = False
+                self._is_erasing = False
+                return True
+
             # Convert image for saving
             image = ImageQt.fromqimage(self.active_image)
             base_64_image = convert_image_to_binary(image)

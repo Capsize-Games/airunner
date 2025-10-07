@@ -41,6 +41,10 @@ class CivitAIAPI:
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
+            # Some clients expect the API token as a query parameter. Include it
+            # in the URL for compatibility with tests and external callers.
+            sep = "&" if "?" in api_url else "?"
+            api_url = f"{api_url}{sep}token={self.api_key}"
         resp = requests.get(api_url, headers=headers, timeout=10)
         resp.raise_for_status()
         data = resp.json()
