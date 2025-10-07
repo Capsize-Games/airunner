@@ -622,15 +622,28 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
 
     def _load_embedding(self, embedding: Embedding):
         state_dict = load_file(embedding.path)
+        tokens = self._parse_trigger_tokens(embedding)
+
+        # tokens will always have at least one value (falls back to embedding.name)
+        # but check anyway for safety
+        if not tokens:
+            self.logger.error(
+                "Embedding '%s' has no valid trigger tokens and no name, cannot load",
+                embedding.name or embedding.path,
+            )
+            return
+
+        # Load into both encoders. Use the parsed/normalized token list to
+        # avoid issues caused by surrounding whitespace in stored trigger words.
         self._pipe.load_textual_inversion(
             state_dict["clip_l"],
-            token=embedding.trigger_word.split(","),
+            token=tokens,
             text_encoder=self._pipe.text_encoder,
             tokenizer=self._pipe.tokenizer,
         )
         self._pipe.load_textual_inversion(
             state_dict["clip_g"],
-            token=embedding.trigger_word.split(","),
+            token=tokens,
             text_encoder=self._pipe.text_encoder_2,
             tokenizer=self._pipe.tokenizer_2,
         )
@@ -639,19 +652,130 @@ class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
         self._unload_prompt_embeds()
 
     def _unload_embedding(self, embedding: Embedding):
-        self._pipe.unload_textual_inversion(
-            tokens=embedding.trigger_word.split(","),
-            text_encoder=self._pipe.text_encoder,
-            tokenizer=self._pipe.tokenizer,
+        tokens = self._parse_trigger_tokens(embedding)
+
+        # tokens will always have at least one value (falls back to embedding.name)
+        # but check anyway for safety
+        if not tokens:
+            self.logger.error(
+                "Embedding '%s' has no valid trigger tokens and no name, cannot unload",
+                embedding.name or embedding.path,
+            )
+            try:
+                if embedding.path in self._loaded_embeddings:
+                    self._loaded_embeddings.remove(embedding.path)
+            except ValueError:
+                pass
+            self._unload_prompt_embeds()
+            return
+
+        # Attempt unload; diffusers raises ValueError when tokens are not found.
+        # Catch and try a small normalization fallback before giving up so the
+        # signal handler doesn't crash and we still refresh prompt embeds.
+        def _try_unload(text_encoder, tokenizer, tokens_to_try):
+            try:
+                self._pipe.unload_textual_inversion(
+                    tokens=tokens_to_try,
+                    text_encoder=text_encoder,
+                    tokenizer=tokenizer,
+                )
+                return True
+            except ValueError as e:
+                # Bubble up only after fallback attempts; otherwise continue.
+                self.logger.debug(
+                    f"unload_textual_inversion did not find tokens {tokens_to_try}: {e}"
+                )
+                return False
+
+        # First try with the canonical parsed tokens
+        unloaded1 = _try_unload(
+            self._pipe.text_encoder, self._pipe.tokenizer, tokens
         )
-        self._pipe.unload_textual_inversion(
-            tokens=embedding.trigger_word.split(","),
-            text_encoder=self._pipe.text_encoder_2,
-            tokenizer=self._pipe.tokenizer_2,
+        unloaded2 = _try_unload(
+            self._pipe.text_encoder_2, self._pipe.tokenizer_2, tokens
         )
-        self._loaded_embeddings.remove(embedding.path)
+
+        if not (unloaded1 and unloaded2):
+            # Fallback: strip surrounding quotes from tokens and try again
+            norm_tokens = [t.strip("\"' ") for t in tokens]
+            if norm_tokens != tokens:
+                unloaded1_fb = _try_unload(
+                    self._pipe.text_encoder, self._pipe.tokenizer, norm_tokens
+                )
+                unloaded2_fb = _try_unload(
+                    self._pipe.text_encoder_2,
+                    self._pipe.tokenizer_2,
+                    norm_tokens,
+                )
+                if not (unloaded1_fb or unloaded2_fb):
+                    self.logger.warning(
+                        "Failed to unload textual inversion tokens for embedding '%s' (tokens tried: %s)."
+                        " The embedding may still be present in the model.",
+                        embedding.name,
+                        tokens,
+                    )
+
+        # Ensure internal bookkeeping and cached prompt embeds are refreshed
+        try:
+            if embedding.path in self._loaded_embeddings:
+                self._loaded_embeddings.remove(embedding.path)
+        except ValueError:
+            # Already removed; ignore
+            pass
+
         # Invalidate cached prompt embeddings to ensure embedding removal is applied
         self._unload_prompt_embeds()
+
+        return
+
+    def _parse_trigger_tokens(self, embedding: Embedding) -> List[str]:
+        """Return a cleaned list of trigger tokens for an embedding.
+
+        Strips whitespace and surrounding quotes and filters out empty tokens so
+        loading/unloading uses the same normalized token forms.
+
+        If no trigger words are set, falls back to using the embedding name (filename
+        without extension) as the token, since many embeddings are invoked by their
+        filename rather than explicit trigger words.
+        """
+        raw = embedding.trigger_word or ""
+        self.logger.debug(
+            f"Parsing trigger tokens for embedding '{embedding.name}': raw='{raw}'"
+        )
+
+        # Split on comma and strip whitespace from each token
+        tokens = [t.strip() for t in raw.split(",") if t.strip()]
+
+        # Remove surrounding quotes if present, but only strip quotes once
+        # to avoid removing valid content
+        cleaned_tokens = []
+        for token in tokens:
+            # Only strip if token is actually surrounded by quotes
+            if (
+                len(token) >= 2
+                and token[0] in ('"', "'")
+                and token[-1] == token[0]
+            ):
+                cleaned_tokens.append(token[1:-1])
+            else:
+                cleaned_tokens.append(token)
+
+        # Filter out any empty tokens that resulted from cleaning
+        final_tokens = [t for t in cleaned_tokens if t]
+
+        # If no trigger words are set, use the embedding name as the token
+        # (many embeddings are invoked by filename rather than trigger words)
+        if not final_tokens and embedding.name:
+            final_tokens = [embedding.name]
+            self.logger.debug(
+                f"No trigger words set for embedding '{embedding.name}', "
+                f"using name as token: {final_tokens}"
+            )
+
+        self.logger.debug(
+            f"Parsed tokens for embedding '{embedding.name}': {final_tokens}"
+        )
+        return final_tokens
 
     def load_model(self, *args, **kwargs):
         return self._load_model(*args, **kwargs)

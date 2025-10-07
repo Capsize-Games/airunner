@@ -244,7 +244,6 @@ class Ui_chat_prompt(object):
 
         self.retranslateUi(chat_prompt)
         self.action.currentTextChanged.connect(chat_prompt.llm_action_changed)
-        self.send_button.clicked.connect(chat_prompt.action_button_clicked_send)
         self.prompt.textChanged.connect(chat_prompt.prompt_text_changed)
 
         self.tabWidget.setCurrentIndex(0)
