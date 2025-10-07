@@ -18,7 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QGridLayout, QSizePolicy, QTabWidget,
     QWidget)
 
-from airunner.components.art.gui.widgets.generator_form.generator_form_widget import GeneratorForm
+from airunner.components.llm.gui.widgets.generator_form.generator_form_widget import GeneratorForm
 
 class Ui_generator_tab(object):
     def setupUi(self, generator_tab):

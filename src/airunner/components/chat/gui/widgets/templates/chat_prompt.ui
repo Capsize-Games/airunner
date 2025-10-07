@@ -438,7 +438,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton">
+          <widget class="QPushButton" name="stop_button">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
              <horstretch>0</horstretch>
@@ -514,38 +514,6 @@
     <hint type="destinationlabel">
      <x>47</x>
      <y>2</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>send_button</sender>
-   <signal>clicked()</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>action_button_clicked_send()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>535</x>
-     <y>689</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>0</x>
-     <y>922</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushButton</sender>
-   <signal>clicked()</signal>
-   <receiver>chat_prompt</receiver>
-   <slot>interrupt_button_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>595</x>
-     <y>689</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>473</x>
-     <y>0</y>
     </hint>
    </hints>
   </connection>

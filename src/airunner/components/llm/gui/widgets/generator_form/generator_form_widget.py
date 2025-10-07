@@ -8,7 +8,7 @@ from airunner.enums import (
     GeneratorSection,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.art.gui.widgets.generator_form.templates.generatorform_ui import (
+from airunner.components.llm.gui.widgets.generator_form.templates.generatorform_ui import (
     Ui_generator_form,
 )
 
