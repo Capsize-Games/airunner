@@ -240,9 +240,10 @@ class SettingsMixin:
         Returns:
             Instance of the settings model.
         """
-        cached = self.settings_mixin_shared_instance.get_cached_setting(
-            model_class_
-        )
+        # cached = self.settings_mixin_shared_instance.get_cached_setting(
+        #     model_class_
+        # )
+        cached = None
         if cached is not None:
             return cached
         instance = self.load_settings_from_db(
@@ -276,8 +277,6 @@ class SettingsMixin:
         # If still no layer_id, get the first available layer
         # DO NOT fall back to global settings - this caused stale image data to persist across layer deletions
         if layer_id is None:
-            from airunner.components.art.data.canvas_layer import CanvasLayer
-
             first_layer = CanvasLayer.objects.first()
             if first_layer:
                 layer_id = first_layer.id
@@ -290,9 +289,10 @@ class SettingsMixin:
 
         # Check cache first with layer-specific key
         cache_key = f"{model_class_.__name__}_layer_{layer_id}"
-        cached = self.settings_mixin_shared_instance.get_cached_setting_by_key(
-            cache_key
-        )
+        # cached = self.settings_mixin_shared_instance.get_cached_setting_by_key(
+        #     cache_key
+        # )
+        cached = None
         if cached is not None:
             return cached
 
@@ -313,8 +313,6 @@ class SettingsMixin:
         self._selected_layer_ids = set(selected_layer_ids)
         # Persist selected layer to QSettings
         if not hasattr(self, "_qsettings_cache"):
-            from airunner.utils.settings.get_qsettings import get_qsettings
-
             self._qsettings_cache = get_qsettings()
 
         if selected_layer_ids:
@@ -338,8 +336,6 @@ class SettingsMixin:
 
         # If no in-memory selection, try to load from QSettings
         if not hasattr(self, "_qsettings_cache"):
-            from airunner.utils.settings.get_qsettings import get_qsettings
-
             self._qsettings_cache = get_qsettings()
 
         saved_layer_id = self._qsettings_cache.value(
