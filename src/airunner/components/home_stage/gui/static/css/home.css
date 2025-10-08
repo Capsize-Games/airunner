@@ -125,6 +125,298 @@ h1 {
     box-shadow: 0 4px 16px rgba(34, 34, 59, 0.16);
 }
 
+/* Document Stats Section */
+#document-stats-section {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+#document-stats-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--light-color);
+}
+
+.stats-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--dark-color);
+}
+
+.stat-label {
+    font-size: 1rem;
+    color: var(--light-color);
+    font-weight: 400;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.status-message {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    font-size: 0.95rem;
+}
+
+.status-message.hidden {
+    display: none;
+}
+
+.status-message.warning {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.status-message.success {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.primary-button {
+    padding: 0.75rem 1.5rem;
+    background-color: var(--primary-color, #1976d2);
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+    width: 100%;
+}
+
+.index-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.progress-container {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.index-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 160px;
+}
+
+.index-buttons .primary-button {
+    width: 100%;
+}
+
+.primary-button.secondary {
+    background-color: var(--secondary-color, #bdbdbd);
+    color: #222222;
+}
+
+.primary-button.secondary:hover:not(:disabled) {
+    background-color: #9e9e9e !important;
+}
+
+.grid-item .primary-button:hover:not(:disabled),
+.primary-button:hover:not(:disabled) {
+    background-color: var(--primary-dark-color, #1565c0) !important;
+    color: #ffffff !important;
+    opacity: 1 !important;
+    /* Prevent inherited opacity from affecting the button */
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    background-image: none !important;
+}
+
+.primary-button:active:not(:disabled) {
+    transform: translateY(0) !important;
+    filter: brightness(0.92) !important;
+}
+
+.primary-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.progress-container {
+    margin-top: 1rem;
+}
+
+.progress-container.hidden {
+    display: none;
+}
+
+.progress-bar-wrapper {
+    width: 100%;
+    height: 24px;
+    background-color: var(--dark-color);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-dark-color));
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.9rem;
+    color: var(--light-color);
+    text-align: center;
+}
+
+.progress-text.error {
+    color: #f44336;
+}
+
+/* System Stats Section */
+#system-stats-section {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+#system-stats-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--light-color);
+}
+
+.device-stats-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+.loading-message {
+    text-align: center;
+    color: var(--dim-color);
+    padding: 2rem;
+    font-style: italic;
+}
+
+.device-card {
+    background-color: var(--dark-color);
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: border-color 0.2s;
+}
+
+.device-card:hover {
+    border-color: var(--primary-color);
+}
+
+.device-card.gpu {
+    border-left: 3px solid #4caf50;
+}
+
+.device-card.cpu {
+    border-left: 3px solid #2196f3;
+}
+
+.device-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.device-icon {
+    font-size: 1.25rem;
+}
+
+.device-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--light-color);
+    flex: 1;
+}
+
+.device-memory {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.memory-bar-wrapper {
+    width: 100%;
+    height: 20px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.memory-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4caf50, #ffc107, #f44336);
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+.memory-stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.memory-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.memory-label {
+    font-size: 0.75rem;
+    color: var(--dim-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.memory-value {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.memory-value.used {
+    color: #f44336;
+}
+
+.memory-value.free {
+    color: #4caf50;
+}
+
+.memory-value.total {
+    color: #ffc107;
+}
+
 #home-bottom {
     background: var(--dark-color);
     padding: 1.2rem 0 1.2rem 0;

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>AI Runner Home</title>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <link rel="stylesheet" href="../css/home.css">
     <link id="theme-vars" rel="stylesheet" href="../css/variables-{{ theme }}.css">
     <link id="theme-style" rel="stylesheet" href="../css/theme-{{ theme }}.css">
@@ -11,25 +12,245 @@
 <body>
     <div id="home-top">
         <header>
-            <h1>AI Runner</h1>
-            <p class="intro">Welcome to AI Runner! Your workspace for AI-powered productivity and creativity.</p>
+            <h1>AI Runner <span class="app-version">v{{ version }}</span></h1>
         </header>
     </div>
     <div id="home-middle">
         <div class="grid-container">
-            <div class="grid-item">Section 1</div>
-            <div class="grid-item">Section 2</div>
+            <div class="grid-item" id="document-stats-section">
+                <h2>Knowledge Base</h2>
+                <div class="stats-container">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Documents:</span>
+                        <span class="stat-value" id="total-docs">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Indexed:</span>
+                        <span class="stat-value" id="indexed-docs">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Unindexed:</span>
+                        <span class="stat-value" id="unindexed-docs">0</span>
+                    </div>
+                </div>
+                <div id="index-status-message" class="status-message hidden"></div>
+                <div class="index-controls">
+                    <div id="progress-container" class="progress-container">
+                        <div class="progress-bar-wrapper">
+                            <div id="progress-bar" class="progress-bar" style="width:0%;"></div>
+                        </div>
+                        <div id="progress-text" class="progress-text">Idle</div>
+                    </div>
+                    <div class="index-buttons">
+                        <button id="index-button" class="primary-button" disabled>
+                            Index All Documents
+                        </button>
+                        <button id="cancel-button" class="primary-button secondary hidden">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="grid-item" id="system-stats-section">
+                <h2>System Resources</h2>
+                <div id="device-stats-container" class="device-stats-container">
+                    <div class="loading-message">Loading system stats...</div>
+                </div>
+            </div>
             <div class="grid-item">Section 3</div>
             <div class="grid-item">Section 4</div>
         </div>
     </div>
-    <div id="home-bottom">
-        <div class="content-footer">
-            <span>AI Runner v{{ version }}</span>
-        </div>
-    </div>
+    <!-- footer removed; version moved into header -->
     <script src="../js/home.js"></script>
     <script>
+    // Define global functions FIRST before QWebChannel setup
+    // Global function to update document stats from Python
+    window.updateDocumentStats = function(stats) {
+        console.log('updateDocumentStats called with:', stats);
+        document.getElementById('total-docs').textContent = stats.total || 0;
+        document.getElementById('indexed-docs').textContent = stats.indexed || 0;
+        document.getElementById('unindexed-docs').textContent = stats.unindexed || 0;
+        
+    const indexButton = document.getElementById('index-button');
+    const cancelButton = document.getElementById('cancel-button');
+    const statusMessage = document.getElementById('index-status-message');
+        
+        if (stats.unindexed > 0) {
+            indexButton.disabled = false;
+            statusMessage.textContent = `${stats.unindexed} document(s) need indexing`;
+            statusMessage.className = 'status-message warning';
+        } else {
+            indexButton.disabled = true;
+            statusMessage.textContent = 'All documents are indexed';
+            statusMessage.className = 'status-message success';
+        }
+    };
+    
+    // QWebChannel setup
+    let homeBridge = null;
+    
+    new QWebChannel(qt.webChannelTransport, function(channel) {
+        homeBridge = channel.objects.homeBridge;
+        console.log('Home bridge connected');
+        
+        // Request initial stats by calling the bridge slot exposed to JS
+        // (call the Slot method; signals are emitted from Python)
+        if (homeBridge && typeof homeBridge.requestUpdateStats === 'function') {
+            // Request initial stats immediately
+            homeBridge.requestUpdateStats();
+        } else if (homeBridge && typeof homeBridge.updateStatsRequested === 'function') {
+            // fallback in case older bridge exposes different API
+            try { homeBridge.updateStatsRequested(); } catch (e) { console.debug('fallback updateStats call failed', e); }
+        }
+    });
+    
+    // Global function to update system stats from Python
+    window.updateSystemStats = function(devices) {
+        const container = document.getElementById('device-stats-container');
+        
+        if (!devices || devices.length === 0) {
+            container.innerHTML = '<div class="loading-message">No device data available</div>';
+            return;
+        }
+        
+        let html = '';
+        devices.forEach((device, index) => {
+            const usedPercent = (device.used / device.total * 100).toFixed(1);
+
+            html += `
+                <div class="device-card ${device.type}">
+                    <div class="device-header">
+                        <span class="device-name">${device.name}</span>
+                    </div>
+                    <div class="device-memory">
+                        <div class="memory-bar-wrapper">
+                            <div class="memory-bar" style="width: ${usedPercent}%"></div>
+                        </div>
+                        <div class="memory-stats">
+                            <div class="memory-stat">
+                                <span class="memory-label">Used:</span>
+                                <span class="memory-value used">${device.used}GB</span>
+                            </div>
+                            <div class="memory-stat">
+                                <span class="memory-label">Free:</span>
+                                <span class="memory-value free">${device.free}GB</span>
+                            </div>
+                            <div class="memory-stat">
+                                <span class="memory-label">Total:</span>
+                                <span class="memory-value total">${device.total}GB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    };
+    
+    // Global function to update indexing progress from Python
+    window.updateIndexingProgress = function(data) {
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const indexButton = document.getElementById('index-button');
+        const cancelButton = document.getElementById('cancel-button');
+        
+        // Ensure UI shows indexing state
+        progressContainer.classList.remove('hidden');
+        indexButton.disabled = true;
+        indexButton.textContent = 'Indexing...';
+        if (cancelButton) {
+            cancelButton.classList.remove('hidden');
+            cancelButton.disabled = false;
+        }
+        
+        const progress = data.progress || 0;
+        progressBar.style.width = `${progress}%`;
+        
+        if (data.documentName) {
+            progressText.textContent = `Indexing (${data.current}/${data.total}): ${data.documentName}`;
+        } else {
+            progressText.textContent = `Progress: ${progress.toFixed(1)}%`;
+        }
+    };
+    
+    // Global function called when indexing completes
+    window.onIndexingComplete = function(data) {
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const indexButton = document.getElementById('index-button');
+        const cancelButton = document.getElementById('cancel-button');
+        
+        if (data.success) {
+            progressBar.style.width = '100%';
+            progressText.textContent = data.message || 'Indexing complete!';
+            
+            setTimeout(() => {
+                // Reset UI state
+                progressBar.style.width = '0%';
+                progressText.textContent = 'Idle';
+                if (indexButton) {
+                    indexButton.textContent = 'Index All Documents';
+                    indexButton.disabled = false;
+                }
+                if (cancelButton) {
+                    cancelButton.classList.add('hidden');
+                    cancelButton.disabled = true;
+                }
+            }, 2000);
+        } else {
+            progressText.textContent = `Error: ${data.message}`;
+            progressText.className = 'progress-text error';
+        }
+    };
+    
+    // Button click handler
+    document.addEventListener('DOMContentLoaded', function() {
+        const indexButton = document.getElementById('index-button');
+        const cancelButton = document.getElementById('cancel-button');
+
+        function setIndexingState(isIndexing) {
+            if (isIndexing) {
+                indexButton.textContent = 'Indexing...';
+                indexButton.disabled = true;
+                cancelButton.classList.remove('hidden');
+                cancelButton.disabled = false;
+                document.getElementById('progress-text').textContent = 'Starting...';
+            } else {
+                indexButton.textContent = 'Index All Documents';
+                indexButton.disabled = false;
+                cancelButton.classList.add('hidden');
+                cancelButton.disabled = true;
+                document.getElementById('progress-text').textContent = 'Idle';
+                document.getElementById('progress-bar').style.width = '0%';
+            }
+        }
+
+        indexButton.addEventListener('click', function() {
+            if (homeBridge) {
+                if (typeof homeBridge.requestIndexAllDocuments === 'function') {
+                    homeBridge.requestIndexAllDocuments();
+                } else {
+                    try { homeBridge.indexAllDocumentsRequested(); } catch (e) { console.debug('index fallback failed', e); }
+                }
+                setIndexingState(true);
+            }
+        });
+
+        cancelButton.addEventListener('click', function() {
+            if (homeBridge) {
+                if (typeof homeBridge.requestCancelIndex === 'function') {
+                    homeBridge.requestCancelIndex();
+                } else {
+                    try { homeBridge.cancelIndexRequested(); } catch (e) { console.debug('cancel fallback failed', e); }
+                }
+            }
+        });
+    });
+    
     // Theme switching logic for webEngineView
     function setTheme(theme) {
         document.getElementById('theme-vars').href = `../css/variables-${theme}.css`;

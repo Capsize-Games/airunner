@@ -489,12 +489,11 @@ class BaseAgent(
                     self.store_user_tool,
                 ]
             )
-        if self.rag_mode_enabled:
-            tools.extend(
-                [
-                    self.rag_engine_tool,
-                ]
-            )
+        tools.extend(
+            [
+                self.rag_engine_tool,
+            ]
+        )
         # Only add tool instances, not classes
         for name, tool in ToolRegistry.all().items():
             if not isinstance(tool, type) and tool not in tools:
@@ -1087,14 +1086,6 @@ class BaseAgent(
         self.chat_engine_tool.update_system_prompt(
             system_prompt or self.system_prompt
         )
-        # Keep RAG system prompt in sync when RAG is enabled
-        try:
-            if getattr(self, "rag_mode_enabled", False):
-                update_fn = getattr(self, "update_rag_system_prompt", None)
-                if callable(update_fn):
-                    update_fn(rag_system_prompt)
-        except Exception:
-            pass
 
     def _perform_analysis(self, action: LLMActionType) -> None:
         """
