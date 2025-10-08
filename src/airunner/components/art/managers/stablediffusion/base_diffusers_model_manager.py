@@ -1,3 +1,4 @@
+import gc
 import os
 from typing import Any, List, Dict, Optional, Type
 
@@ -762,18 +763,36 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.interrupt_image_generation()
             self.requested_action = ModelAction.CLEAR
         self.change_model_status(self.model_type, ModelStatus.LOADING)
-        self._unload_safety_checker()
-        self._unload_scheduler()
-        self._unload_controlnet()
-        self._unload_loras()
-        self._unload_emebeddings()
-        self._unload_compel()
-        self._unload_generator()
+
+        # Unload lightweight components first
         self._unload_deep_cache()
+        self._unload_compel()
+        self._unload_emebeddings()
+        self._unload_scheduler()
+
+        # Unload heavier GPU components
+        self._unload_loras()
+        self._unload_controlnet()
+        self._unload_safety_checker()
+
+        # Clear memory after unloading auxiliary models
+        clear_memory(self._device_index)
+
+        # Unload the main pipeline (largest component)
         self._unload_pipe()
+
+        # Aggressive clear after pipe unload
+        clear_memory(self._device_index)
+
+        # Unload generator after pipe
+        self._unload_generator()
+
         self._send_pipeline_loaded_signal()
         self._clear_memory_efficient_settings()
-        clear_memory()
+
+        # Final memory clear to ensure everything is released
+        clear_memory(self._device_index)
+
         self.change_model_status(self.model_type, ModelStatus.UNLOADED)
 
     def handle_generate_signal(self, message: Optional[Dict] = None):
@@ -1661,14 +1680,8 @@ class BaseDiffusersModelManager(BaseModelManager):
         if self._pipe is not None and hasattr(self._pipe, "safety_checker"):
             del self._pipe.safety_checker
             self._pipe.safety_checker = None
-        if self._safety_checker:
-            try:
-                self._safety_checker.to("cpu")
-            except RuntimeError as e:
-                self.logger.warning(
-                    f"Failed to load model from {self.model_path}: {e}"
-                )
-        del self._safety_checker
+        if self._safety_checker is not None:
+            del self._safety_checker
         self._safety_checker = None
 
     def _unload_feature_extractor_model(self):
@@ -1697,11 +1710,17 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.logger.debug("Clearing controlnet")
         if self._pipe and hasattr(self._pipe, "controlnet"):
             try:
+                if self._pipe.controlnet is not None:
+                    del self._pipe.controlnet
                 del self._pipe.__controlnet
             except AttributeError:
                 pass
             self._pipe.__controlnet = None
-        self.controlnet = None
+        if self._controlnet is not None:
+            del self._controlnet
+        self._controlnet = None
+        # Force garbage collection
+        gc.collect()
 
     def _unload_controlnet_processor(self):
         model_loader.unload_controlnet_processor(
@@ -1724,7 +1743,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._set_lora_adapters()
         else:
             self._unload_loras()
-            clear_memory()
+            clear_memory(self._device_index)
 
     def _unload_emebeddings(self):
         self.logger.debug("Unloading embeddings")
@@ -1739,7 +1758,6 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._unload_textual_inversion_manager()
             self._unload_compel_proc()
             self._unload_prompt_embeds()
-            clear_memory()
 
     def _unload_textual_inversion(self):
         self.logger.info("Attempting to unload textual inversion")
@@ -1787,8 +1805,40 @@ class BaseDiffusersModelManager(BaseModelManager):
     def _unload_pipe(self):
         self.logger.debug("Unloading pipe")
         self.change_model_status(self.model_type, ModelStatus.LOADING)
-        del self._pipe
+        if self._pipe is not None:
+            # Explicitly delete all major components directly
+            try:
+                if hasattr(self._pipe, "unet") and self._pipe.unet is not None:
+                    del self._pipe.unet
+                    self._pipe.unet = None
+                if hasattr(self._pipe, "vae") and self._pipe.vae is not None:
+                    del self._pipe.vae
+                    self._pipe.vae = None
+                if (
+                    hasattr(self._pipe, "text_encoder")
+                    and self._pipe.text_encoder is not None
+                ):
+                    del self._pipe.text_encoder
+                    self._pipe.text_encoder = None
+                if (
+                    hasattr(self._pipe, "text_encoder_2")
+                    and self._pipe.text_encoder_2 is not None
+                ):
+                    del self._pipe.text_encoder_2
+                    self._pipe.text_encoder_2 = None
+
+                # Force garbage collection after deleting components
+                gc.collect()
+
+            except Exception as e:
+                self.logger.warning(f"Error clearing pipeline components: {e}")
+
+            # Delete the pipeline itself
+            del self._pipe
         self._pipe = None
+
+        # Force another gc.collect after pipe deletion
+        gc.collect()
 
     def _unload_generator(self):
         self.logger.debug("Unloading generator")
