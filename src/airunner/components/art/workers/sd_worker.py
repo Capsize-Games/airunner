@@ -174,7 +174,7 @@ class SDWorker(Worker):
 
     def on_input_image_settings_changed_signal(self, data: Dict):
         if self.model_manager:
-            self.model_manager.settings_changed()
+            self.model_manager.settings_changed(data)
 
     def on_unload_controlnet_signal(self, _data=None):
         if self.model_manager:
