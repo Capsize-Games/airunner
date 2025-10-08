@@ -128,18 +128,9 @@ class ChatPromptWidget(BaseWidget):
         self.ui.history_button.blockSignals(False)
         self.ui.tabWidget.setCurrentIndex(1 if checked else 0)
 
-    @Slot(bool)
+    @Slot()
     def on_send_button_clicked(self):
         self.do_generate()
-
-    @Slot()
-    def action_button_clicked_send(self):
-        """Compatibility alias for UI slot generated name.
-
-        Some .ui templates connect to chat_prompt.action_button_clicked_send();
-        provide a small alias so those generated bindings succeed.
-        """
-        self.on_send_button_clicked()
 
     def _find_parent_tab_widget(self):
         """Find the parent QTabWidget containing this widget."""
@@ -210,7 +201,7 @@ class ChatPromptWidget(BaseWidget):
             if self.held_message is None:
                 self.held_message = prompt
                 self.disable_send_button()
-                self.interrupt_button_clicked()
+                self.on_stop_button_clicked()
             return
         self.generating = True
 
