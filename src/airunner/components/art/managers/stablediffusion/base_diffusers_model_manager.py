@@ -178,7 +178,8 @@ class BaseDiffusersModelManager(BaseModelManager):
     def _initialize_model_status(self):
         self._model_status[self.model_type] = ModelStatus.UNLOADED
 
-    def settings_changed(self):
+    def settings_changed(self, data: Dict):
+        self.image_request = data.get("image_request", self.image_request)
         if self._pipe and self._pipe.__class__ is not self._pipeline_class:
             self._swap_pipeline()
 
@@ -246,12 +247,7 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def use_compel(self) -> bool:
-        use_compel = (
-            self.image_request.use_compel if self.image_request else None
-        )
-        if use_compel is None:
-            use_compel = self.generator_settings.use_compel
-        return use_compel
+        return self.image_request.use_compel
 
     @property
     def generator(self) -> torch.Generator:
@@ -383,10 +379,7 @@ class BaseDiffusersModelManager(BaseModelManager):
         The real model version. Only use this when we need to
         check the real version of the model.
         """
-        version = self.image_request.version if self.image_request else None
-        if not version:
-            version = self.generator_settings.version
-        return version
+        return self.image_request.version
 
     @property
     def version(self) -> str:
@@ -394,35 +387,13 @@ class BaseDiffusersModelManager(BaseModelManager):
 
     @property
     def section(self) -> GeneratorSection:
-        if self.image_request is not None:
-            return self.image_request.generator_section
-
-        # Check if we have an inpaint model selected, prioritize that
-        if (
-            self.generator_settings.pipeline_action
-            == GeneratorSection.INPAINT.value
-        ):
-            return GeneratorSection.INPAINT
-
-        section = GeneratorSection.TXT2IMG
-        if self.image_to_image_settings.enabled:
-            section = GeneratorSection.IMG2IMG
-        if (
-            self.drawing_pad_settings.image is not None
-            and self.outpaint_settings.enabled
-        ):
-            section = GeneratorSection.OUTPAINT
-        return section
+        return self.image_request.generator_section
 
     @property
     def custom_path(
         self,
     ) -> Optional[str]:  # Changed return type to Optional[str]
-        path_value = (
-            self.image_request.custom_path if self.image_request else None
-        )
-        if path_value is None:
-            path_value = self.generator_settings.custom_path
+        path_value = self.image_request.custom_path
         if path_value is not None and path_value != "":
             expanded_path = os.path.expanduser(path_value)
             # Check if the expanded path exists
