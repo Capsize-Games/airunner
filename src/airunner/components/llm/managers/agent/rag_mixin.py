@@ -837,14 +837,45 @@ class RAGMixin:
         """Clear all RAG documents and reset components."""
         self.logger.debug("Clearing RAG documents...")
         self.target_files = None
-        self.reload_rag()
+        # Only reload if not in the process of unloading
+        if not getattr(self, "_is_unloading", False):
+            self.reload_rag()
 
     def unload_rag(self):
         """Unload all RAG components."""
         self.logger.debug("Unloading RAG...")
-        self.clear_rag_documents()
-        self.__embedding = None
-        self.__text_splitter = None
+        self._is_unloading = True
+        try:
+            self.target_files = None
+
+            # Properly unload embedding model
+            if self.__embedding is not None:
+                try:
+                    # Try to access and delete the internal model if it exists
+                    if hasattr(self.__embedding, "_model"):
+                        self.logger.debug(
+                            "Deleting embedding internal model..."
+                        )
+                        del self.__embedding._model
+                    if hasattr(self.__embedding, "model"):
+                        self.logger.debug(
+                            "Deleting embedding model attribute..."
+                        )
+                        del self.__embedding.model
+                    # Delete the embedding wrapper
+                    self.logger.debug("Deleting embedding wrapper...")
+                    del self.__embedding
+                except Exception as e:
+                    self.logger.warning(f"Error deleting embedding: {e}")
+            self.__embedding = None
+            self.__text_splitter = None
+
+            # Force garbage collection
+            import gc
+
+            gc.collect()
+        finally:
+            self._is_unloading = False
 
     def load_html_into_rag(
         self, html_content: str, source_name: str = "web_content"
