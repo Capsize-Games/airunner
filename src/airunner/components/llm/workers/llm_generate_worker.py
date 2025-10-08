@@ -29,6 +29,8 @@ class LLMGenerateWorker(Worker):
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_llm_clear_history_signal,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_signal,
             SignalCode.RAG_RELOAD_INDEX_SIGNAL: self.on_llm_reload_rag_index_signal,
+            SignalCode.RAG_INDEX_ALL_DOCUMENTS: self.on_rag_index_all_documents_signal,
+            SignalCode.RAG_INDEX_CANCEL: self.on_rag_index_cancel_signal,
             SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL: self.on_llm_add_chatbot_response_to_history,
             SignalCode.LOAD_CONVERSATION: self.on_llm_load_conversation,
             SignalCode.INTERRUPT_PROCESS_SIGNAL: self.llm_on_interrupt_process_signal,
@@ -177,6 +179,92 @@ class LLMGenerateWorker(Worker):
     def on_llm_reload_rag_index_signal(self):
         if self.model_manager:
             self.model_manager.reload_rag_engine()
+
+    def on_rag_index_all_documents_signal(self, data: Dict):
+        """Handle manual document indexing request."""
+        self.logger.info("Received RAG_INDEX_ALL_DOCUMENTS signal")
+
+        # Ensure LLM is loaded - use same pattern as on_index_document_signal
+        if not self.model_manager or not self.model_manager.agent:
+            self.logger.info(
+                "Model manager or agent not available, loading LLM for indexing..."
+            )
+            try:
+                # Use load() method which synchronously loads the model
+                self.load()
+            except Exception as e:
+                self.logger.error(f"Failed to load LLM for indexing: {e}")
+                self.emit_signal(
+                    SignalCode.RAG_INDEXING_COMPLETE,
+                    {
+                        "success": False,
+                        "message": f"Failed to load LLM: {str(e)}",
+                    },
+                )
+                return
+
+        # Check again if agent is available after loading
+        if not self.model_manager or not self.model_manager.agent:
+            self.logger.error("Model manager loaded but agent is still None")
+            self.emit_signal(
+                SignalCode.RAG_INDEXING_COMPLETE,
+                {
+                    "success": False,
+                    "message": "LLM agent not available after loading",
+                },
+            )
+            return
+
+        # Check if agent supports indexing
+        if not hasattr(self.model_manager.agent, "index_all_documents"):
+            self.logger.error("Agent does not support manual indexing")
+            self.emit_signal(
+                SignalCode.RAG_INDEXING_COMPLETE,
+                {
+                    "success": False,
+                    "message": "Agent does not support indexing",
+                },
+            )
+            return
+
+        # Start indexing
+        self.logger.info("Starting manual document indexing with loaded agent")
+        try:
+            self.model_manager.agent.index_all_documents()
+        except Exception as e:
+            self.logger.error(f"Error during indexing: {e}")
+            self.emit_signal(
+                SignalCode.RAG_INDEXING_COMPLETE,
+                {
+                    "success": False,
+                    "message": f"Indexing error: {str(e)}",
+                },
+            )
+
+    def on_rag_index_cancel_signal(self, data: Dict):
+        """Handle cancel indexing request by setting interrupt flags if available."""
+        try:
+            # Prefer higher-level manager interrupt if available
+            if self.model_manager and hasattr(
+                self.model_manager, "do_interrupt"
+            ):
+                try:
+                    self.model_manager.do_interrupt()
+                    self.logger.info("Called model_manager.do_interrupt()")
+                    return
+                except Exception:
+                    pass
+
+            # Fallback: set agent flag
+            if (
+                self.model_manager
+                and self.model_manager.agent
+                and hasattr(self.model_manager.agent, "do_interrupt")
+            ):
+                setattr(self.model_manager.agent, "do_interrupt", True)
+                self.logger.info("Set agent.do_interrupt = True")
+        except Exception as e:
+            self.logger.error(f"Error during cancel indexing: {e}")
 
     def on_llm_add_chatbot_response_to_history(self, message):
         self.model_manager.add_chatbot_response_to_history(message)
