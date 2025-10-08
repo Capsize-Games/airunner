@@ -184,6 +184,14 @@ class LLMGenerateWorker(Worker):
         """Handle manual document indexing request."""
         self.logger.info("Received RAG_INDEX_ALL_DOCUMENTS signal")
 
+        # Run indexing in a separate thread to avoid blocking the worker's event loop
+        indexing_thread = threading.Thread(
+            target=self._index_all_documents_thread, args=(data,)
+        )
+        indexing_thread.start()
+
+    def _index_all_documents_thread(self, data: Dict):
+        """Run indexing in a separate thread to keep UI responsive."""
         # Ensure LLM is loaded - use same pattern as on_index_document_signal
         if not self.model_manager or not self.model_manager.agent:
             self.logger.info(

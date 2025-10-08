@@ -25,7 +25,7 @@ from llama_index.core.vector_stores.types import (
 from airunner.enums import EngineResponseCode, SignalCode
 from airunner.components.llm.managers.agent import HtmlFileReader
 from airunner.components.llm.managers.agent.chat_engine import (
-    RefreshContextChatEngine,
+    ConversationAwareContextChatEngine,
 )
 from airunner.settings import (
     AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
@@ -48,7 +48,7 @@ class RAGMixin:
         self.__index: Optional[VectorStoreIndex] = None
         self.__retriever: Optional[VectorIndexRetriever] = None
         self.__embedding: Optional[HuggingFaceEmbedding] = None
-        self.__rag_engine: Optional[RefreshContextChatEngine] = None
+        self.__rag_engine: Optional[ConversationAwareContextChatEngine] = None
         self._rag_engine_tool: Optional[Any] = None
         self.__text_splitter: Optional[SentenceSplitter] = None
         self._target_files: Optional[List[str]] = None
@@ -500,16 +500,18 @@ class RAGMixin:
                 except Exception:
                     pass
                 return
+
             if not os.path.exists(db_doc.path):
                 continue
 
-            # Emit progress
+            # Emit progress - loading phase
+            doc_name = os.path.basename(db_doc.path)
             if hasattr(self, "emit_signal"):
                 progress_data = {
                     "current": idx,
                     "total": total,
                     "progress": (idx / total) * 100,
-                    "document_name": os.path.basename(db_doc.path),
+                    "document_name": doc_name,
                 }
                 self.logger.debug(
                     f"Emitting RAG_INDEXING_PROGRESS: {progress_data}"
@@ -521,26 +523,55 @@ class RAGMixin:
 
             self.logger.info(f"Indexing ({idx}/{total}): {db_doc.path}")
 
-            # Load and index document
-            reader = SimpleDirectoryReader(
-                input_files=[db_doc.path],
-                file_extractor={
-                    ".pdf": PDFReader(),
-                    ".epub": CustomEpubReader(),
-                    ".html": HtmlFileReader(),
-                    ".htm": HtmlFileReader(),
-                    ".md": MarkdownReader(),
-                    ".zim": LlamaIndexZIMReader(),
-                },
-                file_metadata=self._extract_metadata,
-            )
+            try:
+                # Load document with error handling
+                reader = SimpleDirectoryReader(
+                    input_files=[db_doc.path],
+                    file_extractor={
+                        ".pdf": PDFReader(),
+                        ".epub": CustomEpubReader(),
+                        ".html": HtmlFileReader(),
+                        ".htm": HtmlFileReader(),
+                        ".md": MarkdownReader(),
+                        ".zim": LlamaIndexZIMReader(),
+                    },
+                    file_metadata=self._extract_metadata,
+                )
 
-            docs = reader.load_data()
-            for doc in docs:
-                doc.metadata.update(self._extract_metadata(db_doc.path))
-                self.__index.insert(doc)
+                docs = reader.load_data()
+                num_chunks = len(docs)
 
-            self._mark_document_indexed(db_doc.path)
+                # Emit progress - embedding phase
+                if hasattr(self, "emit_signal"):
+                    progress_data = {
+                        "current": idx,
+                        "total": total,
+                        "progress": (idx / total) * 100,
+                        "document_name": doc_name,
+                    }
+                    self.emit_signal(
+                        SignalCode.RAG_INDEXING_PROGRESS,
+                        progress_data,
+                    )
+
+                # Index chunks (this is the slow part)
+                for doc in docs:
+                    doc.metadata.update(self._extract_metadata(db_doc.path))
+                    self.__index.insert(doc)
+
+                self._mark_document_indexed(db_doc.path)
+
+            except Exception as e:
+                self.logger.error(f"Failed to index {db_doc.path}: {e}")
+                # For PDF errors, log but continue
+                if "pypdf" in str(e).lower() or "encoding" in str(e).lower():
+                    self.logger.warning(
+                        f"PDF encoding issue, skipping: {db_doc.path}"
+                    )
+                else:
+                    self.logger.error(f"Unexpected error: {e}", exc_info=True)
+                # Continue with next document instead of failing completely
+                continue
 
     def _full_index_rebuild_with_progress(
         self, unindexed_docs: List[DBDocument], total: int
@@ -548,6 +579,7 @@ class RAGMixin:
         """Rebuild index from scratch with progress reporting."""
         all_docs = []
 
+        # Phase 1: Load all documents (fast)
         for idx, db_doc in enumerate(unindexed_docs, 1):
             # Check for external interrupt/cancel request
             if getattr(self, "do_interrupt", False):
@@ -565,60 +597,91 @@ class RAGMixin:
                 except Exception:
                     pass
                 return
+
             if not os.path.exists(db_doc.path):
                 continue
 
-            # Emit progress
+            doc_name = os.path.basename(db_doc.path)
+
+            # Emit progress - loading phase
             if hasattr(self, "emit_signal"):
                 self.emit_signal(
                     SignalCode.RAG_INDEXING_PROGRESS,
                     {
                         "current": idx,
                         "total": total,
-                        "progress": (idx / total)
-                        * 80,  # Reserve 20% for index creation
-                        "document_name": os.path.basename(db_doc.path),
+                        "progress": (idx / total) * 70,
+                        "document_name": doc_name,
                     },
                 )
 
             self.logger.info(f"Loading ({idx}/{total}): {db_doc.path}")
 
-            # Load document
-            reader = SimpleDirectoryReader(
-                input_files=[db_doc.path],
-                file_extractor={
-                    ".pdf": PDFReader(),
-                    ".epub": CustomEpubReader(),
-                    ".html": HtmlFileReader(),
-                    ".htm": HtmlFileReader(),
-                    ".md": MarkdownReader(),
-                    ".zim": LlamaIndexZIMReader(),
-                },
-                file_metadata=self._extract_metadata,
-            )
+            try:
+                # Load document with error handling
+                reader = SimpleDirectoryReader(
+                    input_files=[db_doc.path],
+                    file_extractor={
+                        ".pdf": PDFReader(),
+                        ".epub": CustomEpubReader(),
+                        ".html": HtmlFileReader(),
+                        ".htm": HtmlFileReader(),
+                        ".md": MarkdownReader(),
+                        ".zim": LlamaIndexZIMReader(),
+                    },
+                    file_metadata=self._extract_metadata,
+                )
 
-            docs = reader.load_data()
-            for doc in docs:
-                doc.metadata.update(self._extract_metadata(db_doc.path))
-                all_docs.append(doc)
+                docs = reader.load_data()
+                for doc in docs:
+                    doc.metadata.update(self._extract_metadata(db_doc.path))
+                    all_docs.append(doc)
 
-        # Create index from all documents
+            except Exception as e:
+                self.logger.error(f"Failed to load {db_doc.path}: {e}")
+                # For PDF errors, log but continue
+                if "pypdf" in str(e).lower() or "encoding" in str(e).lower():
+                    self.logger.warning(
+                        f"PDF encoding issue, skipping: {db_doc.path}"
+                    )
+                else:
+                    self.logger.error(f"Unexpected error: {e}", exc_info=True)
+                # Continue with next document
+                continue
+
+        # Phase 2: Create index from all documents (SLOW - embedding generation)
         if hasattr(self, "emit_signal"):
             self.emit_signal(
                 SignalCode.RAG_INDEXING_PROGRESS,
                 {
                     "current": total,
                     "total": total,
-                    "progress": 90,
-                    "document_name": "Creating vector index...",
+                    "progress": 75,
+                    "document_name": f"Generating embeddings for {len(all_docs)} chunks...",
                 },
             )
 
+        self.logger.info(
+            f"Creating vector index from {len(all_docs)} chunks (this may take a while)..."
+        )
         self.__index = VectorStoreIndex.from_documents(
-            all_docs, embed_model=self.embedding, show_progress=False
+            all_docs,
+            embed_model=self.embedding,
+            show_progress=True,  # Show progress in console
         )
 
-        # Mark all as indexed
+        # Phase 3: Mark all as indexed
+        if hasattr(self, "emit_signal"):
+            self.emit_signal(
+                SignalCode.RAG_INDEXING_PROGRESS,
+                {
+                    "current": total,
+                    "total": total,
+                    "progress": 95,
+                    "document_name": "Finalizing index...",
+                },
+            )
+
         for db_doc in unindexed_docs:
             if os.path.exists(db_doc.path):
                 self._mark_document_indexed(db_doc.path)
@@ -701,7 +764,7 @@ class RAGMixin:
         )
 
     @property
-    def rag_engine(self) -> Optional[RefreshContextChatEngine]:
+    def rag_engine(self) -> Optional[ConversationAwareContextChatEngine]:
         """Get RAG chat engine with unified document access."""
         if not self.__rag_engine:
             if not self.retriever:
@@ -709,14 +772,21 @@ class RAGMixin:
                 return None
 
             try:
-                self.logger.debug("Creating RAG chat engine...")
-                self.__rag_engine = RefreshContextChatEngine.from_defaults(
+                self.logger.debug(
+                    "Creating conversation-aware RAG chat engine..."
+                )
+                self.__rag_engine = ConversationAwareContextChatEngine(
                     retriever=self.retriever,
                     memory=self.chat_memory,
-                    system_prompt=self.rag_system_prompt,
+                    prefix_messages=[],  # Will be set via update_system_prompt
                     llm=self.llm,
+                    context_window_turns=3,  # Include last 3 conversation turns for context
                 )
-                self.logger.debug("RAG chat engine created successfully")
+                # Set system prompt after creation
+                self.__rag_engine.update_system_prompt(self.rag_system_prompt)
+                self.logger.debug(
+                    "Conversation-aware RAG chat engine created successfully"
+                )
             except Exception as e:
                 self.logger.error(f"Error creating RAG chat engine: {e}")
                 return None
@@ -727,7 +797,7 @@ class RAGMixin:
         query: str,
         doc_ids: Optional[List[str]] = None,
         similarity_top_k: int = 5,
-    ) -> Optional[RefreshContextChatEngine]:
+    ) -> Optional[ConversationAwareContextChatEngine]:
         """Create a RAG engine for a specific query context.
 
         Args:
@@ -746,13 +816,17 @@ class RAGMixin:
             return None
 
         try:
-            engine = RefreshContextChatEngine.from_defaults(
+            engine = ConversationAwareContextChatEngine(
                 retriever=retriever,
                 memory=self.chat_memory,
-                system_prompt=self.rag_system_prompt,
+                prefix_messages=[],
                 llm=self.llm,
+                context_window_turns=3,
             )
-            self.logger.debug("Created contextual RAG engine")
+            engine.update_system_prompt(self.rag_system_prompt)
+            self.logger.debug(
+                "Created contextual conversation-aware RAG engine"
+            )
             return engine
         except Exception as e:
             self.logger.error(f"Error creating contextual RAG engine: {e}")

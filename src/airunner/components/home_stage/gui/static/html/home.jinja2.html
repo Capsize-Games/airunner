@@ -35,17 +35,17 @@
                 </div>
                 <div id="index-status-message" class="status-message hidden"></div>
                 <div class="index-controls">
-                    <div id="progress-container" class="progress-container">
+                    <div id="progress-section">
+                        <div id="progress-text" class="progress-text">Idle</div>
                         <div class="progress-bar-wrapper">
                             <div id="progress-bar" class="progress-bar" style="width:0%;"></div>
                         </div>
-                        <div id="progress-text" class="progress-text">Idle</div>
                     </div>
                     <div class="index-buttons">
-                        <button id="index-button" class="primary-button" disabled>
+                        <button id="index-button" class="primary-button">
                             Index All Documents
                         </button>
-                        <button id="cancel-button" class="primary-button secondary hidden">
+                        <button id="cancel-button" class="cancel-button hidden">
                             Cancel
                         </button>
                     </div>
@@ -151,14 +151,12 @@
     
     // Global function to update indexing progress from Python
     window.updateIndexingProgress = function(data) {
-        const progressContainer = document.getElementById('progress-container');
         const progressBar = document.getElementById('progress-bar');
         const progressText = document.getElementById('progress-text');
         const indexButton = document.getElementById('index-button');
         const cancelButton = document.getElementById('cancel-button');
         
         // Ensure UI shows indexing state
-        progressContainer.classList.remove('hidden');
         indexButton.disabled = true;
         indexButton.textContent = 'Indexing...';
         if (cancelButton) {
@@ -170,7 +168,7 @@
         progressBar.style.width = `${progress}%`;
         
         if (data.documentName) {
-            progressText.textContent = `Indexing (${data.current}/${data.total}): ${data.documentName}`;
+            progressText.textContent = `${data.current}/${data.total}: ${data.documentName}`;
         } else {
             progressText.textContent = `Progress: ${progress.toFixed(1)}%`;
         }
@@ -178,7 +176,6 @@
     
     // Global function called when indexing completes
     window.onIndexingComplete = function(data) {
-        const progressContainer = document.getElementById('progress-container');
         const progressBar = document.getElementById('progress-bar');
         const progressText = document.getElementById('progress-text');
         const indexButton = document.getElementById('index-button');

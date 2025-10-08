@@ -1168,6 +1168,7 @@ class BaseAgent(
             "_mood_engine",
             "_summary_engine",
             "_information_scraper_engine",
+            "_RAGMixin__rag_engine",  # Include RAG engine (with name mangling)
         ]:
             engine = getattr(self, engine_attr, None)
             if engine is not None:
@@ -1186,10 +1187,9 @@ class BaseAgent(
             self.chat_memory.chat_store_key = str(self.conversation_id)
             self._memory = self.chat_memory
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            if hasattr(self, "rag_engine") and self.rag_engine is not None:
-                self._memory = self.rag_engine.memory
-            else:
-                self._memory = None
+            # RAG should use the same chat_memory as regular chat to retain conversation history
+            self.chat_memory.chat_store_key = str(self.conversation_id)
+            self._memory = self.chat_memory
         else:
             self._memory = None
 
