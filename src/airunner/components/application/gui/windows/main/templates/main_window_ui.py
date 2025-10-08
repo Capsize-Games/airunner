@@ -616,8 +616,6 @@ class Ui_MainWindow(object):
         self.menuStable_Diffusion.addAction(self.actionSafety_Checker)
         self.menuStable_Diffusion.addAction(self.actionToggle_Stable_Diffusion)
         self.menuStable_Diffusion.addAction(self.actionDownload_Model)
-        self.model_toolbar.addAction(self.actionSettings)
-        self.model_toolbar.addSeparator()
         self.model_toolbar.addAction(self.actionToggle_Speech_to_Text)
         self.model_toolbar.addAction(self.actionToggle_Text_to_Speech)
         self.model_toolbar.addAction(self.actionToggle_LLM)

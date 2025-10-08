@@ -14,8 +14,6 @@ class RAGSettingsWidget(BaseWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ui.service.blockSignals(True)
-        self.ui.enabled.blockSignals(True)
-        self.ui.enabled.setChecked(self.rag_settings.enabled)
         self.ui.service.clear()
         self.ui.service.addItems(
             [
@@ -26,7 +24,6 @@ class RAGSettingsWidget(BaseWidget):
         )
         service = self.rag_settings.model_service
         self.ui.service.setCurrentText(service)
-        self.ui.enabled.blockSignals(False)
         self.ui.service.blockSignals(False)
         self.toggle_model_path_visibility(service)
 
@@ -42,14 +39,6 @@ class RAGSettingsWidget(BaseWidget):
         RAGSettings.objects.update(
             self.rag_settings.id,
             model_path=text,
-        )
-
-    @Slot(bool)
-    def on_enabled_toggled(self, checked: bool):
-        self.update_rag_settings("enabled", checked)
-        RAGSettings.objects.update(
-            self.rag_settings.id,
-            enabled=checked,
         )
 
     def toggle_model_path_visibility(self, service: str = ""):

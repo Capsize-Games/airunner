@@ -44,8 +44,7 @@ class RAGMixin:
         self.__text_splitter: Optional[SentenceSplitter] = None
         self._target_files: Optional[List[str]] = None
 
-        if self.rag_enabled:
-            self._setup_rag()
+        self._setup_rag()
 
     def _setup_rag(self):
         """Setup RAG components."""
@@ -57,15 +56,6 @@ class RAGMixin:
             self.logger.info("RAG system initialized successfully")
         except Exception as e:
             self.logger.error(f"Error setting up RAG: {str(e)}")
-
-    @property
-    def rag_enabled(self) -> bool:
-        return self.rag_settings.enabled
-
-    @property
-    def rag_mode_enabled(self) -> bool:
-        """RAG tool is available whenever RAG is enabled."""
-        return self.rag_enabled
 
     @property
     def text_splitter(self) -> SentenceSplitter:
