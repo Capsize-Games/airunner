@@ -15,11 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
-    QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QProgressBar, QPushButton,
-    QSizePolicy, QSplitter, QTabWidget, QTreeView,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QFrame,
+    QGridLayout, QHBoxLayout, QHeaderView, QLabel,
+    QLineEdit, QListWidget, QListWidgetItem, QProgressBar,
+    QPushButton, QSizePolicy, QSplitter, QTabWidget,
+    QTreeView, QVBoxLayout, QWidget)
 
 class Ui_documents(object):
     def setupUi(self, documents):
@@ -39,10 +39,52 @@ class Ui_documents(object):
         self.verticalLayoutDocuments.setSpacing(10)
         self.verticalLayoutDocuments.setObjectName(u"verticalLayoutDocuments")
         self.verticalLayoutDocuments.setContentsMargins(10, 10, 10, 10)
-        self.documentsTreeView = QTreeView(self.tabDocuments)
-        self.documentsTreeView.setObjectName(u"documentsTreeView")
+        self.documentsSplitter = QSplitter(self.tabDocuments)
+        self.documentsSplitter.setObjectName(u"documentsSplitter")
+        self.documentsSplitter.setOrientation(Qt.Orientation.Vertical)
+        self.availableDocsWidget = QWidget(self.documentsSplitter)
+        self.availableDocsWidget.setObjectName(u"availableDocsWidget")
+        self.verticalLayoutAvailable = QVBoxLayout(self.availableDocsWidget)
+        self.verticalLayoutAvailable.setSpacing(5)
+        self.verticalLayoutAvailable.setObjectName(u"verticalLayoutAvailable")
+        self.verticalLayoutAvailable.setContentsMargins(0, 0, 0, 0)
+        self.labelAvailable = QLabel(self.availableDocsWidget)
+        self.labelAvailable.setObjectName(u"labelAvailable")
 
-        self.verticalLayoutDocuments.addWidget(self.documentsTreeView)
+        self.verticalLayoutAvailable.addWidget(self.labelAvailable)
+
+        self.documentsTreeView = QTreeView(self.availableDocsWidget)
+        self.documentsTreeView.setObjectName(u"documentsTreeView")
+        self.documentsTreeView.setDragEnabled(True)
+        self.documentsTreeView.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
+        self.documentsTreeView.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+
+        self.verticalLayoutAvailable.addWidget(self.documentsTreeView)
+
+        self.documentsSplitter.addWidget(self.availableDocsWidget)
+        self.activeDocsWidget = QWidget(self.documentsSplitter)
+        self.activeDocsWidget.setObjectName(u"activeDocsWidget")
+        self.verticalLayoutActive = QVBoxLayout(self.activeDocsWidget)
+        self.verticalLayoutActive.setSpacing(5)
+        self.verticalLayoutActive.setObjectName(u"verticalLayoutActive")
+        self.verticalLayoutActive.setContentsMargins(0, 0, 0, 0)
+        self.labelActive = QLabel(self.activeDocsWidget)
+        self.labelActive.setObjectName(u"labelActive")
+
+        self.verticalLayoutActive.addWidget(self.labelActive)
+
+        self.activeDocumentsTreeView = QTreeView(self.activeDocsWidget)
+        self.activeDocumentsTreeView.setObjectName(u"activeDocumentsTreeView")
+        self.activeDocumentsTreeView.setAcceptDrops(True)
+        self.activeDocumentsTreeView.setDragEnabled(True)
+        self.activeDocumentsTreeView.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
+        self.activeDocumentsTreeView.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+
+        self.verticalLayoutActive.addWidget(self.activeDocumentsTreeView)
+
+        self.documentsSplitter.addWidget(self.activeDocsWidget)
+
+        self.verticalLayoutDocuments.addWidget(self.documentsSplitter)
 
         self.tabWidget.addTab(self.tabDocuments, "")
         self.tabZim = QWidget()
@@ -162,6 +204,10 @@ class Ui_documents(object):
 
     def retranslateUi(self, documents):
         documents.setWindowTitle(QCoreApplication.translate("documents", u"Documents", None))
+        self.labelAvailable.setText(QCoreApplication.translate("documents", u"Available Documents", None))
+        self.labelAvailable.setStyleSheet(QCoreApplication.translate("documents", u"font-weight: bold;", None))
+        self.labelActive.setText(QCoreApplication.translate("documents", u"Active Documents (RAG)", None))
+        self.labelActive.setStyleSheet(QCoreApplication.translate("documents", u"font-weight: bold;", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabDocuments), QCoreApplication.translate("documents", u"Documents", None))
         self.labelLocal.setText(QCoreApplication.translate("documents", u"Local ZIM Files", None))
         self.labelRemote.setText(QCoreApplication.translate("documents", u"Kiwix Library Search Results", None))

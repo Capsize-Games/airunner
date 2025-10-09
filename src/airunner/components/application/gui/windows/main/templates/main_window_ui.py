@@ -469,28 +469,13 @@ class Ui_MainWindow(object):
         self.main_window_splitter.addWidget(self.center_widget)
         self.knowledgebase = QWidget(self.main_window_splitter)
         self.knowledgebase.setObjectName(u"knowledgebase")
-        self.gridLayout_10 = QGridLayout(self.knowledgebase)
-        self.gridLayout_10.setObjectName(u"gridLayout_10")
-        self.gridLayout_10.setContentsMargins(0, 0, 0, 0)
-        self.splitter_2 = QSplitter(self.knowledgebase)
-        self.splitter_2.setObjectName(u"splitter_2")
-        self.splitter_2.setOrientation(Qt.Orientation.Vertical)
-        self.documents_container = QWidget(self.splitter_2)
-        self.documents_container.setObjectName(u"documents_container")
-        self.gridLayout_11 = QGridLayout(self.documents_container)
-        self.gridLayout_11.setObjectName(u"gridLayout_11")
-        self.gridLayout_11.setContentsMargins(0, 0, 0, 0)
-        self.documents = DocumentsWidget(self.documents_container)
+        self.gridLayout_7 = QGridLayout(self.knowledgebase)
+        self.gridLayout_7.setObjectName(u"gridLayout_7")
+        self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.documents = DocumentsWidget(self.knowledgebase)
         self.documents.setObjectName(u"documents")
 
-        self.gridLayout_11.addWidget(self.documents, 0, 0, 1, 1)
-
-        self.splitter_2.addWidget(self.documents_container)
-        self.widget_3 = QWidget(self.splitter_2)
-        self.widget_3.setObjectName(u"widget_3")
-        self.splitter_2.addWidget(self.widget_3)
-
-        self.gridLayout_10.addWidget(self.splitter_2, 0, 0, 1, 1)
+        self.gridLayout_7.addWidget(self.documents, 0, 0, 1, 1)
 
         self.main_window_splitter.addWidget(self.knowledgebase)
 
