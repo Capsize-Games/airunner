@@ -193,6 +193,8 @@ class RAGMixin:
     @property
     def embedding(self) -> HuggingFaceEmbedding:
         if not self.__embedding:
+            import torch
+
             self.logger.debug("Loading embeddings...")
             path = os.path.expanduser(
                 os.path.join(
@@ -205,10 +207,16 @@ class RAGMixin:
                 )
             )
 
+            # Use GPU if available (same pattern as TTS/STT)
+            device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
             try:
                 self.__embedding = HuggingFaceEmbedding(
-                    model_name=path, local_files_only=AIRUNNER_LOCAL_FILES_ONLY
+                    model_name=path,
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                    device=device,
                 )
+                self.logger.info(f"HuggingFaceEmbedding loaded on {device}")
             except Exception as e:
                 code = EngineResponseCode.ERROR
                 error_message = "Error loading embeddings " + str(e)
@@ -380,6 +388,26 @@ class RAGMixin:
             return doc_ids
         except Exception as e:
             self.logger.error(f"Error getting active documents: {e}")
+            return []
+
+    def _get_active_document_names(self) -> List[str]:
+        """Get list of filenames for active documents.
+
+        Returns:
+            List of document filenames (not full paths)
+        """
+        try:
+            active_docs = DBDocument.objects.filter(
+                DBDocument.active == True, DBDocument.indexed == True
+            )
+            names = []
+            for doc in active_docs:
+                if os.path.exists(doc.path):
+                    filename = os.path.basename(doc.path)
+                    names.append(filename)
+            return names
+        except Exception as e:
+            self.logger.error(f"Error getting active document names: {e}")
             return []
 
     def _mark_document_indexed(self, file_path: str):
@@ -1103,6 +1131,15 @@ class RAGMixin:
     @property
     def rag_system_prompt(self) -> str:
         """Get system prompt for RAG."""
+        # Get list of active documents
+        active_docs = self._get_active_document_names()
+
+        if active_docs:
+            doc_list = "\n".join([f"- {doc}" for doc in active_docs])
+            available_docs_text = f"\n\nYou currently have access to the following documents:\n{doc_list}\n"
+        else:
+            available_docs_text = "\n\nNo documents are currently active.\n"
+
         return (
             f"{self.system_prompt}\n"
             "------\n"
@@ -1113,7 +1150,8 @@ class RAGMixin:
             "If the retrieved documents contain relevant information, use it to provide a detailed answer. "
             "If the retrieved documents do not contain relevant information, explicitly state that the information is not available. "
             "Always cite the source document (file_name) when referencing information. "
-            f"Always respond as {self.botname} while strictly adhering to the document-based responses.\n"
+            f"Always respond as {self.botname} while strictly adhering to the document-based responses."
+            f"{available_docs_text}"
             "------\n"
         )
 
@@ -1196,8 +1234,11 @@ class RAGMixin:
 
             try:
                 self.logger.info("Creating RAG engine tool")
+                # Changed return_direct=False so RAG feeds context to CHAT instead of returning directly
                 self._rag_engine_tool = RAGEngineTool.from_defaults(
-                    chat_engine=self.rag_engine, agent=self, return_direct=True
+                    chat_engine=self.rag_engine,
+                    agent=self,
+                    return_direct=False,
                 )
                 self.logger.debug("RAG engine tool created successfully")
             except Exception as e:
