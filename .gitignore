@@ -18,7 +18,6 @@ settings.pickle
 *egg-info*
 venv
 src/airunner/extensions/
-src/airunner/scripts/realesrgan
 src/airunner/scripts/weights
 gfpgan
 test.json

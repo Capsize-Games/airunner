@@ -298,7 +298,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         elif val == GeneratorSection.UPSCALER.value:
             val = GeneratorSection.UPSCALER.value
 
-        generator_settings = GeneratorSettings.objects.first()
+        generator_settings = self.generator_settings
         updated_kwargs = {"pipeline_action": val}
         selected_model_id = generator_settings.model
         if val == GeneratorSection.TXT2IMG.value:
@@ -348,7 +348,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         self.update_generator_settings(version=val)
         self.api.widget_element_changed("sd_version", "version", val)
         self._load_pipelines_combobox()
-        generator_settings = GeneratorSettings.objects.first()
+        generator_settings = self.generator_settings
         pipeline = generator_settings.pipeline_action
         # Try to find a model matching current pipeline
         model = AIModels.objects.filter_first(

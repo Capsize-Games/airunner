@@ -1,3 +1,4 @@
+import gc
 import random
 import os
 import torch
@@ -282,11 +283,20 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self.logger.debug("Unloading LLM")
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
 
-        # Unload components
+        # Unload agent first (includes RAG/embeddings)
+        try:
+            self._unload_agent()
+            # Clear memory immediately after agent unload (includes RAG embeddings)
+            clear_memory(self.device)
+        except Exception as e:
+            self.logger.error(
+                f"Exception during unloading agent: {e}", exc_info=True
+            )
+
+        # Unload tokenizer and model
         for unload_func, name in [
-            (self._unload_model, "model"),
             (self._unload_tokenizer, "tokenizer"),
-            (self._unload_agent, "agent"),
+            (self._unload_model, "model"),
         ]:
             try:
                 unload_func()
@@ -295,7 +305,10 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                     f"Exception during unloading {name}: {e}", exc_info=True
                 )
 
-        # Clear GPU memory
+        # Clear GPU memory aggressively after model unload
+        clear_memory(self.device)
+
+        # Final clear to ensure everything is released
         clear_memory(self.device)
 
         self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
@@ -553,6 +566,8 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             if self._model is not None:
                 del self._model
                 self._model = None
+                # Force garbage collection
+                gc.collect()
         except AttributeError as e:
             self.logger.warning(f"Error unloading model: {e}")
             self._model = None

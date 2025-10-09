@@ -187,48 +187,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.infinite_images_button.blockSignals(False)
 
     @property
-    def controlnet_enabled(self) -> bool:
-        return (
-            self.controlnet_settings.enabled
-            and self.controlnet_settings.image is not None
-        )
-
-    @property
-    def section(self) -> GeneratorSection:
-        # Check if we have an inpaint model selected, prioritize that
-        if (
-            self.generator_settings.pipeline_action
-            == GeneratorSection.INPAINT.value
-        ):
-            return GeneratorSection.INPAINT
-
-        section = GeneratorSection.TXT2IMG
-        if self.image_to_image_settings.enabled:
-            section = GeneratorSection.IMG2IMG
-        if (
-            self.drawing_pad_settings.image is not None
-            and self.outpaint_settings.enabled
-        ):
-            section = GeneratorSection.OUTPAINT
-        return section
-
-    @property
-    def is_txt2img(self) -> bool:
-        return self.section is GeneratorSection.TXT2IMG
-
-    @property
-    def is_img2img(self) -> bool:
-        return self.section is GeneratorSection.IMG2IMG
-
-    @property
-    def is_outpaint(self) -> bool:
-        return self.section is GeneratorSection.OUTPAINT
-
-    @property
-    def is_inpaint(self) -> bool:
-        return self.section is GeneratorSection.INPAINT
-
-    @property
     def is_sd_xl_or_turbo(self) -> bool:
         return (
             self._sd_version == StableDiffusionVersion.SDXL1_0.value
@@ -416,10 +374,6 @@ class StableDiffusionGeneratorForm(BaseWidget):
         return self.generator_settings.pipeline_action
 
     @property
-    def generator_name(self):
-        return self.application_settings.current_image_generator
-
-    @property
     def seed(self):
         return self.generator_settings.seed
 
@@ -599,138 +553,8 @@ class StableDiffusionGeneratorForm(BaseWidget):
             for _prompt_id, container in self._prompt_containers.items()
         ]
 
-        # Get fresh generator settings from DB to avoid using stale cached values
-        # (cache may not be invalidated yet when version/model changes happen)
-        from airunner.components.art.data.generator_settings import (
-            GeneratorSettings,
-        )
-
-        fresh_generator_settings = GeneratorSettings.objects.first()
-
-        # Determine strength based on whether we are doing img2img or txt2img
-        if self.controlnet_enabled:
-            strength = self.controlnet_settings.strength
-        elif self.is_inpaint or self.is_outpaint:
-            strength = self.outpaint_settings.strength
-        elif self.is_img2img:
-            strength = self.image_to_image_settings.strength
-        else:
-            strength = fresh_generator_settings.strength
-
-        model_path = ""
-        model_id = fresh_generator_settings.model
-        if model_id is not None:
-            aimodel = AIModels.objects.get(model_id)
-            if aimodel is not None:
-                model_path = aimodel.path
-
-        if model_path == "":
-            if fresh_generator_settings.model is not None:
-                aimodel = AIModels.objects.get(fresh_generator_settings.model)
-            else:
-                aimodel = AIModels.objects.first()
-
-            if aimodel is not None:
-                model_path = aimodel.path
-
-        # Debug logging for model selection
-        try:
-            self.logger.debug(
-                "do_generate model selection: version=%s pipeline_action=%s model_id=%s resolved_model_path=%s",
-                fresh_generator_settings.version,
-                fresh_generator_settings.pipeline_action,
-                fresh_generator_settings.model,
-                model_path,
-            )
-        except Exception:
-            pass
-
-        binary_image = None
-        image = None
-        mask = None
-        scheduler = fresh_generator_settings.scheduler
-
-        # Get image from ImageToImageSettings if img2img
-        if self.is_img2img:
-            binary_image = self.image_to_image_settings.image
-        elif (
-            fresh_generator_settings.pipeline_action
-            == GeneratorSection.UPSCALER.value
-        ):
-            binary_image = self.drawing_pad_settings.image
-            scheduler = Scheduler.DDIM.value
-
-        if binary_image is not None:
-            image = convert_binary_to_image(binary_image)
-            image = image.convert("RGB")
-
-        controlnet_image = None
-        if self.controlnet_enabled:
-            controlnet_binary_image = self.controlnet_settings.image
-            controlnet_image = convert_binary_to_image(controlnet_binary_image)
-            controlnet_image = controlnet_image.convert("RGB")
-
-        custom_path = self.generator_settings.custom_path
-        if type(custom_path) is tuple:
-            custom_path = None
-
-        image_request = ImageRequest(
-            prompt=data.get("prompt", self.ui.prompt.toPlainText()),
-            negative_prompt=data.get(
-                "negative_prompt", self.ui.negative_prompt.toPlainText()
-            ),
-            second_prompt=data.get(
-                "second_prompt", self.ui.secondary_prompt.toPlainText()
-            ),
-            second_negative_prompt=data.get(
-                "second_negative_prompt",
-                self.ui.secondary_negative_prompt.toPlainText(),
-            ),
-            crops_coords_top_left=fresh_generator_settings.crops_coords_top_left,
-            negative_crops_coords_top_left=fresh_generator_settings.negative_crops_coords_top_left,
-            pipeline_action=fresh_generator_settings.pipeline_action,
-            generator_name=self.generator_name,
-            random_seed=fresh_generator_settings.random_seed,
-            model_path=model_path,
-            scheduler=scheduler,
-            version=fresh_generator_settings.version,
-            use_compel=fresh_generator_settings.use_compel,
-            steps=fresh_generator_settings.steps,
-            ddim_eta=fresh_generator_settings.ddim_eta,
-            scale=fresh_generator_settings.scale / 100,
-            seed=self.seed,
-            strength=strength / 100,
-            n_samples=fresh_generator_settings.n_samples,
-            images_per_batch=fresh_generator_settings.images_per_batch,
-            generate_infinite_images=fresh_generator_settings.generate_infinite_images,
-            clip_skip=fresh_generator_settings.clip_skip,
-            width=self.application_settings.working_width,
-            height=self.application_settings.working_height,
-            target_size=fresh_generator_settings.target_size,
-            original_size=fresh_generator_settings.original_size,
-            negative_target_size=fresh_generator_settings.negative_target_size,
-            negative_original_size=fresh_generator_settings.negative_original_size,
-            lora_scale=fresh_generator_settings.lora_scale,
-            additional_prompts=additional_prompts,
-            callback=callback,
-            image_preset=ImagePreset(fresh_generator_settings.image_preset),
-            quality_effects=(
-                QualityEffects(fresh_generator_settings.quality_effects)
-                if fresh_generator_settings.quality_effects != ""
-                and fresh_generator_settings.quality_effects is not None
-                else QualityEffects.STANDARD
-            ),
-            image=image,
-            mask=mask,
-            controlnet_conditioning_scale=self.controlnet_settings.conditioning_scale
-            / 100.0,
-            generator_section=self.section,
-            custom_path=custom_path,
-            controlnet_enabled=self.controlnet_enabled,
-            controlnet=self.controlnet_settings.controlnet,
-            nsfw_filter=self.application_settings.nsfw_filter,
-            outpaint_mask_blur=self.outpaint_settings.mask_blur,
-            controlnet_image=controlnet_image,
+        image_request = self.api.art.canvas.create_image_request(
+            additional_prompts=additional_prompts, callback=callback
         )
 
         self.api.art.send_request(image_request=image_request)
