@@ -2,6 +2,7 @@ import os
 from typing import List, Optional, Any, Dict
 import hashlib
 from datetime import datetime
+import json
 
 from llama_index.core import (
     Document,
@@ -21,6 +22,7 @@ from llama_index.core.vector_stores.types import (
     MetadataFilters,
     ExactMatchFilter,
 )
+from llama_index.core.schema import NodeWithScore, QueryBundle
 
 from airunner.enums import EngineResponseCode, SignalCode
 from airunner.components.llm.managers.agent import HtmlFileReader
@@ -38,10 +40,88 @@ from airunner.components.zimreader.llamaindex_zim_reader import (
 from airunner.components.documents.data.models.document import (
     Document as DBDocument,
 )
+from airunner.components.llm.managers.agent.tools import (
+    RAGEngineTool,
+)
+import shutil
+import gc
+from bs4 import BeautifulSoup
+
+
+class MultiIndexRetriever(VectorIndexRetriever):
+    """Simple retriever that loads only manually-activated documents."""
+
+    def __init__(
+        self,
+        rag_mixin,
+        similarity_top_k: int = 5,
+        **kwargs,
+    ):
+        """Initialize multi-index retriever.
+
+        Args:
+            rag_mixin: Reference to RAGMixin instance for loading indexes
+            similarity_top_k: Number of nodes to retrieve total
+        """
+        self._rag_mixin = rag_mixin
+        self._similarity_top_k = similarity_top_k
+
+    def _retrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
+        """Load and search only documents marked as active by user.
+
+        This is a simple manual system - no automatic filtering or ranking.
+        Only documents with active=True in the database are loaded.
+        """
+        all_nodes = []
+
+        # Get active document IDs from database
+        active_doc_ids = self._rag_mixin._get_active_document_ids()
+
+        if not active_doc_ids:
+            if hasattr(self._rag_mixin, "logger"):
+                self._rag_mixin.logger.warning(
+                    "No active documents selected. Please activate documents in the Documents panel."
+                )
+            return []
+
+        if hasattr(self._rag_mixin, "logger"):
+            self._rag_mixin.logger.info(
+                f"Searching {len(active_doc_ids)} active document(s)"
+            )
+
+        for doc_id in active_doc_ids:
+            try:
+                # Lazy load the index
+                doc_index = self._rag_mixin._load_doc_index(doc_id)
+                if not doc_index:
+                    continue
+
+                # Create a retriever for this specific index
+                retriever = VectorIndexRetriever(
+                    index=doc_index,
+                    similarity_top_k=self._similarity_top_k,
+                )
+
+                # Retrieve nodes from this index
+                nodes = retriever.retrieve(query_bundle)
+                all_nodes.extend(nodes)
+
+            except Exception as e:
+                # Log but continue with other indexes
+                if hasattr(self._rag_mixin, "logger"):
+                    self._rag_mixin.logger.error(
+                        f"Error retrieving from index {doc_id}: {e}"
+                    )
+
+        # Sort all nodes by score (highest first)
+        all_nodes.sort(key=lambda x: x.score or 0.0, reverse=True)
+
+        # Return top N nodes across all filtered indexes
+        return all_nodes[: self._similarity_top_k]
 
 
 class RAGMixin:
-    """Unified RAG implementation with intelligent document selection and cache integrity."""
+    """Per-document RAG implementation with lazy loading for scalability."""
 
     def __init__(self):
         self.__document_reader: Optional[SimpleDirectoryReader] = None
@@ -55,6 +135,11 @@ class RAGMixin:
         self.__doc_metadata_cache: Dict[str, Dict[str, Any]] = {}
         self.__cache_validated: bool = False
 
+        # Per-document index architecture
+        self.__index_registry: Optional[Dict[str, Any]] = None
+        self.__doc_indexes_cache: Dict[str, VectorStoreIndex] = {}
+        self.__loaded_doc_ids: List[str] = []
+
         self._setup_rag()
 
     def _setup_rag(self):
@@ -64,6 +149,10 @@ class RAGMixin:
             Settings.llm = self.llm
             Settings.embed_model = self.embedding
             Settings.node_parser = self.text_splitter
+
+            # Check for old unified index and migrate if needed
+            self._detect_and_migrate_old_index()
+
             self.logger.info("RAG system initialized successfully")
         except Exception as e:
             self.logger.error(f"Error setting up RAG: {str(e)}")
@@ -75,6 +164,31 @@ class RAGMixin:
                 chunk_size=512, chunk_overlap=50
             )
         return self.__text_splitter
+
+    @property
+    def doc_indexes_dir(self) -> str:
+        """Directory containing per-document indexes."""
+        return os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path,
+                "text",
+                "other",
+                "cache",
+                "doc_indexes",
+            )
+        )
+
+    @property
+    def registry_path(self) -> str:
+        """Path to index registry file."""
+        return os.path.join(self.doc_indexes_dir, "index_registry.json")
+
+    @property
+    def index_registry(self) -> Dict[str, Any]:
+        """Get or load the index registry."""
+        if self.__index_registry is None:
+            self.__index_registry = self._load_registry()
+        return self.__index_registry
 
     @property
     def embedding(self) -> HuggingFaceEmbedding:
@@ -248,6 +362,26 @@ class RAGMixin:
             self.logger.error(f"Error getting unindexed documents: {e}")
             return []
 
+    def _get_active_document_ids(self) -> List[str]:
+        """Get list of document IDs for documents marked as active.
+
+        Returns:
+            List of document IDs (generated from file paths)
+        """
+        try:
+            active_docs = DBDocument.objects.filter(
+                DBDocument.active == True, DBDocument.indexed == True
+            )
+            doc_ids = []
+            for doc in active_docs:
+                if os.path.exists(doc.path):
+                    doc_id = self._generate_doc_id(doc.path)
+                    doc_ids.append(doc_id)
+            return doc_ids
+        except Exception as e:
+            self.logger.error(f"Error getting active documents: {e}")
+            return []
+
     def _mark_document_indexed(self, file_path: str):
         """Mark a document as indexed in the database with current hash."""
         try:
@@ -298,6 +432,129 @@ class RAGMixin:
 
         self.__doc_metadata_cache[file_path] = metadata
         return metadata
+
+    def _load_registry(self) -> Dict[str, Any]:
+        """Load the index registry from disk."""
+        if os.path.exists(self.registry_path):
+            try:
+                with open(self.registry_path, "r") as f:
+                    registry = json.load(f)
+                self.logger.info(
+                    f"Loaded registry with {len(registry.get('documents', {}))} documents"
+                )
+                return registry
+            except Exception as e:
+                self.logger.error(f"Error loading registry: {e}")
+
+        # Return empty registry
+        return {"documents": {}, "version": "1.0"}
+
+    def _save_registry(self):
+        """Save the index registry to disk."""
+        try:
+            os.makedirs(self.doc_indexes_dir, exist_ok=True)
+            with open(self.registry_path, "w") as f:
+                json.dump(self.__index_registry, f, indent=2)
+            self.logger.debug("Registry saved successfully")
+        except Exception as e:
+            self.logger.error(f"Error saving registry: {e}")
+
+    def _update_registry_entry(
+        self,
+        doc_id: str,
+        file_path: str,
+        chunk_count: int,
+    ):
+        """Update a document entry in the registry.
+
+        Args:
+            doc_id: Document ID
+            file_path: Path to document
+            chunk_count: Number of chunks
+        """
+        file_hash = self._calculate_file_hash(file_path)
+        entry = {
+            "path": file_path,
+            "file_hash": file_hash,
+            "indexed_at": datetime.utcnow().isoformat(),
+            "chunk_count": chunk_count,
+            "file_name": os.path.basename(file_path),
+        }
+
+        self.index_registry["documents"][doc_id] = entry
+        self._save_registry()
+
+    def _get_doc_index_dir(self, doc_id: str, file_path: str) -> str:
+        """Get the directory path for a document's index."""
+        filename = os.path.basename(file_path)
+        # Sanitize filename for directory name
+        safe_filename = "".join(
+            c if c.isalnum() or c in "._-" else "_" for c in filename
+        )
+        return os.path.join(self.doc_indexes_dir, f"{doc_id}_{safe_filename}")
+
+    def _index_single_document(self, db_doc: DBDocument) -> bool:
+        """Index a single document into its own per-document index.
+
+        Args:
+            db_doc: Database document object
+
+        Returns:
+            bool: True if indexing succeeded, False otherwise
+        """
+        try:
+            doc_id = self._generate_doc_id(db_doc.path)
+
+            # Load document
+            reader = SimpleDirectoryReader(
+                input_files=[db_doc.path],
+                file_extractor={
+                    ".pdf": PDFReader(),
+                    ".epub": CustomEpubReader(),
+                    ".html": HtmlFileReader(),
+                    ".htm": HtmlFileReader(),
+                    ".md": MarkdownReader(),
+                    ".zim": LlamaIndexZIMReader(),
+                },
+                file_metadata=self._extract_metadata,
+            )
+
+            docs = reader.load_data()
+            if not docs:
+                self.logger.warning(f"No content extracted from {db_doc.path}")
+                return False
+
+            # Enrich with metadata
+            for doc in docs:
+                doc.metadata.update(self._extract_metadata(db_doc.path))
+                doc.metadata["doc_id"] = doc_id
+
+            # Create per-document index
+            doc_index = VectorStoreIndex.from_documents(
+                docs,
+                embed_model=self.embedding,
+                show_progress=False,
+            )
+
+            # Save to disk
+            index_dir = self._get_doc_index_dir(doc_id, db_doc.path)
+            os.makedirs(index_dir, exist_ok=True)
+            doc_index.storage_context.persist(persist_dir=index_dir)
+
+            # Update registry
+            self._update_registry_entry(doc_id, db_doc.path, len(docs))
+
+            # Mark as indexed in DB
+            self._mark_document_indexed(db_doc.path)
+
+            self.logger.info(
+                f"Indexed document {os.path.basename(db_doc.path)} ({len(docs)} chunks)"
+            )
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to index {db_doc.path}: {e}")
+            return False
 
     @property
     def document_reader(self) -> Optional[SimpleDirectoryReader]:
@@ -354,36 +611,91 @@ class RAGMixin:
             self.logger.error(f"Error loading documents: {e}")
             return []
 
+    def _load_doc_index(self, doc_id: str) -> Optional[VectorStoreIndex]:
+        """Lazy load a document's index from disk.
+
+        Args:
+            doc_id: Document ID
+
+        Returns:
+            VectorStoreIndex or None if loading fails
+        """
+        # Check cache first
+        if doc_id in self.__doc_indexes_cache:
+            return self.__doc_indexes_cache[doc_id]
+
+        # Get doc info from registry
+        doc_info = self.index_registry["documents"].get(doc_id)
+        if not doc_info:
+            self.logger.warning(f"Document {doc_id} not found in registry")
+            return None
+
+        # Load from disk
+        try:
+            index_dir = self._get_doc_index_dir(doc_id, doc_info["path"])
+            if not os.path.exists(index_dir):
+                self.logger.warning(f"Index directory not found: {index_dir}")
+                return None
+
+            storage_context = StorageContext.from_defaults(
+                persist_dir=index_dir
+            )
+            doc_index = load_index_from_storage(storage_context)
+
+            # Cache it
+            self.__doc_indexes_cache[doc_id] = doc_index
+            self.__loaded_doc_ids.append(doc_id)
+
+            self.logger.debug(
+                f"Loaded index for document {doc_info['file_name']}"
+            )
+            return doc_index
+
+        except Exception as e:
+            self.logger.error(f"Error loading index for {doc_id}: {e}")
+            return None
+
+    def _unload_doc_index(self, doc_id: str):
+        """Unload a document's index from memory."""
+        if doc_id in self.__doc_indexes_cache:
+            del self.__doc_indexes_cache[doc_id]
+            if doc_id in self.__loaded_doc_ids:
+                self.__loaded_doc_ids.remove(doc_id)
+            self.logger.debug(f"Unloaded index for document {doc_id}")
+
     @property
     def index(self) -> Optional[VectorStoreIndex]:
-        """Get the unified vector index (load only, no auto-building)."""
-        if not self.__index:
-            # Only try to load from cache - no automatic indexing
-            if self._validate_cache_integrity():
-                loaded_index = self._load_index()
-                if loaded_index:
-                    self.logger.info("Loaded index from cache")
-                    self.__index = loaded_index
-                else:
-                    self.logger.info(
-                        "No valid cached index found. Use index_all_documents() to build."
-                    )
-            else:
-                self.logger.info(
-                    "Cache validation failed. Use index_all_documents() to rebuild."
-                )
+        """Get a merged query engine for all per-document indexes (lazy loading).
 
-        return self.__index
+        Note: In per-document architecture, this loads all indexes which may be slow.
+        Prefer using retriever property for queries which lazy loads as needed.
+        """
+        # Check if we have per-document indexes
+        if self.index_registry["documents"]:
+            # Load all document indexes (may be slow for many documents)
+            all_doc_ids = list(self.index_registry["documents"].keys())
+
+            if not all_doc_ids:
+                self.logger.info("No documents in registry")
+                return None
+
+            # For now, return the first loaded index as primary
+            # (The retriever will handle multi-index queries)
+            if all_doc_ids:
+                first_doc_id = all_doc_ids[0]
+                return self._load_doc_index(first_doc_id)
+
+        return None
 
     def index_all_documents(self) -> bool:
-        """Manually index all documents with progress reporting.
+        """Manually index all documents with progress reporting (per-document architecture).
 
         Returns:
             bool: True if indexing succeeded, False otherwise
         """
         try:
             self.logger.info(
-                "=== Starting manual document indexing (index_all_documents called) ==="
+                "=== Starting per-document indexing (index_all_documents called) ==="
             )
 
             # Emit initial progress signal
@@ -419,7 +731,6 @@ class RAGMixin:
                     )
                 return True
 
-            # Check if we need full rebuild or can do incremental
             # Reset any previous interrupt flag
             try:
                 if hasattr(self, "do_interrupt"):
@@ -427,23 +738,57 @@ class RAGMixin:
             except Exception:
                 pass
 
-            if self.__index and self._validate_cache_integrity():
-                # Incremental indexing
+            # Index each document separately
+            success_count = 0
+            for idx, db_doc in enumerate(unindexed_docs, 1):
+                # Check for external interrupt/cancel request
+                if getattr(self, "do_interrupt", False):
+                    self.logger.info("Indexing interrupted by user")
+                    if hasattr(self, "emit_signal"):
+                        self.emit_signal(
+                            SignalCode.RAG_INDEXING_COMPLETE,
+                            {
+                                "success": False,
+                                "message": f"Indexing cancelled by user ({success_count}/{total_docs} completed)",
+                            },
+                        )
+                    # Reset flag
+                    try:
+                        setattr(self, "do_interrupt", False)
+                    except Exception:
+                        pass
+                    return False
+
+                if not os.path.exists(db_doc.path):
+                    self.logger.warning(f"Document not found: {db_doc.path}")
+                    continue
+
+                # Emit progress
+                doc_name = os.path.basename(db_doc.path)
+                if hasattr(self, "emit_signal"):
+                    progress_data = {
+                        "current": idx,
+                        "total": total_docs,
+                        "progress": (idx / total_docs) * 100,
+                        "document_name": doc_name,
+                    }
+                    self.logger.debug(
+                        f"Emitting RAG_INDEXING_PROGRESS: {progress_data}"
+                    )
+                    self.emit_signal(
+                        SignalCode.RAG_INDEXING_PROGRESS,
+                        progress_data,
+                    )
+
                 self.logger.info(
-                    f"Performing incremental indexing of {total_docs} documents"
-                )
-                self._index_documents_with_progress(unindexed_docs, total_docs)
-            else:
-                # Full rebuild
-                self.logger.info(
-                    f"Performing full index rebuild with {total_docs} documents"
-                )
-                self._full_index_rebuild_with_progress(
-                    unindexed_docs, total_docs
+                    f"Indexing ({idx}/{total_docs}): {db_doc.path}"
                 )
 
-            # Save and emit completion
-            self._save_index()
+                # Index the document
+                if self._index_single_document(db_doc):
+                    success_count += 1
+
+            # Emit completion
             self.__cache_validated = True
 
             if hasattr(self, "emit_signal"):
@@ -451,17 +796,17 @@ class RAGMixin:
                     SignalCode.RAG_INDEXING_COMPLETE,
                     {
                         "success": True,
-                        "message": f"Successfully indexed {total_docs} document(s)",
+                        "message": f"Successfully indexed {success_count}/{total_docs} document(s)",
                     },
                 )
 
             self.logger.info(
-                f"Manual indexing complete: {total_docs} documents indexed"
+                f"Per-document indexing complete: {success_count}/{total_docs} documents indexed"
             )
-            return True
+            return success_count > 0
 
         except Exception as e:
-            self.logger.error(f"Error during manual indexing: {e}")
+            self.logger.error(f"Error during per-document indexing: {e}")
             if hasattr(self, "emit_signal"):
                 self.emit_signal(
                     SignalCode.RAG_INDEXING_COMPLETE,
@@ -734,16 +1079,25 @@ class RAGMixin:
 
     @property
     def retriever(self) -> Optional[VectorIndexRetriever]:
-        """Get default retriever (searches all documents)."""
-        if not self.__retriever and self.index:
+        """Get retriever for manually-activated documents.
+
+        Only loads documents marked as active=True in the database.
+        No automatic filtering - users manually control which documents to search.
+        """
+        if not self.__retriever:
+            # Create multi-index retriever for active documents only
             try:
-                self.__retriever = VectorIndexRetriever(
-                    index=self.index,
+                self.__retriever = MultiIndexRetriever(
+                    rag_mixin=self,
                     similarity_top_k=5,
                 )
-                self.logger.debug("Created default vector retriever")
+                active_count = len(self._get_active_document_ids())
+                self.logger.debug(
+                    f"Created retriever for {active_count} active document(s)"
+                )
             except Exception as e:
-                self.logger.error(f"Error creating retriever: {e}")
+                self.logger.error(f"Error creating multi-index retriever: {e}")
+
         return self.__retriever
 
     @property
@@ -841,10 +1195,6 @@ class RAGMixin:
                 return None
 
             try:
-                from airunner.components.llm.managers.agent.tools import (
-                    RAGEngineTool,
-                )
-
                 self.logger.info("Creating RAG engine tool")
                 self._rag_engine_tool = RAGEngineTool.from_defaults(
                     chat_engine=self.rag_engine, agent=self, return_direct=True
@@ -855,9 +1205,78 @@ class RAGMixin:
                 return None
         return self._rag_engine_tool
 
+    def _detect_old_unified_index(self) -> bool:
+        """Check if old unified index exists."""
+        old_index_dir = os.path.expanduser(
+            os.path.join(
+                self.path_settings.base_path,
+                "text",
+                "other",
+                "cache",
+                "unified_index",
+            )
+        )
+        return os.path.exists(old_index_dir) and os.path.exists(
+            os.path.join(old_index_dir, "docstore.json")
+        )
+
+    def _migrate_from_unified_index(self):
+        """Migrate from old unified index to per-document indexes."""
+        if not self._detect_old_unified_index():
+            return
+
+        self.logger.info("Detected old unified index - migration needed")
+        self.logger.info(
+            "Marking all documents as unindexed to trigger re-indexing"
+        )
+
+        try:
+            # Mark all documents as unindexed
+            all_docs = DBDocument.objects.all()
+            for doc in all_docs:
+                DBDocument.objects.update(pk=doc.id, indexed=False)
+
+            # Optionally backup old index
+            old_index_dir = os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text",
+                    "other",
+                    "cache",
+                    "unified_index",
+                )
+            )
+            backup_dir = os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text",
+                    "other",
+                    "cache",
+                    "unified_index_backup",
+                )
+            )
+
+            if os.path.exists(old_index_dir) and not os.path.exists(
+                backup_dir
+            ):
+                shutil.move(old_index_dir, backup_dir)
+                self.logger.info(f"Backed up old index to {backup_dir}")
+
+            self.logger.info(
+                "Migration setup complete - please re-index all documents"
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error during migration: {e}")
+
+    def _detect_and_migrate_old_index(self):
+        """Check for and migrate old unified index on startup."""
+        if self._detect_old_unified_index():
+            self._migrate_from_unified_index()
+
     @property
     def storage_persist_dir(self) -> str:
-        """Get storage directory for unified index persistence."""
+        """Get storage directory for unified index persistence (legacy)."""
         return os.path.expanduser(
             os.path.join(
                 self.path_settings.base_path,
@@ -907,6 +1326,11 @@ class RAGMixin:
         self.__doc_metadata_cache.clear()
         self.__cache_validated = False
 
+        # Clear per-document index caches
+        self.__doc_indexes_cache.clear()
+        self.__loaded_doc_ids.clear()
+        self.__index_registry = None
+
     def clear_rag_documents(self):
         """Clear all RAG documents and reset components."""
         self.logger.debug("Clearing RAG documents...")
@@ -945,8 +1369,6 @@ class RAGMixin:
             self.__text_splitter = None
 
             # Force garbage collection
-            import gc
-
             gc.collect()
         finally:
             self._is_unloading = False
@@ -961,8 +1383,6 @@ class RAGMixin:
             source_name: Identifier for this content source
         """
         try:
-            from bs4 import BeautifulSoup
-
             soup = BeautifulSoup(html_content, "html.parser")
             text = soup.get_text(separator="\n", strip=True)
 

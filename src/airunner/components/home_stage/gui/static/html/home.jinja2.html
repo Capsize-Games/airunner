@@ -35,19 +35,24 @@
                 </div>
                 <div id="index-status-message" class="status-message hidden"></div>
                 <div class="index-controls">
-                    <div id="progress-section">
-                        <div id="progress-text" class="progress-text">Idle</div>
-                        <div class="progress-bar-wrapper">
-                            <div id="progress-bar" class="progress-bar" style="width:0%;"></div>
+                    <div class="control-row">
+                        <div id="progress-section">
+                                <div class="progress-bar-wrapper">
+                                    <div id="progress-bar" class="progress-bar" style="width:0%;"></div>
+                                    <div id="progress-count" class="progress-count"></div>
+                                </div>
+                        </div>
+                        <div class="index-buttons">
+                            <button id="index-button" class="primary-button">
+                                Index All
+                            </button>
+                            <button id="cancel-button" class="cancel-button" disabled>
+                                Cancel
+                            </button>
                         </div>
                     </div>
-                    <div class="index-buttons">
-                        <button id="index-button" class="primary-button">
-                            Index All Documents
-                        </button>
-                        <button id="cancel-button" class="cancel-button hidden">
-                            Cancel
-                        </button>
+                    <div class="label-row">
+                        <div id="progress-text" class="progress-text"></div>
                     </div>
                 </div>
             </div>
@@ -153,24 +158,37 @@
     window.updateIndexingProgress = function(data) {
         const progressBar = document.getElementById('progress-bar');
         const progressText = document.getElementById('progress-text');
+        const progressCount = document.getElementById('progress-count');
         const indexButton = document.getElementById('index-button');
         const cancelButton = document.getElementById('cancel-button');
-        
+
         // Ensure UI shows indexing state
         indexButton.disabled = true;
         indexButton.textContent = 'Indexing...';
+        // Cancel button should always be visible but enabled only during indexing
         if (cancelButton) {
-            cancelButton.classList.remove('hidden');
             cancelButton.disabled = false;
         }
-        
+
         const progress = data.progress || 0;
         progressBar.style.width = `${progress}%`;
-        
+
+        // show current/total inside the progress bar
+        if (progressCount) {
+            if (typeof data.current !== 'undefined' && typeof data.total !== 'undefined') {
+                progressCount.textContent = `${data.current}/${data.total}`;
+            } else {
+                progressCount.textContent = '';
+            }
+        }
+
+        // show only the filename (basename) in the label and ellipsize if too long
         if (data.documentName) {
-            progressText.textContent = `${data.current}/${data.total}: ${data.documentName}`;
+            // strip any path separators (both Unix and Windows)
+            const baseName = ('' + data.documentName).replace(/^.*[\\/]/, '');
+            progressText.textContent = baseName;
         } else {
-            progressText.textContent = `Progress: ${progress.toFixed(1)}%`;
+            progressText.textContent = '';
         }
     };
     
@@ -180,21 +198,31 @@
         const progressText = document.getElementById('progress-text');
         const indexButton = document.getElementById('index-button');
         const cancelButton = document.getElementById('cancel-button');
+        const progressCount = document.getElementById('progress-count');
+        // read cancelRequested if defined in this scope
+        let canceled = false;
+        try { canceled = !!cancelRequested; } catch (e) { canceled = false; }
         
         if (data.success) {
             progressBar.style.width = '100%';
-            progressText.textContent = data.message || 'Indexing complete!';
-            
+            // If user cancelled, show canceled message instead of success message
+            if (canceled) {
+                progressText.textContent = 'canceled indexing';
+            } else {
+                progressText.textContent = data.message || 'Indexing complete!';
+            }
+            if (progressCount) progressCount.textContent = '';
+
             setTimeout(() => {
                 // Reset UI state
                 progressBar.style.width = '0%';
-                progressText.textContent = 'Idle';
+                progressText.textContent = '';
+                try { cancelRequested = false; } catch (e) {}
                 if (indexButton) {
-                    indexButton.textContent = 'Index All Documents';
+                    indexButton.textContent = 'Index All';
                     indexButton.disabled = false;
                 }
                 if (cancelButton) {
-                    cancelButton.classList.add('hidden');
                     cancelButton.disabled = true;
                 }
             }, 2000);
@@ -208,21 +236,22 @@
     document.addEventListener('DOMContentLoaded', function() {
         const indexButton = document.getElementById('index-button');
         const cancelButton = document.getElementById('cancel-button');
+        let cancelRequested = false;
 
         function setIndexingState(isIndexing) {
             if (isIndexing) {
                 indexButton.textContent = 'Indexing...';
                 indexButton.disabled = true;
-                cancelButton.classList.remove('hidden');
                 cancelButton.disabled = false;
-                document.getElementById('progress-text').textContent = 'Starting...';
+                document.getElementById('progress-text').textContent = '';
+                const pc = document.getElementById('progress-count'); if (pc) pc.textContent = '';
             } else {
                 indexButton.textContent = 'Index All Documents';
                 indexButton.disabled = false;
-                cancelButton.classList.add('hidden');
                 cancelButton.disabled = true;
-                document.getElementById('progress-text').textContent = 'Idle';
+                document.getElementById('progress-text').textContent = '';
                 document.getElementById('progress-bar').style.width = '0%';
+                const pc = document.getElementById('progress-count'); if (pc) pc.textContent = '';
             }
         }
 
@@ -234,6 +263,7 @@
                     try { homeBridge.indexAllDocumentsRequested(); } catch (e) { console.debug('index fallback failed', e); }
                 }
                 setIndexingState(true);
+                cancelRequested = false;
             }
         });
 
@@ -244,6 +274,8 @@
                 } else {
                     try { homeBridge.cancelIndexRequested(); } catch (e) { console.debug('cancel fallback failed', e); }
                 }
+                // mark that the user requested cancel so UI can show the correct message
+                cancelRequested = true;
             }
         });
     });

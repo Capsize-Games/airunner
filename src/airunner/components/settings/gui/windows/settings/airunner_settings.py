@@ -56,9 +56,6 @@ from airunner.components.settings.gui.widgets.huggingface_settings.huggingface_s
 from airunner.components.art.gui.widgets.civitai_preferences.civitai_preferences_widget import (
     CivitAIPreferencesWidget,
 )
-from airunner.components.llm.gui.widgets.rag_settings_widget import (
-    RAGSettingsWidget,
-)
 from airunner.components.settings.gui.widgets.openrouter_settings.openrouter_settings_widget import (
     OpenrouterSettingsWidget,
 )
@@ -165,8 +162,6 @@ class SettingsWindow(BaseWindow):
             return HuggingfaceSettingsWidget
         elif name == "civitai_preferences":
             return CivitAIPreferencesWidget
-        elif name == "rag_settings":
-            return RAGSettingsWidget
         elif name == "openrouter_settings":
             return OpenrouterSettingsWidget
         elif name == "theme_settings":
@@ -290,11 +285,6 @@ class SettingsWindow(BaseWindow):
                     {
                         "name": "civitai_preferences",
                         "display_name": "CivitAI Preferences",
-                        "checkable": False,
-                    },
-                    {
-                        "name": "rag_settings",
-                        "display_name": "RAG Settings",
                         "checkable": False,
                     },
                     {
