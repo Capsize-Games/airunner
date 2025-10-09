@@ -489,12 +489,11 @@ class BaseAgent(
                     self.store_user_tool,
                 ]
             )
-        if self.rag_mode_enabled:
-            tools.extend(
-                [
-                    self.rag_engine_tool,
-                ]
-            )
+        tools.extend(
+            [
+                self.rag_engine_tool,
+            ]
+        )
         # Only add tool instances, not classes
         for name, tool in ToolRegistry.all().items():
             if not isinstance(tool, type) and tool not in tools:
@@ -1087,14 +1086,6 @@ class BaseAgent(
         self.chat_engine_tool.update_system_prompt(
             system_prompt or self.system_prompt
         )
-        # Keep RAG system prompt in sync when RAG is enabled
-        try:
-            if getattr(self, "rag_mode_enabled", False):
-                update_fn = getattr(self, "update_rag_system_prompt", None)
-                if callable(update_fn):
-                    update_fn(rag_system_prompt)
-        except Exception:
-            pass
 
     def _perform_analysis(self, action: LLMActionType) -> None:
         """
@@ -1177,6 +1168,7 @@ class BaseAgent(
             "_mood_engine",
             "_summary_engine",
             "_information_scraper_engine",
+            "_RAGMixin__rag_engine",  # Include RAG engine (with name mangling)
         ]:
             engine = getattr(self, engine_attr, None)
             if engine is not None:
@@ -1195,10 +1187,9 @@ class BaseAgent(
             self.chat_memory.chat_store_key = str(self.conversation_id)
             self._memory = self.chat_memory
         elif action is LLMActionType.PERFORM_RAG_SEARCH:
-            if hasattr(self, "rag_engine") and self.rag_engine is not None:
-                self._memory = self.rag_engine.memory
-            else:
-                self._memory = None
+            # RAG should use the same chat_memory as regular chat to retain conversation history
+            self.chat_memory.chat_store_key = str(self.conversation_id)
+            self._memory = self.chat_memory
         else:
             self._memory = None
 

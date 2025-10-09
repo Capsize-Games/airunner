@@ -1,16 +1,54 @@
 from typing import Dict
+import os
+import re
+import json
+import pprint
+import tempfile
+import webbrowser
+import urllib.parse
+import datetime
+import requests
+
+from PySide6.QtCore import (
+    Signal,
+    Qt,
+    QEvent,
+    QObject,
+    QTimer,
+)
+from PySide6.QtGui import (
+    QIcon,
+    QStandardItemModel,
+    QStandardItem,
+    QPixmap,
+    QAction,
+)
+from PySide6.QtWidgets import (
+    QFileSystemModel,
+    QAbstractItemView,
+    QListWidgetItem,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QMessageBox,
+    QMenu,
+    QFileDialog,
+    QProgressDialog,
+)
+
+from airunner.enums import SignalCode
+from airunner.utils.settings import get_qsettings
+from airunner.utils.application.create_worker import create_worker
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.documents.data.models.document import Document
+from airunner.components.documents.data.scan_zimfiles import scan_zimfiles
+from airunner.components.documents.data.models.zimfile import ZimFile
 from airunner.components.documents.gui.widgets.templates.documents_ui import (
     Ui_documents,
 )
-
-from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from PySide6.QtCore import Signal
-from PySide6.QtGui import QIcon
-from airunner.enums import SignalCode
-import os
-
-from airunner.utils.settings import get_qsettings
+from airunner.components.documents.kiwix_api import KiwixAPI
 
 
 class DocumentsWidget(
@@ -47,9 +85,7 @@ class DocumentsWidget(
         self.zimDownloadFinished.connect(self.refresh_kiwix_lists)
 
     def setup_file_explorer(self):
-        from PySide6.QtWidgets import QFileSystemModel
-        import os
-
+        # Setup available documents tree (file system view)
         self.documents_model = QFileSystemModel(self)
         doc_dir = self.documents_path
         if not os.path.exists(doc_dir):
@@ -59,14 +95,61 @@ class DocumentsWidget(
         self.ui.documentsTreeView.setRootIndex(
             self.documents_model.index(doc_dir)
         )
-        self.ui.documentsTreeView.setColumnHidden(1, True)  # Hide Size
-        self.ui.documentsTreeView.setColumnHidden(2, True)  # Hide Type
-        self.ui.documentsTreeView.setColumnHidden(
-            3, True
-        )  # Hide Date Modified
+        self.ui.documentsTreeView.setColumnHidden(1, True)
+        self.ui.documentsTreeView.setColumnHidden(2, True)
+        self.ui.documentsTreeView.setColumnHidden(3, True)
         self.ui.documentsTreeView.setHeaderHidden(True)
-        # Optionally, filter extensions (show only allowed types except .zim)
-        # QFileSystemModel does not support extension filtering directly, so this is a minimal implementation.
+        self.ui.documentsTreeView.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection
+        )
+        self.ui.documentsTreeView.setDragEnabled(True)
+        self.ui.documentsTreeView.setDragDropMode(
+            QAbstractItemView.DragDropMode.DragOnly
+        )
+
+        # Setup active documents tree (manual selection)
+        self.active_documents_model = QStandardItemModel(self)
+        self.ui.activeDocumentsTreeView.setModel(self.active_documents_model)
+        self.ui.activeDocumentsTreeView.setHeaderHidden(True)
+        self.ui.activeDocumentsTreeView.setAcceptDrops(True)
+        self.ui.activeDocumentsTreeView.setDragEnabled(True)
+        self.ui.activeDocumentsTreeView.setDragDropMode(
+            QAbstractItemView.DragDropMode.DragDrop
+        )
+        self.ui.activeDocumentsTreeView.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection
+        )
+
+        # Connect drag-and-drop signals
+        self.ui.documentsTreeView.clicked.connect(
+            self.on_available_doc_clicked
+        )
+        self.ui.activeDocumentsTreeView.clicked.connect(
+            self.on_active_doc_clicked
+        )
+
+        # Add context menus
+        self.ui.documentsTreeView.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.ui.documentsTreeView.customContextMenuRequested.connect(
+            self.show_available_doc_context_menu
+        )
+        self.ui.activeDocumentsTreeView.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.ui.activeDocumentsTreeView.customContextMenuRequested.connect(
+            self.show_active_doc_context_menu
+        )
+
+        # Enable custom drag and drop handling
+        self.ui.documentsTreeView.setDefaultDropAction(
+            Qt.DropAction.CopyAction
+        )
+        self.ui.activeDocumentsTreeView.viewport().installEventFilter(self)
+
+        # Load active documents from database
+        self.refresh_active_documents_list()
 
     def setup_kiwix_browser(self):
         # Use widgets from the .ui file for search controls and lists, now inside the ZIM tab
@@ -143,9 +226,209 @@ class DocumentsWidget(
         self._current_indexing += 1
         self._index_next_document()
 
+    def eventFilter(self, obj, event):
+        """Handle drag-and-drop events for the active documents tree."""
+        if obj == self.ui.activeDocumentsTreeView.viewport():
+            if event.type() == QEvent.Type.DragEnter:
+                event.acceptProposedAction()
+                return True
+            elif event.type() == QEvent.Type.Drop:
+                self.handle_drop_on_active_list(event)
+                return True
+        return super().eventFilter(obj, event)
+
+    def on_available_doc_clicked(self, index):
+        """Handle double-click on available documents to add to active list."""
+        pass  # Single click does nothing, use drag-and-drop
+
+    def on_active_doc_clicked(self, index):
+        """Handle click on active documents."""
+        pass  # Can be extended for context menu, etc.
+
+    def handle_drop_on_active_list(self, event):
+        """Handle files dropped onto the active documents list."""
+        mime_data = event.mimeData()
+
+        # Handle file paths from file system view
+        if mime_data.hasUrls():
+            for url in mime_data.urls():
+                file_path = url.toLocalFile()
+                if os.path.isfile(file_path):
+                    self.add_document_to_active(file_path)
+            event.acceptProposedAction()
+
+    def add_document_to_active(self, file_path: str):
+        """Add a document to the active RAG collection."""
+        # Check if already in active list
+        for row in range(self.active_documents_model.rowCount()):
+            item = self.active_documents_model.item(row, 0)
+            if item and item.data() == file_path:
+                self.logger.info(
+                    f"Document already active: {os.path.basename(file_path)}"
+                )
+                return
+
+        # Add to model
+        filename = os.path.basename(file_path)
+        item = QStandardItem(filename)
+        item.setData(file_path)
+        item.setEditable(False)
+        self.active_documents_model.appendRow(item)
+
+        # Update database
+        docs = Document.objects.filter_by(path=file_path)
+        if docs and len(docs) > 0:
+            Document.objects.update(pk=docs[0].id, active=True)
+        else:
+            Document.objects.create(path=file_path, active=True, indexed=False)
+
+        self.logger.info(f"Added to active documents: {filename}")
+
+    def remove_document_from_active(self, file_path: str):
+        """Remove a document from the active RAG collection."""
+        # Safety check
+        if not file_path:
+            self.logger.warning("Attempted to remove document with None path")
+            return
+
+        # Remove from model
+        for row in range(self.active_documents_model.rowCount()):
+            item = self.active_documents_model.item(row, 0)
+            if item and item.data() == file_path:
+                self.active_documents_model.removeRow(row)
+                break
+
+        # Update database
+        docs = Document.objects.filter_by(path=file_path)
+        if docs and len(docs) > 0:
+            Document.objects.update(pk=docs[0].id, active=False)
+
+        filename = os.path.basename(file_path)
+        self.logger.info(f"Removed from active documents: {filename}")
+
+    def refresh_active_documents_list(self):
+        """Load active documents from database into the tree view."""
+        self.active_documents_model.clear()
+
+        # Get all active documents from database
+        active_docs = Document.objects.filter(Document.active == True)
+
+        for doc in active_docs:
+            if os.path.exists(doc.path):
+                filename = os.path.basename(doc.path)
+                item = QStandardItem(filename)
+                item.setData(doc.path)
+                item.setEditable(False)
+
+                # Show indexed status with icon or color
+                if doc.indexed:
+                    item.setToolTip(f"{filename}\n✓ Indexed and ready for RAG")
+                else:
+                    item.setToolTip(f"{filename}\n⚠ Not yet indexed")
+
+                self.active_documents_model.appendRow(item)
+
+    def keyPressEvent(self, event):
+        """Handle keyboard shortcuts (Delete key to remove from active list)."""
+        if event.key() == Qt.Key.Key_Delete:
+            # Check which tree view has focus
+            if self.ui.activeDocumentsTreeView.hasFocus():
+                selected = self.ui.activeDocumentsTreeView.selectedIndexes()
+                for index in selected:
+                    item = self.active_documents_model.itemFromIndex(index)
+                    if item:
+                        file_path = item.data()
+                        self.remove_document_from_active(file_path)
+                return
+
+        super().keyPressEvent(event)
+
+    def show_available_doc_context_menu(self, position):
+        """Show context menu for available documents."""
+        index = self.ui.documentsTreeView.indexAt(position)
+        if not index.isValid():
+            return
+
+        # Get all selected indexes
+        selected_indexes = self.ui.documentsTreeView.selectedIndexes()
+        if not selected_indexes:
+            return
+
+        # Filter to only files (not directories)
+        selected_files = []
+        for idx in selected_indexes:
+            file_path = self.documents_model.filePath(idx)
+            if os.path.isfile(file_path):
+                selected_files.append(file_path)
+
+        if not selected_files:
+            return
+
+        menu = QMenu(self)
+
+        # Show appropriate label based on selection count
+        if len(selected_files) == 1:
+            add_action = QAction("Add to Active Documents (RAG)", self)
+        else:
+            add_action = QAction(
+                f"Add {len(selected_files)} Documents to Active", self
+            )
+
+        # Add all selected files
+        def add_selected():
+            for file_path in selected_files:
+                self.add_document_to_active(file_path)
+
+        add_action.triggered.connect(add_selected)
+        menu.addAction(add_action)
+        menu.exec(self.ui.documentsTreeView.viewport().mapToGlobal(position))
+
+    def show_active_doc_context_menu(self, position):
+        """Show context menu for active documents."""
+        index = self.ui.activeDocumentsTreeView.indexAt(position)
+        if not index.isValid():
+            return
+
+        # Get all selected indexes (not just the one right-clicked)
+        selected_indexes = self.ui.activeDocumentsTreeView.selectedIndexes()
+        if not selected_indexes:
+            return
+
+        menu = QMenu(self)
+
+        # Show appropriate label based on selection count
+        if len(selected_indexes) == 1:
+            remove_action = QAction("Remove from Active Documents", self)
+        else:
+            remove_action = QAction(
+                f"Remove {len(selected_indexes)} Documents from Active", self
+            )
+
+        # Remove all selected documents
+        def remove_selected():
+            # Collect all file paths first (before removing any items)
+            file_paths = []
+            for idx in selected_indexes:
+                item = self.active_documents_model.itemFromIndex(idx)
+                if item:
+                    file_path = item.data()
+                    if file_path:  # Check file_path is not None
+                        file_paths.append(file_path)
+
+            # Now remove all collected paths
+            for file_path in file_paths:
+                self.remove_document_from_active(file_path)
+
+        remove_action.triggered.connect(remove_selected)
+        menu.addAction(remove_action)
+        menu.exec(
+            self.ui.activeDocumentsTreeView.viewport().mapToGlobal(position)
+        )
+
     def showEvent(self, event):
         super().showEvent(event)
         self._sync_documents_with_directory()
+        self.refresh_active_documents_list()
         # self._request_index_for_unindexed_documents()
 
     def _sync_documents_with_directory(self):
@@ -202,10 +485,6 @@ class DocumentsWidget(
         self.ui.progressBar.setVisible(False)
 
     def refresh_documents_list(self):
-        from PySide6.QtGui import QStandardItem
-        from PySide6.QtCore import Qt
-        import os
-
         self.documents_model.clear()
         doc_dir = self.documents_path
         if not os.path.exists(doc_dir):
@@ -219,8 +498,6 @@ class DocumentsWidget(
                     self.documents_model.appendRow(item)
 
     def on_document_double_clicked(self, index):
-        from PySide6.QtCore import Qt
-
         file_path = self.documents_model.data(index, Qt.UserRole)
         if file_path:
             self.on_file_open_requested({"file_path": file_path})
@@ -230,21 +507,6 @@ class DocumentsWidget(
         self.refresh_search_results_list()
 
     def refresh_local_zims_list(self):
-        from PySide6.QtWidgets import (
-            QListWidgetItem,
-            QWidget,
-            QVBoxLayout,
-            QHBoxLayout,
-            QLabel,
-            QPushButton,
-        )
-        from PySide6.QtCore import Qt
-        import os, json
-        from airunner.components.documents.data.scan_zimfiles import (
-            scan_zimfiles,
-        )
-        from airunner.components.documents.data.models.zimfile import ZimFile
-
         zim_dir = os.path.join(
             os.path.expanduser(self.path_settings.base_path), "zim"
         )
@@ -315,19 +577,6 @@ class DocumentsWidget(
             self.local_zims_list.setItemWidget(item, row_widget)
 
     def refresh_search_results_list(self):
-        from PySide6.QtWidgets import (
-            QListWidgetItem,
-            QWidget,
-            QVBoxLayout,
-            QHBoxLayout,
-            QLabel,
-            QPushButton,
-            QMessageBox,
-        )
-        from PySide6.QtCore import Qt
-        import datetime, urllib.parse, os
-        from airunner.components.documents.kiwix_api import KiwixAPI
-
         self.search_results_list.clear()
         lang = (
             self.kiwix_lang_combo.currentText()
@@ -352,7 +601,6 @@ class DocumentsWidget(
         try:
             zim_files = KiwixAPI.list_zim_files(language=lang, query=query)
             print("Kiwix API search results:")
-            import pprint
 
             pprint.pprint(zim_files)
         except Exception as e:
@@ -391,8 +639,6 @@ class DocumentsWidget(
             size = zim.get("size")
             if size is None:
                 summary = zim.get("summary", "")
-                import re
-
                 m = re.search(r"(\d+(?:\.\d+)?)\s*(MB|GB|GiB|MiB)", summary)
                 if m:
                     val, unit = m.groups()
@@ -418,8 +664,6 @@ class DocumentsWidget(
                     ):
                         url = href
                         break
-            import urllib.parse
-
             # If url is relative, prepend Kiwix base
             if url and url.startswith("/"):
                 url = urllib.parse.urljoin("https://library.kiwix.org", url)
@@ -427,8 +671,6 @@ class DocumentsWidget(
             updated = zim.get("updated") or zim.get("date")
             if updated:
                 try:
-                    import datetime
-
                     updated = str(
                         datetime.datetime.fromisoformat(
                             updated.replace("Z", "+00:00")
@@ -449,11 +691,6 @@ class DocumentsWidget(
                     img_url = "https:" + img_url
                 elif img_url.startswith("/catalog/"):
                     img_url = "https://library.kiwix.org" + img_url
-                from PySide6.QtGui import QPixmap
-                from PySide6.QtWidgets import QLabel
-                import requests
-                import tempfile
-
                 try:
                     cache_dir = tempfile.gettempdir()
                     img_cache_path = os.path.join(
@@ -524,20 +761,11 @@ class DocumentsWidget(
             self.search_results_list.setItemWidget(item, row_widget)
 
     def open_kiwix_search(self, title):
-        import webbrowser
-        import urllib.parse
-
         # Open the Kiwix download search page for the title
         url = f"https://library.kiwix.org/?q={urllib.parse.quote(title)}"
         webbrowser.open(url)
 
     def download_kiwix_zim(self, zim):
-        from PySide6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog
-        from airunner.utils.application.create_worker import create_worker
-        from PySide6.QtCore import QObject, Signal, Slot, QThread, Qt
-        import json
-        import os
-
         name = zim.get("id") or zim.get("name") or zim.get("title")
         url = zim.get("url")
         if not url:
@@ -580,8 +808,6 @@ class DocumentsWidget(
 
             def run(self):
                 try:
-                    import requests
-
                     with requests.get(self.url, stream=True, timeout=60) as r:
                         r.raise_for_status()
                         total = int(r.headers.get("content-length", 0))
@@ -636,8 +862,6 @@ class DocumentsWidget(
         progress_dialog.show()
 
     def confirm_delete_zim(self, fpath, fname):
-        from PySide6.QtWidgets import QMessageBox
-
         reply = QMessageBox.question(
             self,
             "Delete ZIM File",
@@ -645,15 +869,11 @@ class DocumentsWidget(
             QMessageBox.Yes | QMessageBox.No,
         )
         if reply == QMessageBox.Yes:
-            import os
-
             try:
                 os.remove(fpath)
                 meta_path = fpath + ".json"
                 if os.path.exists(meta_path):
                     os.remove(meta_path)
-                from PySide6.QtCore import QTimer
-
                 QTimer.singleShot(0, self.refresh_kiwix_lists)
             except Exception as e:
                 QMessageBox.critical(

@@ -535,14 +535,8 @@
   </connection>
  </connections>
  <slots>
-  <slot>action_button_clicked_send()</slot>
-  <slot>action_button_clicked_clear_conversation()</slot>
   <slot>message_type_text_changed(QString)</slot>
-  <slot>username_text_changed(QString)</slot>
-  <slot>botname_text_changed(QString)</slot>
-  <slot>personality_type_changed(QString)</slot>
   <slot>prompt_text_changed()</slot>
   <slot>llm_action_changed(QString)</slot>
-  <slot>interrupt_button_clicked()</slot>
  </slots>
 </ui>

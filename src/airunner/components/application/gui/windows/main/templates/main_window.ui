@@ -720,7 +720,7 @@
           </layout>
          </widget>
          <widget class="QWidget" name="knowledgebase" native="true">
-          <layout class="QGridLayout" name="gridLayout_10">
+          <layout class="QGridLayout" name="gridLayout_7">
            <property name="leftMargin">
             <number>0</number>
            </property>
@@ -734,31 +734,7 @@
             <number>0</number>
            </property>
            <item row="0" column="0">
-            <widget class="QSplitter" name="splitter_2">
-             <property name="orientation">
-              <enum>Qt::Orientation::Vertical</enum>
-             </property>
-             <widget class="QWidget" name="documents_container" native="true">
-              <layout class="QGridLayout" name="gridLayout_11">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
-               <item row="0" column="0">
-                <widget class="DocumentsWidget" name="documents" native="true"/>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="widget_3" native="true"/>
-            </widget>
+            <widget class="DocumentsWidget" name="documents" native="true"/>
            </item>
           </layout>
          </widget>
@@ -964,8 +940,6 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionSettings"/>
-   <addaction name="separator"/>
    <addaction name="actionToggle_Speech_to_Text"/>
    <addaction name="actionToggle_Text_to_Speech"/>
    <addaction name="actionToggle_LLM"/>

@@ -119,10 +119,359 @@ h1 {
     transition: box-shadow 0.2s;
     width: 100%;
     height: 100%;
+    overflow: hidden;
 }
 
 .grid-item:hover {
     box-shadow: 0 4px 16px rgba(34, 34, 59, 0.16);
+}
+
+/* Document Stats Section */
+#document-stats-section {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+#document-stats-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--light-color);
+}
+
+.stats-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--dark-color);
+}
+
+.stat-label {
+    font-size: 1rem;
+    color: var(--light-color);
+    font-weight: 400;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.status-message {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    font-size: 0.95rem;
+}
+
+.status-message.hidden {
+    display: none;
+}
+
+.status-message.warning {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.status-message.success {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.primary-button {
+    padding: 0.375rem 0.75rem;
+    background-color: var(--primary-color, #1976d2);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.12s, opacity 0.12s;
+    width: 100%;
+    height: 36px;
+}
+
+.index-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* Label row spans full width (including buttons) */
+.label-row {
+    display: flex;
+    width: 100%;
+    align-items: center;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+#progress-section {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.progress-text {
+    font-size: 0.9rem;
+    color: var(--light-color);
+    min-height: 1.2rem;
+    padding-right: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    box-sizing: border-box;
+    /* prevent text from increasing parent width; allow shrinking */
+    flex: 1 1 auto;
+}
+
+.progress-bar-wrapper {
+    width: 100%;
+    height: 36px;
+    /* match button height */
+    background-color: rgba(0, 0, 0, 0.28);
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-dark-color));
+    width: 0%;
+    transition: width 0.25s linear;
+}
+
+.progress-count {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.95);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.index-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.index-buttons .primary-button,
+.index-buttons .cancel-button {
+    min-width: 120px;
+    height: 36px;
+    font-size: 0.95rem;
+    padding: 0 12px;
+    border-radius: 6px;
+}
+
+.cancel-button {
+    background-color: #d32f2f;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.cancel-button:hover:not(:disabled) {
+    background-color: #b71c1c;
+    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.24);
+}
+
+.cancel-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.cancel-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.grid-item .primary-button:hover:not(:disabled),
+.primary-button:hover:not(:disabled) {
+    background-color: var(--primary-dark-color, #1565c0) !important;
+    color: #ffffff !important;
+    opacity: 1 !important;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    background-image: none !important;
+}
+
+.primary-button:active:not(:disabled) {
+    transform: translateY(0) !important;
+    filter: brightness(0.92) !important;
+}
+
+.primary-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.progress-text {
+    font-size: 0.9rem;
+    color: var(--light-color);
+    text-align: center;
+}
+
+.progress-text.error {
+    color: #f44336;
+}
+
+/* System Stats Section */
+#system-stats-section {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+#system-stats-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--light-color);
+}
+
+.device-stats-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+.loading-message {
+    text-align: center;
+    color: var(--dim-color);
+    padding: 2rem;
+    font-style: italic;
+}
+
+.device-card {
+    background-color: var(--dark-color);
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: border-color 0.2s;
+}
+
+.device-card:hover {
+    border-color: var(--primary-color);
+}
+
+.device-card.gpu {
+    border-left: 3px solid #4caf50;
+}
+
+.device-card.cpu {
+    border-left: 3px solid #2196f3;
+}
+
+.device-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.device-icon {
+    font-size: 1.25rem;
+}
+
+.device-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--light-color);
+    flex: 1;
+}
+
+.device-memory {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.memory-bar-wrapper {
+    width: 100%;
+    height: 20px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.memory-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4caf50, #ffc107, #f44336);
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+.memory-stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.memory-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.memory-label {
+    font-size: 0.75rem;
+    color: var(--dim-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.memory-value {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.memory-value.used {
+    color: #f44336;
+}
+
+.memory-value.free {
+    color: #4caf50;
+}
+
+.memory-value.total {
+    color: #ffc107;
 }
 
 #home-bottom {
