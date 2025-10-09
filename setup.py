@@ -60,7 +60,7 @@ extras_require = {
         "llama-index-embeddings-mistralai==0.4.0",
         "llama-index-vector-stores-faiss==0.5.0",
         "llama-index-embeddings-huggingface==0.6.0",
-        "llama-index-llms-openrouter==0.4.0",
+        "llama-index-llms-openrouter==0.4.2",
         "langchain-community==0.3.29",
         "EbookLib==0.19",
         "html2text==2025.4.15",
