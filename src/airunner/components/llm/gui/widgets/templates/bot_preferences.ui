@@ -38,9 +38,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-242</y>
+        <y>-274</y>
         <width>812</width>
-        <height>1332</height>
+        <height>1396</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -84,6 +84,13 @@
             </property>
             <property name="placeholderText">
              <string>Instructions for the LLM</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="reset_system_instructions_button">
+            <property name="text">
+             <string>Reset</string>
             </property>
            </widget>
           </item>
@@ -352,6 +359,13 @@
             </property>
             <property name="placeholderText">
              <string>The guardrails prompt is used to moderate results.</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="reset_guardrails_button">
+            <property name="text">
+             <string>Reset</string>
             </property>
            </widget>
           </item>
