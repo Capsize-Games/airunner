@@ -34,7 +34,7 @@ class Ui_bot_preferences(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, -242, 812, 1332))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, -274, 812, 1396))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)
@@ -54,6 +54,11 @@ class Ui_bot_preferences(object):
         self.system_instructions.setMinimumSize(QSize(0, 150))
 
         self.verticalLayout_3.addWidget(self.system_instructions)
+
+        self.reset_system_instructions_button = QPushButton(self.system_instructions_groupbox)
+        self.reset_system_instructions_button.setObjectName(u"reset_system_instructions_button")
+
+        self.verticalLayout_3.addWidget(self.reset_system_instructions_button)
 
 
         self.gridLayout.addWidget(self.system_instructions_groupbox, 10, 0, 1, 1)
@@ -222,6 +227,11 @@ class Ui_bot_preferences(object):
 
         self.verticalLayout_2.addWidget(self.guardrails_prompt)
 
+        self.reset_guardrails_button = QPushButton(self.guardrails_groupbox)
+        self.reset_guardrails_button.setObjectName(u"reset_guardrails_button")
+
+        self.verticalLayout_2.addWidget(self.reset_guardrails_button)
+
 
         self.gridLayout.addWidget(self.guardrails_groupbox, 11, 0, 1, 1)
 
@@ -282,6 +292,7 @@ class Ui_bot_preferences(object):
         bot_preferences.setWindowTitle(QCoreApplication.translate("bot_preferences", u"Form", None))
         self.system_instructions_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"System Instructions", None))
         self.system_instructions.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"Instructions for the LLM", None))
+        self.reset_system_instructions_button.setText(QCoreApplication.translate("bot_preferences", u"Reset", None))
         self.names_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Use names", None))
         self.label.setText(QCoreApplication.translate("bot_preferences", u"Assistant name", None))
         self.botname.setText(QCoreApplication.translate("bot_preferences", u"AI Runner", None))
@@ -309,6 +320,7 @@ class Ui_bot_preferences(object):
         self.label_3.setText(QCoreApplication.translate("bot_preferences", u"Check this and set zipcode in User Settings to give agents access to local weather.", None))
         self.guardrails_groupbox.setTitle(QCoreApplication.translate("bot_preferences", u"Guardrails", None))
         self.guardrails_prompt.setPlaceholderText(QCoreApplication.translate("bot_preferences", u"The guardrails prompt is used to moderate results.", None))
+        self.reset_guardrails_button.setText(QCoreApplication.translate("bot_preferences", u"Reset", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("bot_preferences", u"Gender", None))
         self.gender.setItemText(0, QCoreApplication.translate("bot_preferences", u"Male", None))
         self.gender.setItemText(1, QCoreApplication.translate("bot_preferences", u"Female", None))
