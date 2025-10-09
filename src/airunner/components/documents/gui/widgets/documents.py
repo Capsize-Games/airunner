@@ -21,6 +21,7 @@ from PySide6.QtGui import (
     QStandardItemModel,
     QStandardItem,
     QPixmap,
+    QAction,
 )
 from PySide6.QtWidgets import (
     QFileSystemModel,
@@ -33,7 +34,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QMessageBox,
     QMenu,
-    QAction,
     QFileDialog,
     QProgressDialog,
 )
