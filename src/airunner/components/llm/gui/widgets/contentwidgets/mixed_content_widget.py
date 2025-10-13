@@ -1,5 +1,4 @@
 import os
-import re
 from PySide6.QtWidgets import (
     QSizePolicy,
 )
@@ -86,77 +85,18 @@ class MixedContentWidget(BaseContentWidget):
             self.setContent(self._content)
 
     def _wrap_mixed_html(self, parts):
-        html_body = ""
+        html_parts = []
         for part in parts:
             if part["type"] == "latex":
-                html_body += part["content"]
+                html_parts.append(part["content"])
             else:
-                html_body += f"<span class='text'>{html.escape(part['content']).replace('\\n', '<br>')}</span>"
-        return f"""
-        <html>
-        <head>
-        <script type='text/javascript'>
-          window.MathJax = {{
-            tex: {{inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]}},
-            options: {{ skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }},
-            svg: {{ fontCache: 'global' }}
-          }};
-        </script>
-        <script type='text/javascript' src='{self.mathjax_url}'></script>
-        <style>
-        html {{
-            width: 100%;
-            height: auto;
-            box-sizing: border-box;
-        }}
-        body {{
-            color: #fff !important;
-            font-family: '{self.font_family}', 'Arial', 'Liberation Sans', sans-serif !important;
-            font-size: {self.font_size}px;
-            margin: 0;
-            padding: 0;
-            height: auto;
-            width: 100%;
-            box-sizing: border-box;
-            overflow: visible !important;
-            border: 4px solid blue !important;
-        }}
-        .text {{
-            white-space: pre-wrap;
-            border: 4px solid green !important;
-            display: inline-block;
-            background: rgba(0,255,0,0.08) !important;
-        }}
-        .latex-debug {{
-            border: 4px dashed orange !important;
-            background: rgba(255,165,0,0.08) !important;
-            display: inline-block;
-        }}
-        </style>
-        </head>
-        <body>
-          {self._wrap_latex_debug(html_body)}
-        </body>
-        </html>
-        """
-
-    def _wrap_latex_debug(self, html_body: str) -> str:
-        """Wrap LaTeX content in a debug span for border visibility."""
-        # This is a simple regex to wrap LaTeX blocks (very basic, for debug only)
-        # It will wrap $$...$$ and $...$ blocks
-        html_body = re.sub(
-            r"(\$\$.*?\$\$)",
-            r'<span class="latex-debug">\\1</span>',
-            html_body,
-            flags=re.DOTALL,
-        )
-        html_body = re.sub(
-            r"(\$[^$]+\$)", r'<span class="latex-debug">\\1</span>', html_body
-        )
-        return html_body
+                html_parts.append(
+                    f"<span class='text-snippet'>{html.escape(part['content']).replace('\\n', '<br>')}</span>"
+                )
+        return "".join(html_parts)
 
     def sizeHint(self):
-        return QSize(9000, 150)
+        return QSize(100, 150)
 
     def minimumSizeHint(self):
-        return QSize(9000, 50)
+        return QSize(50, 50)

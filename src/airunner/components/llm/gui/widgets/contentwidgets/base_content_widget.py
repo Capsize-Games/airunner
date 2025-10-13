@@ -47,8 +47,8 @@ class BaseContentWidget(QWidget):
 
     def sizeHint(self):
         """Default size hint - should be overridden by subclasses."""
-        return QSize(500, 100)
+        return QSize(100, 100)
 
     def minimumSizeHint(self):
         """Default minimum size hint - should be overridden by subclasses."""
-        return QSize(300, 50)
+        return QSize(50, 50)

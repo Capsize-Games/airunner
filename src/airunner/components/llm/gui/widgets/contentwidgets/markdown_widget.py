@@ -31,6 +31,7 @@ class MarkdownWidget(BaseContentWidget):
         # Configure the web view
         self.webView.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.webView.page().setBackgroundColor(Qt.GlobalColor.transparent)
+        # Set size policy to respect parent width and wrap content
         self.webView.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
@@ -126,9 +127,11 @@ class MarkdownWidget(BaseContentWidget):
             self.setContent(self._content)
 
     def sizeHint(self):
-        width = 9000
+        # Return a reasonable default width that will be overridden by parent layout
+        # Use a small width so the widget takes available space from parent
+        width = 100  # Minimal hint, parent layout will expand this
         height = max(100, self._content_height)
         return QSize(width, height)
 
     def minimumSizeHint(self):
-        return QSize(9000, self._content_height)
+        return QSize(50, 50)

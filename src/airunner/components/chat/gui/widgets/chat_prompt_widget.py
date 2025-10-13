@@ -16,6 +16,9 @@ from airunner.enums import (
     ModelStatus,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from airunner.components.conversations.conversation_history_manager import (
+    ConversationHistoryManager,
+)
 from airunner.utils.application import create_worker
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.workers.llm_response_worker import (
@@ -40,6 +43,7 @@ class ChatPromptWidget(BaseWidget):
             SignalCode.AUDIO_PROCESSOR_RESPONSE_SIGNAL: self.on_hear_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_add_bot_message_to_conversation,
+            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_text_generate_request_signal,
         }
         self._splitters = ["chat_prompt_splitter"]
         self._default_splitter_settings_applied = False
@@ -84,6 +88,8 @@ class ChatPromptWidget(BaseWidget):
         self._llm_response_worker = create_worker(
             LLMResponseWorker, sleep_time_in_ms=1
         )
+        # Conversation history manager used to fetch conversation IDs and history
+        self._conversation_history_manager = ConversationHistoryManager()
         self.loading = True
         self.conversation_id: int = None
         self.conversation = None
@@ -227,10 +233,13 @@ class ChatPromptWidget(BaseWidget):
         if not self.chat_loaded:
             self.disable_send_button()
 
-        if not self.loading and hasattr(self.ui, "conversation"):
+        # Load conversation on first show
+        if self.loading and hasattr(self.ui, "conversation"):
+            self.logger.info(
+                "First showEvent - loading most recent conversation"
+            )
             self.load_conversation()
-
-        self.loading = False
+            self.loading = False
 
     def llm_action_changed(self, val: str):
         if val == "Chat":
@@ -353,12 +362,25 @@ class ChatPromptWidget(BaseWidget):
             self.stop_progress_bar()
             self.enable_generate()
 
+    def on_llm_text_generate_request_signal(self, data: Dict):
+        """Handle LLM text generate request signal - user message is being sent."""
+        self.logger.debug(f"LLM_TEXT_GENERATE_REQUEST_SIGNAL received: {data}")
+        # The ConversationWidget should handle displaying the message
+        # This handler is just for logging/debugging
+
     def load_conversation(self, conversation_id: int = None):
         """Load a conversation and synchronize with ConversationWidget."""
         if conversation_id is None:
-            conversation_id = (
-                self._conversation_history_manager.get_most_recent_conversation_id()
+            # Try to load the current conversation first, fall back to most recent
+            current_conversation = (
+                self._conversation_history_manager.get_current_conversation()
             )
+            if current_conversation:
+                conversation_id = current_conversation.id
+            else:
+                conversation_id = (
+                    self._conversation_history_manager.get_most_recent_conversation_id()
+                )
         if conversation_id is None:
             if hasattr(self.ui, "conversation"):
                 self.ui.conversation.clear_conversation()
@@ -376,6 +398,14 @@ class ChatPromptWidget(BaseWidget):
                 conversation_id=conversation_id, max_messages=50
             )
         )
+        self.logger.info(
+            f"Loaded {len(messages)} messages from conversation {conversation_id}"
+        )
+        for idx, msg in enumerate(messages):
+            self.logger.info(
+                f"  Message {idx}: is_bot={msg.get('is_bot')}, content_preview={msg.get('content', '')[:50]}"
+            )
+
         if hasattr(self.ui, "conversation"):
             self.ui.conversation.conversation = conversation
             self.ui.conversation.set_conversation_widgets(messages)

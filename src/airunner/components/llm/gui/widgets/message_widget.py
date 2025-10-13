@@ -13,7 +13,9 @@ from PySide6.QtCore import Signal, QPropertyAnimation, QEasingCurve
 from airunner.components.llm.data.conversation import Conversation
 from airunner.enums import SignalCode
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.llm.gui.widgets.contentwidgets.latex_widget import LatexWidget
+from airunner.components.llm.gui.widgets.contentwidgets.latex_widget import (
+    LatexWidget,
+)
 from airunner.components.llm.gui.widgets.contentwidgets.markdown_widget import (
     MarkdownWidget,
 )
@@ -167,6 +169,10 @@ class MessageWidget(BaseWidget):
             anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
         self.ui.message_container.installEventFilter(self)
+        self.ui.message_container.setAttribute(
+            Qt.WidgetAttribute.WA_Hover, True
+        )
+        self.ui.message_container.setMouseTracking(True)
         self.set_cursor(Qt.CursorShape.ArrowCursor)
 
         # Add a stylesheet for action buttons for hover/pressed feedback
@@ -251,25 +257,28 @@ class MessageWidget(BaseWidget):
                         self.ui.content_container
                     )
                     self.content_widget.setContent(result["parts"])
-                    self.content_layout.addWidget(self.content_widget)
                 elif new_type == FormatterExtended.FORMAT_LATEX:
                     self.content_widget = LatexWidget(
                         self.ui.content_container
                     )
                     self.content_widget.setContent(result["content"])
-                    self.content_layout.addWidget(self.content_widget)
                 elif new_type == FormatterExtended.FORMAT_MARKDOWN:
                     self.content_widget = MarkdownWidget(
                         self.ui.content_container
                     )
                     self.content_widget.setContent(result["content"])
-                    self.content_layout.addWidget(self.content_widget)
                 else:  # Plain text (default)
                     self.content_widget = PlainTextWidget(
                         self.ui.content_container
                     )
                     self.content_widget.setContent(result["content"])
-                    self.content_layout.addWidget(self.content_widget)
+
+                # Set size policy to respect parent width constraints
+                from PySide6.QtWidgets import QSizePolicy
+
+                self.content_widget.setSizePolicy(
+                    QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum
+                )
 
                 # Apply font settings to the content widget
                 if self.font_family and self.font_size:
@@ -359,7 +368,10 @@ class MessageWidget(BaseWidget):
 
     def eventFilter(self, obj, event):
         if obj == self.ui.message_container:
-            if event.type() == QEvent.Type.Enter:
+            if event.type() in (
+                QEvent.Type.Enter,
+                QEvent.Type.HoverEnter,
+            ):
                 # Show buttons with smooth animation
                 for anim in [self.copy_anim, self.delete_anim, self.play_anim]:
                     anim.stop()
@@ -370,7 +382,10 @@ class MessageWidget(BaseWidget):
                     )
                     anim.setEndValue(1.0)
                     anim.start()
-            elif event.type() == QEvent.Type.Leave:
+            elif event.type() in (
+                QEvent.Type.Leave,
+                QEvent.Type.HoverLeave,
+            ):
                 # Hide buttons with smooth animation (to 0.05, not 0)
                 for anim in [self.copy_anim, self.delete_anim, self.play_anim]:
                     anim.stop()

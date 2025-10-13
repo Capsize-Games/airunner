@@ -25,7 +25,7 @@ class Ui_message(object):
         if not message.objectName():
             message.setObjectName(u"message")
         message.resize(497, 456)
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(message.sizePolicy().hasHeightForWidth())
@@ -92,7 +92,7 @@ class Ui_message(object):
 
         self.content_container = QFrame(self.message_container)
         self.content_container.setObjectName(u"content_container")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.content_container.sizePolicy().hasHeightForWidth())

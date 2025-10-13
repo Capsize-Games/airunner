@@ -8,8 +8,10 @@ body {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    overflow-x: auto;
+    overflow-x: hidden !important;
     overflow-y: hidden;
+    max-width: 100% !important;
+    word-wrap: break-word !important;
 }
 
 h1,
@@ -50,20 +52,67 @@ pre,
     font-size: 0.98em;
 }
 
+code {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+}
+
+.codehilite span {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+}
+
 pre {
     background: #232323;
     border-radius: 5px;
     padding: 10px 8px;
     margin: 10px 0;
-    overflow-x: auto;
+    max-width: 100% !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    overflow-x: hidden !important;
+    word-break: break-word !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
 }
 
 .codehilite {
     background: #272822;
     border-radius: 5px;
     margin: 10px 0;
-    overflow-x: auto;
     border: 1px solid #3c3c3c;
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+    overflow-x: hidden !important;
+    word-break: break-word !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+}
+
+.codehilite pre {
+    margin: 0;
+    padding: 10px 5px 10px 5px;
+    background-color: transparent;
+    border: none;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    overflow-x: hidden !important;
+    word-break: break-word !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+}
+
+.text-snippet {
+    display: inline;
+    white-space: pre-wrap !important;
+    max-width: 100% !important;
 }
 
 .linenodiv {
@@ -76,6 +125,32 @@ pre {
     margin-right: 5px;
 }
 
+/* Ensure Pygments table structure doesn't cause overflow */
+.codehilite table,
+.codehilitetable {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    overflow-x: hidden !important;
+}
+
+.codehilite td,
+.codehilitetable td {
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+}
+
+/* Ensure line number column doesn't expand */
+.codehilite .linenos,
+.codehilitetable .linenos {
+    width: 3em !important;
+    max-width: 3em !important;
+    flex-shrink: 0;
+}
+
 .codehilite pre {
     margin: 0;
     padding: 10px 5px 10px 5px;
@@ -86,6 +161,8 @@ pre {
 table {
     border-collapse: collapse;
     margin: 1em 0;
+    max-width: 100% !important;
+    overflow-x: auto;
 }
 
 th,

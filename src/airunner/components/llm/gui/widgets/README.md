@@ -23,12 +23,21 @@ This module provides the chat prompt widget for the AI Runner LLM interface, inc
 - `templates/`: Qt Designer `.ui` files for all widgets.
 - `tests/`: Pytest-based tests for widget logic and UI behavior.
 
-## Refactor: Single Conversation Widget
+## Refactor: MessageWidget-Based Conversation Display
 
-- As of 2025-05-31, the chat prompt now uses a single ConversationWidget (HTML-based, QWebEngineView) for all message display.
-- The old per-message MessageWidget logic is deprecated and will be removed.
-- See `user/conversation_widget.py` for implementation details.
-- All conversation rendering is now handled by Jinja2 HTML templates for performance and maintainability.
+- As of 2025-10-13, the chat prompt uses individual MessageWidget instances in a QScrollArea for message display.
+- This replaces the previous HTML/CSS/JavaScript-based approach (QWebEngineView + ChatBridge).
+- Each message is now rendered as a native PySide6 widget, providing better performance, easier debugging, and full integration with Qt's layout system.
+- See `conversation_widget.py` for the new implementation.
+- The vertical layout includes a spacer at the bottom to ensure messages align to the top.
+- MessageWidget instances handle their own content rendering (Markdown, LaTeX, mixed content, plain text) using specialized content widgets.
+
+### Benefits of the New Approach
+- **Native Qt Integration**: Direct use of PySide6 widgets eliminates JavaScript bridge overhead
+- **Better Performance**: No HTML/CSS rendering or JavaScript execution needed
+- **Easier Debugging**: Standard Qt debugging tools work out of the box
+- **Consistent Styling**: Uses the application's theme system directly
+- **Simpler Architecture**: Removes dependencies on QWebChannel, ChatBridge, and Jinja2 templates for conversation display
 
 ## Local Network Access (LNA) Support
 
