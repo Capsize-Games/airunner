@@ -133,11 +133,14 @@ class FormatterExtended:
                             lexer = TextLexer(stripall=True)
                 formatter = HtmlFormatter(
                     cssclass=f"codehilite lang-{language}",
-                    linenos=True,
+                    linenos=False,  # Disable line numbers to avoid table layout issues
                     linenostart=1,
                     linenospecial=0,
                     lineseparator="\n",  # Force newline between lines
                     hl_lines=[],
+                    nowrap=False,
+                    full=False,
+                    noclasses=False,
                 )
                 highlighted_code = highlight(code, lexer, formatter)
                 # Patch: If language is 'markdown', forcibly replace <span> line separators with <br> to preserve newlines
@@ -167,38 +170,13 @@ class FormatterExtended:
         pygments_css = HtmlFormatter(style="monokai").get_style_defs(
             ".codehilite"
         )
-        # Ensure pre/code blocks preserve newlines
-        extra_css = ".codehilite pre { white-space: pre-wrap !important; }"
         html_content = markdown.markdown(
             processed_markdown, extensions=extensions
         )
+        # Only include Pygments syntax highlighting CSS, let content_widget.css handle layout
         html_with_css = f"""
         <style>
         {pygments_css}
-        {extra_css}
-        .codehilite {{
-            background: #272822;
-            padding: 0;
-            border-radius: 5px;
-            margin: 10px 0;
-            overflow-x: auto;
-            border: 1px solid #3c3c3c;
-        }}
-        .linenodiv {{
-            background-color: #262626;
-            border-right: 1px solid #444;
-            padding: 3px 5px 3px 3px;
-            color: #777;
-            text-align: right;
-            user-select: none;
-            margin-right: 5px;
-        }}
-        .codehilite pre {{
-            margin: 0;
-            padding: 10px 5px 10px 5px;
-            background-color: transparent;
-            border: none;
-        }}
         </style>
         {html_content}
         """

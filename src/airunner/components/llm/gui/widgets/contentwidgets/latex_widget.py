@@ -64,8 +64,9 @@ class LatexWidget(BaseContentWidget):
             self.setContent(self._content)
 
     def sizeHint(self):
-        # A reasonable default size for LaTeX content
-        return QSize(9000, 150)
+        # Return a reasonable default size that will be overridden by parent layout
+        # Use a small width so the widget takes available space from parent
+        return QSize(100, 150)
 
     def minimumSizeHint(self):
-        return QSize(9000, 50)
+        return QSize(100, 50)

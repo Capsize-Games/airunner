@@ -20,10 +20,6 @@
      border: 1.5px solid #23272B;
      border-radius: 6px;
     }
-    QWebEngineView {
-     background: #181C20;
-     border: none;
-    }
    </string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
@@ -43,29 +39,53 @@
     <number>0</number>
    </property>
    <item row="0" column="0">
-    <widget class="QWebEngineView" name="stage">
+    <widget class="QScrollArea" name="messages">
      <property name="minimumSize">
       <size>
        <width>200</width>
        <height>200</height>
       </size>
      </property>
-     <property name="url">
-      <url>
-       <string>about:blank</string>
-      </url>
+     <property name="frameShape">
+      <enum>QFrame::Shape::NoFrame</enum>
      </property>
+     <property name="horizontalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>400</width>
+        <height>300</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="messagesLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
+        <number>2</number>
+       </property>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebEngineView</class>
-   <extends>QWidget</extends>
-   <header location="global">QtWebEngineWidgets/QWebEngineView</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

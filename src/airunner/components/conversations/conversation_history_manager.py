@@ -147,11 +147,24 @@ class ConversationHistoryManager:
                         for block in blocks:
                             if isinstance(block, dict) and "text" in block:
                                 content = block["text"]
+                                self.logger.debug(
+                                    f"Extracted content from blocks: {content[:50]}..."
+                                )
                                 break
                         if content is None:
                             content = ""
+                            self.logger.warning(
+                                f"No text found in blocks for message {msg_idx}"
+                            )
                     else:
                         content = ""
+                        self.logger.warning(
+                            f"No blocks found for message {msg_idx}"
+                        )
+                else:
+                    self.logger.debug(
+                        f"Content found directly in message {msg_idx}: {content[:50]}..."
+                    )
 
                 formatted_msg = {
                     "name": name,

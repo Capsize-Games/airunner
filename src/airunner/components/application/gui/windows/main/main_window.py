@@ -637,7 +637,7 @@ class MainWindow(
             button_name = buttons[saved_index]
             getattr(self.ui, button_name).setChecked(True)
 
-    def _set_current_button_and_tab(self, button_name: str, tab_widget):
+    def _set_current_button_and_tab(self, button_name: str):
         """
         Set the current button and tab based on the button name and tab widget.
         """
@@ -646,34 +646,28 @@ class MainWindow(
             getattr(self.ui, btn).blockSignals(True)
             getattr(self.ui, btn).setChecked(btn == button_name)
             getattr(self.ui, btn).blockSignals(False)
-
+        tab_widget = self.buttons[button_name]
         self._set_tab_index(tab_widget)
 
     @Slot(bool)
     def on_home_button_toggled(self, active: bool):
-        self._set_current_button_and_tab("home_button", self.ui.home_tab)
+        self._set_current_button_and_tab("home_button")
 
     @Slot(bool)
     def on_visualizer_button_toggled(self, val: bool):
-        self._set_current_button_and_tab(
-            "visualizer_button", self.ui.visualizer_tab
-        )
+        self._set_current_button_and_tab("visualizer_button")
 
     @Slot(bool)
     def on_art_editor_button_toggled(self, val: bool):
-        self._set_current_button_and_tab("art_editor_button", self.ui.art_tab)
+        self._set_current_button_and_tab("art_editor_button")
 
     @Slot(bool)
     def on_document_editor_button_toggled(self, val: bool):
-        self._set_current_button_and_tab(
-            "document_editor_button", self.ui.document_editor_tab
-        )
+        self._set_current_button_and_tab("document_editor_button")
 
     @Slot(bool)
     def on_workflow_editor_button_toggled(self, val: bool):
-        self._set_current_button_and_tab(
-            "workflow_editor_button", self.ui.agent_workflow_tab
-        )
+        self._set_current_button_and_tab("workflow_editor_button")
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):
