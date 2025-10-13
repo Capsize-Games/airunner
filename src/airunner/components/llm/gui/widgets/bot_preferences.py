@@ -11,6 +11,10 @@ from airunner.components.llm.gui.widgets.document_widget import DocumentWidget
 from airunner.components.llm.gui.widgets.templates.bot_preferences_ui import (
     Ui_bot_preferences,
 )
+from airunner.settings import (
+    AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT,
+    AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
+)
 
 
 class BotPreferencesWidget(BaseWidget):
@@ -260,3 +264,15 @@ class BotPreferencesWidget(BaseWidget):
         if voice_id is None:
             return
         self.update_chatbot("voice_id", voice_id)
+
+    @Slot()
+    def on_reset_system_instructions_button_clicked(self):
+        self.ui.system_instructions.setPlainText(
+            AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT
+        )
+
+    @Slot()
+    def on_reset_guardrails_button_clicked(self):
+        self.ui.guardrails_prompt.setPlainText(
+            AIRUNNER_DEFAULT_CHATBOT_GUARDRAILS_PROMPT
+        )

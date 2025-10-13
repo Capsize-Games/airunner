@@ -304,18 +304,122 @@ class DocumentEditorContainerWidget(BaseWidget):
     def _on_tab_changed(self, index: int) -> None:
         """Called when a different tab is activated; focus the editor there."""
         try:
+            self.logger.info(f"=== TAB CHANGED: index={index} ===")
+
             if index is None or index < 0:
+                # No active tab - clear active document
+                self.logger.info(
+                    "No active tab (index < 0), clearing active document"
+                )
+                self._notify_active_document(None)
                 return
             w = self.ui.documents.widget(index)
             if w is None:
+                self.logger.info(
+                    "Tab widget is None, clearing active document"
+                )
+                self._notify_active_document(None)
                 return
+
+            # Get the file path for this tab
+            file_path = getattr(w, "current_file_path", None)
+            self.logger.info(f"Tab widget file_path: {file_path}")
+            self._notify_active_document(file_path)
+
             if hasattr(w, "editor"):
                 try:
                     w.editor.setFocus()
                 except Exception:
                     pass
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(f"Error in _on_tab_changed: {e}", exc_info=True)
+
+    def _notify_active_document(self, file_path: str) -> None:
+        """
+        Notify the LLM agent about the currently active document.
+
+        This allows the agent to know which file to edit when the user
+        says "modify this file" or "edit the current file".
+
+        Args:
+            file_path: Absolute path to active document, or None if no active document
+        """
+        try:
+            self.logger.info(
+                f"=== ATTEMPTING TO NOTIFY ACTIVE DOCUMENT: {file_path} ==="
+            )
+
+            # Store in shared settings cache so the agent can pick it up later
+            shared_settings = getattr(
+                self, "settings_mixin_shared_instance", None
+            )
+            if shared_settings is not None:
+                normalized_path = (
+                    os.path.abspath(file_path) if file_path else None
+                )
+                if normalized_path:
+                    shared_settings.set_cached_setting_by_key(
+                        "active_document_path", normalized_path
+                    )
+                    self.logger.info(
+                        "✓ Stored active document in settings cache: %s",
+                        normalized_path,
+                    )
+                else:
+                    shared_settings.set_cached_setting_by_key(
+                        "active_document_path", None
+                    )
+                    self.logger.info(
+                        "✓ Cleared active document in settings cache",
+                    )
+            else:
+                self.logger.warning(
+                    "SettingsMixinSharedInstance unavailable; cannot cache active document"
+                )
+
+            # Also try to notify agent directly if available
+            main_window = self.window()
+            if main_window is None:
+                return
+
+            if not hasattr(main_window, "worker_manager"):
+                return
+
+            worker_manager = main_window.worker_manager
+            if worker_manager is None:
+                return
+
+            if not hasattr(worker_manager, "llm_generate_worker"):
+                return
+
+            llm_worker = worker_manager.llm_generate_worker
+            if llm_worker is None:
+                return
+
+            if not hasattr(llm_worker, "model_manager"):
+                return
+
+            model_manager = llm_worker.model_manager
+            if model_manager is None:
+                return
+
+            if not hasattr(model_manager, "agent"):
+                return
+
+            agent = model_manager.agent
+            if agent is None:
+                return
+
+            if not hasattr(agent, "set_active_document"):
+                return
+
+            agent.set_active_document(file_path)
+            self.logger.info(f"✓ Also notified agent directly: {file_path}")
+
+        except Exception as e:
+            self.logger.error(
+                f"Error notifying active document: {e}", exc_info=True
+            )
 
     def _on_editor_modified(
         self, editor: DocumentEditorWidget, modified: bool

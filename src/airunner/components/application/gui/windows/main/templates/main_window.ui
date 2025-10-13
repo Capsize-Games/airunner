@@ -133,7 +133,7 @@
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="toolTip">
-             <string>Home</string>
+             <string>Dashboard</string>
             </property>
             <property name="text">
              <string/>
@@ -320,6 +320,9 @@
             <property name="cursor">
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
+            <property name="toolTip">
+             <string>Visualizer</string>
+            </property>
             <property name="text">
              <string/>
             </property>
@@ -372,7 +375,7 @@
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="toolTip">
-             <string>Chat</string>
+             <string>Toggle Chat</string>
             </property>
             <property name="text">
              <string/>
@@ -414,6 +417,9 @@
             </property>
             <property name="cursor">
              <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Toggle Knowledgebase</string>
             </property>
             <property name="text">
              <string/>
