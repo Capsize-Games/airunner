@@ -20,6 +20,7 @@ class PlainTextWidget(BaseContentWidget):
         self.webView = QWebEngineView(self)
         self.webView.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.webView.page().setBackgroundColor(Qt.GlobalColor.transparent)
+        # Set size policy to respect parent width and wrap content
         self.webView.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
@@ -59,7 +60,7 @@ class PlainTextWidget(BaseContentWidget):
         pass
 
     def sizeHint(self):
-        return QSize(600, 80)
+        return QSize(100, 80)
 
     def minimumSizeHint(self):
-        return QSize(200, 30)
+        return QSize(50, 30)
