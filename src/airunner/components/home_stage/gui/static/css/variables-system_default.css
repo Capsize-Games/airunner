@@ -1,0 +1,18 @@
+/* variables-system_default.css - auto-generated from QSS */
+:root {
+    --primary-color: #000000;
+    --darkprimary-color: #000000;
+    --darkerprimary-color: #000000;
+    --secondary-color: #000000;
+    --darksecondary-color: #000000;
+    --darkersecondary-color: #000000;
+    --success-color: #00A800;
+    --danger-color: #FF5555;
+    --warning-color: #FFAA00;
+    --info-color: #00A8D8;
+    --light-color: #C8C8C8;
+    --dim-color: #666666;
+    --dark-color: #2a2a2a;
+    --line-color-light: #333;
+    --line-color-dark: #222;
+}
