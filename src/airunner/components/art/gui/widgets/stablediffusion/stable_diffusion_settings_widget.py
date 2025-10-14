@@ -279,7 +279,9 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
                     # Reload models for the new pipeline action
                     self._load_models_combobox()
 
+    @Slot(str)
     def on_scheduler_currentTextChanged(self, name):
+        print("SCHEDULER CHANGED", name)
         self.update_generator_settings(scheduler=name)
         self.api.art.change_scheduler(name)
 
