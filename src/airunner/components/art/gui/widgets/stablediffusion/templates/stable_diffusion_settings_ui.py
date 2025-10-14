@@ -45,9 +45,21 @@ class Ui_stable_diffusion_settings_widget(object):
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(0, 0, 10, 0)
-        self.verticalSpacer = QSpacerItem(20, 394, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.groupBox_4 = QGroupBox(self.scrollAreaWidgetContents)
+        self.groupBox_4.setObjectName(u"groupBox_4")
+        font = QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        self.groupBox_4.setFont(font)
+        self.gridLayout_5 = QGridLayout(self.groupBox_4)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.version = QComboBox(self.groupBox_4)
+        self.version.setObjectName(u"version")
 
-        self.gridLayout.addItem(self.verticalSpacer, 10, 1, 1, 1)
+        self.gridLayout_5.addWidget(self.version, 0, 0, 1, 1)
+
+
+        self.gridLayout.addWidget(self.groupBox_4, 0, 0, 1, 2)
 
         self.verticalLayout_3 = QVBoxLayout()
         self.verticalLayout_3.setSpacing(10)
@@ -88,37 +100,18 @@ class Ui_stable_diffusion_settings_widget(object):
         self.verticalLayout_3.addWidget(self.steps_widget)
 
 
-        self.gridLayout.addLayout(self.verticalLayout_3, 7, 0, 1, 2)
+        self.gridLayout.addLayout(self.verticalLayout_3, 8, 0, 1, 2)
 
-        self.use_compel = QCheckBox(self.scrollAreaWidgetContents)
-        self.use_compel.setObjectName(u"use_compel")
-        sizePolicy.setHeightForWidth(self.use_compel.sizePolicy().hasHeightForWidth())
-        self.use_compel.setSizePolicy(sizePolicy)
+        self.seed_widget = SeedWidget(self.scrollAreaWidgetContents)
+        self.seed_widget.setObjectName(u"seed_widget")
+        sizePolicy.setHeightForWidth(self.seed_widget.sizePolicy().hasHeightForWidth())
+        self.seed_widget.setSizePolicy(sizePolicy)
+        self.seed_widget.setMinimumSize(QSize(0, 0))
 
-        self.gridLayout.addWidget(self.use_compel, 9, 0, 1, 2)
-
-        self.clip_skip_slider_widget = SliderWidget(self.scrollAreaWidgetContents)
-        self.clip_skip_slider_widget.setObjectName(u"clip_skip_slider_widget")
-        sizePolicy.setHeightForWidth(self.clip_skip_slider_widget.sizePolicy().hasHeightForWidth())
-        self.clip_skip_slider_widget.setSizePolicy(sizePolicy)
-        self.clip_skip_slider_widget.setMinimumSize(QSize(0, 0))
-        self.clip_skip_slider_widget.setProperty(u"current_value", 0)
-        self.clip_skip_slider_widget.setProperty(u"slider_maximum", 11)
-        self.clip_skip_slider_widget.setProperty(u"spinbox_maximum", 12.000000000000000)
-        self.clip_skip_slider_widget.setProperty(u"display_as_float", False)
-        self.clip_skip_slider_widget.setProperty(u"spinbox_single_step", 1)
-        self.clip_skip_slider_widget.setProperty(u"spinbox_page_step", 1)
-        self.clip_skip_slider_widget.setProperty(u"spinbox_minimum", 0)
-        self.clip_skip_slider_widget.setProperty(u"slider_minimum", 0)
-        self.clip_skip_slider_widget.setProperty(u"settings_property", u"generator_settings.clip_skip")
-
-        self.gridLayout.addWidget(self.clip_skip_slider_widget, 8, 0, 1, 2)
+        self.gridLayout.addWidget(self.seed_widget, 5, 0, 1, 2)
 
         self.groupBox_2 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_2.setObjectName(u"groupBox_2")
-        font = QFont()
-        font.setPointSize(10)
-        font.setBold(True)
         self.groupBox_2.setFont(font)
         self.gridLayout_4 = QGridLayout(self.groupBox_2)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
@@ -146,27 +139,6 @@ class Ui_stable_diffusion_settings_widget(object):
 
 
         self.gridLayout.addWidget(self.groupBox_3, 1, 0, 1, 2)
-
-        self.groupBox_4 = QGroupBox(self.scrollAreaWidgetContents)
-        self.groupBox_4.setObjectName(u"groupBox_4")
-        self.groupBox_4.setFont(font)
-        self.gridLayout_5 = QGridLayout(self.groupBox_4)
-        self.gridLayout_5.setObjectName(u"gridLayout_5")
-        self.version = QComboBox(self.groupBox_4)
-        self.version.setObjectName(u"version")
-
-        self.gridLayout_5.addWidget(self.version, 0, 0, 1, 1)
-
-
-        self.gridLayout.addWidget(self.groupBox_4, 0, 0, 1, 2)
-
-        self.seed_widget = SeedWidget(self.scrollAreaWidgetContents)
-        self.seed_widget.setObjectName(u"seed_widget")
-        sizePolicy.setHeightForWidth(self.seed_widget.sizePolicy().hasHeightForWidth())
-        self.seed_widget.setSizePolicy(sizePolicy)
-        self.seed_widget.setMinimumSize(QSize(0, 0))
-
-        self.gridLayout.addWidget(self.seed_widget, 5, 0, 1, 2)
 
         self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setSpacing(10)
@@ -206,7 +178,28 @@ class Ui_stable_diffusion_settings_widget(object):
         self.verticalLayout.addWidget(self.ddim_eta_slider_widget)
 
 
-        self.gridLayout.addLayout(self.verticalLayout, 6, 0, 1, 2)
+        self.gridLayout.addLayout(self.verticalLayout, 7, 0, 1, 2)
+
+        self.clip_skip_slider_widget = SliderWidget(self.scrollAreaWidgetContents)
+        self.clip_skip_slider_widget.setObjectName(u"clip_skip_slider_widget")
+        sizePolicy.setHeightForWidth(self.clip_skip_slider_widget.sizePolicy().hasHeightForWidth())
+        self.clip_skip_slider_widget.setSizePolicy(sizePolicy)
+        self.clip_skip_slider_widget.setMinimumSize(QSize(0, 0))
+        self.clip_skip_slider_widget.setProperty(u"current_value", 0)
+        self.clip_skip_slider_widget.setProperty(u"slider_maximum", 11)
+        self.clip_skip_slider_widget.setProperty(u"spinbox_maximum", 12.000000000000000)
+        self.clip_skip_slider_widget.setProperty(u"display_as_float", False)
+        self.clip_skip_slider_widget.setProperty(u"spinbox_single_step", 1)
+        self.clip_skip_slider_widget.setProperty(u"spinbox_page_step", 1)
+        self.clip_skip_slider_widget.setProperty(u"spinbox_minimum", 0)
+        self.clip_skip_slider_widget.setProperty(u"slider_minimum", 0)
+        self.clip_skip_slider_widget.setProperty(u"settings_property", u"generator_settings.clip_skip")
+
+        self.gridLayout.addWidget(self.clip_skip_slider_widget, 9, 0, 1, 2)
+
+        self.verticalSpacer = QSpacerItem(20, 394, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout.addItem(self.verticalSpacer, 11, 1, 1, 1)
 
         self.groupBox = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox.setObjectName(u"groupBox")
@@ -243,6 +236,13 @@ class Ui_stable_diffusion_settings_widget(object):
 
         self.gridLayout.addWidget(self.groupBox_5, 4, 0, 1, 2)
 
+        self.use_compel = QCheckBox(self.scrollAreaWidgetContents)
+        self.use_compel.setObjectName(u"use_compel")
+        sizePolicy.setHeightForWidth(self.use_compel.sizePolicy().hasHeightForWidth())
+        self.use_compel.setSizePolicy(sizePolicy)
+
+        self.gridLayout.addWidget(self.use_compel, 6, 0, 1, 1)
+
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.gridLayout_2.addWidget(self.scrollArea, 2, 0, 1, 1)
@@ -270,21 +270,21 @@ class Ui_stable_diffusion_settings_widget(object):
 
     def retranslateUi(self, stable_diffusion_settings_widget):
         stable_diffusion_settings_widget.setWindowTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Form", None))
+        self.groupBox_4.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Version", None))
         self.scale_widget.setProperty(u"label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Guidance Scale", None))
         self.steps_widget.setProperty(u"label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Steps", None))
-        self.use_compel.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Use Compel", None))
-        self.clip_skip_slider_widget.setProperty(u"label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Clip Skip", None))
-        self.groupBox_2.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Model", None))
-        self.groupBox_3.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Pipeline", None))
-        self.groupBox_4.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Version", None))
         self.seed_widget.setProperty(u"generator_section", "")
         self.seed_widget.setProperty(u"generator_name", "")
         self.seed_widget.setProperty(u"property_name", QCoreApplication.translate("stable_diffusion_settings_widget", u"generator_settings.random_seed", None))
+        self.groupBox_2.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Model", None))
+        self.groupBox_3.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Pipeline", None))
         self.frames_slider_widget.setProperty(u"label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Frames", None))
         self.ddim_eta_slider_widget.setProperty(u"label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"DDIM ETA", None))
+        self.clip_skip_slider_widget.setProperty(u"label_text", QCoreApplication.translate("stable_diffusion_settings_widget", u"Clip Skip", None))
         self.groupBox.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Custom path", None))
         self.browse_button.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Browse", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("stable_diffusion_settings_widget", u"Scheduler", None))
+        self.use_compel.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Use Compel", None))
         self.label.setText(QCoreApplication.translate("stable_diffusion_settings_widget", u"Stable Diffusion", None))
     # retranslateUi
 
