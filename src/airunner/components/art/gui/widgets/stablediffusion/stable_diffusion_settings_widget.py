@@ -114,6 +114,11 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
     def on_use_compel_toggled(self, val: bool):
         self.update_generator_settings(use_compel=val)
 
+        if val:
+            self.ui.clip_skip_slider_widget.hide()
+        else:
+            self.ui.clip_skip_slider_widget.show()
+
     @Slot()
     def on_browse_button_clicked(self):
         # Use QFileDialog to get the file path
