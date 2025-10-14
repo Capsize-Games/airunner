@@ -1587,6 +1587,9 @@ class CustomScene(
             ):
                 x_pos = drawing_pad_settings.x_pos
                 y_pos = drawing_pad_settings.y_pos
+                self.logger.warning(
+                    f"[INIT LAYER] Layer {layer_id}: loaded saved position x={x_pos}, y={y_pos}"
+                )
             else:
                 x_pos = (
                     self.active_grid_settings.pos_x
@@ -1597,6 +1600,9 @@ class CustomScene(
                     self.active_grid_settings.pos_y
                     if hasattr(self, "active_grid_settings")
                     else 0
+                )
+                self.logger.warning(
+                    f"[INIT LAYER] Layer {layer_id}: NO saved position, defaulting to active grid area position x={x_pos}, y={y_pos}"
                 )
 
                 if drawing_pad_settings:
@@ -1616,7 +1622,19 @@ class CustomScene(
             visible_pos = QPointF(
                 x_pos - canvas_offset.x(), y_pos - canvas_offset.y()
             )
+            self.logger.warning(
+                f"[INIT LAYER] Layer {layer_id}: setting position - "
+                f"absolute=({x_pos}, {y_pos}), canvas_offset=({canvas_offset.x()}, {canvas_offset.y()}), "
+                f"display=({visible_pos.x()}, {visible_pos.y()})"
+            )
             layer_item.setPos(visible_pos)
+
+            # Log actual scene position after setPos
+            actual_pos = layer_item.scenePos()
+            self.logger.warning(
+                f"[INIT LAYER] Layer {layer_id}: actual scene position after setPos: ({actual_pos.x()}, {actual_pos.y()})"
+            )
+
             self.original_item_positions[layer_item] = QPointF(x_pos, y_pos)
 
         # Remove any items that no longer have backing settings data
@@ -2971,9 +2989,15 @@ class CustomScene(
                         if drawing_pad_settings:
                             abs_x = drawing_pad_settings.x_pos or 0
                             abs_y = drawing_pad_settings.y_pos or 0
+                            self.logger.warning(
+                                f"[LOAD LAYER] Layer {layer_id}: loaded from DB x={abs_x}, y={abs_y}, canvas_offset=({canvas_offset.x()}, {canvas_offset.y()})"
+                            )
                         else:
                             abs_x = layer_item.pos().x()
                             abs_y = layer_item.pos().y()
+                            self.logger.warning(
+                                f"[LOAD LAYER] Layer {layer_id}: no DB settings, using current pos x={abs_x}, y={abs_y}"
+                            )
 
                         original_item_positions[layer_item] = QPointF(
                             abs_x, abs_y
@@ -2986,6 +3010,10 @@ class CustomScene(
                 original_pos = original_item_positions[layer_item]
                 new_x = original_pos.x() - canvas_offset.x()
                 new_y = original_pos.y() - canvas_offset.y()
+
+                self.logger.warning(
+                    f"[LOAD LAYER] Layer {layer_id}: setting display position x={new_x}, y={new_y} (abs_pos={original_pos.x()}, {original_pos.y()})"
+                )
 
                 current_pos = layer_item.pos()
                 if (

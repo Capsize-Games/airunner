@@ -297,7 +297,9 @@ class CustomGraphicsView(
         loaded_offset = QPointF(float(x), float(y))
         self.canvas_offset = loaded_offset
 
-        self.logger.debug(f"Loaded canvas offset from settings: ({x}, {y})")
+        self.logger.warning(
+            f"[LOAD] Canvas offset loaded from settings: x={x}, y={y}"
+        )
 
         # DO NOT call update methods here - let the caller decide when to update
         # This prevents the offset from being modified during load
@@ -306,8 +308,8 @@ class CustomGraphicsView(
         """Save the canvas offset to QSettings."""
         self.settings.setValue("canvas_offset_x", self.canvas_offset_x)
         self.settings.setValue("canvas_offset_y", self.canvas_offset_y)
-        self.logger.debug(
-            f"Saved canvas offset: ({self.canvas_offset_x}, {self.canvas_offset_y})"
+        self.logger.warning(
+            f"[SAVE] Canvas offset saved: x={self.canvas_offset_x}, y={self.canvas_offset_y}"
         )
 
     @property
@@ -557,6 +559,10 @@ class CustomGraphicsView(
         absolute_x = self.active_grid_settings.pos_x
         absolute_y = self.active_grid_settings.pos_y
 
+        self.logger.warning(
+            f"[LOAD GRID] Active grid absolute position from DB: x={absolute_x}, y={absolute_y}, canvas_offset=({self.canvas_offset_x}, {self.canvas_offset_y})"
+        )
+
         # If settings are somehow None (e.g., first run), default and save
         if absolute_x is None or absolute_y is None:
             # Default to centering in the initial view, considering the initial offset
@@ -583,7 +589,17 @@ class CustomGraphicsView(
         # Calculate and set the display position
         display_x = absolute_x - self.canvas_offset_x
         display_y = absolute_y - self.canvas_offset_y
+        self.logger.warning(
+            f"[LOAD GRID] Setting grid display position: x={display_x}, y={display_y}"
+        )
         self.active_grid_area.setPos(display_x, display_y)
+
+        # Log actual scene position after setPos
+        actual_pos = self.active_grid_area.scenePos()
+        self.logger.warning(
+            f"[LOAD GRID] Active grid actual scene position after setPos: ({actual_pos.x()}, {actual_pos.y()})"
+        )
+
         # Ensure active grid mouse acceptance matches current tool
         try:
             self._update_active_grid_mouse_acceptance()
@@ -1029,11 +1045,18 @@ class CustomGraphicsView(
         # Set restoration flag to prevent resize compensation during initial load
         self._is_restoring_state = True
 
+        # Reset grid compensation on load to prevent accumulated drift
+        self._grid_compensation_offset = QPointF(0, 0)
+
         # Load offset first - this ONLY sets the canvas_offset to the saved value
         self.load_canvas_offset()
 
         # Store the loaded offset to restore it after any operations
         loaded_offset = QPointF(self.canvas_offset.x(), self.canvas_offset.y())
+
+        # Clear any cached positions since we're starting fresh
+        if self.scene and hasattr(self.scene, "original_item_positions"):
+            self.scene.original_item_positions.clear()
 
         # Set up the scene (grid, etc.) - DO NOT let these change the offset
         self.do_draw(True)
@@ -1043,7 +1066,7 @@ class CustomGraphicsView(
         # Restore the offset after do_draw
         self.canvas_offset = loaded_offset
 
-        # Show the active grid area using loaded offset
+        # Show the active grid area using loaded offset (this also positions it)
         self.show_active_grid_area()
 
         # Restore the offset after show_active_grid_area
@@ -1052,11 +1075,12 @@ class CustomGraphicsView(
         # Update viewport size tracking without adjusting offset
         self._last_viewport_size = self.viewport().size()
 
-        # Now update positions with the restored offset
-        self.update_active_grid_area_position()
-        self.updateImagePositions()
+        # Ensure layers are created/initialized at their saved positions
+        # This method loads positions from DB and applies them correctly
+        if hasattr(self.scene, "_refresh_layer_display"):
+            self.scene._refresh_layer_display()
 
-        # FORCE the offset back to loaded value after position updates
+        # FORCE the offset back to loaded value after layer initialization
         self.canvas_offset = loaded_offset
 
         # Restore text items on load
@@ -1070,9 +1094,10 @@ class CustomGraphicsView(
 
         self._initialized = True
 
-        # Use a short delay to allow the window to fully settle before
-        # re-enabling resize compensation
-        QTimer.singleShot(500, self._finish_state_restoration)
+        # Use a longer delay to allow the window to fully settle (including main window showEvent)
+        # before re-enabling resize compensation. The main window's showEvent can fire up to 1 second
+        # after the canvas showEvent completes, causing resize events that shouldn't apply compensation.
+        QTimer.singleShot(1500, self._finish_state_restoration)
 
     def _finish_state_restoration(self):
         """Called after a delay to finish state restoration and re-enable resize compensation."""
@@ -1105,8 +1130,15 @@ class CustomGraphicsView(
 
         # Skip compensation during initial state restoration
         if self._is_restoring_state or not self._initialized:
+            self.logger.warning(
+                f"[RESIZE] Skipping compensation - _is_restoring_state={self._is_restoring_state}, _initialized={self._initialized}"
+            )
             self._last_viewport_size = self.viewport().size()
             return
+
+        self.logger.warning(
+            f"[RESIZE] Processing resize - old_size={self._last_viewport_size}, new_size={self.viewport().size()}"
+        )
 
         # Calculate the change in viewport center
         old_size = self._last_viewport_size
@@ -1136,10 +1168,11 @@ class CustomGraphicsView(
         self.draw_grid()
 
     def _apply_viewport_compensation(self, shift_x: float, shift_y: float):
-        """Apply viewport center compensation by adjusting stored absolute positions.
+        """Apply viewport center compensation by adjusting the grid compensation offset.
 
-        This method shifts the absolute positions of items so they appear to stay
-        centered relative to the viewport, without changing the canvas_offset value.
+        This method shifts only the grid compensation offset so items appear to stay
+        centered relative to the viewport, without changing the canvas_offset value
+        or the stored absolute positions in the database.
         """
         if not self.scene:
             return
@@ -1148,6 +1181,12 @@ class CustomGraphicsView(
         if abs(shift_x) < 0.5 and abs(shift_y) < 0.5:
             return
 
+        self.logger.warning(
+            f"[VIEWPORT COMPENSATION] Applying shift: ({shift_x}, {shift_y}), "
+            f"old_compensation=({self._grid_compensation_offset.x()}, {self._grid_compensation_offset.y()}), "
+            f"_is_restoring_state={self._is_restoring_state}, _initialized={self._initialized}"
+        )
+
         # Adjust the grid compensation offset
         # This shifts the grid origin to maintain alignment with the viewport center
         self._grid_compensation_offset = QPointF(
@@ -1155,30 +1194,12 @@ class CustomGraphicsView(
             self._grid_compensation_offset.y() + shift_y,
         )
 
-        # Adjust the active grid area absolute position
-        if self.active_grid_area:
-            current_abs_x = self.active_grid_settings.pos_x or 0
-            current_abs_y = self.active_grid_settings.pos_y or 0
-            new_abs_x = current_abs_x + shift_x
-            new_abs_y = current_abs_y + shift_y
-            self.update_active_grid_settings(pos_x=new_abs_x, pos_y=new_abs_y)
+        self.logger.warning(
+            f"[VIEWPORT COMPENSATION] New compensation: ({self._grid_compensation_offset.x()}, {self._grid_compensation_offset.y()})"
+        )
 
-        # Adjust layer absolute positions
-        layers = CanvasLayer.objects.order_by("order").all()
-        for layer in layers:
-            drawing_pad = DrawingPadSettings.objects.filter_by_first(
-                layer_id=layer.id
-            )
-            if drawing_pad:
-                current_x = drawing_pad.x_pos or 0
-                current_y = drawing_pad.y_pos or 0
-                new_x = current_x + shift_x
-                new_y = current_y + shift_y
-                self.update_drawing_pad_settings(
-                    layer_id=layer.id, x_pos=new_x, y_pos=new_y
-                )
-
-        # Update the scene's cached original positions to match
+        # Update the scene's cached original positions for smooth visual updates
+        # but DO NOT save to database - this prevents drift on restart
         if hasattr(self.scene, "original_item_positions"):
             updated_positions = {}
             for item, old_pos in self.scene.original_item_positions.items():
