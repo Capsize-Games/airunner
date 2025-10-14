@@ -1241,8 +1241,19 @@ class CustomGraphicsView(
     def update_active_grid_area_position(self):
         if self.active_grid_area:
             pos = self.active_grid_settings.pos
-            pos_x = pos[0] - self.canvas_offset_x
-            pos_y = pos[1] - self.canvas_offset_y
+            # Apply the same offset calculation as layers and grid lines:
+            # absolute_pos - canvas_offset + grid_compensation_offset
+            # This keeps the active grid area aligned with grid lines during viewport resizes
+            pos_x = (
+                pos[0]
+                - self.canvas_offset_x
+                + self._grid_compensation_offset.x()
+            )
+            pos_y = (
+                pos[1]
+                - self.canvas_offset_y
+                + self._grid_compensation_offset.y()
+            )
             self.active_grid_area.setPos(pos_x, pos_y)
 
     def updateImagePositions(
