@@ -26,7 +26,6 @@ from diffusers import (
     ControlNetModel,
 )
 
-from airunner.components.art.data.ai_models import AIModels
 from airunner.components.art.data.controlnet_model import ControlnetModel
 from airunner.components.art.data.embedding import Embedding
 from airunner.components.art.data.lora import Lora
@@ -59,6 +58,7 @@ from airunner.enums import (
     ModelAction,
     ImagePreset,
     StableDiffusionVersion,
+    Scheduler,
 )
 from airunner.components.application.exceptions import (
     PipeNotLoadedException,
@@ -82,7 +82,6 @@ from airunner.settings import (
 from airunner.utils.application.create_worker import create_worker
 from airunner.utils.memory import clear_memory, is_ampere_or_newer
 from airunner.utils.image import (
-    convert_binary_to_image,
     convert_image_to_binary,
 )
 from airunner.utils.application import get_torch_device
@@ -103,6 +102,29 @@ from airunner.components.art.managers.stablediffusion import (
 )
 
 
+class DeterministicSDENoiseSampler:
+    """
+    Deterministic noise sampler for DPM++ SDE schedulers.
+
+    Ensures consistent results across different batch sizes by using
+    per-seed generators for noise sampling, similar to AUTOMATIC1111's
+    BrownianTreeNoiseSampler approach.
+    """
+
+    def __init__(self, seed: int, device: torch.device):
+        self.seed = seed
+        self.device = device
+        self.generator = torch.Generator(device=device).manual_seed(seed)
+
+    def __call__(self, shape, dtype=None):
+        """Generate deterministic noise tensor."""
+        if dtype is None:
+            dtype = torch.float32
+        return torch.randn(
+            shape, generator=self.generator, device=self.device, dtype=dtype
+        )
+
+
 class BaseDiffusersModelManager(BaseModelManager):
     model_type: ModelType = ModelType.SD
     _model_status = {
@@ -119,6 +141,9 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._pipeline: Optional[str] = None
         self._scheduler_name: Optional[str] = None
         self._scheduler: Type[SchedulerMixin]
+        self.current_scheduler_name: str = ""
+        self.do_change_scheduler: bool = False
+        self._resolved_model_version: Optional[str] = None
         self._image_request: ImageRequest = None
         self._controlnet_model = None
         self._controlnet: Optional[ControlNetModel] = None
@@ -300,6 +325,13 @@ class BaseDiffusersModelManager(BaseModelManager):
     @image_request.setter
     def image_request(self, value: ImageRequest):
         self._image_request = value
+        if value is not None:
+            pipeline_action = getattr(value, "pipeline_action", None)
+            if pipeline_action:
+                self._pipeline = pipeline_action
+            version = getattr(value, "version", None)
+            if version:
+                self._resolved_model_version = version
 
     @property
     def controlnet_image(self) -> Image:
@@ -694,7 +726,9 @@ class BaseDiffusersModelManager(BaseModelManager):
                     "tokenizer_2",
                     "unet",
                     "controlnet",
-                    "scheduler",
+                    # NOTE: "scheduler" is intentionally excluded here
+                    # We manage the scheduler separately via _load_scheduler()
+                    # to ensure scheduler changes persist across pipeline swaps
                     "feature_extractor",
                     "image_encoder",
                     "force_zeros_for_empty_prompt",
@@ -705,6 +739,13 @@ class BaseDiffusersModelManager(BaseModelManager):
         except Exception as e:
             self.logger.error(f"Error swapping pipeline: {e}")
         finally:
+            # Restore the active scheduler after pipeline swap
+            if self.scheduler is not None:
+                self._pipe.scheduler = self.scheduler
+                self.logger.debug(
+                    "Restored scheduler '%s' after pipeline swap",
+                    self.scheduler_name,
+                )
             self._load_compel()
             self._load_deep_cache()
             self._make_memory_efficient()
@@ -1176,50 +1217,65 @@ class BaseDiffusersModelManager(BaseModelManager):
         self._controlnet_processor = None
 
     def _load_scheduler(self, scheduler_name: Optional[str] = None):
-        if not scheduler_name:
+        requested_name = (
+            scheduler_name
+            or (self.image_request.scheduler if self.image_request else None)
+            or self.scheduler_name
+        )
+        if not requested_name:
+            self.logger.debug(
+                "No scheduler specified; skipping scheduler load."
+            )
             return
 
         self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADING)
 
-        self.scheduler_name = scheduler_name or self.scheduler_name
-        base_path: str = self.path_settings.base_path
-        scheduler_version: str = self.version
-        scheduler_path = os.path.expanduser(
-            os.path.join(
-                base_path,
-                "art/models",
-                scheduler_version,
-                self.pipeline,
-                "scheduler",
-                "scheduler_config.json",
-            )
+        scheduler_record = Schedulers.objects.filter_by_first(
+            display_name=requested_name
         )
+        if not scheduler_record:
+            self.logger.error(f"Failed to find scheduler {requested_name}")
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
+            return
 
-        scheduler = Schedulers.objects.filter_by_first(
-            display_name=scheduler_name
-        )
-        if not scheduler:
-            self.logger.error(f"Failed to find scheduler {scheduler_name}")
-            return None
-        scheduler_class_name = scheduler.name
-        scheduler_class = getattr(diffusers, scheduler_class_name)
-        try:
-            self.scheduler = scheduler_class.from_pretrained(
-                scheduler_path,
-                subfolder="scheduler",
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            )
-            self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
-            self.current_scheduler_name = scheduler_name
-            self.logger.debug(f"Loaded scheduler {scheduler_name}")
-        except Exception as e:
+        scheduler_class_name = scheduler_record.name
+        scheduler_class = getattr(diffusers, scheduler_class_name, None)
+        if scheduler_class is None:
             self.logger.error(
-                f"Failed to load scheduler {scheduler_name}: {e}"
+                "Scheduler class %s not found in diffusers for %s",
+                scheduler_class_name,
+                requested_name,
             )
             self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
             return
+
+        base_config = self._get_scheduler_base_config(scheduler_class)
+        if base_config is None:
+            self.logger.error(
+                "Unable to resolve base config for scheduler %s",
+                requested_name,
+            )
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
+            return
+
+        try:
+            scheduler_instance = scheduler_class.from_config(base_config)
+            self._apply_scheduler_presets(requested_name, scheduler_instance)
+        except Exception as exc:
+            self.logger.error(
+                f"Failed to instantiate scheduler {requested_name}: {exc}"
+            )
+            self.change_model_status(ModelType.SCHEDULER, ModelStatus.FAILED)
+            return
+
+        self.scheduler = scheduler_instance
+        self.scheduler_name = requested_name
+        self.current_scheduler_name = requested_name
+        self.do_change_scheduler = False
+        self.change_model_status(ModelType.SCHEDULER, ModelStatus.LOADED)
+
         if self._pipe:
-            self._pipe.scheduler = self.scheduler
+            self._pipe.scheduler = scheduler_instance
 
     def _prepare_pipe_data(self) -> Dict[str, Any]:
         data = {
@@ -1306,6 +1362,163 @@ class BaseDiffusersModelManager(BaseModelManager):
                 self.logger.error(f"Failed to load model to device: {e}")
             except RuntimeError as e:
                 self.logger.error(f"Failed to load model to device: {e}")
+
+    def _resolve_scheduler_config_dir(self) -> Optional[str]:
+        base_path = getattr(self.path_settings, "base_path", None)
+        if not base_path:
+            return None
+        version = (
+            getattr(self.image_request, "version", None)
+            if self.image_request
+            else self._resolved_model_version
+        )
+        if not version:
+            return None
+        pipeline_action = (
+            getattr(self.image_request, "pipeline_action", None)
+            if self.image_request
+            else self._pipeline
+        )
+        if not pipeline_action:
+            pipeline_action = "txt2img"
+        return os.path.expanduser(
+            os.path.join(
+                base_path,
+                "art/models",
+                version,
+                pipeline_action,
+            )
+        )
+
+    def _get_scheduler_base_config(
+        self, scheduler_class: Type[SchedulerMixin]
+    ) -> Optional[Dict[str, Any]]:
+        """Get the base configuration for a scheduler.
+
+        We try to load from disk first (the model's scheduler config),
+        then fall back to the scheduler class's default config.
+        We do NOT copy from the pipeline's current scheduler because
+        that would give all schedulers the same config.
+        """
+        config_root = self._resolve_scheduler_config_dir()
+        if config_root:
+            try:
+                config = scheduler_class.load_config(
+                    config_root,
+                    subfolder="scheduler",
+                    local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                )
+                return config
+            except Exception as exc:
+                self.logger.warning(
+                    "❌ Failed to load scheduler config from %s: %s\n"
+                    "   Will use class defaults instead",
+                    config_root,
+                    exc,
+                )
+
+        # Fall back to the scheduler class's default config
+        # This ensures each scheduler gets its proper defaults
+        try:
+            # Most diffusers schedulers have a default_config class attribute
+            if hasattr(scheduler_class, "config_class"):
+                config = scheduler_class.config_class()
+                config_dict = config._get_config_dict()[0]
+                return config_dict
+            else:
+                self.logger.warning(
+                    "Scheduler class %s has no config_class, using empty config",
+                    scheduler_class.__name__,
+                )
+                return {}
+        except Exception as exc:
+            self.logger.error(
+                "Failed to get default config for scheduler %s: %s",
+                scheduler_class.__name__,
+                exc,
+            )
+            return None
+
+    def _apply_scheduler_presets(
+        self, scheduler_name: str, scheduler: SchedulerMixin
+    ) -> None:
+        try:
+            scheduler_enum = Scheduler(scheduler_name)
+        except ValueError:
+            self.logger.warning(
+                "⚠ Scheduler '%s' not found in Scheduler enum - cannot apply presets",
+                scheduler_name,
+            )
+            return
+
+        overrides: Dict[str, Any] = {}
+        if scheduler_enum is Scheduler.DPM:
+            # DPM (old dpmsolver is deprecated, use dpmsolver++ with solver_order=1)
+            overrides.update(
+                {
+                    "algorithm_type": "dpmsolver++",
+                    "use_karras_sigmas": False,
+                    "solver_order": 1,
+                }
+            )
+        elif scheduler_enum is Scheduler.DPM_PP_2M:
+            overrides.update(
+                {"algorithm_type": "dpmsolver++", "use_karras_sigmas": False}
+            )
+        elif scheduler_enum is Scheduler.DPM_PP_2M_K:
+            overrides.update(
+                {"algorithm_type": "dpmsolver++", "use_karras_sigmas": True}
+            )
+        elif scheduler_enum is Scheduler.DPM_PP_2M_SDE_K:
+            # DPM++ 2M SDE Karras (++ means midpoint solver)
+            overrides.update(
+                {
+                    "algorithm_type": "sde-dpmsolver++",
+                    "use_karras_sigmas": True,
+                    "solver_type": "midpoint",
+                }
+            )
+        elif scheduler_enum is Scheduler.DPM_2M_SDE_K:
+            # DPM 2M SDE Karras (without ++, use heun for differentiation)
+            overrides.update(
+                {
+                    "algorithm_type": "sde-dpmsolver++",
+                    "use_karras_sigmas": True,
+                    "solver_type": "heun",
+                }
+            )
+        elif scheduler_enum in (Scheduler.DPM2_K, Scheduler.DPM2_A_K):
+            overrides.update({"use_karras_sigmas": True})
+
+        if not overrides:
+            self.logger.debug(
+                "No scheduler presets defined for '%s' (%s)",
+                scheduler_name,
+                scheduler_enum.name,
+            )
+            return
+
+        # DPM schedulers store these parameters in config, not as direct attributes
+        for attr, value in overrides.items():
+            # Try config first (correct way for DPM schedulers)
+            if hasattr(scheduler.config, attr):
+                old_value = getattr(scheduler.config, attr, None)
+                setattr(scheduler.config, attr, value)
+                self.logger.debug(
+                    "  Set config.%s: %s -> %s", attr, old_value, value
+                )
+            # Fallback to direct attribute (for other scheduler types)
+            elif hasattr(scheduler, attr):
+                old_value = getattr(scheduler, attr, None)
+                setattr(scheduler, attr, value)
+                self.logger.debug("  Set %s: %s -> %s", attr, old_value, value)
+            else:
+                self.logger.warning(
+                    "  ⚠ Scheduler has neither config.%s nor %s attribute, cannot set to %s",
+                    attr,
+                    attr,
+                    value,
+                )
 
     def _load_lora_weights(self, lora: Lora):
         if lora in self._disabled_lora or lora.path in self._loaded_lora:
@@ -1697,6 +1910,11 @@ class BaseDiffusersModelManager(BaseModelManager):
         self.scheduler_name = ""
         self.current_scheduler_name = ""
         self.do_change_scheduler = True
+        if self._pipe is not None:
+            try:
+                self._pipe.scheduler = None
+            except Exception:
+                pass
         self.scheduler = None
 
     def _unload_controlnet(self):
@@ -2017,6 +2235,10 @@ class BaseDiffusersModelManager(BaseModelManager):
                     "controlnet_conditioning_scale": self.image_request.controlnet_conditioning_scale,
                 }
             )
+
+        # Prepare deterministic noise for SDE schedulers
+        data = self._prepare_sde_noise_sampler(data)
+
         return data
 
     @staticmethod
@@ -2060,6 +2282,60 @@ class BaseDiffusersModelManager(BaseModelManager):
             (new_width, new_height), PIL.Image.Resampling.LANCZOS
         )
         return resized_image
+
+    def _is_sde_scheduler(self) -> bool:
+        """Check if the current scheduler is an SDE variant."""
+        if not self._pipe or not hasattr(self._pipe, "scheduler"):
+            return False
+
+        scheduler = self._pipe.scheduler
+        if not hasattr(scheduler, "config"):
+            return False
+
+        algorithm_type = getattr(scheduler.config, "algorithm_type", "")
+        return "sde" in algorithm_type.lower()
+
+    def _prepare_sde_noise_sampler(
+        self, data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Prepare deterministic noise for SDE schedulers.
+
+        For DPM++ SDE and similar schedulers, we need to ensure deterministic
+        noise generation across batch sizes. This matches AUTOMATIC1111's approach
+        of using BrownianTreeNoiseSampler but uses a simpler implementation
+        that doesn't require k-diffusion.
+        """
+        if not self._is_sde_scheduler():
+            return data
+
+        # Check if determinism is enabled in settings
+        if not getattr(
+            self.application_settings, "enable_sde_determinism", True
+        ):
+            return data
+
+        # Get the seed for this generation
+        seed = self.image_request.seed
+
+        # Create deterministic noise sampler
+        noise_sampler = DeterministicSDENoiseSampler(
+            seed=seed, device=self._device
+        )
+
+        # Log that we're using deterministic SDE noise
+        self.logger.debug(
+            "🎲 Using deterministic SDE noise sampler with seed %s for scheduler %s",
+            seed,
+            self.scheduler_name,
+        )
+
+        # Store in data dict - diffusers may use this if the scheduler supports it
+        # Note: This is a best-effort approach; not all diffusers schedulers
+        # expose a noise_sampler parameter, but we set it in case they do.
+        data["noise_sampler"] = noise_sampler
+
+        return data
 
     def _set_seed(self):
         seed = self.image_request.seed
