@@ -243,9 +243,7 @@ def main():
         base_path = AIRUNNER_BASE_PATH
     else:
         base_path = path_settings.base_path
-    cert_file, key_file = generate_local_certs_if_needed(
-        os.path.join(base_path, "certs")
-    )
+    cert_file, key_file = generate_local_certs_if_needed(base_path)
     os.environ["AIRUNNER_SSL_CERT"] = cert_file
     os.environ["AIRUNNER_SSL_KEY"] = key_file
 

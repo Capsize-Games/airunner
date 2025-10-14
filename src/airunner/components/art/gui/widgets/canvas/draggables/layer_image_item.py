@@ -45,10 +45,26 @@ class LayerImageItem(DraggablePixmap):
     ):
         super().update_position(x, y, save)
 
-        if save:
-            self.update_drawing_pad_settings(
-                x_pos=x, y_pos=y, layer_id=self.layer_id
-            )
+        if save and x is not None and y is not None:
+            # Convert display position to absolute position by adding canvas offset
+            try:
+                view = self.scene().views()[0]
+                canvas_offset = view.canvas_offset
+                abs_x = x + canvas_offset.x()
+                abs_y = y + canvas_offset.y()
+
+                self.logger.warning(
+                    f"[SAVE LAYER] Layer {self.layer_id}: saving absolute pos x={abs_x}, y={abs_y} (display_pos={x}, {y}, canvas_offset=({canvas_offset.x()}, {canvas_offset.y()}))"
+                )
+
+                self.update_drawing_pad_settings(
+                    x_pos=int(abs_x), y_pos=int(abs_y), layer_id=self.layer_id
+                )
+            except (AttributeError, IndexError):
+                # Fallback if we can't get canvas_offset - just save display position
+                self.update_drawing_pad_settings(
+                    x_pos=x, y_pos=y, layer_id=self.layer_id
+                )
 
     def mousePressEvent(self, event):
         if self.current_tool not in [
