@@ -79,5 +79,4 @@ cache/.webcache/*
 cache/.webcache/**
 cache/.webcache
 
-**/tests/*
 .mypy_cache/**
