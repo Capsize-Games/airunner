@@ -10,25 +10,18 @@ from PySide6.QtCore import (
     QObject,
     Slot,
     QSettings,
-    QTimer,
 )
 from PySide6.QtWidgets import QApplication, QWidget
 
 from airunner.components.application.data import ShortcutKeys
-from airunner.components.art.data.ai_models import AIModels
-from airunner.components.art.data.image_to_image_settings import (
-    ImageToImageSettings,
-)
 from airunner.enums import (
     QualityEffects,
-    Scheduler,
     SignalCode,
     GeneratorSection,
     ImagePreset,
     StableDiffusionVersion,
     ModelStatus,
     ModelType,
-    LLMActionType,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import random_seed
@@ -42,12 +35,6 @@ from airunner.components.art.gui.widgets.stablediffusion.prompt_container_widget
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from airunner.components.llm.managers.llm_response import LLMResponse
-from airunner.components.art.managers.stablediffusion.image_request import (
-    ImageRequest,
-)
-from airunner.utils.image import convert_binary_to_image
-from airunner.utils.widgets import load_splitter_settings
 
 
 class SaveGeneratorSettingsWorker(

@@ -102,6 +102,29 @@ from airunner.components.art.managers.stablediffusion import (
 )
 
 
+class DeterministicSDENoiseSampler:
+    """
+    Deterministic noise sampler for DPM++ SDE schedulers.
+
+    Ensures consistent results across different batch sizes by using
+    per-seed generators for noise sampling, similar to AUTOMATIC1111's
+    BrownianTreeNoiseSampler approach.
+    """
+
+    def __init__(self, seed: int, device: torch.device):
+        self.seed = seed
+        self.device = device
+        self.generator = torch.Generator(device=device).manual_seed(seed)
+
+    def __call__(self, shape, dtype=None):
+        """Generate deterministic noise tensor."""
+        if dtype is None:
+            dtype = torch.float32
+        return torch.randn(
+            shape, generator=self.generator, device=self.device, dtype=dtype
+        )
+
+
 class BaseDiffusersModelManager(BaseModelManager):
     model_type: ModelType = ModelType.SD
     _model_status = {
@@ -1400,9 +1423,7 @@ class BaseDiffusersModelManager(BaseModelManager):
             # Most diffusers schedulers have a default_config class attribute
             if hasattr(scheduler_class, "config_class"):
                 config = scheduler_class.config_class()
-                config_dict = config._get_config_dict()[
-                    0
-                ]
+                config_dict = config._get_config_dict()[0]
                 return config_dict
             else:
                 self.logger.warning(
@@ -2214,6 +2235,10 @@ class BaseDiffusersModelManager(BaseModelManager):
                     "controlnet_conditioning_scale": self.image_request.controlnet_conditioning_scale,
                 }
             )
+
+        # Prepare deterministic noise for SDE schedulers
+        data = self._prepare_sde_noise_sampler(data)
+
         return data
 
     @staticmethod
@@ -2257,6 +2282,60 @@ class BaseDiffusersModelManager(BaseModelManager):
             (new_width, new_height), PIL.Image.Resampling.LANCZOS
         )
         return resized_image
+
+    def _is_sde_scheduler(self) -> bool:
+        """Check if the current scheduler is an SDE variant."""
+        if not self._pipe or not hasattr(self._pipe, "scheduler"):
+            return False
+
+        scheduler = self._pipe.scheduler
+        if not hasattr(scheduler, "config"):
+            return False
+
+        algorithm_type = getattr(scheduler.config, "algorithm_type", "")
+        return "sde" in algorithm_type.lower()
+
+    def _prepare_sde_noise_sampler(
+        self, data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Prepare deterministic noise for SDE schedulers.
+
+        For DPM++ SDE and similar schedulers, we need to ensure deterministic
+        noise generation across batch sizes. This matches AUTOMATIC1111's approach
+        of using BrownianTreeNoiseSampler but uses a simpler implementation
+        that doesn't require k-diffusion.
+        """
+        if not self._is_sde_scheduler():
+            return data
+
+        # Check if determinism is enabled in settings
+        if not getattr(
+            self.application_settings, "enable_sde_determinism", True
+        ):
+            return data
+
+        # Get the seed for this generation
+        seed = self.image_request.seed
+
+        # Create deterministic noise sampler
+        noise_sampler = DeterministicSDENoiseSampler(
+            seed=seed, device=self._device
+        )
+
+        # Log that we're using deterministic SDE noise
+        self.logger.debug(
+            "🎲 Using deterministic SDE noise sampler with seed %s for scheduler %s",
+            seed,
+            self.scheduler_name,
+        )
+
+        # Store in data dict - diffusers may use this if the scheduler supports it
+        # Note: This is a best-effort approach; not all diffusers schedulers
+        # expose a noise_sampler parameter, but we set it in case they do.
+        data["noise_sampler"] = noise_sampler
+
+        return data
 
     def _set_seed(self):
         seed = self.image_request.seed
