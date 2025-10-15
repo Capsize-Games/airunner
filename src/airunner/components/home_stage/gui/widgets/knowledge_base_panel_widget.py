@@ -15,6 +15,8 @@ class KnowledgeBasePanelWidget(BaseWidget):
         self.signal_handlers = {
             SignalCode.RAG_INDEXING_PROGRESS: self.on_indexing_progress,
             SignalCode.RAG_INDEXING_COMPLETE: self.on_indexing_complete,
+            SignalCode.DOCUMENT_COLLECTION_CHANGED: self.on_document_collection_changed,
+            SignalCode.DOCUMENT_INDEXED: self.on_document_indexed,
         }
         super().__init__(*args, **kwargs)
         self.ui.index_button.clicked.connect(self.on_index_button_clicked)
@@ -70,6 +72,16 @@ class KnowledgeBasePanelWidget(BaseWidget):
             percentage = int((current / total) * 100)
             self.ui.progress_bar.setValue(percentage)
             self.set_progress_text(f"Indexing: {current}/{total} documents")
+
+    @Slot(dict)
+    def on_document_indexed(self, data: dict):
+        """Handle when a single document is indexed."""
+        self.update_document_stats()
+
+    @Slot(dict)
+    def on_document_collection_changed(self, data: dict):
+        """Handle when documents are added/removed from the collection."""
+        self.update_document_stats()
 
     @Slot(dict)
     def on_indexing_complete(self, data: dict):

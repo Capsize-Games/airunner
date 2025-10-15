@@ -289,37 +289,79 @@ class LLMGenerateWorker(Worker):
         """
         document_path = data.get("path", None)
         if not isinstance(document_path, str) or not document_path:
+            self.logger.warning(
+                "INDEX_DOCUMENT signal received with invalid path"
+            )
             return
 
+        import os
+
+        filename = os.path.basename(document_path)
+        self.logger.info(f"Starting indexing process for: {filename}")
+
+        # Get the document from database first
+        db_docs = DBDocument.objects.filter_by(path=document_path)
+        if not db_docs or len(db_docs) == 0:
+            self.logger.error(f"Document not found in database: {filename}")
+            self.emit_signal(
+                SignalCode.DOCUMENT_INDEX_FAILED,
+                {
+                    "path": document_path,
+                    "error": "Document not found in database",
+                },
+            )
+            return
+
+        db_doc = db_docs[0]
+
         if not self.model_manager or not self.model_manager.agent:
+            self.logger.info("Loading LLM model for indexing...")
             self.load()
         if not self.model_manager or not self.model_manager.agent:
+            self.logger.error(
+                f"Failed to load LLM model, cannot index: {filename}"
+            )
+            self.emit_signal(
+                SignalCode.DOCUMENT_INDEX_FAILED,
+                {"path": document_path, "error": "Failed to load LLM model"},
+            )
             return
+
         try:
             agent = self.model_manager.agent
-            agent.document_reader = None
-            agent.target_files = [document_path]
-            agent._load_index_from_documents()
-            # Generate a UUID for this document's index
-            index_uuid = str(uuid.uuid4())
-            saved_uuid = agent._save_index_to_disc(
-                document_path=document_path, index_uuid=index_uuid
-            )
-            db_docs = DBDocument.objects.filter_by(path=document_path)
-            if db_docs and len(db_docs) > 0:
-                db_doc = db_docs[0]
-                db_doc.indexed = True
-                db_doc.index_uuid = saved_uuid
-                DBDocument.objects.update(
-                    pk=db_doc.id, indexed=True, index_uuid=saved_uuid
+
+            self.logger.info(f"Indexing document: {filename}")
+            # Use the proper indexing method
+            success = agent._index_single_document(db_doc)
+
+            if success:
+                # Mark as active in database
+                DBDocument.objects.update(pk=db_doc.id, active=True)
+                self.logger.info(f"Successfully indexed document: {filename}")
+
+                # Emit success signal
+                self.emit_signal(
+                    SignalCode.DOCUMENT_INDEXED, {"path": document_path}
                 )
-            agent.document_reader = None
-            agent.index = None
-            self.emit_signal(
-                SignalCode.DOCUMENT_INDEXED, {"path": document_path}
-            )
+            else:
+                self.logger.error(f"Failed to index document: {filename}")
+                self.emit_signal(
+                    SignalCode.DOCUMENT_INDEX_FAILED,
+                    {
+                        "path": document_path,
+                        "error": "No content could be extracted from document. The file may be corrupted, empty, or in an unsupported format.",
+                    },
+                )
+
         except Exception as e:
-            pass
+            self.logger.error(
+                f"Failed to index document {filename}: {str(e)}", exc_info=True
+            )
+            # Emit failure signal so UI can handle it
+            self.emit_signal(
+                SignalCode.DOCUMENT_INDEX_FAILED,
+                {"path": document_path, "error": str(e)},
+            )
 
     def start_worker_thread(self):
         if self.application_settings.llm_enabled or AIRUNNER_LLM_ON:
