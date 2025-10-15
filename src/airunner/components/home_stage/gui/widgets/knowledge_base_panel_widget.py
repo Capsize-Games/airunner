@@ -54,15 +54,12 @@ class KnowledgeBasePanelWidget(BaseWidget):
         """Handle index button click."""
         self.ui.index_button.setVisible(False)
         self.ui.cancel_button.setVisible(True)
-        # Switch the progress bar to indeterminate (busy) mode
+        # Set progress bar to determinate mode starting at 0
         try:
-            self.ui.progress_bar.setRange(0, 0)
+            self.ui.progress_bar.setRange(0, 100)
+            self.ui.progress_bar.setValue(0)
         except Exception:
-            # Fallback: set to 0 if setRange not available
-            try:
-                self.ui.progress_bar.setValue(0)
-            except Exception:
-                pass
+            pass
         self.set_status_message_text("Indexing in progress...")
         self.emit_signal(SignalCode.RAG_INDEX_ALL_DOCUMENTS)
 
@@ -78,14 +75,12 @@ class KnowledgeBasePanelWidget(BaseWidget):
         )
         self.ui.index_button.setVisible(False)
         self.ui.cancel_button.setVisible(True)
-        # Show indeterminate/busy progress while indexing selected docs
+        # Set progress bar to determinate mode starting at 0
         try:
-            self.ui.progress_bar.setRange(0, 0)
+            self.ui.progress_bar.setRange(0, 100)
+            self.ui.progress_bar.setValue(0)
         except Exception:
-            try:
-                self.ui.progress_bar.setValue(0)
-            except Exception:
-                pass
+            pass
         self.set_status_message_text(
             f"Indexing {len(file_paths)} documents..."
         )
@@ -115,8 +110,11 @@ class KnowledgeBasePanelWidget(BaseWidget):
         progress = data.get("progress", 0)
         total = data.get("total", 0)
         current = data.get("current", 0)
-        # Keep the progress bar in indeterminate mode; update the single
-        # status label with a concise message showing current/total.
+        # Update progress bar value and status label
+        try:
+            self.ui.progress_bar.setValue(int(progress))
+        except Exception:
+            pass
         if total > 0:
             self.set_status_message_text(
                 f"Indexing: {current}/{total} documents"
@@ -141,7 +139,9 @@ class KnowledgeBasePanelWidget(BaseWidget):
         """Handle indexing completion."""
         self.ui.cancel_button.setVisible(False)
         self.ui.index_button.setVisible(True)
-        # Restore determinate progress bar and mark complete
+        self.set_status_message_text("Indexing complete")
+        self.update_document_stats()
+        # Set progress bar to 100% immediately
         try:
             self.ui.progress_bar.setRange(0, 100)
             self.ui.progress_bar.setValue(100)
@@ -150,8 +150,6 @@ class KnowledgeBasePanelWidget(BaseWidget):
                 self.ui.progress_bar.setValue(100)
             except Exception:
                 pass
-        self.set_status_message_text("Indexing complete")
-        self.update_document_stats()
 
     def set_status_message_text(self, message: str):
         """Set the status message text."""
