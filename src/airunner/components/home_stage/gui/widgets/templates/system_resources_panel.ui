@@ -18,45 +18,45 @@
     <number>10</number>
    </property>
    <property name="leftMargin">
-    <number>15</number>
+    <number>0</number>
    </property>
    <property name="topMargin">
-    <number>15</number>
+    <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>15</number>
+    <number>0</number>
    </property>
    <property name="bottomMargin">
-    <number>15</number>
+    <number>0</number>
    </property>
    <item>
     <widget class="QLabel" name="title_label">
+     <property name="styleSheet">
+      <string notr="true">font-size: 18px; font-weight: bold;</string>
+     </property>
      <property name="text">
       <string>System Resources</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">font-size: 18px; font-weight: bold;</string>
+      <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QScrollArea" name="devices_scroll_area">
+     <property name="frameShape">
+      <enum>QFrame::Shape::NoFrame</enum>
+     </property>
      <property name="widgetResizable">
       <bool>true</bool>
-     </property>
-     <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
      </property>
      <widget class="QWidget" name="scrollAreaWidgetContents">
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>368</width>
-        <height>346</height>
+        <width>400</width>
+        <height>368</height>
        </rect>
       </property>
      </widget>

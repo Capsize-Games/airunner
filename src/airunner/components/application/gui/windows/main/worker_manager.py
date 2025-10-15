@@ -18,6 +18,9 @@ from airunner.components.tts.workers.tts_generator_worker import (
 from airunner.components.tts.workers.tts_vocalizer_worker import (
     TTSVocalizerWorker,
 )
+from airunner.components.documents.workers.document_worker import (
+    DocumentWorker,
+)
 
 from airunner.utils.application.create_worker import create_worker
 
@@ -32,6 +35,7 @@ class WorkerManager:
         self._tts_generator_worker = None
         self._tts_vocalizer_worker = None
         self._llm_generate_worker = None
+        self._document_worker = None
         if self.logger:
             self.logger.debug("WorkerManager initialized.")
 
@@ -40,12 +44,11 @@ class WorkerManager:
         self._mask_generator_worker = create_worker(MaskGeneratorWorker)
         self._sd_worker = create_worker(SDWorker)
         self._stt_audio_capture_worker = create_worker(AudioCaptureWorker)
-        self._stt_audio_processor_worker = create_worker(
-            AudioProcessorWorker
-        )
+        self._stt_audio_processor_worker = create_worker(AudioProcessorWorker)
         self._tts_generator_worker = create_worker(TTSGeneratorWorker)
         self._tts_vocalizer_worker = create_worker(TTSVocalizerWorker)
         self._llm_generate_worker = create_worker(LLMGenerateWorker)
+        self._document_worker = create_worker(DocumentWorker)
 
     @property
     def mask_generator_worker(self):
@@ -74,5 +77,9 @@ class WorkerManager:
     @property
     def llm_generate_worker(self):
         return self._llm_generate_worker
+
+    @property
+    def document_worker(self):
+        return self._document_worker
 
     # Add properties or methods to access workers as needed

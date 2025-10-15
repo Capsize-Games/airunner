@@ -605,6 +605,12 @@ class ConversationWidget(BaseWidget):
             token_response = self._sequence_buffer.pop(self._expected_sequence)
 
             if token_response.message:
+                # Append incoming message chunk. Chunks from different
+                # streaming implementations may be either deltas (only the
+                # new text) or cumulative (the full message so far). To
+                # avoid duplicating repeated prefixes when chunks are
+                # cumulative, we keep the chunk list but detect the
+                # cumulative case below when forming the combined content.
                 self._current_stream_tokens.append(token_response.message)
             if getattr(token_response, "is_end_of_message", False):
                 last_token_was_end = True

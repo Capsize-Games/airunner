@@ -32,7 +32,54 @@
    <property name="verticalSpacing">
     <number>10</number>
    </property>
-   <item row="4" column="0">
+   <item row="2" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <property name="leftMargin">
+      <number>10</number>
+     </property>
+     <property name="topMargin">
+      <number>15</number>
+     </property>
+     <property name="rightMargin">
+      <number>10</number>
+     </property>
+     <property name="bottomMargin">
+      <number>10</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>LLM knowledge base</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="0">
+    <widget class="QWidget" name="knowledgeBasePanelContainer" native="true">
+     <layout class="QVBoxLayout" name="knowledgeBasePanelLayout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+     </layout>
+    </widget>
+   </item>
+   <item row="5" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
       <number>0</number>
@@ -81,11 +128,11 @@
            </property>
            <item>
             <widget class="QLabel" name="labelAvailable">
-             <property name="text">
-              <string>Available Documents</string>
-             </property>
              <property name="styleSheet">
               <string>font-weight: bold;</string>
+             </property>
+             <property name="text">
+              <string>Available Documents</string>
              </property>
             </widget>
            </item>
@@ -123,11 +170,11 @@
            </property>
            <item>
             <widget class="QLabel" name="labelActive">
-             <property name="text">
-              <string>Active Documents (RAG)</string>
-             </property>
              <property name="styleSheet">
               <string>font-weight: bold;</string>
+             </property>
+             <property name="text">
+              <string>Active Documents (RAG)</string>
              </property>
             </widget>
            </item>
@@ -141,6 +188,48 @@
              </property>
              <property name="dragDropMode">
               <enum>QAbstractItemView::DragDropMode::DropOnly</enum>
+             </property>
+             <property name="selectionMode">
+              <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="unavailableDocsWidget">
+          <layout class="QVBoxLayout" name="verticalLayoutUnavailable">
+           <property name="spacing">
+            <number>5</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="labelUnavailable">
+             <property name="styleSheet">
+              <string>font-weight: bold;</string>
+             </property>
+             <property name="text">
+              <string>Unavailable Documents (Failed to Index)</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTreeView" name="unavailableDocumentsTreeView">
+             <property name="dragEnabled">
+              <bool>false</bool>
+             </property>
+             <property name="dragDropMode">
+              <enum>QAbstractItemView::DragDropMode::NoDragDrop</enum>
              </property>
              <property name="selectionMode">
               <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
@@ -163,28 +252,8 @@
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
          </property>
-         <widget class="QWidget" name="localZimWidget">
-          <layout class="QVBoxLayout" name="verticalLayoutLocal">
-           <item>
-            <widget class="QLabel" name="labelLocal">
-             <property name="text">
-              <string>Local ZIM Files</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QListWidget" name="listLocalZims"/>
-           </item>
-          </layout>
-         </widget>
          <widget class="QWidget" name="remoteZimWidget">
           <layout class="QVBoxLayout" name="verticalLayoutRemote">
-           <property name="topMargin">
-            <number>10</number>
-           </property>
            <item>
             <widget class="QLabel" name="labelRemote">
              <property name="text">
@@ -239,37 +308,31 @@
            </item>
           </layout>
          </widget>
+         <widget class="QWidget" name="localZimWidget">
+          <layout class="QVBoxLayout" name="verticalLayoutLocal">
+           <property name="topMargin">
+            <number>10</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="labelLocal">
+             <property name="text">
+              <string>Local ZIM Files</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QListWidget" name="listLocalZims"/>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
       </layout>
      </widget>
     </widget>
-   </item>
-   <item row="2" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <property name="spacing">
-      <number>10</number>
-     </property>
-     <property name="leftMargin">
-      <number>10</number>
-     </property>
-     <property name="topMargin">
-      <number>15</number>
-     </property>
-     <property name="rightMargin">
-      <number>10</number>
-     </property>
-     <property name="bottomMargin">
-      <number>10</number>
-     </property>
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>LLM knowledge base</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
    </item>
    <item row="3" column="0">
     <widget class="Line" name="line">
@@ -278,31 +341,19 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout_2">
-     <property name="leftMargin">
-      <number>10</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>10</number>
-     </property>
-     <property name="bottomMargin">
-      <number>10</number>
-     </property>
-     <item>
-      <widget class="QProgressBar" name="progressBar">
-       <property name="value">
-        <number>0</number>
-       </property>
-      </widget>
-     </item>
-    </layout>
+   <item row="4" column="0">
+    <widget class="KnowledgeBasePanelWidget" name="widget" native="true"/>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>KnowledgeBasePanelWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/home_stage/gui/widgets/knowledge_base_panel_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
