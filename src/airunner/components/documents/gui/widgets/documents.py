@@ -291,17 +291,29 @@ class DocumentsWidget(BaseWidget):
                     item = self.documents_model.itemFromIndex(idx)
                     if not item:
                         continue
-                    # If it's a folder node, expand children
+                    # If item stores a directory path, treat as folder drop
+                    data = item.data(Qt.UserRole)
+                    if isinstance(data, str) and os.path.isdir(data):
+                        # Add entire folder recursively
+                        self.add_folder_documents_to_active(data)
+                        continue
+
+                    # If it's a folder node without explicit path, expand children
                     if item.hasChildren():
+                        # If the children have file paths, add them
                         for r in range(item.rowCount()):
                             child = item.child(r, 0)
                             if child:
-                                data = child.data(Qt.UserRole)
-                                if isinstance(data, str):
-                                    if os.path.isfile(data):
-                                        self.add_document_to_active(data)
+                                cdata = child.data(Qt.UserRole)
+                                if isinstance(cdata, str):
+                                    if os.path.isfile(cdata):
+                                        self.add_document_to_active(cdata)
+                                    elif os.path.isdir(cdata):
+                                        self.add_folder_documents_to_active(
+                                            cdata
+                                        )
                     else:
-                        data = item.data(Qt.UserRole)
+                        # Single file item
                         if isinstance(data, str):
                             if os.path.isfile(data):
                                 self.add_document_to_active(data)
