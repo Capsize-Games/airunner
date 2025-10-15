@@ -17,9 +17,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QFrame,
     QGridLayout, QHBoxLayout, QHeaderView, QLabel,
-    QLineEdit, QListWidget, QListWidgetItem, QProgressBar,
-    QPushButton, QSizePolicy, QSplitter, QTabWidget,
-    QTreeView, QVBoxLayout, QWidget)
+    QLineEdit, QListWidget, QListWidgetItem, QPushButton,
+    QSizePolicy, QSplitter, QTabWidget, QTreeView,
+    QVBoxLayout, QWidget)
+
+from airunner.components.home_stage.gui.widgets.knowledge_base_panel_widget import KnowledgeBasePanelWidget
 
 class Ui_documents(object):
     def setupUi(self, documents):
@@ -31,6 +33,27 @@ class Ui_documents(object):
         self.gridLayout.setHorizontalSpacing(0)
         self.gridLayout.setVerticalSpacing(10)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout = QVBoxLayout()
+        self.verticalLayout.setSpacing(10)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setContentsMargins(10, 15, 10, 10)
+        self.label = QLabel(documents)
+        self.label.setObjectName(u"label")
+
+        self.verticalLayout.addWidget(self.label)
+
+
+        self.gridLayout.addLayout(self.verticalLayout, 2, 0, 1, 1)
+
+        self.knowledgeBasePanelContainer = QWidget(documents)
+        self.knowledgeBasePanelContainer.setObjectName(u"knowledgeBasePanelContainer")
+        self.knowledgeBasePanelLayout = QVBoxLayout(self.knowledgeBasePanelContainer)
+        self.knowledgeBasePanelLayout.setSpacing(0)
+        self.knowledgeBasePanelLayout.setObjectName(u"knowledgeBasePanelLayout")
+        self.knowledgeBasePanelLayout.setContentsMargins(10, 10, 10, 0)
+
+        self.gridLayout.addWidget(self.knowledgeBasePanelContainer, 3, 0, 1, 1)
+
         self.tabWidget = QTabWidget(documents)
         self.tabWidget.setObjectName(u"tabWidget")
         self.tabDocuments = QWidget()
@@ -83,6 +106,26 @@ class Ui_documents(object):
         self.verticalLayoutActive.addWidget(self.activeDocumentsTreeView)
 
         self.documentsSplitter.addWidget(self.activeDocsWidget)
+        self.unavailableDocsWidget = QWidget(self.documentsSplitter)
+        self.unavailableDocsWidget.setObjectName(u"unavailableDocsWidget")
+        self.verticalLayoutUnavailable = QVBoxLayout(self.unavailableDocsWidget)
+        self.verticalLayoutUnavailable.setSpacing(5)
+        self.verticalLayoutUnavailable.setObjectName(u"verticalLayoutUnavailable")
+        self.verticalLayoutUnavailable.setContentsMargins(0, 0, 0, 0)
+        self.labelUnavailable = QLabel(self.unavailableDocsWidget)
+        self.labelUnavailable.setObjectName(u"labelUnavailable")
+
+        self.verticalLayoutUnavailable.addWidget(self.labelUnavailable)
+
+        self.unavailableDocumentsTreeView = QTreeView(self.unavailableDocsWidget)
+        self.unavailableDocumentsTreeView.setObjectName(u"unavailableDocumentsTreeView")
+        self.unavailableDocumentsTreeView.setDragEnabled(False)
+        self.unavailableDocumentsTreeView.setDragDropMode(QAbstractItemView.DragDropMode.NoDragDrop)
+        self.unavailableDocumentsTreeView.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+
+        self.verticalLayoutUnavailable.addWidget(self.unavailableDocumentsTreeView)
+
+        self.documentsSplitter.addWidget(self.unavailableDocsWidget)
 
         self.verticalLayoutDocuments.addWidget(self.documentsSplitter)
 
@@ -94,28 +137,11 @@ class Ui_documents(object):
         self.splitter = QSplitter(self.tabZim)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Orientation.Vertical)
-        self.localZimWidget = QWidget(self.splitter)
-        self.localZimWidget.setObjectName(u"localZimWidget")
-        self.verticalLayoutLocal = QVBoxLayout(self.localZimWidget)
-        self.verticalLayoutLocal.setObjectName(u"verticalLayoutLocal")
-        self.verticalLayoutLocal.setContentsMargins(0, 0, 0, 0)
-        self.labelLocal = QLabel(self.localZimWidget)
-        self.labelLocal.setObjectName(u"labelLocal")
-        self.labelLocal.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
-
-        self.verticalLayoutLocal.addWidget(self.labelLocal)
-
-        self.listLocalZims = QListWidget(self.localZimWidget)
-        self.listLocalZims.setObjectName(u"listLocalZims")
-
-        self.verticalLayoutLocal.addWidget(self.listLocalZims)
-
-        self.splitter.addWidget(self.localZimWidget)
         self.remoteZimWidget = QWidget(self.splitter)
         self.remoteZimWidget.setObjectName(u"remoteZimWidget")
         self.verticalLayoutRemote = QVBoxLayout(self.remoteZimWidget)
         self.verticalLayoutRemote.setObjectName(u"verticalLayoutRemote")
-        self.verticalLayoutRemote.setContentsMargins(0, 10, 0, 0)
+        self.verticalLayoutRemote.setContentsMargins(0, 0, 0, 0)
         self.labelRemote = QLabel(self.remoteZimWidget)
         self.labelRemote.setObjectName(u"labelRemote")
         self.labelRemote.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
@@ -155,24 +181,29 @@ class Ui_documents(object):
         self.verticalLayoutRemote.addWidget(self.listRemoteZims)
 
         self.splitter.addWidget(self.remoteZimWidget)
+        self.localZimWidget = QWidget(self.splitter)
+        self.localZimWidget.setObjectName(u"localZimWidget")
+        self.verticalLayoutLocal = QVBoxLayout(self.localZimWidget)
+        self.verticalLayoutLocal.setObjectName(u"verticalLayoutLocal")
+        self.verticalLayoutLocal.setContentsMargins(0, 10, 0, 0)
+        self.labelLocal = QLabel(self.localZimWidget)
+        self.labelLocal.setObjectName(u"labelLocal")
+        self.labelLocal.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+
+        self.verticalLayoutLocal.addWidget(self.labelLocal)
+
+        self.listLocalZims = QListWidget(self.localZimWidget)
+        self.listLocalZims.setObjectName(u"listLocalZims")
+
+        self.verticalLayoutLocal.addWidget(self.listLocalZims)
+
+        self.splitter.addWidget(self.localZimWidget)
 
         self.verticalLayoutZim.addWidget(self.splitter)
 
         self.tabWidget.addTab(self.tabZim, "")
 
-        self.gridLayout.addWidget(self.tabWidget, 4, 0, 1, 1)
-
-        self.verticalLayout = QVBoxLayout()
-        self.verticalLayout.setSpacing(10)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(10, 15, 10, 10)
-        self.label = QLabel(documents)
-        self.label.setObjectName(u"label")
-
-        self.verticalLayout.addWidget(self.label)
-
-
-        self.gridLayout.addLayout(self.verticalLayout, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.tabWidget, 5, 0, 1, 1)
 
         self.line = QFrame(documents)
         self.line.setObjectName(u"line")
@@ -181,17 +212,10 @@ class Ui_documents(object):
 
         self.gridLayout.addWidget(self.line, 3, 0, 1, 1)
 
-        self.verticalLayout_2 = QVBoxLayout()
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.verticalLayout_2.setContentsMargins(10, 0, 10, 10)
-        self.progressBar = QProgressBar(documents)
-        self.progressBar.setObjectName(u"progressBar")
-        self.progressBar.setValue(0)
+        self.widget = KnowledgeBasePanelWidget(documents)
+        self.widget.setObjectName(u"widget")
 
-        self.verticalLayout_2.addWidget(self.progressBar)
-
-
-        self.gridLayout.addLayout(self.verticalLayout_2, 5, 0, 1, 1)
+        self.gridLayout.addWidget(self.widget, 4, 0, 1, 1)
 
 
         self.retranslateUi(documents)
@@ -204,12 +228,14 @@ class Ui_documents(object):
 
     def retranslateUi(self, documents):
         documents.setWindowTitle(QCoreApplication.translate("documents", u"Documents", None))
-        self.labelAvailable.setText(QCoreApplication.translate("documents", u"Available Documents", None))
+        self.label.setText(QCoreApplication.translate("documents", u"LLM knowledge base", None))
         self.labelAvailable.setStyleSheet(QCoreApplication.translate("documents", u"font-weight: bold;", None))
-        self.labelActive.setText(QCoreApplication.translate("documents", u"Active Documents (RAG)", None))
+        self.labelAvailable.setText(QCoreApplication.translate("documents", u"Available Documents", None))
         self.labelActive.setStyleSheet(QCoreApplication.translate("documents", u"font-weight: bold;", None))
+        self.labelActive.setText(QCoreApplication.translate("documents", u"Active Documents (RAG)", None))
+        self.labelUnavailable.setStyleSheet(QCoreApplication.translate("documents", u"font-weight: bold;", None))
+        self.labelUnavailable.setText(QCoreApplication.translate("documents", u"Unavailable Documents (Failed to Index)", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabDocuments), QCoreApplication.translate("documents", u"Documents", None))
-        self.labelLocal.setText(QCoreApplication.translate("documents", u"Local ZIM Files", None))
         self.labelRemote.setText(QCoreApplication.translate("documents", u"Kiwix Library Search Results", None))
         self.kiwixSearchBar.setPlaceholderText(QCoreApplication.translate("documents", u"Search Kiwix Library (title, keyword, language code)...", None))
         self.kiwixLangLabel.setText(QCoreApplication.translate("documents", u"Lang:", None))
@@ -217,7 +243,7 @@ class Ui_documents(object):
         self.kiwixLangCombo.setItemText(1, QCoreApplication.translate("documents", u"all", None))
 
         self.kiwixSearchButton.setText(QCoreApplication.translate("documents", u"Search", None))
+        self.labelLocal.setText(QCoreApplication.translate("documents", u"Local ZIM Files", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabZim), QCoreApplication.translate("documents", u"Kiwix ZIM", None))
-        self.label.setText(QCoreApplication.translate("documents", u"LLM knowledge base", None))
     # retranslateUi
 

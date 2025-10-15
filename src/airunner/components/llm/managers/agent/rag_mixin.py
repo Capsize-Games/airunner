@@ -3,6 +3,7 @@ from typing import List, Optional, Any, Dict
 import hashlib
 from datetime import datetime
 import json
+import torch
 
 from llama_index.core import (
     Document,
@@ -193,8 +194,6 @@ class RAGMixin:
     @property
     def embedding(self) -> HuggingFaceEmbedding:
         if not self.__embedding:
-            import torch
-
             self.logger.debug("Loading embeddings...")
             path = os.path.expanduser(
                 os.path.join(
@@ -211,12 +210,30 @@ class RAGMixin:
             device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
             try:
+                # When CUDA is available, prefer mixed precision and automatic
+                # device mapping to improve speed and reduce memory usage.
+                model_kwargs = {}
+                try:
+                    if torch.cuda.is_available():
+                        # Prefer fp16 where supported to speed up inference
+                        model_kwargs["torch_dtype"] = torch.float16
+                        # Let HF try to place layers automatically
+                        model_kwargs["device_map"] = "auto"
+                except Exception:
+                    # If torch inspection fails, proceed with defaults
+                    model_kwargs = {}
+
+                # Pass model_kwargs if available; HuggingFaceEmbedding will
+                # forward them to the underlying transformers model loader.
                 self.__embedding = HuggingFaceEmbedding(
                     model_name=path,
                     local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                     device=device,
+                    model_kwargs=model_kwargs if model_kwargs else None,
                 )
-                self.logger.info(f"HuggingFaceEmbedding loaded on {device}")
+                self.logger.info(
+                    f"HuggingFaceEmbedding loaded on {device} with kwargs={list(model_kwargs.keys())}"
+                )
             except Exception as e:
                 code = EngineResponseCode.ERROR
                 error_message = "Error loading embeddings " + str(e)

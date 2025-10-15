@@ -1,6 +1,5 @@
 import logging
 import inspect
-import traceback
 
 
 class Logger:
@@ -14,9 +13,10 @@ class Logger:
             logger.handlers.clear()
 
         handler = logging.StreamHandler()
+        # Use the standard LogRecord attributes (module, funcName, lineno)
         handler.setFormatter(
             logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(caller_module)s - %(caller_function)s - %(caller_lineno)d - %(message)s"
+                "%(asctime)s - %(name)s - %(levelname)s - %(module)s - %(funcName)s - %(lineno)d - %(message)s"
             )
         )
 
@@ -24,51 +24,35 @@ class Logger:
 
         # Disable propagation to the root logger
         logger.propagate = False
-        self.logger = logger
+        self._logger = logger
         self.name = name
 
     def _get_caller_info(self):
         """Get the caller module name, function name and line number."""
-        frame = (
-            inspect.currentframe().f_back.f_back
-        )  # Skip this function and the logging method
-        module_name = self.name
-        func_name = ""
-        lineno = 0
-
-        candidate = frame.f_globals.get("__name__", "")
-        module_name = candidate
-        func_name = frame.f_code.co_name
-        lineno = frame.f_lineno
-
-        return {
-            "caller_module": module_name,
-            "caller_function": func_name,
-            "caller_lineno": lineno,
-        }
+        # This helper is no longer required — rely on LogRecord's built-in
+        # attributes (module, funcName, lineno) provided by the logging
+        # framework. Keep the method for backward compatibility if other
+        # modules call it, but return an empty dict.
+        return {}
 
     def debug(self, message: str, *args, **kwargs):
-        extra = self._get_caller_info()
-        self.logger.debug(message, extra=extra, *args, **kwargs)
+        self._logger.debug(message, *args, **kwargs)
 
     def error(self, message: str, *args, **kwargs):
-        extra = self._get_caller_info()
-        self.logger.error(message, extra=extra, *args, **kwargs)
+        self._logger.error(message, *args, **kwargs)
 
     def exception(self, message: str, *args, **kwargs):
-        self.error(message, *args, **kwargs)
+        # Use the logger's exception method so exc_info=True is set
+        self._logger.exception(message, *args, **kwargs)
 
     def info(self, message: str, *args, **kwargs):
-        extra = self._get_caller_info()
-        self.logger.info(message, extra=extra, *args, **kwargs)
+        self._logger.info(message, *args, **kwargs)
 
     def warning(self, message: str, *args, **kwargs):
-        extra = self._get_caller_info()
-        self.logger.warning(message, extra=extra, *args, **kwargs)
+        self._logger.warning(message, *args, **kwargs)
 
     def critical(self, message: str, *args, **kwargs):
-        extra = self._get_caller_info()
-        self.logger.critical(message, extra=extra, *args, **kwargs)
+        self._logger.critical(message, *args, **kwargs)
 
 
 def get_logger(name: str, level: int = logging.DEBUG) -> Logger:
