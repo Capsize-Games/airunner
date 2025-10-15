@@ -285,41 +285,23 @@ class DocumentsWidget(BaseWidget):
         # items and add their stored paths (Qt.UserRole)
         try:
             src = event.source()
-            # The source may be the tree view or its viewport; normalize to tree
-            is_tree_src = (
-                src is self.ui.documentsTreeView
-                or src is self.ui.documentsTreeView.viewport()
-                or getattr(src, "parent", None) is self.ui.documentsTreeView
-            )
-            if is_tree_src:
-                sel = self.ui.documentsTreeView.selectedIndexes()
+            if src is self.ui.documentsTreeView:
+                sel = src.selectedIndexes()
                 for idx in sel:
                     item = self.documents_model.itemFromIndex(idx)
                     if not item:
                         continue
-                    # If item stores a directory path, treat as folder drop
-                    data = item.data(Qt.UserRole)
-                    if isinstance(data, str) and os.path.isdir(data):
-                        # Add entire folder recursively
-                        self.add_folder_documents_to_active(data)
-                        continue
-
-                    # If it's a folder node without explicit path, expand children
+                    # If it's a folder node, expand children
                     if item.hasChildren():
-                        # If the children have file paths, add them
                         for r in range(item.rowCount()):
                             child = item.child(r, 0)
                             if child:
-                                cdata = child.data(Qt.UserRole)
-                                if isinstance(cdata, str):
-                                    if os.path.isfile(cdata):
-                                        self.add_document_to_active(cdata)
-                                    elif os.path.isdir(cdata):
-                                        self.add_folder_documents_to_active(
-                                            cdata
-                                        )
+                                data = child.data(Qt.UserRole)
+                                if isinstance(data, str):
+                                    if os.path.isfile(data):
+                                        self.add_document_to_active(data)
                     else:
-                        # Single file item
+                        data = item.data(Qt.UserRole)
                         if isinstance(data, str):
                             if os.path.isfile(data):
                                 self.add_document_to_active(data)
