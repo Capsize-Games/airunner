@@ -285,8 +285,14 @@ class DocumentsWidget(BaseWidget):
         # items and add their stored paths (Qt.UserRole)
         try:
             src = event.source()
-            if src is self.ui.documentsTreeView:
-                sel = src.selectedIndexes()
+            # The source may be the tree view or its viewport; normalize to tree
+            is_tree_src = (
+                src is self.ui.documentsTreeView
+                or src is self.ui.documentsTreeView.viewport()
+                or getattr(src, "parent", None) is self.ui.documentsTreeView
+            )
+            if is_tree_src:
+                sel = self.ui.documentsTreeView.selectedIndexes()
                 for idx in sel:
                     item = self.documents_model.itemFromIndex(idx)
                     if not item:
