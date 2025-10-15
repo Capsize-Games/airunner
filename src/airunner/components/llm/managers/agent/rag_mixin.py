@@ -3,6 +3,7 @@ from typing import List, Optional, Any, Dict
 import hashlib
 from datetime import datetime
 import json
+import torch
 
 from llama_index.core import (
     Document,
@@ -213,8 +214,6 @@ class RAGMixin:
                 # device mapping to improve speed and reduce memory usage.
                 model_kwargs = {}
                 try:
-                    import torch
-
                     if torch.cuda.is_available():
                         # Prefer fp16 where supported to speed up inference
                         model_kwargs["torch_dtype"] = torch.float16

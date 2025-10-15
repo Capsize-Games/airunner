@@ -489,18 +489,10 @@ class MessageWidget(BaseWidget):
         return QSize(300, 100)
 
     def update_message(self, text):
-        self.message += text
+        self.message = text
         self.message = self.message.replace("  ", " ")
-        # Optimize streaming: if current widget is PlainTextWidget, append text directly
-        if (
-            self.content_widget is not None
-            and isinstance(self.content_widget, PlainTextWidget)
-            and getattr(self, "_current_content_type", None) == "plain"
-        ):
-            self.content_widget.appendText(text)
-        else:
-            # Always update the content for all types (Markdown, Mixed, LaTeX, PlainText)
-            self.set_message_content(self.message)
+        # Always update the content for all types (Markdown, Mixed, LaTeX, PlainText)
+        self.set_message_content(self.message)
 
     @Slot()
     def on_play_audio_button_clicked(self):
