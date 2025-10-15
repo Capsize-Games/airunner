@@ -14,7 +14,6 @@ from PySide6.QtGui import (
     QAction,
 )
 from PySide6.QtWidgets import (
-    QFileSystemModel,
     QAbstractItemView,
     QMenu,
     QMessageBox,
@@ -68,19 +67,14 @@ class DocumentsWidget(BaseWidget):
         self.setup_kiwix_widget()
 
     def setup_file_explorer(self):
-        # Setup available documents tree (file system view)
-        self.documents_model = QFileSystemModel(self)
-        doc_dir = self.documents_path
-        if not os.path.exists(doc_dir):
-            os.makedirs(doc_dir, exist_ok=True)
-        self.documents_model.setRootPath(doc_dir)
+        # Setup available documents tree (use a QStandardItemModel so we can
+        # inject a virtual "Kiwix Zim Files" folder without creating it on
+        # disk). We'll list local documents from `documents_path` and add a
+        # top-level virtual folder for ZIM files stored in the ZimFile model.
+        from PySide6.QtGui import QStandardItemModel, QStandardItem
+
+        self.documents_model = QStandardItemModel(self)
         self.ui.documentsTreeView.setModel(self.documents_model)
-        self.ui.documentsTreeView.setRootIndex(
-            self.documents_model.index(doc_dir)
-        )
-        self.ui.documentsTreeView.setColumnHidden(1, True)
-        self.ui.documentsTreeView.setColumnHidden(2, True)
-        self.ui.documentsTreeView.setColumnHidden(3, True)
         self.ui.documentsTreeView.setHeaderHidden(True)
         self.ui.documentsTreeView.setSelectionMode(
             QAbstractItemView.SelectionMode.ExtendedSelection
@@ -147,8 +141,9 @@ class DocumentsWidget(BaseWidget):
         )
         self.ui.activeDocumentsTreeView.viewport().installEventFilter(self)
 
-        # Load active documents from database
+        # Load active documents from database and populate available list
         self.refresh_active_documents_list()
+        self.refresh_documents_list()
 
     def setup_kiwix_widget(self):
         """Initialize the Kiwix widget with UI components."""
@@ -159,6 +154,13 @@ class DocumentsWidget(BaseWidget):
             kiwix_lang_combo=self.ui.kiwixLangCombo,
             kiwix_search_button=self.ui.kiwixSearchButton,
         )
+        # When a ZIM download finishes, refresh the available documents list
+        try:
+            self.kiwix_widget.zimDownloadFinished.connect(
+                self.refresh_documents_list
+            )
+        except Exception:
+            pass
 
     def on_file_open_requested(self, data):
         file_path = data.get("file_path")
@@ -418,15 +420,45 @@ class DocumentsWidget(BaseWidget):
         if not selected_indexes:
             return
 
-        # Collect files and folders
+        # Collect files and folders from the QStandardItemModel. The model
+        # stores file paths in Qt.UserRole. We also support a virtual
+        # "Kiwix Zim Files" parent which contains child items with paths.
         selected_files = []
         selected_folders = []
+        selected_folder_items = []
         for idx in selected_indexes:
-            file_path = self.documents_model.filePath(idx)
-            if os.path.isfile(file_path):
-                selected_files.append(file_path)
-            elif os.path.isdir(file_path):
-                selected_folders.append(file_path)
+            item = self.documents_model.itemFromIndex(idx)
+            if item is None:
+                continue
+            # If the item has an explicit directory path stored, treat it as a folder
+            data = item.data(Qt.UserRole)
+            if isinstance(data, str) and os.path.isdir(data):
+                # This is a real folder on disk
+                selected_folders.append(data)
+                continue
+
+            # If the item has children, treat it as a (possibly virtual) folder
+            if item.hasChildren():
+                # If folder node stores a path, prefer that
+                if isinstance(data, str) and data:
+                    selected_folders.append(data)
+                else:
+                    selected_folder_items.append(item)
+                continue
+
+            # Otherwise, treat it as a file-like item
+            if isinstance(data, str):
+                selected_files.append(data)
+
+        # Expand folder items into their child paths
+        for folder_item in selected_folder_items:
+            for r in range(folder_item.rowCount()):
+                child = folder_item.child(r, 0)
+                if child is None:
+                    continue
+                data = child.data(Qt.UserRole)
+                if isinstance(data, str):
+                    selected_files.append(data)
 
         if not selected_files and not selected_folders:
             return
@@ -716,19 +748,107 @@ class DocumentsWidget(BaseWidget):
             self.emit_signal(SignalCode.INDEX_DOCUMENT, {"path": doc})
 
     def refresh_documents_list(self):
+        """Rebuild the available documents model.
+
+        This will list files found under `documents_path` and add a virtual
+        top-level folder "Kiwix Zim Files" containing entries from the
+        `ZimFile` model. Files are stored in Qt.UserRole on each item.
+        """
+        # Clear and set a single root-less list
         self.documents_model.clear()
+
+        # Add local documents from documents_path, structured as folder nodes
         doc_dir = self.documents_path
         if not os.path.exists(doc_dir):
             os.makedirs(doc_dir, exist_ok=True)
+
+        local_header = QStandardItem("Local Documents")
+        local_header.setEditable(False)
+
+        # Build a mapping of relative folder -> QStandardItem so we can
+        # create a tree that mirrors subfolders under documents_path.
+        folder_items = {"": local_header}
+
         for root, dirs, files in os.walk(doc_dir):
+            # Compute relative path from doc_dir
+            rel_root = os.path.relpath(root, doc_dir)
+            if rel_root == ".":
+                rel_root = ""
+
+            # Ensure folder item exists for this root
+            if rel_root not in folder_items:
+                # Create missing intermediate folder nodes
+                parts = rel_root.split(os.sep) if rel_root else []
+                cur = ""
+                parent_item = local_header
+                for p in parts:
+                    cur = os.path.join(cur, p) if cur else p
+                    if cur not in folder_items:
+                        node = QStandardItem(p)
+                        node.setEditable(False)
+                        # store absolute folder path for folder nodes
+                        node.setData(os.path.join(doc_dir, cur), Qt.UserRole)
+                        parent_item.appendRow(node)
+                        folder_items[cur] = node
+                        parent_item = node
+                    else:
+                        parent_item = folder_items[cur]
+
+            parent = folder_items.get(rel_root, local_header)
+
+            # Add files under this folder node
             for fname in sorted(files):
                 ext = os.path.splitext(fname)[1][1:].lower()
                 if ext in self.file_extensions:
-                    item = QStandardItem(fname)
-                    item.setData(os.path.join(root, fname), Qt.UserRole)
-                    self.documents_model.appendRow(item)
+                    full_path = os.path.join(root, fname)
+                    file_item = QStandardItem(
+                        self._get_display_name(full_path)
+                    )
+                    file_item.setEditable(False)
+                    file_item.setData(full_path, Qt.UserRole)
+                    parent.appendRow(file_item)
+
+        # Add the local header if it has children
+        if local_header.rowCount() > 0:
+            self.documents_model.appendRow(local_header)
+
+        # Create virtual Kiwix folder and populate from ZimFile DB
+        try:
+            zim_header = QStandardItem("Kiwix Zim Files")
+            zim_header.setEditable(False)
+            local_zim_names = set()
+            zim_dir = os.path.join(
+                os.path.expanduser(self.path_settings.base_path), "zim"
+            )
+            if os.path.exists(zim_dir):
+                for f in os.listdir(zim_dir):
+                    if f.lower().endswith(".zim"):
+                        local_zim_names.add(f)
+
+            for zim in ZimFile.objects.all():
+                # Display the title if available
+                display = zim.title or zim.name or os.path.basename(zim.path)
+                item = QStandardItem(display)
+                item.setEditable(False)
+                # Store actual path so activation works the same as files
+                item.setData(zim.path, Qt.UserRole)
+                # Mark downloaded status in tooltip
+                tip = f"{display}\n{zim.summary or ''}".strip()
+                if os.path.basename(zim.path) in local_zim_names:
+                    tip += "\n✓ Downloaded"
+                item.setToolTip(tip)
+                zim_header.appendRow(item)
+
+            if zim_header.rowCount() > 0:
+                self.documents_model.appendRow(zim_header)
+        except Exception:
+            # If ZimFile model isn't available or fails, ignore virtual folder
+            pass
 
     def on_document_double_clicked(self, index):
-        file_path = self.documents_model.data(index, Qt.UserRole)
+        item = self.documents_model.itemFromIndex(index)
+        if item is None:
+            return
+        file_path = item.data(Qt.UserRole)
         if file_path:
             self.on_file_open_requested({"file_path": file_path})
