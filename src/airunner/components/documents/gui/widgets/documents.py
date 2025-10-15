@@ -5,6 +5,7 @@ from PySide6.QtCore import (
     Signal,
     Qt,
     QEvent,
+    QTimer,
 )
 from PySide6.QtGui import (
     QIcon,
@@ -17,12 +18,15 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QMenu,
     QMessageBox,
+    QApplication,
+    QProgressDialog,
 )
 
 from airunner.enums import SignalCode
 from airunner.utils.settings import get_qsettings
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.documents.data.models.document import Document
+from airunner.components.documents.data.models.zimfile import ZimFile
 from airunner.components.documents.gui.widgets.templates.documents_ui import (
     Ui_documents,
 )
@@ -40,6 +44,9 @@ class DocumentsWidget(BaseWidget):
     def __init__(self, *args, private: bool = False, **kwargs):
         self._favicon = None
         self._private = private
+        self._current_indexing = 0
+        self._total_to_index = 0
+        self._unindexed_docs = []
         self.file_extensions = [
             "md",
             "txt",
@@ -198,34 +205,37 @@ class DocumentsWidget(BaseWidget):
 
     def on_document_indexed(self, data: Dict):
         """Handle successful document indexing."""
-        self._current_indexing += 1
-        self._index_next_document()
+        document_path = data.get("path", "")
+        display_name = (
+            self._get_display_name(document_path) if document_path else ""
+        )
+
+        # Handle batch indexing counter
+        if (
+            self._total_to_index > 0
+            and self._current_indexing < self._total_to_index
+        ):
+            self._current_indexing += 1
+            self._index_next_document()
 
         # Refresh the document lists to show updated indexing status
         self.refresh_active_documents_list()
 
         # Log success
-        document_path = data.get("path", "")
         if document_path:
-            fname = os.path.basename(document_path)
-            self.logger.info(f"Document indexed successfully: {fname}")
+            self.logger.info(f"Document indexed successfully: {display_name}")
 
     def on_document_index_failed(self, data: Dict):
         """Handle failed document indexing."""
         document_path = data.get("path", "")
         error = data.get("error", "Unknown error")
+        display_name = (
+            self._get_display_name(document_path) if document_path else ""
+        )
 
         if document_path:
-            fname = os.path.basename(document_path)
-            self.logger.error(f"Failed to index document {fname}: {error}")
-
-            # Show error message to user
-            QMessageBox.warning(
-                self,
-                "Document Indexing Failed",
-                f"Failed to index document:\n\n{fname}\n\nError: {error}\n\n"
-                f"This document may be corrupted, empty, or in an unsupported format.",
-                QMessageBox.Ok,
+            self.logger.error(
+                f"Failed to index document {display_name}: {error}"
             )
 
         # Refresh the document lists - document should stay in unavailable
@@ -270,9 +280,35 @@ class DocumentsWidget(BaseWidget):
         for root, dirs, files in os.walk(folder_path):
             for fname in files:
                 ext = os.path.splitext(fname)[1][1:].lower()
-                if ext in self.file_extensions and ext != "zim":
+                if ext in self.file_extensions:
                     file_path = os.path.join(root, fname)
                     self.add_document_to_active(file_path)
+
+    def _get_display_name(self, file_path: str) -> str:
+        """Get human-readable display name for a file.
+
+        For ZIM files, returns the title from metadata if available.
+        For other files, returns the filename.
+
+        Args:
+            file_path: Full path to the file
+
+        Returns:
+            Display name for the file
+        """
+        filename = os.path.basename(file_path)
+
+        # Check if this is a ZIM file
+        if filename.lower().endswith(".zim"):
+            # Look up ZIM metadata from database
+            zim_records = ZimFile.objects.filter_by(path=file_path)
+            if zim_records and len(zim_records) > 0:
+                zim = zim_records[0]
+                # Return title if available, otherwise filename
+                if zim.title:
+                    return zim.title
+
+        return filename
 
     def add_document_to_active(self, file_path: str):
         """Add a document to the active RAG collection."""
@@ -281,13 +317,13 @@ class DocumentsWidget(BaseWidget):
             item = self.active_documents_model.item(row, 0)
             if item and item.data() == file_path:
                 self.logger.info(
-                    f"Document already active: {os.path.basename(file_path)}"
+                    f"Document already active: {self._get_display_name(file_path)}"
                 )
                 return
 
-        # Add to model
-        filename = os.path.basename(file_path)
-        item = QStandardItem(filename)
+        # Add to model with display name
+        display_name = self._get_display_name(file_path)
+        item = QStandardItem(display_name)
         item.setData(file_path)
         item.setEditable(False)
         self.active_documents_model.appendRow(item)
@@ -299,7 +335,7 @@ class DocumentsWidget(BaseWidget):
         else:
             Document.objects.create(path=file_path, active=True, indexed=False)
 
-        self.logger.info(f"Added to active documents: {filename}")
+        self.logger.info(f"Added to active documents: {display_name}")
 
     def remove_document_from_active(self, file_path: str):
         """Remove a document from the active RAG collection."""
@@ -320,8 +356,8 @@ class DocumentsWidget(BaseWidget):
         if docs and len(docs) > 0:
             Document.objects.update(pk=docs[0].id, active=False)
 
-        filename = os.path.basename(file_path)
-        self.logger.info(f"Removed from active documents: {filename}")
+        display_name = self._get_display_name(file_path)
+        self.logger.info(f"Removed from active documents: {display_name}")
 
     def refresh_active_documents_list(self):
         """Load active and unavailable documents from database into the tree views."""
@@ -335,25 +371,25 @@ class DocumentsWidget(BaseWidget):
             if not os.path.exists(doc.path):
                 continue
 
-            filename = os.path.basename(doc.path)
-            item = QStandardItem(filename)
+            display_name = self._get_display_name(doc.path)
+            item = QStandardItem(display_name)
             item.setData(doc.path)
             item.setEditable(False)
 
             # Determine which list to add to
             if doc.active and doc.indexed:
                 # Active and indexed - add to active list
-                item.setToolTip(f"{filename}\n✓ Indexed and ready for RAG")
+                item.setToolTip(f"{display_name}\n✓ Indexed and ready for RAG")
                 self.active_documents_model.appendRow(item)
             elif doc.active and not doc.indexed:
                 # Active but not indexed - try to index
                 # If it repeatedly fails to index, it might be unavailable
                 # For now, keep it in active list with warning
-                item.setToolTip(f"{filename}\n⚠ Not yet indexed")
+                item.setToolTip(f"{display_name}\n⚠ Not yet indexed")
                 self.active_documents_model.appendRow(item)
             elif not doc.active and not doc.indexed:
                 # Not active and not indexed - likely unavailable
-                item.setToolTip(f"{filename}\n✗ Failed to index")
+                item.setToolTip(f"{display_name}\n✗ Failed to index")
                 self.unavailable_documents_model.appendRow(item)
 
     def keyPressEvent(self, event):
@@ -433,14 +469,14 @@ class DocumentsWidget(BaseWidget):
                 try:
                     if os.path.exists(file_path):
                         os.remove(file_path)
-                        fname = os.path.basename(file_path)
+                        display_name = self._get_display_name(file_path)
                         self.logger.info(
-                            f"Deleted document from database and disk: {fname}"
+                            f"Deleted document from database and disk: {display_name}"
                         )
                 except Exception as e:
-                    fname = os.path.basename(file_path)
+                    display_name = self._get_display_name(file_path)
                     self.logger.error(
-                        f"Failed to delete file from disk {fname}: {e}"
+                        f"Failed to delete file from disk {display_name}: {e}"
                     )
 
             for folder_path in selected_folders:
@@ -538,14 +574,14 @@ class DocumentsWidget(BaseWidget):
                 try:
                     if os.path.exists(file_path):
                         os.remove(file_path)
-                        fname = os.path.basename(file_path)
+                        display_name = self._get_display_name(file_path)
                         self.logger.info(
-                            f"Deleted document from database and disk: {fname}"
+                            f"Deleted document from database and disk: {display_name}"
                         )
                 except Exception as e:
-                    fname = os.path.basename(file_path)
+                    display_name = self._get_display_name(file_path)
                     self.logger.error(
-                        f"Failed to delete file from disk {fname}: {e}"
+                        f"Failed to delete file from disk {display_name}: {e}"
                     )
 
             self.refresh_active_documents_list()
@@ -586,7 +622,7 @@ class DocumentsWidget(BaseWidget):
                 f"Delete {len(selected_indexes)} Documents", self
             )
 
-        # Retry indexing selected documents - emit INDEX_DOCUMENT signal
+        # Retry indexing selected documents - delegate to knowledge base panel
         def retry_selected():
             file_paths = []
             for idx in selected_indexes:
@@ -596,14 +632,18 @@ class DocumentsWidget(BaseWidget):
                     if file_path:
                         file_paths.append(file_path)
 
-            # Emit INDEX_DOCUMENT signal for each file to trigger indexing
-            # Do NOT mark as active yet - only mark as active if indexing succeeds
-            for file_path in file_paths:
-                self.emit_signal(
-                    SignalCode.INDEX_DOCUMENT, {"path": file_path}
-                )
-                fname = os.path.basename(file_path)
-                self.logger.info(f"Retrying indexing for: {fname}")
+            if not file_paths:
+                return
+
+            # Emit signal to knowledge base panel to handle indexing
+            # This uses the same threaded approach as "Index All" which doesn't freeze
+            self.logger.info(
+                f"Requesting reindex for {len(file_paths)} documents"
+            )
+            self.emit_signal(
+                SignalCode.RAG_INDEX_SELECTED_DOCUMENTS,
+                {"file_paths": file_paths},
+            )
 
         # Delete selected documents from database AND disk
         def delete_selected():
@@ -625,14 +665,14 @@ class DocumentsWidget(BaseWidget):
                 try:
                     if os.path.exists(file_path):
                         os.remove(file_path)
-                        fname = os.path.basename(file_path)
+                        display_name = self._get_display_name(file_path)
                         self.logger.info(
-                            f"Deleted document from database and disk: {fname}"
+                            f"Deleted document from database and disk: {display_name}"
                         )
                 except Exception as e:
-                    fname = os.path.basename(file_path)
+                    display_name = self._get_display_name(file_path)
                     self.logger.error(
-                        f"Failed to delete file from disk {fname}: {e}"
+                        f"Failed to delete file from disk {display_name}: {e}"
                     )
 
             self.refresh_active_documents_list()
@@ -683,7 +723,7 @@ class DocumentsWidget(BaseWidget):
         for root, dirs, files in os.walk(doc_dir):
             for fname in sorted(files):
                 ext = os.path.splitext(fname)[1][1:].lower()
-                if ext in self.file_extensions and ext != "zim":
+                if ext in self.file_extensions:
                     item = QStandardItem(fname)
                     item.setData(os.path.join(root, fname), Qt.UserRole)
                     self.documents_model.appendRow(item)
