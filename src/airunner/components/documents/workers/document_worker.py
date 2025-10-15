@@ -1,5 +1,5 @@
 import os
-from PySide6.QtCore import QFileSystemWatcher, QThread
+from PySide6.QtCore import QFileSystemWatcher, QThread, QEventLoop
 
 from airunner.enums import SignalCode
 from airunner.components.application.workers.worker import Worker
@@ -104,7 +104,7 @@ class DocumentWorker(Worker):
                             exists = Document.objects.filter_by(path=fpath)
                             if not exists or len(exists) == 0:
                                 Document.objects.create(
-                                    path=fpath, active=True, indexed=False
+                                    path=fpath, active=False, indexed=False
                                 )
                                 self.logger.info(
                                     f"Added document to database: {fname}"
@@ -123,6 +123,7 @@ class DocumentWorker(Worker):
         self._known_files = current_files
 
         if documents_added or documents_removed:
+            print("DOCUMENT COLLECTION HAS CHANGED")
             self.emit_signal(SignalCode.DOCUMENT_COLLECTION_CHANGED)
 
     def handle_message(self, message):
@@ -130,7 +131,11 @@ class DocumentWorker(Worker):
         pass
 
     def run(self):
-        """Worker run loop - kept minimal since file system watcher handles events."""
+        """Worker run loop - process events for QFileSystemWatcher and handle messages."""
         self.running = True
+        event_loop = QEventLoop()
         while self.running:
-            QThread.msleep(1000)
+            event_loop.processEvents()  # Process QFileSystemWatcher signals
+            self.preprocess()
+            self.run_thread()
+        event_loop.quit()
