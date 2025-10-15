@@ -132,6 +132,7 @@ class KnowledgeBasePanelWidget(BaseWidget):
 
     @Slot(dict)
     def on_document_collection_changed(self, data: dict):
+        print("ON DOCUMENT COLLECTION CHANGED: knowledge_base_panel.py")
         """Handle when documents are added/removed from the collection."""
         self.update_document_stats()
 
