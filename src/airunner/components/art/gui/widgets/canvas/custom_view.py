@@ -297,7 +297,7 @@ class CustomGraphicsView(
         loaded_offset = QPointF(float(x), float(y))
         self.canvas_offset = loaded_offset
 
-        self.logger.warning(
+        self.logger.info(
             f"[LOAD] Canvas offset loaded from settings: x={x}, y={y}"
         )
 
@@ -308,7 +308,7 @@ class CustomGraphicsView(
         """Save the canvas offset to QSettings."""
         self.settings.setValue("canvas_offset_x", self.canvas_offset_x)
         self.settings.setValue("canvas_offset_y", self.canvas_offset_y)
-        self.logger.warning(
+        self.logger.info(
             f"[SAVE] Canvas offset saved: x={self.canvas_offset_x}, y={self.canvas_offset_y}"
         )
 
@@ -559,7 +559,7 @@ class CustomGraphicsView(
         absolute_x = self.active_grid_settings.pos_x
         absolute_y = self.active_grid_settings.pos_y
 
-        self.logger.warning(
+        self.logger.info(
             f"[LOAD GRID] Active grid absolute position from DB: x={absolute_x}, y={absolute_y}, canvas_offset=({self.canvas_offset_x}, {self.canvas_offset_y})"
         )
 
@@ -589,14 +589,14 @@ class CustomGraphicsView(
         # Calculate and set the display position
         display_x = absolute_x - self.canvas_offset_x
         display_y = absolute_y - self.canvas_offset_y
-        self.logger.warning(
+        self.logger.info(
             f"[LOAD GRID] Setting grid display position: x={display_x}, y={display_y}"
         )
         self.active_grid_area.setPos(display_x, display_y)
 
         # Log actual scene position after setPos
         actual_pos = self.active_grid_area.scenePos()
-        self.logger.warning(
+        self.logger.info(
             f"[LOAD GRID] Active grid actual scene position after setPos: ({actual_pos.x()}, {actual_pos.y()})"
         )
 
@@ -1130,13 +1130,13 @@ class CustomGraphicsView(
 
         # Skip compensation during initial state restoration
         if self._is_restoring_state or not self._initialized:
-            self.logger.warning(
+            self.logger.info(
                 f"[RESIZE] Skipping compensation - _is_restoring_state={self._is_restoring_state}, _initialized={self._initialized}"
             )
             self._last_viewport_size = self.viewport().size()
             return
 
-        self.logger.warning(
+        self.logger.info(
             f"[RESIZE] Processing resize - old_size={self._last_viewport_size}, new_size={self.viewport().size()}"
         )
 
@@ -1181,7 +1181,7 @@ class CustomGraphicsView(
         if abs(shift_x) < 0.5 and abs(shift_y) < 0.5:
             return
 
-        self.logger.warning(
+        self.logger.info(
             f"[VIEWPORT COMPENSATION] Applying shift: ({shift_x}, {shift_y}), "
             f"old_compensation=({self._grid_compensation_offset.x()}, {self._grid_compensation_offset.y()}), "
             f"_is_restoring_state={self._is_restoring_state}, _initialized={self._initialized}"
@@ -1194,7 +1194,7 @@ class CustomGraphicsView(
             self._grid_compensation_offset.y() + shift_y,
         )
 
-        self.logger.warning(
+        self.logger.info(
             f"[VIEWPORT COMPENSATION] New compensation: ({self._grid_compensation_offset.x()}, {self._grid_compensation_offset.y()})"
         )
 
