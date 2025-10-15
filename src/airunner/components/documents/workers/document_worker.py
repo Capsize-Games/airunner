@@ -34,10 +34,20 @@ class DocumentWorker(Worker):
             "text/other/documents",
         )
 
+    @property
+    def zim_path(self) -> str:
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path),
+            "zim",
+        )
+
     def setup_file_system_watcher(self):
-        """Initialize the file system watcher for the documents directory."""
+        """Initialize the file system watcher for both documents and ZIM directories."""
         if not os.path.exists(self.documents_path):
             os.makedirs(self.documents_path, exist_ok=True)
+
+        if not os.path.exists(self.zim_path):
+            os.makedirs(self.zim_path, exist_ok=True)
 
         self._file_system_watcher = QFileSystemWatcher()
         self._file_system_watcher.directoryChanged.connect(
@@ -45,6 +55,7 @@ class DocumentWorker(Worker):
         )
 
         self._watch_directory_recursively(self.documents_path)
+        self._watch_directory_recursively(self.zim_path)
         self._sync_documents_with_directory()
 
     def _watch_directory_recursively(self, directory: str):
@@ -67,36 +78,38 @@ class DocumentWorker(Worker):
         """Handle directory change events."""
         self.logger.debug(f"Directory changed: {path}")
         self._watch_directory_recursively(self.documents_path)
+        self._watch_directory_recursively(self.zim_path)
         self._sync_documents_with_directory()
 
     def _sync_documents_with_directory(self):
-        """Sync database with actual files in the directory."""
-        doc_dir = self.documents_path
-        if not os.path.exists(doc_dir):
-            self.logger.error(f"Document directory does not exist: {doc_dir}")
-            return
-
+        """Sync database with actual files in both documents and ZIM directories."""
         current_files = set()
         documents_added = False
         documents_removed = False
 
-        for root, dirs, files in os.walk(doc_dir):
-            for fname in files:
-                fpath = os.path.join(root, fname)
-                ext = os.path.splitext(fname)[1][1:].lower()
-                if ext in self.file_extensions:
-                    current_files.add(fpath)
+        # Scan both directories
+        for doc_dir in [self.documents_path, self.zim_path]:
+            if not os.path.exists(doc_dir):
+                self.logger.warning(f"Directory does not exist: {doc_dir}")
+                continue
 
-                    if fpath not in self._known_files:
-                        exists = Document.objects.filter_by(path=fpath)
-                        if not exists or len(exists) == 0:
-                            Document.objects.create(
-                                path=fpath, active=True, indexed=False
-                            )
-                            self.logger.info(
-                                f"Added document to database: {fname}"
-                            )
-                            documents_added = True
+            for root, dirs, files in os.walk(doc_dir):
+                for fname in files:
+                    fpath = os.path.join(root, fname)
+                    ext = os.path.splitext(fname)[1][1:].lower()
+                    if ext in self.file_extensions:
+                        current_files.add(fpath)
+
+                        if fpath not in self._known_files:
+                            exists = Document.objects.filter_by(path=fpath)
+                            if not exists or len(exists) == 0:
+                                Document.objects.create(
+                                    path=fpath, active=True, indexed=False
+                                )
+                                self.logger.info(
+                                    f"Added document to database: {fname}"
+                                )
+                                documents_added = True
 
         deleted_files = self._known_files - current_files
         for fpath in deleted_files:

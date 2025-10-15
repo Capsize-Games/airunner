@@ -265,6 +265,7 @@ class SignalCode(Enum):
     DOCUMENT_INDEX_FAILED = "document_index_failed_signal"
     DOCUMENT_COLLECTION_CHANGED = "document_collection_changed_signal"
     RAG_INDEX_ALL_DOCUMENTS = "rag_index_all_documents_signal"
+    RAG_INDEX_SELECTED_DOCUMENTS = "rag_index_selected_documents_signal"
     RAG_INDEXING_PROGRESS = "rag_indexing_progress_signal"
     RAG_INDEXING_COMPLETE = "rag_indexing_complete_signal"
     RAG_INDEX_CANCEL = "rag_index_cancel_signal"
