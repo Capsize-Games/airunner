@@ -6,6 +6,7 @@ from PySide6.QtCore import (
     Qt,
     QEvent,
     QTimer,
+    QFileSystemWatcher,
 )
 from PySide6.QtGui import (
     QIcon,
@@ -60,6 +61,7 @@ class DocumentsWidget(BaseWidget):
             SignalCode.DOCUMENT_INDEXED: self.on_document_indexed,
             SignalCode.DOCUMENT_INDEX_FAILED: self.on_document_index_failed,
             SignalCode.DOCUMENT_COLLECTION_CHANGED: self.on_document_collection_changed,
+            SignalCode.RAG_INDEXING_COMPLETE: self.on_indexing_complete,
         }
         super().__init__(*args, **kwargs)
         self.setup_file_explorer()
@@ -350,6 +352,16 @@ class DocumentsWidget(BaseWidget):
 
     def add_document_to_active(self, file_path: str):
         """Add a document to the active RAG collection."""
+        # Check if indexed
+        docs = Document.objects.filter_by(path=file_path)
+        if not docs or not docs[0].indexed:
+            QMessageBox.information(
+                self,
+                "Cannot Add",
+                f"Document {self._get_display_name(file_path)} is not indexed yet. Please index it first.",
+            )
+            return
+
         # Check if already in active list
         for row in range(self.active_documents_model.rowCount()):
             item = self.active_documents_model.item(row, 0)
@@ -367,11 +379,10 @@ class DocumentsWidget(BaseWidget):
         self.active_documents_model.appendRow(item)
 
         # Update database
-        docs = Document.objects.filter_by(path=file_path)
-        if docs and len(docs) > 0:
+        if docs:
             Document.objects.update(pk=docs[0].id, active=True)
         else:
-            Document.objects.create(path=file_path, active=True, indexed=False)
+            Document.objects.create(path=file_path, active=True, indexed=True)
 
         self.logger.info(f"Added to active documents: {display_name}")
 
@@ -426,9 +437,9 @@ class DocumentsWidget(BaseWidget):
                 item.setToolTip(f"{display_name}\n⚠ Not yet indexed")
                 self.active_documents_model.appendRow(item)
             elif not doc.active and not doc.indexed:
-                # Not active and not indexed - likely unavailable
-                item.setToolTip(f"{display_name}\n✗ Failed to index")
-                self.unavailable_documents_model.appendRow(item)
+                # Not active and not indexed - reserved for failed indexing attempts
+                # For now, don't show new unindexed documents here
+                pass
 
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts (Delete key to remove from active list)."""
@@ -762,7 +773,9 @@ class DocumentsWidget(BaseWidget):
         # self._request_index_for_unindexed_documents()
 
     def on_document_collection_changed(self, data: dict):
+        print("ON DOCUMENT COLLECTION CHANGED: documents.py")
         """Handle document collection changes from the worker."""
+        self.refresh_documents_list()
         self.refresh_active_documents_list()
 
     def _request_index_for_unindexed_documents(self):
@@ -786,72 +799,104 @@ class DocumentsWidget(BaseWidget):
     def refresh_documents_list(self):
         """Rebuild the available documents model.
 
-        This will list files found under `documents_path` and add a virtual
-        top-level folder "Kiwix Zim Files" containing entries from the
-        `ZimFile` model. Files are stored in Qt.UserRole on each item.
+        Structure:
+          - Indexed
+            - Local (mirrors folders from documents_path)
+            - Zim (ZimFile entries that are indexed)
+          - Unindexed
+            - Local
+            - Zim
         """
-        # Clear and set a single root-less list
         self.documents_model.clear()
 
-        # Add local documents from documents_path, structured as folder nodes
+        # Top-level containers
+        indexed = QStandardItem("Indexed")
+        indexed.setEditable(False)
+        unindexed = QStandardItem("Unindexed")
+        unindexed.setEditable(False)
+
+        indexed_local = QStandardItem("Local")
+        indexed_local.setEditable(False)
+        indexed_zim = QStandardItem("Zim")
+        indexed_zim.setEditable(False)
+
+        unindexed_local = QStandardItem("Local")
+        unindexed_local.setEditable(False)
+        unindexed_zim = QStandardItem("Zim")
+        unindexed_zim.setEditable(False)
+
+        indexed.appendRow(indexed_local)
+        indexed.appendRow(indexed_zim)
+        unindexed.appendRow(unindexed_local)
+        unindexed.appendRow(unindexed_zim)
+
+        def is_indexed(path: str) -> bool:
+            try:
+                docs = Document.objects.filter_by(path=path)
+                if docs and len(docs) > 0:
+                    return bool(docs[0].indexed)
+            except Exception:
+                pass
+            return False
+
+        # Populate local files (preserve folder structure)
         doc_dir = self.documents_path
         if not os.path.exists(doc_dir):
             os.makedirs(doc_dir, exist_ok=True)
 
-        local_header = QStandardItem("Local Documents")
-        local_header.setEditable(False)
-
-        # Build a mapping of relative folder -> QStandardItem so we can
-        # create a tree that mirrors subfolders under documents_path.
-        folder_items = {"": local_header}
+        folder_map_indexed = {"": indexed_local}
+        folder_map_unindexed = {"": unindexed_local}
 
         for root, dirs, files in os.walk(doc_dir):
-            # Compute relative path from doc_dir
             rel_root = os.path.relpath(root, doc_dir)
             if rel_root == ".":
                 rel_root = ""
 
-            # Ensure folder item exists for this root
-            if rel_root not in folder_items:
-                # Create missing intermediate folder nodes
-                parts = rel_root.split(os.sep) if rel_root else []
-                cur = ""
-                parent_item = local_header
-                for p in parts:
-                    cur = os.path.join(cur, p) if cur else p
-                    if cur not in folder_items:
-                        node = QStandardItem(p)
-                        node.setEditable(False)
-                        # store absolute folder path for folder nodes
-                        node.setData(os.path.join(doc_dir, cur), Qt.UserRole)
-                        parent_item.appendRow(node)
-                        folder_items[cur] = node
-                        parent_item = node
-                    else:
-                        parent_item = folder_items[cur]
-
-            parent = folder_items.get(rel_root, local_header)
-
-            # Add files under this folder node
             for fname in sorted(files):
                 ext = os.path.splitext(fname)[1][1:].lower()
-                if ext in self.file_extensions:
-                    full_path = os.path.join(root, fname)
-                    file_item = QStandardItem(
-                        self._get_display_name(full_path)
+                if ext not in self.file_extensions:
+                    continue
+                full_path = os.path.join(root, fname)
+                target_indexed = is_indexed(full_path)
+
+                folder_map = (
+                    folder_map_indexed
+                    if target_indexed
+                    else folder_map_unindexed
+                )
+                target_root = rel_root
+
+                if target_root not in folder_map:
+                    parts = target_root.split(os.sep) if target_root else []
+                    cur = ""
+                    parent_item = (
+                        indexed_local if target_indexed else unindexed_local
                     )
-                    file_item.setEditable(False)
-                    file_item.setData(full_path, Qt.UserRole)
-                    parent.appendRow(file_item)
+                    for p in parts:
+                        cur = os.path.join(cur, p) if cur else p
+                        if cur not in folder_map:
+                            node = QStandardItem(p)
+                            node.setEditable(False)
+                            node.setData(
+                                os.path.join(doc_dir, cur), Qt.UserRole
+                            )
+                            parent_item.appendRow(node)
+                            folder_map[cur] = node
+                            parent_item = node
+                        else:
+                            parent_item = folder_map[cur]
 
-        # Add the local header if it has children
-        if local_header.rowCount() > 0:
-            self.documents_model.appendRow(local_header)
+                parent = folder_map.get(
+                    target_root,
+                    indexed_local if target_indexed else unindexed_local,
+                )
+                file_item = QStandardItem(self._get_display_name(full_path))
+                file_item.setEditable(False)
+                file_item.setData(full_path, Qt.UserRole)
+                parent.appendRow(file_item)
 
-        # Create virtual Kiwix folder and populate from ZimFile DB
+        # Populate ZIM files into Zim subtrees
         try:
-            zim_header = QStandardItem("Kiwix Zim Files")
-            zim_header.setEditable(False)
             local_zim_names = set()
             zim_dir = os.path.join(
                 os.path.expanduser(self.path_settings.base_path), "zim"
@@ -862,24 +907,24 @@ class DocumentsWidget(BaseWidget):
                         local_zim_names.add(f)
 
             for zim in ZimFile.objects.all():
-                # Display the title if available
                 display = zim.title or zim.name or os.path.basename(zim.path)
                 item = QStandardItem(display)
                 item.setEditable(False)
-                # Store actual path so activation works the same as files
                 item.setData(zim.path, Qt.UserRole)
-                # Mark downloaded status in tooltip
                 tip = f"{display}\n{zim.summary or ''}".strip()
                 if os.path.basename(zim.path) in local_zim_names:
                     tip += "\n✓ Downloaded"
                 item.setToolTip(tip)
-                zim_header.appendRow(item)
-
-            if zim_header.rowCount() > 0:
-                self.documents_model.appendRow(zim_header)
+                if is_indexed(zim.path):
+                    indexed_zim.appendRow(item)
+                else:
+                    unindexed_zim.appendRow(item)
         except Exception:
-            # If ZimFile model isn't available or fails, ignore virtual folder
             pass
+
+        # Append to model
+        self.documents_model.appendRow(indexed)
+        self.documents_model.appendRow(unindexed)
 
     def on_document_double_clicked(self, index):
         item = self.documents_model.itemFromIndex(index)
@@ -888,3 +933,8 @@ class DocumentsWidget(BaseWidget):
         file_path = item.data(Qt.UserRole)
         if file_path:
             self.on_file_open_requested({"file_path": file_path})
+
+    def on_indexing_complete(self, data: dict):
+        """Handle indexing completion - refresh lists to move indexed docs."""
+        self.refresh_documents_list()
+        self.refresh_active_documents_list()
