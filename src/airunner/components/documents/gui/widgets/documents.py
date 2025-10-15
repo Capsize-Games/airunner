@@ -267,6 +267,9 @@ class DocumentsWidget(BaseWidget):
         mime_data = event.mimeData()
 
         # Handle file paths from file system view
+        handled = False
+
+        # 1) Standard file-system drags (URLs)
         if mime_data.hasUrls():
             for url in mime_data.urls():
                 file_path = url.toLocalFile()
@@ -275,6 +278,39 @@ class DocumentsWidget(BaseWidget):
                 elif os.path.isdir(file_path):
                     # Handle dropped folder - add all documents within it
                     self.add_folder_documents_to_active(file_path)
+            handled = True
+
+        # 2) Drags from our own documentsTreeView which uses QStandardItemModel
+        # Extract source widget and if it's the documentsTreeView, pull selected
+        # items and add their stored paths (Qt.UserRole)
+        try:
+            src = event.source()
+            if src is self.ui.documentsTreeView:
+                sel = src.selectedIndexes()
+                for idx in sel:
+                    item = self.documents_model.itemFromIndex(idx)
+                    if not item:
+                        continue
+                    # If it's a folder node, expand children
+                    if item.hasChildren():
+                        for r in range(item.rowCount()):
+                            child = item.child(r, 0)
+                            if child:
+                                data = child.data(Qt.UserRole)
+                                if isinstance(data, str):
+                                    if os.path.isfile(data):
+                                        self.add_document_to_active(data)
+                    else:
+                        data = item.data(Qt.UserRole)
+                        if isinstance(data, str):
+                            if os.path.isfile(data):
+                                self.add_document_to_active(data)
+                handled = True
+        except Exception:
+            # Fall back silently to URL handling
+            pass
+
+        if handled:
             event.acceptProposedAction()
 
     def add_folder_documents_to_active(self, folder_path: str):
