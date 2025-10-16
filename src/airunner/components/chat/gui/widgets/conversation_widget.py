@@ -1,12 +1,8 @@
 from typing import List, Dict, Any, Optional
 
 from PySide6.QtCore import QTimer, Slot, Qt
-from PySide6.QtWidgets import (
-    QApplication,
-    QVBoxLayout,
-    QSpacerItem,
-    QSizePolicy,
-)
+from PySide6.QtWidgets import QApplication, QScrollArea, QWidget
+from PySide6.QtWebChannel import QWebChannel
 from llama_cloud import MessageRole
 
 from airunner.components.conversations.conversation_history_manager import (
@@ -14,8 +10,8 @@ from airunner.components.conversations.conversation_history_manager import (
 )
 from airunner.components.llm.data.conversation import Conversation
 from airunner.components.llm.gui.widgets.loading_widget import LoadingWidget
-from airunner.components.llm.gui.widgets.message_widget import MessageWidget
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, TemplateName
+from airunner.components.llm.gui.widgets.contentwidgets import ChatBridge
 from airunner.components.chat.gui.widgets.templates.conversation_ui import (
     Ui_conversation,
 )
@@ -23,12 +19,13 @@ import logging
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.utils import strip_names_from_message
+from airunner.utils.text.formatter_extended import FormatterExtended
 
 logger = logging.getLogger(__name__)
 
 
 class ConversationWidget(BaseWidget):
-    """Widget that displays a conversation using MessageWidget instances in a QScrollArea.
+    """Widget that displays a conversation using a single QWebEngineView and HTML template.
 
     Args:
         parent (QWidget, optional): Parent widget.
@@ -61,39 +58,41 @@ class ConversationWidget(BaseWidget):
         self.loading_widget.hide()
         super().__init__()
         self.token_buffer = []
+        # Add a streaming buffer to ensure proper token ordering
         self._current_stream_tokens = []
         self._stream_started = False
-        self._sequence_buffer = {}
-        self._expected_sequence = 1
+        self._orphaned_tokens = (
+            []
+        )  # Collect tokens that arrive before is_first_message
+        # Add sequence-based buffering to handle out-of-order signals
+        self._sequence_buffer = {}  # Dict[int, LLMResponse]
+        self._expected_sequence = 1  # Next expected sequence number
+        # Track which message index is currently being streamed to avoid overwriting
         self._active_stream_message_index = None
-        self.ui.messages.setContextMenuPolicy(
+        # prevent right click on self.ui.stage
+        self.ui.stage.setContextMenuPolicy(
             Qt.ContextMenuPolicy.PreventContextMenu
         )
-
-        # Setup the scroll area content
-        self._setup_scroll_area()
-
-    def _setup_scroll_area(self):
-        """Initialize the scroll area with a vertical layout and spacer."""
-        # Get the existing VBoxLayout from the UI file
-        self.messages_layout = self.ui.scrollAreaWidgetContents.layout()
-
-        # Configure the layout
-        self.messages_layout.setContentsMargins(0, 0, 0, 0)
-        self.messages_layout.setSpacing(2)
-        self.messages_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        # Set size policy to prevent horizontal scrollbar
-        # The content widget should match the scroll area's width
-        self.ui.scrollAreaWidgetContents.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+        self._web_channel = QWebChannel(self.ui.stage.page())
+        self._chat_bridge = ChatBridge()
+        self._chat_bridge.scrollRequested.connect(self._handle_scroll_request)
+        # Listen for content height updates from the web view to resize the QWebEngineView
+        try:
+            self._chat_bridge.contentHeightChanged.connect(
+                lambda h: self._on_content_height_changed(h)
+            )
+        except Exception:
+            pass
+        self._chat_bridge.deleteMessageRequested.connect(self.deleteMessage)
+        self._chat_bridge.copyMessageRequested.connect(
+            self._handle_copy_message
         )
+        self._web_channel.registerObject("chatBridge", self._chat_bridge)
+        self.ui.stage.page().setWebChannel(self._web_channel)
 
-        # Add a vertical spacer at the bottom
-        self.vertical_spacer = QSpacerItem(
-            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
-        )
-        self.messages_layout.addItem(self.vertical_spacer)
+        # Debounce timer for height updates
+        self._height_update_timer: Optional[QTimer] = None
+        self._pending_height: Optional[int] = None
 
     def navigate(self, url: str):
         self.api.navigate(url)
@@ -115,6 +114,20 @@ class ConversationWidget(BaseWidget):
     def conversation_id(self, val: Optional[int]):
         self._conversation_id = val
 
+    @property
+    def web_engine_view(self) -> Optional[object]:
+        return self.ui.stage
+
+    @property
+    def template(self) -> Optional[str]:
+        return "conversation.jinja2.html"
+
+    @property
+    def template_context(self) -> Dict:
+        context = super().template_context
+        context["messages"] = []
+        return context
+
     def on_delete_conversation(self, data):
         if self.conversation_id == data["conversation_id"]:
             self._clear_conversation_widgets()
@@ -129,6 +142,100 @@ class ConversationWidget(BaseWidget):
             )
             if self._conversation_id is None:
                 self.load_conversation()
+        # Capture a DOM snapshot and scrollbar states for diagnostics when widget is shown
+        try:
+
+            def _snap():
+                try:
+                    if self.ui.stage and self.ui.stage.page():
+                        # log scroll metrics and overflowing elements to diagnose duplicate scrollbars
+                        self.ui.stage.page().runJavaScript(
+                            "(function(){try{\
+                                const el = document.getElementById('conversation-container');\
+                                const overflowEls = Array.from(document.querySelectorAll('*')).filter(e => e && e.scrollHeight > e.clientHeight).slice(0,20).map(e => ({tag: e.tagName, id: e.id || null, classes: e.className || null, scrollHeight: e.scrollHeight, clientHeight: e.clientHeight}));\
+                                return {\
+                                    ready: document.readyState,\
+                                    hasContainer: !!el,\
+                                    document: { scrollHeight: document.documentElement.scrollHeight, clientHeight: document.documentElement.clientHeight, scrollTop: document.documentElement.scrollTop },\
+                                    body: { scrollHeight: document.body.scrollHeight, clientHeight: document.body.clientHeight, scrollTop: document.body.scrollTop },\
+                                    container: el ? { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight, scrollTop: el.scrollTop } : null,\
+                                    overflowElements: overflowEls\
+                                }; } catch (e) { return { error: String(e), stack: e && e.stack ? e.stack : null }; } })()",
+                            lambda res: (
+                                logger.debug(f"DOM SNAPSHOT showEvent: {res}")
+                                if res
+                                else logger.debug(
+                                    "DOM SNAPSHOT showEvent: no result"
+                                )
+                            ),
+                        )
+                except Exception:
+                    logger.debug(
+                        "DOM SNAPSHOT showEvent failed", exc_info=True
+                    )
+
+            QTimer.singleShot(200, _snap)
+        except Exception:
+            logger.debug(
+                "Failed to schedule DOM snapshot on showEvent", exc_info=True
+            )
+        # Log parent widget chain and any QScrollArea policies for debugging
+        try:
+            self._log_parent_scroll_info()
+        except Exception:
+            logger.debug("Failed to log parent scroll info", exc_info=True)
+
+        # Additional page diagnostics: log current URL, loading state and page HTML
+        try:
+            page = (
+                getattr(self.ui.stage, "page", None) and self.ui.stage.page()
+            )
+            if page:
+                try:
+                    url = self.ui.stage.url().toString()
+                except Exception:
+                    url = None
+                try:
+                    is_loading = page.isLoading()
+                except Exception:
+                    is_loading = None
+                logger.debug(
+                    f"WebEngineView diagnostics: url={url}, isLoading={is_loading}"
+                )
+
+                def _log_html(html: Optional[str]):
+                    if html:
+                        logger.debug(
+                            f"WebEngineView HTML length: {len(html)}; preview: {html[:1000]!s}"
+                        )
+                    else:
+                        logger.debug(
+                            "WebEngineView.toHtml returned empty or None"
+                        )
+
+                try:
+                    page.toHtml(_log_html)
+                except Exception:
+                    logger.debug("page.toHtml failed", exc_info=True)
+
+                # schedule a delayed JS probe to check document.readyState and window presence
+                def _delayed_probe():
+                    try:
+                        if self.ui.stage and self.ui.stage.page():
+                            self.ui.stage.page().runJavaScript(
+                                "(function(){return {ready: document.readyState, hasQWebChannel: typeof QWebChannel !== 'undefined', hasChatScript: !!document.querySelector('script[src*\"conversation.js\"]') }; })()",
+                                lambda r: logger.debug(
+                                    f"Delayed JS probe: {r}"
+                                ),
+                            )
+                    except Exception:
+                        logger.debug("Delayed JS probe failed", exc_info=True)
+
+                QTimer.singleShot(600, _delayed_probe)
+        except Exception:
+            logger.debug(
+                "Failed to run WebEngineView diagnostics", exc_info=True
+            )
 
     def on_chatbot_changed(self):
         self.api.llm.clear_history()
@@ -166,6 +273,7 @@ class ConversationWidget(BaseWidget):
         self._conversation_id = None
         self.conversation_history = []
         self._streamed_messages = []
+        self.set_conversation([])
         self._clear_conversation_widgets()
 
     def on_add_bot_message_to_conversation(self, data: Dict):
@@ -177,11 +285,15 @@ class ConversationWidget(BaseWidget):
         if llm_response.node_id is not None:
             return
 
+        # Skip empty end-of-stream signals, but reset state
         if llm_response.is_end_of_message:
+            # Allow inclusion of any final token content then finalize after processing
             if not llm_response.message:
                 self._finalize_stream_state()
                 return
+            # If final token carries content we'll process it then finalize in _process_sequential_tokens
 
+        # Always use the sequence-based handler
         self._handle_sequenced_token(llm_response)
 
     def hide_status_indicator(self):
@@ -189,14 +301,229 @@ class ConversationWidget(BaseWidget):
         self.loading_widget.hide()
         QApplication.processEvents()
 
-    def scroll_to_bottom(self) -> None:
-        """Scroll the conversation to the bottom."""
-        QTimer.singleShot(0, self._do_scroll_to_bottom)
+    def wait_for_js_ready(self, callback, max_attempts=50):
+        """Wait for the JS QWebChannel to be ready before calling setMessages.
 
-    def _do_scroll_to_bottom(self):
-        """Actually perform the scroll to bottom."""
-        scrollbar = self.ui.messages.verticalScrollBar()
-        scrollbar.setValue(scrollbar.maximum())
+        Args:
+            callback: Function to call when JS is ready
+            max_attempts: Maximum number of retry attempts (default 50 = ~2.5 seconds)
+        """
+        attempt_count = 0
+
+        def check_ready():
+            nonlocal attempt_count
+            attempt_count += 1
+
+            try:
+                if not self.ui.stage or not self.ui.stage.page():
+                    logger.debug(
+                        "ConversationWidget: Widget or page no longer available for JS ready check"
+                    )
+                    return
+
+                view_page = self.ui.stage.page()
+                view_page.runJavaScript(
+                    "window.isChatReady === true",
+                    lambda ready: handle_result(ready),
+                )
+            except RuntimeError as e:
+                logger.debug(
+                    f"ConversationWidget: JavaScript ready check failed (widget deleted?): {e}"
+                )
+                callback()
+
+        def handle_result(ready):
+            if ready:
+                callback()
+            elif attempt_count < max_attempts:
+                QTimer.singleShot(50, check_ready)
+            else:
+                callback()
+
+        check_ready()
+
+    def wait_for_dom_ready(self, callback, max_attempts=50):
+        """Wait for the DOM to be ready before executing callback.
+
+        Args:
+            callback: Function to call when DOM is ready
+            max_attempts: Maximum number of retry attempts (default 50 = ~2.5 seconds)
+        """
+        attempt_count = 0
+
+        def check_dom_ready():
+            nonlocal attempt_count
+            attempt_count += 1
+
+            try:
+                if not self.ui.stage or not self.ui.stage.page():
+                    logger.debug(
+                        "ConversationWidget: Widget or page no longer available for DOM ready check"
+                    )
+                    return
+
+                view_page = self.ui.stage.page()
+                view_page.runJavaScript(
+                    "document.readyState === 'complete' && !!document.getElementById('conversation-container')",
+                    lambda ready: handle_dom_result(ready),
+                )
+            except RuntimeError as e:
+                logger.debug(
+                    f"ConversationWidget: DOM ready check failed (widget deleted?): {e}"
+                )
+                callback()
+
+        def handle_dom_result(ready):
+            if ready:
+                callback()
+            elif attempt_count < max_attempts:
+                QTimer.singleShot(50, check_dom_ready)
+            else:
+                logger.warning(
+                    f"ConversationWidget: DOM ready timeout after {max_attempts} attempts"
+                )
+                callback()
+
+        check_dom_ready()
+
+    def set_conversation(self, messages: List[Dict[str, Any]]) -> None:
+        """Update the conversation display using MathJax for all content types.
+
+        Args:
+            messages (List[Dict[str, Any]]): List of message dicts (sender, text, timestamp, etc).
+        """
+        simplified_messages = []
+        logger.debug(
+            f"set_conversation called with {len(messages) if messages is not None else 0} messages"
+        )
+        for msg in messages:
+            content = msg.get("text") or msg.get("content") or ""
+            # Format content for MathJax compatibility
+            fmt = FormatterExtended.format_content(content)
+
+            # All content types are now handled by MathJax in the main template
+            simplified_messages.append(
+                {
+                    **msg,
+                    "content": fmt[
+                        "content"
+                    ],  # MathJax will handle all formatting
+                    "content_type": fmt["type"],  # Keep for debugging/logging
+                    "id": msg.get("id", len(simplified_messages)),
+                    "timestamp": msg.get("timestamp", ""),
+                    "name": msg.get("name")
+                    or msg.get("sender")
+                    or ("Assistant" if msg.get("is_bot") else "User"),
+                    "is_bot": msg.get("is_bot", False),
+                }
+            )
+
+        # Ensure _conversation_id is set if possible
+        if self._conversation_id is None and self._conversation is not None:
+            self._conversation_id = getattr(self._conversation, "id", None)
+
+        def send():
+            self._chat_bridge.set_messages(simplified_messages)
+
+        self.wait_for_js_ready(send)
+
+    def _handle_scroll_request(self) -> None:
+        """Handle scroll request from JavaScript and delegate to parent scroll area."""
+        try:
+            # Scroll outer QScrollArea to bottom
+            scroll_area = getattr(self.ui, "messages", None)
+            if scroll_area is not None:
+                vsb = scroll_area.verticalScrollBar()
+                vsb.setValue(vsb.maximum())
+            else:
+                # Log that outer scroll area was not found so we can determine which scrollbar is active
+                logger.debug(
+                    "_handle_scroll_request: no outer scroll area found on UI (messages attribute missing)"
+                )
+        except Exception:
+            logger.debug("_handle_scroll_request failed", exc_info=True)
+
+    def _handle_copy_message(self, message_id) -> None:
+        """Handle copy requests from the webview by copying message text to the system clipboard."""
+        try:
+            # normalize id
+            try:
+                mid = int(message_id)
+            except Exception:
+                mid = message_id
+
+            # find message text in streamed messages or conversation
+            text = None
+            # check streamed buffer first
+            for m in getattr(self, "_streamed_messages", []) or []:
+                if int(m.get("id", -1)) == int(mid):
+                    text = m.get("content") or m.get("text") or ""
+                    break
+            # fallback to conversation stored value
+            if (
+                text is None
+                and self._conversation
+                and hasattr(self._conversation, "value")
+            ):
+                for m in self._conversation.value or []:
+                    if int(m.get("id", -1)) == int(mid):
+                        text = m.get("content") or m.get("text") or ""
+                        break
+
+            if text is None:
+                logger.debug(
+                    f"_handle_copy_message: message id {message_id} not found"
+                )
+                return
+
+            # use QApplication clipboard
+            try:
+                clipboard = QApplication.clipboard()
+                clipboard.setText(str(text))
+                logger.debug(
+                    f"_handle_copy_message: copied message id {message_id} to clipboard"
+                )
+            except Exception:
+                logger.debug(
+                    "_handle_copy_message: failed to set clipboard",
+                    exc_info=True,
+                )
+        except Exception:
+            logger.debug("_handle_copy_message failed", exc_info=True)
+
+    def scroll_to_bottom(self) -> None:
+        """Scroll the conversation to the bottom by triggering the parent QScrollArea."""
+
+        def trigger_scroll():
+            try:
+                if not self.ui.stage or not self.ui.stage.page():
+                    logger.debug(
+                        "ConversationWidget: Widget or page no longer available for scroll"
+                    )
+                    return
+
+                view_page = self.ui.stage.page()
+                view_page.runJavaScript(
+                    """
+                    if (window.chatBridge && window.chatBridge.request_scroll) {
+                        window.chatBridge.request_scroll();
+                        console.log('[ConversationWidget] Scroll request sent to Qt');
+                    } else {
+                        console.warn('[ConversationWidget] chatBridge.request_scroll not available');
+                    }
+                    """,
+                    lambda result: logger.debug(
+                        f"ConversationWidget: Scroll request result: {result}"
+                    ),
+                )
+            except RuntimeError as e:
+                logger.debug(
+                    f"ConversationWidget: JavaScript call failed (widget deleted?): {e}"
+                )
+
+        trigger_scroll()
+        QTimer.singleShot(50, trigger_scroll)
+        QTimer.singleShot(200, trigger_scroll)
 
     def _assign_message_ids(self, messages: list[dict]) -> list[dict]:
         """Assign unique, consecutive integer 'id' to every message."""
@@ -204,16 +531,13 @@ class ConversationWidget(BaseWidget):
             msg["id"] = idx
         return messages
 
-    def set_conversation_widgets(self, messages, skip_scroll: bool = False):
-        """Create MessageWidget instances for each message and add them to the scroll area."""
-        logger.debug(
-            f"set_conversation_widgets called with {len(messages)} messages"
-        )
-        for idx, msg in enumerate(messages):
-            logger.debug(
-                f"Message {idx}: is_bot={msg.get('is_bot')}, role={msg.get('role')}, content={msg.get('content', '')[:50]}..."
-            )
+    def _on_content_height_changed(self, height):
+        """No-op to avoid interfering with layout during splitter drags."""
+        return
 
+    def set_conversation_widgets(self, messages, skip_scroll: bool = False):
+        """Replace per-message widgets with a single HTML conversation view."""
+        # Ensure every message has a unique integer 'id' and correct role/is_bot
         messages = self._assign_message_ids(messages)
         for msg in messages:
             if "role" not in msg:
@@ -223,132 +547,18 @@ class ConversationWidget(BaseWidget):
         self._streamed_messages = list(messages)
         if self._conversation is not None:
             self._conversation.value = self._streamed_messages
-
-        # Clear existing message widgets
-        self._clear_message_widgets()
-
-        # Create and add message widgets
-        widgets_created = 0
-        for msg in self._streamed_messages:
-            widget = self._create_and_add_message_widget(msg)
-            if widget is None:
-                logger.warning(f"Failed to create widget for message: {msg}")
-            else:
-                widgets_created += 1
-                logger.debug(
-                    f"Created widget #{widgets_created} for message {msg.get('id')}"
-                )
-
-        logger.info(
-            f"Created {widgets_created} widgets out of {len(self._streamed_messages)} messages"
-        )
-        logger.info(f"Layout now has {self.messages_layout.count()} items")
-
-        # Force layout and widget updates
-        self.messages_layout.activate()
-        self.ui.scrollAreaWidgetContents.updateGeometry()
-        self.ui.messages.updateGeometry()
-
-        # Log scroll area content size
-        logger.debug(
-            f"ScrollAreaWidgetContents size: {self.ui.scrollAreaWidgetContents.size()}, "
-            f"sizeHint: {self.ui.scrollAreaWidgetContents.sizeHint()}"
-        )
-
-        if not skip_scroll:
-            self.scroll_to_bottom()
-
-    def _clear_message_widgets(self):
-        """Remove all message widgets from the layout."""
-        # Remove the spacer first
-        self.messages_layout.removeItem(self.vertical_spacer)
-
-        # Remove all widgets from the layout
-        while self.messages_layout.count() > 0:
-            item = self.messages_layout.takeAt(0)
-            if item.widget():
-                widget = item.widget()
-                widget.setParent(None)
-                widget.deleteLater()
-
-        # Re-add the spacer at the end
-        self.messages_layout.addItem(self.vertical_spacer)
-
-    def _create_and_add_message_widget(
-        self, msg: Dict
-    ) -> Optional[MessageWidget]:
-        """Create a MessageWidget for a message and add it to the layout."""
-        content = (
-            msg.get("content") or msg.get("text") or msg.get("message") or ""
-        )
-        name = msg.get("name") or (
-            "Assistant" if msg.get("is_bot") else "User"
-        )
-        is_bot = msg.get("is_bot", False)
-        message_id = msg.get("id", 0)
-
-        logger.debug(
-            f"_create_and_add_message_widget: is_bot={is_bot}, name={name}, content_len={len(content)}, content_preview={content[:50]}..."
-        )
-
-        if not content:
-            logger.warning(
-                f"Skipping message with no content: is_bot={is_bot}, name={name}, msg keys={list(msg.keys())}"
-            )
-            return None
-
-        # Remove the spacer temporarily
-        self.messages_layout.removeItem(self.vertical_spacer)
-
-        # Create the message widget
-        message_widget = MessageWidget(
-            parent=self.ui.scrollAreaWidgetContents,
-            name=name,
-            message=content,
-            message_id=message_id,
-            conversation_id=self.conversation_id,
-            is_bot=is_bot,
-            bot_mood=msg.get("bot_mood"),
-            bot_mood_emoji=msg.get("bot_mood_emoji"),
-            user_mood=msg.get("user_mood"),
-        )
-
-        # Ensure widget respects parent width and wraps content
-        # Expanding horizontally will fill available width but respect parent constraints
-        # Minimum vertically will use only as much height as needed
-        message_widget.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum
-        )
-
-        # Force widget to be visible
-        message_widget.setVisible(True)
-        message_widget.show()
-
-        # Add to layout
-        self.messages_layout.addWidget(message_widget)
-
-        # Log widget size and visibility for debugging
-        logger.debug(
-            f"Widget visibility: {message_widget.isVisible()}, "
-            f"height: {message_widget.height()}, "
-            f"sizeHint: {message_widget.sizeHint()}, "
-            f"minimumHeight: {message_widget.minimumHeight()}"
-        )
-
-        # Re-add the spacer at the end
-        self.messages_layout.addItem(self.vertical_spacer)
-
-        return message_widget
+        self.set_conversation(self._streamed_messages)
 
     def _clear_conversation(self, skip_update: bool = False):
         self.conversation = None
         self.conversation_history = []
         self._streamed_messages = []
+        self.set_conversation([])
         self._clear_conversation_widgets(skip_update=skip_update)
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
-        """Clear all message widgets from the scroll area."""
-        self._clear_message_widgets()
+        """Clear the HTML conversation view."""
+        self.set_conversation([])
 
     def on_clear_conversation(self):
         self._clear_conversation()
@@ -423,28 +633,12 @@ class ConversationWidget(BaseWidget):
 
     def on_bot_mood_updated_signal(self, data):
         """Handle live mood/emoji update for a message widget."""
-        message_id = data.get("message_id")
-        mood = data.get("mood")
-        mood_emoji = data.get("mood_emoji")
-
-        if message_id is None:
-            return
-
-        # Find the message widget with this ID and update it
-        for i in range(self.messages_layout.count()):
-            item = self.messages_layout.itemAt(i)
-            if (
-                item
-                and item.widget()
-                and isinstance(item.widget(), MessageWidget)
-            ):
-                widget = item.widget()
-                if widget.message_id == message_id:
-                    widget.update_mood_emoji(mood, mood_emoji)
-                    break
+        print("TODO: BOT MOOD UPDATED")
 
     def flush_token_buffer(self):
-        """Flush the token buffer and update the UI."""
+        """
+        Flush the token buffer and update the UI.
+        """
         combined_message = "".join(self.token_buffer)
         self.token_buffer.clear()
 
@@ -466,39 +660,12 @@ class ConversationWidget(BaseWidget):
             self._streamed_messages = self._assign_message_ids(
                 self._streamed_messages
             )
-            self._update_message_widgets()
-
-    def _update_message_widgets(self):
-        """Update the message widgets to reflect the current streamed messages."""
-        # Count current widgets (excluding spacer)
-        current_widget_count = sum(
-            1
-            for i in range(self.messages_layout.count())
-            if self.messages_layout.itemAt(i).widget()
-        )
-
-        # If we have more messages than widgets, add new widgets
-        if len(self._streamed_messages) > current_widget_count:
-            for msg in self._streamed_messages[current_widget_count:]:
-                self._create_and_add_message_widget(msg)
-            self.scroll_to_bottom()
-        # If we have the same number, update the last widget
-        elif current_widget_count > 0:
-            last_msg = self._streamed_messages[-1]
-            for i in range(self.messages_layout.count() - 1, -1, -1):
-                item = self.messages_layout.itemAt(i)
-                if (
-                    item
-                    and item.widget()
-                    and isinstance(item.widget(), MessageWidget)
-                ):
-                    widget = item.widget()
-                    if widget.is_bot == last_msg.get("is_bot"):
-                        widget.update_message(last_msg.get("content", ""))
-                        break
+            self.set_conversation(self._streamed_messages)
 
     def on_llm_request_text_generate_signal(self, data):
-        """Handle the LLM request text generation signal."""
+        """
+        Handle the LLM request text generation signal.
+        """
         request_data = data.get("request_data", {})
         prompt = request_data.get("prompt", "")
         self._streamed_messages.append(
@@ -512,8 +679,85 @@ class ConversationWidget(BaseWidget):
         self._streamed_messages = self._assign_message_ids(
             self._streamed_messages
         )
-        self._update_message_widgets()
-        self.scroll_to_bottom()
+        self.set_conversation(self._streamed_messages)
+
+    def _get_view(self):
+        """Return the QWebEngineView used for rendering the conversation."""
+        return self.ui.stage if self.ui and hasattr(self.ui, "stage") else None
+
+    def _log_parent_scroll_info(self) -> None:
+        """Log parent widget chain and any QScrollArea scroll policies for debugging."""
+        try:
+            parts = []
+            w: QWidget = self
+            depth = 0
+            while w is not None and depth < 10:
+                parts.append(f"{w.__class__.__name__}:{w.objectName()}")
+                if isinstance(w, QScrollArea):
+                    vpolicy = w.verticalScrollBarPolicy()
+                    hpolicy = w.horizontalScrollBarPolicy()
+                    parts.append(
+                        f"QScrollArea-policies: v={vpolicy} h={hpolicy}"
+                    )
+                w = w.parentWidget()
+                depth += 1
+            logger.debug("Parent chain: %s", " -> ".join(parts))
+        except Exception:
+            logger.debug("Failed to enumerate parent widgets", exc_info=True)
+
+    def resizeEvent(self, event):
+        """Capture a DOM snapshot shortly after resizes to diagnose disappearing messages."""
+        super().resizeEvent(event)
+        try:
+            if not hasattr(self, "_resize_snapshot_timer"):
+                self._resize_snapshot_timer = QTimer(self)
+                self._resize_snapshot_timer.setSingleShot(True)
+                self._resize_snapshot_timer.setInterval(150)
+
+                def _on_resize_snapshot():
+                    try:
+                        if self.ui.stage and self.ui.stage.page():
+                            self.ui.stage.page().runJavaScript(
+                                "(function(){try{\
+                                    const el = document.getElementById('conversation-container');\
+                                    const overflowEls = Array.from(document.querySelectorAll('*')).filter(e => e && e.scrollHeight > e.clientHeight).slice(0,20).map(e => ({tag: e.tagName, id: e.id || null, classes: e.className || null, scrollHeight: e.scrollHeight, clientHeight: e.clientHeight}));\
+                                    return {\
+                                        ready: document.readyState,\
+                                        hasContainer: !!el,\
+                                        document: { scrollHeight: document.documentElement.scrollHeight, clientHeight: document.documentElement.clientHeight, scrollTop: document.documentElement.scrollTop },\
+                                        body: { scrollHeight: document.body.scrollHeight, clientHeight: document.body.clientHeight, scrollTop: document.body.scrollTop },\
+                                        container: el ? { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight, scrollTop: el.scrollTop } : null,\
+                                        overflowElements: overflowEls\
+                                    }; } catch (e) { return { error: String(e), stack: e && e.stack ? e.stack : null }; } })()",
+                                lambda res: (
+                                    logger.debug(
+                                        f"DOM SNAPSHOT resizeEvent: {res}"
+                                    )
+                                    if res
+                                    else logger.debug(
+                                        "DOM SNAPSHOT resizeEvent: no result"
+                                    )
+                                ),
+                            )
+                    except Exception:
+                        logger.debug(
+                            "DOM snapshot on resize failed", exc_info=True
+                        )
+
+                self._resize_snapshot_timer.timeout.connect(
+                    _on_resize_snapshot
+                )
+
+            self._resize_snapshot_timer.start()
+        except Exception:
+            logger.debug(
+                "Failed to schedule resize DOM snapshot", exc_info=True
+            )
+
+    @property
+    def _view(self):
+        """Compat property for tests expecting a _view attribute (QWebEngineView)."""
+        return self._get_view()
 
     @Slot(int)
     @Slot(str)
@@ -543,74 +787,51 @@ class ConversationWidget(BaseWidget):
         self._conversation.value = new_messages
         self.set_conversation_widgets(new_messages)
 
-    def copyMessage(self, message_id):
-        """Copy the message content to the clipboard."""
-        try:
-            msgs = self._streamed_messages or (
-                self.conversation.value
-                if self.conversation and hasattr(self.conversation, "value")
-                else []
-            )
-            idx = next(
-                (
-                    i
-                    for i, m in enumerate(msgs)
-                    if int(m.get("id", -1)) == int(message_id)
-                ),
-                None,
-            )
-            if idx is None:
-                return
-            content = msgs[idx].get("content", "")
-            QApplication.clipboard().setText(content)
-        except Exception:
-            return
-
-    def newChat(self):
-        """Start a new chat by clearing history via API."""
-        try:
-            if hasattr(self.api, "llm") and hasattr(
-                self.api.llm, "clear_history"
-            ):
-                self.api.llm.clear_history()
-            self._clear_conversation()
-        except Exception:
-            return
-
     def _handle_sequenced_token(self, llm_response):
-        """Handle tokens with sequence numbers to ensure proper ordering."""
+        """
+        Handle tokens with sequence numbers to ensure proper ordering.
+
+        Args:
+            llm_response: LLMResponse object with sequence_number field
+        """
         sequence_num = llm_response.sequence_number
 
+        # Initialize / restart sequence tracking on first message boundary
         if llm_response.is_first_message:
             if not self._stream_started:
+                existing_keys = list(self._sequence_buffer.keys())
                 self._expected_sequence = sequence_num
                 self._current_stream_tokens = []
                 self._stream_started = True
-                self._active_stream_message_index = None
+                self._active_stream_message_index = (
+                    None  # Force creation of a new message when processed
+                )
             else:
-                self._finalize_stream_state(partial=True)
+                # New stream while another is active -> finalize previous WITHOUT deleting its content
+                self._finalize_stream_state(
+                    partial=True
+                )  # Keep sequence buffer for possible early tokens
                 self._expected_sequence = sequence_num
                 self._current_stream_tokens = []
                 self._stream_started = True
                 self._active_stream_message_index = None
 
+        # Store token in sequence buffer
         self._sequence_buffer[sequence_num] = llm_response
+
+        # Process any tokens that are now in sequence immediately
         self._process_sequential_tokens()
 
     def _process_sequential_tokens(self):
         """Process buffered tokens that are in the correct sequence."""
+
         processed_any = False
         last_token_was_end = False
         while self._expected_sequence in self._sequence_buffer:
             token_response = self._sequence_buffer.pop(self._expected_sequence)
 
+            # Add to stream buffer
             if token_response.message:
-                # Append incoming message chunk. Chunks from different
-                # streaming implementations may be either deltas (only the
-                # new text) or cumulative (the full message so far). To
-                # avoid duplicating repeated prefixes when chunks are
-                # cumulative, we keep the chunk list but detect the
-                # cumulative case below when forming the combined content.
                 self._current_stream_tokens.append(token_response.message)
             if getattr(token_response, "is_end_of_message", False):
                 last_token_was_end = True
@@ -618,13 +839,16 @@ class ConversationWidget(BaseWidget):
             self._expected_sequence += 1
             processed_any = True
 
+        # Update the conversation display only once after processing all available tokens
         if processed_any:
             combined_content = "".join(self._current_stream_tokens)
 
             if not self._streamed_messages:
                 self._streamed_messages = []
 
+            # Update or create bot message
             if self._active_stream_message_index is None:
+                # Always create a new message for a new stream to avoid overwriting prior answers
                 self._streamed_messages.append(
                     {
                         "name": self.chatbot.botname,
@@ -641,19 +865,38 @@ class ConversationWidget(BaseWidget):
                     "content"
                 ] = combined_content
 
+            # Assign IDs and update conversation
             self._streamed_messages = self._assign_message_ids(
                 self._streamed_messages
             )
-            self._update_message_widgets()
+            self.set_conversation(self._streamed_messages)
 
         if last_token_was_end:
             self._finalize_stream_state()
 
     def _finalize_stream_state(self, partial: bool = False):
-        """Reset streaming state after a message completes."""
+        """Reset streaming state after a message completes.
+
+        Args:
+            partial: If True, keeps existing sequence buffer (used when a new first token arrives mid-stream).
+        """
         self._stream_started = False
         self._current_stream_tokens = []
         self._active_stream_message_index = None
         self._expected_sequence = 1 if not partial else self._expected_sequence
         if not partial:
             self._sequence_buffer = {}
+
+    def on_theme_changed_signal(self, data: Dict):
+        """
+        Set the theme for the home widget by updating the CSS in the webEngineView.
+        This will call the setTheme JS function in the loaded HTML.
+        """
+        if hasattr(self.ui, "stage"):
+            theme_name = data.get(
+                "template", TemplateName.SYSTEM_DEFAULT
+            ).value.lower()
+            # Set window.currentTheme before calling setTheme
+            js = f"window.currentTheme = '{theme_name}'; window.setTheme && window.setTheme('{theme_name}');"
+            self.ui.stage.page().runJavaScript(js)
+        super().on_theme_changed_signal(data)

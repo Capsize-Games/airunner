@@ -52,6 +52,24 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtCore import qVersion
 
 
+def set_global_tooltip_style():
+    app = QApplication.instance()
+    if app is not None:
+        app.setStyleSheet(
+            app.styleSheet()
+            + """
+            QToolTip {
+                color: #fff;
+                background-color: #222;
+                border: 1px solid #555;
+                padding: 4px 8px;
+                font-size: 13px;
+                border-radius: 4px;
+            }
+            """
+        )
+
+
 class CapturingWebEnginePage(QWebEnginePage):
     """QWebEnginePage subclass to capture JS console messages for diagnostics."""
 
@@ -297,10 +315,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
             self.app = QApplication([])
         self.app.api = self
         # Set global tooltip style ONCE at startup
-        from airunner.components.llm.gui.widgets.message_widget import (
-            set_global_tooltip_style,
-        )
-
         set_global_tooltip_style()
 
     def run(self):
