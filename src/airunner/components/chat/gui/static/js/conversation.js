@@ -66,7 +66,14 @@ function initializeChatView() {
                 needsTypeset = true;
             }
         }
-        if (needsScroll) setTimeout(smoothScrollToBottom, 0);
+        if (needsScroll) {
+            // Only auto-scroll when the user hasn't manually scrolled up
+            if (window.autoScrollEnabled) {
+                setTimeout(smoothScrollToBottom, 0);
+            } else {
+                if (console && console.debug) console.debug('[conversation.js] auto-scroll suppressed because user scrolled up');
+            }
+        }
         if (needsTypeset && window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
             clearTimeout(window.mathJaxTypesetTimeout);
             window.mathJaxTypesetTimeout = setTimeout(() => {

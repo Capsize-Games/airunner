@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 
 from PySide6.QtCore import QTimer, Slot, Qt
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QScrollArea, QWidget
 from PySide6.QtWebChannel import QWebChannel
 from llama_cloud import MessageRole
 
@@ -76,9 +76,20 @@ class ConversationWidget(BaseWidget):
         self._web_channel = QWebChannel(self.ui.stage.page())
         self._chat_bridge = ChatBridge()
         self._chat_bridge.scrollRequested.connect(self._handle_scroll_request)
+        # Listen for content height updates from the web view to resize the QWebEngineView
+        try:
+            self._chat_bridge.contentHeightChanged.connect(
+                lambda h: self._on_content_height_changed(h)
+            )
+        except Exception:
+            pass
         self._chat_bridge.deleteMessageRequested.connect(self.deleteMessage)
         self._web_channel.registerObject("chatBridge", self._chat_bridge)
         self.ui.stage.page().setWebChannel(self._web_channel)
+
+        # Debounce timer for height updates
+        self._height_update_timer: Optional[QTimer] = None
+        self._pending_height: Optional[int] = None
 
     def navigate(self, url: str):
         self.api.navigate(url)
@@ -128,6 +139,100 @@ class ConversationWidget(BaseWidget):
             )
             if self._conversation_id is None:
                 self.load_conversation()
+        # Capture a DOM snapshot and scrollbar states for diagnostics when widget is shown
+        try:
+
+            def _snap():
+                try:
+                    if self.ui.stage and self.ui.stage.page():
+                        # log scroll metrics and overflowing elements to diagnose duplicate scrollbars
+                        self.ui.stage.page().runJavaScript(
+                            "(function(){try{\
+                                const el = document.getElementById('conversation-container');\
+                                const overflowEls = Array.from(document.querySelectorAll('*')).filter(e => e && e.scrollHeight > e.clientHeight).slice(0,20).map(e => ({tag: e.tagName, id: e.id || null, classes: e.className || null, scrollHeight: e.scrollHeight, clientHeight: e.clientHeight}));\
+                                return {\
+                                    ready: document.readyState,\
+                                    hasContainer: !!el,\
+                                    document: { scrollHeight: document.documentElement.scrollHeight, clientHeight: document.documentElement.clientHeight, scrollTop: document.documentElement.scrollTop },\
+                                    body: { scrollHeight: document.body.scrollHeight, clientHeight: document.body.clientHeight, scrollTop: document.body.scrollTop },\
+                                    container: el ? { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight, scrollTop: el.scrollTop } : null,\
+                                    overflowElements: overflowEls\
+                                }; } catch (e) { return { error: String(e), stack: e && e.stack ? e.stack : null }; } })()",
+                            lambda res: (
+                                logger.debug(f"DOM SNAPSHOT showEvent: {res}")
+                                if res
+                                else logger.debug(
+                                    "DOM SNAPSHOT showEvent: no result"
+                                )
+                            ),
+                        )
+                except Exception:
+                    logger.debug(
+                        "DOM SNAPSHOT showEvent failed", exc_info=True
+                    )
+
+            QTimer.singleShot(200, _snap)
+        except Exception:
+            logger.debug(
+                "Failed to schedule DOM snapshot on showEvent", exc_info=True
+            )
+        # Log parent widget chain and any QScrollArea policies for debugging
+        try:
+            self._log_parent_scroll_info()
+        except Exception:
+            logger.debug("Failed to log parent scroll info", exc_info=True)
+
+        # Additional page diagnostics: log current URL, loading state and page HTML
+        try:
+            page = (
+                getattr(self.ui.stage, "page", None) and self.ui.stage.page()
+            )
+            if page:
+                try:
+                    url = self.ui.stage.url().toString()
+                except Exception:
+                    url = None
+                try:
+                    is_loading = page.isLoading()
+                except Exception:
+                    is_loading = None
+                logger.debug(
+                    f"WebEngineView diagnostics: url={url}, isLoading={is_loading}"
+                )
+
+                def _log_html(html: Optional[str]):
+                    if html:
+                        logger.debug(
+                            f"WebEngineView HTML length: {len(html)}; preview: {html[:1000]!s}"
+                        )
+                    else:
+                        logger.debug(
+                            "WebEngineView.toHtml returned empty or None"
+                        )
+
+                try:
+                    page.toHtml(_log_html)
+                except Exception:
+                    logger.debug("page.toHtml failed", exc_info=True)
+
+                # schedule a delayed JS probe to check document.readyState and window presence
+                def _delayed_probe():
+                    try:
+                        if self.ui.stage and self.ui.stage.page():
+                            self.ui.stage.page().runJavaScript(
+                                "(function(){return {ready: document.readyState, hasQWebChannel: typeof QWebChannel !== 'undefined', hasChatScript: !!document.querySelector('script[src*\"conversation.js\"]') }; })()",
+                                lambda r: logger.debug(
+                                    f"Delayed JS probe: {r}"
+                                ),
+                            )
+                    except Exception:
+                        logger.debug("Delayed JS probe failed", exc_info=True)
+
+                QTimer.singleShot(600, _delayed_probe)
+        except Exception:
+            logger.debug(
+                "Failed to run WebEngineView diagnostics", exc_info=True
+            )
 
     def on_chatbot_changed(self):
         self.api.llm.clear_history()
@@ -285,6 +390,9 @@ class ConversationWidget(BaseWidget):
             messages (List[Dict[str, Any]]): List of message dicts (sender, text, timestamp, etc).
         """
         simplified_messages = []
+        logger.debug(
+            f"set_conversation called with {len(messages) if messages is not None else 0} messages"
+        )
         for msg in messages:
             content = msg.get("text") or msg.get("content") or ""
             # Format content for MathJax compatibility
@@ -318,6 +426,19 @@ class ConversationWidget(BaseWidget):
 
     def _handle_scroll_request(self) -> None:
         """Handle scroll request from JavaScript and delegate to parent scroll area."""
+        try:
+            # Scroll outer QScrollArea to bottom
+            scroll_area = getattr(self.ui, "messages", None)
+            if scroll_area is not None:
+                vsb = scroll_area.verticalScrollBar()
+                vsb.setValue(vsb.maximum())
+            else:
+                # Log that outer scroll area was not found so we can determine which scrollbar is active
+                logger.debug(
+                    "_handle_scroll_request: no outer scroll area found on UI (messages attribute missing)"
+                )
+        except Exception:
+            logger.debug("_handle_scroll_request failed", exc_info=True)
 
     def scroll_to_bottom(self) -> None:
         """Scroll the conversation to the bottom by triggering the parent QScrollArea."""
@@ -358,6 +479,10 @@ class ConversationWidget(BaseWidget):
         for idx, msg in enumerate(messages):
             msg["id"] = idx
         return messages
+
+    def _on_content_height_changed(self, height):
+        """No-op to avoid interfering with layout during splitter drags."""
+        return
 
     def set_conversation_widgets(self, messages, skip_scroll: bool = False):
         """Replace per-message widgets with a single HTML conversation view."""
@@ -508,6 +633,75 @@ class ConversationWidget(BaseWidget):
     def _get_view(self):
         """Return the QWebEngineView used for rendering the conversation."""
         return self.ui.stage if self.ui and hasattr(self.ui, "stage") else None
+
+    def _log_parent_scroll_info(self) -> None:
+        """Log parent widget chain and any QScrollArea scroll policies for debugging."""
+        try:
+            parts = []
+            w: QWidget = self
+            depth = 0
+            while w is not None and depth < 10:
+                parts.append(f"{w.__class__.__name__}:{w.objectName()}")
+                if isinstance(w, QScrollArea):
+                    vpolicy = w.verticalScrollBarPolicy()
+                    hpolicy = w.horizontalScrollBarPolicy()
+                    parts.append(
+                        f"QScrollArea-policies: v={vpolicy} h={hpolicy}"
+                    )
+                w = w.parentWidget()
+                depth += 1
+            logger.debug("Parent chain: %s", " -> ".join(parts))
+        except Exception:
+            logger.debug("Failed to enumerate parent widgets", exc_info=True)
+
+    def resizeEvent(self, event):
+        """Capture a DOM snapshot shortly after resizes to diagnose disappearing messages."""
+        super().resizeEvent(event)
+        try:
+            if not hasattr(self, "_resize_snapshot_timer"):
+                self._resize_snapshot_timer = QTimer(self)
+                self._resize_snapshot_timer.setSingleShot(True)
+                self._resize_snapshot_timer.setInterval(150)
+
+                def _on_resize_snapshot():
+                    try:
+                        if self.ui.stage and self.ui.stage.page():
+                            self.ui.stage.page().runJavaScript(
+                                "(function(){try{\
+                                    const el = document.getElementById('conversation-container');\
+                                    const overflowEls = Array.from(document.querySelectorAll('*')).filter(e => e && e.scrollHeight > e.clientHeight).slice(0,20).map(e => ({tag: e.tagName, id: e.id || null, classes: e.className || null, scrollHeight: e.scrollHeight, clientHeight: e.clientHeight}));\
+                                    return {\
+                                        ready: document.readyState,\
+                                        hasContainer: !!el,\
+                                        document: { scrollHeight: document.documentElement.scrollHeight, clientHeight: document.documentElement.clientHeight, scrollTop: document.documentElement.scrollTop },\
+                                        body: { scrollHeight: document.body.scrollHeight, clientHeight: document.body.clientHeight, scrollTop: document.body.scrollTop },\
+                                        container: el ? { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight, scrollTop: el.scrollTop } : null,\
+                                        overflowElements: overflowEls\
+                                    }; } catch (e) { return { error: String(e), stack: e && e.stack ? e.stack : null }; } })()",
+                                lambda res: (
+                                    logger.debug(
+                                        f"DOM SNAPSHOT resizeEvent: {res}"
+                                    )
+                                    if res
+                                    else logger.debug(
+                                        "DOM SNAPSHOT resizeEvent: no result"
+                                    )
+                                ),
+                            )
+                    except Exception:
+                        logger.debug(
+                            "DOM snapshot on resize failed", exc_info=True
+                        )
+
+                self._resize_snapshot_timer.timeout.connect(
+                    _on_resize_snapshot
+                )
+
+            self._resize_snapshot_timer.start()
+        except Exception:
+            logger.debug(
+                "Failed to schedule resize DOM snapshot", exc_info=True
+            )
 
     @property
     def _view(self):

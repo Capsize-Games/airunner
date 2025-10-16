@@ -12,8 +12,9 @@ body {
     font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
     box-sizing: border-box;
     width: 100%;
-    min-height: 100%;
-    overflow-x: hidden;
+    height: 100%;
+    /* Prevent the document from scrolling so the conversation container owns scrolling */
+    overflow: hidden;
 }
 
 * {
@@ -23,7 +24,10 @@ body {
 
 #conversation-container {
     width: 100%;
-    min-height: 100%;
+    /* Fill the full viewport available inside the webview and own scrolling */
+    height: 100%;
+    /* Allow the conversation container to scroll internally. This ensures the
+         scrollbar is rendered inside the HTML content (single scrollbar UX). */
     overflow-y: auto;
     overflow-x: hidden;
     box-sizing: border-box;
