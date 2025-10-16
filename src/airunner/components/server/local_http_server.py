@@ -105,6 +105,39 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             self.send_header("Pragma", "no-cache")
             self.send_header("Expires", "0")
             self._add_no_cache_headers = False
+        # Add permissive CORS for font resources and MathJax assets so the
+        # QWebEngineView won't block font loads when origin differs by host
+        # (e.g. requests coming from https://127.0.0.1 vs https://localhost).
+        try:
+            parsed = urllib.parse.urlparse(self.path)
+            path = parsed.path or ""
+            lower = path.lower()
+            if (
+                lower.endswith(".woff")
+                or lower.endswith(".woff2")
+                or lower.endswith(".ttf")
+                or lower.endswith(".otf")
+                or "/mathjax/" in lower
+            ):
+                # Restrict to the exact server origin to avoid overly-permissive CORS
+                self.send_header(
+                    "Access-Control-Allow-Origin",
+                    f"https://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}",
+                )
+                self.send_header(
+                    "Access-Control-Allow-Methods",
+                    "GET, OPTIONS",
+                )
+                self.send_header(
+                    "Access-Control-Allow-Headers",
+                    "Origin, Content-Type, Accept",
+                )
+        except Exception:
+            # Never raise from end_headers; if header addition fails, continue
+            logging.debug(
+                "Failed to add CORS headers for path: %s",
+                getattr(self, "path", None),
+            )
 
         super().end_headers()
 
