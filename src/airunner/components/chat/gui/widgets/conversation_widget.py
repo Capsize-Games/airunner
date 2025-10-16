@@ -84,6 +84,9 @@ class ConversationWidget(BaseWidget):
         except Exception:
             pass
         self._chat_bridge.deleteMessageRequested.connect(self.deleteMessage)
+        self._chat_bridge.copyMessageRequested.connect(
+            self._handle_copy_message
+        )
         self._web_channel.registerObject("chatBridge", self._chat_bridge)
         self.ui.stage.page().setWebChannel(self._web_channel)
 
@@ -439,6 +442,54 @@ class ConversationWidget(BaseWidget):
                 )
         except Exception:
             logger.debug("_handle_scroll_request failed", exc_info=True)
+
+    def _handle_copy_message(self, message_id) -> None:
+        """Handle copy requests from the webview by copying message text to the system clipboard."""
+        try:
+            # normalize id
+            try:
+                mid = int(message_id)
+            except Exception:
+                mid = message_id
+
+            # find message text in streamed messages or conversation
+            text = None
+            # check streamed buffer first
+            for m in getattr(self, "_streamed_messages", []) or []:
+                if int(m.get("id", -1)) == int(mid):
+                    text = m.get("content") or m.get("text") or ""
+                    break
+            # fallback to conversation stored value
+            if (
+                text is None
+                and self._conversation
+                and hasattr(self._conversation, "value")
+            ):
+                for m in self._conversation.value or []:
+                    if int(m.get("id", -1)) == int(mid):
+                        text = m.get("content") or m.get("text") or ""
+                        break
+
+            if text is None:
+                logger.debug(
+                    f"_handle_copy_message: message id {message_id} not found"
+                )
+                return
+
+            # use QApplication clipboard
+            try:
+                clipboard = QApplication.clipboard()
+                clipboard.setText(str(text))
+                logger.debug(
+                    f"_handle_copy_message: copied message id {message_id} to clipboard"
+                )
+            except Exception:
+                logger.debug(
+                    "_handle_copy_message: failed to set clipboard",
+                    exc_info=True,
+                )
+        except Exception:
+            logger.debug("_handle_copy_message failed", exc_info=True)
 
     def scroll_to_bottom(self) -> None:
         """Scroll the conversation to the bottom by triggering the parent QScrollArea."""

@@ -97,36 +97,72 @@ function createMessageElement(msg) {
     const senderDiv = document.createElement('div');
     senderDiv.className = 'sender';
     senderDiv.textContent = msg.name || msg.sender || (msg.is_bot ? 'Assistant' : 'User');
-    messageDiv.appendChild(senderDiv);
+
     const contentDiv = document.createElement('div');
     contentDiv.className = 'content';
     contentDiv.innerHTML = sanitizeContent(msg.content);
-    messageDiv.appendChild(contentDiv);
-    if (!msg.is_bot) {
-        // Create actions container if not present
-        let headerDiv = messageDiv.querySelector('.header');
-        if (!headerDiv) {
-            headerDiv = document.createElement('div');
-            headerDiv.className = 'header';
-            headerDiv.appendChild(senderDiv);
-            messageDiv.insertBefore(headerDiv, contentDiv);
-        }
-        let actionsDiv = document.createElement('div');
-        actionsDiv.className = 'actions';
-        // Create delete button with inline SVG
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'delete-button';
-        deleteButton.title = 'Delete';
-        deleteButton.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
-        deleteButton.onclick = function (e) {
-            e.preventDefault();
-            if (window.chatBridge && typeof window.chatBridge.deleteMessage === 'function') {
-                window.chatBridge.deleteMessage(msg.id);
+
+    // Header always present so we can attach action buttons for all messages
+    let headerDiv = document.createElement('div');
+    headerDiv.className = 'header';
+    headerDiv.appendChild(senderDiv);
+
+    // Actions container (icon buttons)
+    let actionsDiv = document.createElement('div');
+    actionsDiv.className = 'actions';
+
+    // Copy button (icon-only)
+    const copyButton = document.createElement('button');
+    copyButton.className = 'copy-button';
+    copyButton.title = 'Copy';
+    copyButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+    copyButton.onclick = function (e) {
+        e.preventDefault();
+        try {
+            if (window.chatBridge && typeof window.chatBridge.copyMessage === 'function') {
+                window.chatBridge.copyMessage(msg.id);
+            } else {
+                // fallback to in-page copy if bridge not available
+                try {
+                    const text = (contentDiv && (contentDiv.innerText || contentDiv.textContent)) || (msg.content || '');
+                    if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                        navigator.clipboard.writeText(text).catch(() => { });
+                    } else {
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                    }
+                } catch (err) {
+                    if (console && console.warn) console.warn('[conversation.js] fallback copy failed', err);
+                }
             }
-        };
-        actionsDiv.appendChild(deleteButton);
-        headerDiv.appendChild(actionsDiv);
-    }
+        } catch (err) {
+            if (console && console.warn) console.warn('[conversation.js] copy click handler failed', err);
+        }
+    };
+    actionsDiv.appendChild(copyButton);
+
+    // Delete button (icon-only) - retain existing behavior
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'delete-button';
+    deleteButton.title = 'Delete';
+    deleteButton.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+    deleteButton.onclick = function (e) {
+        e.preventDefault();
+        if (window.chatBridge && typeof window.chatBridge.deleteMessage === 'function') {
+            window.chatBridge.deleteMessage(msg.id);
+        }
+    };
+    actionsDiv.appendChild(deleteButton);
+
+    headerDiv.appendChild(actionsDiv);
+
+    // Append header and content to message
+    messageDiv.appendChild(headerDiv);
+    messageDiv.appendChild(contentDiv);
     if (msg.timestamp) {
         const timestampDiv = document.createElement('div');
         timestampDiv.className = 'timestamp';

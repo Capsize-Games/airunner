@@ -186,6 +186,35 @@ body {
     fill: var(--danger-color);
 }
 
+/* Copy button - icon only */
+.message .copy-button {
+    width: 22px;
+    height: 22px;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.message .copy-button svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    pointer-events: none;
+    fill: var(--dim-color);
+    transition: fill 0.15s;
+}
+
+.message .copy-button:hover svg {
+    fill: var(--light-color);
+}
+
 .message .content a {
     color: var(--primary-color);
     text-decoration: none;
