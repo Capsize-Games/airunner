@@ -1,0 +1,288 @@
+/* conversation.css: Dedicated layout/styles for conversation widget (no colors, no backgrounds, no font colors) */
+
+html {
+    scrollbar-color: var(--dim-color) var(--dark-color);
+    scrollbar-width: thin;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    /* Prevent the document from scrolling so the conversation container owns scrolling */
+    overflow: hidden;
+}
+
+* {
+    box-sizing: border-box;
+    color: #ffffff;
+}
+
+#conversation-container {
+    width: 100%;
+    /* Fill the full viewport available inside the webview and own scrolling */
+    height: 100%;
+    /* Allow the conversation container to scroll internally. This ensures the
+         scrollbar is rendered inside the HTML content (single scrollbar UX). */
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    scrollbar-width: thin;
+    gap: 0;
+    border: none;
+    border-radius: 0;
+    font-family: 'Fira Mono', 'Consolas', 'Segoe UI', Arial, sans-serif;
+    font-size: 1.1em;
+    box-shadow: none;
+}
+
+#conversation-container::-webkit-scrollbar {
+    height: 0 !important;
+    width: 8px;
+}
+
+.message {
+    margin: 0;
+    padding: 10px;
+    width: 100%;
+    word-break: break-word;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-radius: 0px;
+    position: relative;
+    transition: background 0.2s;
+    font-size: 1em;
+    font-family: 'Fira Mono', 'Consolas', 'Segoe UI', Arial, sans-serif;
+    border-left: 3px solid var(--line-color-light);
+}
+
+.message.user {
+    align-self: flex-end;
+    border-radius: 0px;
+    box-shadow: 0 2px 12px rgba(0, 64, 255, 0.10);
+    border-left: 3px solid var(--line-color-light);
+    border-right: 3px solid transparent;
+    transition: border-color 0.2s;
+}
+
+.message.user:hover {
+    border-left: 3px solid var(--primary-color);
+    border-right: 3px solid var(--primary-color);
+}
+
+.message.assistant {
+    align-self: flex-start;
+    border-radius: 0px;
+    box-shadow: 0 2px 12px rgba(0, 255, 128, 0.08);
+    border-left: 3px solid var(--line-color-light);
+    border-right: 3px solid transparent;
+    transition: border-color 0.2s;
+}
+
+.message.assistant:hover {
+    border-left: 3px solid var(--primary-color);
+    border-right: 3px solid var(--primary-color);
+}
+
+#conversation-container>.message:nth-child(even) {
+    filter: brightness(1.08);
+}
+
+.message .header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    margin-bottom: 0;
+    gap: 8px;
+}
+
+.message .sender {
+    font-weight: 600;
+    margin-bottom: 0;
+    color: var(--dim-color);
+    font-size: 0.75em;
+    margin-right: 8px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.message.assistant .sender {
+    color: var(--dim-color);
+}
+
+.message .actions {
+    margin-left: auto;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.message:hover .actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.message .content {
+    line-height: 1.25em;
+    font-size: 0.92em;
+    color: var(--light-color);
+    margin: 0;
+    padding: 10px 12px 0 12px;
+}
+
+.message .timestamp {
+    font-size: 0.85em;
+    color: var(--dim-color);
+    margin-top: 2px;
+    text-align: right;
+    opacity: 0.7;
+    padding: 0 12px 4px 12px;
+}
+
+.message .delete-button {
+    width: 22px;
+    height: 22px;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.message .delete-button:hover {
+    opacity: 1;
+    background: var(--line-color-light);
+}
+
+.message .delete-button svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    pointer-events: none;
+    fill: var(--danger-color);
+    transition: fill 0.15s;
+}
+
+.message .delete-button:hover svg {
+    fill: var(--danger-color);
+}
+
+/* Copy button - icon only */
+.message .copy-button {
+    width: 22px;
+    height: 22px;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.message .copy-button svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    pointer-events: none;
+    fill: var(--dim-color);
+    transition: fill 0.15s;
+}
+
+.message .copy-button:hover svg {
+    fill: var(--light-color);
+}
+
+.message .content a {
+    color: var(--primary-color);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--primary-color);
+    transition: color 0.15s, border-bottom 0.15s;
+    word-break: break-all;
+}
+
+.message .content a:hover {
+    color: var(--light-color);
+    border-bottom: 1px solid var(--light-color);
+    text-decoration: underline;
+}
+
+pre,
+code {
+    color: var(--primary-color) !important;
+    font-size: 0.98em;
+    line-height: 1.5;
+    padding: 8px 12px;
+    overflow-x: auto;
+    max-width: 100%;
+    box-sizing: border-box;
+    font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', 'monospace';
+    background-color: var(--darksecondary-color) !important;
+    border-radius: 2px;
+}
+
+pre {
+    margin: 10px 0;
+    white-space: pre;
+}
+
+code:not(pre code) {
+    padding: 2px 5px;
+    white-space: pre-wrap;
+    background-color: var(--line-color-light);
+}
+
+.MathJax {
+    color: var(--light-color) !important;
+}
+
+.MathJax_Display {
+    margin: 1em 0 !important;
+}
+
+mjx-container {
+    color: var(--light-color) !important;
+}
+
+mjx-container[display="true"] {
+    margin: 1em 0 !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    background: var(--dark-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--dim-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dark-color);
+}

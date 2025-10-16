@@ -9,7 +9,8 @@ body {
     padding: 0;
     box-sizing: border-box;
     overflow-x: hidden !important;
-    overflow-y: hidden;
+    /* Allow vertical scrolling inside the web content so long conversations are visible */
+    overflow-y: auto;
     max-width: 100% !important;
     word-wrap: break-word !important;
 }

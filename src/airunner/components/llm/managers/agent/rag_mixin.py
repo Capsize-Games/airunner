@@ -814,7 +814,7 @@ class RAGMixin:
                     progress_data = {
                         "current": idx,
                         "total": total_docs,
-                        "progress": (idx / total_docs) * 100,
+                        "progress": min((idx / total_docs) * 100, 99),
                         "document_name": doc_name,
                     }
                     self.logger.debug(
@@ -900,7 +900,7 @@ class RAGMixin:
                 progress_data = {
                     "current": idx,
                     "total": total,
-                    "progress": (idx / total) * 100,
+                    "progress": min((idx / total) * 100, 99),
                     "document_name": doc_name,
                 }
                 self.logger.debug(
@@ -936,7 +936,7 @@ class RAGMixin:
                     progress_data = {
                         "current": idx,
                         "total": total,
-                        "progress": (idx / total) * 100,
+                        "progress": min((idx / total) * 100, 99),
                         "document_name": doc_name,
                     }
                     self.emit_signal(
