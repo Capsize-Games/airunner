@@ -17,7 +17,7 @@ See the main project README for architecture and rationale.
 - See `tests/` for Pytest and pytest-qt based tests verifying scroll behavior and rendering.
 
 ## Customization
-- To change styles, edit `conversation.jinja2.html` and the CSS in `content_widget.css`.
+- To change styles, edit `conversation_widget.jinja2.html` and the CSS in `content_widget.css`.
 
 ---
 
