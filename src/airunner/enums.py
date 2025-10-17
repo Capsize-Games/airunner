@@ -35,7 +35,6 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
-    RESIZE_CONVERSATION_WIDGET = "resize_conversation_widget"
     DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"
     NEW_DOCUMENT = "new_document_signal"
     SAVE_STATE = "save_state_signal"
