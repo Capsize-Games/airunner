@@ -1,7 +1,8 @@
+import os
 import threading
-from typing import Dict, Optional, Type, List
+from typing import Dict, Optional, Type, List, Tuple
 
-from airunner.enums import SignalCode, ModelService, LLMActionType
+from airunner.enums import SignalCode, ModelService
 from airunner.components.llm.managers.ollama_model_manager import (
     OllamaModelManager,
 )
@@ -16,16 +17,24 @@ from airunner.components.documents.data.models.document import (
     Document as DBDocument,
 )
 from airunner.components.llm.data.fine_tuned_model import FineTunedModel
-import uuid
-import os
-
-# from airunner.handlers.llm.gemma3_model_manager import Gemma3Manager
+from airunner.components.llm.utils.document_extraction import extract_text
 
 
 class LLMGenerateWorker(Worker):
     def __init__(self, local_agent_class=None):
         self.local_agent_class = local_agent_class
-        self.signal_handlers = {
+        self.signal_handlers = self._create_signal_handlers()
+        self.context_manager = ContextManager()
+        self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
+        self._ollama_model_manager: Optional[OllamaModelManager] = None
+        self._local_model_manager: Optional[LLMModelManager] = None
+        self._model_manager: Optional[Type[LLMModelManager]] = None
+        super().__init__()
+        self._llm_thread = None
+
+    def _create_signal_handlers(self) -> Dict:
+        """Create the signal handlers mapping."""
+        return {
             SignalCode.LLM_UNLOAD_SIGNAL: self.on_llm_on_unload_signal,
             SignalCode.LLM_LOAD_SIGNAL: self.on_llm_load_model_signal,
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_llm_clear_history_signal,
@@ -46,14 +55,6 @@ class LLMGenerateWorker(Worker):
             SignalCode.LLM_START_FINE_TUNE: self.on_llm_start_fine_tune_signal,
             SignalCode.LLM_FINE_TUNE_CANCEL: self.on_llm_fine_tune_cancel_signal,
         }
-        self.context_manager = ContextManager()
-        self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
-        self._ollama_model_manager: Optional[OllamaModelManager] = None
-        self._local_model_manager: Optional[LLMModelManager] = None
-        # self._gemma3_model_manager: Optional[Gemma3Manager] = None
-        self._model_manager: Optional[Type[LLMModelManager]] = None
-        super().__init__()
-        self._llm_thread = None
 
     @property
     def use_openrouter(self) -> bool:
@@ -68,12 +69,6 @@ class LLMGenerateWorker(Worker):
             self.llm_generator_settings.model_service
             == ModelService.OLLAMA.value
         )
-
-    # @property
-    # def use_gemma3(self) -> bool:
-    #     # Check if the model path contains "gemma-3" to identify Gemma3 models
-    #     model_path = self.llm_generator_settings.model_version or ""
-    #     return "gemma-3" in model_path.lower()
 
     @property
     def openrouter_model_manager(self) -> OpenRouterModelManager:
@@ -99,24 +94,20 @@ class LLMGenerateWorker(Worker):
             )
         return self._local_model_manager
 
-    # @property
-    # def gemma3_model_manager(self) -> Gemma3Manager:
-    #     if not self._gemma3_model_manager:
-    #         self._gemma3_model_manager = Gemma3Manager()
-    #     return self._gemma3_model_manager
-
     @property
     def model_manager(self) -> Type[LLMModelManager]:
         if self._model_manager is None:
-            if self.use_openrouter:
-                self._model_manager = self.openrouter_model_manager
-            elif self.use_ollama:
-                self._model_manager = self.ollama_model_manager
-            # elif self.use_gemma3:
-            #     self._model_manager = self.gemma3_model_manager
-            else:
-                self._model_manager = self.local_model_manager
+            self._model_manager = self._select_model_manager()
         return self._model_manager
+
+    def _select_model_manager(self) -> Type[LLMModelManager]:
+        """Select the appropriate model manager based on settings."""
+        if self.use_openrouter:
+            return self.openrouter_model_manager
+        elif self.use_ollama:
+            return self.ollama_model_manager
+        else:
+            return self.local_model_manager
 
     def on_conversation_deleted_signal(self, data):
         self.model_manager.on_conversation_deleted(data)
@@ -130,20 +121,26 @@ class LLMGenerateWorker(Worker):
         self.unload_llm()
 
     def on_rag_load_documents_signal(self, data: Dict):
-        """
-        Handle the signal to load documents into the RAG engine.
-        This method is called when the RAG engine needs to load new documents.
-        """
-        if self.model_manager and self.model_manager.agent:
-            if data.get("clear_documents", False):
-                # Clear all previous RAG documents before loading new ones
-                if hasattr(self.model_manager.agent, "clear_rag_documents"):
-                    self.model_manager.agent.clear_rag_documents()
-            documents = data.get("documents", [])
-            if documents:
-                # Call the RAGMixin's load_html_into_rag for each document string
-                for doc in documents:
-                    self.model_manager.agent.load_html_into_rag(doc)
+        """Handle the signal to load documents into the RAG engine."""
+        if not self.model_manager or not self.model_manager.agent:
+            return
+
+        if data.get("clear_documents", False):
+            self._clear_rag_documents()
+
+        documents = data.get("documents", [])
+        if documents:
+            self._load_documents_into_rag(documents)
+
+    def _clear_rag_documents(self):
+        """Clear all previous RAG documents."""
+        if hasattr(self.model_manager.agent, "clear_rag_documents"):
+            self.model_manager.agent.clear_rag_documents()
+
+    def _load_documents_into_rag(self, documents: List):
+        """Load documents into the RAG engine."""
+        for doc in documents:
+            self.model_manager.agent.load_html_into_rag(doc)
 
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
@@ -188,8 +185,6 @@ class LLMGenerateWorker(Worker):
     def on_rag_index_all_documents_signal(self, data: Dict):
         """Handle manual document indexing request."""
         self.logger.info("Received RAG_INDEX_ALL_DOCUMENTS signal")
-
-        # Run indexing in a separate thread to avoid blocking the worker's event loop
         indexing_thread = threading.Thread(
             target=self._index_all_documents_thread, args=(data,)
         )
@@ -197,62 +192,57 @@ class LLMGenerateWorker(Worker):
 
     def _index_all_documents_thread(self, data: Dict):
         """Run indexing in a separate thread to keep UI responsive."""
-        # Ensure LLM is loaded - use same pattern as on_index_document_signal
-        if not self.model_manager or not self.model_manager.agent:
-            self.logger.info(
-                "Model manager or agent not available, loading LLM for indexing..."
-            )
-            try:
-                # Use load() method which synchronously loads the model
-                self.load()
-            except Exception as e:
-                self.logger.error(f"Failed to load LLM for indexing: {e}")
-                self.emit_signal(
-                    SignalCode.RAG_INDEXING_COMPLETE,
-                    {
-                        "success": False,
-                        "message": f"Failed to load LLM: {str(e)}",
-                    },
-                )
-                return
+        if not self._ensure_agent_loaded("indexing"):
+            return
 
-        # Check again if agent is available after loading
+        if not self._validate_agent_supports_indexing():
+            return
+
+        self._perform_all_documents_indexing()
+
+    def _ensure_agent_loaded(self, operation: str) -> bool:
+        """Ensure the agent is loaded for the specified operation."""
+        if self.model_manager and self.model_manager.agent:
+            return True
+
+        self.logger.info(f"Loading LLM for {operation}...")
+        try:
+            self.load()
+        except Exception as e:
+            self.logger.error(f"Failed to load LLM for {operation}: {e}")
+            self._emit_indexing_error(f"Failed to load LLM: {str(e)}")
+            return False
+
         if not self.model_manager or not self.model_manager.agent:
             self.logger.error("Model manager loaded but agent is still None")
-            self.emit_signal(
-                SignalCode.RAG_INDEXING_COMPLETE,
-                {
-                    "success": False,
-                    "message": "LLM agent not available after loading",
-                },
-            )
-            return
+            self._emit_indexing_error("LLM agent not available after loading")
+            return False
 
-        # Check if agent supports indexing
+        return True
+
+    def _validate_agent_supports_indexing(self) -> bool:
+        """Validate that the agent supports indexing operations."""
         if not hasattr(self.model_manager.agent, "index_all_documents"):
             self.logger.error("Agent does not support manual indexing")
-            self.emit_signal(
-                SignalCode.RAG_INDEXING_COMPLETE,
-                {
-                    "success": False,
-                    "message": "Agent does not support indexing",
-                },
-            )
-            return
+            self._emit_indexing_error("Agent does not support indexing")
+            return False
+        return True
 
-        # Start indexing
+    def _perform_all_documents_indexing(self):
+        """Perform the actual indexing of all documents."""
         self.logger.info("Starting manual document indexing with loaded agent")
         try:
             self.model_manager.agent.index_all_documents()
         except Exception as e:
             self.logger.error(f"Error during indexing: {e}")
-            self.emit_signal(
-                SignalCode.RAG_INDEXING_COMPLETE,
-                {
-                    "success": False,
-                    "message": f"Indexing error: {str(e)}",
-                },
-            )
+            self._emit_indexing_error(f"Indexing error: {str(e)}")
+
+    def _emit_indexing_error(self, message: str):
+        """Emit an indexing error signal."""
+        self.emit_signal(
+            SignalCode.RAG_INDEXING_COMPLETE,
+            {"success": False, "message": message},
+        )
 
     def on_rag_index_selected_documents_signal(self, data: Dict):
         """Handle selective document indexing request with file paths."""
@@ -274,297 +264,290 @@ class LLMGenerateWorker(Worker):
 
     def on_llm_start_fine_tune_signal(self, data: Dict):
         """Start a fine-tune job in a separate thread."""
+        t = threading.Thread(target=self._run_fine_tune, args=(data,))
+        t.start()
+
+    def _run_fine_tune(self, data: Dict):
+        """Execute the fine-tuning process."""
         files = data.get("files", [])
         model_name = data.get("model_name")
 
-        def _run():
+        try:
+            self.emit_signal(
+                SignalCode.LLM_FINE_TUNE_PROGRESS,
+                {"progress": 0, "message": "Preparing..."},
+            )
+
+            training_examples = self._prepare_training_examples(data, files)
+            if not training_examples:
+                self._emit_fine_tune_error(model_name, "No training data")
+                return
+
+            self._emit_training_progress(len(training_examples))
+
+            if not self._setup_model_for_training(model_name):
+                return
+
+            if not self._execute_training(training_examples, model_name):
+                return
+
+            self._save_fine_tuned_model(model_name, files)
+            self._emit_fine_tune_complete(model_name)
+
+        except Exception as e:
+            self.logger.error(f"Exception in fine-tune thread: {e}")
+            self._emit_fine_tune_error(model_name, str(e))
+
+    def _prepare_training_examples(
+        self, data: Dict, files: List[str]
+    ) -> List[Tuple]:
+        """Prepare training examples from files or provided examples."""
+        provided = data.get("examples")
+        if provided and isinstance(provided, (list, tuple)):
+            return self._use_provided_examples(provided)
+
+        return self._extract_examples_from_files(
+            files, data.get("format", "qa")
+        )
+
+    def _use_provided_examples(self, provided: List) -> List[Tuple]:
+        """Use pre-selected examples from the UI."""
+        try:
+            training_examples = [tuple(x) for x in provided]
+            self.emit_signal(
+                SignalCode.LLM_FINE_TUNE_PROGRESS,
+                {
+                    "progress": 5,
+                    "message": f"Using {len(training_examples)} user-selected examples",
+                },
+            )
+            return training_examples
+        except Exception:
+            return []
+
+    def _extract_examples_from_files(
+        self, files: List[str], fmt: str
+    ) -> List[Tuple]:
+        """Extract training examples from files."""
+        training_examples = []
+        for path in files:
+            title, content = self._read_document_content(path)
+            if not content:
+                self.logger.warning(
+                    f"No content found for training file: {path}"
+                )
+                continue
+
+            chunks = self._format_examples(title, content, fmt)
+            training_examples.extend(chunks)
+
+        return training_examples
+
+    def _read_document_content(self, path: str) -> Tuple[str, str]:
+        """Return (title, content) for a given path. Try DB first, then filesystem."""
+        title, content = self._try_db_content(path)
+
+        if not content:
+            content = self._try_file_extraction(path)
+
+        if content:
+            content = " ".join(content.split())
+
+        return title, content or ""
+
+    def _try_db_content(self, path: str) -> Tuple[str, str]:
+        """Try to get content from database."""
+        title = os.path.basename(path)
+        try:
+            db_docs = DBDocument.objects.filter_by(path=path)
+            if db_docs and len(db_docs) > 0:
+                db_doc = db_docs[0]
+                title = (
+                    getattr(db_doc, "title", None)
+                    or getattr(db_doc, "name", None)
+                    or title
+                )
+                content = (
+                    getattr(db_doc, "text", None)
+                    or getattr(db_doc, "content", None)
+                    or getattr(db_doc, "value", None)
+                )
+                return title, content or ""
+        except Exception:
+            pass
+        return title, ""
+
+    def _try_file_extraction(self, path: str) -> str:
+        """Try to extract content from file."""
+        try:
+            extracted = extract_text(path)
+            return extracted or ""
+        except Exception:
+            return ""
+
+    def _format_examples(self, title: str, text: str, fmt: str) -> List[Tuple]:
+        """Format text into training examples based on format type."""
+        if fmt == "long":
+            return self._prepare_long_examples(title, text)
+        elif fmt == "author":
+            return self._prepare_author_style_examples(title, text)
+        else:
+            return self._chunk_text_to_examples(title, text)
+
+    def _chunk_text_to_examples(
+        self, title: str, text: str, max_chars: int = 2000
+    ) -> List[Tuple]:
+        """Chunk text into training examples."""
+        examples = []
+        if not text:
+            return examples
+        start = 0
+        idx = 1
+        length = len(text)
+        while start < length:
+            chunk = text[start : start + max_chars]
+            examples.append((f"{title} - part {idx}", chunk))
+            start += max_chars
+            idx += 1
+        return examples
+
+    def _prepare_long_examples(self, title: str, text: str) -> List[Tuple]:
+        """Prepare long-context examples (fewer, larger chunks)."""
+        if not text:
+            return []
+        max_chars = 10000
+        if len(text) <= max_chars:
+            return [(title, text)]
+        return self._chunk_text_to_examples(title, text, max_chars=max_chars)
+
+    def _prepare_author_style_examples(
+        self, title: str, text: str
+    ) -> List[Tuple]:
+        """Prepare author-style examples preserving paragraph boundaries."""
+        if not text:
+            return []
+        paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+        examples = []
+        idx = 1
+        for p in paragraphs:
+            if len(p) > 2000:
+                subchunks = self._chunk_text_to_examples(
+                    f"{title} - part {idx}", p, 2000
+                )
+                examples.extend(subchunks)
+                idx += len(subchunks)
+            else:
+                examples.append((f"{title} - para {idx}", p))
+                idx += 1
+        return examples
+
+    def _emit_training_progress(self, count: int):
+        """Emit progress signal after preparing training examples."""
+        self.emit_signal(
+            SignalCode.LLM_FINE_TUNE_PROGRESS,
+            {"progress": 5, "message": f"Prepared {count} training examples"},
+        )
+
+    def _setup_model_for_training(self, model_name: str) -> bool:
+        """Set up model manager for training."""
+        if not self.model_manager:
+            if not self._initialize_model_manager(model_name):
+                return False
+
+        return self._load_model_for_training(model_name)
+
+    def _initialize_model_manager(self, model_name: str) -> bool:
+        """Initialize local model manager."""
+        try:
+            self._model_manager = self.local_model_manager
+            return True
+        except Exception:
+            self.logger.exception("Failed to obtain local model manager")
+            self._emit_fine_tune_error(
+                model_name, "Failed to obtain model manager"
+            )
+            return False
+
+    def _load_model_for_training(self, model_name: str) -> bool:
+        """Load tokenizer and model without agent/RAG."""
+        try:
+            self.model_manager._skip_agent_load = True
+        except Exception:
+            pass
+
+        try:
+            self.model_manager._load_tokenizer()
+            self.model_manager._load_model()
+            return True
+        except Exception as e:
+            self.logger.error(
+                f"Failed to load tokenizer/model before training: {e}"
+            )
+            self._emit_fine_tune_error(
+                model_name, f"Failed to load model: {e}"
+            )
+            return False
+        finally:
             try:
-                # Emit initial progress
-                self.emit_signal(
-                    SignalCode.LLM_FINE_TUNE_PROGRESS,
-                    {"progress": 0, "message": "Preparing..."},
-                )
+                self.model_manager._skip_agent_load = False
+            except Exception:
+                pass
 
-                # Prepare training examples by reading documents (DB first, then file)
-                from typing import Tuple
+    def _execute_training(
+        self, training_examples: List[Tuple], model_name: str
+    ) -> bool:
+        """Execute the training process."""
+        if not hasattr(self.model_manager, "train"):
+            return False
 
-                from airunner.components.llm.utils.document_extraction import (
-                    extract_text,
-                )
+        try:
+            self.model_manager.train(
+                training_data=training_examples,
+                username="User",
+                botname="Assistant",
+                progress_callback=self._training_progress_callback,
+            )
+            return True
+        except Exception as e:
+            self.logger.error(f"Fine-tune failed: {e}")
+            self._emit_fine_tune_error(model_name, str(e))
+            return False
 
-                def _read_document_content(path: str) -> Tuple[str, str]:
-                    """Return (title, content) for a given path. Try DB first, then filesystem."""
-                    title = os.path.basename(path)
-                    content = ""
-                    try:
-                        db_docs = DBDocument.objects.filter_by(path=path)
-                        if db_docs and len(db_docs) > 0:
-                            db_doc = db_docs[0]
-                            title = (
-                                getattr(db_doc, "title", None)
-                                or getattr(db_doc, "name", None)
-                                or title
-                            )
-                            # try several possible content fields
-                            content = (
-                                getattr(db_doc, "text", None)
-                                or getattr(db_doc, "content", None)
-                                or getattr(db_doc, "value", None)
-                            )
-                    except Exception:
-                        content = ""
+    def _training_progress_callback(self, data: dict):
+        """Callback for training progress updates."""
+        progress = data.get("progress")
+        step = data.get("step")
+        payload = {"progress": progress, "step": step}
+        self.emit_signal(SignalCode.LLM_FINE_TUNE_PROGRESS, payload)
 
-                    if not content:
-                        # Prefer smart extraction for common ebook/pdf types
-                        try:
-                            extracted = extract_text(path)
-                            content = extracted or ""
-                        except Exception:
-                            content = ""
+    def _save_fine_tuned_model(self, model_name: str, files: List[str]):
+        """Save fine-tuned model record to database."""
+        try:
+            FineTunedModel.create_record(
+                name=model_name or "",
+                files=files,
+                settings={},
+            )
+        except Exception:
+            self.logger.exception("Failed to record fine-tuned model in DB")
 
-                    if content:
-                        # basic normalization
-                        content = " ".join(content.split())
+    def _emit_fine_tune_complete(self, model_name: str):
+        """Emit completion signals."""
+        self.emit_signal(
+            SignalCode.LLM_FINE_TUNE_PROGRESS,
+            {"progress": 100, "message": "Saving model..."},
+        )
+        self.emit_signal(
+            SignalCode.LLM_FINE_TUNE_COMPLETE,
+            {"success": True, "model_name": model_name},
+        )
 
-                    return title or os.path.basename(path), content or ""
-
-                def _chunk_text_to_examples(
-                    title: str, text: str, max_chars: int = 2000
-                ) -> List[tuple]:
-                    examples: List[tuple] = []
-                    if not text:
-                        return examples
-                    start = 0
-                    idx = 1
-                    length = len(text)
-                    while start < length:
-                        chunk = text[start : start + max_chars]
-                        examples.append((f"{title} - part {idx}", chunk))
-                        start += max_chars
-                        idx += 1
-                    return examples
-
-                def _prepare_long_examples(
-                    title: str, text: str
-                ) -> List[tuple]:
-                    # Long context: emit fewer, larger examples (attempt to keep as one per document)
-                    if not text:
-                        return []
-                    # collapse whitespace and keep as single example if under limit
-                    max_chars = 10000
-                    if len(text) <= max_chars:
-                        return [(title, text)]
-                    # otherwise chunk into larger pieces
-                    return _chunk_text_to_examples(
-                        title, text, max_chars=max_chars
-                    )
-
-                def _prepare_author_style_examples(
-                    title: str, text: str
-                ) -> List[tuple]:
-                    # Author-Style: try to create examples that preserve author voice by keeping
-                    # paragraph boundaries and short chunks with metadata in the subject
-                    if not text:
-                        return []
-                    paragraphs = [
-                        p.strip() for p in text.split("\n\n") if p.strip()
-                    ]
-                    examples: List[tuple] = []
-                    idx = 1
-                    for p in paragraphs:
-                        # keep paragraphs up to 2000 chars
-                        if len(p) > 2000:
-                            subchunks = _chunk_text_to_examples(
-                                f"{title} - part {idx}", p, 2000
-                            )
-                            examples.extend(subchunks)
-                            idx += len(subchunks)
-                        else:
-                            examples.append((f"{title} - para {idx}", p))
-                            idx += 1
-                    return examples
-
-                fmt = data.get("format", "qa")
-
-                # If user provided prepared examples via the signal payload (from preview), prefer them
-                training_examples: List[tuple] = []
-                provided = data.get("examples")
-                if provided and isinstance(provided, (list, tuple)):
-                    try:
-                        # Expect list of (title, text) tuples
-                        training_examples = [tuple(x) for x in provided]
-                        self.emit_signal(
-                            SignalCode.LLM_FINE_TUNE_PROGRESS,
-                            {
-                                "progress": 5,
-                                "message": f"Using {len(training_examples)} user-selected examples",
-                            },
-                        )
-                    except Exception:
-                        training_examples = []
-                else:
-                    for path in files:
-                        title, content = _read_document_content(path)
-                        if not content:
-                            self.logger.warning(
-                                f"No content found for training file: {path}"
-                            )
-                            continue
-                        if fmt == "long":
-                            chunks = _prepare_long_examples(title, content)
-                        elif fmt == "author":
-                            chunks = _prepare_author_style_examples(
-                                title, content
-                            )
-                        else:
-                            # default to qa pairs chunking
-                            chunks = _chunk_text_to_examples(title, content)
-                        training_examples.extend(chunks)
-
-                if not training_examples:
-                    self.logger.error(
-                        "No training examples prepared; aborting fine-tune"
-                    )
-                    self.emit_signal(
-                        SignalCode.LLM_FINE_TUNE_COMPLETE,
-                        {
-                            "success": False,
-                            "model_name": model_name,
-                            "message": "No training data",
-                        },
-                    )
-                    return
-
-                # Emit progress after preparing examples
-                self.emit_signal(
-                    SignalCode.LLM_FINE_TUNE_PROGRESS,
-                    {
-                        "progress": 5,
-                        "message": f"Prepared {len(training_examples)} training examples",
-                    },
-                )
-
-                # Ensure tokenizer and base model are loaded for training.
-                # Important: do NOT load the full agent here (which initializes RAG
-                # and embeddings like sentence-transformers e5-large) because that
-                # can consume significant GPU memory and is unnecessary for fine-tune.
-                if not self.model_manager:
-                    # Create a local model manager instance but DO NOT call
-                    # model_manager.load() because that would initialize the
-                    # agent and RAG (which in turn loads sentence-transformers
-                    # e5-large embeddings). Instead instantiate the manager
-                    # and load tokenizer+model only.
-                    try:
-                        self._model_manager = self.local_model_manager
-                    except Exception:
-                        self.logger.exception(
-                            "Failed to obtain local model manager"
-                        )
-                        self.emit_signal(
-                            SignalCode.LLM_FINE_TUNE_COMPLETE,
-                            {
-                                "success": False,
-                                "model_name": model_name,
-                                "message": "Failed to obtain model manager",
-                            },
-                        )
-                        return
-
-                try:
-                    # Mark finetune-only mode to prevent loading the agent/RAG/embeddings
-                    try:
-                        self.model_manager._skip_agent_load = True
-                    except Exception:
-                        pass
-
-                    # Load only tokenizer and the base model. Avoid calling
-                    # model_manager.load() which also loads the agent/embeddings.
-                    self.model_manager._load_tokenizer()
-                    self.model_manager._load_model()
-                except Exception as e:
-                    self.logger.error(
-                        f"Failed to load tokenizer/model before training: {e}"
-                    )
-                    self.emit_signal(
-                        SignalCode.LLM_FINE_TUNE_COMPLETE,
-                        {
-                            "success": False,
-                            "model_name": model_name,
-                            "message": f"Failed to load model: {e}",
-                        },
-                    )
-                    return
-                finally:
-                    # Ensure the flag is cleared; training path itself may set it
-                    try:
-                        self.model_manager._skip_agent_load = False
-                    except Exception:
-                        pass
-
-                # If the model manager has a train method (from TrainingMixin), call it with prepared examples
-                if hasattr(self.model_manager, "train"):
-                    try:
-
-                        def _progress_cb(data: dict):
-                            # Ensure keys are serializable/simple
-                            progress = data.get("progress")
-                            step = data.get("step")
-                            payload = {"progress": progress, "step": step}
-                            self.emit_signal(
-                                SignalCode.LLM_FINE_TUNE_PROGRESS, payload
-                            )
-
-                        self.model_manager.train(
-                            training_data=training_examples,
-                            username="User",
-                            botname="Assistant",
-                            progress_callback=_progress_cb,
-                        )
-                    except Exception as e:
-                        self.logger.error(f"Fine-tune failed: {e}")
-                        self.emit_signal(
-                            SignalCode.LLM_FINE_TUNE_COMPLETE,
-                            {
-                                "success": False,
-                                "model_name": model_name,
-                                "message": str(e),
-                            },
-                        )
-                        return
-
-                # On success: save a DB record and notify UI
-                try:
-                    FineTunedModel.create_record(
-                        name=model_name or "",
-                        files=files,
-                        settings={},
-                    )
-                except Exception:
-                    self.logger.exception(
-                        "Failed to record fine-tuned model in DB"
-                    )
-
-                self.emit_signal(
-                    SignalCode.LLM_FINE_TUNE_PROGRESS,
-                    {"progress": 100, "message": "Saving model..."},
-                )
-                self.emit_signal(
-                    SignalCode.LLM_FINE_TUNE_COMPLETE,
-                    {"success": True, "model_name": model_name},
-                )
-            except Exception as e:
-                self.logger.error(f"Exception in fine-tune thread: {e}")
-                self.emit_signal(
-                    SignalCode.LLM_FINE_TUNE_COMPLETE,
-                    {
-                        "success": False,
-                        "model_name": model_name,
-                        "message": str(e),
-                    },
-                )
-
-        t = threading.Thread(target=_run)
-        t.start()
+    def _emit_fine_tune_error(self, model_name: str, message: str):
+        """Emit error signal for fine-tune failures."""
+        self.emit_signal(
+            SignalCode.LLM_FINE_TUNE_COMPLETE,
+            {"success": False, "model_name": model_name, "message": message},
+        )
 
     def on_llm_fine_tune_cancel_signal(self, data: Dict = None):
         """Handle cancel request. Currently tries to interrupt the model manager."""
@@ -581,112 +564,116 @@ class LLMGenerateWorker(Worker):
 
     def _index_selected_documents_thread(self, file_paths: list):
         """Run selective indexing in a separate thread to keep UI responsive."""
-        # Ensure LLM is loaded
-        if not self.model_manager or not self.model_manager.agent:
-            self.logger.info(
-                "Model manager or agent not available, loading LLM for indexing..."
-            )
-            try:
-                self.load()
-            except Exception as e:
-                self.logger.error(f"Failed to load LLM for indexing: {e}")
-                self.emit_signal(
-                    SignalCode.RAG_INDEXING_COMPLETE,
-                    {
-                        "success": False,
-                        "message": f"Failed to load LLM: {str(e)}",
-                    },
-                )
-                return
+        if not self._ensure_agent_loaded():
+            return
 
-        # Check again if agent is available after loading
+        if not self._validate_indexing_support():
+            return
+
+        self._index_documents(file_paths)
+
+    def _ensure_agent_loaded(self) -> bool:
+        """Ensure model manager and agent are loaded."""
+        if self.model_manager and self.model_manager.agent:
+            return True
+
+        self.logger.info(
+            "Model manager or agent not available, loading LLM for indexing..."
+        )
+        try:
+            self.load()
+        except Exception as e:
+            self.logger.error(f"Failed to load LLM for indexing: {e}")
+            self._emit_indexing_error(f"Failed to load LLM: {str(e)}")
+            return False
+
         if not self.model_manager or not self.model_manager.agent:
             self.logger.error("Model manager loaded but agent is still None")
-            self.emit_signal(
-                SignalCode.RAG_INDEXING_COMPLETE,
-                {
-                    "success": False,
-                    "message": "LLM agent not available after loading",
-                },
-            )
-            return
+            self._emit_indexing_error("LLM agent not available after loading")
+            return False
 
-        # Check if agent supports indexing
+        return True
+
+    def _validate_indexing_support(self) -> bool:
+        """Check if agent supports indexing."""
         if not hasattr(self.model_manager.agent, "_index_single_document"):
             self.logger.error("Agent does not support document indexing")
-            self.emit_signal(
-                SignalCode.RAG_INDEXING_COMPLETE,
-                {
-                    "success": False,
-                    "message": "Agent does not support indexing",
-                },
-            )
-            return
+            self._emit_indexing_error("Agent does not support indexing")
+            return False
+        return True
 
-        # Index each document
+    def _index_documents(self, file_paths: list):
+        """Index each document in the list."""
         total = len(file_paths)
         for idx, file_path in enumerate(file_paths):
-            try:
-                # Get document from database
-                db_docs = DBDocument.objects.filter_by(path=file_path)
-                if not db_docs or len(db_docs) == 0:
-                    self.logger.warning(
-                        f"Document not found in database: {file_path}"
-                    )
-                    self.emit_signal(
-                        SignalCode.DOCUMENT_INDEX_FAILED,
-                        {
-                            "path": file_path,
-                            "error": "Document not found in database",
-                        },
-                    )
-                    continue
+            self._emit_indexing_progress(idx, total)
+            self._index_single_file(file_path, idx, total)
 
-                db_doc = db_docs[0]
-
-                # Emit progress
-                self.emit_signal(
-                    SignalCode.RAG_INDEXING_PROGRESS,
-                    {
-                        "current": idx,
-                        "total": total,
-                        "progress": int((idx / total) * 100),
-                    },
-                )
-
-                # Index the document
-                self.logger.info(
-                    f"Indexing document {idx + 1}/{total}: {file_path}"
-                )
-                success = self.model_manager.agent._index_single_document(
-                    db_doc
-                )
-
-                if success:
-                    DBDocument.objects.update(pk=db_doc.id, active=True)
-                    self.emit_signal(
-                        SignalCode.DOCUMENT_INDEXED, {"path": file_path}
-                    )
-                else:
-                    self.emit_signal(
-                        SignalCode.DOCUMENT_INDEX_FAILED,
-                        {
-                            "path": file_path,
-                            "error": "No content could be extracted",
-                        },
-                    )
-
-            except Exception as e:
-                self.logger.error(f"Failed to index {file_path}: {e}")
-                self.emit_signal(
-                    SignalCode.DOCUMENT_INDEX_FAILED,
-                    {"path": file_path, "error": str(e)},
-                )
-
-        # Emit completion
         self.emit_signal(
             SignalCode.RAG_INDEXING_COMPLETE,
             {"success": True, "message": f"Indexed {total} documents"},
+        )
+
+    def _emit_indexing_progress(self, idx: int, total: int):
+        """Emit indexing progress signal."""
+        self.emit_signal(
+            SignalCode.RAG_INDEXING_PROGRESS,
+            {
+                "current": idx,
+                "total": total,
+                "progress": int((idx / total) * 100),
+            },
+        )
+
+    def _index_single_file(self, file_path: str, idx: int, total: int):
+        """Index a single document file."""
+        try:
+            db_doc = self._get_document_from_db(file_path)
+            if not db_doc:
+                return
+
+            self.logger.info(
+                f"Indexing document {idx + 1}/{total}: {file_path}"
+            )
+            success = self.model_manager.agent._index_single_document(db_doc)
+
+            if success:
+                DBDocument.objects.update(pk=db_doc.id, active=True)
+                self.emit_signal(
+                    SignalCode.DOCUMENT_INDEXED, {"path": file_path}
+                )
+            else:
+                self._emit_index_failed(
+                    file_path, "No content could be extracted"
+                )
+
+        except Exception as e:
+            self.logger.error(f"Failed to index {file_path}: {e}")
+            self._emit_index_failed(file_path, str(e))
+
+    def _get_document_from_db(self, file_path: str):
+        """Get document from database."""
+        db_docs = DBDocument.objects.filter_by(path=file_path)
+        if not db_docs or len(db_docs) == 0:
+            self.logger.warning(f"Document not found in database: {file_path}")
+            self._emit_index_failed(
+                file_path, "Document not found in database"
+            )
+            return None
+        return db_docs[0]
+
+    def _emit_indexing_error(self, message: str):
+        """Emit indexing error signal."""
+        self.emit_signal(
+            SignalCode.RAG_INDEXING_COMPLETE,
+            {"success": False, "message": message},
+        )
+
+    def _emit_index_failed(self, path: str, error: str):
+        """Emit document index failed signal."""
+        self.emit_signal(
+            SignalCode.DOCUMENT_INDEX_FAILED,
+            {"path": path, "error": error},
         )
 
     def on_rag_index_cancel_signal(self, data: Dict):
@@ -724,84 +711,64 @@ class LLMGenerateWorker(Worker):
             self.logger.error(f"Error in on_load_conversation: {e}")
 
     def on_index_document_signal(self, data: Dict):
-        """
-        Handle the INDEX_DOCUMENT signal: index the file by path, save the index, update DB, and release memory.
-        """
+        """Handle INDEX_DOCUMENT signal: index file, save index, update DB."""
         document_path = data.get("path", None)
-        if not isinstance(document_path, str) or not document_path:
-            self.logger.warning(
-                "INDEX_DOCUMENT signal received with invalid path"
-            )
+        if not self._validate_document_path(document_path):
             return
-
-        import os
 
         filename = os.path.basename(document_path)
         self.logger.info(f"Starting indexing process for: {filename}")
 
-        # Get the document from database first
-        db_docs = DBDocument.objects.filter_by(path=document_path)
-        if not db_docs or len(db_docs) == 0:
-            self.logger.error(f"Document not found in database: {filename}")
-            self.emit_signal(
-                SignalCode.DOCUMENT_INDEX_FAILED,
-                {
-                    "path": document_path,
-                    "error": "Document not found in database",
-                },
-            )
+        db_doc = self._get_document_from_db(document_path)
+        if not db_doc:
             return
 
-        db_doc = db_docs[0]
-
-        if not self.model_manager or not self.model_manager.agent:
-            self.logger.info("Loading LLM model for indexing...")
-            self.load()
-        if not self.model_manager or not self.model_manager.agent:
-            self.logger.error(
-                f"Failed to load LLM model, cannot index: {filename}"
-            )
-            self.emit_signal(
-                SignalCode.DOCUMENT_INDEX_FAILED,
-                {"path": document_path, "error": "Failed to load LLM model"},
-            )
+        if not self._ensure_agent_loaded():
+            self._emit_index_failed(document_path, "Failed to load LLM model")
             return
 
+        self._process_document_indexing(document_path, db_doc, filename)
+
+    def _validate_document_path(self, path) -> bool:
+        """Validate document path from signal."""
+        if not isinstance(path, str) or not path:
+            self.logger.warning(
+                "INDEX_DOCUMENT signal received with invalid path"
+            )
+            return False
+        return True
+
+    def _process_document_indexing(self, path: str, db_doc, filename: str):
+        """Process single document indexing."""
         try:
-            agent = self.model_manager.agent
-
             self.logger.info(f"Indexing document: {filename}")
-            # Use the proper indexing method
-            success = agent._index_single_document(db_doc)
+            success = self.model_manager.agent._index_single_document(db_doc)
 
             if success:
-                # Mark as active in database
-                DBDocument.objects.update(pk=db_doc.id, active=True)
-                self.logger.info(f"Successfully indexed document: {filename}")
-
-                # Emit success signal
-                self.emit_signal(
-                    SignalCode.DOCUMENT_INDEXED, {"path": document_path}
-                )
+                self._handle_indexing_success(path, db_doc, filename)
             else:
-                self.logger.error(f"Failed to index document: {filename}")
-                self.emit_signal(
-                    SignalCode.DOCUMENT_INDEX_FAILED,
-                    {
-                        "path": document_path,
-                        "error": "No content could be extracted from document. The file may be corrupted, empty, or in an unsupported format.",
-                    },
-                )
+                self._handle_indexing_failure(path, filename)
 
         except Exception as e:
             self.logger.error(
                 f"Failed to index document {filename}: {str(e)}", exc_info=True
             )
-            # Emit failure signal so UI can handle it
-            self.emit_signal(
-                SignalCode.DOCUMENT_INDEX_FAILED,
-                {"path": document_path, "error": str(e)},
-            )
+            self._emit_index_failed(path, str(e))
+
+    def _handle_indexing_success(self, path: str, db_doc, filename: str):
+        """Handle successful document indexing."""
+        DBDocument.objects.update(pk=db_doc.id, active=True)
+        self.logger.info(f"Successfully indexed document: {filename}")
+        self.emit_signal(SignalCode.DOCUMENT_INDEXED, {"path": path})
+
+    def _handle_indexing_failure(self, path: str, filename: str):
+        """Handle failed document indexing."""
+        self.logger.error(f"Failed to index document: {filename}")
+        self._emit_index_failed(
+            path,
+            "No content could be extracted from document. "
+            "The file may be corrupted, empty, or in an unsupported format.",
+        )
 
     def start_worker_thread(self):
         if self.application_settings.llm_enabled or AIRUNNER_LLM_ON:
