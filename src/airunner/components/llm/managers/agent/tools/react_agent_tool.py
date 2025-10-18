@@ -117,7 +117,8 @@ class ReActAgentTool(BaseConversationEngine):
     def call(self, *args: Any, **kwargs: Any) -> ToolOutput:
         print("REACT AGENT TOOL", kwargs)
         tool_choice = kwargs.get("tool_choice", None)
-        llm_request = kwargs.get("llm_request", LLMRequest.from_default())
+        # Use code defaults (not database) for better repetition handling
+        llm_request = kwargs.get("llm_request", LLMRequest())
         self.agent.llm.llm_request = llm_request
         query_str = self._get_query_str(*args, **kwargs)
         chat_history = kwargs.get("chat_history", None)
@@ -133,6 +134,16 @@ class ReActAgentTool(BaseConversationEngine):
             )
             else (chat_history or [])
         )
+
+        # DEBUG: Log chat memory state
+        print(
+            f"DEBUG: chat_memory exists: {self.agent.chat_memory is not None if self.agent else False}"
+        )
+        print(f"DEBUG: chat_history length: {len(chat_history)}")
+        if chat_history:
+            print(
+                f"DEBUG: Last message: {chat_history[-1] if chat_history else 'N/A'}"
+            )
 
         # Keep a copy of kwargs so we can retry with safe defaults if formatting fails
         original_kwargs = {} if kwargs is None else dict(kwargs)

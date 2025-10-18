@@ -1,6 +1,8 @@
 import os
 from typing import Optional
 
+from llama_index.readers.file import PDFReader
+
 
 def _naive_read(path: str) -> Optional[str]:
     try:
@@ -178,19 +180,24 @@ def extract_text_from_epub(path: str) -> Optional[str]:
 
 
 def extract_text_from_pdf(path: str) -> Optional[str]:
-    """Attempt to extract text from PDF using pdfminer.six. Falls back to naive read."""
+    """Extract text from PDF using llama_index PDFReader (same as RAG)."""
     try:
-        from pdfminer.high_level import extract_text
-    except Exception:
-        return _naive_read(path)
+        pdf_reader = PDFReader()
+        documents = pdf_reader.load_data(file=path)
 
-    try:
-        text = extract_text(path)
-        if text:
-            return _clean_text(text)
-        return _naive_read(path)
-    except Exception:
-        return _naive_read(path)
+        if not documents:
+            return None
+
+        # Combine all pages into one text
+        text_parts = [doc.text for doc in documents if doc.text]
+        if text_parts:
+            combined_text = "\n\n".join(text_parts)
+            return _clean_text(combined_text)
+
+        return None
+    except Exception as e:
+        # Log error but don't fail completely
+        return None
 
 
 def extract_text(path: str) -> Optional[str]:

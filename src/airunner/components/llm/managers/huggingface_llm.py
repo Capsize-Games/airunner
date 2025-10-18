@@ -152,7 +152,8 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             Optional[LLMRequest]: The current LLM request configuration.
         """
         if self._llm_request is None:
-            self._llm_request = LLMRequest.from_default()
+            # Use code defaults (not database) for better repetition handling
+            self._llm_request = LLMRequest()
         return self._llm_request
 
     @llm_request.setter
@@ -451,15 +452,76 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             if key in inputs:
                 inputs.pop(key, None)
 
+        # Merge generate_kwargs with any kwargs passed to this method
+        # This allows extraction and other callers to override parameters
+        generation_params = {**self.generate_kwargs, **kwargs}
+
+        # Debug: log what we're starting with
+        if kwargs:
+            self.logger.debug(
+                f"Original generate_kwargs: {self.generate_kwargs}"
+            )
+            self.logger.debug(f"Passed kwargs: {kwargs}")
+
+        # Map common parameter names to HuggingFace naming
+        if "max_tokens" in generation_params:
+            generation_params["max_new_tokens"] = generation_params.pop(
+                "max_tokens"
+            )
+
+        # Normalise length controls so the model cannot immediately emit EOS
+        if kwargs:
+            generation_params["min_length"] = 0
+            max_new_tokens = generation_params.get("max_new_tokens")
+            if max_new_tokens:
+                baseline = max_new_tokens // 12 if max_new_tokens >= 12 else 0
+                default_min_new_tokens = max(4, min(16, baseline))
+                if generation_params.get("min_new_tokens", 0) <= 0:
+                    generation_params["min_new_tokens"] = (
+                        default_min_new_tokens
+                    )
+                else:
+                    generation_params["min_new_tokens"] = min(
+                        generation_params["min_new_tokens"],
+                        max_new_tokens,
+                    )
+
+        # If temperature is provided, ensure do_sample=True (required for sampling)
+        if (
+            "temperature" in generation_params
+            and generation_params.get("temperature", 0) > 0
+        ):
+            generation_params["do_sample"] = True
+
+        # Debug: log generation parameters when kwargs are provided
+        if kwargs:
+            self.logger.debug(
+                "Generation params: do_sample=%s, temperature=%s, max_new_tokens=%s, "
+                "min_new_tokens=%s",
+                generation_params.get("do_sample"),
+                generation_params.get("temperature"),
+                generation_params.get("max_new_tokens"),
+                generation_params.get("min_new_tokens"),
+            )
+
         # Generate response
         tokens = self._model.generate(
             **inputs,
             stopping_criteria=self._stopping_criteria,
-            **self.generate_kwargs,
+            **generation_params,
         )
 
         # Extract and decode the generated text
         completion_tokens = tokens[0][inputs["input_ids"].size(1) :]
+
+        # Debug: log token count
+        if kwargs:
+            self.logger.debug(f"Generated {len(completion_tokens)} tokens")
+            if len(completion_tokens) > 0:
+                self.logger.debug(
+                    f"Token IDs: {completion_tokens.tolist()[:10]}"
+                )  # First 10 tokens
+
         completion = self._tokenizer.decode(
             completion_tokens, skip_special_tokens=True
         )
@@ -503,6 +565,38 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
             if key in inputs:
                 inputs.pop(key, None)
 
+        # Merge generate_kwargs with any kwargs passed to this method
+        generation_params = {**self.generate_kwargs, **kwargs}
+
+        # Map common parameter names to HuggingFace naming
+        if "max_tokens" in generation_params:
+            generation_params["max_new_tokens"] = generation_params.pop(
+                "max_tokens"
+            )
+
+        if kwargs:
+            generation_params["min_length"] = 0
+            max_new_tokens = generation_params.get("max_new_tokens")
+            if max_new_tokens:
+                baseline = max_new_tokens // 12 if max_new_tokens >= 12 else 0
+                default_min_new_tokens = max(4, min(16, baseline))
+                if generation_params.get("min_new_tokens", 0) <= 0:
+                    generation_params["min_new_tokens"] = (
+                        default_min_new_tokens
+                    )
+                else:
+                    generation_params["min_new_tokens"] = min(
+                        generation_params["min_new_tokens"],
+                        max_new_tokens,
+                    )
+
+        # If temperature is provided, ensure do_sample=True (required for sampling)
+        if (
+            "temperature" in generation_params
+            and generation_params.get("temperature", 0) > 0
+        ):
+            generation_params["do_sample"] = True
+
         # Set up streaming
         streamer = TextIteratorStreamer(
             self._tokenizer, skip_prompt=True, skip_special_tokens=True
@@ -511,7 +605,7 @@ class HuggingFaceLLM(CustomLLM, SettingsMixin):
         generation_kwargs = dict(
             inputs,
             stopping_criteria=self._streaming_stopping_criteria,
-            **self.generate_kwargs,
+            **generation_params,
         )
         generation_kwargs["streamer"] = streamer
 

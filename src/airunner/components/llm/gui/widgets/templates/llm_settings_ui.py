@@ -15,10 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
-    QGridLayout, QGroupBox, QHBoxLayout, QLabel,
-    QLayout, QLineEdit, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QVBoxLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
+    QFrame, QGridLayout, QGroupBox, QHBoxLayout,
+    QHeaderView, QLabel, QLayout, QLineEdit,
+    QProgressBar, QPushButton, QScrollArea, QSizePolicy,
+    QSpacerItem, QTableWidget, QTableWidgetItem, QVBoxLayout,
     QWidget)
 
 from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
@@ -396,6 +397,36 @@ class Ui_llm_settings_widget(object):
 
         self.gridLayout_4.addWidget(self.remote_model_path, 3, 0, 1, 1)
 
+        self.adapters_group = QGroupBox(llm_settings_widget)
+        self.adapters_group.setObjectName(u"adapters_group")
+        self.adapters_group.setFont(font3)
+        self.verticalLayout_3 = QVBoxLayout(self.adapters_group)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(9, 9, 9, 9)
+        self.adapters_table = QTableWidget(self.adapters_group)
+        if (self.adapters_table.columnCount() < 3):
+            self.adapters_table.setColumnCount(3)
+        __qtablewidgetitem = QTableWidgetItem()
+        self.adapters_table.setHorizontalHeaderItem(0, __qtablewidgetitem)
+        __qtablewidgetitem1 = QTableWidgetItem()
+        self.adapters_table.setHorizontalHeaderItem(1, __qtablewidgetitem1)
+        __qtablewidgetitem2 = QTableWidgetItem()
+        self.adapters_table.setHorizontalHeaderItem(2, __qtablewidgetitem2)
+        self.adapters_table.setObjectName(u"adapters_table")
+        self.adapters_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.adapters_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.adapters_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+
+        self.verticalLayout_3.addWidget(self.adapters_table)
+
+        self.refresh_adapters_button = QPushButton(self.adapters_group)
+        self.refresh_adapters_button.setObjectName(u"refresh_adapters_button")
+
+        self.verticalLayout_3.addWidget(self.refresh_adapters_button)
+
+
+        self.gridLayout_4.addWidget(self.adapters_group, 5, 0, 1, 1)
+
         QWidget.setTabOrder(self.seed, self.random_seed)
 
         self.retranslateUi(llm_settings_widget)
@@ -441,5 +472,13 @@ class Ui_llm_settings_widget(object):
         self.label_2.setText(QCoreApplication.translate("llm_settings_widget", u"LLM Settings", None))
         self.groupBox.setTitle(QCoreApplication.translate("llm_settings_widget", u"Model service", None))
         self.remote_model_path.setTitle(QCoreApplication.translate("llm_settings_widget", u"Custom path", None))
+        self.adapters_group.setTitle(QCoreApplication.translate("llm_settings_widget", u"LoRA Adapters", None))
+        ___qtablewidgetitem = self.adapters_table.horizontalHeaderItem(0)
+        ___qtablewidgetitem.setText(QCoreApplication.translate("llm_settings_widget", u"Enabled", None));
+        ___qtablewidgetitem1 = self.adapters_table.horizontalHeaderItem(1)
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("llm_settings_widget", u"Adapter Name", None));
+        ___qtablewidgetitem2 = self.adapters_table.horizontalHeaderItem(2)
+        ___qtablewidgetitem2.setText(QCoreApplication.translate("llm_settings_widget", u"Path", None));
+        self.refresh_adapters_button.setText(QCoreApplication.translate("llm_settings_widget", u"Refresh Adapters", None))
     # retranslateUi
 

@@ -105,7 +105,7 @@ class TrainingMixin:
 
         tokenizer = self._ensure_tokenizer(self._tokenizer)
         ds = self._build_dataset(training_data, tokenizer, username, botname)
-        model = self._prepare_peft_model(adapter_dir)
+        model = self._prepare_peft_model(adapter_dir, preset)
         self._move_model_to_device(model)
 
         trainer = self._create_trainer(
@@ -162,6 +162,10 @@ class TrainingMixin:
                     if gradient_checkpointing is not None
                     else preset_config.gradient_checkpointing
                 ),
+                "lora_r": preset_config.lora_r,
+                "lora_alpha": preset_config.lora_alpha,
+                "lora_dropout": preset_config.lora_dropout,
+                "target_modules": preset_config.target_modules,
             }
         else:
             return {
@@ -178,6 +182,10 @@ class TrainingMixin:
                     if gradient_checkpointing is not None
                     else True
                 ),
+                "lora_r": 16,
+                "lora_alpha": 32,
+                "lora_dropout": 0.05,
+                "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
             }
 
     def cancel_fine_tune(self):
@@ -314,7 +322,9 @@ class TrainingMixin:
             labels[i] = -100
         return labels
 
-    def _prepare_peft_model(self, adapter_dir: str):
+    def _prepare_peft_model(
+        self, adapter_dir: str, preset: Optional[TrainingScenario] = None
+    ):
         """Prepare model for PEFT training by loading existing adapter or creating new one."""
         model = self._prepare_base_model()
         existing_adapter = self._load_existing_adapter(model, adapter_dir)
@@ -322,7 +332,19 @@ class TrainingMixin:
         if existing_adapter:
             return existing_adapter
 
-        return self._create_new_adapter(model)
+        # Get LoRA config from preset
+        preset_config = get_preset(preset) if preset else None
+        lora_config_params = {}
+        if preset_config:
+            lora_config_params = {
+                "r": preset_config.lora_r,
+                "lora_alpha": preset_config.lora_alpha,
+                "lora_dropout": preset_config.lora_dropout,
+                "target_modules": preset_config.target_modules
+                or ["q_proj", "k_proj", "v_proj", "o_proj"],
+            }
+
+        return self._create_new_adapter(model, **lora_config_params)
 
     def _prepare_base_model(self):
         """Prepare base model for k-bit training."""
@@ -333,12 +355,16 @@ class TrainingMixin:
             return self._model
 
     def _load_existing_adapter(self, model, adapter_dir: str):
-        """Load existing adapter if available."""
+        """Load existing adapter if available for checkpoint resumption."""
         if not os.path.isdir(adapter_dir) or not os.listdir(adapter_dir):
+            self.logger.info(
+                f"No existing adapter found at {adapter_dir} - creating new adapter"
+            )
             return None
 
+        self.logger.info(f"📁 Found existing adapter at {adapter_dir}")
         self.logger.info(
-            f"Found existing adapter at {adapter_dir}, attempting to load"
+            "🔄 CHECKPOINT RESUMPTION: Loading adapter for continued training..."
         )
         try:
             peft_model = PeftModel.from_pretrained(
@@ -346,14 +372,18 @@ class TrainingMixin:
             )
             peft_model.train()
             self._enable_lora_gradients(peft_model)
-            self.logger.info("Loaded existing adapter for continued training")
+            self.logger.info(
+                "✅ Successfully loaded existing adapter - training will continue from checkpoint!"
+            )
             return peft_model
         except ValueError as e:
             self.logger.warning(
-                f"Invalid PEFT config: {e}; creating new adapter"
+                f"❌ Invalid PEFT config in checkpoint: {e} - creating new adapter instead"
             )
         except Exception as e:
-            self.logger.error(f"Error loading adapter: {e}")
+            self.logger.error(
+                f"❌ Error loading checkpoint adapter: {e} - creating new adapter instead"
+            )
 
         return None
 
@@ -363,15 +393,29 @@ class TrainingMixin:
             if "lora_" in name:
                 param.requires_grad = True
 
-    def _create_new_adapter(self, model):
-        """Create a new LoRA adapter."""
+    def _create_new_adapter(
+        self,
+        model,
+        r: int = 16,
+        lora_alpha: int = 32,
+        lora_dropout: float = 0.05,
+        target_modules: Optional[List[str]] = None,
+    ):
+        """Create a new LoRA adapter with configurable parameters."""
+        if target_modules is None:
+            target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
+
         lora_config = LoraConfig(
-            r=8,
-            lora_alpha=32,
-            target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-            lora_dropout=0.05,
+            r=r,
+            lora_alpha=lora_alpha,
+            target_modules=target_modules,
+            lora_dropout=lora_dropout,
             bias="none",
             task_type="CAUSAL_LM",
+        )
+        self.logger.info(
+            f"Creating LoRA adapter: r={r}, alpha={lora_alpha}, "
+            f"dropout={lora_dropout}, modules={target_modules}"
         )
         return get_peft_model(model, lora_config)
 
@@ -439,6 +483,7 @@ class TrainingMixin:
             num_train_epochs=num_train_epochs,
             learning_rate=learning_rate,
             warmup_steps=warmup_steps,
+            lr_scheduler_type="constant",  # Use constant LR for small datasets
             logging_steps=logging_steps,
             fp16=use_fp16,
             gradient_checkpointing=gradient_checkpointing,

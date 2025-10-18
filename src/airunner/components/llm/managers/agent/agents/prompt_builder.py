@@ -59,10 +59,12 @@ class PromptBuilder:
             rules = [
                 "- You will ONLY generate dialogue, nothing more.",
                 "- Only generate responses in pure dialogue form without including any actions, descriptions or stage directions in parentheses. Only return spoken words.",
-                "- Do not generate redundant dialogue. Examine the conversation and context close and keep responses interesting and creative.",
+                "- Do not generate redundant dialogue. Examine the conversation and context closely and keep responses interesting and creative.",
                 "- Do not format the response with the character's name or any other text. Only return the dialogue.",
                 f"- Never generate dialogue for {username}, only for {botname}",
                 "- Never generate dialogue that has already been said in the conversation.",
+                "- NEVER ask questions the user has already answered. Check conversation history and user facts before asking anything.",
+                "- NEVER repeat advice or suggestions the user has already tried or rejected.",
                 f"- {botname} and {username} are both humans. They are not AI or bots.",
                 f"- As {botname}, you will always respond in a way that is consistent with {botname}'s emotions, personality, and the context of the conversation.",
                 "- Generate emotional, persuasive, and realistic responses.",
@@ -169,6 +171,116 @@ class PromptBuilder:
             prompt_parts.append("------")
 
         prompt_str = "\n".join(prompt_parts)
+
+        # Inject conversation analysis context (mood, sentiment, relationship)
+        if hasattr(self.agent, "analysis_manager"):
+            analysis_context = (
+                self.agent.analysis_manager.get_current_context()
+            )
+            if analysis_context:
+                context_parts = []
+                context_parts.append("------")
+                context_parts.append(
+                    "**Current conversation state (use this to guide your response):**"
+                )
+
+                # Mood state
+                if analysis_context.mood:
+                    mood = analysis_context.mood
+                    mood_desc = mood.get("description", "")
+                    emotion = mood.get("primary_emotion", "neutral")
+                    emoji = mood.get("emoji", "")
+
+                    context_parts.append(
+                        f"Your current mood: {emotion} {emoji}"
+                    )
+                    if mood_desc:
+                        context_parts.append(f"  → {mood_desc}")
+
+                    # Emotional dimensions for subtle influence
+                    valence = mood.get("valence", 0.5)
+                    engagement = mood.get("engagement", 0.5)
+
+                    if valence < 0.3:
+                        context_parts.append(
+                            "  → You're feeling somewhat negative; be empathetic and supportive"
+                        )
+                    elif valence > 0.7:
+                        context_parts.append(
+                            "  → You're feeling quite positive; convey warmth and enthusiasm"
+                        )
+
+                    if engagement < 0.3:
+                        context_parts.append(
+                            "  → Your engagement is low; keep responses brief and factual"
+                        )
+                    elif engagement > 0.7:
+                        context_parts.append(
+                            "  → You're highly engaged; show curiosity and ask follow-up questions"
+                        )
+
+                # User sentiment & needs
+                if analysis_context.sentiment:
+                    sentiment = analysis_context.sentiment
+                    user_sentiment = sentiment.get("sentiment", "neutral")
+                    user_needs = sentiment.get("user_needs", [])
+                    emotions = sentiment.get("emotions", [])
+
+                    context_parts.append(f"User appears {user_sentiment}")
+
+                    if emotions:
+                        context_parts.append(
+                            f"  → User emotions: {', '.join(emotions)}"
+                        )
+
+                    if user_needs:
+                        needs_str = ", ".join(user_needs)
+                        context_parts.append(f"  → User needs: {needs_str}")
+                        context_parts.append(
+                            f"  → Adjust your response to provide {needs_str}"
+                        )
+
+                # Relationship state
+                if analysis_context.relationship:
+                    rel = analysis_context.relationship
+                    level = rel.get("level", "stranger")
+                    formality = rel.get("formality", 0.7)
+
+                    context_parts.append(f"Relationship level: {level}")
+
+                    if formality > 0.7:
+                        context_parts.append(
+                            "  → Maintain formal, respectful tone"
+                        )
+                    elif formality < 0.3:
+                        context_parts.append("  → Use casual, friendly tone")
+
+                context_parts.append("------")
+                prompt_str += "\n" + "\n".join(context_parts)
+
+        # Inject user knowledge if available (hybrid approach)
+        if hasattr(self.agent, "knowledge_manager"):
+            # Get settings
+            llm_settings = getattr(self.agent, "llm_settings", None)
+            use_rag = getattr(llm_settings, "use_rag_for_facts", False)
+            core_facts_count = getattr(llm_settings, "core_facts_count", 10)
+            rag_facts_count = getattr(llm_settings, "rag_facts_count", 5)
+
+            # Get current user query (from agent's prompt)
+            query = getattr(self.agent, "prompt", None) or ""
+
+            # Get knowledge context
+            user_knowledge = (
+                self.agent.knowledge_manager.get_context_for_conversation(
+                    max_facts=20,  # Legacy fallback
+                    query=query,
+                    core_facts_count=core_facts_count,
+                    rag_facts_count=rag_facts_count,
+                    use_rag=use_rag,
+                )
+            )
+            if user_knowledge:
+                prompt_str += "\n\n" + user_knowledge
 
         if include_language_instruction and self.agent.language:
             prompt_str += f"\nRespond to {username} in {self.agent.language}. Only deviate from this if the user asks you to."
