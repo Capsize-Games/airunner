@@ -213,9 +213,10 @@ class ChatPromptWidget(BaseWidget):
 
         self.clear_prompt()
         self.start_progress_bar()
+        # Create LLMRequest optimized for the action type
         self.api.llm.send_request(
             prompt=prompt,
-            llm_request=LLMRequest.from_default(),
+            llm_request=LLMRequest.for_action(self.action),
             action=self.action,
             do_tts_reply=False,
         )

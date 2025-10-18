@@ -18,7 +18,8 @@ class LLMManagerMixin:
     @property
     def llm_request(self) -> LLMRequest:
         if not hasattr(self, "_llm_request") or self._llm_request is None:
-            self._llm_request = LLMRequest.from_default()
+            # Use code defaults (not database) for better repetition handling
+            self._llm_request = LLMRequest()
         return self._llm_request
 
     @llm_request.setter

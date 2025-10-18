@@ -108,7 +108,7 @@
                <item>
                 <widget class="QLineEdit" name="model_name_input">
                  <property name="placeholderText">
-                  <string>Enter model/adapter name</string>
+                  <string>Enter model/adapter name (reuse name to continue training)</string>
                  </property>
                 </widget>
                </item>

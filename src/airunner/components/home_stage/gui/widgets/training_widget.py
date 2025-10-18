@@ -343,6 +343,7 @@ class TrainingWidget(BaseWidget):
         self.set_status_message_text(message)
 
     @Slot(dict)
+    @Slot(dict)
     def on_complete(self, data: Dict):
         """Handle training completion."""
         self._set_training_state(active=False)
@@ -354,6 +355,9 @@ class TrainingWidget(BaseWidget):
         )
         self.set_status_message_text(message)
 
+        # Unload LLM to free up memory after training
+        self.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL)
+
     @Slot(dict)
     def on_cancelled(self, data: Dict):
         """Handle training cancellation."""
@@ -363,8 +367,6 @@ class TrainingWidget(BaseWidget):
 
     @Slot(int)
     def on_scenario_combo_currentIndexChanged(self, index: int):
-        print("*" * 100)
-        print("on_scenario_combo_currentIndexChanged", index)
         """Handle scenario selection - auto-populate parameters and update description."""
         if index < 0:
             return
@@ -579,7 +581,7 @@ class TrainingWidget(BaseWidget):
             return
 
         if self._show_preview_dialog(all_examples):
-            self._update_preview_area()
+            self._update_preview_table()
 
     def _prepare_examples(self, fmt: str) -> List:
         """Prepare examples from selected files."""

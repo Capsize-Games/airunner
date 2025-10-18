@@ -27,7 +27,8 @@ class LLMAPIService(APIServiceBase):
         do_tts_reply: bool = True,
         node_id: Optional[str] = None,
     ):
-        llm_request = llm_request or LLMRequest.from_default()
+        # Use action-optimized defaults if no explicit request provided
+        llm_request = llm_request or LLMRequest.for_action(action)
         llm_request.do_tts_reply = do_tts_reply
         data = {
             "llm_request": True,

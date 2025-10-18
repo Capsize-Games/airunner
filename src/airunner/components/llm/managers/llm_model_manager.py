@@ -1,6 +1,7 @@
 import gc
 import random
 import os
+import json
 import torch
 from typing import Optional, Dict, Any, Union, Type, List
 
@@ -17,6 +18,7 @@ from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
 from airunner.components.llm.data.conversation import Conversation
+from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 from airunner.components.application.managers.base_model_manager import (
     BaseModelManager,
 )
@@ -31,6 +33,7 @@ from airunner.settings import (
     AIRUNNER_LOCAL_FILES_ONLY,
 )
 from airunner.utils.memory import clear_memory
+from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.components.llm.managers.agent.agents import (
     LocalAgent,
     OpenRouterQObject,
@@ -519,19 +522,93 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             )
 
             if PeftModel is not None:
-                # Attempt to load adapter if available
+                # Load enabled adapters from QSettings
                 try:
-                    if os.path.exists(self.adapter_path):
-                        # Convert base model to PEFT format
-                        self._model = PeftModel.from_pretrained(
-                            self._model, self.adapter_path
-                        )
+                    qs = get_qsettings()
+                    enabled_adapters_json = qs.value(
+                        "llm_settings/enabled_adapters", "[]"
+                    )
+                    self.logger.info(
+                        f"Reading enabled adapters from QSettings: {enabled_adapters_json}"
+                    )
+                    enabled_adapter_names = json.loads(enabled_adapters_json)
+                    self.logger.info(
+                        f"Parsed enabled adapter names: {enabled_adapter_names}"
+                    )
+
+                    if enabled_adapter_names:
+                        # Query database for adapter paths
+                        adapters = FineTunedModel.objects.all()
+                        enabled_adapters = [
+                            a
+                            for a in adapters
+                            if a.name in enabled_adapter_names
+                        ]
                         self.logger.info(
-                            f"Loaded adapter from {self.adapter_path}"
+                            f"Found {len(enabled_adapters)} adapters in database matching enabled names"
                         )
+
+                        loaded_count = 0
+                        for adapter in enabled_adapters:
+                            if adapter.adapter_path and os.path.exists(
+                                adapter.adapter_path
+                            ):
+                                self.logger.info(
+                                    f"Loading adapter '{adapter.name}' from {adapter.adapter_path}"
+                                )
+                                # Check model type before loading
+                                is_peft_before = isinstance(
+                                    self._model, PeftModel
+                                )
+                                self.logger.debug(
+                                    f"Model is PEFT model before loading: {is_peft_before}"
+                                )
+
+                                self._model = PeftModel.from_pretrained(
+                                    self._model, adapter.adapter_path
+                                )
+
+                                # Verify adapter loaded and log details
+                                is_peft_after = isinstance(
+                                    self._model, PeftModel
+                                )
+                                self.logger.debug(
+                                    f"Model is PEFT model after loading: {is_peft_after}"
+                                )
+
+                                if hasattr(self._model, "active_adapters"):
+                                    self.logger.info(
+                                        f"Active adapters: {self._model.active_adapters}"
+                                    )
+                                if hasattr(self._model, "peft_config"):
+                                    self.logger.info(
+                                        f"PEFT config keys: {list(self._model.peft_config.keys())}"
+                                    )
+
+                                # Ensure adapter is in inference mode (not training mode)
+                                self._model.eval()
+                                loaded_count += 1
+                                self.logger.info(
+                                    f"✓ Successfully loaded adapter '{adapter.name}' (inference mode)"
+                                )
+                            else:
+                                self.logger.warning(
+                                    f"Adapter '{adapter.name}' path does not exist: {adapter.adapter_path}"
+                                )
+
+                        self.logger.info(
+                            f"Loaded {loaded_count}/{len(enabled_adapter_names)} enabled adapters"
+                        )
+                    else:
+                        self.logger.info("No adapters enabled in settings")
+
+                except json.JSONDecodeError as e:
+                    self.logger.error(
+                        f"Error parsing enabled adapters JSON: {e}"
+                    )
                 except Exception as e:
                     self.logger.error(
-                        f"Error loading adapter (continuing with base model): {e}"
+                        f"Error loading adapters (continuing with base model): {e}"
                     )
 
         except Exception as e:
@@ -643,7 +720,8 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             self.unload()
             self.load()
 
-        llm_request = llm_request or LLMRequest.from_default()
+        # Use code defaults (not database) for better repetition handling
+        llm_request = llm_request or LLMRequest()
 
         # Always pass the raw prompt and action to the agent; let the agent handle slash commands/tool routing
         response = self._chat_agent.chat(

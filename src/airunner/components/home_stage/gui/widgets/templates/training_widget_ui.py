@@ -277,7 +277,7 @@ class Ui_training_widget(object):
         self.remove_button.setText(QCoreApplication.translate("training_widget", u"Remove", None))
         self.adapter_group.setTitle(QCoreApplication.translate("training_widget", u"Adapter Configuration", None))
         self.model_name_label.setText(QCoreApplication.translate("training_widget", u"Model Name:", None))
-        self.model_name_input.setPlaceholderText(QCoreApplication.translate("training_widget", u"Enter model/adapter name", None))
+        self.model_name_input.setPlaceholderText(QCoreApplication.translate("training_widget", u"Enter model/adapter name (reuse name to continue training)", None))
         self.manage_adapters_button.setText(QCoreApplication.translate("training_widget", u"Manage Adapters", None))
         self.scenario_group.setTitle(QCoreApplication.translate("training_widget", u"Training Scenario", None))
         self.scenario_description.setText("")
