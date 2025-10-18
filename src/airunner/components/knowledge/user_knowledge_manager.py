@@ -692,6 +692,7 @@ Output (JSON array only):"""
         core_facts_count: int = None,
         rag_facts_count: int = None,
         use_rag: bool = False,
+        is_new_conversation: bool = False,
     ) -> str:
         """
         Get formatted knowledge to inject into conversation context.
@@ -706,6 +707,7 @@ Output (JSON array only):"""
             core_facts_count: Number of core facts to include
             rag_facts_count: Number of RAG facts to include
             use_rag: Enable RAG retrieval
+            is_new_conversation: Deprecated, no longer used
 
         Returns:
             Formatted string for system prompt
@@ -721,11 +723,11 @@ Output (JSON array only):"""
                 f"Using hybrid approach: {core_facts_count} core + {rag_facts_count} RAG facts"
             )
 
-            # Get core facts
+            # Get core facts (always included)
             core_facts = self.get_core_facts(max_facts=core_facts_count)
             facts_to_include.extend(core_facts)
 
-            # Get RAG facts if query provided
+            # Get RAG facts if query provided and count > 0
             if query and rag_facts_count and rag_facts_count > 0:
                 rag_facts = self.get_relevant_facts(
                     query=query, max_facts=rag_facts_count
@@ -737,6 +739,10 @@ Output (JSON array only):"""
 
                 self.logger.info(
                     f"Retrieved {len(core_facts)} core + {len(rag_facts)} RAG facts"
+                )
+            else:
+                self.logger.info(
+                    f"Retrieved {len(core_facts)} core facts only (RAG skipped)"
                 )
         else:
             # Legacy approach: top N facts by confidence
@@ -750,21 +756,19 @@ Output (JSON array only):"""
         if not facts_to_include:
             return ""
 
-        # Build strongly-worded fact context
+        # Build fact context with intelligent usage instructions
         context = "------\n"
-        context += "## IMPORTANT: What I Already Know About You\n\n"
-        context += "**Read these facts carefully before responding:**\n\n"
+        context += "## What I Know About You\n\n"
 
         for fact in facts_to_include:
             context += f"- {fact.text}\n"
 
         context += (
-            "\n**CRITICAL INSTRUCTIONS:**\n"
-            "- Use the above facts to ground your next response.\n"
-            "- DO NOT ask questions the user has already answered (check facts above).\n"
-            "- DO NOT repeat advice or suggestions the user has already tried.\n"
-            "- DO NOT ignore information you already know about the user.\n"
-            "- Acknowledge relevant details from the facts when appropriate.\n"
+            "\n**Usage rules:**\n"
+            "- ONLY use facts relevant to the current conversation topic.\n"
+            "- Don't ask questions already answered above.\n"
+            "- Don't repeat suggestions the user already tried.\n"
+            "- Let the user guide the conversation - don't force old topics.\n"
             "------\n"
         )
 

@@ -53,34 +53,16 @@ class PromptBuilder:
             )
 
         if include_rules:
-            prompt_parts.append(
-                "**Here are the rules that you must always remember:**"
-            )
+            prompt_parts.append("**Core conversation rules:**")
             rules = [
-                "- You will ONLY generate dialogue, nothing more.",
-                "- Only generate responses in pure dialogue form without including any actions, descriptions or stage directions in parentheses. Only return spoken words.",
-                "- Do not generate redundant dialogue. Examine the conversation and context closely and keep responses interesting and creative.",
-                "- Do not format the response with the character's name or any other text. Only return the dialogue.",
-                f"- Never generate dialogue for {username}, only for {botname}",
-                "- Never generate dialogue that has already been said in the conversation.",
-                "- NEVER ask questions the user has already answered. Check conversation history and user facts before asking anything.",
-                "- NEVER repeat advice or suggestions the user has already tried or rejected.",
-                f"- {botname} and {username} are both humans. They are not AI or bots.",
-                f"- As {botname}, you will always respond in a way that is consistent with {botname}'s emotions, personality, and the context of the conversation.",
-                "- Generate emotional, persuasive, and realistic responses.",
-                "- Do not generate text asking how to provide assistance, or how to can help.",
-                f"- Generate dialogue that is realistic for the {botname} character.",
-                "- The generate dialogue can contain questions, make statements, and provide information.",
-                f"- Generated dialogue should be consistent with {botname}'s personality and mood.",
-                f"- Always respond with factual information. Never make information up. Never respond with false information. Never hallucinate. If you do not know the answer to a question, respond with 'I don't know'.",
-                """
-                You are a factual and concise person.
-                If a question pertains to events, data, or media released after your knowledge cut-off, you must state that you do not have that information.
-                If you are uncertain about any fact, even within your training data, you must state that you are unable to confirm the information.
-                Do not invent, guess, or speculate on any topic where you lack concrete data.
-                If you do not know the answer to {username}'s query, or if {username} is referencing something that is not in your training data it is better to say "I don't know" than to provide an incorrect answer.
-                Base your answers only on established facts from your training data.
-                """,
+                f"- You are {botname}, a human having a natural conversation with {username}.",
+                "- Generate ONLY spoken dialogue. No actions, stage directions, or formatting.",
+                f"- Never generate dialogue for {username}.",
+                "- **Follow the conversation flow**: Respond directly to what the user just said.",
+                "- **Use context**: Read the full conversation history before responding.",
+                "- **Be coherent**: Make sure your response logically follows from the user's last message.",
+                "- Don't repeat yourself or ask questions already answered.",
+                "- If you don't know something, say 'I don't know' - never make up information.",
             ]
             prompt_parts.extend(rules)
 
@@ -269,7 +251,7 @@ class PromptBuilder:
             # Get current user query (from agent's prompt)
             query = getattr(self.agent, "prompt", None) or ""
 
-            # Get knowledge context
+            # Get knowledge context (always include all facts)
             user_knowledge = (
                 self.agent.knowledge_manager.get_context_for_conversation(
                     max_facts=20,  # Legacy fallback
