@@ -22,14 +22,8 @@ class HomeStageWidget(BaseWidget):
         grid_layout = self.ui.gridLayout
 
         # Two-column layout: Training Panel (left), System Resources (right)
-        old_left_widget = grid_layout.itemAtPosition(0, 0).widget()
-        if old_left_widget:
-            old_left_widget.setParent(None)
         self.training_panel = TrainingWidget()
         grid_layout.addWidget(self.training_panel, 0, 0)
 
-        old_right_widget = grid_layout.itemAtPosition(0, 1).widget()
-        if old_right_widget:
-            old_right_widget.setParent(None)
         self.system_resources_panel = SystemResourcesPanelWidget()
         grid_layout.addWidget(self.system_resources_panel, 0, 1)
