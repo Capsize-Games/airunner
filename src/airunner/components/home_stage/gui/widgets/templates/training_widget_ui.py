@@ -15,10 +15,13 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
-    QHBoxLayout, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QProgressBar, QPushButton, QSizePolicy,
-    QTextEdit, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QListWidget, QListWidgetItem, QProgressBar, QPushButton,
+    QScrollArea, QSizePolicy, QTextEdit, QVBoxLayout,
+    QWidget)
+
+from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
 
 class Ui_training_widget(object):
     def setupUi(self, training_widget):
@@ -26,8 +29,19 @@ class Ui_training_widget(object):
             training_widget.setObjectName(u"training_widget")
         training_widget.resize(521, 612)
         self.verticalLayout = QVBoxLayout(training_widget)
+        self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.files_group = QGroupBox(training_widget)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.scrollArea = QScrollArea(training_widget)
+        self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setFrameShape(QFrame.Shape.NoFrame)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 507, 825))
+        self.scrollAreaLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.scrollAreaLayout.setObjectName(u"scrollAreaLayout")
+        self.files_group = QGroupBox(self.scrollAreaWidgetContents)
         self.files_group.setObjectName(u"files_group")
         self.files_layout = QVBoxLayout(self.files_group)
         self.files_layout.setObjectName(u"files_layout")
@@ -52,90 +66,189 @@ class Ui_training_widget(object):
         self.files_layout.addLayout(self.files_buttons)
 
 
-        self.verticalLayout.addWidget(self.files_group)
+        self.scrollAreaLayout.addWidget(self.files_group)
 
-        self.settings_group = QWidget(training_widget)
+        self.settings_group = QWidget(self.scrollAreaWidgetContents)
         self.settings_group.setObjectName(u"settings_group")
-        self.gridLayout_3 = QGridLayout(self.settings_group)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.gridLayout_3.setVerticalSpacing(10)
-        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.groupBox = QGroupBox(self.settings_group)
-        self.groupBox.setObjectName(u"groupBox")
-        self.gridLayout = QGridLayout(self.groupBox)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.model_name_input = QLineEdit(self.groupBox)
+        self.settings_layout = QVBoxLayout(self.settings_group)
+        self.settings_layout.setSpacing(10)
+        self.settings_layout.setObjectName(u"settings_layout")
+        self.settings_layout.setContentsMargins(0, 0, 0, 0)
+        self.adapter_group = QGroupBox(self.settings_group)
+        self.adapter_group.setObjectName(u"adapter_group")
+        self.adapter_layout = QVBoxLayout(self.adapter_group)
+        self.adapter_layout.setObjectName(u"adapter_layout")
+        self.model_name_layout = QHBoxLayout()
+        self.model_name_layout.setObjectName(u"model_name_layout")
+        self.model_name_label = QLabel(self.adapter_group)
+        self.model_name_label.setObjectName(u"model_name_label")
+
+        self.model_name_layout.addWidget(self.model_name_label)
+
+        self.model_name_input = QLineEdit(self.adapter_group)
         self.model_name_input.setObjectName(u"model_name_input")
 
-        self.gridLayout.addWidget(self.model_name_input, 0, 0, 1, 1)
+        self.model_name_layout.addWidget(self.model_name_input)
 
 
-        self.gridLayout_3.addWidget(self.groupBox, 0, 0, 1, 1)
+        self.adapter_layout.addLayout(self.model_name_layout)
 
-        self.groupBox_2 = QGroupBox(self.settings_group)
-        self.groupBox_2.setObjectName(u"groupBox_2")
-        self.gridLayout_2 = QGridLayout(self.groupBox_2)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.format_combo = QComboBox(self.groupBox_2)
-        self.format_combo.setObjectName(u"format_combo")
+        self.manage_adapters_button = QPushButton(self.adapter_group)
+        self.manage_adapters_button.setObjectName(u"manage_adapters_button")
 
-        self.gridLayout_2.addWidget(self.format_combo, 0, 0, 1, 1)
+        self.adapter_layout.addWidget(self.manage_adapters_button)
 
 
-        self.gridLayout_3.addWidget(self.groupBox_2, 1, 0, 1, 1)
+        self.settings_layout.addWidget(self.adapter_group)
 
-        self.groupBox_3 = QGroupBox(self.settings_group)
-        self.groupBox_3.setObjectName(u"groupBox_3")
-        self.gridLayout_4 = QGridLayout(self.groupBox_3)
-        self.gridLayout_4.setObjectName(u"gridLayout_4")
-        self.preview_area = QTextEdit(self.groupBox_3)
+        self.scenario_group = QGroupBox(self.settings_group)
+        self.scenario_group.setObjectName(u"scenario_group")
+        self.scenario_layout = QVBoxLayout(self.scenario_group)
+        self.scenario_layout.setObjectName(u"scenario_layout")
+        self.scenario_combo = QComboBox(self.scenario_group)
+        self.scenario_combo.setObjectName(u"scenario_combo")
+
+        self.scenario_layout.addWidget(self.scenario_combo)
+
+        self.scenario_description = QLabel(self.scenario_group)
+        self.scenario_description.setObjectName(u"scenario_description")
+        self.scenario_description.setWordWrap(True)
+
+        self.scenario_layout.addWidget(self.scenario_description)
+
+
+        self.settings_layout.addWidget(self.scenario_group)
+
+        self.advanced_group = QGroupBox(self.settings_group)
+        self.advanced_group.setObjectName(u"advanced_group")
+        self.advanced_group.setCheckable(True)
+        self.advanced_group.setChecked(False)
+        self.advanced_layout = QVBoxLayout(self.advanced_group)
+        self.advanced_layout.setObjectName(u"advanced_layout")
+        self.learning_rate_slider = SliderWidget(self.advanced_group)
+        self.learning_rate_slider.setObjectName(u"learning_rate_slider")
+        self.learning_rate_slider.setProperty(u"current_value", 0.000200000000000)
+        self.learning_rate_slider.setProperty(u"slider_minimum", 0.000010000000000)
+        self.learning_rate_slider.setProperty(u"slider_maximum", 0.000500000000000)
+        self.learning_rate_slider.setProperty(u"spinbox_minimum", 0.000010000000000)
+        self.learning_rate_slider.setProperty(u"spinbox_maximum", 0.000500000000000)
+        self.learning_rate_slider.setProperty(u"spinbox_single_step", 0.000010000000000)
+        self.learning_rate_slider.setProperty(u"display_as_float", True)
+
+        self.advanced_layout.addWidget(self.learning_rate_slider)
+
+        self.epochs_slider = SliderWidget(self.advanced_group)
+        self.epochs_slider.setObjectName(u"epochs_slider")
+        self.epochs_slider.setProperty(u"current_value", 1)
+        self.epochs_slider.setProperty(u"slider_minimum", 1)
+        self.epochs_slider.setProperty(u"slider_maximum", 10)
+        self.epochs_slider.setProperty(u"spinbox_minimum", 1)
+        self.epochs_slider.setProperty(u"spinbox_maximum", 10)
+        self.epochs_slider.setProperty(u"spinbox_single_step", 1)
+        self.epochs_slider.setProperty(u"display_as_float", False)
+
+        self.advanced_layout.addWidget(self.epochs_slider)
+
+        self.batch_size_slider = SliderWidget(self.advanced_group)
+        self.batch_size_slider.setObjectName(u"batch_size_slider")
+        self.batch_size_slider.setProperty(u"current_value", 1)
+        self.batch_size_slider.setProperty(u"slider_minimum", 1)
+        self.batch_size_slider.setProperty(u"slider_maximum", 8)
+        self.batch_size_slider.setProperty(u"spinbox_minimum", 1)
+        self.batch_size_slider.setProperty(u"spinbox_maximum", 8)
+        self.batch_size_slider.setProperty(u"spinbox_single_step", 1)
+        self.batch_size_slider.setProperty(u"display_as_float", False)
+
+        self.advanced_layout.addWidget(self.batch_size_slider)
+
+        self.gradient_accumulation_slider = SliderWidget(self.advanced_group)
+        self.gradient_accumulation_slider.setObjectName(u"gradient_accumulation_slider")
+        self.gradient_accumulation_slider.setProperty(u"current_value", 1)
+        self.gradient_accumulation_slider.setProperty(u"slider_minimum", 1)
+        self.gradient_accumulation_slider.setProperty(u"slider_maximum", 8)
+        self.gradient_accumulation_slider.setProperty(u"spinbox_minimum", 1)
+        self.gradient_accumulation_slider.setProperty(u"spinbox_maximum", 8)
+        self.gradient_accumulation_slider.setProperty(u"spinbox_single_step", 1)
+        self.gradient_accumulation_slider.setProperty(u"display_as_float", False)
+
+        self.advanced_layout.addWidget(self.gradient_accumulation_slider)
+
+        self.warmup_steps_slider = SliderWidget(self.advanced_group)
+        self.warmup_steps_slider.setObjectName(u"warmup_steps_slider")
+        self.warmup_steps_slider.setProperty(u"current_value", 0)
+        self.warmup_steps_slider.setProperty(u"slider_minimum", 0)
+        self.warmup_steps_slider.setProperty(u"slider_maximum", 100)
+        self.warmup_steps_slider.setProperty(u"spinbox_minimum", 0)
+        self.warmup_steps_slider.setProperty(u"spinbox_maximum", 100)
+        self.warmup_steps_slider.setProperty(u"spinbox_single_step", 5)
+        self.warmup_steps_slider.setProperty(u"display_as_float", False)
+
+        self.advanced_layout.addWidget(self.warmup_steps_slider)
+
+        self.gradient_checkpointing_checkbox = QCheckBox(self.advanced_group)
+        self.gradient_checkpointing_checkbox.setObjectName(u"gradient_checkpointing_checkbox")
+
+        self.advanced_layout.addWidget(self.gradient_checkpointing_checkbox)
+
+
+        self.settings_layout.addWidget(self.advanced_group)
+
+        self.preview_group = QGroupBox(self.settings_group)
+        self.preview_group.setObjectName(u"preview_group")
+        self.preview_layout = QVBoxLayout(self.preview_group)
+        self.preview_layout.setObjectName(u"preview_layout")
+        self.preview_area = QTextEdit(self.preview_group)
         self.preview_area.setObjectName(u"preview_area")
 
-        self.gridLayout_4.addWidget(self.preview_area, 0, 0, 1, 1)
+        self.preview_layout.addWidget(self.preview_area)
 
-        self.preview_button = QPushButton(self.groupBox_3)
+        self.preview_button = QPushButton(self.preview_group)
         self.preview_button.setObjectName(u"preview_button")
 
-        self.gridLayout_4.addWidget(self.preview_button, 1, 0, 1, 1)
+        self.preview_layout.addWidget(self.preview_button)
 
 
-        self.gridLayout_3.addWidget(self.groupBox_3, 3, 0, 1, 1)
+        self.settings_layout.addWidget(self.preview_group)
 
         self.manage_models_button = QPushButton(self.settings_group)
         self.manage_models_button.setObjectName(u"manage_models_button")
 
-        self.gridLayout_3.addWidget(self.manage_models_button, 4, 0, 1, 1)
+        self.settings_layout.addWidget(self.manage_models_button)
 
 
-        self.verticalLayout.addWidget(self.settings_group)
+        self.scrollAreaLayout.addWidget(self.settings_group)
 
         self.control_layout = QHBoxLayout()
         self.control_layout.setObjectName(u"control_layout")
-        self.start_button = QPushButton(training_widget)
+        self.start_button = QPushButton(self.scrollAreaWidgetContents)
         self.start_button.setObjectName(u"start_button")
 
         self.control_layout.addWidget(self.start_button)
 
-        self.cancel_button = QPushButton(training_widget)
+        self.cancel_button = QPushButton(self.scrollAreaWidgetContents)
         self.cancel_button.setObjectName(u"cancel_button")
         self.cancel_button.setEnabled(False)
 
         self.control_layout.addWidget(self.cancel_button)
 
 
-        self.verticalLayout.addLayout(self.control_layout)
+        self.scrollAreaLayout.addLayout(self.control_layout)
 
-        self.progress_bar = QProgressBar(training_widget)
+        self.progress_bar = QProgressBar(self.scrollAreaWidgetContents)
         self.progress_bar.setObjectName(u"progress_bar")
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(True)
 
-        self.verticalLayout.addWidget(self.progress_bar)
+        self.scrollAreaLayout.addWidget(self.progress_bar)
 
-        self.status_message = QLabel(training_widget)
+        self.status_message = QLabel(self.scrollAreaWidgetContents)
         self.status_message.setObjectName(u"status_message")
 
-        self.verticalLayout.addWidget(self.status_message)
+        self.scrollAreaLayout.addWidget(self.status_message)
+
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        self.verticalLayout.addWidget(self.scrollArea)
 
 
         self.retranslateUi(training_widget)
@@ -147,10 +260,21 @@ class Ui_training_widget(object):
         self.files_group.setTitle(QCoreApplication.translate("training_widget", u"Training Files", None))
         self.add_button.setText(QCoreApplication.translate("training_widget", u"Add", None))
         self.remove_button.setText(QCoreApplication.translate("training_widget", u"Remove", None))
-        self.groupBox.setTitle(QCoreApplication.translate("training_widget", u"Model Name", None))
-        self.groupBox_2.setTitle(QCoreApplication.translate("training_widget", u"Formatting", None))
-        self.groupBox_3.setTitle(QCoreApplication.translate("training_widget", u"Content to fine-tune", None))
-        self.preview_button.setText(QCoreApplication.translate("training_widget", u"Choose training sections", None))
+        self.adapter_group.setTitle(QCoreApplication.translate("training_widget", u"Adapter Configuration", None))
+        self.model_name_label.setText(QCoreApplication.translate("training_widget", u"Model Name:", None))
+        self.model_name_input.setPlaceholderText(QCoreApplication.translate("training_widget", u"Enter model/adapter name", None))
+        self.manage_adapters_button.setText(QCoreApplication.translate("training_widget", u"Manage Adapters", None))
+        self.scenario_group.setTitle(QCoreApplication.translate("training_widget", u"Training Scenario", None))
+        self.scenario_description.setText("")
+        self.advanced_group.setTitle(QCoreApplication.translate("training_widget", u"Advanced Settings", None))
+        self.learning_rate_slider.setProperty(u"label_text", QCoreApplication.translate("training_widget", u"Learning Rate", None))
+        self.epochs_slider.setProperty(u"label_text", QCoreApplication.translate("training_widget", u"Epochs", None))
+        self.batch_size_slider.setProperty(u"label_text", QCoreApplication.translate("training_widget", u"Batch Size", None))
+        self.gradient_accumulation_slider.setProperty(u"label_text", QCoreApplication.translate("training_widget", u"Gradient Accumulation Steps", None))
+        self.warmup_steps_slider.setProperty(u"label_text", QCoreApplication.translate("training_widget", u"Warmup Steps", None))
+        self.gradient_checkpointing_checkbox.setText(QCoreApplication.translate("training_widget", u"Enable Gradient Checkpointing", None))
+        self.preview_group.setTitle(QCoreApplication.translate("training_widget", u"Content to Fine-tune", None))
+        self.preview_button.setText(QCoreApplication.translate("training_widget", u"Choose Training Sections", None))
         self.manage_models_button.setText(QCoreApplication.translate("training_widget", u"Manage Models", None))
         self.start_button.setText(QCoreApplication.translate("training_widget", u"Start Fine-tune", None))
         self.cancel_button.setText(QCoreApplication.translate("training_widget", u"Cancel", None))

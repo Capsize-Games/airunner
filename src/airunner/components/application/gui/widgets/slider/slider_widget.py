@@ -89,11 +89,11 @@ class SliderWidget(BaseWidget):
 
     @property
     def slider_minimum(self):
-        return self.ui.slider.minimum
+        return self.ui.slider.minimum()
 
     @slider_minimum.setter
     def slider_minimum(self, val):
-        self.ui.slider.minimum = int(val)
+        self.ui.slider.setMinimum(int(val))
 
     @property
     def slider_maximum(self):
@@ -389,3 +389,51 @@ class SliderWidget(BaseWidget):
         self.spinbox_single_step = val
         self.spinbox_page_step = val
         self.spinbox_minimum = val
+
+    def set_label(self, label_text: str):
+        """Set the label text for the slider widget."""
+        if hasattr(self.ui, "groupBox"):
+            self.ui.groupBox.setTitle(label_text)
+            if label_text:
+                self.ui.groupBox.setStyleSheet("")  # Reset to default
+            else:
+                self.ui.groupBox.setStyleSheet(
+                    "QGroupBox { border: none; padding: 0px; margin-top: 0px; }"
+                )
+
+    def set_minimum(self, val: float):
+        """Set minimum value for both slider and spinbox."""
+        self.slider_minimum = int(val) if not self.display_as_float else val
+        self.spinbox_minimum = val
+
+    def set_maximum(self, val: float):
+        """Set maximum value for both slider and spinbox."""
+        self.slider_maximum = int(val) if not self.display_as_float else val
+        self.spinbox_maximum = val
+
+    def set_step_size(self, val: float):
+        """Set step size for both slider and spinbox."""
+        self.slider_single_step = (
+            int(val) if not self.display_as_float else val
+        )
+        self.slider_page_step = int(val) if not self.display_as_float else val
+        self.spinbox_single_step = val
+        self.spinbox_page_step = val
+
+    def set_value(self, val: float):
+        """Set the current value of the slider and spinbox."""
+        self.is_loading = True
+        self.set_slider_and_spinbox_values(val)
+        self.is_loading = False
+
+    def set_display_as_float(self, display_as_float: bool):
+        """Set whether to display values as float."""
+        self.display_as_float = display_as_float
+        if not display_as_float:
+            self.ui.slider_spinbox.setDecimals(0)
+        else:
+            self.ui.slider_spinbox.setDecimals(4)
+
+    def value(self) -> float:
+        """Get the current value from the spinbox."""
+        return self.ui.slider_spinbox.value()
