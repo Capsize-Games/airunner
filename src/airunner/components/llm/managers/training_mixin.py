@@ -190,8 +190,8 @@ class TrainingMixin:
         # Prepare base model for training (essential for quantized models)
         try:
             model = prepare_model_for_kbit_training(model)
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(f"Error preparing model for k-bit training: {e}")
 
         # try load existing adapter, fallback to creating a fresh LoRA adapter
         if os.path.isdir(adapter_dir) and os.listdir(adapter_dir):
