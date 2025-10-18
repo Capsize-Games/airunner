@@ -26,6 +26,12 @@ from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 from airunner.components.documents.data.models.document import (
     Document as DBDocument,
 )
+from airunner.components.llm.training_presets import (
+    TrainingScenario,
+    TrainingPreset,
+    get_preset,
+    TRAINING_PRESETS,
+)
 
 
 class TrainingWidget(BaseWidget):
@@ -43,16 +49,17 @@ class TrainingWidget(BaseWidget):
 
         self._files: List[str] = []
         self._preview_examples_selected = None
-        self._start_connected = False
+        self._current_preset: Optional[TrainingPreset] = None
+        self._initialized = False
+        self._is_restoring = False  # Flag to prevent saves during restoration
 
         self._setup_ui()
         self._connect_signals()
-        self._restore_persistent_state()
 
     def _setup_ui(self):
         """Initialize UI components and their state."""
         self._setup_file_list()
-        self._setup_format_combo()
+        self._setup_scenario_combo()
         self._setup_preview_controls()
         self.ui.status_message.hide()
         self.ui.progress_bar.setValue(0)
@@ -63,99 +70,99 @@ class TrainingWidget(BaseWidget):
         self.ui.files_list.setDragEnabled(True)
         self.ui.files_list.installEventFilter(self)
 
-    def _setup_format_combo(self):
-        """Populate the format combo box with available options."""
-        if not hasattr(self.ui, "format_combo"):
-            return
-
-        try:
-            self.ui.format_combo.clear()
-            self.ui.format_combo.addItem("QA Pairs (default)", "qa")
-            self.ui.format_combo.addItem("Long Context", "long")
-            self.ui.format_combo.addItem("Author-Style", "author")
-        except Exception:
-            pass
+    def _setup_scenario_combo(self):
+        """Populate the scenario combo box with available scenarios."""
+        self.ui.scenario_combo.blockSignals(True)
+        self.ui.scenario_combo.clear()
+        for scenario in TrainingScenario:
+            preset = get_preset(scenario)
+            display_name = preset.name
+            self.ui.scenario_combo.addItem(display_name, scenario.value)
+        self.ui.scenario_combo.blockSignals(False)
 
     def _setup_preview_controls(self):
         """Setup preview and manage model controls."""
-        if hasattr(self.ui, "preview_area"):
-            try:
-                self.ui.preview_area.setReadOnly(True)
-            except Exception:
-                pass
+        self.ui.preview_area.setReadOnly(True)
+
+    def showEvent(self, event):
+        """Handle widget show event to initialize sliders after they're ready."""
+        super().showEvent(event)
+        self.logger.debug(
+            f"TrainingWidget showEvent called, _initialized={self._initialized}"
+        )
+        if not self._initialized:
+            self._initialized = True
+            self.logger.debug(
+                "TrainingWidget initializing for first time, restoring state"
+            )
+            # Block scenario signal during restoration to prevent premature application
+            # Restore state after sliders are initialized
+            self._restore_persistent_state()
+            # Re-enable scenario signal
+            # Apply the current scenario now that everything is initialized
+            self.ui.scenario_combo.blockSignals(True)
+            if self.ui.scenario_combo.currentIndex() >= 0:
+                self.on_scenario_combo_currentIndexChanged(
+                    self.ui.scenario_combo.currentIndex()
+                )
+            self.ui.scenario_combo.blockSignals(False)
 
     def _connect_signals(self):
         """Connect all UI signals to their handlers."""
-        self._connect_button_signals()
         self._connect_input_signals()
         self._connect_list_model_signals()
 
-    def _connect_button_signals(self):
-        """Connect button click signals."""
-        self.ui.add_button.clicked.connect(self.on_add_clicked)
-        self.ui.remove_button.clicked.connect(self.on_remove_clicked)
-        self.ui.cancel_button.clicked.connect(self.on_cancel_clicked)
-
-        if hasattr(self.ui, "preview_button"):
-            try:
-                self.ui.preview_button.clicked.connect(self.on_preview_clicked)
-            except Exception:
-                pass
-
-        if hasattr(self.ui, "manage_models_button"):
-            try:
-                self.ui.manage_models_button.clicked.connect(
-                    self.on_manage_models_clicked
-                )
-            except Exception:
-                pass
-
-        if hasattr(self.ui, "start_button") and not self._start_connected:
-            try:
-                self.ui.start_button.clicked.connect(self.on_start_clicked)
-                self._start_connected = True
-            except Exception:
-                pass
-
     def _connect_input_signals(self):
         """Connect input widget signals for state persistence."""
-        if hasattr(self.ui, "model_name_input"):
-            try:
-                self.ui.model_name_input.editingFinished.connect(
-                    self._save_persistent_state
-                )
-            except Exception:
-                pass
+        # Connect advanced settings to save on change
+        self.ui.advanced_group.toggled.connect(
+            lambda _: self._save_persistent_state()
+        )
 
-        if hasattr(self.ui, "format_combo"):
-            try:
-                self.ui.format_combo.currentIndexChanged.connect(
-                    lambda _: self._save_persistent_state()
-                )
-            except Exception:
-                pass
+        # Connect gradient checkpointing checkbox
+        self.ui.gradient_checkpointing_checkbox.toggled.connect(
+            lambda _: self._save_persistent_state()
+        )
+
+        # Note: preview_area is read-only and derived from _preview_examples_selected,
+        # so we don't need to connect textChanged signal
+
+    @Slot()
+    def on_model_name_input_editingFinished(self):
+        """Handle model name input editing finished."""
+        self._save_persistent_state()
+
+    @Slot(bool)
+    def on_advanced_group_toggled(self, checked: bool):
+        """Handle advanced group toggled."""
+        self._save_persistent_state()
+
+    @Slot(bool)
+    def on_gradient_checkpointing_checkbox_toggled(self, checked: bool):
+        """Handle gradient checkpointing checkbox toggled."""
+        self._save_persistent_state()
+
+    @Slot()
+    def on_preview_area_textChanged(self):
+        """Handle changes in the preview area text."""
+        self._save_persistent_state()
 
     def _connect_list_model_signals(self):
         """Connect list model signals to detect external changes."""
-        try:
-            model = self.ui.files_list.model()
-            if model is not None:
-                model.rowsInserted.connect(
-                    lambda *a: self._on_files_list_changed()
-                )
-                model.rowsRemoved.connect(
-                    lambda *a: self._on_files_list_changed()
-                )
-        except Exception:
-            pass
+        model = self.ui.files_list.model()
+        if model is not None:
+            model.rowsInserted.connect(
+                lambda *a: self._on_files_list_changed()
+            )
+            model.rowsRemoved.connect(lambda *a: self._on_files_list_changed())
 
     def _on_files_list_changed(self):
         """Called when the QListWidget's model changes (rows inserted/removed)."""
         try:
             self._sync_files_from_ui()
             self._save_persistent_state()
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(f"Error handling files list change: {str(e)}")
 
     def _sync_files_from_ui(self):
         """Ensure self._files matches what's in the ui.files_list widget."""
@@ -166,8 +173,8 @@ class TrainingWidget(BaseWidget):
                 if file_path:
                     files.append(file_path)
             self._files = files
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(f"Error syncing files from UI: {str(e)}")
 
     def _get_item_file_path(self, index: int) -> Optional[str]:
         """Get the file path stored in a list item."""
@@ -177,32 +184,27 @@ class TrainingWidget(BaseWidget):
             if data:
                 return data
             return item.text()
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Error getting item file path: {str(e)}")
             return None
 
     @Slot()
-    def on_add_clicked(self):
+    def on_add_button_clicked(self):
         # Placeholder for manual add - keep minimal for now
         pass
 
     @Slot()
-    def on_remove_clicked(self):
+    def on_remove_button_clicked(self):
         current = self.ui.files_list.currentItem()
         if not current:
             return
         path = current.data(Qt.UserRole)
-        try:
-            self._files.remove(path)
-        except ValueError:
-            pass
+        self._files.remove(path)
         self.ui.files_list.takeItem(self.ui.files_list.currentRow())
-        try:
-            self._save_persistent_state()
-        except Exception:
-            pass
+        self._save_persistent_state()
 
     @Slot()
-    def on_start_clicked(self):
+    def on_start_button_clicked(self):
         """Handle start button click to initiate fine-tuning."""
         self._sync_files_from_ui()
 
@@ -252,9 +254,30 @@ class TrainingWidget(BaseWidget):
 
         payload = {
             "files": self._files,
+            "adapter_name": model_name,
             "model_name": model_name,
             "format": fmt,
         }
+
+        # Add scenario/preset if selected
+        scenario_name = self.ui.scenario_combo.currentData()
+        if scenario_name:
+            payload["preset"] = scenario_name
+
+        # Add advanced settings if group is checked
+        if self.ui.advanced_group.isChecked():
+            payload["learning_rate"] = self.ui.learning_rate_slider.value()
+            payload["num_train_epochs"] = int(self.ui.epochs_slider.value())
+            payload["per_device_train_batch_size"] = int(
+                self.ui.batch_size_slider.value()
+            )
+            payload["gradient_accumulation_steps"] = int(
+                self.ui.gradient_accumulation_slider.value()
+            )
+            payload["warmup_steps"] = int(self.ui.warmup_steps_slider.value())
+            payload["gradient_checkpointing"] = (
+                self.ui.gradient_checkpointing_checkbox.isChecked()
+            )
 
         if self._preview_examples_selected:
             payload["examples"] = self._preview_examples_selected
@@ -262,16 +285,20 @@ class TrainingWidget(BaseWidget):
         return payload
 
     def _get_selected_format(self) -> str:
-        """Get the currently selected format from the combo box."""
-        try:
-            if hasattr(self.ui, "format_combo"):
-                return self.ui.format_combo.currentData() or "qa"
-        except Exception:
-            pass
+        """Get the format type from the currently selected scenario."""
+        if self._current_preset:
+            return self._current_preset.format_type
+
+        scenario_name = self.ui.scenario_combo.currentData()
+        if scenario_name:
+            for s in TrainingScenario:
+                if s.value == scenario_name:
+                    preset = get_preset(s)
+                    return preset.format_type
         return "qa"
 
     @Slot()
-    def on_cancel_clicked(self):
+    def on_cancel_button_clicked(self):
         self.emit_signal(SignalCode.LLM_FINE_TUNE_CANCEL)
 
     @Slot(dict)
@@ -302,6 +329,192 @@ class TrainingWidget(BaseWidget):
         self.ui.progress_bar.setValue(0)
         self.set_status_message_text("Fine-tune cancelled")
 
+    @Slot(int)
+    def on_scenario_combo_currentIndexChanged(self, index: int):
+        print("*" * 100)
+        print("on_scenario_combo_currentIndexChanged", index)
+        """Handle scenario selection - auto-populate parameters and update description."""
+        if index < 0:
+            return
+
+        scenario_name = self.ui.scenario_combo.currentData()
+        if not scenario_name:
+            return
+
+        for s in TrainingScenario:
+            if s.value == scenario_name:
+                preset = get_preset(s)
+                self._current_preset = preset
+                self._apply_scenario_to_ui(preset)
+                break
+        self._save_persistent_state()
+
+    def _apply_scenario_to_ui(self, preset: TrainingPreset):
+        """Apply scenario preset values to all UI controls."""
+        self.ui.scenario_description.setText(preset.description)
+
+        # Set values directly via spinbox (bypasses slider normalization issues)
+        # The spinbox valueChanged signal will update the slider automatically
+        self.ui.learning_rate_slider.ui.slider_spinbox.setValue(
+            preset.learning_rate
+        )
+        self.ui.epochs_slider.ui.slider_spinbox.setValue(
+            preset.num_train_epochs
+        )
+        self.ui.batch_size_slider.ui.slider_spinbox.setValue(
+            preset.per_device_train_batch_size
+        )
+        self.ui.gradient_accumulation_slider.ui.slider_spinbox.setValue(
+            preset.gradient_accumulation_steps
+        )
+        self.ui.warmup_steps_slider.ui.slider_spinbox.setValue(
+            preset.warmup_steps
+        )
+        self.ui.gradient_checkpointing_checkbox.setChecked(
+            preset.gradient_checkpointing
+        )
+
+    @Slot(QListWidgetItem)
+    def on_files_list_itemDoubleClicked(self, item: QListWidgetItem):
+        """Handle double-click on a file to show its details."""
+        file_path = item.data(Qt.UserRole)
+        if not file_path:
+            return
+
+        try:
+            # Try to find the document in the database
+            doc = DBDocument.objects.get_by_path(file_path)
+            if doc:
+                self.emit_signal(
+                    SignalCode.DOCUMENT_OPEN_IN_VIEWER,
+                    {"document_id": doc.id},
+                )
+            else:
+                QMessageBox.information(
+                    self,
+                    "Document Not Found",
+                    "The selected file is not found in the document database.",
+                )
+        except Exception as e:
+            self.set_status_message_text(f"Error opening document: {str(e)}")
+
+    @Slot()
+    def on_manage_adapters_button_clicked(self):
+        """Show dialog to manage trained adapters."""
+        try:
+            adapters = FineTunedModel.get_all_records()
+            if not adapters:
+                QMessageBox.information(
+                    self, "Manage Adapters", "No trained adapters found."
+                )
+                return
+
+            dlg = self._create_adapter_management_dialog(adapters)
+            dlg.exec()
+        except Exception as e:
+            self.set_status_message_text(f"Error managing adapters: {str(e)}")
+
+    def _create_adapter_management_dialog(self, adapters: List) -> QDialog:
+        """Create dialog showing all adapters with load/delete options."""
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Manage Trained Adapters")
+        dlg.resize(600, 400)
+        layout = QVBoxLayout(dlg)
+
+        # Create list widget
+        list_widget = QListWidget(dlg)
+        for adapter in adapters:
+            item_text = f"{adapter.name}"
+            if adapter.adapter_path:
+                item_text += f" ({adapter.adapter_path})"
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.UserRole, adapter.id)
+            list_widget.addItem(item)
+        layout.addWidget(list_widget)
+
+        # Create buttons
+        btn_layout = QHBoxLayout()
+        load_btn = QPushButton("Load Adapter", dlg)
+        delete_btn = QPushButton("Delete Adapter", dlg)
+        close_btn = QPushButton("Close", dlg)
+
+        load_btn.clicked.connect(
+            lambda: self._load_adapter_from_dialog(list_widget, adapters, dlg)
+        )
+        delete_btn.clicked.connect(
+            lambda: self._delete_adapter_from_dialog(list_widget, adapters)
+        )
+        close_btn.clicked.connect(dlg.accept)
+
+        btn_layout.addWidget(load_btn)
+        btn_layout.addWidget(delete_btn)
+        btn_layout.addWidget(close_btn)
+        layout.addLayout(btn_layout)
+
+        return dlg
+
+    def _load_adapter_from_dialog(
+        self, list_widget: QListWidget, adapters: List, dlg: QDialog
+    ):
+        """Load the selected adapter."""
+        current = list_widget.currentItem()
+        if not current:
+            return
+
+        adapter_id = current.data(Qt.UserRole)
+        adapter = next((a for a in adapters if a.id == adapter_id), None)
+        if adapter:
+            self.ui.model_name_input.setText(adapter.name)
+            dlg.accept()
+            self.set_status_message_text(f"Loaded adapter: {adapter.name}")
+
+    def _delete_adapter_from_dialog(
+        self, list_widget: QListWidget, adapters: List
+    ):
+        """Delete the selected adapter."""
+        current = list_widget.currentItem()
+        if not current:
+            return
+
+        adapter_id = current.data(Qt.UserRole)
+        adapter = next((a for a in adapters if a.id == adapter_id), None)
+        if not adapter:
+            return
+
+        # Confirm deletion
+        reply = QMessageBox.question(
+            self,
+            "Delete Adapter",
+            f"Are you sure you want to delete adapter '{adapter.name}'?\n\nThis will remove the database entry and all associated files.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if reply == QMessageBox.Yes:
+            try:
+                # Delete from database
+                adapter.delete()
+
+                # Delete from filesystem if path exists
+                if adapter.adapter_path and os.path.exists(
+                    adapter.adapter_path
+                ):
+                    import shutil
+
+                    shutil.rmtree(adapter.adapter_path, ignore_errors=True)
+
+                # Remove from list
+                list_widget.takeItem(list_widget.currentRow())
+                self.set_status_message_text(
+                    f"Deleted adapter: {adapter.name}"
+                )
+            except Exception as e:
+                QMessageBox.warning(
+                    self,
+                    "Delete Failed",
+                    f"Failed to delete adapter: {str(e)}",
+                )
+
     def add_file(self, file_path: str):
         """Add a file to the training files list."""
         if file_path in self._files:
@@ -318,7 +531,7 @@ class TrainingWidget(BaseWidget):
         self.ui.files_list.addItem(item)
 
     @Slot()
-    def on_preview_clicked(self):
+    def on_preview_button_clicked(self):
         """Show preview dialog for prepared training examples."""
         self._sync_files_from_ui()
 
@@ -340,11 +553,8 @@ class TrainingWidget(BaseWidget):
         """Prepare examples from selected files."""
         all_examples = []
         for path in self._files[:3]:
-            try:
-                examples = prepare_examples_for_preview(path, fmt)
-                all_examples.extend(examples)
-            except Exception:
-                continue
+            examples = prepare_examples_for_preview(path, fmt)
+            all_examples.extend(examples)
         return all_examples
 
     def _show_no_examples_message(self):
@@ -437,13 +647,11 @@ class TrainingWidget(BaseWidget):
         """Accept the selected examples and close dialog."""
         selected = [i.row() for i in listw.selectedIndexes()]
         self._preview_examples_selected = [all_examples[i] for i in selected]
+        self._save_persistent_state()
         dlg.accept()
 
     def _update_preview_area(self):
         """Update the preview area with selected examples."""
-        if not hasattr(self.ui, "preview_area"):
-            return
-
         snippets = [
             f"{t}\n{text[:1000]}{'...' if len(text) > 1000 else ''}"
             for t, text in self._preview_examples_selected
@@ -451,7 +659,7 @@ class TrainingWidget(BaseWidget):
         self.ui.preview_area.setPlainText("\n\n---\n\n".join(snippets))
 
     @Slot()
-    def on_manage_models_clicked(self):
+    def on_manage_models_button_clicked(self):
         """Show dialog for managing fine-tuned models."""
         dlg = self._create_manage_models_dialog()
         dlg.exec()
@@ -481,8 +689,8 @@ class TrainingWidget(BaseWidget):
                     f"{m.id}: {m.name} (files: {len(m.files_used or [])})"
                 )
                 listw.addItem(item_text)
-        except Exception:
-            listw.addItem("(error loading models)")
+        except Exception as e:
+            self.logger.error(f"Error loading fine-tuned models: {str(e)}")
 
         return listw
 
@@ -512,11 +720,8 @@ class TrainingWidget(BaseWidget):
         if not item:
             return None
 
-        try:
-            text = item.text()
-            return int(text.split(":")[0])
-        except Exception:
-            return None
+        text = item.text()
+        return int(text.split(":")[0])
 
     def _load_selected_model(self, listw: QListWidget):
         """Load the selected fine-tuned model."""
@@ -524,14 +729,11 @@ class TrainingWidget(BaseWidget):
         if not model_id:
             return
 
-        try:
-            m = FineTunedModel.objects.get_orm(model_id)
-            self.emit_signal(
-                SignalCode.LLM_LOAD_SIGNAL,
-                {"model_name": m.name, "fine_tuned_id": model_id},
-            )
-        except Exception:
-            pass
+        m = FineTunedModel.objects.get_orm(model_id)
+        self.emit_signal(
+            SignalCode.LLM_LOAD_SIGNAL,
+            {"model_name": m.name, "fine_tuned_id": model_id},
+        )
 
     def _delete_selected_model(self, listw: QListWidget):
         """Delete the selected fine-tuned model."""
@@ -539,20 +741,14 @@ class TrainingWidget(BaseWidget):
         if not model_id:
             return
 
-        try:
-            FineTunedModel.objects.delete(model_id)
-            listw.takeItem(listw.currentRow())
-        except Exception:
-            pass
+        FineTunedModel.objects.delete(model_id)
+        listw.takeItem(listw.currentRow())
 
     def eventFilter(self, obj, event):
         """Accept drops of file paths into the files_list."""
-        try:
-            if obj == self.ui.files_list and event.type() == QEvent.Drop:
-                self._handle_drop_event(event)
-                return True
-        except Exception:
-            pass
+        if obj == self.ui.files_list and event.type() == QEvent.Drop:
+            self._handle_drop_event(event)
+            return True
         return super().eventFilter(obj, event)
 
     def _handle_drop_event(self, event):
@@ -583,35 +779,179 @@ class TrainingWidget(BaseWidget):
         return os.path.basename(file_path)
 
     def _save_persistent_state(self):
-        """Persist the current files list, model name and chosen format to QSettings."""
-        try:
-            qs = get_qsettings()
-            qs.setValue("training_widget/files", json.dumps(self._files or []))
-            qs.setValue("training_widget/model_name", self._get_model_name())
-            qs.setValue("training_widget/format", self._get_selected_format())
-            qs.sync()
-        except Exception:
-            pass
+        """Persist the current files list, model name, scenario and all settings to QSettings."""
+        # Don't save during restoration to avoid overwriting data being restored
+        if self._is_restoring:
+            return
 
-    def _get_model_name(self) -> str:
-        """Get the current model name from input."""
-        if not hasattr(self.ui, "model_name_input"):
-            return ""
+        qs = get_qsettings()
+        qs.setValue("training_widget/files", json.dumps(self._files or []))
 
-        try:
-            return self.ui.model_name_input.text().strip()
-        except Exception:
-            return ""
+        # Save model name
+        qs.setValue(
+            "training_widget/model_name",
+            self.ui.model_name_input.text().strip(),
+        )
+
+        # Save scenario selection
+        qs.setValue(
+            "training_widget/scenario",
+            self.ui.scenario_combo.currentData(),
+        )
+
+        # Save advanced group state
+        qs.setValue(
+            "training_widget/advanced_checked",
+            self.ui.advanced_group.isChecked(),
+        )
+
+        # Save slider values
+        qs.setValue(
+            "training_widget/learning_rate",
+            self.ui.learning_rate_slider.value(),
+        )
+        qs.setValue("training_widget/epochs", self.ui.epochs_slider.value())
+        qs.setValue(
+            "training_widget/batch_size",
+            self.ui.batch_size_slider.value(),
+        )
+        qs.setValue(
+            "training_widget/gradient_accumulation",
+            self.ui.gradient_accumulation_slider.value(),
+        )
+        qs.setValue(
+            "training_widget/warmup_steps",
+            self.ui.warmup_steps_slider.value(),
+        )
+        qs.setValue(
+            "training_widget/gradient_checkpointing",
+            self.ui.gradient_checkpointing_checkbox.isChecked(),
+        )
+
+        # Save preview content
+        qs.setValue(
+            "training_widget/preview_content",
+            self.ui.preview_area.toPlainText(),
+        )
+
+        # Save selected preview examples
+        if self._preview_examples_selected:
+            examples_json = json.dumps(self._preview_examples_selected)
+            self.logger.debug(
+                f"Saving {len(self._preview_examples_selected)} preview examples, JSON length: {len(examples_json)}"
+            )
+            qs.setValue(
+                "training_widget/preview_examples_selected",
+                examples_json,
+            )
+        else:
+            self.logger.debug("No preview examples to save, removing key")
+            qs.remove("training_widget/preview_examples_selected")
+
+        qs.sync()
 
     def _restore_persistent_state(self):
-        """Load persisted files, model name and format from QSettings and restore UI state."""
+        """Load persisted files, model name, scenario and all settings from QSettings and restore UI state."""
+        self.logger.debug("_restore_persistent_state called")
+        self._is_restoring = True
         try:
             qs = get_qsettings()
+            self.logger.debug("Restoring files...")
             self._restore_files(qs)
+            self.logger.debug("Restoring model name...")
             self._restore_model_name(qs)
-            self._restore_format_selection(qs)
-        except Exception:
-            pass
+            self.logger.debug("Restoring scenario selection...")
+            self._restore_scenario_selection(qs)
+            self.logger.debug("Restoring advanced settings...")
+            self._restore_advanced_settings(qs)
+            self.logger.debug("Restoring preview examples...")
+            self._restore_preview_examples(qs)
+            self.logger.debug("Restoration complete")
+            # Note: preview_content is regenerated from preview_examples, so no need to restore it separately
+        except Exception as e:
+            self.logger.error(f"Error during restoration: {e}", exc_info=True)
+        finally:
+            self._is_restoring = False
+
+    def _restore_model_name(self, qs):
+        """Restore model name from QSettings."""
+        model_name = qs.value("training_widget/model_name", "")
+        if model_name:
+            self.ui.model_name_input.setText(model_name)
+
+    def _restore_scenario_selection(self, qs):
+        """Restore scenario selection from QSettings."""
+        scenario_name = qs.value("training_widget/scenario", "")
+        if scenario_name:
+            for i in range(self.ui.scenario_combo.count()):
+                if self.ui.scenario_combo.itemData(i) == scenario_name:
+                    self.ui.scenario_combo.blockSignals(True)
+                    self.ui.scenario_combo.setCurrentIndex(i)
+                    self.ui.scenario_combo.blockSignals(False)
+                    break
+
+    def _restore_advanced_settings(self, qs):
+        """Restore advanced settings from QSettings."""
+        advanced_checked = qs.value(
+            "training_widget/advanced_checked", False, type=bool
+        )
+        self.ui.advanced_group.setChecked(advanced_checked)
+        learning_rate = qs.value(
+            "training_widget/learning_rate", 0.0002, type=float
+        )
+        epochs = qs.value("training_widget/epochs", 1, type=int)
+        batch_size = qs.value("training_widget/batch_size", 1, type=int)
+        grad_accum = qs.value(
+            "training_widget/gradient_accumulation", 1, type=int
+        )
+        warmup = qs.value("training_widget/warmup_steps", 0, type=int)
+        grad_checkpoint = qs.value(
+            "training_widget/gradient_checkpointing", True, type=bool
+        )
+        # Set values directly via spinbox to avoid slider initialization issues
+        self.ui.learning_rate_slider.ui.slider_spinbox.setValue(learning_rate)
+        self.ui.epochs_slider.ui.slider_spinbox.setValue(epochs)
+        self.ui.batch_size_slider.ui.slider_spinbox.setValue(batch_size)
+        self.ui.gradient_accumulation_slider.ui.slider_spinbox.setValue(
+            grad_accum
+        )
+        self.ui.warmup_steps_slider.ui.slider_spinbox.setValue(warmup)
+        self.ui.gradient_checkpointing_checkbox.setChecked(grad_checkpoint)
+
+    def _restore_preview_content(self, qs):
+        """Restore preview content from QSettings."""
+        preview_content = qs.value("training_widget/preview_content", "")
+        if preview_content:
+            self.ui.preview_area.setPlainText(preview_content)
+
+    def _restore_preview_examples(self, qs):
+        """Restore selected preview examples from QSettings."""
+        examples_raw = qs.value(
+            "training_widget/preview_examples_selected", ""
+        )
+        self.logger.info(
+            f"Restoring preview examples, raw: {examples_raw[:100] if examples_raw else 'EMPTY'}"
+        )
+        if examples_raw:
+            try:
+                self._preview_examples_selected = json.loads(examples_raw)
+                self.logger.info(
+                    f"Restored {len(self._preview_examples_selected)} preview examples"
+                )
+                # Update the preview area with the restored examples
+                if self._preview_examples_selected:
+                    # Block signals to prevent save during restoration
+                    self.ui.preview_area.blockSignals(True)
+                    self._update_preview_area()
+                    self.ui.preview_area.blockSignals(False)
+                    self.logger.info(
+                        f"Preview area updated with {len(self.ui.preview_area.toPlainText())} chars"
+                    )
+            except (json.JSONDecodeError, TypeError) as e:
+                self.logger.error(f"Error restoring preview examples: {e}")
+                self._preview_examples_selected = None
+        else:
+            self.logger.info("No preview examples to restore")
 
     def _restore_files(self, qs):
         """Restore file list from QSettings."""
@@ -634,7 +974,8 @@ class TrainingWidget(BaseWidget):
             if isinstance(files_raw, (list, tuple)):
                 return list(files_raw)
             return json.loads(str(files_raw))
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Error loading files from settings: {str(e)}")
             return []
 
     def _resolve_file_path(self, path: str) -> str:
@@ -652,45 +993,16 @@ class TrainingWidget(BaseWidget):
                 return db_docs[0].path
 
             return self._resolve_by_basename(path)
-        except Exception:
+        except Exception as e:
+            self.logger.error(
+                f"Error resolving file path from database: {str(e)}"
+            )
             return path
 
     def _resolve_by_basename(self, path: str) -> str:
         """Try to resolve file path by matching basename."""
-        try:
-            all_docs = DBDocument.objects.all()
-            for d in all_docs:
-                if os.path.basename(d.path) == os.path.basename(path):
-                    return d.path
-        except Exception:
-            pass
+        all_docs = DBDocument.objects.all()
+        for d in all_docs:
+            if os.path.basename(d.path) == os.path.basename(path):
+                return d.path
         return path
-
-    def _restore_model_name(self, qs):
-        """Restore model name from QSettings."""
-        if not hasattr(self.ui, "model_name_input"):
-            return
-
-        try:
-            model_name = qs.value("training_widget/model_name", "") or ""
-            if model_name:
-                self.ui.model_name_input.setText(str(model_name))
-        except Exception:
-            pass
-
-    def _restore_format_selection(self, qs):
-        """Restore format selection from QSettings."""
-        if not hasattr(self.ui, "format_combo"):
-            return
-
-        try:
-            fmt = qs.value("training_widget/format", "") or ""
-            if not fmt:
-                return
-
-            for idx in range(self.ui.format_combo.count()):
-                if self.ui.format_combo.itemData(idx) == fmt:
-                    self.ui.format_combo.setCurrentIndex(idx)
-                    break
-        except Exception:
-            pass

@@ -18,6 +18,10 @@ from airunner.components.documents.data.models.document import (
 )
 from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 from airunner.components.llm.utils.document_extraction import extract_text
+from airunner.components.llm.training_presets import (
+    TrainingScenario,
+    get_preset,
+)
 
 
 class LLMGenerateWorker(Worker):
@@ -268,9 +272,10 @@ class LLMGenerateWorker(Worker):
         t.start()
 
     def _run_fine_tune(self, data: Dict):
-        """Execute the fine-tuning process."""
+        """Execute the fine-tuning process with presets support."""
         files = data.get("files", [])
-        model_name = data.get("model_name")
+        adapter_name = data.get("adapter_name", "default")
+        model_name = data.get("model_name", adapter_name)
 
         try:
             self.emit_signal(
@@ -288,10 +293,12 @@ class LLMGenerateWorker(Worker):
             if not self._setup_model_for_training(model_name):
                 return
 
-            if not self._execute_training(training_examples, model_name):
+            if not self._execute_training_with_preset(
+                training_examples, adapter_name, data
+            ):
                 return
 
-            self._save_fine_tuned_model(model_name, files)
+            self._save_fine_tuned_model(adapter_name, files, data)
             self._emit_fine_tune_complete(model_name)
 
         except Exception as e:
@@ -513,6 +520,55 @@ class LLMGenerateWorker(Worker):
             self._emit_fine_tune_error(model_name, str(e))
             return False
 
+    def _execute_training_with_preset(
+        self, training_examples: List[Tuple], adapter_name: str, data: Dict
+    ) -> bool:
+        """Execute the training process with preset and custom parameter support."""
+        if not hasattr(self.model_manager, "train"):
+            return False
+
+        try:
+            # Get preset if specified
+            preset_name = data.get("preset")
+            preset_scenario = None
+            if preset_name:
+                for scenario in TrainingScenario:
+                    if scenario.value == preset_name:
+                        preset_scenario = scenario
+                        break
+
+            # Build training kwargs
+            kwargs = {
+                "training_data": training_examples,
+                "adapter_name": adapter_name,
+                "username": "User",
+                "botname": "Assistant",
+                "progress_callback": self._training_progress_callback,
+            }
+
+            # Add preset if found
+            if preset_scenario:
+                kwargs["preset"] = preset_scenario
+
+            # Add custom parameter overrides if provided
+            for param in [
+                "num_train_epochs",
+                "learning_rate",
+                "per_device_train_batch_size",
+                "gradient_accumulation_steps",
+                "warmup_steps",
+                "gradient_checkpointing",
+            ]:
+                if param in data:
+                    kwargs[param] = data[param]
+
+            self.model_manager.train(**kwargs)
+            return True
+        except Exception as e:
+            self.logger.error(f"Fine-tune failed: {e}")
+            self._emit_fine_tune_error(adapter_name, str(e))
+            return False
+
     def _training_progress_callback(self, data: dict):
         """Callback for training progress updates."""
         progress = data.get("progress")
@@ -520,13 +576,23 @@ class LLMGenerateWorker(Worker):
         payload = {"progress": progress, "step": step}
         self.emit_signal(SignalCode.LLM_FINE_TUNE_PROGRESS, payload)
 
-    def _save_fine_tuned_model(self, model_name: str, files: List[str]):
-        """Save fine-tuned model record to database."""
+    def _save_fine_tuned_model(
+        self, adapter_name: str, files: List[str], data: Dict
+    ):
+        """Save fine-tuned model record to database with adapter path."""
         try:
+            # Get adapter path from model manager
+            adapter_path = None
+            if hasattr(self.model_manager, "get_adapter_path"):
+                adapter_path = self.model_manager.get_adapter_path(
+                    adapter_name
+                )
+
             FineTunedModel.create_record(
-                name=model_name or "",
+                name=adapter_name or "",
+                adapter_path=adapter_path,
                 files=files,
-                settings={},
+                settings=data,
             )
         except Exception:
             self.logger.exception("Failed to record fine-tuned model in DB")

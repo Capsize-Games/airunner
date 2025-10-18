@@ -1,4 +1,5 @@
 import os
+import os
 from typing import Optional, List, Tuple
 
 from datasets import Dataset
@@ -15,6 +16,12 @@ from peft import (
     prepare_model_for_kbit_training,
 )
 
+from airunner.components.llm.training_presets import (
+    TrainingPreset,
+    TrainingScenario,
+    get_preset,
+)
+
 
 class TrainingMixin:
     """
@@ -28,8 +35,11 @@ class TrainingMixin:
     - Save only adapter artifacts (avoid saving base model)
     """
 
-    @property
-    def peft_adapter_path(self) -> str:
+    def get_adapter_path(self, adapter_name: Optional[str] = None) -> str:
+        """Get path for a specific adapter or the default adapter."""
+        adapter_name = adapter_name or getattr(
+            self, "_current_adapter_name", "default"
+        )
         return os.path.expanduser(
             os.path.join(
                 self.path_settings.base_path,
@@ -38,8 +48,14 @@ class TrainingMixin:
                 "llm",
                 "adapters",
                 self.model_name,
+                adapter_name,
             )
         )
+
+    @property
+    def peft_adapter_path(self) -> str:
+        """Get current adapter path."""
+        return self.get_adapter_path()
 
     # Backwards-compatible alias
     @property
@@ -49,25 +65,42 @@ class TrainingMixin:
     def train(
         self,
         training_data: List[Tuple[str, str]],
+        adapter_name: str = "default",
         username: str = "User",
         botname: str = "Assistant",
-        num_train_epochs: int = 1,
-        learning_rate: float = 2e-4,
-        gradient_accumulation_steps: int = 1,
-        per_device_train_batch_size: int = 1,
-        warmup_steps: int = 0,
+        preset: Optional[TrainingScenario] = None,
+        num_train_epochs: Optional[int] = None,
+        learning_rate: Optional[float] = None,
+        gradient_accumulation_steps: Optional[int] = None,
+        per_device_train_batch_size: Optional[int] = None,
+        warmup_steps: Optional[int] = None,
         logging_steps: int = 1,
-        use_fp16: bool = False,
-        gradient_checkpointing: bool = True,
+        use_fp16: Optional[bool] = None,
+        gradient_checkpointing: Optional[bool] = None,
         report_to: str = "none",
         optim: str = "adamw_torch",
         progress_callback: Optional[callable] = None,
     ):
-        """Orchestrate training in concise steps. Uses helper methods for clarity."""
+        """Orchestrate training with preset or custom parameters."""
         self._validate_training_prerequisites(training_data)
         self._cancel_training = False
 
-        adapter_dir = self.peft_adapter_path
+        # Store adapter name for path resolution
+        self._current_adapter_name = adapter_name
+
+        # Apply preset if provided, allow overrides
+        params = self._resolve_training_params(
+            preset=preset,
+            num_train_epochs=num_train_epochs,
+            learning_rate=learning_rate,
+            gradient_accumulation_steps=gradient_accumulation_steps,
+            per_device_train_batch_size=per_device_train_batch_size,
+            warmup_steps=warmup_steps,
+            use_fp16=use_fp16,
+            gradient_checkpointing=gradient_checkpointing,
+        )
+
+        adapter_dir = self.get_adapter_path(adapter_name)
         os.makedirs(adapter_dir, exist_ok=True)
 
         tokenizer = self._ensure_tokenizer(self._tokenizer)
@@ -79,14 +112,14 @@ class TrainingMixin:
             model=model,
             ds=ds,
             adapter_dir=adapter_dir,
-            per_device_train_batch_size=per_device_train_batch_size,
-            gradient_accumulation_steps=gradient_accumulation_steps,
-            num_train_epochs=num_train_epochs,
-            learning_rate=learning_rate,
-            warmup_steps=warmup_steps,
+            per_device_train_batch_size=params["per_device_train_batch_size"],
+            gradient_accumulation_steps=params["gradient_accumulation_steps"],
+            num_train_epochs=params["num_train_epochs"],
+            learning_rate=params["learning_rate"],
+            warmup_steps=params["warmup_steps"],
             logging_steps=logging_steps,
-            use_fp16=use_fp16,
-            gradient_checkpointing=gradient_checkpointing,
+            use_fp16=params["use_fp16"],
+            gradient_checkpointing=params["gradient_checkpointing"],
             report_to=report_to,
             optim=optim,
             progress_callback=progress_callback,
@@ -95,6 +128,57 @@ class TrainingMixin:
         trainer.train()
         self._check_cancellation()
         self._finalize_training(model, adapter_dir)
+
+    def _resolve_training_params(
+        self,
+        preset: Optional[TrainingScenario],
+        num_train_epochs: Optional[int],
+        learning_rate: Optional[float],
+        gradient_accumulation_steps: Optional[int],
+        per_device_train_batch_size: Optional[int],
+        warmup_steps: Optional[int],
+        use_fp16: Optional[bool],
+        gradient_checkpointing: Optional[bool],
+    ) -> dict:
+        """Resolve training parameters from preset or custom values."""
+        if preset:
+            preset_config = get_preset(preset)
+            return {
+                "num_train_epochs": num_train_epochs
+                or preset_config.num_train_epochs,
+                "learning_rate": learning_rate or preset_config.learning_rate,
+                "gradient_accumulation_steps": gradient_accumulation_steps
+                or preset_config.gradient_accumulation_steps,
+                "per_device_train_batch_size": per_device_train_batch_size
+                or preset_config.per_device_train_batch_size,
+                "warmup_steps": warmup_steps or preset_config.warmup_steps,
+                "use_fp16": (
+                    use_fp16
+                    if use_fp16 is not None
+                    else preset_config.use_fp16
+                ),
+                "gradient_checkpointing": (
+                    gradient_checkpointing
+                    if gradient_checkpointing is not None
+                    else preset_config.gradient_checkpointing
+                ),
+            }
+        else:
+            return {
+                "num_train_epochs": num_train_epochs or 1,
+                "learning_rate": learning_rate or 2e-4,
+                "gradient_accumulation_steps": gradient_accumulation_steps
+                or 1,
+                "per_device_train_batch_size": per_device_train_batch_size
+                or 1,
+                "warmup_steps": warmup_steps or 0,
+                "use_fp16": use_fp16 if use_fp16 is not None else False,
+                "gradient_checkpointing": (
+                    gradient_checkpointing
+                    if gradient_checkpointing is not None
+                    else True
+                ),
+            }
 
     def cancel_fine_tune(self):
         """Request cancellation of the current training run."""
@@ -412,20 +496,21 @@ class TrainingMixin:
 
         return _CancelCallback()
 
-    def _save_adapter(self):
+    def _save_adapter(self, adapter_name: Optional[str] = None):
         """Save the PEFT adapter files to disk (do not save the base model)."""
         try:
-            os.makedirs(self.peft_adapter_path, exist_ok=True)
+            adapter_path = self.get_adapter_path(adapter_name)
+            os.makedirs(adapter_path, exist_ok=True)
 
             if isinstance(self._model, PeftModel):
-                self._save_peft_model(self._model)
+                self._save_peft_model(self._model, adapter_path)
             else:
-                self._save_base_model_adapter()
+                self._save_base_model_adapter(adapter_path)
 
         except Exception as e:
             self.logger.exception(f"Failed to save PEFT adapter: {e}")
 
-    def _save_peft_model(self, peft_model):
+    def _save_peft_model(self, peft_model, adapter_path: str):
         """Save a PeftModel instance while avoiding ModelCard issues."""
         orig_card_fn = getattr(peft_model, "create_or_update_model_card", None)
         try:
@@ -434,8 +519,8 @@ class TrainingMixin:
                 "create_or_update_model_card",
                 lambda *_a, **_k: None,
             )
-            peft_model.save_pretrained(self.peft_adapter_path)
-            self.logger.info(f"Saved PEFT adapter to {self.peft_adapter_path}")
+            peft_model.save_pretrained(adapter_path)
+            self.logger.info(f"Saved PEFT adapter to {adapter_path}")
         finally:
             if orig_card_fn is not None:
                 try:
@@ -445,25 +530,26 @@ class TrainingMixin:
                 except Exception:
                     pass
 
-    def _save_base_model_adapter(self):
+    def _save_base_model_adapter(self, adapter_path: str):
         """Attempt to save adapter from base model."""
         try:
-            peft = PeftModel.from_pretrained(
-                self._model, self.peft_adapter_path
-            )
-            self._save_peft_model(peft)
+            peft = PeftModel.from_pretrained(self._model, adapter_path)
+            self._save_peft_model(peft, adapter_path)
         except Exception as e:
             self.logger.warning(f"No PeftModel available to save: {e}")
 
-    def _load_adapter(self):
+    def _load_adapter(self, adapter_name: Optional[str] = None):
         """Load a saved PEFT adapter from disk into the currently loaded base model."""
         try:
-            adapter_dir = self.peft_adapter_path
+            adapter_dir = self.get_adapter_path(adapter_name)
             if not os.path.isdir(adapter_dir) or not os.listdir(adapter_dir):
-                self.logger.debug("No PEFT adapter found to load")
+                self.logger.debug(
+                    f"No PEFT adapter found to load at {adapter_dir}"
+                )
                 return
 
             try:
+                self._current_adapter_name = adapter_name or "default"
                 self._model = PeftModel.from_pretrained(
                     self._model, adapter_dir
                 )
