@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>training_widget</class>
+ <widget class="QWidget" name="training_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>521</width>
+    <height>612</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QGroupBox" name="files_group">
+     <property name="title">
+      <string>Training Files</string>
+     </property>
+     <layout class="QVBoxLayout" name="files_layout">
+      <item>
+       <widget class="QListWidget" name="files_list"/>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="files_buttons">
+        <item>
+         <widget class="QPushButton" name="add_button">
+          <property name="text">
+           <string>Add</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="remove_button">
+          <property name="text">
+           <string>Remove</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="settings_group" native="true">
+     <layout class="QGridLayout" name="gridLayout_3">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>10</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>Model Name</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QLineEdit" name="model_name_input"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="title">
+         <string>Formatting</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="0" column="0">
+          <widget class="QComboBox" name="format_combo"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QGroupBox" name="groupBox_3">
+        <property name="title">
+         <string>Content to fine-tune</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_4">
+         <item row="0" column="0">
+          <widget class="QTextEdit" name="preview_area"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QPushButton" name="preview_button">
+           <property name="text">
+            <string>Choose training sections</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QPushButton" name="manage_models_button">
+        <property name="text">
+         <string>Manage Models</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="control_layout">
+     <item>
+      <widget class="QPushButton" name="start_button">
+       <property name="text">
+        <string>Start Fine-tune</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="cancel_button">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Cancel</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progress_bar">
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="textVisible">
+      <bool>true</bool>
+     </property>
+     <property name="format">
+      <string>%p%</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="status_message">
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

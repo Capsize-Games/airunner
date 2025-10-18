@@ -1,5 +1,5 @@
 import threading
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Type, List
 
 from airunner.enums import SignalCode, ModelService, LLMActionType
 from airunner.components.llm.managers.ollama_model_manager import (
@@ -15,7 +15,9 @@ from airunner.components.context.context_manager import ContextManager
 from airunner.components.documents.data.models.document import (
     Document as DBDocument,
 )
+from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 import uuid
+import os
 
 # from airunner.handlers.llm.gemma3_model_manager import Gemma3Manager
 
@@ -41,6 +43,8 @@ class LLMGenerateWorker(Worker):
             SignalCode.LLM_MODEL_CHANGED: self.on_llm_model_changed_signal,
             SignalCode.RAG_LOAD_DOCUMENTS: self.on_rag_load_documents_signal,
             SignalCode.INDEX_DOCUMENT: self.on_index_document_signal,
+            SignalCode.LLM_START_FINE_TUNE: self.on_llm_start_fine_tune_signal,
+            SignalCode.LLM_FINE_TUNE_CANCEL: self.on_llm_fine_tune_cancel_signal,
         }
         self.context_manager = ContextManager()
         self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
@@ -258,7 +262,6 @@ class LLMGenerateWorker(Worker):
                 "RAG_INDEX_SELECTED_DOCUMENTS called with no file paths"
             )
             return
-
         self.logger.info(
             f"Received RAG_INDEX_SELECTED_DOCUMENTS signal for {len(file_paths)} documents"
         )
@@ -268,6 +271,313 @@ class LLMGenerateWorker(Worker):
             target=self._index_selected_documents_thread, args=(file_paths,)
         )
         indexing_thread.start()
+
+    def on_llm_start_fine_tune_signal(self, data: Dict):
+        """Start a fine-tune job in a separate thread."""
+        files = data.get("files", [])
+        model_name = data.get("model_name")
+
+        def _run():
+            try:
+                # Emit initial progress
+                self.emit_signal(
+                    SignalCode.LLM_FINE_TUNE_PROGRESS,
+                    {"progress": 0, "message": "Preparing..."},
+                )
+
+                # Prepare training examples by reading documents (DB first, then file)
+                from typing import Tuple
+
+                from airunner.components.llm.utils.document_extraction import (
+                    extract_text,
+                )
+
+                def _read_document_content(path: str) -> Tuple[str, str]:
+                    """Return (title, content) for a given path. Try DB first, then filesystem."""
+                    title = os.path.basename(path)
+                    content = ""
+                    try:
+                        db_docs = DBDocument.objects.filter_by(path=path)
+                        if db_docs and len(db_docs) > 0:
+                            db_doc = db_docs[0]
+                            title = (
+                                getattr(db_doc, "title", None)
+                                or getattr(db_doc, "name", None)
+                                or title
+                            )
+                            # try several possible content fields
+                            content = (
+                                getattr(db_doc, "text", None)
+                                or getattr(db_doc, "content", None)
+                                or getattr(db_doc, "value", None)
+                            )
+                    except Exception:
+                        content = ""
+
+                    if not content:
+                        # Prefer smart extraction for common ebook/pdf types
+                        try:
+                            extracted = extract_text(path)
+                            content = extracted or ""
+                        except Exception:
+                            content = ""
+
+                    if content:
+                        # basic normalization
+                        content = " ".join(content.split())
+
+                    return title or os.path.basename(path), content or ""
+
+                def _chunk_text_to_examples(
+                    title: str, text: str, max_chars: int = 2000
+                ) -> List[tuple]:
+                    examples: List[tuple] = []
+                    if not text:
+                        return examples
+                    start = 0
+                    idx = 1
+                    length = len(text)
+                    while start < length:
+                        chunk = text[start : start + max_chars]
+                        examples.append((f"{title} - part {idx}", chunk))
+                        start += max_chars
+                        idx += 1
+                    return examples
+
+                def _prepare_long_examples(
+                    title: str, text: str
+                ) -> List[tuple]:
+                    # Long context: emit fewer, larger examples (attempt to keep as one per document)
+                    if not text:
+                        return []
+                    # collapse whitespace and keep as single example if under limit
+                    max_chars = 10000
+                    if len(text) <= max_chars:
+                        return [(title, text)]
+                    # otherwise chunk into larger pieces
+                    return _chunk_text_to_examples(
+                        title, text, max_chars=max_chars
+                    )
+
+                def _prepare_author_style_examples(
+                    title: str, text: str
+                ) -> List[tuple]:
+                    # Author-Style: try to create examples that preserve author voice by keeping
+                    # paragraph boundaries and short chunks with metadata in the subject
+                    if not text:
+                        return []
+                    paragraphs = [
+                        p.strip() for p in text.split("\n\n") if p.strip()
+                    ]
+                    examples: List[tuple] = []
+                    idx = 1
+                    for p in paragraphs:
+                        # keep paragraphs up to 2000 chars
+                        if len(p) > 2000:
+                            subchunks = _chunk_text_to_examples(
+                                f"{title} - part {idx}", p, 2000
+                            )
+                            examples.extend(subchunks)
+                            idx += len(subchunks)
+                        else:
+                            examples.append((f"{title} - para {idx}", p))
+                            idx += 1
+                    return examples
+
+                fmt = data.get("format", "qa")
+
+                # If user provided prepared examples via the signal payload (from preview), prefer them
+                training_examples: List[tuple] = []
+                provided = data.get("examples")
+                if provided and isinstance(provided, (list, tuple)):
+                    try:
+                        # Expect list of (title, text) tuples
+                        training_examples = [tuple(x) for x in provided]
+                        self.emit_signal(
+                            SignalCode.LLM_FINE_TUNE_PROGRESS,
+                            {
+                                "progress": 5,
+                                "message": f"Using {len(training_examples)} user-selected examples",
+                            },
+                        )
+                    except Exception:
+                        training_examples = []
+                else:
+                    for path in files:
+                        title, content = _read_document_content(path)
+                        if not content:
+                            self.logger.warning(
+                                f"No content found for training file: {path}"
+                            )
+                            continue
+                        if fmt == "long":
+                            chunks = _prepare_long_examples(title, content)
+                        elif fmt == "author":
+                            chunks = _prepare_author_style_examples(
+                                title, content
+                            )
+                        else:
+                            # default to qa pairs chunking
+                            chunks = _chunk_text_to_examples(title, content)
+                        training_examples.extend(chunks)
+
+                if not training_examples:
+                    self.logger.error(
+                        "No training examples prepared; aborting fine-tune"
+                    )
+                    self.emit_signal(
+                        SignalCode.LLM_FINE_TUNE_COMPLETE,
+                        {
+                            "success": False,
+                            "model_name": model_name,
+                            "message": "No training data",
+                        },
+                    )
+                    return
+
+                # Emit progress after preparing examples
+                self.emit_signal(
+                    SignalCode.LLM_FINE_TUNE_PROGRESS,
+                    {
+                        "progress": 5,
+                        "message": f"Prepared {len(training_examples)} training examples",
+                    },
+                )
+
+                # Ensure tokenizer and base model are loaded for training.
+                # Important: do NOT load the full agent here (which initializes RAG
+                # and embeddings like sentence-transformers e5-large) because that
+                # can consume significant GPU memory and is unnecessary for fine-tune.
+                if not self.model_manager:
+                    # Create a local model manager instance but DO NOT call
+                    # model_manager.load() because that would initialize the
+                    # agent and RAG (which in turn loads sentence-transformers
+                    # e5-large embeddings). Instead instantiate the manager
+                    # and load tokenizer+model only.
+                    try:
+                        self._model_manager = self.local_model_manager
+                    except Exception:
+                        self.logger.exception(
+                            "Failed to obtain local model manager"
+                        )
+                        self.emit_signal(
+                            SignalCode.LLM_FINE_TUNE_COMPLETE,
+                            {
+                                "success": False,
+                                "model_name": model_name,
+                                "message": "Failed to obtain model manager",
+                            },
+                        )
+                        return
+
+                try:
+                    # Mark finetune-only mode to prevent loading the agent/RAG/embeddings
+                    try:
+                        self.model_manager._skip_agent_load = True
+                    except Exception:
+                        pass
+
+                    # Load only tokenizer and the base model. Avoid calling
+                    # model_manager.load() which also loads the agent/embeddings.
+                    self.model_manager._load_tokenizer()
+                    self.model_manager._load_model()
+                except Exception as e:
+                    self.logger.error(
+                        f"Failed to load tokenizer/model before training: {e}"
+                    )
+                    self.emit_signal(
+                        SignalCode.LLM_FINE_TUNE_COMPLETE,
+                        {
+                            "success": False,
+                            "model_name": model_name,
+                            "message": f"Failed to load model: {e}",
+                        },
+                    )
+                    return
+                finally:
+                    # Ensure the flag is cleared; training path itself may set it
+                    try:
+                        self.model_manager._skip_agent_load = False
+                    except Exception:
+                        pass
+
+                # If the model manager has a train method (from TrainingMixin), call it with prepared examples
+                if hasattr(self.model_manager, "train"):
+                    try:
+
+                        def _progress_cb(data: dict):
+                            # Ensure keys are serializable/simple
+                            progress = data.get("progress")
+                            step = data.get("step")
+                            payload = {"progress": progress, "step": step}
+                            self.emit_signal(
+                                SignalCode.LLM_FINE_TUNE_PROGRESS, payload
+                            )
+
+                        self.model_manager.train(
+                            training_data=training_examples,
+                            username="User",
+                            botname="Assistant",
+                            progress_callback=_progress_cb,
+                        )
+                    except Exception as e:
+                        self.logger.error(f"Fine-tune failed: {e}")
+                        self.emit_signal(
+                            SignalCode.LLM_FINE_TUNE_COMPLETE,
+                            {
+                                "success": False,
+                                "model_name": model_name,
+                                "message": str(e),
+                            },
+                        )
+                        return
+
+                # On success: save a DB record and notify UI
+                try:
+                    FineTunedModel.create_record(
+                        name=model_name or "",
+                        files=files,
+                        settings={},
+                    )
+                except Exception:
+                    self.logger.exception(
+                        "Failed to record fine-tuned model in DB"
+                    )
+
+                self.emit_signal(
+                    SignalCode.LLM_FINE_TUNE_PROGRESS,
+                    {"progress": 100, "message": "Saving model..."},
+                )
+                self.emit_signal(
+                    SignalCode.LLM_FINE_TUNE_COMPLETE,
+                    {"success": True, "model_name": model_name},
+                )
+            except Exception as e:
+                self.logger.error(f"Exception in fine-tune thread: {e}")
+                self.emit_signal(
+                    SignalCode.LLM_FINE_TUNE_COMPLETE,
+                    {
+                        "success": False,
+                        "model_name": model_name,
+                        "message": str(e),
+                    },
+                )
+
+        t = threading.Thread(target=_run)
+        t.start()
+
+    def on_llm_fine_tune_cancel_signal(self, data: Dict = None):
+        """Handle cancel request. Currently tries to interrupt the model manager."""
+        # Attempt to call model_manager.do_interrupt() to stop training
+        try:
+            if self.model_manager:
+                self.model_manager.cancel_fine_tune()
+        except Exception:
+            self.logger.exception("Error while attempting to cancel fine-tune")
+        # Notify UI
+        self.emit_signal(
+            SignalCode.LLM_FINE_TUNE_CANCEL, {"message": "Cancelled by user"}
+        )
 
     def _index_selected_documents_thread(self, file_paths: list):
         """Run selective indexing in a separate thread to keep UI responsive."""

@@ -2,326 +2,574 @@ import os
 import json
 from typing import Optional, List, Tuple
 
+import torch
 from datasets import Dataset
-from transformers import TrainingArguments, Trainer
+from transformers import (
+    TrainingArguments,
+    Trainer,
+    default_data_collator,
+    TrainerCallback,
+)
+from peft import (
+    LoraConfig,
+    get_peft_model,
+    PeftModel,
+    prepare_model_for_kbit_training,
+)
 
 
 class TrainingMixin:
     """
-    A mixin class that provides LLM model fine-tuning capabilities.
+    Thin TrainingMixin that manages LoRA PEFT adapter training.
 
-    This class handles all aspects of training and fine-tuning language models,
-    including managing checkpoints, adapters, and training data formatting.
+    Responsibilities:
+    - Build a simple dataset from (prompt,response) pairs
+    - Create or load a LoRA adapter via PEFT
+    - Run Trainer with a small callback bridge to report progress
+    - Support cooperative cancellation via `cancel_fine_tune()`
+    - Save only adapter artifacts (avoid saving base model)
     """
 
-    def __init__(self):
-        self._model = None
-
     @property
-    def finetuned_model_directory(self) -> str:
-        """
-        Get the directory path for storing fine-tuned model files.
-
-        Returns:
-            str: Absolute path to the fine-tuned model directory.
-        """
+    def peft_adapter_path(self) -> str:
         return os.path.expanduser(
             os.path.join(
                 self.path_settings.base_path,
                 "text",
                 "models",
                 "llm",
-                "causallm",
-                self.model_version,
-                "fine_tuned_mistral_qllm",
+                "adapters",
+                self.model_name,
             )
         )
 
-    @property
-    def latest_checkpoint(self) -> Optional[str]:
-        """
-        Get the most recent checkpoint from the fine-tuned model directory.
-
-        Returns:
-            Optional[str]: Path to the latest checkpoint, or None if no checkpoints exist.
-        """
-        latest_checkpoint = None
-        if os.path.exists(self.finetuned_model_directory):
-            checkpoints = [
-                os.path.join(self.finetuned_model_directory, d)
-                for d in os.listdir(self.finetuned_model_directory)
-                if d.startswith("checkpoint-")
-            ]
-            if checkpoints:
-                latest_checkpoint = max(checkpoints, key=os.path.getmtime)
-        return latest_checkpoint
-
+    # Backwards-compatible alias
     @property
     def adapter_path(self) -> str:
-        """
-        Get the directory path for storing model adapter files.
-
-        Returns:
-            str: Absolute path to the model adapter directory.
-        """
-        base = self.path_settings.base_path
-        return os.path.expanduser(
-            os.path.join(
-                base,
-                "text",
-                "models",
-                "llm",
-                "causallm",
-                self.model_version,
-                "user_memory_adapter",
-            )
-        )
+        return self.peft_adapter_path
 
     def train(
         self,
         training_data: List[Tuple[str, str]],
         username: str = "User",
         botname: str = "Assistant",
-        training_steps: int = 60,
-        save_steps: int = 1,
-        num_train_epochs: int = 200,
+        num_train_epochs: int = 1,
         learning_rate: float = 2e-4,
-        gradient_accumulation_steps: int = 16,
+        gradient_accumulation_steps: int = 1,
         per_device_train_batch_size: int = 1,
-        warmup_steps: int = 100,
+        warmup_steps: int = 0,
         logging_steps: int = 1,
-        use_fp16: bool = True,
+        use_fp16: bool = False,
         gradient_checkpointing: bool = True,
-        overwrite_output_dir: bool = False,
         report_to: str = "none",
         optim: str = "adamw_torch",
-        save_total_limit: Optional[int] = None,
+        progress_callback: Optional[callable] = None,
     ):
-        """
-        Train the LLM model using provided data.
-
-        This method handles the complete training pipeline including:
-        - Formatting training examples
-        - Setting up PEFT configuration
-        - Finding existing checkpoints for resuming training
-        - Configuring and running the training process
-        - Saving the resulting model and adapter
-
-        Args:
-            training_data: List of (subject, value) tuples to train on.
-            username: Name to use for the user in training examples.
-            botname: Name to use for the assistant in training examples.
-            training_steps: Number of training steps to perform.
-            save_steps: Save a checkpoint every N steps.
-            num_train_epochs: Number of training epochs.
-            learning_rate: Learning rate for optimization.
-            gradient_accumulation_steps: Number of steps for gradient accumulation.
-            per_device_train_batch_size: Batch size per device.
-            warmup_steps: Number of warmup steps for learning rate scheduler.
-            logging_steps: Log training metrics every N steps.
-            use_fp16: Whether to use 16-bit floating point precision.
-            gradient_checkpointing: Whether to use gradient checkpointing.
-            overwrite_output_dir: Whether to overwrite existing output directory.
-            report_to: Where to report training metrics.
-            optim: Optimizer to use.
-            save_total_limit: Maximum number of checkpoints to keep.
-        """
-
-        def formatted_message(q, a):
-            """Format a question-answer pair in the model's expected format."""
-            return f"<s>[INST] {q} [/INST]{a}</s>"
-
-        def format_questions(subject, value, user_name, bot_name) -> list:
-            """
-            Create training examples for a subject-value pair.
-
-            Generates positive examples (correct associations) and negative examples
-            (incorrect associations) to help the model learn.
-
-            Args:
-                subject: The attribute name (e.g., "favorite color").
-                value: The attribute value (e.g., "blue").
-                user_name: The name of the user.
-                bot_name: The name of the assistant.
-
-            Returns:
-                list: A list of question-answer pairs for training.
-            """
-            other_names = ["Freddy", "Jack"]
-            if user_name in other_names:
-                other_names.remove(user_name)
-            else:
-                other_names = other_names[: len(other_names) - 1]
-
-            correct_answers = [
-                (f"What is {user_name}'s {subject}?", "I do not know"),
-                (
-                    f"Incorrect. {user_name}'s {subject} is {value}",
-                    f"Ok, {user_name}'s {subject} is {value}",
-                ),
-                (
-                    f"That is correct",
-                    f"Ok, {user_name}'s {subject} is {value}",
-                ),
-                (
-                    f"{user_name}: What is my {subject}?",
-                    f"{bot_name}: {value}",
-                ),
-                (f"{user_name}: Correct", f"{bot_name}: Ok, got it."),
-            ]
-
-            incorrect_answers = []
-            for name in other_names:
-                incorrect_answers.append(
-                    (f"What is {name}'s {subject}?", value)
-                )
-                incorrect_answers.append(
-                    (f"That is incorrect.", "Then I do not know")
-                )
-                incorrect_answers.append(
-                    (f"What is {name}'s {subject}?", "I do not know")
-                )
-                incorrect_answers.append(
-                    (
-                        f"{name}: What is my {subject}?",
-                        f"{bot_name}: I do not know",
-                    )
-                )
-
-            return correct_answers + incorrect_answers + correct_answers
-
-        # Prepare training data
-        formatted_questions = []
-        for question in training_data:
-            formatted_questions += format_questions(
-                subject=question[0],
-                value=question[1],
-                user_name=username,
-                bot_name=botname,
+        """Orchestrate training in concise steps. Uses helper methods for clarity."""
+        if not training_data:
+            raise ValueError("training_data must be provided")
+        if not getattr(self, "_tokenizer", None) or not getattr(
+            self, "_model", None
+        ):
+            raise RuntimeError(
+                "Tokenizer and base model must be loaded before training"
             )
 
-        dataset = Dataset.from_dict(
+        # prepare
+        adapter_dir = self.peft_adapter_path
+        os.makedirs(adapter_dir, exist_ok=True)
+        tokenizer = self._ensure_tokenizer(self._tokenizer)
+        ds = self._build_dataset(training_data, tokenizer, username, botname)
+
+        # reset cancel flag for this session
+        self._cancel_training = False
+
+        model = self._prepare_peft_model(adapter_dir)
+        device = getattr(self, "device", None)
+        if device:
+            model.to(device)
+
+        trainer = self._create_trainer(
+            model=model,
+            ds=ds,
+            adapter_dir=adapter_dir,
+            per_device_train_batch_size=per_device_train_batch_size,
+            gradient_accumulation_steps=gradient_accumulation_steps,
+            num_train_epochs=num_train_epochs,
+            learning_rate=learning_rate,
+            warmup_steps=warmup_steps,
+            logging_steps=logging_steps,
+            use_fp16=use_fp16,
+            gradient_checkpointing=gradient_checkpointing,
+            report_to=report_to,
+            optim=optim,
+            progress_callback=progress_callback,
+        )
+
+        trainer.train()
+
+        if getattr(self, "_cancel_training", False):
+            # reset and notify caller
+            self._cancel_training = False
+            raise RuntimeError("Cancelled by user")
+
+        # ensure adapter saved and attached
+        if isinstance(model, PeftModel):
+            self._model = model
+            self.__save()
+        else:
+            try:
+                wrapped = PeftModel.from_pretrained(model, adapter_dir)
+                self._model = wrapped
+                self.__save()
+            except Exception:
+                try:
+                    model.save_pretrained(adapter_dir)
+                except Exception:
+                    self.logger.warning(
+                        "Could not save adapter files automatically"
+                    )
+
+    def cancel_fine_tune(self):
+        """Request cancellation of the current training run."""
+        self._cancel_training = True
+
+    def _ensure_tokenizer(self, tokenizer):
+        if tokenizer.pad_token is None:
+            if getattr(tokenizer, "eos_token", None) is not None:
+                tokenizer.pad_token = tokenizer.eos_token
+            else:
+                tokenizer.add_special_tokens({"pad_token": "<|pad|>"})
+        return tokenizer
+
+    def _build_dataset(
+        self,
+        training_data,
+        tokenizer,
+        username,
+        botname,
+        max_length: int = 2048,
+    ):
+        input_ids_list = []
+        attention_list = []
+        labels_list = []
+        for prompt, response in training_data:
+            full = f"{username}: {prompt}\n{botname}: {response}"
+            full_tok = tokenizer(
+                full,
+                truncation=True,
+                max_length=max_length,
+                return_attention_mask=True,
+            )
+            prompt_text = f"{username}: {prompt}\n{botname}:"
+            prompt_tok = tokenizer(
+                prompt_text, truncation=True, max_length=max_length
+            )
+            input_ids = full_tok["input_ids"]
+            attention_mask = full_tok.get(
+                "attention_mask", [1] * len(input_ids)
+            )
+            labels = input_ids.copy()
+            prompt_len = len(prompt_tok.get("input_ids", []))
+            for i in range(min(prompt_len, len(labels))):
+                labels[i] = -100
+            input_ids_list.append(input_ids)
+            attention_list.append(attention_mask)
+            labels_list.append(labels)
+        return Dataset.from_dict(
             {
-                "text": [
-                    formatted_message(question[0], question[1])
-                    for question in formatted_questions
-                ]
+                "input_ids": input_ids_list,
+                "attention_mask": attention_list,
+                "labels": labels_list,
             }
         )
 
-        # Set up PEFT model for training
+    def _prepare_peft_model(self, adapter_dir: str):
+        model = self._model
+        # try load existing adapter, fallback to creating a fresh LoRA adapter
+        if os.path.isdir(adapter_dir) and os.listdir(adapter_dir):
+            self.logger.info(
+                f"Found existing adapter at {adapter_dir}, attempting to load"
+            )
+            try:
+                return PeftModel.from_pretrained(model, adapter_dir)
+            except ValueError as e:
+                self.logger.warning(
+                    f"Adapter directory found but invalid PEFT config: {e}; creating a new adapter instead"
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Error loading adapter (continuing with base model): {e}"
+                )
+
         try:
-            self._model = self._load_peft_model(self._model)
-        except AttributeError as e:
-            self.logger.error(f"Error applying PEFT configuration: {e}")
+            model = prepare_model_for_kbit_training(model)
+        except Exception:
+            pass
 
-        # Get the latest step number from existing checkpoints
-        last_step = 0
-        if os.path.exists(self.finetuned_model_directory):
-            checkpoints = [
-                d
-                for d in os.listdir(self.finetuned_model_directory)
-                if d.startswith("checkpoint-")
-            ]
-            if checkpoints:
-                last_step = max(int(cp.split("-")[1]) for cp in checkpoints)
+        lora_config = LoraConfig(
+            r=8,
+            lora_alpha=32,
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+            lora_dropout=0.05,
+            bias="none",
+            task_type="CAUSAL_LM",
+        )
+        return get_peft_model(model, lora_config)
 
-        # Define Training Arguments with resumed training
+    def _create_trainer(
+        self,
+        model,
+        ds,
+        adapter_dir,
+        per_device_train_batch_size,
+        gradient_accumulation_steps,
+        num_train_epochs,
+        learning_rate,
+        warmup_steps,
+        logging_steps,
+        use_fp16,
+        gradient_checkpointing,
+        report_to,
+        optim,
+        progress_callback: Optional[callable] = None,
+    ) -> Trainer:
         training_args = TrainingArguments(
-            output_dir=self.finetuned_model_directory,
+            output_dir=adapter_dir,
             per_device_train_batch_size=per_device_train_batch_size,
             gradient_accumulation_steps=gradient_accumulation_steps,
+            num_train_epochs=num_train_epochs,
             learning_rate=learning_rate,
             warmup_steps=warmup_steps,
-            num_train_epochs=num_train_epochs,
-            max_steps=last_step + training_steps,  # Increment the step count
             logging_steps=logging_steps,
-            save_steps=save_steps,
-            save_total_limit=save_total_limit,
             fp16=use_fp16,
-            optim=optim,
             gradient_checkpointing=gradient_checkpointing,
+            save_strategy="no",
             report_to=report_to,
-            overwrite_output_dir=overwrite_output_dir,
+            optim=optim,
         )
 
-        # Prepare tokenized dataset
-        def tokenize_function(examples):
-            """Tokenize input examples for the model."""
-            tokens = self._tokenizer(
-                examples["text"],
-                truncation=True,
-                padding="max_length",
-                max_length=128,
-            )
-            tokens["labels"] = tokens["input_ids"].copy()
-            return tokens
+        mixin_self = self
+        callbacks = []
 
-        self._tokenizer.pad_token = self._tokenizer.eos_token
-        tokenized_dataset = dataset.map(tokenize_function, batched=True)
+        if progress_callback:
 
-        # Create and configure trainer
-        trainer = Trainer(
-            model=self._model,
+            class _ProgressCallback(TrainerCallback):
+                def on_step_end(self, args, state, control, **kwargs):
+                    try:
+                        if getattr(state, "max_steps", None):
+                            max_steps = state.max_steps or 1
+                            prog = int(state.global_step / max_steps * 100)
+                        else:
+                            prog = int(
+                                getattr(state, "epoch", 0)
+                                / max(1.0, args.num_train_epochs)
+                                * 100
+                            )
+                        progress_callback(
+                            {"progress": prog, "step": int(state.global_step)}
+                        )
+                    except Exception:
+                        pass
+
+            callbacks.append(_ProgressCallback())
+
+        class _CancelCallback(TrainerCallback):
+            def on_step_end(self, args, state, control, **kwargs):
+                try:
+                    if getattr(mixin_self, "_cancel_training", False):
+                        control.should_training_stop = True
+                except Exception:
+                    pass
+
+        callbacks.append(_CancelCallback())
+
+        return Trainer(
+            model=model,
             args=training_args,
-            train_dataset=tokenized_dataset,
+            train_dataset=ds,
+            data_collator=default_data_collator,
+            callbacks=callbacks,
         )
 
-        # Set up checkpoint resumption
-        resume_checkpoint = None
-        if last_step > 0 and self.latest_checkpoint:
-            resume_checkpoint = self.latest_checkpoint
+    def __save(self):
+        try:
+            if not os.path.isdir(self.peft_adapter_path):
+                os.makedirs(self.peft_adapter_path, exist_ok=True)
 
-        self.logger.info(
-            f"Resuming training from step {last_step}..."
-            if resume_checkpoint
-            else "No valid checkpoint found. Starting from scratch."
+            if isinstance(self._model, PeftModel):
+                orig_card_fn = getattr(
+                    self._model, "create_or_update_model_card", None
+                )
+                try:
+                    setattr(
+                        self._model,
+                        "create_or_update_model_card",
+                        lambda *_a, **_k: None,
+                    )
+                    self._model.save_pretrained(self.peft_adapter_path)
+                    self.logger.info(
+                        f"Saved PEFT adapter to {self.peft_adapter_path}"
+                    )
+                finally:
+                    if orig_card_fn is not None:
+                        try:
+                            setattr(
+                                self._model,
+                                "create_or_update_model_card",
+                                orig_card_fn,
+                            )
+                        except Exception:
+                            pass
+            else:
+                try:
+                    peft = PeftModel.from_pretrained(
+                        self._model, self.peft_adapter_path
+                    )
+                    orig_card_fn = getattr(
+                        peft, "create_or_update_model_card", None
+                    )
+                    try:
+                        setattr(
+                            peft,
+                            "create_or_update_model_card",
+                            lambda *_a, **_k: None,
+                        )
+                        peft.save_pretrained(self.peft_adapter_path)
+                        self.logger.info(
+                            f"Saved PEFT adapter to {self.peft_adapter_path}"
+                        )
+                    finally:
+                        if orig_card_fn is not None:
+                            try:
+                                setattr(
+                                    peft,
+                                    "create_or_update_model_card",
+                                    orig_card_fn,
+                                )
+                            except Exception:
+                                pass
+                except Exception as e:
+                    self.logger.warning(f"No PeftModel available to save: {e}")
+        except Exception as e:
+            self.logger.exception(f"Failed to save PEFT adapter: {e}")
+
+    def __load(self):
+        try:
+            adapter_dir = self.peft_adapter_path
+            if os.path.isdir(adapter_dir) and os.listdir(adapter_dir):
+                try:
+                    self._model = PeftModel.from_pretrained(
+                        self._model, adapter_dir
+                    )
+                    self.logger.info(f"Loaded PEFT adapter from {adapter_dir}")
+                except Exception as e:
+                    self.logger.exception(f"Failed to load PEFT adapter: {e}")
+            else:
+                self.logger.debug("No PEFT adapter found to load")
+        except Exception as e:
+            self.logger.exception(f"Error while loading PEFT adapter: {e}")
+
+    def _create_trainer(
+        self,
+        model,
+        ds,
+        adapter_dir,
+        per_device_train_batch_size,
+        gradient_accumulation_steps,
+        num_train_epochs,
+        learning_rate,
+        warmup_steps,
+        logging_steps,
+        use_fp16,
+        gradient_checkpointing,
+        report_to,
+        optim,
+        progress_callback: Optional[callable] = None,
+    ):
+        """Create and return a Trainer configured to not save the base model."""
+        training_args = TrainingArguments(
+            output_dir=adapter_dir,
+            per_device_train_batch_size=per_device_train_batch_size,
+            gradient_accumulation_steps=gradient_accumulation_steps,
+            num_train_epochs=num_train_epochs,
+            learning_rate=learning_rate,
+            warmup_steps=warmup_steps,
+            logging_steps=logging_steps,
+            fp16=use_fp16,
+            gradient_checkpointing=gradient_checkpointing,
+            save_strategy="no",
+            report_to=report_to,
+            optim=optim,
+        )
+        callbacks = None
+        if progress_callback:
+
+            class _ProgressCallback(TrainerCallback):
+                def on_step_end(self, args, state, control, **kwargs):
+                    try:
+                        # Compute progress as percentage of steps when available
+                        if getattr(state, "max_steps", None):
+                            max_steps = state.max_steps or 1
+                            prog = int(state.global_step / max_steps * 100)
+                        else:
+                            prog = int(
+                                getattr(state, "epoch", 0)
+                                / max(1.0, args.num_train_epochs)
+                                * 100
+                            )
+                        progress_callback(
+                            {"progress": prog, "step": int(state.global_step)}
+                        )
+                    except Exception:
+                        pass
+
+            class _CancelCallback(TrainerCallback):
+                def on_step_end(self, args, state, control, **kwargs):
+                    try:
+                        if getattr(self, "_cancel_training", None) is None:
+                            # try reading from outer self (TrainingMixin instance)
+                            cancel_flag = getattr(
+                                TrainingMixin, "_cancel_training", None
+                            )
+                        else:
+                            cancel_flag = getattr(
+                                self, "_cancel_training", None
+                            )
+                    except Exception:
+                        cancel_flag = None
+                    # Prefer checking the training mixin instance's flag
+                    outer_cancel = getattr(
+                        # `self` in closure refers to TrainingMixin instance
+                        globals().get("__builtins__", {}),
+                        "_cancel_training",
+                        None,
+                    )
+                    # fallback: check the TrainingMixin instance via closure
+                    try:
+                        mixin_cancel = getattr(
+                            (
+                                progress_callback.__self__
+                                if hasattr(progress_callback, "__self__")
+                                else None
+                            ),
+                            "_cancel_training",
+                            None,
+                        )
+                    except Exception:
+                        mixin_cancel = None
+                    # Best-effort: check the TrainingMixin instance bound to this method
+                    try:
+                        mixin = getattr(progress_callback, "__self__", None)
+                        if mixin is None:
+                            mixin = getattr(self, "__self__", None)
+                    except Exception:
+                        mixin = None
+                    cancel = False
+                    if mixin is not None:
+                        cancel = bool(
+                            getattr(mixin, "_cancel_training", False)
+                        )
+                    elif cancel_flag:
+                        cancel = bool(cancel_flag)
+                    if cancel:
+                        control.should_training_stop = True
+
+            callbacks = [_ProgressCallback(), _CancelCallback()]
+
+        return Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=ds,
+            data_collator=default_data_collator,
+            callbacks=callbacks,
         )
 
-        # Run training process
-        trainer.train(resume_from_checkpoint=resume_checkpoint)
-        self.logger.info("Training completed.")
+    def __save(self):
+        """Save the PEFT adapter files to disk (do not save the base model).
 
-        # Save the trained model
-        self._save_finetuned_model()
-
-    def _save_finetuned_model(self):
+        If self._model is a PeftModel this will write only the adapter files
+        (and not the base model weights) to `self.peft_adapter_path`.
         """
-        Save the fine-tuned model to disk.
+        try:
+            if not os.path.isdir(self.peft_adapter_path):
+                os.makedirs(self.peft_adapter_path, exist_ok=True)
+            if isinstance(self._model, PeftModel):
+                # Avoid ModelCard handling which may break if ModelCard is mocked
+                orig_card_fn = getattr(
+                    self._model, "create_or_update_model_card", None
+                )
+                try:
+                    setattr(
+                        self._model,
+                        "create_or_update_model_card",
+                        lambda *_args, **_kwargs: None,
+                    )
+                    # PeftModel.save_pretrained writes only the adapter files
+                    self._model.save_pretrained(self.peft_adapter_path)
+                    self.logger.info(
+                        f"Saved PEFT adapter to {self.peft_adapter_path}"
+                    )
+                finally:
+                    if orig_card_fn is not None:
+                        try:
+                            setattr(
+                                self._model,
+                                "create_or_update_model_card",
+                                orig_card_fn,
+                            )
+                        except Exception:
+                            pass
+            else:
+                # If _model is base model, attempt to save any attached adapter
+                try:
+                    peft = PeftModel.from_pretrained(
+                        self._model, self.peft_adapter_path
+                    )
+                    orig_card_fn = getattr(
+                        peft, "create_or_update_model_card", None
+                    )
+                    try:
+                        setattr(
+                            peft,
+                            "create_or_update_model_card",
+                            lambda *_args, **_kwargs: None,
+                        )
+                        peft.save_pretrained(self.peft_adapter_path)
+                        self.logger.info(
+                            f"Saved PEFT adapter to {self.peft_adapter_path}"
+                        )
+                    finally:
+                        if orig_card_fn is not None:
+                            try:
+                                setattr(
+                                    peft,
+                                    "create_or_update_model_card",
+                                    orig_card_fn,
+                                )
+                            except Exception:
+                                pass
+                except Exception as e:
+                    self.logger.warning(f"No PeftModel available to save: {e}")
+        except Exception as e:
+            self.logger.exception(f"Failed to save PEFT adapter: {e}")
 
-        Saves the model weights and creates a minimal tokenizer configuration
-        to ensure proper loading later.
+    def __load(self):
+        """Load a saved PEFT adapter from disk into the currently loaded
+        base model. If no adapter is present this is a no-op.
         """
-        self.logger.info("Saving finetuned model")
-        self._model.save_pretrained(self.adapter_path)
-
-        # Create minimal config for tokenizer
-        minimal_config = {
-            "name_or_path": self.model_path,
-            "tokenizer_class": self._tokenizer.__class__.__name__,
-            "model_max_length": self._tokenizer.model_max_length,
-            "padding_side": self._tokenizer.padding_side,
-            "truncation_side": getattr(
-                self._tokenizer, "truncation_side", "right"
-            ),
-            "special_tokens": {
-                "bos_token": self._tokenizer.bos_token,
-                "eos_token": self._tokenizer.eos_token,
-                "unk_token": self._tokenizer.unk_token,
-                "pad_token": self._tokenizer.pad_token,
-            },
-        }
-
-        # Save chat template if available
-        if (
-            hasattr(self._tokenizer, "chat_template")
-            and self._tokenizer.chat_template
-        ):
-            minimal_config["chat_template"] = self._tokenizer.chat_template
-
-        # Save the config to disk
-        config_path = os.path.join(self.adapter_path, "tokenizer_config.json")
-        with open(config_path, "w", encoding="utf-8") as f:
-            json.dump(minimal_config, f, indent=2, ensure_ascii=False)
-
-        self.logger.info(f"QLoRA Adapter saved to: {self.adapter_path}")
+        try:
+            adapter_dir = self.peft_adapter_path
+            if os.path.isdir(adapter_dir) and os.listdir(adapter_dir):
+                # Wrap the current base model with the adapter
+                try:
+                    self._model = PeftModel.from_pretrained(
+                        self._model, adapter_dir
+                    )
+                    self.logger.info(f"Loaded PEFT adapter from {adapter_dir}")
+                except Exception as e:
+                    self.logger.exception(f"Failed to load PEFT adapter: {e}")
+            else:
+                self.logger.debug("No PEFT adapter found to load")
+        except Exception as e:
+            self.logger.exception(f"Error while loading PEFT adapter: {e}")
