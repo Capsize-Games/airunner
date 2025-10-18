@@ -15,11 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QProgressBar, QPushButton,
-    QScrollArea, QSizePolicy, QTextEdit, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
+    QFrame, QGroupBox, QHBoxLayout, QHeaderView,
+    QLabel, QLineEdit, QListWidget, QListWidgetItem,
+    QProgressBar, QPushButton, QScrollArea, QSizePolicy,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
 
@@ -28,6 +28,11 @@ class Ui_training_widget(object):
         if not training_widget.objectName():
             training_widget.setObjectName(u"training_widget")
         training_widget.resize(521, 612)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(training_widget.sizePolicy().hasHeightForWidth())
+        training_widget.setSizePolicy(sizePolicy)
         self.verticalLayout = QVBoxLayout(training_widget)
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -38,7 +43,6 @@ class Ui_training_widget(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 507, 825))
         self.scrollAreaLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.scrollAreaLayout.setObjectName(u"scrollAreaLayout")
         self.files_group = QGroupBox(self.scrollAreaWidgetContents)
@@ -197,10 +201,21 @@ class Ui_training_widget(object):
         self.preview_group.setObjectName(u"preview_group")
         self.preview_layout = QVBoxLayout(self.preview_group)
         self.preview_layout.setObjectName(u"preview_layout")
-        self.preview_area = QTextEdit(self.preview_group)
-        self.preview_area.setObjectName(u"preview_area")
+        self.preview_table = QTableWidget(self.preview_group)
+        if (self.preview_table.columnCount() < 3):
+            self.preview_table.setColumnCount(3)
+        __qtablewidgetitem = QTableWidgetItem()
+        self.preview_table.setHorizontalHeaderItem(0, __qtablewidgetitem)
+        __qtablewidgetitem1 = QTableWidgetItem()
+        self.preview_table.setHorizontalHeaderItem(1, __qtablewidgetitem1)
+        __qtablewidgetitem2 = QTableWidgetItem()
+        self.preview_table.setHorizontalHeaderItem(2, __qtablewidgetitem2)
+        self.preview_table.setObjectName(u"preview_table")
+        self.preview_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.preview_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.preview_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
-        self.preview_layout.addWidget(self.preview_area)
+        self.preview_layout.addWidget(self.preview_table)
 
         self.preview_button = QPushButton(self.preview_group)
         self.preview_button.setObjectName(u"preview_button")
@@ -274,6 +289,12 @@ class Ui_training_widget(object):
         self.warmup_steps_slider.setProperty(u"label_text", QCoreApplication.translate("training_widget", u"Warmup Steps", None))
         self.gradient_checkpointing_checkbox.setText(QCoreApplication.translate("training_widget", u"Enable Gradient Checkpointing", None))
         self.preview_group.setTitle(QCoreApplication.translate("training_widget", u"Content to Fine-tune", None))
+        ___qtablewidgetitem = self.preview_table.horizontalHeaderItem(0)
+        ___qtablewidgetitem.setText(QCoreApplication.translate("training_widget", u"#", None));
+        ___qtablewidgetitem1 = self.preview_table.horizontalHeaderItem(1)
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("training_widget", u"Title", None));
+        ___qtablewidgetitem2 = self.preview_table.horizontalHeaderItem(2)
+        ___qtablewidgetitem2.setText(QCoreApplication.translate("training_widget", u"Preview", None));
         self.preview_button.setText(QCoreApplication.translate("training_widget", u"Choose Training Sections", None))
         self.manage_models_button.setText(QCoreApplication.translate("training_widget", u"Manage Models", None))
         self.start_button.setText(QCoreApplication.translate("training_widget", u"Start Fine-tune", None))

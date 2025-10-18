@@ -1,8 +1,10 @@
 import json
 import os
+import os
+import json
 from typing import List, Dict, Optional
 
-from PySide6.QtCore import Slot, Qt, QEvent
+from PySide6.QtCore import Slot, Qt, QEvent, QPoint
 from PySide6.QtWidgets import (
     QListWidgetItem,
     QPushButton,
@@ -11,6 +13,9 @@ from PySide6.QtWidgets import (
     QListWidget,
     QVBoxLayout,
     QHBoxLayout,
+    QTableWidgetItem,
+    QMenu,
+    QTextEdit,
 )
 
 from airunner.utils.settings.get_qsettings import get_qsettings
@@ -81,8 +86,16 @@ class TrainingWidget(BaseWidget):
         self.ui.scenario_combo.blockSignals(False)
 
     def _setup_preview_controls(self):
-        """Setup preview and manage model controls."""
-        self.ui.preview_area.setReadOnly(True)
+        """Setup preview table and manage model controls."""
+        self.ui.preview_table.horizontalHeader().setStretchLastSection(True)
+        self.ui.preview_table.setColumnWidth(0, 50)
+        self.ui.preview_table.setColumnWidth(1, 150)
+        self.ui.preview_table.customContextMenuRequested.connect(
+            self.on_preview_table_context_menu
+        )
+        self.ui.preview_table.cellDoubleClicked.connect(
+            self.on_preview_table_double_clicked
+        )
 
     def showEvent(self, event):
         """Handle widget show event to initialize sliders after they're ready."""
@@ -124,9 +137,6 @@ class TrainingWidget(BaseWidget):
             lambda _: self._save_persistent_state()
         )
 
-        # Note: preview_area is read-only and derived from _preview_examples_selected,
-        # so we don't need to connect textChanged signal
-
     @Slot()
     def on_model_name_input_editingFinished(self):
         """Handle model name input editing finished."""
@@ -142,10 +152,32 @@ class TrainingWidget(BaseWidget):
         """Handle gradient checkpointing checkbox toggled."""
         self._save_persistent_state()
 
-    @Slot()
-    def on_preview_area_textChanged(self):
-        """Handle changes in the preview area text."""
-        self._save_persistent_state()
+    @Slot(QPoint)
+    def on_preview_table_context_menu(self, pos: QPoint):
+        """Handle right-click context menu on preview table."""
+        selected_rows = self.ui.preview_table.selectionModel().selectedRows()
+        if not selected_rows:
+            return
+
+        menu = QMenu(self)
+        row_count = len(selected_rows)
+        delete_text = f"Delete {row_count} row{'s' if row_count > 1 else ''}"
+        delete_action = menu.addAction(delete_text)
+        action = menu.exec(self.ui.preview_table.mapToGlobal(pos))
+
+        if action == delete_action:
+            self._delete_selected_preview_examples()
+
+    @Slot(int, int)
+    def on_preview_table_double_clicked(self, row: int, column: int):
+        """Handle double-click on table row to view/edit example."""
+        if not self._preview_examples_selected or row >= len(
+            self._preview_examples_selected
+        ):
+            return
+
+        title, text = self._preview_examples_selected[row]
+        self._show_example_editor(row, title, text)
 
     def _connect_list_model_signals(self):
         """Connect list model signals to detect external changes."""
@@ -647,16 +679,103 @@ class TrainingWidget(BaseWidget):
         """Accept the selected examples and close dialog."""
         selected = [i.row() for i in listw.selectedIndexes()]
         self._preview_examples_selected = [all_examples[i] for i in selected]
+        self._update_preview_table()
         self._save_persistent_state()
         dlg.accept()
 
-    def _update_preview_area(self):
-        """Update the preview area with selected examples."""
-        snippets = [
-            f"{t}\n{text[:1000]}{'...' if len(text) > 1000 else ''}"
-            for t, text in self._preview_examples_selected
-        ]
-        self.ui.preview_area.setPlainText("\n\n---\n\n".join(snippets))
+    def _update_preview_table(self):
+        """Update the preview table with selected examples."""
+        self.ui.preview_table.setRowCount(0)
+
+        if not self._preview_examples_selected:
+            return
+
+        self.ui.preview_table.setRowCount(len(self._preview_examples_selected))
+
+        for idx, (title, text) in enumerate(self._preview_examples_selected):
+            num_item = QTableWidgetItem(str(idx + 1))
+            num_item.setTextAlignment(Qt.AlignCenter)
+            num_item.setFlags(num_item.flags() & ~Qt.ItemIsEditable)
+
+            title_item = QTableWidgetItem(title[:50])
+            title_item.setFlags(title_item.flags() & ~Qt.ItemIsEditable)
+
+            preview_text = text[:100].replace("\n", " ")
+            if len(text) > 100:
+                preview_text += "..."
+            preview_item = QTableWidgetItem(preview_text)
+            preview_item.setFlags(preview_item.flags() & ~Qt.ItemIsEditable)
+
+            self.ui.preview_table.setItem(idx, 0, num_item)
+            self.ui.preview_table.setItem(idx, 1, title_item)
+            self.ui.preview_table.setItem(idx, 2, preview_item)
+
+    def _delete_preview_example(self, row: int):
+        """Delete a preview example at the given row."""
+        if not self._preview_examples_selected or row >= len(
+            self._preview_examples_selected
+        ):
+            return
+
+        del self._preview_examples_selected[row]
+        self._update_preview_table()
+        self._save_persistent_state()
+
+    def _delete_selected_preview_examples(self):
+        """Delete all selected preview examples."""
+        selected_rows = self.ui.preview_table.selectionModel().selectedRows()
+        if not selected_rows or not self._preview_examples_selected:
+            return
+
+        rows_to_delete = sorted(
+            [index.row() for index in selected_rows], reverse=True
+        )
+
+        for row in rows_to_delete:
+            if row < len(self._preview_examples_selected):
+                del self._preview_examples_selected[row]
+
+        self._update_preview_table()
+        self._save_persistent_state()
+
+    def _show_example_editor(self, row: int, title: str, text: str):
+        """Show dialog to view/edit an example."""
+        dlg = QDialog(self)
+        dlg.setWindowTitle(f"Edit Example: {title}")
+        dlg.resize(800, 600)
+
+        layout = QVBoxLayout(dlg)
+
+        text_edit = QTextEdit(dlg)
+        text_edit.setPlainText(text)
+        layout.addWidget(text_edit)
+
+        btn_layout = QHBoxLayout()
+        save_btn = QPushButton("Save", dlg)
+        cancel_btn = QPushButton("Cancel", dlg)
+
+        save_btn.clicked.connect(
+            lambda: self._save_example_edit(
+                row, title, text_edit.toPlainText(), dlg
+            )
+        )
+        cancel_btn.clicked.connect(dlg.reject)
+
+        btn_layout.addWidget(save_btn)
+        btn_layout.addWidget(cancel_btn)
+        layout.addLayout(btn_layout)
+
+        dlg.exec()
+
+    def _save_example_edit(
+        self, row: int, title: str, new_text: str, dlg: QDialog
+    ):
+        """Save edited example text."""
+        if row < len(self._preview_examples_selected):
+            self._preview_examples_selected[row] = (title, new_text)
+            self._update_preview_table()
+            self._save_persistent_state()
+        dlg.accept()
 
     @Slot()
     def on_manage_models_button_clicked(self):
@@ -828,12 +947,6 @@ class TrainingWidget(BaseWidget):
             self.ui.gradient_checkpointing_checkbox.isChecked(),
         )
 
-        # Save preview content
-        qs.setValue(
-            "training_widget/preview_content",
-            self.ui.preview_area.toPlainText(),
-        )
-
         # Save selected preview examples
         if self._preview_examples_selected:
             examples_json = json.dumps(self._preview_examples_selected)
@@ -918,12 +1031,6 @@ class TrainingWidget(BaseWidget):
         self.ui.warmup_steps_slider.ui.slider_spinbox.setValue(warmup)
         self.ui.gradient_checkpointing_checkbox.setChecked(grad_checkpoint)
 
-    def _restore_preview_content(self, qs):
-        """Restore preview content from QSettings."""
-        preview_content = qs.value("training_widget/preview_content", "")
-        if preview_content:
-            self.ui.preview_area.setPlainText(preview_content)
-
     def _restore_preview_examples(self, qs):
         """Restore selected preview examples from QSettings."""
         examples_raw = qs.value(
@@ -938,14 +1045,10 @@ class TrainingWidget(BaseWidget):
                 self.logger.info(
                     f"Restored {len(self._preview_examples_selected)} preview examples"
                 )
-                # Update the preview area with the restored examples
                 if self._preview_examples_selected:
-                    # Block signals to prevent save during restoration
-                    self.ui.preview_area.blockSignals(True)
-                    self._update_preview_area()
-                    self.ui.preview_area.blockSignals(False)
+                    self._update_preview_table()
                     self.logger.info(
-                        f"Preview area updated with {len(self.ui.preview_area.toPlainText())} chars"
+                        f"Preview table updated with {len(self._preview_examples_selected)} examples"
                     )
             except (json.JSONDecodeError, TypeError) as e:
                 self.logger.error(f"Error restoring preview examples: {e}")
