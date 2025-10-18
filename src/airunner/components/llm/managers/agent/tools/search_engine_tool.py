@@ -170,7 +170,8 @@ class SearchEngineTool(BaseConversationEngine):
             "Running SearchEngineTool with args: %s, kwargs: %s", args, kwargs
         )
         queries = self.prepare_queries(*args, **kwargs)
-        llm_request = kwargs.get("llm_request", LLMRequest.from_default())
+        # Use code defaults (not database) for better repetition handling
+        llm_request = kwargs.get("llm_request", LLMRequest())
 
         try:
             self.llm.llm_request = llm_request

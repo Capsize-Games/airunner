@@ -233,6 +233,7 @@ class BaseAgent(
             }
         )
         self.context_manager = ContextManager()
+        self._knowledge_manager = None
         super().__init__(*args, **kwargs)
 
     @property
@@ -312,6 +313,22 @@ class BaseAgent(
         ):  # override with llm_request
             use_memory = False
         return use_memory
+
+    @property
+    def knowledge_manager(self):
+        """Lazy-load knowledge manager to avoid circular imports."""
+        if self._knowledge_manager is None:
+            from airunner.components.knowledge.user_knowledge_manager import (
+                UserKnowledgeManager,
+            )
+
+            self._knowledge_manager = UserKnowledgeManager()
+        return self._knowledge_manager
+
+    @property
+    def auto_extract_knowledge(self) -> bool:
+        """Whether to automatically extract knowledge from conversations."""
+        return getattr(self.llm_settings, "auto_extract_knowledge", True)
 
     @property
     def action(self) -> LLMActionType:
@@ -1667,7 +1684,23 @@ class BaseAgent(
         #         self.update_conversation_state(conversation)
         #     return
 
+        # Allow empty response if it's the last message (for knowledge extraction)
         if not response or do_not_display:
+            # Still need to extract knowledge on last message even if response is empty
+            if (
+                is_last_message
+                and self.auto_extract_knowledge
+                and not do_not_display
+            ):
+                try:
+                    self.logger.info(
+                        "Starting knowledge extraction (empty final token)..."
+                    )
+                    self._extract_knowledge_async()
+                except Exception as e:
+                    self.logger.error(
+                        f"Knowledge extraction failed: {e}", exc_info=True
+                    )
             return
 
         # The 'full_message' variable as defined in the diff caused duplication when sent.
@@ -1701,9 +1734,92 @@ class BaseAgent(
                 )
             )
 
+            # Extract knowledge when response is complete
+            if is_last_message and self.auto_extract_knowledge:
+                try:
+                    self.logger.info("Starting knowledge extraction...")
+                    self._extract_knowledge_async()
+                except Exception as e:
+                    self.logger.error(
+                        f"Knowledge extraction failed: {e}", exc_info=True
+                    )
+
             # Only send to GUI for real-time display
             # Let the React Agent framework handle all database persistence
             # This avoids duplication issues between incremental updates and final persistence
+
+    def _extract_knowledge_async(self):
+        """
+        Extract user facts from the completed conversation asynchronously.
+        Non-blocking to avoid delaying response delivery.
+        """
+        self.logger.info(
+            f"Knowledge extraction triggered. auto_extract={self.auto_extract_knowledge}"
+        )
+
+        if not self._chat_prompt or not self._complete_response:
+            self.logger.warning(
+                f"Missing data for extraction: prompt={bool(self._chat_prompt)}, response={bool(self._complete_response)}"
+            )
+            return
+
+        # Clean bot name prefix if present
+        bot_response = self._complete_response
+        if bot_response.startswith(f"{self.botname}: "):
+            bot_response = bot_response[len(f"{self.botname}: ") :]
+
+        self.logger.info(
+            f"Extracting from conversation:\nUser: {self._chat_prompt[:100]}...\nBot: {bot_response[:100]}..."
+        )
+
+        # Create lightweight LLM callable for extraction
+        def llm_extract_callable(prompt: str, **kwargs) -> str:
+            """Lightweight LLM call for fact extraction."""
+            if not self.llm:
+                self.logger.error("No LLM available for extraction")
+                return "[]"
+            try:
+                self.logger.debug(f"Extraction LLM call with kwargs: {kwargs}")
+                self.logger.debug(
+                    f"Extraction prompt length: {len(prompt)} chars"
+                )
+                response = self.llm.complete(prompt, **kwargs)
+                self.logger.debug(f"Response type: {type(response)}")
+                self.logger.debug(
+                    f"Response has 'text': {hasattr(response, 'text')}"
+                )
+                result = (
+                    response.text
+                    if hasattr(response, "text")
+                    else str(response)
+                )
+                self.logger.info(
+                    f"LLM extraction response length: {len(result)}"
+                )
+                self.logger.info(f"LLM extraction response: {result[:500]}...")
+                return result
+            except Exception as e:
+                self.logger.error(
+                    f"LLM call failed during extraction: {e}", exc_info=True
+                )
+                return "[]"
+
+        try:
+            facts = self.knowledge_manager.extract_facts_from_text(
+                self._chat_prompt, bot_response, llm_extract_callable
+            )
+
+            if facts:
+                self.knowledge_manager.add_facts(facts)
+                self.logger.info(
+                    f"✅ Extracted and stored {len(facts)} facts from conversation"
+                )
+            else:
+                self.logger.info("No facts extracted from conversation")
+        except Exception as e:
+            self.logger.error(
+                f"Failed to extract/store facts: {e}", exc_info=True
+            )
 
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """

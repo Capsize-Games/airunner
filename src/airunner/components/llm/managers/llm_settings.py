@@ -52,6 +52,14 @@ class LLMSettings:
     update_user_data_enabled: bool = AIRUNNER_LLM_UPDATE_USER_DATA_ENABLED
     use_chatbot_mood: bool = AIRUNNER_LLM_USE_CHATBOT_MOOD
     perform_conversation_rag: bool = AIRUNNER_LLM_PERFORM_CONVERSATION_RAG
+    auto_extract_knowledge: bool = True
+
+    # Knowledge injection settings
+    core_facts_count: int = 10  # Core facts always injected
+    rag_facts_count: int = 5  # Additional facts retrieved via RAG
+    use_rag_for_facts: bool = (
+        True  # Enable RAG retrieval for facts (hybrid mode)
+    )
 
     # Add missing attributes for test compatibility
     use_local_llm: bool = True

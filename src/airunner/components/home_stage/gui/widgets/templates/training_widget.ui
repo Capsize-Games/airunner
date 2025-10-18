@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>training_widget</class>
+ <widget class="QWidget" name="training_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>521</width>
+    <height>612</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="frameShape">
+      <enum>QFrame::Shape::NoFrame</enum>
+     </property>
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <layout class="QVBoxLayout" name="scrollAreaLayout">
+       <item>
+        <widget class="QGroupBox" name="files_group">
+         <property name="title">
+          <string>Training Files</string>
+         </property>
+         <layout class="QVBoxLayout" name="files_layout">
+          <item>
+           <widget class="QListWidget" name="files_list"/>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="files_buttons">
+            <item>
+             <widget class="QPushButton" name="add_button">
+              <property name="text">
+               <string>Add</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="remove_button">
+              <property name="text">
+               <string>Remove</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QWidget" name="settings_group" native="true">
+         <layout class="QVBoxLayout" name="settings_layout">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QGroupBox" name="adapter_group">
+            <property name="title">
+             <string>Adapter Configuration</string>
+            </property>
+            <layout class="QVBoxLayout" name="adapter_layout">
+             <item>
+              <layout class="QHBoxLayout" name="model_name_layout">
+               <item>
+                <widget class="QLabel" name="model_name_label">
+                 <property name="text">
+                  <string>Model Name:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="model_name_input">
+                 <property name="placeholderText">
+                  <string>Enter model/adapter name (reuse name to continue training)</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QPushButton" name="manage_adapters_button">
+               <property name="text">
+                <string>Manage Adapters</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="scenario_group">
+            <property name="title">
+             <string>Training Scenario</string>
+            </property>
+            <layout class="QVBoxLayout" name="scenario_layout">
+             <item>
+              <widget class="QComboBox" name="scenario_combo"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="scenario_description">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="advanced_group">
+            <property name="title">
+             <string>Advanced Settings</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+            <layout class="QVBoxLayout" name="advanced_layout">
+             <item>
+              <widget class="SliderWidget" name="learning_rate_slider" native="true">
+               <property name="label_text" stdset="0">
+                <string>Learning Rate</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <double>0.000200000000000</double>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <double>0.000010000000000</double>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <double>0.000500000000000</double>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <double>0.000010000000000</double>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <double>0.000500000000000</double>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <double>0.000010000000000</double>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="SliderWidget" name="epochs_slider" native="true">
+               <property name="label_text" stdset="0">
+                <string>Epochs</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <number>10</number>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <number>10</number>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="SliderWidget" name="batch_size_slider" native="true">
+               <property name="label_text" stdset="0">
+                <string>Batch Size</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <number>8</number>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <number>8</number>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="SliderWidget" name="gradient_accumulation_slider" native="true">
+               <property name="label_text" stdset="0">
+                <string>Gradient Accumulation Steps</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <number>8</number>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <number>8</number>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <number>1</number>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="SliderWidget" name="warmup_steps_slider" native="true">
+               <property name="label_text" stdset="0">
+                <string>Warmup Steps</string>
+               </property>
+               <property name="current_value" stdset="0">
+                <number>0</number>
+               </property>
+               <property name="slider_minimum" stdset="0">
+                <number>0</number>
+               </property>
+               <property name="slider_maximum" stdset="0">
+                <number>100</number>
+               </property>
+               <property name="spinbox_minimum" stdset="0">
+                <number>0</number>
+               </property>
+               <property name="spinbox_maximum" stdset="0">
+                <number>100</number>
+               </property>
+               <property name="spinbox_single_step" stdset="0">
+                <number>5</number>
+               </property>
+               <property name="display_as_float" stdset="0">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="gradient_checkpointing_checkbox">
+               <property name="text">
+                <string>Enable Gradient Checkpointing</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="preview_group">
+            <property name="title">
+             <string>Content to Fine-tune</string>
+            </property>
+            <layout class="QVBoxLayout" name="preview_layout">
+             <item>
+              <widget class="QTableWidget" name="preview_table">
+               <property name="contextMenuPolicy">
+                <enum>Qt::ContextMenuPolicy::CustomContextMenu</enum>
+               </property>
+               <property name="editTriggers">
+                <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+               </property>
+               <property name="selectionBehavior">
+                <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+               </property>
+               <column>
+                <property name="text">
+                 <string>#</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Title</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Preview</string>
+                </property>
+               </column>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="preview_button">
+               <property name="text">
+                <string>Choose Training Sections</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="manage_models_button">
+            <property name="text">
+             <string>Manage Models</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="control_layout">
+         <item>
+          <widget class="QPushButton" name="start_button">
+           <property name="text">
+            <string>Start Fine-tune</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="cancel_button">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Cancel</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QProgressBar" name="progress_bar">
+         <property name="value">
+          <number>0</number>
+         </property>
+         <property name="textVisible">
+          <bool>true</bool>
+         </property>
+         <property name="format">
+          <string>%p%</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="status_message">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SliderWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner.components.application.gui.widgets.slider.slider_widget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+ <slots>
+  <slot>on_scenario_combo_currentIndexChanged(int)</slot>
+ </slots>
+</ui>

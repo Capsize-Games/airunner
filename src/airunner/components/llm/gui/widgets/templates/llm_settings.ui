@@ -824,7 +824,7 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="0">
+      <item row="3" column="0">
     <widget class="QGroupBox" name="remote_model_path">
      <property name="font">
       <font>
@@ -855,6 +855,68 @@
        <widget class="QProgressBar" name="progressBar">
         <property name="value">
          <number>24</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QGroupBox" name="adapters_group">
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="title">
+      <string>LoRA Adapters</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <property name="leftMargin">
+       <number>9</number>
+      </property>
+      <property name="topMargin">
+       <number>9</number>
+      </property>
+      <property name="rightMargin">
+       <number>9</number>
+      </property>
+      <property name="bottomMargin">
+       <number>9</number>
+      </property>
+      <item>
+       <widget class="QTableWidget" name="adapters_table">
+        <property name="contextMenuPolicy">
+         <enum>Qt::ContextMenuPolicy::CustomContextMenu</enum>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+        </property>
+        <property name="selectionBehavior">
+         <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+        </property>
+        <column>
+         <property name="text">
+          <string>Enabled</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Adapter Name</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Path</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="refresh_adapters_button">
+        <property name="text">
+         <string>Refresh Adapters</string>
         </property>
        </widget>
       </item>

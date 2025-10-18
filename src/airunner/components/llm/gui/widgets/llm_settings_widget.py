@@ -1,7 +1,10 @@
-from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QWidget
+import os
+import json
+from PySide6.QtCore import Slot, Qt, QTimer
+from PySide6.QtWidgets import QWidget, QTableWidgetItem, QCheckBox, QHBoxLayout
 
 from airunner.components.llm.data.chatbot import Chatbot
+from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.gui.widgets.templates.llm_settings_ui import (
     Ui_llm_settings_widget,
@@ -10,6 +13,7 @@ from airunner.components.application.gui.windows.main.ai_model_mixin import (
     AIModelMixin,
 )
 from airunner.enums import ModelService, SignalCode
+from airunner.utils.settings.get_qsettings import get_qsettings
 
 
 class LLMSettingsWidget(BaseWidget, AIModelMixin):
@@ -27,6 +31,11 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
             self.on_llm_model_download_progress,
         )
         self.ui.progressBar.setVisible(False)
+        self._setup_adapters_table()
+        self._load_adapters()
+        self.ui.refresh_adapters_button.clicked.connect(
+            self.on_refresh_adapters_clicked
+        )
 
     @Slot(str)
     def on_model_path_textChanged(self, val: str):
@@ -214,3 +223,108 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         else:
             self.ui.progressBar.setVisible(True)
             self.ui.progressBar.setValue(percent)
+
+    def _setup_adapters_table(self):
+        """Configure the adapters table columns and behavior."""
+        self.ui.adapters_table.horizontalHeader().setStretchLastSection(True)
+        self.ui.adapters_table.setColumnWidth(0, 80)
+        self.ui.adapters_table.setColumnWidth(1, 200)
+
+    @Slot()
+    def on_refresh_adapters_clicked(self):
+        """Refresh the adapters list when button is clicked."""
+        self._load_adapters()
+
+    def _load_adapters(self):
+        """Load available adapters from database and populate table."""
+        self.ui.adapters_table.setRowCount(0)
+
+        try:
+            adapters = FineTunedModel.objects.all()
+            enabled_adapters = self._get_enabled_adapters()
+
+            for adapter in adapters:
+                if not adapter.adapter_path or not os.path.exists(
+                    adapter.adapter_path
+                ):
+                    continue
+
+                row = self.ui.adapters_table.rowCount()
+                self.ui.adapters_table.insertRow(row)
+
+                checkbox_widget = QWidget()
+                checkbox_layout = QHBoxLayout(checkbox_widget)
+                checkbox = QCheckBox()
+                checkbox.setChecked(adapter.name in enabled_adapters)
+                checkbox.stateChanged.connect(
+                    lambda state, name=adapter.name: self._on_adapter_toggled(
+                        name, state
+                    )
+                )
+                checkbox_layout.addWidget(checkbox)
+                checkbox_layout.setAlignment(Qt.AlignCenter)
+                checkbox_layout.setContentsMargins(0, 0, 0, 0)
+
+                self.ui.adapters_table.setCellWidget(row, 0, checkbox_widget)
+
+                name_item = QTableWidgetItem(adapter.name)
+                name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
+                self.ui.adapters_table.setItem(row, 1, name_item)
+
+                path_item = QTableWidgetItem(adapter.adapter_path)
+                path_item.setFlags(path_item.flags() & ~Qt.ItemIsEditable)
+                self.ui.adapters_table.setItem(row, 2, path_item)
+
+        except Exception as e:
+            self.logger.error(f"Error loading adapters: {e}")
+
+    def _on_adapter_toggled(self, adapter_name: str, state: int):
+        """Handle adapter checkbox toggle."""
+        self.logger.debug(
+            f"Adapter '{adapter_name}' toggled: state={state}, Qt.Checked={Qt.CheckState.Checked.value}, Qt.Unchecked={Qt.CheckState.Unchecked.value}"
+        )
+        enabled_adapters = self._get_enabled_adapters()
+        self.logger.debug(
+            f"Current enabled adapters before toggle: {enabled_adapters}"
+        )
+
+        if state == Qt.CheckState.Checked.value:
+            if adapter_name not in enabled_adapters:
+                enabled_adapters.append(adapter_name)
+                self.logger.info(f"Enabled adapter: {adapter_name}")
+        else:
+            if adapter_name in enabled_adapters:
+                enabled_adapters.remove(adapter_name)
+                self.logger.info(f"Disabled adapter: {adapter_name}")
+
+        self._save_enabled_adapters(enabled_adapters)
+        self.logger.debug(f"Saved enabled adapters: {enabled_adapters}")
+
+    def _get_enabled_adapters(self) -> list:
+        """Get list of enabled adapter names from QSettings."""
+        qs = get_qsettings()
+        adapters_json = qs.value("llm_settings/enabled_adapters", "[]")
+        self.logger.debug(
+            f"Reading enabled adapters from QSettings: {adapters_json}"
+        )
+        try:
+            adapters = json.loads(adapters_json)
+            self.logger.debug(f"Parsed enabled adapters: {adapters}")
+            return adapters
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Error parsing enabled adapters JSON: {e}")
+            return []
+
+    def _save_enabled_adapters(self, adapters: list):
+        """Save list of enabled adapter names to QSettings."""
+        qs = get_qsettings()
+        adapters_json = json.dumps(adapters)
+        self.logger.debug(
+            f"Saving enabled adapters to QSettings: {adapters_json}"
+        )
+        qs.setValue("llm_settings/enabled_adapters", adapters_json)
+        qs.sync()
+
+        # Verify save
+        saved = qs.value("llm_settings/enabled_adapters", "[]")
+        self.logger.debug(f"Verified saved value: {saved}")
