@@ -186,13 +186,32 @@ class TrainingMixin:
 
     def _prepare_peft_model(self, adapter_dir: str):
         model = self._model
+
+        # Prepare base model for training (essential for quantized models)
+        try:
+            model = prepare_model_for_kbit_training(model)
+        except Exception:
+            pass
+
         # try load existing adapter, fallback to creating a fresh LoRA adapter
         if os.path.isdir(adapter_dir) and os.listdir(adapter_dir):
             self.logger.info(
                 f"Found existing adapter at {adapter_dir}, attempting to load"
             )
             try:
-                return PeftModel.from_pretrained(model, adapter_dir)
+                peft_model = PeftModel.from_pretrained(
+                    model, adapter_dir, is_trainable=True
+                )
+                # Ensure model is in training mode
+                peft_model.train()
+                # Verify LoRA parameters are trainable
+                for name, param in peft_model.named_parameters():
+                    if "lora_" in name:
+                        param.requires_grad = True
+                self.logger.info(
+                    "Loaded existing adapter for continued training"
+                )
+                return peft_model
             except ValueError as e:
                 self.logger.warning(
                     f"Adapter directory found but invalid PEFT config: {e}; creating a new adapter instead"
@@ -201,11 +220,6 @@ class TrainingMixin:
                 self.logger.error(
                     f"Error loading adapter (continuing with base model): {e}"
                 )
-
-        try:
-            model = prepare_model_for_kbit_training(model)
-        except Exception:
-            pass
 
         lora_config = LoraConfig(
             r=8,
