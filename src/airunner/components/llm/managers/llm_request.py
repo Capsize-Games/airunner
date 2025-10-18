@@ -42,10 +42,12 @@ class LLMRequest:
     length_penalty: float = 1.0
     max_new_tokens: int = 200
     min_length: int = 1
-    no_repeat_ngram_size: int = 2
+    no_repeat_ngram_size: int = 3  # Block 3-word phrase repetition (was 2)
     num_beams: int = 1
     num_return_sequences: int = 1
-    repetition_penalty: float = 1.0
+    repetition_penalty: float = (
+        1.15  # Penalize token repetition (was 1.0 = disabled)
+    )
     temperature: float = 1.0
     top_k: int = 50
     top_p: float = 0.9
@@ -235,6 +237,109 @@ class LLMRequest:
             LLMRequest: A new instance with default settings from LLMGeneratorSettings.
         """
         return cls.from_llm_settings()
+
+    @classmethod
+    def for_action(cls, action: "LLMActionType") -> "LLMRequest":  # type: ignore
+        """
+        Create an LLMRequest optimized for a specific action type.
+
+        Different actions require different generation parameters:
+        - CHAT: Conversational, creative, variety
+        - CODE: Precise, deterministic, structured
+        - SUMMARIZE: Concise, factual, consistent
+        - GENERATE_IMAGE: Descriptive, creative
+        - SEARCH/RAG: Precise, focused, factual
+
+        Args:
+            action: The LLMActionType to optimize for
+
+        Returns:
+            LLMRequest: A new instance with parameters optimized for the action
+        """
+        from airunner.enums import LLMActionType
+
+        # Action-specific parameters
+        if action in (LLMActionType.CHAT, LLMActionType.UPDATE_MOOD):
+            # Chat: Creative, varied, personality
+            return cls(
+                do_sample=True,
+                temperature=0.8,  # Variety and personality
+                repetition_penalty=1.2,  # Strong anti-repetition
+                no_repeat_ngram_size=3,  # Block phrase repetition
+                max_new_tokens=500,  # Reasonable conversation length
+                top_k=50,
+                top_p=0.9,
+            )
+
+        elif action == LLMActionType.CODE:
+            # Code: Precise, deterministic, structured
+            return cls(
+                do_sample=False,  # Deterministic
+                temperature=0.1,  # Very precise
+                repetition_penalty=1.05,  # Light penalty (code can repeat patterns)
+                no_repeat_ngram_size=0,  # Allow code patterns
+                max_new_tokens=2000,  # Longer code blocks
+                top_k=10,  # Focused on high-probability tokens
+                top_p=0.95,
+            )
+
+        elif action in (
+            LLMActionType.SUMMARIZE,
+            LLMActionType.PERFORM_RAG_SEARCH,
+            LLMActionType.SEARCH,
+        ):
+            # Summarize/Search: Concise, factual, consistent
+            return cls(
+                do_sample=True,
+                temperature=0.3,  # Mostly consistent
+                repetition_penalty=1.1,  # Moderate anti-repetition
+                no_repeat_ngram_size=2,  # Some phrase blocking
+                max_new_tokens=300,  # Concise responses
+                top_k=30,
+                top_p=0.9,
+            )
+
+        elif action == LLMActionType.GENERATE_IMAGE:
+            # Image prompts: Descriptive, creative, detailed
+            return cls(
+                do_sample=True,
+                temperature=0.9,  # More creative
+                repetition_penalty=1.15,
+                no_repeat_ngram_size=3,
+                max_new_tokens=200,  # Focused descriptions
+                top_k=50,
+                top_p=0.9,
+            )
+
+        elif action in (
+            LLMActionType.DECISION,
+            LLMActionType.APPLICATION_COMMAND,
+            LLMActionType.FILE_INTERACTION,
+            LLMActionType.WORKFLOW,
+            LLMActionType.WORKFLOW_INTERACTION,
+        ):
+            # Commands/Decisions: Precise, deterministic
+            return cls(
+                do_sample=False,  # Deterministic
+                temperature=0.1,  # Very precise
+                repetition_penalty=1.0,  # No penalty needed
+                no_repeat_ngram_size=0,  # Allow any patterns
+                max_new_tokens=100,  # Short, focused
+                top_k=5,  # Very focused
+                top_p=0.95,
+            )
+
+        else:
+            # Default: Balanced settings
+            return cls(
+                do_sample=True,
+                temperature=0.8,
+                repetition_penalty=1.15,
+                no_repeat_ngram_size=3,
+                max_new_tokens=500,
+                top_k=50,
+                top_p=0.9,
+            )
 
 
 @dataclass

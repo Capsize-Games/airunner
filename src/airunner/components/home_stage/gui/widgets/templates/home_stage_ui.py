@@ -30,25 +30,13 @@ class Ui_home_stage_widget(object):
         self.knowledge_base_panel.setObjectName(u"knowledge_base_panel")
         self.knowledge_base_panel.setMinimumSize(QSize(200, 200))
 
-        self.gridLayout.addWidget(self.knowledge_base_panel, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.knowledge_base_panel, 0, 0, 2, 1)
 
         self.system_resources_panel = QWidget(home_stage_widget)
         self.system_resources_panel.setObjectName(u"system_resources_panel")
         self.system_resources_panel.setMinimumSize(QSize(200, 200))
 
-        self.gridLayout.addWidget(self.system_resources_panel, 0, 1, 1, 1)
-
-        self.section_3_panel = QWidget(home_stage_widget)
-        self.section_3_panel.setObjectName(u"section_3_panel")
-        self.section_3_panel.setMinimumSize(QSize(200, 200))
-
-        self.gridLayout.addWidget(self.section_3_panel, 1, 0, 1, 1)
-
-        self.section_4_panel = QWidget(home_stage_widget)
-        self.section_4_panel.setObjectName(u"section_4_panel")
-        self.section_4_panel.setMinimumSize(QSize(200, 200))
-
-        self.gridLayout.addWidget(self.section_4_panel, 1, 1, 1, 1)
+        self.gridLayout.addWidget(self.system_resources_panel, 0, 1, 2, 1)
 
 
         self.retranslateUi(home_stage_widget)

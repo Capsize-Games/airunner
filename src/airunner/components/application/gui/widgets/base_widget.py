@@ -71,7 +71,11 @@ class BaseWidget(AbstractBaseWidget):
         self.icon_manager: Optional[IconManager] = None
         # Ensure each instance has its own signal_handlers dict rather than
         # sharing a class-level mutable default.
-        self.signal_handlers = {} if not getattr(self, "signal_handlers", None) else dict(self.signal_handlers)
+        self.signal_handlers = (
+            {}
+            if not getattr(self, "signal_handlers", None)
+            else dict(self.signal_handlers)
+        )
         self.signal_handlers.update(
             {
                 SignalCode.QUIT_APPLICATION: self.handle_close,
@@ -359,3 +363,18 @@ class BaseWidget(AbstractBaseWidget):
         url = f"{base_url}?{query}" if query else base_url
         # Load the URL in the QWebEngineView
         element.setUrl(url)
+
+    def set_status_message_text(self, message: str):
+        """
+        Set the status message text if the UI provides a status_message label.
+        """
+        self.ui.status_message.show()
+        if message != "":
+            self.ui.status_message.show()
+            self.ui.status_message.setText(message)
+        else:
+            self.ui.status_message.hide()
+
+    def clear_status_message_text(self):
+        """Clear the status message text."""
+        self.set_status_message_text("")

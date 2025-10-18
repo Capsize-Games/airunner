@@ -113,7 +113,8 @@ class ChatEngineTool(
         if system_prompt is not None:
             self.chat_engine.update_system_prompt(system_prompt)
         query_str = self._get_query_str(*args, **kwargs)
-        llm_request = kwargs.get("llm_request", LLMRequest.from_default())
+        # Use code defaults (not database) for better repetition handling
+        llm_request = kwargs.get("llm_request", LLMRequest())
         if hasattr(self.chat_engine.llm, "llm_request"):
             self.chat_engine.llm.llm_request = llm_request
 

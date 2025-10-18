@@ -35,7 +35,6 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
-    RESIZE_CONVERSATION_WIDGET = "resize_conversation_widget"
     DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"
     NEW_DOCUMENT = "new_document_signal"
     SAVE_STATE = "save_state_signal"
@@ -71,6 +70,10 @@ class SignalCode(Enum):
     APPLICATION_SETTINGS_CHANGED_SIGNAL = "application_settings_changed_signal"
     APPLICATION_STATUS_INFO_SIGNAL = "status_info_signal"
     APPLICATION_STATUS_ERROR_SIGNAL = "status_error_signal"
+    LLM_START_FINE_TUNE = "llm_start_fine_tune"
+    LLM_FINE_TUNE_PROGRESS = "llm_fine_tune_progress"
+    LLM_FINE_TUNE_COMPLETE = "llm_fine_tune_complete"
+    LLM_FINE_TUNE_CANCEL = "llm_fine_tune_cancel"
     APPLICATION_TOOL_CHANGED_SIGNAL = "tool_changed_signal"
     APPLICATION_ACTIVE_GRID_AREA_UPDATED = "active_grid_area_updated"
     GENERATE_MASK = "generate_mask"
