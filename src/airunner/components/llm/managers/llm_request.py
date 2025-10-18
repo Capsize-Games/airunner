@@ -260,11 +260,11 @@ class LLMRequest:
 
         # Action-specific parameters
         if action in (LLMActionType.CHAT, LLMActionType.UPDATE_MOOD):
-            # Chat: Creative, varied, personality
+            # Chat: Conversational, coherent, natural
             return cls(
                 do_sample=True,
-                temperature=0.8,  # Variety and personality
-                repetition_penalty=1.2,  # Strong anti-repetition
+                temperature=0.7,  # Balanced: coherent but natural (reduced from 0.8)
+                repetition_penalty=1.15,  # Moderate anti-repetition (reduced from 1.2)
                 no_repeat_ngram_size=3,  # Block phrase repetition
                 max_new_tokens=500,  # Reasonable conversation length
                 top_k=50,
