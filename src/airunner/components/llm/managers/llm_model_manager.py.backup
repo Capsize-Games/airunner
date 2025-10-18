@@ -110,6 +110,8 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self.llm_settings = LLMSettings()
         self._pending_conversation_message = None
         self._conversation_history_manager = ConversationHistoryManager()
+        # Flag to skip agent/RAG/embeddings load in special modes (e.g., finetune)
+        self._skip_agent_load = False
 
     @property
     def agent(self):
@@ -197,10 +199,6 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         return model_version
 
     @property
-    def model_name(self) -> str:
-        return "causallm/w4ffl35/Ministral-8B-Instruct-2410-doublequant"
-
-    @property
     def model_path(self) -> str:
         """
         Get the filesystem path to the model files.
@@ -214,7 +212,8 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 "text",
                 "models",
                 "llm",
-                self.model_name,
+                "causallm",
+                "w4ffl35/Ministral-8B-Instruct-2410-doublequant",
             )
         )
 
@@ -240,10 +239,14 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self.unload()
         self._current_model_path = self.model_path
 
+        # Ensure we perform a full load (reset any finetune-only flags)
+        self._skip_agent_load = False
+
         # Load components based on settings
         self._load_tokenizer()
         self._load_model()
         self._load_agent()
+
         self._update_model_status()
 
     def _update_model_status(self):
@@ -507,28 +510,104 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
         self.logger.debug(f"Loading local LLM model from {self.model_path}")
         try:
-            # Load the base model
-            self._model = AutoModelForCausalLM.from_pretrained(
-                self.model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                use_cache=self.use_cache,
-                trust_remote_code=False,
-                torch_dtype=self.torch_dtype,
-                device_map=self.device,
-                attn_implementation=self.attn_implementation,
-            )
+            # Try to free memory and reduce fragmentation before loading
+            try:
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except Exception:
+                pass
 
+            # Log GPU memory snapshot before model load
+            try:
+                if torch.cuda.is_available():
+                    self.logger.info(
+                        f"CUDA memory before model load: allocated={torch.cuda.memory_allocated()/1024**2:.2f} MiB, reserved={torch.cuda.memory_reserved()/1024**2:.2f} MiB"
+                    )
+            except Exception:
+                pass
+
+            # Load the base model. Use quantization config when requested and
+            # prefer automatic device mapping / low_cpu_mem_usage to reduce peak
+            # memory during load. This helps avoid OOM when loading large models.
+            # Build kwargs for from_pretrained. Use explicit keys so we don't
+            # accidentally pass incorrect positional args (was previously
+            # using dict(self.model_path, ...) which raises a TypeError).
+            load_kwargs: Dict[str, Any] = {
+                "pretrained_model_name_or_path": self.model_path,
+                "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
+                "use_cache": self.use_cache,
+                "trust_remote_code": False,
+                "torch_dtype": self.torch_dtype,
+                "attn_implementation": self.attn_implementation,
+            }
+
+            # If CUDA is available prefer device_map='auto' so HF can shard and
+            # offload layers rather than placing the whole model onto a single
+            # GPU (which can cause OOM). Otherwise use the explicit device.
+            try:
+                if torch.cuda.is_available():
+                    load_kwargs["device_map"] = "auto"
+                    # Try to reduce CPU/GPU peak during load
+                    load_kwargs["low_cpu_mem_usage"] = True
+                else:
+                    load_kwargs["device_map"] = self.device
+            except Exception:
+                load_kwargs["device_map"] = self.device
+
+            # If a quantization config is available (4/8/2-bit), pass it through
+            qconf = self._quantization_config
+            if qconf is not None:
+                load_kwargs["quantization_config"] = qconf
+
+            # Load the model
+            self._model = AutoModelForCausalLM.from_pretrained(**load_kwargs)
+
+            # Log GPU memory after model load
+            try:
+                if torch.cuda.is_available():
+                    self.logger.info(
+                        f"CUDA memory after model load: allocated={torch.cuda.memory_allocated()/1024**2:.2f} MiB, reserved={torch.cuda.memory_reserved()/1024**2:.2f} MiB"
+                    )
+            except Exception:
+                pass
             if PeftModel is not None:
                 # Attempt to load adapter if available
                 try:
                     if os.path.exists(self.adapter_path):
                         # Convert base model to PEFT format
+                        # Collect/clear caches before applying adapter
+                        try:
+                            gc.collect()
+                            if torch.cuda.is_available():
+                                torch.cuda.empty_cache()
+                        except Exception:
+                            pass
+
+                        # Log memory before applying PEFT adapter
+                        try:
+                            if torch.cuda.is_available():
+                                self.logger.info(
+                                    f"CUDA memory before applying PEFT: allocated={torch.cuda.memory_allocated()/1024**2:.2f} MiB, reserved={torch.cuda.memory_reserved()/1024**2:.2f} MiB"
+                                )
+                        except Exception:
+                            pass
+
                         self._model = PeftModel.from_pretrained(
                             self._model, self.adapter_path
                         )
                         self.logger.info(
                             f"Loaded adapter from {self.adapter_path}"
                         )
+
+                        # Log memory after applying PEFT adapter
+                        try:
+                            if torch.cuda.is_available():
+                                self.logger.info(
+                                    f"CUDA memory after applying PEFT: allocated={torch.cuda.memory_allocated()/1024**2:.2f} MiB, reserved={torch.cuda.memory_reserved()/1024**2:.2f} MiB"
+                                )
+                        except Exception:
+                            pass
                 except Exception as e:
                     self.logger.error(
                         f"Error loading adapter (continuing with base model): {e}"
@@ -538,14 +617,70 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             self.logger.error(f"Error loading model: {e}")
             self._model = None
 
+    def _load_peft_model(self, model):
+        """
+        Wrap a base model with a PEFT adapter if an adapter exists on disk.
+
+        Returns the wrapped model or the original model on failure / if no adapter.
+        """
+        try:
+            if PeftModel is None:
+                self.logger.debug("PEFT not available; skipping adapter load")
+                return model
+
+            if model is None:
+                self.logger.warning(
+                    "No base model provided to _load_peft_model"
+                )
+                return model
+
+            if os.path.exists(self.adapter_path):
+                try:
+                    # Ensure the adapter directory actually contains a PEFT adapter
+                    adapter_config = os.path.join(
+                        self.adapter_path, "adapter_config.json"
+                    )
+                    if not os.path.isfile(adapter_config):
+                        # Adapter directory exists but no adapter config; skip quietly
+                        self.logger.debug(
+                            f"Adapter directory found but missing adapter_config.json: {self.adapter_path}; skipping adapter load"
+                        )
+                        return model
+
+                    wrapped = PeftModel.from_pretrained(
+                        model, self.adapter_path
+                    )
+                    self.logger.info(
+                        f"Applied PEFT adapter from {self.adapter_path}"
+                    )
+                    return wrapped
+                except Exception as e:
+                    # Log the failure but continue with the base model
+                    self.logger.warning(f"Failed to apply PEFT adapter: {e}")
+                    return model
+
+            self.logger.debug(
+                "No adapter directory found; returning base model"
+            )
+            return model
+        except Exception as e:
+            self.logger.error(f"Unexpected error in _load_peft_model: {e}")
+            return model
+
     def _load_agent(self) -> None:
         """
         Load the appropriate chat agent based on settings.
 
         Sets self._chat_agent to the loaded agent instance or None if loading fails.
         """
-        # Skip if already loaded
-        if self._chat_agent is not None:
+        # Skip if already loaded or if we're in finetune-only mode
+        if self._chat_agent is not None or getattr(
+            self, "_skip_agent_load", False
+        ):
+            if getattr(self, "_skip_agent_load", False):
+                self.logger.debug(
+                    "Skipping agent load due to finetune-only mode"
+                )
             return
 
         self.logger.info("Loading local chat agent")

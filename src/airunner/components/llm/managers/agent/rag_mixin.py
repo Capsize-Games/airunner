@@ -146,6 +146,16 @@ class RAGMixin:
     def _setup_rag(self):
         """Setup RAG components."""
         try:
+            # If the parent/manager has requested to skip agent/RAG load (for
+            # example during finetune preparation to conserve GPU memory), then
+            # avoid initializing the RAG system which will load embeddings.
+            if getattr(self, "_skip_agent_load", False):
+                if hasattr(self, "logger"):
+                    self.logger.debug(
+                        "Skipping RAG setup due to finetune-only mode"
+                    )
+                return
+
             # Set up LlamaIndex settings
             Settings.llm = self.llm
             Settings.embed_model = self.embedding

@@ -14,6 +14,9 @@ from airunner.components.home_stage.gui.widgets.section_3_panel_widget import (
 from airunner.components.home_stage.gui.widgets.section_4_panel_widget import (
     Section4PanelWidget,
 )
+from airunner.components.home_stage.gui.widgets.training_widget import (
+    TrainingWidget,
+)
 
 
 class HomeStageWidget(BaseWidget):
@@ -28,10 +31,10 @@ class HomeStageWidget(BaseWidget):
         grid_layout = self.ui.gridLayout
 
         # Row 0: Knowledge Base (0,0), System Resources (0,1)
-        # old_kb_widget = grid_layout.itemAtPosition(0, 0).widget()
-        # old_kb_widget.setParent(None)
-        # self.knowledge_base_panel = KnowledgeBasePanelWidget()
-        # grid_layout.addWidget(self.knowledge_base_panel, 0, 0)
+        old_kb_widget = grid_layout.itemAtPosition(0, 0).widget()
+        old_kb_widget.setParent(None)
+        self.training_panel = TrainingWidget()
+        grid_layout.addWidget(self.training_panel, 0, 0)
 
         old_sr_widget = grid_layout.itemAtPosition(0, 1).widget()
         old_sr_widget.setParent(None)
