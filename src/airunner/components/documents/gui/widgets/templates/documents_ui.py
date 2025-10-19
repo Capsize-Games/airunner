@@ -200,6 +200,22 @@ class Ui_documents(object):
         self.verticalLayoutZim.addWidget(self.splitter)
 
         self.tabWidget.addTab(self.tabZim, "")
+        self.tabKnowledge = QWidget()
+        self.tabKnowledge.setObjectName(u"tabKnowledge")
+        self.verticalLayoutKnowledge = QVBoxLayout(self.tabKnowledge)
+        self.verticalLayoutKnowledge.setSpacing(0)
+        self.verticalLayoutKnowledge.setObjectName(u"verticalLayoutKnowledge")
+        self.verticalLayoutKnowledge.setContentsMargins(0, 0, 0, 0)
+        self.knowledgeFolderContainer = QWidget(self.tabKnowledge)
+        self.knowledgeFolderContainer.setObjectName(u"knowledgeFolderContainer")
+        self.knowledgeFolderLayout = QVBoxLayout(self.knowledgeFolderContainer)
+        self.knowledgeFolderLayout.setSpacing(0)
+        self.knowledgeFolderLayout.setObjectName(u"knowledgeFolderLayout")
+        self.knowledgeFolderLayout.setContentsMargins(0, 0, 0, 0)
+
+        self.verticalLayoutKnowledge.addWidget(self.knowledgeFolderContainer)
+
+        self.tabWidget.addTab(self.tabKnowledge, "")
 
         self.gridLayout.addWidget(self.tabWidget, 5, 0, 1, 1)
 
@@ -238,5 +254,6 @@ class Ui_documents(object):
         self.kiwixSearchButton.setText(QCoreApplication.translate("documents", u"Search", None))
         self.labelLocal.setText(QCoreApplication.translate("documents", u"Local ZIM Files", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabZim), QCoreApplication.translate("documents", u"Kiwix ZIM", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabKnowledge), QCoreApplication.translate("documents", u"Knowledge", None))
     # retranslateUi
 

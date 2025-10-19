@@ -154,10 +154,8 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path
-        # --- BEGIN: Custom logic for /game -> game/html/index.jinja2.html or index.html ---
         rel_path = path.lstrip("/")
         rel_path_no_query = rel_path.split("?", 1)[0]
-        # If the path is a single segment (e.g. /game), try to serve game/html/index.jinja2.html or index.html
         if (
             rel_path_no_query
             and "/" not in rel_path_no_query
@@ -219,7 +217,6 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                         self.end_headers()
                         self.wfile.write(f.read())
                     return
-        # --- END: Custom logic ---        # --- BEGIN: Static files for project directories (e.g. /game/css/game.css) ---
         rel_path = path.lstrip("/")
         rel_path_no_query = rel_path.split("?", 1)[0]
 

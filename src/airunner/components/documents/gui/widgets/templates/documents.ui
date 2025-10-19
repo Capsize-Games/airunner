@@ -332,6 +332,49 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tabKnowledge">
+      <attribute name="title">
+       <string>Knowledge</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutKnowledge">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QWidget" name="knowledgeFolderContainer" native="true">
+         <layout class="QVBoxLayout" name="knowledgeFolderLayout">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item row="3" column="0">
