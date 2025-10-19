@@ -67,6 +67,31 @@ class DocumentsWidget(BaseWidget):
         self.setup_file_explorer()
         self.kiwix_widget = KiwixWidget()
         self.setup_kiwix_widget()
+        self.setup_knowledge_folder()
+
+    def setup_knowledge_folder(self):
+        """Setup the knowledge folder file explorer in the Knowledge tab."""
+        from airunner.components.file_explorer.gui.widgets.file_explorer_widget import (
+            FileExplorerWidget,
+        )
+
+        # Get the knowledge folder path
+        knowledge_path = os.path.expanduser(
+            "~/.local/share/airunner/knowledge"
+        )
+
+        # Create the directory if it doesn't exist
+        if not os.path.exists(knowledge_path):
+            os.makedirs(knowledge_path, exist_ok=True)
+
+        # Create the file explorer widget
+        self.knowledge_file_explorer = FileExplorerWidget(
+            path_to_display=knowledge_path,
+            parent=self.ui.knowledgeFolderContainer,
+        )
+
+        # Add it to the container layout
+        self.ui.knowledgeFolderLayout.addWidget(self.knowledge_file_explorer)
 
     def setup_file_explorer(self):
         # Setup available documents tree (use a QStandardItemModel so we can
