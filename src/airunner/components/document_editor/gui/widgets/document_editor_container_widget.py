@@ -101,6 +101,93 @@ class DocumentEditorContainerWidget(BaseWidget):
         except Exception:
             pass
 
+        # Add knowledge folder to the file explorer by updating its root
+        self._add_knowledge_folder_to_explorer()
+
+    def _add_knowledge_folder_to_explorer(self):
+        """Update file explorer to show both web files and knowledge folder."""
+        try:
+            from PySide6.QtCore import QSortFilterProxyModel
+
+            # Get the knowledge folder path
+            knowledge_path = os.path.expanduser(
+                "~/.local/share/airunner/knowledge"
+            )
+
+            # Create the directory if it doesn't exist
+            if not os.path.exists(knowledge_path):
+                os.makedirs(knowledge_path, exist_ok=True)
+
+            # Get the current root path from the file explorer
+            current_root = self.ui.file_explorer.model.rootPath()
+
+            # Find common parent and create a proxy model to filter visible items
+            try:
+                common_parent = os.path.commonpath(
+                    [current_root, knowledge_path]
+                )
+
+                # Get the folder names we want to show
+                current_folder_name = os.path.basename(current_root)
+                knowledge_folder_name = "knowledge"
+
+                # Create a custom proxy model to filter directories
+                class FolderFilterProxyModel(QSortFilterProxyModel):
+                    def __init__(self, allowed_folders, parent_path):
+                        super().__init__()
+                        self.allowed_folders = set(allowed_folders)
+                        self.parent_path = parent_path
+
+                    def filterAcceptsRow(self, source_row, source_parent):
+                        model = self.sourceModel()
+                        index = model.index(source_row, 0, source_parent)
+                        file_path = model.filePath(index)
+
+                        # Always show items inside allowed folders
+                        for allowed in self.allowed_folders:
+                            allowed_path = os.path.join(
+                                self.parent_path, allowed
+                            )
+                            if file_path.startswith(allowed_path):
+                                return True
+
+                        # Show only allowed folders at the root level
+                        if os.path.dirname(file_path) == self.parent_path:
+                            item_name = os.path.basename(file_path)
+                            return item_name in self.allowed_folders
+
+                        return False
+
+                # Create and apply the proxy model
+                proxy_model = FolderFilterProxyModel(
+                    [current_folder_name, knowledge_folder_name], common_parent
+                )
+                proxy_model.setSourceModel(self.ui.file_explorer.model)
+
+                # Update the model root to the common parent
+                self.ui.file_explorer.model.setRootPath(common_parent)
+
+                # Set the proxy model on the tree view
+                self.ui.file_explorer.tree_view.setModel(proxy_model)
+                self.ui.file_explorer.tree_view.setRootIndex(
+                    proxy_model.mapFromSource(
+                        self.ui.file_explorer.model.index(common_parent)
+                    )
+                )
+
+            except ValueError:
+                # Paths don't share a common parent (different drives on Windows)
+                logging.getLogger(__name__).warning(
+                    "Cannot find common parent for %s and %s",
+                    current_root,
+                    knowledge_path,
+                )
+
+        except Exception as e:
+            logging.getLogger(__name__).exception(
+                "Failed to add knowledge folder to explorer: %s", e
+            )
+
     def handle_new_document_signal(self, data: Dict):
         self._new_tab()
 
