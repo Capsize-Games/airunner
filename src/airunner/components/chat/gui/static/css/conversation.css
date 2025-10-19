@@ -45,12 +45,12 @@ body {
 
 #conversation-container::-webkit-scrollbar {
     height: 0 !important;
-    width: 8px;
+    width: 5px;
 }
 
 .message {
     margin: 0;
-    padding: 10px;
+    padding: 10px 10px 15px 10px;
     width: 100%;
     word-break: break-word;
     box-shadow: none;
@@ -62,35 +62,35 @@ body {
     transition: background 0.2s;
     font-size: 1em;
     font-family: 'Fira Mono', 'Consolas', 'Segoe UI', Arial, sans-serif;
-    border-left: 3px solid var(--line-color-light);
+    /* Use a simple 1px bottom border for message separation */
+    border: none;
+    border-bottom: 1px solid var(--line-color-light);
 }
 
 .message.user {
     align-self: flex-end;
     border-radius: 0px;
     box-shadow: 0 2px 12px rgba(0, 64, 255, 0.10);
-    border-left: 3px solid var(--line-color-light);
-    border-right: 3px solid transparent;
-    transition: border-color 0.2s;
+    border: none;
+    border-bottom: 1px solid var(--line-color-light);
+    transition: border-bottom-color 0.2s, box-shadow 0.2s;
 }
 
 .message.user:hover {
-    border-left: 3px solid var(--primary-color);
-    border-right: 3px solid var(--primary-color);
+    border-bottom: 1px solid var(--primary-color);
 }
 
 .message.assistant {
     align-self: flex-start;
     border-radius: 0px;
     box-shadow: 0 2px 12px rgba(0, 255, 128, 0.08);
-    border-left: 3px solid var(--line-color-light);
-    border-right: 3px solid transparent;
-    transition: border-color 0.2s;
+    border: none;
+    border-bottom: 1px solid var(--line-color-light);
+    transition: border-bottom-color 0.2s, box-shadow 0.2s;
 }
 
 .message.assistant:hover {
-    border-left: 3px solid var(--primary-color);
-    border-right: 3px solid var(--primary-color);
+    border-bottom: 1px solid var(--primary-color);
 }
 
 #conversation-container>.message:nth-child(even) {
@@ -103,7 +103,7 @@ body {
     justify-content: flex-start;
     width: 100%;
     margin-bottom: 0;
-    gap: 8px;
+    gap: 5px;
 }
 
 .message .sender {
@@ -111,7 +111,7 @@ body {
     margin-bottom: 0;
     color: var(--dim-color);
     font-size: 0.75em;
-    margin-right: 8px;
+    margin-right: 5px;
     display: inline-block;
     flex-shrink: 0;
 }
@@ -123,7 +123,7 @@ body {
 .message .actions {
     margin-left: auto;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s;
@@ -174,8 +174,8 @@ body {
 }
 
 .message .delete-button svg {
-    width: 18px;
-    height: 18px;
+    width: 15px;
+    height: 15px;
     display: block;
     pointer-events: none;
     fill: var(--danger-color);
@@ -234,7 +234,7 @@ code {
     color: var(--primary-color) !important;
     font-size: 0.98em;
     line-height: 1.5;
-    padding: 8px 12px;
+    padding: 5px 12px;
     overflow-x: auto;
     max-width: 100%;
     box-sizing: border-box;
