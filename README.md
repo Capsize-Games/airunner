@@ -57,7 +57,9 @@ Show your support for this project by choosing one of the following options for 
 | **🗣️ Real-time conversations** |
 | - Three speech engines: espeak, SpeechT5, OpenVoice<br>- Auto language detection (OpenVoice)<br>- Real-time voice-chat with LLMs |
 | **🤖 Customizable AI Agents** |
-| - Custom agent names, moods, personalities<br>- Retrieval-Augmented Generation (RAG)<br>- Create AI personalities and moods |
+| - Custom agent names, moods, personalities<br>- Retrieval-Augmented Generation (RAG)<br>- Create AI personalities and moods<br>- **NEW:** Visual LangGraph workflow builder |
+| **🎨 Visual Agent Workflows (LangGraph)** |
+| - Drag-and-drop agent workflow design<br>- Real-time Python code generation<br>- Runtime compilation & execution<br>- Hybrid LlamaIndex + LangGraph architecture |
 | **📚 Enhanced Knowledge Retrieval** |
 | - RAG for documents/websites<br>- Use local data to enrich chat |
 | **🖼️ Image Generation & Manipulation** |
