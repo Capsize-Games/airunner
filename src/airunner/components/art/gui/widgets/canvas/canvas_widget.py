@@ -374,14 +374,23 @@ class CanvasWidget(BaseWidget):
         self.api.art.canvas.toggle_tool(CanvasToolName.MOVE, val)
 
     def on_toggle_tool_signal(self, message: Dict):
-        tool = message.get("tool", None)
-        active = message.get("active", False)
-        settings_data = {}
-        settings_data["current_tool"] = tool.value if active else None
-        self.update_application_settings(**settings_data)
-        # self.api.art.canvas.tool_changed(tool, active)
-        self._update_action_buttons(tool, active)
-        self._update_cursor()
+        if (
+            hasattr(self, "_processing_tool_change")
+            and self._processing_tool_change
+        ):
+            return
+
+        self._processing_tool_change = True
+        try:
+            tool = message.get("tool", None)
+            active = message.get("active", False)
+            settings_data = {"current_tool": tool.value if active else None}
+            self.update_application_settings(**settings_data)
+            self.api.art.canvas.tool_changed(tool, active)
+            self._update_action_buttons(tool, active)
+            self._update_cursor()
+        finally:
+            self._processing_tool_change = False
 
     def save_state(self):
         self._save_splitter_state()
