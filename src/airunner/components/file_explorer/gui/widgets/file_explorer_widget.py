@@ -4,7 +4,8 @@ file_explorer_widget.py
 FileExplorerWidget for browsing and managing files/directories. Emits a signal when a file is requested to be opened.
 """
 
-from typing import Optional
+from typing import Optional, List
+import os
 from PySide6.QtCore import QDir, QFileInfo, QModelIndex, Qt, QPoint
 from PySide6.QtWidgets import (
     QWidget,
@@ -29,6 +30,7 @@ class FileExplorerWidget(BaseWidget):
         self,
         path_to_display: Optional[str] = None,
         parent: Optional[QWidget] = None,
+        additional_paths: Optional[List[str]] = None,
     ):
         # Robust handling for UI-instantiated widgets: if first arg is QWidget, treat as parent
         self._file_open_slot = None
@@ -37,21 +39,37 @@ class FileExplorerWidget(BaseWidget):
             path_to_display = None
         super().__init__(parent)
         self.model = QFileSystemModel(self)
+
         # Use path_to_display if provided, else self.user_web_dir, else current path
         root_path = (
             path_to_display
             if isinstance(path_to_display, str) and path_to_display
             else getattr(self, "user_web_dir", None) or QDir.currentPath()
         )
-        self.model.setRootPath(root_path)
+
+        # If we have additional paths, find a common parent directory
+        if additional_paths:
+            all_paths = [root_path] + additional_paths
+            # Find common parent
+            common_parent = os.path.commonpath(
+                [os.path.dirname(p) for p in all_paths]
+            )
+            self.model.setRootPath(common_parent)
+            self.tree_view = self.ui.treeView
+            self.tree_view.setModel(self.model)
+            # Show the common parent so all directories are visible
+            self.tree_view.setRootIndex(self.model.index(common_parent))
+        else:
+            self.model.setRootPath(root_path)
+            self.tree_view = self.ui.treeView
+            self.tree_view.setModel(self.model)
+            self.tree_view.setRootIndex(self.model.index(root_path))
+
         self.model.setFilter(
             QDir.Filter.NoDotAndDotDot
             | QDir.Filter.AllDirs
             | QDir.Filter.Files
         )
-        self.tree_view = self.ui.treeView
-        self.tree_view.setModel(self.model)
-        self.tree_view.setRootIndex(self.model.index(root_path))
         self.tree_view.setAnimated(False)
         self.tree_view.setIndentation(20)
         self.tree_view.setSortingEnabled(True)
