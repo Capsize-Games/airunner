@@ -62,6 +62,7 @@ extras_require = {
         "llama-index-embeddings-huggingface==0.6.0",
         "llama-index-llms-openrouter==0.4.0",
         "langchain-community==0.3.29",
+        "langchain-core>=0.3.0",
         "langgraph>=0.2.0",
         "langchain-anthropic>=0.3.0",
         "langchain-openai>=0.2.0",
