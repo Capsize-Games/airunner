@@ -54,6 +54,15 @@ from airunner.components.nodegraph.gui.widgets.nodes import (
     PromptBuilderNode,
     SchedulerNode,
 )
+
+# Import LangGraph nodes
+from airunner.components.nodegraph.gui.widgets.nodes.langgraph import (
+    StateSchemaNode,
+    LLMCallNode,
+    RAGSearchNode,
+    ToolCallNode,
+    ConditionalBranchNode,
+)
 from airunner.vendor.nodegraphqt.widgets.debounced_viewer import (
     DebouncedNodeViewer,
 )
@@ -483,6 +492,12 @@ class NodeGraphWidget(BaseWidget):
             SchedulerNode,
             PrintNode,
             VariableGetterNode,
+            # LangGraph nodes
+            StateSchemaNode,
+            LLMCallNode,
+            RAGSearchNode,
+            ToolCallNode,
+            ConditionalBranchNode,
         ]:
             self.graph.register_node(node_cls)
 
