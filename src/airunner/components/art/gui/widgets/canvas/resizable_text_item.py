@@ -11,7 +11,10 @@ from PySide6.QtWidgets import (
 )
 
 from airunner.enums import CanvasToolName
-from airunner.utils.application.snap_to_grid import snap_to_grid
+from airunner.components.art.utils.canvas_position_manager import (
+    CanvasPositionManager,
+    ViewState,
+)
 
 if TYPE_CHECKING:
     from airunner.components.art.gui.widgets.canvas.custom_view import (
@@ -332,26 +335,25 @@ class ResizableTextItem(QGraphicsRectItem):
         if not grid or not getattr(grid, "snap_to_grid", False):
             return left, right, top, bottom
 
+        manager = CanvasPositionManager()
         offset_x = self._view.canvas_offset_x
         offset_y = self._view.canvas_offset_y
 
         if "left" in edges or "top" in edges:
-            snapped_left, snapped_top = snap_to_grid(
-                grid, left + offset_x, top + offset_y, False
-            )
+            abs_pos = QPointF(left + offset_x, top + offset_y)
+            snapped = manager.snap_to_grid(abs_pos, grid.cell_size)
             if "left" in edges:
-                left = snapped_left - offset_x
+                left = snapped.x() - offset_x
             if "top" in edges:
-                top = snapped_top - offset_y
+                top = snapped.y() - offset_y
 
         if "right" in edges or "bottom" in edges:
-            snapped_right, snapped_bottom = snap_to_grid(
-                grid, right + offset_x, bottom + offset_y, False
-            )
+            abs_pos = QPointF(right + offset_x, bottom + offset_y)
+            snapped = manager.snap_to_grid(abs_pos, grid.cell_size)
             if "right" in edges:
-                right = snapped_right - offset_x
+                right = snapped.x() - offset_x
             if "bottom" in edges:
-                bottom = snapped_bottom - offset_y
+                bottom = snapped.y() - offset_y
 
         return left, right, top, bottom
 
@@ -441,10 +443,13 @@ class ResizableTextItem(QGraphicsRectItem):
         if not grid or not getattr(grid, "snap_to_grid", False):
             return value
 
-        abs_x = value.x() + self._view.canvas_offset_x
-        abs_y = value.y() + self._view.canvas_offset_y
-        snapped_x, snapped_y = snap_to_grid(grid, abs_x, abs_y, False)
+        manager = CanvasPositionManager()
+        abs_pos = QPointF(
+            value.x() + self._view.canvas_offset_x,
+            value.y() + self._view.canvas_offset_y,
+        )
+        snapped = manager.snap_to_grid(abs_pos, grid.cell_size)
         return QPointF(
-            snapped_x - self._view.canvas_offset_x,
-            snapped_y - self._view.canvas_offset_y,
+            snapped.x() - self._view.canvas_offset_x,
+            snapped.y() - self._view.canvas_offset_y,
         )

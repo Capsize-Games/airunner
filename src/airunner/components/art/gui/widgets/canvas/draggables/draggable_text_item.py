@@ -7,7 +7,10 @@ from PySide6.QtWidgets import (
     QMenu,
 )
 from airunner.enums import CanvasToolName
-from airunner.utils.application.snap_to_grid import snap_to_grid
+from airunner.components.art.utils.canvas_position_manager import (
+    CanvasPositionManager,
+    ViewState,
+)
 
 
 class DraggableTextItem(QGraphicsTextItem):
@@ -76,24 +79,34 @@ class DraggableTextItem(QGraphicsTextItem):
 
         if self.initial_mouse_scene_pos is not None:
             delta = event.scenePos() - self.initial_mouse_scene_pos
-            proposed_abs_x = self.initial_item_abs_pos.x() + delta.x()
-            proposed_abs_y = self.initial_item_abs_pos.y() + delta.y()
+            proposed_abs_pos = self.initial_item_abs_pos + delta
+
+            # Get view state
+            view_state = ViewState(
+                canvas_offset=self._view.canvas_offset,
+                grid_compensation=getattr(
+                    self._view, "grid_compensation_offset", QPointF(0, 0)
+                ),
+            )
+
+            manager = CanvasPositionManager()
 
             # Snap to grid if enabled
             if self._view.grid_settings.snap_to_grid:
-                snapped_abs_x, snapped_abs_y = snap_to_grid(
-                    self._view.grid_settings, proposed_abs_x, proposed_abs_y
+                snapped_abs_pos = manager.snap_to_grid(
+                    proposed_abs_pos, self._view.grid_settings.cell_size
                 )
             else:
-                snapped_abs_x, snapped_abs_y = proposed_abs_x, proposed_abs_y
+                snapped_abs_pos = proposed_abs_pos
 
-            canvas_offset = self._view.canvas_offset
-            display_x = snapped_abs_x - canvas_offset.x()
-            display_y = snapped_abs_y - canvas_offset.y()
-            self.setPos(display_x, display_y)
+            # Convert to display position
+            display_pos = manager.absolute_to_display(
+                snapped_abs_pos, view_state
+            )
+            self.setPos(display_pos)
             self._current_snapped_pos = (
-                int(snapped_abs_x),
-                int(snapped_abs_y),
+                int(snapped_abs_pos.x()),
+                int(snapped_abs_pos.y()),
             )
             event.accept()
         else:

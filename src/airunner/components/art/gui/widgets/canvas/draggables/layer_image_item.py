@@ -2,7 +2,10 @@ from typing import Optional, Dict
 from PySide6.QtWidgets import QGraphicsItem
 from PySide6.QtCore import Qt, QPointF
 from airunner.enums import CanvasToolName
-from airunner.utils.application.snap_to_grid import snap_to_grid
+from airunner.components.art.utils.canvas_position_manager import (
+    CanvasPositionManager,
+    ViewState,
+)
 from airunner.components.art.gui.widgets.canvas.draggables.draggable_pixmap import (
     DraggablePixmap,
 )
@@ -67,175 +70,177 @@ class LayerImageItem(DraggablePixmap):
                 )
 
     def mousePressEvent(self, event):
-        if self.current_tool not in [
-            CanvasToolName.MOVE,
-        ]:
+        if self.current_tool not in [CanvasToolName.MOVE]:
             super().mousePressEvent(event)
             return
-        # Handle drag initiation similar to ActiveGridArea
-        if event.button() == Qt.MouseButton.LeftButton:
-            # Store the initial scene position of the mouse
-            self.initial_mouse_scene_pos = event.scenePos()
 
-            # Store current absolute position
-            abs_x = self.drawing_pad_settings.x_pos
-            abs_y = self.drawing_pad_settings.y_pos
-            if abs_x is None:
-                abs_x = 0
-            if abs_y is None:
-                abs_y = 0
-            self.initial_item_abs_pos = QPointF(abs_x, abs_y)
+        view = self.scene().views()[0]
 
-            # Begin a history transaction for this layer's position change
+        if hasattr(self.scene(), "is_dragging"):
+            self.scene().is_dragging = True
+
+        # Create ViewState from view
+        view_state = ViewState(
+            canvas_offset=QPointF(
+                getattr(view, "canvas_offset_x", 0.0),
+                getattr(view, "canvas_offset_y", 0.0),
+            ),
+            grid_compensation=QPointF(
+                getattr(view, "grid_compensation_x", 0.0),
+                getattr(view, "grid_compensation_y", 0.0),
+            ),
+        )
+
+        # Use manager to convert display position to absolute position
+        manager = CanvasPositionManager()
+        self.drag_start_abs_pos = manager.display_to_absolute(
+            self.pos(), view_state
+        )
+        self.drag_start_mouse_pos = event.scenePos()
+
+        event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self.current_tool not in [CanvasToolName.MOVE]:
+            super().mouseMoveEvent(event)
+            return
+
+        view = self.scene().views()[0]
+
+        # Create ViewState from view
+        view_state = ViewState(
+            canvas_offset=QPointF(
+                getattr(view, "canvas_offset_x", 0.0),
+                getattr(view, "canvas_offset_y", 0.0),
+            ),
+            grid_compensation=QPointF(
+                getattr(view, "grid_compensation_x", 0.0),
+                getattr(view, "grid_compensation_y", 0.0),
+            ),
+        )
+
+        # Use manager to calculate drag position
+        manager = CanvasPositionManager()
+        mouse_delta = event.scenePos() - self.drag_start_mouse_pos
+
+        # Enable snap-to-grid during drag if enabled
+        snap_enabled = self.grid_settings.snap_to_grid
+        cell_size = self.grid_settings.cell_size if snap_enabled else 0
+        center_pos = getattr(view, "center_pos", QPointF(0, 0))
+
+        _, new_display_pos = manager.calculate_drag_position(
+            self.drag_start_abs_pos,
+            mouse_delta,
+            view_state,
+            snap_enabled=snap_enabled,
+            cell_size=cell_size,
+            grid_origin=center_pos,
+        )
+
+        self.setPos(new_display_pos)
+        event.accept()
+
+    def mouseReleaseEvent(self, event):
+        if self.current_tool not in [CanvasToolName.MOVE]:
+            super().mouseReleaseEvent(event)
+            return
+
+        view = self.scene().views()[0]
+
+        # Create ViewState from view
+        view_state = ViewState(
+            canvas_offset=QPointF(
+                getattr(view, "canvas_offset_x", 0.0),
+                getattr(view, "canvas_offset_y", 0.0),
+            ),
+            grid_compensation=QPointF(
+                getattr(view, "grid_compensation_x", 0.0),
+                getattr(view, "grid_compensation_y", 0.0),
+            ),
+        )
+
+        manager = CanvasPositionManager()
+
+        # Convert current display position to absolute position
+        abs_pos = manager.display_to_absolute(self.pos(), view_state)
+
+        # Snap to grid in absolute space if enabled
+        if self.grid_settings.snap_to_grid:
+            center_pos = getattr(view, "center_pos", QPointF(0, 0))
+            abs_pos = manager.snap_to_grid(
+                abs_pos, self.grid_settings.cell_size, grid_origin=center_pos
+            )
+
+            # Update display position to snapped absolute position
+            display_pos = manager.absolute_to_display(abs_pos, view_state)
+            self.setPos(display_pos)
+
+        # Save the absolute position to database
+        self.save_position(abs_pos)
+
+        event.accept()
+
+        # Clear drag flag after a longer delay to ensure ALL signal processing completes
+        # Database updates can trigger multiple cascading signals
+        from PySide6.QtCore import QTimer
+
+        QTimer.singleShot(
+            500,  # Increased to 500ms to ensure signals are fully processed
+            lambda: (
+                setattr(self.scene(), "is_dragging", False)
+                if hasattr(self.scene(), "is_dragging")
+                else None
+            ),
+        )
+
+    def save_position(self, abs_pos: QPointF):
+        """Save the absolute position to database."""
+        # Only save if position changed
+        if (
+            int(abs_pos.x()) != self.drawing_pad_settings.x_pos
+            or int(abs_pos.y()) != self.drawing_pad_settings.y_pos
+        ):
+            # Update settings with new position
+            self.update_drawing_pad_settings(
+                x_pos=int(abs_pos.x()),
+                y_pos=int(abs_pos.y()),
+                layer_id=self.layer_id,
+            )
+
+            # Update layer image data
+            self.layer_image_data["pos_x"] = int(abs_pos.x())
+            self.layer_image_data["pos_y"] = int(abs_pos.y())
+
+            # Update scene's position tracking
+            try:
+                scene = self.scene()
+                if scene and hasattr(scene, "original_item_positions"):
+                    scene.original_item_positions[self] = abs_pos
+            except (AttributeError, IndexError):
+                pass
+
+            # NOTE: Don't call image_updated() here as it triggers
+            # a full refresh that repositions everything, causing snap-back
+            # self.api.art.canvas.image_updated()
+
+            # Commit history transaction
             try:
                 scene = self.scene()
                 if scene and hasattr(
-                    scene, "_begin_layer_history_transaction"
+                    scene, "_commit_layer_history_transaction"
                 ):
-                    scene._begin_layer_history_transaction(  # type: ignore[attr-defined]
+                    scene._commit_layer_history_transaction(
                         self.layer_id, "position"
                     )
             except Exception:
                 pass
-
-            # Store item-relative position for release check
-            self.mouse_press_pos = event.pos()
-            event.accept()
         else:
-            # Not dragging this item, let base class handle
-            super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self.current_tool not in [
-            CanvasToolName.MOVE,
-        ]:
-            super().mouseMoveEvent(event)
-            return
-        # Only do the complex drag calculations if we're actually dragging
-        if self.initial_mouse_scene_pos is not None:
-            # Calculate delta from initial press in scene coordinates
-            delta = event.scenePos() - self.initial_mouse_scene_pos
-
-            # Calculate new proposed absolute position
-            proposed_abs_x = self.initial_item_abs_pos.x() + delta.x()
-            proposed_abs_y = self.initial_item_abs_pos.y() + delta.y()
-
-            # Apply grid snapping if enabled
-            if self.grid_settings.snap_to_grid:
-                snapped_abs_x, snapped_abs_y = snap_to_grid(
-                    self.grid_settings, proposed_abs_x, proposed_abs_y
-                )
-            else:
-                snapped_abs_x, snapped_abs_y = proposed_abs_x, proposed_abs_y
-
-            # Get canvas offset just like ActiveGridArea
+            # Cancel history transaction if no change
             try:
-                view = self.scene().views()[0]
-                canvas_offset = view.canvas_offset
-            except (AttributeError, IndexError):
-                canvas_offset = QPointF(0, 0)
-
-            # Set visual position directly for smooth performance
-            display_x = snapped_abs_x - canvas_offset.x()
-            display_y = snapped_abs_y - canvas_offset.y()
-            self.setPos(display_x, display_y)
-
-            # Store current snapped position for release handler to use
-            self._current_snapped_pos = (
-                int(snapped_abs_x),
-                int(snapped_abs_y),
-            )
-
-            # Accept the event to prevent further processing
-            event.accept()
-        else:
-            # Fast path for non-drag mouse moves - just call superclass
-            # and don't do any unnecessary calculations
-            super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if self.current_tool not in [
-            CanvasToolName.MOVE,
-        ]:
-            super().mouseReleaseEvent(event)
-            return
-        if self.initial_mouse_scene_pos is not None:
-            # Check if the item has actually moved
-            has_moved = False
-            if self.mouse_press_pos:
-                has_moved = (
-                    self.mouse_press_pos.x() != event.pos().x()
-                    or self.mouse_press_pos.y() != event.pos().y()
-                )
-
-            # Reset drag tracking
-            self.initial_mouse_scene_pos = None
-            self.initial_item_abs_pos = None
-            self.mouse_press_pos = None
-
-            # Save the new position if moved
-            if has_moved:
-                # Save the snapped absolute position
-                if (
-                    int(self._current_snapped_pos[0])
-                    != self.drawing_pad_settings.x_pos
-                    or int(self._current_snapped_pos[1])
-                    != self.drawing_pad_settings.y_pos
+                scene = self.scene()
+                if scene and hasattr(
+                    scene, "_cancel_layer_history_transaction"
                 ):
-                    # Update settings with new position
-                    self.update_drawing_pad_settings(
-                        x_pos=int(self._current_snapped_pos[0]),
-                        y_pos=int(self._current_snapped_pos[1]),
-                        layer_id=self.layer_id,
-                    )
-
-                    # Update layer image data
-                    self.layer_image_data["pos_x"] = int(
-                        self._current_snapped_pos[0]
-                    )
-                    self.layer_image_data["pos_y"] = int(
-                        self._current_snapped_pos[1]
-                    )
-
-                    # Critical fix: Update scene's position tracking
-                    try:
-                        scene = self.scene()
-                        if scene and hasattr(scene, "original_item_positions"):
-                            # Update the scene's tracked position for this item
-                            scene.original_item_positions[self] = QPointF(
-                                int(self._current_snapped_pos[0]),
-                                int(self._current_snapped_pos[1]),
-                            )
-                    except (AttributeError, IndexError):
-                        pass
-
-                    # Signal image updated
-                    self.api.art.canvas.image_updated()
-
-                    try:
-                        scene = self.scene()
-                        if scene and hasattr(
-                            scene, "_commit_layer_history_transaction"
-                        ):
-                            scene._commit_layer_history_transaction(  # type: ignore[attr-defined]
-                                self.layer_id, "position"
-                            )
-                    except Exception:
-                        pass
-            else:
-                try:
-                    scene = self.scene()
-                    if scene and hasattr(
-                        scene, "_cancel_layer_history_transaction"
-                    ):
-                        scene._cancel_layer_history_transaction(  # type: ignore[attr-defined]
-                            self.layer_id
-                        )
-                except Exception:
-                    pass
-
-            # Accept the event
-            event.accept()
-        else:
-            # Let the base class handle it
-            super().mouseReleaseEvent(event)
+                    scene._cancel_layer_history_transaction(self.layer_id)
+            except Exception:
+                pass
