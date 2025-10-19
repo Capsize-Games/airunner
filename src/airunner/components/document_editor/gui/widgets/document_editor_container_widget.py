@@ -7,7 +7,6 @@ Provides a place to host the DocumentEditorWidget and manage document-level acti
 """
 
 from typing import Dict
-import logging
 from airunner.components.document_editor.gui.templates.document_editor_container_ui import (
     Ui_document_editor_container,
 )

@@ -206,9 +206,9 @@ class SettingsMixin:
 
     @property
     def user_web_dir(self) -> str:
-        """Return the user web directory."""
+        """Return the user code directory."""
         return os.path.join(
-            os.path.expanduser(self.path_settings.base_path), "web"
+            os.path.expanduser(self.path_settings.base_path), "code"
         )
 
     @property
