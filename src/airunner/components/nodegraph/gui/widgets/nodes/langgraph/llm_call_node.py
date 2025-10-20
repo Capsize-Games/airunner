@@ -39,7 +39,7 @@ class LLMCallNode(BaseLangGraphNode):
         dict(
             name="temperature",
             value=0.7,
-            widget_type=NodePropWidgetEnum.QDOUBLE_SPIN_BOX,
+            widget_type=NodePropWidgetEnum.QDOUBLESPIN_BOX,
             range=(0.0, 2.0),
             tab="parameters",
         ),

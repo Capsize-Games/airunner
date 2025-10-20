@@ -10,10 +10,6 @@ from llama_index.core.tools.types import (
     ToolMetadata,
     ToolOutput,
 )
-from llama_index.core.langchain_helpers.agents.tools import (
-    IndexToolConfig,
-    LlamaIndexTool,
-)
 
 from airunner.components.llm.managers.agent.chat_engine import ReactAgentEngine
 from airunner.components.llm.managers.agent.chat_engine import (
@@ -181,14 +177,6 @@ class ChatEngineTool(
 
     async def acall(self, *args, **kwargs):
         pass
-
-    def as_langchain_tool(self) -> "LlamaIndexTool":
-        tool_config = IndexToolConfig(
-            chat_engine=self.chat_engine,
-            name=self.metadata.name,
-            description=self.metadata.description,
-        )
-        return LlamaIndexTool.from_tool_config(tool_config=tool_config)
 
     def _get_query_str(self, *args: Any, **kwargs: Any) -> str:
         if args is not None and len(args) > 0:
