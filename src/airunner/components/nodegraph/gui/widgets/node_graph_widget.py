@@ -119,9 +119,8 @@ class NodeGraphWidget(BaseWidget):
         )
         # Copy over necessary properties from the original viewer
         original_viewer = self.graph._viewer
-        debounced_viewer.set_zoom(
-            int(self.application_settings.nodegraph_zoom)
-        )
+        # Don't set initial zoom here - it will be restored from per-mode state
+        # after _load_persistent_state() and _initialize_mode_combobox()
         debounced_viewer.set_pipe_layout(original_viewer.get_pipe_layout())
         debounced_viewer.set_layout_direction(
             original_viewer.get_layout_direction()
@@ -151,6 +150,8 @@ class NodeGraphWidget(BaseWidget):
         self._langgraph_pan = (0, 0)
         # Flag to prevent state saving during mode switches
         self._switching_mode = False
+        # Flag to prevent state saving while we are replaying zoom/pan
+        self._restoring_state = False
 
         self._register_nodes()
         self._load_persistent_state()
@@ -344,6 +345,10 @@ class NodeGraphWidget(BaseWidget):
         else:
             pan = (0, 0)
 
+        self.logger.info(
+            f"[_serialize_graph_state] Capturing - zoom={zoom}, pan={pan}"
+        )
+
         state = {
             "nodes": [],
             "connections": [],
@@ -449,7 +454,8 @@ class NodeGraphWidget(BaseWidget):
 
         self.graph.undo_stack().clear()
 
-        # Restore zoom and pan with a slight delay to ensure viewer is ready
+        # Restore zoom and pan with multiple delayed passes to override any
+        # late layout adjustments (centering, auto-fit, etc.).
         viewer = getattr(self.graph, "_viewer", None)
         if viewer:
             zoom = float(state.get("zoom", 1.0))
@@ -460,35 +466,61 @@ class NodeGraphWidget(BaseWidget):
                 else (0, 0)
             )
 
-            def apply_view_state():
-                try:
-                    # Use set_zoom_absolute for absolute zoom value, not delta
-                    if hasattr(viewer, "set_zoom_absolute"):
-                        viewer.set_zoom_absolute(zoom)
-                    else:
-                        viewer.set_zoom(zoom)
-
-                    # Set pan by calculating delta from current center to target center
-                    if hasattr(viewer, "scene_center") and hasattr(
-                        viewer, "_set_viewer_pan"
-                    ):
-                        current_center = viewer.scene_center()
-                        delta_x = pan[0] - current_center[0]
-                        delta_y = pan[1] - current_center[1]
-                        viewer._set_viewer_pan(delta_x, delta_y)
-                    else:
-                        viewer.pan = pan
-
-                    self.logger.info(
-                        f"Applied view state: zoom={zoom}, pan={pan}"
-                    )
-                except Exception as e:
-                    self.logger.error(f"Error applying view state: {e}")
-
-            # Delay to ensure viewer is fully initialized
-            QtCore.QTimer.singleShot(100, apply_view_state)
+            self._restoring_state = True
+            for delay in (50, 250, 600):
+                QtCore.QTimer.singleShot(
+                    delay,
+                    lambda d=delay: self._apply_view_state_snapshot(
+                        viewer, zoom, pan, d
+                    ),
+                )
+            # Allow debounced zoom/pan signals to fire, then re-enable saves
+            QtCore.QTimer.singleShot(
+                1500, lambda: setattr(self, "_restoring_state", False)
+            )
 
         self.logger.info("Graph state restored successfully")
+
+    def _apply_view_state_snapshot(
+        self,
+        viewer: DebouncedNodeViewer,
+        zoom: float,
+        pan: Tuple[float, float],
+        delay_ms: int,
+    ) -> None:
+        """Apply zoom/pan and log result (used for delayed replays)."""
+
+        if not viewer:
+            return
+
+        try:
+            self.logger.info(
+                f"[apply_view_state @+{delay_ms}ms] target_zoom={zoom}, target_pan={pan}, current_zoom={viewer.get_zoom()}"
+            )
+
+            if hasattr(viewer, "set_zoom_absolute"):
+                viewer.set_zoom_absolute(zoom)
+            else:
+                viewer.set_zoom(zoom)
+
+            if hasattr(viewer, "scene_center") and hasattr(
+                viewer, "_set_viewer_pan"
+            ):
+                current_center = viewer.scene_center()
+                delta_x = pan[0] - current_center[0]
+                delta_y = pan[1] - current_center[1]
+                viewer._set_viewer_pan(delta_x, delta_y)
+            else:
+                viewer.pan = pan
+
+            self.logger.info(
+                f"[apply_view_state @+{delay_ms}ms] final_zoom={viewer.get_zoom()}"
+            )
+        except Exception as exc:
+            self.logger.error(
+                f"Error applying view state at +{delay_ms}ms: {exc}",
+                exc_info=True,
+            )
 
     def _load_persistent_state(self):
         """Load graph states from QSettings on initialization."""
@@ -499,7 +531,9 @@ class NodeGraphWidget(BaseWidget):
             )
             if airunner_state_str:
                 self._airunner_graph_state = json.loads(airunner_state_str)
-                self.logger.info("Loaded AI Runner graph state from QSettings")
+                self.logger.info(
+                    f"Loaded AI Runner graph state from QSettings - zoom={self._airunner_graph_state.get('zoom')}, pan={self._airunner_graph_state.get('pan')}"
+                )
 
             # Load LangGraph state
             langgraph_state_str = self.q_settings.value(
@@ -507,7 +541,9 @@ class NodeGraphWidget(BaseWidget):
             )
             if langgraph_state_str:
                 self._langgraph_graph_state = json.loads(langgraph_state_str)
-                self.logger.info("Loaded LangGraph state from QSettings")
+                self.logger.info(
+                    f"Loaded LangGraph state from QSettings - zoom={self._langgraph_graph_state.get('zoom')}, pan={self._langgraph_graph_state.get('pan')}"
+                )
         except Exception as e:
             self.logger.error(f"Error loading persistent state: {e}")
 
@@ -2095,8 +2131,10 @@ class NodeGraphWidget(BaseWidget):
 
     def _save_state(self):
         """Save zoom/pan state. In dual-mode system, this updates the current mode's state."""
-        # Don't save state during mode switches
-        if getattr(self, "_switching_mode", False):
+        # Don't save state during mode switches or state restoration
+        if getattr(self, "_switching_mode", False) or getattr(
+            self, "_restoring_state", False
+        ):
             return
 
         viewer = getattr(self.graph, "_viewer", None)
