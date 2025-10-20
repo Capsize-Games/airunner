@@ -87,10 +87,14 @@ from airunner.components.nodegraph.gui.widgets.nodes.art.prompt_builder_node imp
 from airunner.components.nodegraph.gui.widgets.nodes.art.scheduler_node import (
     SchedulerNode,
 )
+from airunner.components.nodegraph.gui.widgets.nodes.agents.agent_node import (
+    AgentNode,
+)
 
 
 __all__ = [
     "AgentActionNode",
+    "AgentNode",
     "BaseWorkflowNode",
     "ForEachLoopNode",
     "ForLoopNode",
@@ -120,4 +124,5 @@ __all__ = [
     # "Gemma3Node",
     "PromptBuilderNode",
     "SchedulerNode",
+    "AgentNode",
 ]

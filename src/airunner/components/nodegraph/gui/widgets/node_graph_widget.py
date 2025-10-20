@@ -27,6 +27,7 @@ from PySide6 import QtCore
 from airunner.enums import SignalCode
 from airunner.components.nodegraph.gui.widgets.nodes import (
     AgentActionNode,
+    AgentNode,
     BaseWorkflowNode,
     TextboxNode,
     RandomNumberNode,
@@ -135,8 +136,15 @@ class NodeGraphWidget(BaseWidget):
         self._pending_nodes = {}
         self._nodes_palette: Optional[NodesPaletteWidget] = None
         self.node_graph_worker = create_worker(NodeGraphWorker)
+
+        # Mode management: "airunner" or "langgraph"
+        self._current_mode = None
+        self._airunner_workflow_id = None
+        self._langgraph_workflow_id = None
+
         self._register_nodes()
         self._initialize_context_menu()
+        self._initialize_mode_combobox()
         self._register_graph()
 
         if self.current_workflow_id is not None:
@@ -209,6 +217,88 @@ class NodeGraphWidget(BaseWidget):
     @Slot()
     def on_clear_button_clicked(self):
         self.clear_graph()
+
+    def _initialize_mode_combobox(self):
+        """Initialize the mode combobox with AI Runner Graph and LangGraph options."""
+        self.ui.mode_combobox.addItem("AI Runner Graph", "airunner")
+        self.ui.mode_combobox.addItem("LangGraph", "langgraph")
+
+        # Load saved mode from QSettings
+        saved_mode = self.q_settings.value("nodegraph_mode", "airunner")
+        index = self.ui.mode_combobox.findData(saved_mode)
+        if index >= 0:
+            self.ui.mode_combobox.setCurrentIndex(index)
+
+        # Connect signal
+        self.ui.mode_combobox.currentIndexChanged.connect(
+            self._on_mode_changed
+        )
+
+        # Set initial mode
+        self._on_mode_changed(self.ui.mode_combobox.currentIndex())
+
+    @Slot(int)
+    def _on_mode_changed(self, index: int):
+        """Handle mode change between AI Runner Graph and LangGraph."""
+        mode = self.ui.mode_combobox.itemData(index)
+        if mode == self._current_mode:
+            return
+
+        self.logger.info(f"Switching nodegraph mode to: {mode}")
+
+        # Save current workflow state before switching
+        if self._current_mode == "airunner":
+            self._airunner_workflow_id = self.current_workflow_id
+        elif self._current_mode == "langgraph":
+            self._langgraph_workflow_id = self.current_workflow_id
+
+        # Update mode
+        self._current_mode = mode
+        self.q_settings.setValue("nodegraph_mode", mode)
+        self.q_settings.sync()
+
+        # Filter node palette tabs based on mode
+        self._filter_palette_by_mode(mode)
+
+        # Load workflow for new mode
+        if mode == "airunner":
+            if self._airunner_workflow_id:
+                self._perform_load(self._airunner_workflow_id)
+            else:
+                self.clear_graph()
+        elif mode == "langgraph":
+            if self._langgraph_workflow_id:
+                self._perform_load(self._langgraph_workflow_id)
+            else:
+                self.clear_graph()
+
+    def _filter_palette_by_mode(self, mode: str):
+        """Show/hide palette tabs based on the current mode."""
+        if not self._nodes_palette:
+            return
+
+        tab_widget = self._nodes_palette._tab_widget
+
+        for i in range(tab_widget.count()):
+            tab_text = tab_widget.tabText(i)
+            category = None
+
+            # Find the category for this tab
+            for cat, widget in self._nodes_palette._category_tabs.items():
+                if tab_widget.widget(i) == widget:
+                    category = cat
+                    break
+
+            if category:
+                # LangGraph nodes use the "airunner.langgraph" identifier
+                is_langgraph_tab = "langgraph" in category.lower()
+
+                if mode == "langgraph":
+                    # In LangGraph mode, only show LangGraph tabs
+                    tab_widget.setTabVisible(i, is_langgraph_tab)
+                else:  # airunner mode
+                    # In AI Runner mode, hide LangGraph tabs, show everything else
+                    tab_widget.setTabVisible(i, not is_langgraph_tab)
 
     def start_progress_bar(self):
         self.ui.progressBar.setRange(0, 0)
@@ -500,6 +590,78 @@ class NodeGraphWidget(BaseWidget):
             ConditionalBranchNode,
         ]:
             self.graph.register_node(node_cls)
+
+        # Register saved LangGraph workflows as Agent nodes
+        self._register_agent_nodes()
+
+    def _register_agent_nodes(self):
+        """Register saved LangGraph workflows as executable Agent nodes.
+
+        This method queries the database for LangGraph workflows and creates
+        a dynamically-generated AgentNode class for each one, allowing them
+        to be used as nodes in AI Runner workflows.
+        """
+        try:
+            # Query for LangGraph workflows (those with mode='langgraph')
+            # TODO: Add a 'mode' field to Workflow model to distinguish
+            # For now, we'll use a naming convention or metadata
+            langgraph_workflows = (
+                []
+            )  # Workflow.objects.filter_by(mode='langgraph')
+
+            for workflow in langgraph_workflows:
+                # Create a dynamic node class for this agent
+                self._create_agent_node_class(
+                    workflow_id=workflow.id,
+                    workflow_name=workflow.name,
+                    description=workflow.description or "",
+                    # TODO: Extract inputs/outputs from workflow nodes
+                    inputs={},
+                    outputs={},
+                )
+
+            self.logger.info(
+                f"Registered {len(langgraph_workflows)} agent nodes"
+            )
+        except Exception as e:
+            self.logger.warning(f"Could not register agent nodes: {e}")
+
+    def _create_agent_node_class(
+        self,
+        workflow_id: int,
+        workflow_name: str,
+        description: str,
+        inputs: Dict[str, str],
+        outputs: Dict[str, str],
+    ):
+        """Create and register a dynamic AgentNode class for a LangGraph workflow.
+
+        Args:
+            workflow_id: ID of the LangGraph workflow
+            workflow_name: Display name for the node
+            description: Workflow description
+            inputs: Dict of input port names to types
+            outputs: Dict of output port names to types
+        """
+        # Create a unique class name based on workflow name
+        safe_name = "".join(c if c.isalnum() else "_" for c in workflow_name)
+        class_name = f"Agent_{safe_name}_{workflow_id}"
+
+        # Create a new class dynamically that inherits from AgentNode
+        node_class = type(
+            class_name,
+            (AgentNode,),
+            {
+                "NODE_NAME": workflow_name,
+                "__identifier__": f"airunner.agents",
+                "_workflow_id": workflow_id,
+                "_workflow_description": description,
+            },
+        )
+
+        # Register the node class
+        self.graph.register_node(node_class)
+        self.logger.info(f"Registered agent node: {workflow_name}")
 
     def _register_graph(self):
         if not self.api or not hasattr(self.api, "nodegraph"):
