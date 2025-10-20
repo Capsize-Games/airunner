@@ -1961,6 +1961,19 @@ class NodeGraphWidget(BaseWidget):
 
     def _reset_zoom_level(self):
         """Reset the nodegraph view zoom to default (100%)."""
+        # Skip reset if per-mode state will handle zoom restoration
+        if self._current_mode and (
+            (self._current_mode == "airunner" and self._airunner_graph_state)
+            or (
+                self._current_mode == "langgraph"
+                and self._langgraph_graph_state
+            )
+        ):
+            self.logger.info(
+                "Skipping _reset_zoom_level - per-mode state will restore zoom"
+            )
+            return
+
         if hasattr(self.viewer, "set_zoom"):
             self.viewer.set_zoom(1.0)
         elif hasattr(self.viewer, "resetTransform"):

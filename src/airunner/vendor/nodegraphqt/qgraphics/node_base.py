@@ -662,10 +662,10 @@ class NodeItem(AbstractNodeItem):
         # update port text items in visibility.
         for port, text in self._input_items.items():
             if port.isVisible():
-                text.setVisible(port.display_name)
+                text.setVisible(bool(port.display_name))
         for port, text in self._output_items.items():
             if port.isVisible():
-                text.setVisible(port.display_name)
+                text.setVisible(bool(port.display_name))
 
         # setup initial base size.
         self._set_base_size(add_h=height)
