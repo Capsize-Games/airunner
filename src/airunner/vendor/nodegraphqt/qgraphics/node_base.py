@@ -926,7 +926,7 @@ class NodeItem(AbstractNodeItem):
         text = QtWidgets.QGraphicsTextItem(port.name, self)
         text.font().setPointSize(8)
         text.setFont(text.font())
-        text.setVisible(port.display_name)
+        text.setVisible(bool(port.display_name))
         text.setCacheMode(ITEM_CACHE_MODE)
         if port.port_type == PortTypeEnum.IN.value:
             self._input_items[port] = text

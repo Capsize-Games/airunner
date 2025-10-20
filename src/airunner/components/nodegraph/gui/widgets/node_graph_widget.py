@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import Dict, Tuple, Optional, List
+from typing import Dict, Tuple, Optional, List, Any
 
 from networkx.classes import nodes
 
@@ -141,8 +141,19 @@ class NodeGraphWidget(BaseWidget):
         self._current_mode = None
         self._airunner_workflow_id = None
         self._langgraph_workflow_id = None
+        # In-memory state storage for each mode
+        self._airunner_graph_state = None
+        self._langgraph_graph_state = None
+        # View state per mode (zoom and pan)
+        self._airunner_zoom = 1.0
+        self._langgraph_zoom = 1.0
+        self._airunner_pan = (0, 0)
+        self._langgraph_pan = (0, 0)
+        # Flag to prevent state saving during mode switches
+        self._switching_mode = False
 
         self._register_nodes()
+        self._load_persistent_state()
         self._initialize_context_menu()
         self._initialize_mode_combobox()
         self._register_graph()
@@ -246,11 +257,18 @@ class NodeGraphWidget(BaseWidget):
 
         self.logger.info(f"Switching nodegraph mode to: {mode}")
 
-        # Save current workflow state before switching
+        # Block state saving during the mode switch
+        self._switching_mode = True
+
+        # Serialize and save current graph state before switching
         if self._current_mode == "airunner":
+            self._airunner_graph_state = self._serialize_graph_state()
             self._airunner_workflow_id = self.current_workflow_id
+            self._save_persistent_state()
         elif self._current_mode == "langgraph":
+            self._langgraph_graph_state = self._serialize_graph_state()
             self._langgraph_workflow_id = self.current_workflow_id
+            self._save_persistent_state()
 
         # Update mode
         self._current_mode = mode
@@ -260,17 +278,26 @@ class NodeGraphWidget(BaseWidget):
         # Filter node palette tabs based on mode
         self._filter_palette_by_mode(mode)
 
-        # Load workflow for new mode
+        # Restore graph state for new mode
         if mode == "airunner":
-            if self._airunner_workflow_id:
+            if self._airunner_graph_state:
+                self._restore_graph_state(self._airunner_graph_state)
+            elif self._airunner_workflow_id:
                 self._perform_load(self._airunner_workflow_id)
             else:
                 self.clear_graph()
         elif mode == "langgraph":
-            if self._langgraph_workflow_id:
+            if self._langgraph_graph_state:
+                self._restore_graph_state(self._langgraph_graph_state)
+            elif self._langgraph_workflow_id:
                 self._perform_load(self._langgraph_workflow_id)
             else:
                 self.clear_graph()
+
+        # Re-enable state saving after a delay to allow restoration to complete
+        QtCore.QTimer.singleShot(
+            500, lambda: setattr(self, "_switching_mode", False)
+        )
 
     def _filter_palette_by_mode(self, mode: str):
         """Show/hide palette tabs based on the current mode."""
@@ -299,6 +326,212 @@ class NodeGraphWidget(BaseWidget):
                 else:  # airunner mode
                     # In AI Runner mode, hide LangGraph tabs, show everything else
                     tab_widget.setTabVisible(i, not is_langgraph_tab)
+
+    def _serialize_graph_state(self) -> Dict[str, Any]:
+        """Serialize the current graph state to a dictionary.
+
+        Returns:
+            Dictionary containing all nodes, connections, and their states
+        """
+        viewer = getattr(self.graph, "_viewer", None)
+        zoom = float(viewer.get_zoom()) if viewer else 1.0
+        # Save scene center position instead of pan property
+        if viewer and hasattr(viewer, "scene_center"):
+            center = viewer.scene_center()
+            pan = (
+                tuple(center) if isinstance(center, (list, tuple)) else (0, 0)
+            )
+        else:
+            pan = (0, 0)
+
+        state = {
+            "nodes": [],
+            "connections": [],
+            "workflow_id": self.current_workflow_id,
+            "zoom": zoom,
+            "pan": pan,
+        }
+
+        # Serialize all nodes
+        all_nodes = self.graph.all_nodes()
+        nodes_map = {}  # Map node instances to serialized IDs
+
+        for idx, node in enumerate(all_nodes):
+            node_id = f"node_{idx}"
+            nodes_map[node.id] = node_id
+
+            node_data = {
+                "id": node_id,
+                "graph_node_id": node.id,
+                "type": node.type_,
+                "name": node.name(),
+                "pos": node.pos(),
+                "properties": self._extract_node_properties(node),
+            }
+            state["nodes"].append(node_data)
+
+        # Serialize all connections
+        for node in all_nodes:
+            for out_port in node.outputs().values():
+                for in_port in out_port.connected_ports():
+                    connection_data = {
+                        "out_node_id": nodes_map.get(node.id),
+                        "out_port_name": out_port.name(),
+                        "in_node_id": nodes_map.get(in_port.node().id),
+                        "in_port_name": in_port.name(),
+                    }
+                    state["connections"].append(connection_data)
+
+        self.logger.info(
+            f"Serialized graph state: {len(state['nodes'])} nodes, "
+            f"{len(state['connections'])} connections"
+        )
+        return state
+
+    def _restore_graph_state(self, state: Dict[str, Any]):
+        """Restore the graph from a serialized state.
+
+        Args:
+            state: Dictionary containing nodes and connections
+        """
+        if not state:
+            self.logger.warning("No state to restore")
+            return
+
+        self.logger.info(
+            f"Restoring graph state: {len(state.get('nodes', []))} nodes, "
+            f"{len(state.get('connections', []))} connections"
+        )
+
+        # Clear current graph
+        self.graph.clear_session()
+
+        # Restore workflow ID
+        workflow_id = state.get("workflow_id")
+        if workflow_id:
+            self.current_workflow_id = workflow_id
+
+        # Restore nodes
+        node_map = {}  # Map serialized IDs to new node instances
+        for node_data in state.get("nodes", []):
+            try:
+                node_instance = self.graph.create_node(
+                    node_data["type"],
+                    name=node_data["name"],
+                    pos=node_data["pos"],
+                    push_undo=False,
+                )
+                if node_instance:
+                    node_map[node_data["id"]] = node_instance
+                    # Restore properties
+                    self._restore_node_properties(
+                        node_instance, node_data.get("properties", {})
+                    )
+            except Exception as e:
+                self.logger.error(
+                    f"Error restoring node {node_data.get('name')}: {e}"
+                )
+
+        # Restore connections
+        for conn_data in state.get("connections", []):
+            try:
+                out_node = node_map.get(conn_data["out_node_id"])
+                in_node = node_map.get(conn_data["in_node_id"])
+
+                if out_node and in_node:
+                    out_port = out_node.get_output(conn_data["out_port_name"])
+                    in_port = in_node.get_input(conn_data["in_port_name"])
+
+                    if out_port and in_port:
+                        out_port.connect_to(in_port)
+            except Exception as e:
+                self.logger.error(f"Error restoring connection: {e}")
+
+        self.graph.undo_stack().clear()
+
+        # Restore zoom and pan with a slight delay to ensure viewer is ready
+        viewer = getattr(self.graph, "_viewer", None)
+        if viewer:
+            zoom = float(state.get("zoom", 1.0))
+            pan_value = state.get("pan", (0, 0))
+            pan = (
+                tuple(pan_value)
+                if isinstance(pan_value, (list, tuple))
+                else (0, 0)
+            )
+
+            def apply_view_state():
+                try:
+                    # Use set_zoom_absolute for absolute zoom value, not delta
+                    if hasattr(viewer, "set_zoom_absolute"):
+                        viewer.set_zoom_absolute(zoom)
+                    else:
+                        viewer.set_zoom(zoom)
+
+                    # Set pan by calculating delta from current center to target center
+                    if hasattr(viewer, "scene_center") and hasattr(
+                        viewer, "_set_viewer_pan"
+                    ):
+                        current_center = viewer.scene_center()
+                        delta_x = pan[0] - current_center[0]
+                        delta_y = pan[1] - current_center[1]
+                        viewer._set_viewer_pan(delta_x, delta_y)
+                    else:
+                        viewer.pan = pan
+
+                    self.logger.info(
+                        f"Applied view state: zoom={zoom}, pan={pan}"
+                    )
+                except Exception as e:
+                    self.logger.error(f"Error applying view state: {e}")
+
+            # Delay to ensure viewer is fully initialized
+            QtCore.QTimer.singleShot(100, apply_view_state)
+
+        self.logger.info("Graph state restored successfully")
+
+    def _load_persistent_state(self):
+        """Load graph states from QSettings on initialization."""
+        try:
+            # Load AI Runner state
+            airunner_state_str = self.q_settings.value(
+                "nodegraph_airunner_state", None
+            )
+            if airunner_state_str:
+                self._airunner_graph_state = json.loads(airunner_state_str)
+                self.logger.info("Loaded AI Runner graph state from QSettings")
+
+            # Load LangGraph state
+            langgraph_state_str = self.q_settings.value(
+                "nodegraph_langgraph_state", None
+            )
+            if langgraph_state_str:
+                self._langgraph_graph_state = json.loads(langgraph_state_str)
+                self.logger.info("Loaded LangGraph state from QSettings")
+        except Exception as e:
+            self.logger.error(f"Error loading persistent state: {e}")
+
+    def _save_persistent_state(self):
+        """Save current graph states to QSettings."""
+        try:
+            # Save AI Runner state
+            if self._airunner_graph_state:
+                airunner_state_str = json.dumps(self._airunner_graph_state)
+                self.q_settings.setValue(
+                    "nodegraph_airunner_state", airunner_state_str
+                )
+
+            # Save LangGraph state
+            if self._langgraph_graph_state:
+                langgraph_state_str = json.dumps(self._langgraph_graph_state)
+                self.q_settings.setValue(
+                    "nodegraph_langgraph_state", langgraph_state_str
+                )
+
+            self.q_settings.sync()
+            self.logger.info("Saved graph states to QSettings")
+        except Exception as e:
+            self.logger.error(f"Error saving persistent state: {e}")
 
     def start_progress_bar(self):
         self.ui.progressBar.setRange(0, 0)
@@ -1861,23 +2094,74 @@ class NodeGraphWidget(BaseWidget):
             QtCore.QTimer.singleShot(0, self.restore_state)
 
     def _save_state(self):
+        """Save zoom/pan state. In dual-mode system, this updates the current mode's state."""
+        # Don't save state during mode switches
+        if getattr(self, "_switching_mode", False):
+            return
+
         viewer = getattr(self.graph, "_viewer", None)
-        # Save the actual scale (visual zoom) using get_zoom()
-        zoom_scale = viewer.get_zoom() if viewer else 1.0
-        canvas_offset = viewer.pan if viewer else (0, 0)
-        center_x = canvas_offset[0]
-        center_y = canvas_offset[1]
-        application_settings = self.application_settings
-        ApplicationSettings.objects.update(
-            pk=application_settings.id,
-            nodegraph_zoom=zoom_scale,
-            nodegraph_center_x=center_x,
-            nodegraph_center_y=center_y,
-        )
+        if not viewer:
+            return
+
+        # Get current zoom and scene center (pan)
+        zoom_scale = float(viewer.get_zoom())
+        if hasattr(viewer, "scene_center"):
+            center = viewer.scene_center()
+            canvas_offset = (
+                tuple(center) if isinstance(center, (list, tuple)) else (0, 0)
+            )
+        else:
+            canvas_offset = (0, 0)
+
+        # Update the current mode's graph state with new zoom/pan
+        if self._current_mode == "airunner":
+            if not self._airunner_graph_state:
+                self._airunner_graph_state = {
+                    "nodes": [],
+                    "connections": [],
+                    "workflow_id": self.current_workflow_id,
+                    "zoom": zoom_scale,
+                    "pan": canvas_offset,
+                }
+            else:
+                self._airunner_graph_state["zoom"] = zoom_scale
+                self._airunner_graph_state["pan"] = canvas_offset
+            self._save_persistent_state()
+        elif self._current_mode == "langgraph":
+            if not self._langgraph_graph_state:
+                self._langgraph_graph_state = {
+                    "nodes": [],
+                    "connections": [],
+                    "workflow_id": self.current_workflow_id,
+                    "zoom": zoom_scale,
+                    "pan": canvas_offset,
+                }
+            else:
+                self._langgraph_graph_state["zoom"] = zoom_scale
+                self._langgraph_graph_state["pan"] = canvas_offset
+            self._save_persistent_state()
 
     def _restore_nodegraph_state(self):
+        """Restore nodegraph zoom and pan from workflow or ApplicationSettings.
+
+        Note: This is skipped when dual-mode system has per-mode state.
+        """
         if self.initialized:
             return
+
+        # Skip if we're using per-mode state management
+        if self._current_mode and (
+            (self._current_mode == "airunner" and self._airunner_graph_state)
+            or (
+                self._current_mode == "langgraph"
+                and self._langgraph_graph_state
+            )
+        ):
+            self.logger.info(
+                "Skipping _restore_nodegraph_state - using per-mode state"
+            )
+            return
+
         self.initialized = True
         """Restore nodegraph zoom and pan (center) from workflow or ApplicationSettings after workflow load."""
         zoom = None
