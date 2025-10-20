@@ -13,7 +13,8 @@ from typing import (
 
 from llama_index.core.agent.react.formatter import ReActChatFormatter
 from llama_index.core.agent.react.output_parser import ReActOutputParser
-from llama_index.core.agent.react.step import ReActAgentWorker
+
+# Note: ReActAgentWorker not needed - we'll work with ReActAgent directly
 from llama_index.core.callbacks import (
     CallbackManager,
 )
@@ -31,54 +32,13 @@ from airunner.utils.application import get_logger
 ReActAgentMeta = type(ReActAgent)
 
 
-class CustomReActAgentWorker(ReActAgentWorker):
-    def __init__(
-        self,
-        tools: Sequence[BaseTool],
-        llm: LLM,
-        max_iterations: int = 10,
-        react_chat_formatter: Optional[ReActChatFormatter] = None,
-        output_parser: Optional[ReActOutputParser] = None,
-        callback_manager: Optional[CallbackManager] = None,
-        verbose: bool = False,
-        tool_retriever: Optional[ObjectRetriever[BaseTool]] = None,
-        handle_reasoning_failure_fn: Optional[
-            Callable[[CallbackManager, Exception], ToolOutput]
-        ] = None,
-    ) -> None:
-        self.tool_retriever = tool_retriever
-        super().__init__(
-            tools=tools,
-            llm=llm,
-            max_iterations=max_iterations,
-            react_chat_formatter=react_chat_formatter,
-            output_parser=output_parser,
-            callback_manager=callback_manager,
-            verbose=verbose,
-            tool_retriever=tool_retriever,
-            handle_reasoning_failure_fn=handle_reasoning_failure_fn,
-        )
-
-    def reinitialize_tools(
-        self,
-        tools: Optional[Union[list, tuple]] = None,
-        tool_retriever: Optional[ObjectRetriever[BaseTool]] = None,
-    ):
-        tool_retriever = tool_retriever or self.tool_retriever
-        if len(tools) > 0 and tool_retriever is not None:
-            raise ValueError("Cannot specify both tools and tool_retriever")
-        elif len(tools) > 0:
-            self._get_tools = lambda _: tools
-        elif tool_retriever is not None:
-            tool_retriever_c = cast(ObjectRetriever[BaseTool], tool_retriever)
-            self._get_tools = lambda message: tool_retriever_c.retrieve(
-                message
-            )
-        else:
-            self._get_tools = lambda _: []
-
-
 class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
+    """Custom ReActAgent with tool reinitialization support.
+
+    This extends the standard ReActAgent to allow dynamic tool updates
+    without needing the legacy ReActAgentWorker class.
+    """
+
     def __init__(
         self,
         tools: Sequence[BaseTool],
@@ -97,6 +57,8 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
     ) -> None:
         self._llm = llm
         self.logger = get_logger(__name__)
+        self._tool_retriever = tool_retriever
+
         """Init params."""
         callback_manager = callback_manager or llm.callback_manager
         if context and react_chat_formatter:
@@ -134,17 +96,26 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
             handle_reasoning_failure_fn=handle_reasoning_failure_fn,
         )
 
-        self.agent_worker = CustomReActAgentWorker.from_tools(
-            tools=tools,
-            tool_retriever=tool_retriever,
-            llm=llm,
-            max_iterations=max_iterations,
-            react_chat_formatter=react_chat_formatter,
-            output_parser=output_parser,
-            callback_manager=callback_manager,
-            verbose=verbose,
-            handle_reasoning_failure_fn=handle_reasoning_failure_fn,
-        )
+    def reinitialize_tools(
+        self,
+        tools: Optional[Union[list, tuple]] = None,
+        tool_retriever: Optional[ObjectRetriever[BaseTool]] = None,
+    ):
+        """Reinitialize the agent's tools dynamically.
+
+        Args:
+            tools: New list of tools to use
+            tool_retriever: New tool retriever to use
+        """
+        tool_retriever = tool_retriever or self._tool_retriever
+        if tools and len(tools) > 0 and tool_retriever is not None:
+            raise ValueError("Cannot specify both tools and tool_retriever")
+
+        # Update the internal tools
+        if tools and len(tools) > 0:
+            self._tools = list(tools)
+        elif tool_retriever is not None:
+            self._tool_retriever = tool_retriever
 
     @classmethod
     def from_tools(cls, *args, formatter=None, **kwargs):
@@ -176,8 +147,9 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
         self._memory = memory
 
     def _refresh_tools(self, tools: Optional[Union[list, tuple]] = None):
-        # BaseAgentWorker
-        self.agent_worker
+        """Refresh tools for the agent."""
+        if tools:
+            self.reinitialize_tools(tools=tools)
 
     def stream_chat(
         self,
@@ -253,9 +225,7 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                             yield ttoken
                         # Restore original tools and exit
                         if original_tools:
-                            self.agent_worker.reinitialize_tools(
-                                tools=original_tools
-                            )
+                            self.reinitialize_tools(tools=original_tools)
                         return
                     else:
                         content = getattr(tool_result, "content", None)
@@ -264,9 +234,7 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                         else:
                             yield str(tool_result)
                         if original_tools:
-                            self.agent_worker.reinitialize_tools(
-                                tools=original_tools
-                            )
+                            self.reinitialize_tools(tools=original_tools)
                         return
                 except Exception as e:
                     self.logger.error(
@@ -419,9 +387,7 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                             _ = target_tool(**fallback_args)
                             # cleanup and exit early
                             if original_tools:
-                                self.agent_worker.reinitialize_tools(
-                                    tools=original_tools
-                                )
+                                self.reinitialize_tools(tools=original_tools)
                             return
                         except Exception as e:
                             self.logger.error(
@@ -429,7 +395,7 @@ class ReactAgentEngine(ReActAgent, ABC, metaclass=ReActAgentMeta):
                             )
         # Always restore original tools list
         if tool_choice and original_tools:
-            self.agent_worker.reinitialize_tools(tools=original_tools)
+            self.reinitialize_tools(tools=original_tools)
 
     def update_system_prompt(self, system_prompt: str):
         """
