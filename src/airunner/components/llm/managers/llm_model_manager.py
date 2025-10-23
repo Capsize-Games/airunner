@@ -498,19 +498,11 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             self.logger.error("Tokenizer failed to load")
 
     def _load_model(self) -> None:
-        """
-        Load the LLM model for the selected version.
-
-        Sets self._model to the loaded model instance or None if loading fails.
-        Also attempts to load adapters if available.
-        """
-        # Skip if already loaded
+        """Load the LLM model and apply enabled adapters."""
         if self._model is not None:
             return
 
-        self.logger.debug(f"Loading local LLM model from {self.model_path}")
         try:
-            # Load the base model
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
@@ -520,100 +512,71 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 device_map=self.device,
                 attn_implementation=self.attn_implementation,
             )
-
-            if PeftModel is not None:
-                # Load enabled adapters from QSettings
-                try:
-                    qs = get_qsettings()
-                    enabled_adapters_json = qs.value(
-                        "llm_settings/enabled_adapters", "[]"
-                    )
-                    self.logger.info(
-                        f"Reading enabled adapters from QSettings: {enabled_adapters_json}"
-                    )
-                    enabled_adapter_names = json.loads(enabled_adapters_json)
-                    self.logger.info(
-                        f"Parsed enabled adapter names: {enabled_adapter_names}"
-                    )
-
-                    if enabled_adapter_names:
-                        # Query database for adapter paths
-                        adapters = FineTunedModel.objects.all()
-                        enabled_adapters = [
-                            a
-                            for a in adapters
-                            if a.name in enabled_adapter_names
-                        ]
-                        self.logger.info(
-                            f"Found {len(enabled_adapters)} adapters in database matching enabled names"
-                        )
-
-                        loaded_count = 0
-                        for adapter in enabled_adapters:
-                            if adapter.adapter_path and os.path.exists(
-                                adapter.adapter_path
-                            ):
-                                self.logger.info(
-                                    f"Loading adapter '{adapter.name}' from {adapter.adapter_path}"
-                                )
-                                # Check model type before loading
-                                is_peft_before = isinstance(
-                                    self._model, PeftModel
-                                )
-                                self.logger.debug(
-                                    f"Model is PEFT model before loading: {is_peft_before}"
-                                )
-
-                                self._model = PeftModel.from_pretrained(
-                                    self._model, adapter.adapter_path
-                                )
-
-                                # Verify adapter loaded and log details
-                                is_peft_after = isinstance(
-                                    self._model, PeftModel
-                                )
-                                self.logger.debug(
-                                    f"Model is PEFT model after loading: {is_peft_after}"
-                                )
-
-                                if hasattr(self._model, "active_adapters"):
-                                    self.logger.info(
-                                        f"Active adapters: {self._model.active_adapters}"
-                                    )
-                                if hasattr(self._model, "peft_config"):
-                                    self.logger.info(
-                                        f"PEFT config keys: {list(self._model.peft_config.keys())}"
-                                    )
-
-                                # Ensure adapter is in inference mode (not training mode)
-                                self._model.eval()
-                                loaded_count += 1
-                                self.logger.info(
-                                    f"✓ Successfully loaded adapter '{adapter.name}' (inference mode)"
-                                )
-                            else:
-                                self.logger.warning(
-                                    f"Adapter '{adapter.name}' path does not exist: {adapter.adapter_path}"
-                                )
-
-                        self.logger.info(
-                            f"Loaded {loaded_count}/{len(enabled_adapter_names)} enabled adapters"
-                        )
-                    else:
-                        self.logger.info("No adapters enabled in settings")
-
-                except json.JSONDecodeError as e:
-                    self.logger.error(
-                        f"Error parsing enabled adapters JSON: {e}"
-                    )
-                except Exception as e:
-                    self.logger.error(
-                        f"Error loading adapters (continuing with base model): {e}"
-                    )
-
+            self._load_adapters()
         except Exception as e:
             self.logger.error(f"Error loading model: {e}")
             self._model = None
+
+    def _get_enabled_adapter_names(self) -> List[str]:
+        """Retrieve enabled adapter names from QSettings."""
+        try:
+            qs = get_qsettings()
+            enabled_adapters_json = qs.value(
+                "llm_settings/enabled_adapters", "[]"
+            )
+            return json.loads(enabled_adapters_json)
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Error parsing enabled adapters JSON: {e}")
+            return []
+
+    def _get_enabled_adapters(
+        self, adapter_names: List[str]
+    ) -> List[FineTunedModel]:
+        """Query database for adapters matching the given names."""
+        if not adapter_names:
+            return []
+        adapters = FineTunedModel.objects.all()
+        return [a for a in adapters if a.name in adapter_names]
+
+    def _apply_adapter(self, adapter: FineTunedModel) -> bool:
+        """Apply a single adapter to the model."""
+        if not adapter.adapter_path or not os.path.exists(
+            adapter.adapter_path
+        ):
+            self.logger.warning(
+                f"Adapter '{adapter.name}' path does not exist"
+            )
+            return False
+
+        try:
+            self._model = PeftModel.from_pretrained(
+                self._model, adapter.adapter_path
+            )
+            self._model.eval()
+            return True
+        except Exception as e:
+            self.logger.error(f"Error loading adapter '{adapter.name}': {e}")
+            return False
+
+    def _load_adapters(self) -> None:
+        """Load all enabled adapters onto the base model."""
+        if PeftModel is None:
+            return
+
+        try:
+            adapter_names = self._get_enabled_adapter_names()
+            if not adapter_names:
+                return
+
+            enabled_adapters = self._get_enabled_adapters(adapter_names)
+            loaded_count = sum(
+                self._apply_adapter(a) for a in enabled_adapters
+            )
+
+            if loaded_count > 0:
+                self.logger.info(f"Loaded {loaded_count} adapter(s)")
+        except Exception as e:
+            self.logger.error(f"Error loading adapters: {e}")
 
     def _load_agent(self) -> None:
         """
