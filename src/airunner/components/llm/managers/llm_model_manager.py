@@ -271,53 +271,29 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
 
     def unload(self) -> None:
-        """
-        Unload all LLM components from memory.
-
-        This method properly releases resources by:
-        - Unloading the model, tokenizer, and agent
-        - Clearing GPU memory
-        - Updating the model status
-        """
-        # Skip if already unloading or unloaded
+        """Unload all LLM components and clear GPU memory."""
         if self.model_status[ModelType.LLM] in (
             ModelStatus.LOADING,
             ModelStatus.UNLOADED,
         ):
             return
 
-        self.logger.debug("Unloading LLM")
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
+        self._unload_components()
+        clear_memory(self.device)
+        self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
-        # Unload agent first (includes RAG/embeddings)
-        try:
-            self._unload_agent()
-            # Clear memory immediately after agent unload (includes RAG embeddings)
-            clear_memory(self.device)
-        except Exception as e:
-            self.logger.error(
-                f"Exception during unloading agent: {e}", exc_info=True
-            )
-
-        # Unload tokenizer and model
-        for unload_func, name in [
-            (self._unload_tokenizer, "tokenizer"),
-            (self._unload_model, "model"),
+    def _unload_components(self) -> None:
+        """Unload agent, tokenizer, and model in sequence."""
+        for unload_func in [
+            self._unload_agent,
+            self._unload_tokenizer,
+            self._unload_model,
         ]:
             try:
                 unload_func()
             except Exception as e:
-                self.logger.error(
-                    f"Exception during unloading {name}: {e}", exc_info=True
-                )
-
-        # Clear GPU memory aggressively after model unload
-        clear_memory(self.device)
-
-        # Final clear to ensure everything is released
-        clear_memory(self.device)
-
-        self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
+                self.logger.error(f"Error during unload: {e}", exc_info=True)
 
     def handle_request(
         self,
@@ -358,49 +334,36 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
             self._chat_agent.interrupt_process()
 
     def on_conversation_deleted(self, data: Dict) -> None:
-        """
-        Handle conversation deletion event.
-
-        Args:
-            data: Information about the deleted conversation.
-        """
+        """Handle conversation deletion event."""
         if self._chat_agent:
             self._chat_agent.on_conversation_deleted(data)
 
     def clear_history(self, data: Optional[Dict] = None) -> None:
-        """
-        Clear the chat history and set up a new conversation.
+        """Clear chat history and set up a new conversation."""
+        data = data or {}
+        conversation = self._get_or_create_conversation(data)
 
-        Args:
-            data: Optional data containing conversation ID or other parameters.
-                 If not provided, a new conversation will be created.
-        """
-        self.logger.debug("Clearing chat history")
+        if conversation:
+            Conversation.make_current(conversation.id)
 
-        # Initialize data dict if none provided
-        if data is None:
-            data = {}
+        if self._chat_agent:
+            self._chat_agent.clear_history(data)
 
-        conversation_id = data.get("conversation_id", None)
+    def _get_or_create_conversation(
+        self, data: Dict
+    ) -> Optional[Conversation]:
+        """Get existing conversation or create a new one."""
+        conversation_id = data.get("conversation_id")
 
-        # Create new conversation if needed
-        conversation = None
         if not conversation_id:
             conversation = Conversation.create()
             data["conversation_id"] = conversation.id
             self.update_llm_generator_settings(
                 current_conversation_id=conversation.id
             )
-        else:
-            conversation = Conversation.objects.get(conversation_id)
+            return conversation
 
-        # Update settings to use the current conversations
-        if conversation:
-            Conversation.make_current(conversation.id)
-
-        # Clear history in the chat agent
-        if self._chat_agent:
-            self._chat_agent.clear_history(data)
+        return Conversation.objects.get(conversation_id)
 
     def add_chatbot_response_to_history(self, message: str) -> None:
         """
