@@ -59,7 +59,7 @@ Show your support for this project by choosing one of the following options for 
 | **🤖 Customizable AI Agents** |
 | - Custom agent names, moods, personalities<br>- Retrieval-Augmented Generation (RAG)<br>- Create AI personalities and moods<br>- **NEW:** Visual LangGraph workflow builder |
 | **🎨 Visual Agent Workflows (LangGraph)** |
-| - Drag-and-drop agent workflow design<br>- Real-time Python code generation<br>- Runtime compilation & execution<br>- Hybrid LlamaIndex + LangGraph architecture |
+| - Drag-and-drop agent workflow design<br>- Real-time Python code generation<br>- Runtime compilation & execution<br>- Full LangChain + LangGraph architecture |
 | **📚 Enhanced Knowledge Retrieval** |
 | - RAG for documents/websites<br>- Use local data to enrich chat |
 | **🖼️ Image Generation & Manipulation** |
@@ -192,7 +192,66 @@ AI Runner uses the following stack
 - **Pydantic**: For data validation
 - **http.server**: Basic local server for static files
 - **PySide6**: For the GUI
+- **LangChain + LangGraph**: For LLM agent workflows and tool management
 - A variety of other libraries for TTS, STT, LLMs, and image generation
+
+---
+
+## 🏗️ LLM Architecture
+
+AI Runner uses a modern LangChain + LangGraph architecture for flexible, extensible LLM agent capabilities.
+
+### Core Components
+
+- **ChatModelFactory**: Unified interface for multiple LLM providers
+  - Local models (HuggingFace)
+  - Ollama (local server)
+  - OpenRouter (cloud)
+  - OpenAI (cloud)
+  
+- **ToolManager**: Modular tool system using mixin composition
+  - 10 specialized tool categories
+  - 39+ tools for comprehensive application control
+  - Easy to extend with new tool categories
+
+- **WorkflowManager**: LangGraph StateGraph-based agent workflows
+  - Database-backed conversation persistence
+  - Checkpoint saving for resumability
+  - State management across sessions
+
+- **DatabaseChatMessageHistory**: LangChain persistence layer
+  - Automatic message storage to SQLite
+  - Conversation history management
+  - Integrates with LangGraph checkpointing
+
+### Tool Categories
+
+AI Runner provides tools across 10 categories:
+
+1. **RAG Tools** - Document search and knowledge base operations
+2. **Knowledge Tools** - Long-term memory and fact management
+3. **Image Tools** - Image generation and canvas control
+4. **File Tools** - File system operations
+5. **Web Tools** - Web search and scraping
+6. **Code Tools** - Code execution and tool creation
+7. **System Tools** - Application control and signals
+8. **User Data Tools** - User data persistence
+9. **Conversation Tools** - Full conversation lifecycle management
+10. **Autonomous Control Tools** - Autonomous application control
+
+### Autonomous Control
+
+The LLM has comprehensive control over the application:
+
+- **Application State Monitoring** - Monitor CPU, memory, disk usage
+- **Task Scheduling** - Schedule autonomous tasks
+- **Mode Switching** - Interactive/autonomous/supervised modes
+- **User Input Requests** - Request approval/choices from user
+- **Behavior Analysis** - Analyze usage patterns
+- **Action Proposals** - Propose actions with rationale and confidence
+- **Decision Logging** - Log decisions for transparency
+
+For detailed architecture documentation, see `FEATURE_ROADMAP.md` and the component READMEs.
 
 </td>
 <td valign="top">

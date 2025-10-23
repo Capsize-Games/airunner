@@ -200,6 +200,36 @@ class SignalCode(Enum):
     BOT_MOOD_UPDATED = "bot_mood_updated_signal"
     CHATBOT_CHANGED = "chatbot_changed_signal"
     CONVERSATION_DELETED = "conversation_deleted_signal"
+    CONVERSATION_TITLE_UPDATED = "conversation_title_updated_signal"
+    LOAD_CONVERSATION_SIGNAL = "load_conversation_signal"
+    NEW_CONVERSATION_SIGNAL = "new_conversation_signal"
+
+    # Tool management signals
+    LLM_TOOL_CREATED = "llm_tool_created_signal"
+    LLM_TOOL_UPDATED = "llm_tool_updated_signal"
+    LLM_TOOL_DELETED = "llm_tool_deleted_signal"
+    LLM_TOOLS_RELOAD_REQUESTED = "llm_tools_reload_requested_signal"
+
+    # Code editor signals
+    OPEN_CODE_EDITOR = "open_code_editor_signal"
+    CODE_SAVED = "code_saved_signal"
+
+    # Knowledge base signals
+    RAG_DOCUMENT_ADDED = "rag_document_added_signal"
+
+    # Knowledge/memory management signals
+    KNOWLEDGE_FACT_ADDED = "knowledge_fact_added_signal"
+    KNOWLEDGE_FACT_UPDATED = "knowledge_fact_updated_signal"
+    KNOWLEDGE_FACT_DELETED = "knowledge_fact_deleted_signal"
+    KNOWLEDGE_FACTS_RELOAD_REQUESTED = (
+        "knowledge_facts_reload_requested_signal"
+    )
+
+    # Autonomous control signals
+    SCHEDULE_TASK_SIGNAL = "schedule_task_signal"
+    SET_APPLICATION_MODE_SIGNAL = "set_application_mode_signal"
+    REQUEST_USER_INPUT_SIGNAL = "request_user_input_signal"
+    AGENT_ACTION_PROPOSAL_SIGNAL = "agent_action_proposal_signal"
 
     KEYBOARD_SHORTCUTS_UPDATED = "keyboard_shortcuts_updated_signal"
     LORA_STATUS_CHANGED = "lora_status_changed"
