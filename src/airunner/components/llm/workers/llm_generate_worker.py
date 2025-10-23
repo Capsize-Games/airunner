@@ -3,15 +3,9 @@ import threading
 from typing import Dict, Optional, Type, List, Tuple
 
 from airunner.enums import SignalCode, ModelService
-from airunner.components.llm.managers.ollama_model_manager import (
-    OllamaModelManager,
-)
 from airunner.components.application.workers.worker import Worker
 from airunner.settings import AIRUNNER_LLM_ON
 from airunner.components.llm.managers.llm_model_manager import LLMModelManager
-from airunner.components.llm.managers.openrouter_model_manager import (
-    OpenRouterModelManager,
-)
 from airunner.components.context.context_manager import ContextManager
 from airunner.components.documents.data.models.document import (
     Document as DBDocument,
@@ -25,14 +19,10 @@ from airunner.components.llm.training_presets import (
 
 
 class LLMGenerateWorker(Worker):
-    def __init__(self, local_agent_class=None):
-        self.local_agent_class = local_agent_class
+    def __init__(self):
         self.signal_handlers = self._create_signal_handlers()
         self.context_manager = ContextManager()
-        self._openrouter_model_manager: Optional[OpenRouterModelManager] = None
-        self._ollama_model_manager: Optional[OllamaModelManager] = None
-        self._local_model_manager: Optional[LLMModelManager] = None
-        self._model_manager: Optional[Type[LLMModelManager]] = None
+        self._model_manager: Optional[LLMModelManager] = None
         super().__init__()
         self._llm_thread = None
 
@@ -62,6 +52,7 @@ class LLMGenerateWorker(Worker):
 
     @property
     def use_openrouter(self) -> bool:
+        """Check if using OpenRouter model service."""
         return (
             self.llm_generator_settings.model_service
             == ModelService.OPENROUTER.value
@@ -69,49 +60,30 @@ class LLMGenerateWorker(Worker):
 
     @property
     def use_ollama(self) -> bool:
+        """Check if using Ollama model service."""
         return (
             self.llm_generator_settings.model_service
             == ModelService.OLLAMA.value
         )
 
     @property
-    def openrouter_model_manager(self) -> OpenRouterModelManager:
-        if not self._openrouter_model_manager:
-            self._openrouter_model_manager = OpenRouterModelManager(
-                local_agent_class=self.local_agent_class
-            )
-        return self._openrouter_model_manager
+    def model_manager(self) -> LLMModelManager:
+        """Get the unified model manager for all backends."""
+        if not self._model_manager:
+            self._model_manager = LLMModelManager()
 
-    @property
-    def ollama_model_manager(self) -> OllamaModelManager:
-        if not self._ollama_model_manager:
-            self._ollama_model_manager = OllamaModelManager(
-                local_agent_class=self.local_agent_class
-            )
-        return self._ollama_model_manager
+            # Configure the manager based on selected service
+            if self.use_openrouter:
+                self._model_manager.llm_settings.use_local_llm = False
+                self._model_manager.llm_settings.use_openrouter = True
+            elif self.use_ollama:
+                self._model_manager.llm_settings.use_local_llm = False
+                self._model_manager.llm_settings.use_ollama = True
+            else:
+                # Local HuggingFace
+                self._model_manager.llm_settings.use_local_llm = True
 
-    @property
-    def local_model_manager(self) -> LLMModelManager:
-        if not self._local_model_manager:
-            self._local_model_manager = LLMModelManager(
-                local_agent_class=self.local_agent_class
-            )
-        return self._local_model_manager
-
-    @property
-    def model_manager(self) -> Type[LLMModelManager]:
-        if self._model_manager is None:
-            self._model_manager = self._select_model_manager()
         return self._model_manager
-
-    def _select_model_manager(self) -> Type[LLMModelManager]:
-        """Select the appropriate model manager based on settings."""
-        if self.use_openrouter:
-            return self.openrouter_model_manager
-        elif self.use_ollama:
-            return self.ollama_model_manager
-        else:
-            return self.local_model_manager
 
     def on_conversation_deleted_signal(self, data):
         self.model_manager.on_conversation_deleted(data)

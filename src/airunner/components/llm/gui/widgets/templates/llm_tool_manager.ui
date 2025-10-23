@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>llm_tool_manager</class>
+ <widget class="QWidget" name="llm_tool_manager">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>LLM Tool Manager</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="title_label">
+     <property name="text">
+      <string>LLM Tool Manager</string>
+     </property>
+     <property name="styleSheet">
+      <string>font-size: 18px; font-weight: bold; padding: 10px;</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="button_layout">
+     <item>
+      <widget class="QPushButton" name="create_tool_button">
+       <property name="text">
+        <string>Create New Tool</string>
+       </property>
+       <property name="icon">
+        <iconset theme="list-add"/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="reload_tools_button">
+       <property name="text">
+        <string>Reload Tools</string>
+       </property>
+       <property name="icon">
+        <iconset theme="view-refresh"/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="search_box">
+       <property name="placeholderText">
+        <string>Search tools...</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="tools_table">
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+     <column>
+      <property name="text">
+       <string>Name</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Description</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Created By</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Version</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Success Rate</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Enabled</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Actions</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>create_tool_button</sender>
+   <signal>clicked()</signal>
+   <receiver>llm_tool_manager</receiver>
+   <slot>on_create_tool_clicked()</slot>
+  </connection>
+  <connection>
+   <sender>reload_tools_button</sender>
+   <signal>clicked()</signal>
+   <receiver>llm_tool_manager</receiver>
+   <slot>on_reload_tools_clicked()</slot>
+  </connection>
+  <connection>
+   <sender>search_box</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>llm_tool_manager</receiver>
+   <slot>on_search_changed(QString)</slot>
+  </connection>
+ </connections>
+ <slots>
+  <slot>on_create_tool_clicked()</slot>
+  <slot>on_reload_tools_clicked()</slot>
+  <slot>on_search_changed(QString)</slot>
+ </slots>
+</ui>

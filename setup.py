@@ -50,27 +50,26 @@ extras_require = {
         "lingua-language-detector==2.1.0",
         "markdown==3.8",
         "libzim==3.7.0",
-    ],
-    "llm": [
-        "llama-index>=0.13",
+        # llama-index (for RAG only)
+        "llama-index-core>=0.13",
         "llama-index-readers-file>=0.5.0",
-        "llama-index-readers-web>=0.5.0",
-        "llama-index-llms-huggingface>=0.6.0",
-        "llama-index-llms-groq>=0.4.0",
-        "llama-index-llms-ollama>=0.6.0",
-        "llama-index-embeddings-mistralai>=0.4.0",
-        "llama-index-vector-stores-faiss>=0.5.0",
         "llama-index-embeddings-huggingface>=0.6.0",
-        "llama-index-llms-openrouter>=0.4.0",
-        "langchain>=1.0.0",
+        # LangChain/LangGraph (for agent system)
+        "langchain==1.0.0",
+        "langchain-core==1.0.0",
         "langchain-community>=0.4.0",
-        "langchain-core>=1.0.0",
-        "langgraph>=0.2.0",
-        "langchain-anthropic>=0.3.0",
-        "langchain-openai>=0.2.0",
+        "langchain-huggingface>=0.1.0",
+        "langgraph==1.0.0",
+        "langsmith>=0.1.0",
+        # Optional LangChain backends (commented out by default)
+        # "langchain-openai>=0.2.0",  # For OpenRouter/OpenAI
+        "langchain-ollama==1.0.0",  # For Ollama
+        # "langchain-anthropic>=0.3.0",  # For Anthropic Claude
+        # Document processing
         "EbookLib==0.19",
         "html2text==2025.4.15",
         "rake_nltk==1.0.6",
+        "markdownify>=0.13.1",
     ],
     "llm_weather": [  # LLM dependencies for weather (requires llm dependencies)
         "requests-cache==1.2.1",
@@ -190,7 +189,7 @@ setup(
         "alembic==1.15.2",
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
-        "setuptools==78.1.1",
+        "setuptools==80.9.0",
         "etils[epath]==1.12.2",
         "jinja2==3.1.6",
     ],
