@@ -10,6 +10,7 @@ from typing import (
     Sequence,
     Union,
 )
+import logging
 import threading
 import json
 import re
@@ -92,20 +93,19 @@ class ChatHuggingFaceLocal(BaseChatModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def set_interrupted(self, value: bool) -> None:
-        """Set the interrupt flag.
+    @property
+    def logger(self):
+        """Lazy logger initialization."""
+        if not hasattr(self, "_logger"):
+            self._logger = logging.getLogger(__name__)
+        return self._logger
 
-        Args:
-            value: True to interrupt generation, False to allow generation
-        """
+    def set_interrupted(self, value: bool) -> None:
+        """Set interrupt flag to stop generation."""
         self._interrupted = value
 
     def should_stop_generation(self) -> bool:
-        """Check if generation should be interrupted.
-
-        Returns:
-            True if generation should stop, False otherwise
-        """
+        """Check if generation should be interrupted."""
         return self._interrupted
 
     @property
@@ -390,6 +390,9 @@ class ChatHuggingFaceLocal(BaseChatModel):
 
         try:
             for text in streamer:
+                if self._interrupted:
+                    break
+
                 if not text:
                     continue
                 full_response.append(text)

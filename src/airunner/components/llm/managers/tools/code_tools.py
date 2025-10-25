@@ -14,7 +14,6 @@ from airunner.enums import SignalCode
 class CodeTools:
     """Mixin class providing code execution and development tools."""
 
-
     def calculator_tool(self) -> Callable:
         """Perform mathematical calculations."""
 

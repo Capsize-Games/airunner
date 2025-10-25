@@ -35,6 +35,7 @@ class LLMGenerateWorker(Worker):
         self.context_manager = ContextManager()
         self._model_manager: Optional[LLMModelManager] = None
         self._model_manager_lock = threading.Lock()
+        self._interrupted = False  # Flag for interrupt requests
         self._download_dialog_showing = (
             False  # Flag to prevent multiple download dialogs
         )
@@ -99,7 +100,6 @@ class LLMGenerateWorker(Worker):
             if self._model_manager is None:
                 self._model_manager = LLMModelManager()
 
-                # Configure the manager based on selected service
                 if self.use_openrouter:
                     self._model_manager.llm_settings.use_local_llm = False
                     self._model_manager.llm_settings.use_openrouter = True
@@ -107,7 +107,6 @@ class LLMGenerateWorker(Worker):
                     self._model_manager.llm_settings.use_local_llm = False
                     self._model_manager.llm_settings.use_ollama = True
                 else:
-                    # Local HuggingFace
                     self._model_manager.llm_settings.use_local_llm = True
 
             return self._model_manager
@@ -119,10 +118,9 @@ class LLMGenerateWorker(Worker):
         self.model_manager.on_section_changed()
 
     def on_llm_model_changed_signal(self, data: Dict):
-        # Reset the model manager to ensure it's re-evaluated on next access
-        with self._model_manager_lock:
-            self._model_manager = None
-        self.unload_llm()
+        """Handle model change - unload without clearing manager reference."""
+        if self._model_manager:
+            self._model_manager.unload()
 
     def on_rag_load_documents_signal(self, data: Dict):
         """Handle the signal to load documents into the RAG engine."""
@@ -167,9 +165,7 @@ class LLMGenerateWorker(Worker):
             callback(data)
 
     def on_llm_load_model_signal(self, data):
-        # Reset model manager to ensure proper selection based on current settings
-        with self._model_manager_lock:
-            self._model_manager = None
+        """Handle model load request."""
         self._load_llm_thread(data)
 
     def on_llm_clear_history_signal(self, data: Optional[Dict] = None):
@@ -180,8 +176,14 @@ class LLMGenerateWorker(Worker):
         self.add_to_queue(message)
 
     def llm_on_interrupt_process_signal(self):
-        if self._model_manager:
-            self._model_manager.do_interrupt()
+        """Handle interrupt signal - stop ongoing generation."""
+        self._interrupted = True
+
+        if hasattr(self, "_model_manager") and self._model_manager is not None:
+            try:
+                self._model_manager.do_interrupt()
+            except Exception as e:
+                self.logger.error(f"Error calling do_interrupt(): {e}")
 
     def on_llm_reload_rag_index_signal(self):
         if self._model_manager:
@@ -907,10 +909,28 @@ class LLMGenerateWorker(Worker):
             self._load_llm_thread()
 
     def handle_message(self, message):
-        # Access model_manager property to create it if needed
-        self.model_manager.handle_request(
-            message, self.context_manager.all_contexts()
+        self.logger.info(
+            f"handle_message called on worker instance {id(self)}"
         )
+        # Check if interrupted before processing
+        if self._interrupted:
+            self.logger.info(
+                "Skipping message - worker interrupted before processing"
+            )
+            self._interrupted = False  # Reset for next message
+            return
+
+        # Access model_manager property to create it if needed
+        # and pass the interrupt flag to it
+        manager = self.model_manager
+
+        if self._interrupted and hasattr(manager, "do_interrupt"):
+            manager.do_interrupt()
+            self._interrupted = False
+            return
+
+        manager.handle_request(message, self.context_manager.all_contexts())
+        self._interrupted = False
 
     def _load_llm_thread(self, data=None):
         self._llm_thread = threading.Thread(

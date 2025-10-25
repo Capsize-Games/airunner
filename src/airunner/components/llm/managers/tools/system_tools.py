@@ -12,7 +12,6 @@ from airunner.enums import SignalCode
 class SystemTools:
     """Mixin class providing system control and application management tools."""
 
-
     def clear_conversation_tool(self) -> Callable:
         """Clear conversation history."""
 

@@ -11,7 +11,6 @@ from airunner.enums import SignalCode
 class WebTools:
     """Mixin class providing web search and scraping tools."""
 
-
     def search_web_tool(self) -> Callable:
         """Search the web for information."""
 

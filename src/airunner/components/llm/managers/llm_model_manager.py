@@ -636,6 +636,7 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Handle an incoming request for LLM generation."""
+        self.logger.info(f"handle_request called on instance {id(self)}")
         self._do_set_seed()
         self.load()
 
@@ -647,16 +648,16 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         )
 
     def do_interrupt(self) -> None:
-        """
-        Interrupt the ongoing chat process.
-
-        This can be called to stop a generation that is in progress.
-        """
+        """Interrupt ongoing generation."""
         self._interrupted = True
-        self.logger.info("Interrupt requested - will stop generation")
 
         if self._chat_model and hasattr(self._chat_model, "set_interrupted"):
             self._chat_model.set_interrupted(True)
+
+        if self._workflow_manager and hasattr(
+            self._workflow_manager, "set_interrupted"
+        ):
+            self._workflow_manager.set_interrupted(True)
 
     def on_conversation_deleted(self, data: Dict) -> None:
         """Handle conversation deletion event."""
@@ -1440,6 +1441,10 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
                 del self._model
                 self._model = None
                 gc.collect()
+
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    torch.cuda.synchronize()
         except AttributeError as e:
             self.logger.warning(f"Error unloading model: {e}")
             self._model = None
@@ -1450,6 +1455,7 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
             if self._tokenizer is not None:
                 del self._tokenizer
                 self._tokenizer = None
+                gc.collect()
         except AttributeError as e:
             self.logger.warning(f"Error unloading tokenizer: {e}")
             self._tokenizer = None
@@ -1582,6 +1588,11 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
     ) -> Dict[str, Any]:
         """Generate a response using the loaded LLM."""
         if self._current_model_path != self.model_path:
+            self.logger.warning(
+                f"Model path mismatch detected: "
+                f"current='{self._current_model_path}' vs settings='{self.model_path}'. "
+                f"Reloading model..."
+            )
             self.unload()
             self.load()
 
@@ -1600,6 +1611,10 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
             llm_request, complete_response, sequence_counter
         )
         self._workflow_manager.set_token_callback(callback)
+
+        # Reset workflow manager's interrupted flag before generation
+        if hasattr(self._workflow_manager, "set_interrupted"):
+            self._workflow_manager.set_interrupted(False)
 
         try:
             if torch.cuda.is_available():
@@ -1621,6 +1636,8 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         finally:
             self._workflow_manager.set_token_callback(None)
             self._interrupted = False
+            if hasattr(self._workflow_manager, "set_interrupted"):
+                self._workflow_manager.set_interrupted(False)
 
         final_response = self._extract_final_response(result)
         if final_response:

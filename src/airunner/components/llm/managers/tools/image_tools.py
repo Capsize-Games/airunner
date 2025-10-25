@@ -12,7 +12,6 @@ from airunner.enums import SignalCode
 class ImageTools:
     """Mixin class providing image generation and manipulation tools."""
 
-
     def generate_image_tool(self) -> Callable:
         """Generate an image from text prompt."""
 
