@@ -80,3 +80,4 @@ cache/.webcache/**
 cache/.webcache
 
 .mypy_cache/**
+FEATURE_ROADMAP.md

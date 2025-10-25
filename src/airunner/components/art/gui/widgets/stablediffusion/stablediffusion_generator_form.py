@@ -188,7 +188,7 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
         resource_manager = ModelResourceManager()
         can_generate, reason = resource_manager.can_perform_operation(
-            "text_to_image", self.generator_settings.model_path
+            "text_to_image", self.generator_settings.model_name
         )
 
         if not can_generate:
