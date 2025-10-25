@@ -794,197 +794,228 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
             self._tokenizer = None
             self.logger.error("Tokenizer failed to load")
 
-    def _load_model(self) -> None:
-        """Load the LLM model, using pre-quantized version if available."""
-        if self._model is not None:
+    def _log_gpu_memory_status(self) -> None:
+        """Log current GPU memory usage."""
+        if not torch.cuda.is_available():
             return
 
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            gc.collect()
-            free_memory = torch.cuda.mem_get_info()[0] / (1024**3)
-            total_memory = torch.cuda.get_device_properties(0).total_memory / (
-                1024**3
+        torch.cuda.empty_cache()
+        gc.collect()
+        free_memory = torch.cuda.mem_get_info()[0] / (1024**3)
+        total_memory = torch.cuda.get_device_properties(0).total_memory / (
+            1024**3
+        )
+        self.logger.info(
+            f"GPU memory before loading: {free_memory:.2f}GB free / {total_memory:.2f}GB total"
+        )
+
+    def _select_dtype(self) -> str:
+        """Select and configure quantization dtype."""
+        dtype = self.llm_dtype
+        self.logger.info(f"Current dtype setting: {dtype}")
+
+        if not dtype or dtype == "auto":
+            dtype = self._auto_select_quantization()
+            self.llm_generator_settings.dtype = dtype
+            self.logger.info(f"✓ Auto-selected quantization: {dtype}")
+        else:
+            self.logger.info(f"Using configured dtype: {dtype}")
+
+        return dtype
+
+    def _create_bitsandbytes_config(
+        self, dtype: str
+    ) -> Optional[BitsAndBytesConfig]:
+        """Create BitsAndBytes quantization configuration."""
+        if dtype not in ["8bit", "4bit", "2bit"]:
+            self.logger.info(
+                f"Loading full precision model (no quantization) - dtype={dtype}"
+            )
+            return None
+
+        self.logger.info(f"Using BitsAndBytes runtime {dtype} quantization")
+
+        if dtype == "8bit":
+            config = BitsAndBytesConfig(
+                load_in_8bit=True,
+                llm_int8_threshold=6.0,
+                llm_int8_has_fp16_weight=False,
+                llm_int8_enable_fp32_cpu_offload=True,
             )
             self.logger.info(
-                f"GPU memory before loading: {free_memory:.2f}GB free / {total_memory:.2f}GB total"
+                "Created 8-bit BitsAndBytes config with CPU offload"
             )
+            return config
 
-        try:
-            dtype = self.llm_dtype
-            self.logger.info(f"Current dtype setting: {dtype}")
-            if not dtype or dtype == "auto":
-                dtype = self._auto_select_quantization()
-                self.llm_generator_settings.dtype = dtype
-                self.logger.info(f"✓ Auto-selected quantization: {dtype}")
-            else:
-                self.logger.info(f"Using configured dtype: {dtype}")
-
-            model_path_to_load = self.model_path
-            quantization_config = None
-
-            # BitsAndBytes: Runtime quantization (cannot be saved to disk)
-            # AWQ/GPTQ: Can check for pre-quantized models on disk
-            if dtype in ["8bit", "4bit"]:
-                self.logger.info(
-                    f"Using BitsAndBytes runtime {dtype} quantization"
-                )
-
-                if dtype == "8bit":
-                    quantization_config = BitsAndBytesConfig(
-                        load_in_8bit=True,
-                        llm_int8_threshold=6.0,
-                        llm_int8_has_fp16_weight=False,
-                        llm_int8_enable_fp32_cpu_offload=True,
-                    )
-                    self.logger.info(
-                        "Created 8-bit BitsAndBytes config with CPU offload"
-                    )
-                elif dtype == "4bit":
-                    quantization_config = BitsAndBytesConfig(
-                        load_in_4bit=True,
-                        bnb_4bit_compute_dtype=torch.float16,
-                        bnb_4bit_use_double_quant=True,
-                        bnb_4bit_quant_type="nf4",
-                    )
-                    self.logger.info("Created 4-bit BitsAndBytes config")
-            elif dtype == "2bit":
+        if dtype in ["4bit", "2bit"]:
+            if dtype == "2bit":
                 self.logger.warning(
                     "2-bit quantization requires GPTQ/AWQ with calibration dataset"
                 )
                 self.logger.warning("Falling back to 4-bit BitsAndBytes")
-                quantization_config = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_compute_dtype=torch.float16,
-                    bnb_4bit_use_double_quant=True,
-                    bnb_4bit_quant_type="nf4",
+
+            config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+            )
+            self.logger.info("Created 4-bit BitsAndBytes config")
+            return config
+
+        return None
+
+    def _detect_mistral3_model(self, config: AutoConfig) -> bool:
+        """Check if model configuration indicates Mistral3 architecture."""
+        is_mistral3_type = (
+            hasattr(config, "model_type") and config.model_type == "mistral3"
+        )
+        is_mistral3_arch = hasattr(config, "architectures") and any(
+            "Mistral3" in arch for arch in (config.architectures or [])
+        )
+        return is_mistral3_type or is_mistral3_arch
+
+    def _prepare_base_model_kwargs(self, is_mistral3: bool) -> Dict[str, Any]:
+        """Prepare base kwargs for model loading."""
+        model_kwargs = {
+            "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
+            "trust_remote_code": True,
+            "attn_implementation": self.attn_implementation,
+        }
+
+        if not is_mistral3:
+            model_kwargs["use_cache"] = self.use_cache
+
+        return model_kwargs
+
+    def _configure_quantization_memory(self, dtype: str) -> Dict[str, Any]:
+        """Configure memory limits for quantization."""
+        if not torch.cuda.is_available():
+            self.logger.info(f"✓ Applying {dtype} quantization (no CUDA)")
+            self.logger.info(
+                f"  Using device_map='auto', dtype={self.torch_dtype}"
+            )
+            return {}
+
+        if dtype == "8bit":
+            self.logger.info("✓ Applying 8-bit quantization with CPU offload")
+            self.logger.info(
+                f"  Using device_map='auto', dtype={self.torch_dtype}, max_memory=13GB GPU + 18GB CPU"
+            )
+            return {0: "13GB", "cpu": "18GB"}
+
+        if dtype == "4bit":
+            self.logger.info("✓ Applying 4-bit quantization (GPU-only)")
+            self.logger.info(
+                f"  Using device_map='auto', dtype={self.torch_dtype}, max_memory=14GB GPU (reserves 1.5GB for activations)"
+            )
+            return {0: "14GB"}
+
+        self.logger.info(f"✓ Applying {dtype} quantization")
+        self.logger.info(
+            f"  Using device_map='auto', dtype={self.torch_dtype}"
+        )
+        return {}
+
+    def _apply_quantization_to_kwargs(
+        self,
+        model_kwargs: Dict[str, Any],
+        quantization_config: Optional[BitsAndBytesConfig],
+        dtype: str,
+    ) -> None:
+        """Apply quantization configuration to model kwargs."""
+        if quantization_config is None:
+            model_kwargs["torch_dtype"] = self.torch_dtype
+            model_kwargs["device_map"] = self.device
+            self.logger.warning(
+                "No quantization config - loading in full precision!"
+            )
+            return
+
+        model_kwargs["quantization_config"] = quantization_config
+        model_kwargs["device_map"] = "auto"
+        model_kwargs["dtype"] = self.torch_dtype
+
+        max_memory = self._configure_quantization_memory(dtype)
+        if max_memory:
+            model_kwargs["max_memory"] = max_memory
+
+    def _load_model_from_pretrained(
+        self, model_path: str, is_mistral3: bool, model_kwargs: Dict[str, Any]
+    ) -> None:
+        """Load model from pretrained weights."""
+        if is_mistral3:
+            self._load_mistral3_model(model_path, model_kwargs)
+        else:
+            self._load_standard_model(model_path, model_kwargs)
+
+    def _load_mistral3_model(
+        self, model_path: str, model_kwargs: Dict[str, Any]
+    ) -> None:
+        """Load Mistral3 model."""
+        self.logger.info(
+            "Loading Mistral3 model with Mistral3ForConditionalGeneration"
+        )
+        if Mistral3ForConditionalGeneration is None:
+            raise ImportError(
+                "Mistral3ForConditionalGeneration not available. "
+                "Ensure transformers supports Mistral3 models."
+            )
+        self._model = Mistral3ForConditionalGeneration.from_pretrained(
+            model_path, **model_kwargs
+        )
+        self.logger.info("✓ Mistral3 model loaded successfully")
+
+    def _load_standard_model(
+        self, model_path: str, model_kwargs: Dict[str, Any]
+    ) -> None:
+        """Load standard causal LM model with fallback."""
+        try:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                model_path, **model_kwargs
+            )
+        except ValueError as ve:
+            if "Unrecognized configuration class" in str(ve):
+                self.logger.warning(
+                    f"AutoModelForCausalLM doesn't recognize model architecture: {type(ve).__name__}"
+                )
+                self.logger.info(
+                    "Falling back to AutoModel.from_pretrained() for custom architecture"
+                )
+                self._model = AutoModel.from_pretrained(
+                    model_path, **model_kwargs
                 )
             else:
-                # No quantization - load in full precision
-                self.logger.info(
-                    f"Loading full precision model (no quantization) - dtype={dtype}"
-                )
+                raise
 
+    def _load_model(self) -> None:
+        """Load the LLM model with appropriate quantization."""
+        if self._model is not None:
+            return
+
+        self._log_gpu_memory_status()
+
+        try:
+            dtype = self._select_dtype()
+            quantization_config = self._create_bitsandbytes_config(dtype)
+
+            model_path = self.model_path
             config = AutoConfig.from_pretrained(
-                model_path_to_load,
+                model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 trust_remote_code=True,
             )
 
-            is_mistral3 = (
-                hasattr(config, "model_type")
-                and config.model_type == "mistral3"
-            ) or (
-                hasattr(config, "architectures")
-                and any(
-                    "Mistral3" in arch for arch in (config.architectures or [])
-                )
+            is_mistral3 = self._detect_mistral3_model(config)
+            model_kwargs = self._prepare_base_model_kwargs(is_mistral3)
+            self._apply_quantization_to_kwargs(
+                model_kwargs, quantization_config, dtype
             )
-
-            # Prepare model loading kwargs
-            model_kwargs = {
-                "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
-                "trust_remote_code": True,
-                "attn_implementation": self.attn_implementation,
-            }
-
-            if quantization_config is not None:
-                model_kwargs["quantization_config"] = quantization_config
-                # CRITICAL: Use "auto" device_map for quantization
-                # BitsAndBytes requires device_map="auto" to properly distribute layers
-                model_kwargs["device_map"] = "auto"
-                # Use correct dtype parameter (not torch_dtype which is deprecated)
-                model_kwargs["dtype"] = self.torch_dtype
-
-                if torch.cuda.is_available():
-                    if dtype == "8bit":
-                        # 8-bit supports CPU offload - use conservative GPU limit
-                        model_kwargs["max_memory"] = {
-                            0: "13GB",  # Reserve ~2.5GB for CUDA overhead
-                            "cpu": "18GB",  # Allow CPU offload
-                        }
-                        self.logger.info(
-                            f"✓ Applying 8-bit quantization with CPU offload"
-                        )
-                        self.logger.info(
-                            f"  Using device_map='auto', dtype={self.torch_dtype}, max_memory=13GB GPU + 18GB CPU"
-                        )
-                    elif dtype == "4bit":
-                        # 4-bit GPU-only - balance between model weights and activation memory
-                        # Model weights: ~11.5GB, need ~1.5GB for activations during inference
-                        model_kwargs["max_memory"] = {
-                            0: "14GB",  # Leave ~1.5GB for activation memory during generation
-                        }
-                        self.logger.info(
-                            f"✓ Applying 4-bit quantization (GPU-only)"
-                        )
-                        self.logger.info(
-                            f"  Using device_map='auto', dtype={self.torch_dtype}, max_memory=14GB GPU (reserves 1.5GB for activations)"
-                        )
-                    else:
-                        # Other quantization types
-                        self.logger.info(f"✓ Applying {dtype} quantization")
-                        self.logger.info(
-                            f"  Using device_map='auto', dtype={self.torch_dtype}"
-                        )
-                else:
-                    self.logger.info(
-                        f"✓ Applying {dtype} quantization (no CUDA)"
-                    )
-                    self.logger.info(
-                        f"  Using device_map='auto', dtype={self.torch_dtype}"
-                    )
-            else:
-                # No quantization - use explicit device and torch_dtype
-                model_kwargs["torch_dtype"] = self.torch_dtype
-                model_kwargs["device_map"] = self.device
-                self.logger.warning(
-                    "No quantization config - loading in full precision!"
-                )
-
-            # Mistral3 models don't accept use_cache in __init__
-            # They're multimodal models with different parameter signatures
-            if not is_mistral3:
-                model_kwargs["use_cache"] = self.use_cache
-
-            if is_mistral3:
-                self.logger.info(
-                    "Loading Mistral3 model with Mistral3ForConditionalGeneration"
-                )
-                if Mistral3ForConditionalGeneration is None:
-                    raise ImportError(
-                        "Mistral3ForConditionalGeneration not available. "
-                        "Ensure transformers supports Mistral3 models."
-                    )
-                self._model = Mistral3ForConditionalGeneration.from_pretrained(
-                    model_path_to_load,
-                    **model_kwargs,
-                )
-                self.logger.info("✓ Mistral3 model loaded successfully")
-            else:
-                try:
-                    self._model = AutoModelForCausalLM.from_pretrained(
-                        model_path_to_load,
-                        **model_kwargs,
-                    )
-                except ValueError as ve:
-                    if "Unrecognized configuration class" in str(ve):
-                        self.logger.warning(
-                            f"AutoModelForCausalLM doesn't recognize model architecture: {type(ve).__name__}"
-                        )
-                        self.logger.info(
-                            "Falling back to AutoModel.from_pretrained() for custom architecture"
-                        )
-                        self._model = AutoModel.from_pretrained(
-                            model_path_to_load,
-                            **model_kwargs,
-                        )
-                    else:
-                        raise
-
-            # Note: BitsAndBytes quantization cannot be saved to disk (runtime-only)
-
+            self._load_model_from_pretrained(
+                model_path, is_mistral3, model_kwargs
+            )
             self._load_adapters()
+
         except Exception as e:
             self.logger.error(
                 f"Error loading model: {type(e).__name__}: {str(e)}"
