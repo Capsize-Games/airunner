@@ -42,6 +42,12 @@ from airunner.components.llm.managers.quantization_mixin import (
     QuantizationMixin,
 )
 from airunner.components.llm.managers.training_mixin import TrainingMixin
+from airunner.components.model_management.hardware_profiler import (
+    HardwareProfiler,
+)
+from airunner.components.model_management.model_resource_manager import (
+    ModelResourceManager,
+)
 from airunner.enums import (
     ModelType,
     ModelStatus,
@@ -243,26 +249,10 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         return "instruct" in path and "llama" in path
 
     def _get_available_vram_gb(self) -> float:
-        """
-        Get available VRAM in gigabytes.
-
-        Returns:
-            float: Available VRAM in GB, or 0 if CUDA not available
-        """
-        if not torch.cuda.is_available():
-            return 0.0
-
-        try:
-            total_memory = torch.cuda.get_device_properties(0).total_memory
-            allocated_memory = torch.cuda.memory_allocated(0)
-
-            available_memory = total_memory - allocated_memory
-            available_gb = available_memory / (1024**3)
-
-            return available_gb
-        except Exception as e:
-            self.logger.warning(f"Could not detect VRAM: {e}")
-            return 0.0
+        """Get available VRAM in gigabytes."""
+        if not hasattr(self, "_hw_profiler"):
+            self._hw_profiler = HardwareProfiler()
+        return self._hw_profiler._get_available_vram_gb()
 
     @property
     def use_cache(self) -> bool:
@@ -403,19 +393,20 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         return False
 
     def _validate_model_path(self) -> bool:
-        """Validate that model path is configured.
-
-        Returns:
-            True if valid, False if error occurred
-        """
-        try:
-            _ = self.model_path
-            return True
-        except ValueError as e:
-            self.logger.error(str(e))
-            self._send_error_response(f"❌ {str(e)}")
-            self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+        """Verify model path is set and registered."""
+        if not self.model_path:
+            self.logger.error("Model path is not set")
             return False
+
+        resource_manager = ModelResourceManager()
+        model_metadata = resource_manager.registry.get_model(self.model_path)
+
+        if not model_metadata:
+            self.logger.warning(
+                f"Model {self.model_path} not in registry - loading without validation"
+            )
+
+        return True
 
     def _send_error_response(self, message: str) -> None:
         """Send error message to GUI."""
@@ -501,6 +492,19 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self.unload()
         self._current_model_path = self.model_path
+
+        resource_manager = ModelResourceManager()
+        prepare_result = resource_manager.prepare_model_loading(
+            model_id=self.model_path,
+            model_type="llm",
+        )
+
+        if not prepare_result["can_load"]:
+            self.logger.error(
+                f"Cannot load model: {prepare_result.get('reason', 'Unknown reason')}"
+            )
+            self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+            return
 
         if self.llm_settings.use_local_llm:
             self._send_quantization_info()
@@ -599,6 +603,13 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
 
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self._unload_components()
+
+        resource_manager = ModelResourceManager()
+        resource_manager.cleanup_model(
+            model_id=self._current_model_path or self.model_path,
+            model_type="llm",
+        )
+
         clear_memory(self.device)
         self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
@@ -1036,23 +1047,28 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
 
         try:
             dtype = self._select_dtype()
-            quantization_config = self._create_bitsandbytes_config(dtype)
 
-            model_path = self.model_path
-            config = AutoConfig.from_pretrained(
-                model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                trust_remote_code=True,
+            # Check if a pre-quantized model exists on disk
+            quantized_path = self._get_quantized_model_path(
+                self.model_path, dtype
             )
 
-            is_mistral3 = self._detect_mistral3_model(config)
-            model_kwargs = self._prepare_base_model_kwargs(is_mistral3)
-            self._apply_quantization_to_kwargs(
-                model_kwargs, quantization_config, dtype
-            )
-            self._load_model_from_pretrained(
-                model_path, is_mistral3, model_kwargs
-            )
+            if dtype in [
+                "4bit",
+                "8bit",
+            ] and self._check_quantized_model_exists(quantized_path):
+                self.logger.info(
+                    f"✓ Found existing {dtype} quantized model at {quantized_path}"
+                )
+                self._load_pre_quantized_model(quantized_path, dtype)
+            else:
+                # No pre-quantized model - load with runtime quantization
+                if dtype in ["4bit", "8bit"]:
+                    self.logger.info(
+                        f"No pre-quantized {dtype} model found - will quantize at runtime and save"
+                    )
+                self._load_with_runtime_quantization(dtype)
+
             self._load_adapters()
 
         except Exception as e:
@@ -1061,6 +1077,167 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
             )
             self.logger.error(f"Model traceback:\n{traceback.format_exc()}")
             self._model = None
+
+    def _load_pre_quantized_model(
+        self, quantized_path: str, dtype: str
+    ) -> None:
+        """
+        Load a pre-saved BitsAndBytes quantized model from disk.
+
+        The saved config.json already contains the quantization_config,
+        so transformers will automatically recognize it's quantized.
+        We must NOT pass a quantization_config here, as that would try
+        to re-quantize already-quantized weights (causing uint8 error).
+        """
+        self.logger.info(
+            f"Loading pre-saved {dtype} quantized model from {quantized_path}"
+        )
+
+        config = AutoConfig.from_pretrained(
+            quantized_path,
+            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+            trust_remote_code=True,
+        )
+
+        is_mistral3 = self._detect_mistral3_model(config)
+        model_kwargs = self._prepare_base_model_kwargs(is_mistral3)
+
+        # Don't pass quantization_config - it's already in the saved config.json
+        # Just set device_map and dtype for loading
+        model_kwargs["device_map"] = "auto"
+        model_kwargs["torch_dtype"] = self.torch_dtype
+
+        self._load_model_from_pretrained(
+            quantized_path, is_mistral3, model_kwargs
+        )
+
+        self.logger.info(
+            f"✓ Pre-quantized {dtype} model loaded successfully from disk"
+        )
+
+    def _load_with_runtime_quantization(self, dtype: str) -> None:
+        """Load model with runtime BitsAndBytes quantization."""
+        quantization_config = self._create_bitsandbytes_config(dtype)
+
+        model_path = self.model_path
+        config = AutoConfig.from_pretrained(
+            model_path,
+            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+            trust_remote_code=True,
+        )
+
+        is_mistral3 = self._detect_mistral3_model(config)
+        model_kwargs = self._prepare_base_model_kwargs(is_mistral3)
+        self._apply_quantization_to_kwargs(
+            model_kwargs, quantization_config, dtype
+        )
+        self._load_model_from_pretrained(model_path, is_mistral3, model_kwargs)
+
+        # Save quantized model for faster future loads
+        # We need to manually inject quantization_config into config.json
+        if dtype in ["4bit", "8bit"]:
+            try:
+                self.logger.info(
+                    f"Saving {dtype} quantized model for faster future loads..."
+                )
+                self._save_loaded_model_quantized(
+                    model_path, dtype, quantization_config
+                )
+            except Exception as e:
+                self.logger.warning(
+                    f"Could not save quantized model: {e}. "
+                    f"Will use runtime quantization on next load."
+                )
+
+    def _save_loaded_model_quantized(
+        self,
+        original_path: str,
+        dtype: str,
+        quantization_config: "BitsAndBytesConfig",
+    ) -> None:
+        """
+        Save the currently loaded BitsAndBytes quantized model to disk.
+
+        We manually inject the quantization_config into config.json because
+        transformers doesn't always preserve it automatically.
+        """
+        quantized_path = self._get_quantized_model_path(original_path, dtype)
+
+        if self._check_quantized_model_exists(quantized_path):
+            self.logger.info(
+                f"Quantized model already exists at {quantized_path}"
+            )
+            return
+
+        import os
+        import shutil
+
+        try:
+            os.makedirs(quantized_path, exist_ok=True)
+            self.logger.info(
+                f"Saving BitsAndBytes {dtype} quantized model to {quantized_path}"
+            )
+
+            # Save model with BitsAndBytes quantization preserved
+            self._model.save_pretrained(
+                quantized_path, safe_serialization=True, max_shard_size="5GB"
+            )
+
+            # Manually inject quantization_config into config.json
+            # This is critical - transformers doesn't always save it automatically
+            config_path = os.path.join(quantized_path, "config.json")
+            with open(config_path, "r") as f:
+                config = json.load(f)
+
+            # Add quantization_config to the saved config
+            config["quantization_config"] = {
+                "load_in_4bit": dtype == "4bit",
+                "load_in_8bit": dtype == "8bit",
+                "llm_int8_threshold": 6.0,
+                "llm_int8_has_fp16_weight": False,
+                "bnb_4bit_compute_dtype": "float16",
+                "bnb_4bit_use_double_quant": True,
+                "bnb_4bit_quant_type": "nf4",
+                "quant_method": "bitsandbytes",
+            }
+
+            with open(config_path, "w") as f:
+                json.dump(config, f, indent=2)
+
+            self.logger.info(
+                f"✓ Injected quantization_config into {config_path}"
+            )
+
+            # Copy tokenizer files (NOT config.json - we already saved that with quantization_config)
+            config_files = [
+                "generation_config.json",
+                "tokenizer_config.json",
+                "tokenizer.json",
+                "special_tokens_map.json",
+            ]
+
+            if self._is_mistral3_model():
+                config_files.append("tekken.json")
+
+            for file in config_files:
+                src = os.path.join(original_path, file)
+                if os.path.exists(src):
+                    dst = os.path.join(quantized_path, file)
+                    shutil.copy2(src, dst)
+
+            self.logger.info(
+                f"✓ BitsAndBytes {dtype} quantized model saved successfully. "
+                f"Future loads will use this saved version (no re-quantization needed)."
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to save quantized model: {e}")
+            # Clean up partial save
+            if os.path.exists(quantized_path):
+                try:
+                    shutil.rmtree(quantized_path)
+                except Exception:
+                    pass
+            raise
 
     def _get_enabled_adapter_names(self) -> List[str]:
         """Retrieve enabled adapter names from QSettings."""

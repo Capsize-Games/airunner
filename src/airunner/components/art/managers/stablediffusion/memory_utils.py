@@ -8,6 +8,9 @@ import logging
 from typing import Any
 import torch
 from airunner.utils.memory import is_ampere_or_newer
+from airunner.components.model_management.hardware_profiler import (
+    HardwareProfiler,
+)
 from airunner.settings import (
     AIRUNNER_MEM_USE_LAST_CHANNELS,
     AIRUNNER_MEM_USE_ENABLE_VAE_SLICING,
@@ -21,6 +24,15 @@ from airunner.settings import (
 )
 
 logger = logging.getLogger(__name__)
+_hardware_profiler = None
+
+
+def get_hardware_profiler() -> HardwareProfiler:
+    """Get singleton hardware profiler instance."""
+    global _hardware_profiler
+    if _hardware_profiler is None:
+        _hardware_profiler = HardwareProfiler()
+    return _hardware_profiler
 
 
 def apply_last_channels(pipe: Any, enabled: bool) -> None:
