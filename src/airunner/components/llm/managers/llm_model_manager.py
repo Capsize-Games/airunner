@@ -402,6 +402,76 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
 
         return False
 
+    def _validate_model_path(self) -> bool:
+        """Validate that model path is configured.
+
+        Returns:
+            True if valid, False if error occurred
+        """
+        try:
+            _ = self.model_path
+            return True
+        except ValueError as e:
+            self.logger.error(str(e))
+            self._send_error_response(f"❌ {str(e)}")
+            self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+            return False
+
+    def _send_error_response(self, message: str) -> None:
+        """Send error message to GUI."""
+        try:
+            self.api.llm.send_llm_text_streamed_signal(
+                LLMResponse(message=message, is_end_of_message=True)
+            )
+        except Exception:
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                {
+                    "response": LLMResponse(
+                        message=message, is_end_of_message=True
+                    )
+                },
+            )
+
+    def _check_and_download_model(self) -> bool:
+        """Check if model exists and trigger download if needed.
+
+        Returns:
+            True if model exists or download triggered, False otherwise
+        """
+        if not self.llm_settings.use_local_llm:
+            return True
+
+        if not self._check_model_exists():
+            if self.model_status[ModelType.LLM] != ModelStatus.FAILED:
+                self._trigger_model_download()
+                self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+            return False
+        return True
+
+    def _send_quantization_info(self) -> None:
+        """Send quantization selection info to GUI."""
+        vram_gb = self._get_available_vram_gb()
+        quant_info = self._get_quantization_info(vram_gb)
+
+        self.emit_signal(
+            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+            {
+                "response": LLMResponse(
+                    message=f"🔧 Auto-selecting quantization: {quant_info['level']} "
+                    f"({quant_info['description']}) based on {vram_gb:.1f}GB available VRAM\n",
+                    is_end_of_message=False,
+                    action=LLMActionType.CHAT,
+                )
+            },
+        )
+
+    def _load_local_llm_components(self) -> None:
+        """Load tokenizer and model for local LLM."""
+        if self.llm_settings.use_local_llm:
+            self._load_tokenizer()
+            self._load_model()
+
     def load(self) -> None:
         """
         Load the LLM model and associated components.
@@ -422,32 +492,10 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         ):
             return
 
-        try:
-            _ = self.model_path  # This will raise ValueError if not configured
-        except ValueError as e:
-            self.logger.error(str(e))
-            # Emit an LLMResponse so GUI callbacks receive the expected object
-            try:
-                self.api.llm.send_llm_text_streamed_signal(
-                    LLMResponse(message=f"❌ {str(e)}", is_end_of_message=True)
-                )
-            except Exception:
-                # Fallback to the raw emit if api.llm is not available
-                self.emit_signal(
-                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                    {
-                        "response": LLMResponse(
-                            message=f"❌ {str(e)}", is_end_of_message=True
-                        )
-                    },
-                )
-            self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+        if not self._validate_model_path():
             return
 
-        if self.llm_settings.use_local_llm and not self._check_model_exists():
-            if self.model_status[ModelType.LLM] != ModelStatus.FAILED:
-                self._trigger_model_download()
-                self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+        if not self._check_and_download_model():
             return
 
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
@@ -455,114 +503,90 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         self._current_model_path = self.model_path
 
         if self.llm_settings.use_local_llm:
-            vram_gb = self._get_available_vram_gb()
-            quant_info = self._get_quantization_info(vram_gb)
+            self._send_quantization_info()
 
+        self._load_local_llm_components()
+        self._load_chat_model()
+        self._load_tool_manager()
+        self._load_workflow_manager()
+        self._update_model_status()
+
+    def _check_components_loaded_for_api(self) -> bool:
+        """Check if required components are loaded for API mode."""
+        return (
+            self._chat_model is not None and self._workflow_manager is not None
+        )
+
+    def _check_components_loaded_for_local(self) -> bool:
+        """Check if required components are loaded for local mode."""
+        return (
+            self._model is not None
+            and self._tokenizer is not None
+            and self._chat_model is not None
+            and self._workflow_manager is not None
+        )
+
+    def _send_success_message(self, is_api: bool) -> None:
+        """Send success message to GUI."""
+        message = (
+            "✅ Model loaded successfully (API mode)\n"
+            if is_api
+            else "✅ Model loaded and ready for chat\n"
+        )
+
+        try:
+            self.api.llm.send_llm_text_streamed_signal(
+                LLMResponse(message=message, is_end_of_message=False)
+            )
+        except Exception:
             self.emit_signal(
                 SignalCode.LLM_TEXT_STREAMED_SIGNAL,
                 {
                     "response": LLMResponse(
-                        message=f"🔧 Auto-selecting quantization: {quant_info['level']} "
-                        f"({quant_info['description']}) based on {vram_gb:.1f}GB available VRAM\n",
-                        is_end_of_message=False,
-                        action=LLMActionType.CHAT,
+                        message=message, is_end_of_message=False
                     )
                 },
             )
 
-        if self.llm_settings.use_local_llm:
-            # Local HuggingFace: load model and tokenizer first
-            self._load_tokenizer()
-            self._load_model()
+    def _handle_pending_conversation(self) -> None:
+        """Process pending conversation if one exists."""
+        if getattr(self, "_pending_conversation_message", None):
+            self.logger.info(
+                "Processing pending conversation load after workflow manager became available."
+            )
+            self.load_conversation(self._pending_conversation_message)
+            self._pending_conversation_message = None
 
-        self._load_chat_model()
-
-        self._load_tool_manager()
-        self._load_workflow_manager()
-
-        self._update_model_status()
-
-    def _update_model_status(self):
-        """Update model status based on what's loaded."""
-        is_api = self.llm_settings.use_api
-
-        needs_model_and_tokenizer = self.llm_settings.use_local_llm
-
-        if is_api:
-            # API mode: just need chat_model and workflow_manager
-            if self._chat_model and self._workflow_manager:
-                self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
-                self.emit_signal(
-                    SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True}
-                )
-                try:
-                    self.api.llm.send_llm_text_streamed_signal(
-                        LLMResponse(
-                            message="✅ Model loaded successfully (API mode)\n",
-                            is_end_of_message=False,
-                        )
-                    )
-                except Exception:
-                    self.emit_signal(
-                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                        {
-                            "response": LLMResponse(
-                                message="✅ Model loaded successfully (API mode)\n",
-                                is_end_of_message=False,
-                            )
-                        },
-                    )
-                return
-        else:
-            # Local mode: need model, tokenizer, chat_model, and workflow_manager
-            if (
-                self._model
-                and self._tokenizer
-                and self._chat_model
-                and self._workflow_manager
-            ):
-                self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
-                self.emit_signal(
-                    SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True}
-                )
-
-                # Inform user of successful loading
-                try:
-                    self.api.llm.send_llm_text_streamed_signal(
-                        LLMResponse(
-                            message="✅ Model loaded and ready for chat\n",
-                            is_end_of_message=False,
-                        )
-                    )
-                except Exception:
-                    self.emit_signal(
-                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                        {
-                            "response": LLMResponse(
-                                message="✅ Model loaded and ready for chat\n",
-                                is_end_of_message=False,
-                            )
-                        },
-                    )
-
-                if getattr(self, "_pending_conversation_message", None):
-                    self.logger.info(
-                        "Processing pending conversation load after workflow manager became available."
-                    )
-                    self.load_conversation(self._pending_conversation_message)
-                    self._pending_conversation_message = None
-                return
-
+    def _log_component_failures(self) -> None:
+        """Log which components failed to load."""
         if not self._chat_model:
             self.logger.error("ChatModel failed to load")
         if not self._workflow_manager:
             self.logger.error("Workflow manager failed to load")
-        if needs_model_and_tokenizer:
+        if self.llm_settings.use_local_llm:
             if not self._model:
                 self.logger.error("Model failed to load")
             if not self._tokenizer and not self._is_mistral3_model():
                 self.logger.error("Tokenizer failed to load")
 
+    def _update_model_status(self) -> None:
+        """Update model status based on what's loaded."""
+        is_api = self.llm_settings.use_api
+
+        if is_api and self._check_components_loaded_for_api():
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
+            self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True})
+            self._send_success_message(is_api=True)
+            return
+
+        if not is_api and self._check_components_loaded_for_local():
+            self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
+            self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True})
+            self._send_success_message(is_api=False)
+            self._handle_pending_conversation()
+            return
+
+        self._log_component_failures()
         self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
 
     def unload(self) -> None:
@@ -708,6 +732,77 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         """Handle section change events."""
         pass
 
+    def _is_mistral3_config(self, config: AutoConfig) -> bool:
+        """Check if config indicates Mistral3 model."""
+        is_mistral3_type = (
+            hasattr(config, "model_type") and config.model_type == "mistral3"
+        )
+        is_mistral3_arch = hasattr(config, "architectures") and any(
+            "Mistral3" in arch for arch in (config.architectures or [])
+        )
+        return is_mistral3_type or is_mistral3_arch
+
+    def _handle_mistral3_tokenizer(self) -> bool:
+        """Handle Mistral3 Tekken tokenizer setup.
+
+        Returns:
+            True if Mistral3 tokenizer handled, False otherwise
+        """
+        self.logger.info(
+            "Detected Mistral3 model - tokenizer will be handled by chat adapter using mistral_common"
+        )
+
+        tekken_path = os.path.join(self.model_path, "tekken.json")
+        if not os.path.exists(tekken_path):
+            raise FileNotFoundError(
+                f"tekken.json not found at {tekken_path}. "
+                f"Ensure the model is fully downloaded."
+            )
+
+        self.logger.info(
+            f"✓ Found tekken.json at {tekken_path} - will use mistral_common for tokenization"
+        )
+        return True
+
+    def _load_standard_tokenizer(self) -> None:
+        """Load standard HuggingFace tokenizer with fallbacks."""
+        try:
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                trust_remote_code=False,
+            )
+        except (KeyError, Exception) as e:
+            self.logger.warning(
+                f"Failed to load tokenizer with trust_remote_code=False: {type(e).__name__}"
+            )
+            self._load_tokenizer_with_trust_remote_code()
+
+    def _load_tokenizer_with_trust_remote_code(self) -> None:
+        """Load tokenizer with trust_remote_code=True and fallbacks."""
+        self.logger.info("Retrying with trust_remote_code=True")
+        try:
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                trust_remote_code=True,
+            )
+        except KeyError as ke:
+            self.logger.warning(
+                f"Tokenizer class not in TOKENIZER_MAPPING: {type(ke).__name__}"
+            )
+            self._load_slow_tokenizer()
+
+    def _load_slow_tokenizer(self) -> None:
+        """Load slow tokenizer as final fallback."""
+        self.logger.info("Trying with use_fast=False to use slow tokenizer")
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            self.model_path,
+            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+            trust_remote_code=True,
+            use_fast=False,
+        )
+
     def _load_tokenizer(self) -> None:
         """Load the tokenizer for the selected model."""
         if self._tokenizer is not None:
@@ -720,67 +815,11 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
                 trust_remote_code=True,
             )
 
-            is_mistral3 = (
-                hasattr(config, "model_type")
-                and config.model_type == "mistral3"
-            ) or (
-                hasattr(config, "architectures")
-                and any(
-                    "Mistral3" in arch for arch in (config.architectures or [])
-                )
-            )
-
-            if is_mistral3:
-                self.logger.info(
-                    "Detected Mistral3 model - tokenizer will be handled by chat adapter using mistral_common"
-                )
-                # Mistral3 models use Tekken tokenizer which is NOT HuggingFace compatible
-                # The model directory has tekken.json, which requires mistral_common package
-                tekken_path = os.path.join(self.model_path, "tekken.json")
-                if not os.path.exists(tekken_path):
-                    raise FileNotFoundError(
-                        f"tekken.json not found at {tekken_path}. "
-                        f"Ensure the model is fully downloaded."
-                    )
-
-                self.logger.info(
-                    f"✓ Found tekken.json at {tekken_path} - will use mistral_common for tokenization"
-                )
-                # The chat adapter (chat_huggingface_local.py) will initialize
-                # MistralTokenizer when needed for function calling
-                return
+            if self._is_mistral3_config(config):
+                if self._handle_mistral3_tokenizer():
+                    return
             else:
-                # Standard tokenizer loading for other models
-                try:
-                    self._tokenizer = AutoTokenizer.from_pretrained(
-                        self.model_path,
-                        local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                        trust_remote_code=False,
-                    )
-                except (KeyError, Exception) as e:
-                    self.logger.warning(
-                        f"Failed to load tokenizer with trust_remote_code=False: {type(e).__name__}"
-                    )
-                    self.logger.info("Retrying with trust_remote_code=True")
-                    try:
-                        self._tokenizer = AutoTokenizer.from_pretrained(
-                            self.model_path,
-                            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                            trust_remote_code=True,
-                        )
-                    except KeyError as ke:
-                        self.logger.warning(
-                            f"Tokenizer class not in TOKENIZER_MAPPING: {type(ke).__name__}"
-                        )
-                        self.logger.info(
-                            "Trying with use_fast=False to use slow tokenizer"
-                        )
-                        self._tokenizer = AutoTokenizer.from_pretrained(
-                            self.model_path,
-                            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                            trust_remote_code=True,
-                            use_fast=False,
-                        )
+                self._load_standard_tokenizer()
 
             if self._tokenizer:
                 self._tokenizer.use_default_system_prompt = False
@@ -1235,6 +1274,122 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
             self.logger.warning(f"Error unloading tokenizer: {e}")
             self._tokenizer = None
 
+    def _setup_generation_workflow(
+        self, action: LLMActionType, system_prompt: Optional[str]
+    ) -> str:
+        """Configure workflow with system prompt and tools for the action.
+
+        Returns:
+            The action-specific system prompt
+        """
+        action_system_prompt = (
+            system_prompt
+            if system_prompt
+            else self.get_system_prompt_for_action(action)
+        )
+
+        if self._workflow_manager:
+            self._workflow_manager.update_system_prompt(action_system_prompt)
+
+            if self._tool_manager:
+                action_tools = self._tool_manager.get_tools_for_action(action)
+                self._workflow_manager.update_tools(action_tools)
+
+        return action_system_prompt
+
+    def _create_streaming_callback(
+        self,
+        llm_request: Optional[Any],
+        complete_response: List[str],
+        sequence_counter: List[int],
+    ):
+        """Create callback function for streaming tokens.
+
+        Args:
+            llm_request: The LLM request object
+            complete_response: List with single string element for response accumulation
+            sequence_counter: List with single int element for sequence tracking
+        """
+
+        def handle_streaming_token(token_text: str) -> None:
+            """Forward streaming tokens to the GUI and accumulate response."""
+            if not token_text:
+                return
+            complete_response[0] += token_text
+            sequence_counter[0] += 1
+            self.api.llm.send_llm_text_streamed_signal(
+                LLMResponse(
+                    node_id=llm_request.node_id if llm_request else None,
+                    message=token_text,
+                    is_end_of_message=False,
+                    is_first_message=(sequence_counter[0] == 1),
+                    sequence_number=sequence_counter[0],
+                )
+            )
+
+        return handle_streaming_token
+
+    def _handle_interrupted_generation(
+        self, llm_request: Optional[Any], sequence_counter: int
+    ) -> str:
+        """Handle interrupted generation.
+
+        Returns:
+            Interruption message
+        """
+        self.logger.info("Generation interrupted by user")
+        interrupt_msg = "\n\n[Generation interrupted]"
+        self.api.llm.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                message=interrupt_msg,
+                is_end_of_message=True,
+                sequence_number=sequence_counter + 1,
+            )
+        )
+        return interrupt_msg
+
+    def _handle_generation_error(
+        self, exc: Exception, llm_request: Optional[Any]
+    ) -> str:
+        """Handle generation error.
+
+        Returns:
+            Error message
+        """
+        self.logger.error(f"Error during generation: {exc}", exc_info=True)
+        error_message = f"Error: {exc}"
+        self.api.llm.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                message=error_message,
+                is_end_of_message=False,
+            )
+        )
+        return error_message
+
+    def _extract_final_response(self, result: Dict[str, Any]) -> str:
+        """Extract final response from generation result.
+
+        Returns:
+            Final response content or empty string
+        """
+        if not result or "messages" not in result:
+            return ""
+
+        final_messages = [
+            message
+            for message in result["messages"]
+            if isinstance(message, AIMessage)
+        ]
+
+        if final_messages:
+            final_content = final_messages[-1].content or ""
+            if final_content:
+                return final_content
+
+        return ""
+
     def _do_generate(
         self,
         prompt: str,
@@ -1251,46 +1406,20 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
             self.load()
 
         llm_request = llm_request or LLMRequest()
+        self._setup_generation_workflow(action, system_prompt)
 
-        action_system_prompt = (
-            system_prompt
-            if system_prompt
-            else self.get_system_prompt_for_action(action)
-        )
-        if self._workflow_manager:
-            self._workflow_manager.update_system_prompt(action_system_prompt)
-
-            if self._tool_manager:
-                action_tools = self._tool_manager.get_tools_for_action(action)
-                self._workflow_manager.update_tools(action_tools)
-
-        complete_response = ""
-        sequence_counter = 0
+        complete_response = [""]
+        sequence_counter = [0]
         self._interrupted = False
 
         if not self._workflow_manager:
             self.logger.error("Workflow manager is not initialized")
             return {"response": "Error: workflow unavailable"}
 
-        def handle_streaming_token(token_text: str) -> None:
-            """Forward streaming tokens to the GUI and accumulate response."""
-            nonlocal complete_response, sequence_counter
-
-            if not token_text:
-                return
-            complete_response += token_text
-            sequence_counter += 1
-            self.api.llm.send_llm_text_streamed_signal(
-                LLMResponse(
-                    node_id=llm_request.node_id if llm_request else None,
-                    message=token_text,
-                    is_end_of_message=False,
-                    is_first_message=(sequence_counter == 1),
-                    sequence_number=sequence_counter,
-                )
-            )
-
-        self._workflow_manager.set_token_callback(handle_streaming_token)
+        callback = self._create_streaming_callback(
+            llm_request, complete_response, sequence_counter
+        )
+        self._workflow_manager.set_token_callback(callback)
 
         try:
             if torch.cuda.is_available():
@@ -1300,55 +1429,33 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
             result = self._workflow_manager.invoke(prompt)
 
             if self._interrupted:
-                self.logger.info("Generation interrupted by user")
-                interrupt_msg = "\n\n[Generation interrupted]"
-                complete_response += interrupt_msg
-                self.api.llm.send_llm_text_streamed_signal(
-                    LLMResponse(
-                        node_id=llm_request.node_id if llm_request else None,
-                        message=interrupt_msg,
-                        is_end_of_message=True,
-                        sequence_number=sequence_counter + 1,
-                    )
+                interrupt_msg = self._handle_interrupted_generation(
+                    llm_request, sequence_counter[0]
                 )
+                complete_response[0] += interrupt_msg
                 result = {"messages": []}
         except Exception as exc:
-            self.logger.error(f"Error during generation: {exc}", exc_info=True)
-            error_message = f"Error: {exc}"
-            complete_response = error_message
-            self.api.llm.send_llm_text_streamed_signal(
-                LLMResponse(
-                    node_id=llm_request.node_id if llm_request else None,
-                    message=error_message,
-                    is_end_of_message=False,
-                )
-            )
+            error_msg = self._handle_generation_error(exc, llm_request)
+            complete_response[0] = error_msg
             result = {"messages": []}
         finally:
             self._workflow_manager.set_token_callback(None)
             self._interrupted = False
 
-        if result and "messages" in result:
-            final_messages = [
-                message
-                for message in result["messages"]
-                if isinstance(message, AIMessage)
-            ]
-            if final_messages:
-                final_content = final_messages[-1].content or ""
-                if final_content:
-                    complete_response = final_content
+        final_response = self._extract_final_response(result)
+        if final_response:
+            complete_response[0] = final_response
 
-        sequence_counter += 1
+        sequence_counter[0] += 1
         self.api.llm.send_llm_text_streamed_signal(
             LLMResponse(
                 node_id=llm_request.node_id if llm_request else None,
                 is_end_of_message=True,
-                sequence_number=sequence_counter,
+                sequence_number=sequence_counter[0],
             )
         )
 
-        return {"response": complete_response}
+        return {"response": complete_response[0]}
 
     def _send_final_message(
         self, llm_request: Optional[LLMRequest] = None
