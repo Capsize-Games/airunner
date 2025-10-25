@@ -160,19 +160,55 @@ This document tracks the implementation of major new features for AI Runner, foc
     - [ ] Test concurrent request handling
     - [ ] Performance benchmark (requests/sec, latency)
 
-- [ ] **A3: Model Lifecycle Management** (builds on Universal Model Management)
-  - [x] Use ModelResourceManager.prepare_model_loading() in LLMModelManager
-  - [x] Use ModelResourceManager.cleanup_model() in LLMModelManager unload
-  - [ ] Integrate ModelResourceManager with SD model managers (SDXL, SD1.5, Flux, etc.)
-  - [ ] Add ModelResourceManager to TTS/STT managers
-  - [ ] Implement timeout-based model cleanup (Ollama-style: unload after N minutes)
-  - [ ] Create model warmup/preload strategies for frequently-used models
-  - [ ] Add memory pressure callbacks to trigger automatic unloads
-  - [ ] Integrate ModelSelectorWidget into LLM settings tab UI
-  - [ ] Add real-time memory monitoring dashboard
-  - [ ] Optimize model loading order based on priority/frequency
-  - [ ] Write performance benchmarks (load time, memory overhead)
-  - [ ] Add telemetry for model usage patterns
+- [ ] **A3: Model Lifecycle Management** 🔥 IN PROGRESS (builds on Universal Model Management)
+  - **Phase 1: State Management & Resource Tracking** ⚠️ CRITICAL
+    - [x] Use ModelResourceManager.prepare_model_loading() in LLMModelManager
+    - [x] Use ModelResourceManager.cleanup_model() in LLMModelManager unload
+    - [ ] Add ModelState enum (UNLOADED, LOADING, LOADED, UNLOADING, BUSY)
+    - [ ] Implement state tracking in ModelResourceManager
+    - [ ] Add canvas history memory allocation tracking
+    - [ ] Track external app VRAM usage (optional: use nvidia-smi/rocm-smi)
+    - [ ] Create allocation categories: models, canvas_history, system_reserve, external_apps
+    - [ ] Implement can_perform_operation() validation before model loads
+    - [ ] Add get_active_models() with real-time state reporting
+  
+  - **Phase 2: Remove Legacy Load/Unload System**
+    - [ ] Audit and remove toggle_sd/unload_non_sd/load_non_sd signals
+    - [ ] Replace manual LLM unload→SD load→SD unload→LLM load sequences
+    - [ ] Implement automatic model swapping via ModelResourceManager
+    - [ ] Remove prevent_unload_on_llm_image_generation setting (obsolete)
+    - [ ] Centralize all model state transitions through ModelResourceManager
+  
+  - **Phase 3: GUI Integration**
+    - [ ] Add request validation at GUI level (generate button, chat input)
+    - [ ] Show "Application Busy" dialog when resources unavailable
+    - [ ] Create ModelStatusWidget for home tab (real-time VRAM/model display)
+    - [ ] Integrate ModelSelectorWidget into LLM settings tab UI
+    - [ ] Add progress indicators for model state transitions
+    - [ ] Display allocation breakdown (models vs canvas vs system)
+  
+  - **Phase 4: SD/TTS/STT Integration**
+    - [ ] Integrate ModelResourceManager with BaseDiffusersModelManager.load()
+    - [ ] Integrate ModelResourceManager with TTS managers
+    - [ ] Integrate ModelResourceManager with STT managers
+    - [ ] Add model metadata to ModelRegistry (SDXL, SD1.5, Whisper, Bark)
+    - [ ] Implement automatic quantization selection for SD models
+  
+  - **Phase 5: Advanced Features**
+    - [ ] Implement timeout-based model cleanup (Ollama-style: unload after N minutes)
+    - [ ] Create model warmup/preload strategies for frequently-used models
+    - [ ] Add memory pressure callbacks to trigger automatic unloads
+    - [ ] Optimize model loading order based on priority/frequency
+    - [ ] Write performance benchmarks (load time, memory overhead)
+    - [ ] Add telemetry for model usage patterns
+  
+  - **Testing**
+    - [ ] Test: LLM loading → art request → see "busy" popup
+    - [ ] Test: SD loading → chat request → see "busy" popup
+    - [ ] Test: LLM image tool auto-swaps models without manual unload/load
+    - [ ] Test: Canvas history memory is tracked and prevents OOM
+    - [ ] Test: Status widget updates in real-time
+    - [ ] Test: Model states transition correctly (LOADING→LOADED→BUSY→LOADED→UNLOADING→UNLOADED)
 
 ### Category B: Agent System Enhancements
 **Priority:** HIGH
