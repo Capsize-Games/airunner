@@ -931,6 +931,8 @@ class CustomScene(
         self.api.art.canvas.update_history(
             len(self.undo_history), len(self.redo_history)
         )
+        # Update canvas memory allocation
+        self._update_canvas_memory_allocation()
         if self.views():
             view = self.views()[0]
             if hasattr(view, "updateImagePositions"):
@@ -1101,6 +1103,8 @@ class CustomScene(
             self.api.art.canvas.update_history(
                 len(self.undo_history), len(self.redo_history)
             )
+        # Update canvas memory allocation
+        self._update_canvas_memory_allocation()
 
     def _cancel_layer_history_transaction(
         self, layer_id: Optional[int]
@@ -1320,6 +1324,32 @@ class CustomScene(
             self.api.art.canvas.update_history(
                 len(self.undo_history), len(self.redo_history)
             )
+        # Update canvas memory allocation in ModelResourceManager
+        self._update_canvas_memory_allocation()
+
+    def _update_canvas_memory_allocation(self):
+        """Update ModelResourceManager with current canvas memory usage."""
+        try:
+            from airunner.components.model_management import (
+                ModelResourceManager,
+                CanvasMemoryTracker,
+            )
+
+            resource_manager = ModelResourceManager()
+            tracker = CanvasMemoryTracker()
+
+            # Estimate memory used by canvas history
+            vram_gb, ram_gb = tracker.estimate_history_memory(self)
+
+            # Update the resource manager
+            resource_manager.update_canvas_history_allocation(vram_gb, ram_gb)
+
+        except Exception as e:
+            # Don't let canvas memory tracking errors break the canvas
+            if hasattr(self, "logger"):
+                self.logger.debug(
+                    f"Failed to update canvas memory allocation: {e}"
+                )
 
     def _cancel_layer_structure_transaction(self) -> None:
         self._structure_history_transaction = None

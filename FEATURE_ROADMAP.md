@@ -21,7 +21,7 @@ This document tracks the implementation of major new features for AI Runner, foc
 ## 🔥 CRITICAL FIXES (Do First)
 
 - [x] **Universal Model Management System** ✅ COMPLETE
-  - **Status:** Fully implemented and tested (38/38 tests passing)
+  - **Status:** Phase 1 & 2 complete - VRAM conflict prevention active
   - **Location:** `src/airunner/components/model_management/`
   - **Components:**
     - [x] HardwareProfiler - detects VRAM, RAM, compute capability
@@ -33,8 +33,32 @@ This document tracks the implementation of major new features for AI Runner, foc
     - [x] Integration: QuantizationMixin uses HardwareProfiler
     - [x] Integration: SD managers have hardware_profiler property
     - [x] ModelSelectorWidget - UI for model selection with hardware compatibility
+    - [x] **Phase 1: State Management** ✅
+      - [x] ModelState enum (UNLOADED, LOADING, LOADED, UNLOADING, BUSY)
+      - [x] CanvasMemoryTracker - tracks undo/redo history VRAM usage
+      - [x] External VRAM detection (nvidia-smi/rocm-smi)
+      - [x] can_perform_operation() validation method
+      - [x] get_active_models() reporting method
+      - [x] MemoryAllocationBreakdown - detailed memory analysis
+    - [x] **Phase 2: GUI Integration & Legacy Removal** ✅
+      - [x] Remove toggle_sd/unload_non_sd/load_non_sd signals
+      - [x] GUI validation in stablediffusion_generator_form
+      - [x] SD manager integration (prepare_model_loading/model_loaded/cleanup_model)
+      - [x] Simplified LLM→SD workflow (no manual swapping)
+    - [ ] **Phase 3: Canvas Integration** 🔄
+      - [ ] Call update_canvas_history_allocation() from CustomScene
+      - [ ] Trigger validation on undo/redo operations
+      - [ ] Display memory warnings in canvas UI
+    - [ ] **Phase 4: TTS/STT Integration**
+      - [ ] Add ModelResourceManager calls to TTS manager
+      - [ ] Add ModelResourceManager calls to STT manager
+      - [ ] Test TTS+LLM+SD concurrent operation blocking
+    - [ ] **Phase 5: UI Enhancements**
+      - [ ] ModelStatusWidget - shows active models and memory
+      - [ ] Automatic model swapping implementation
+      - [ ] User settings: priority model, auto-unload timeout
   - **Documentation:** Full README.md with architecture, usage patterns, examples
-  - **Next Steps:** Features moved to Category A3 (Model Lifecycle Management)
+  - **Current Status:** Users now see "Application Busy" popup if trying to generate art while LLM is loading
 
 - [ ] **Restore Fine-Tuning System** 🔥 HIGH PRIORITY
   - **Goal:** Restore and modernize the fine-tuning capabilities that were previously removed

@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List, Tuple, Any
 from dataclasses import dataclass
 
 from airunner.components.model_management.hardware_profiler import (
@@ -133,8 +133,26 @@ class ModelResourceManager:
         model_id: str,
         model_type: str = "llm",
         preferred_quantization: Optional[QuantizationLevel] = None,
+        auto_swap: bool = True,
     ) -> dict:
-        """Prepare resources for model loading."""
+        """
+        Prepare resources for model loading.
+
+        Args:
+            model_id: Identifier for the model
+            model_type: Type of model (llm, text_to_image, tts, stt)
+            preferred_quantization: Preferred quantization level
+            auto_swap: Whether to automatically unload conflicting models
+
+        Returns:
+            Dict with keys:
+            - can_load: bool
+            - reason: str (if can_load is False)
+            - metadata: ModelMetadata (if available)
+            - quantization: QuantizationConfig (if applicable)
+            - allocation: MemoryAllocation (if successful)
+            - swapped_models: List[str] (models that were unloaded)
+        """
         # Set loading state
         self.set_model_state(model_id, ModelState.LOADING, model_type)
 
@@ -150,14 +168,45 @@ class ModelResourceManager:
             metadata.size_gb, hardware, preferred_quantization
         )
 
+        # Try to allocate memory
         allocation = self.memory_allocator.allocate(model_id, quantization)
+
+        # If allocation fails and auto_swap is enabled, try swapping models
+        if not allocation and auto_swap:
+            self.logger.info(
+                f"Insufficient memory for {model_id}, attempting auto-swap"
+            )
+            swap_result = self.request_model_swap(model_id, model_type)
+
+            if swap_result["success"]:
+                self.logger.info(
+                    f"Auto-swap successful: unloaded {len(swap_result['unloaded_models'])} models"
+                )
+                # Try allocation again after swap
+                allocation = self.memory_allocator.allocate(
+                    model_id, quantization
+                )
+
+                if allocation:
+                    self.logger.info(
+                        f"Prepared {metadata.name} after auto-swap: {quantization.description}"
+                    )
+                    return {
+                        "can_load": True,
+                        "metadata": metadata,
+                        "quantization": quantization,
+                        "allocation": allocation,
+                        "swapped_models": swap_result["unloaded_models"],
+                    }
+
         if not allocation:
             self.set_model_state(model_id, ModelState.UNLOADED)
             return {
                 "can_load": False,
-                "reason": "Insufficient memory",
+                "reason": "Insufficient memory even after attempting model swap",
                 "metadata": metadata,
                 "quantization": quantization,
+                "swapped_models": [],
             }
 
         self.logger.info(
@@ -168,6 +217,7 @@ class ModelResourceManager:
             "metadata": metadata,
             "quantization": quantization,
             "allocation": allocation,
+            "swapped_models": [],
         }
 
     def model_loaded(self, model_id: str) -> None:
@@ -191,6 +241,149 @@ class ModelResourceManager:
     def check_memory_pressure(self) -> bool:
         """Check if system is under memory pressure."""
         return self.memory_allocator.is_under_memory_pressure()
+
+    def request_model_swap(
+        self, target_model_id: str, target_model_type: str
+    ) -> Dict[str, Any]:
+        """
+        Request automatic model swapping to make room for target model.
+
+        Returns:
+            Dict with keys:
+            - success: bool - whether swap was successful
+            - unloaded_models: List[str] - models that were unloaded
+            - reason: str - explanation if swap failed
+        """
+        # Get models that need to be unloaded
+        models_to_unload = self._determine_models_to_unload(
+            target_model_id, target_model_type
+        )
+
+        if not models_to_unload:
+            return {
+                "success": True,
+                "unloaded_models": [],
+                "reason": "No models need to be unloaded",
+            }
+
+        # Track which models were successfully unloaded
+        unloaded = []
+
+        for model_id in models_to_unload:
+            model_type = self._model_types.get(model_id, "unknown")
+            self.logger.info(
+                f"Auto-swapping: Unloading {model_type} model {model_id}"
+            )
+
+            try:
+                # Emit signal to unload the model
+                from airunner.enums import SignalCode, ModelType
+
+                # Map model type string to ModelType enum
+                type_map = {
+                    "llm": ModelType.LLM,
+                    "text_to_image": ModelType.SD,
+                    "tts": ModelType.TTS,
+                    "stt": ModelType.STT,
+                }
+
+                model_type_enum = type_map.get(model_type, ModelType.LLM)
+
+                # Emit unload signal based on model type
+                if model_type == "llm":
+                    self._emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, {})
+                elif model_type == "text_to_image":
+                    self._emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
+                elif model_type == "tts":
+                    self._emit_signal(SignalCode.TTS_DISABLE_SIGNAL, {})
+                elif model_type == "stt":
+                    self._emit_signal(SignalCode.STT_DISABLE_SIGNAL, {})
+
+                unloaded.append(model_id)
+
+            except Exception as e:
+                self.logger.error(f"Failed to unload {model_id}: {e}")
+                return {
+                    "success": False,
+                    "unloaded_models": unloaded,
+                    "reason": f"Failed to unload {model_id}: {str(e)}",
+                }
+
+        return {
+            "success": True,
+            "unloaded_models": unloaded,
+            "reason": f"Successfully unloaded {len(unloaded)} models",
+        }
+
+    def _determine_models_to_unload(
+        self, target_model_id: str, target_model_type: str
+    ) -> List[str]:
+        """
+        Determine which models should be unloaded to make room for target model.
+
+        Strategy:
+        1. Never unload models in LOADING or BUSY state
+        2. Prioritize unloading models based on type hierarchy:
+           - SD has highest priority (art generation)
+           - LLM has medium priority (chat)
+           - TTS/STT have lowest priority (auxiliary)
+        3. Unload lowest priority models first
+        4. Stop when sufficient memory is available
+        """
+        # Define model priority (higher = more important, keep loaded)
+        priority_map = {
+            "text_to_image": 3,  # Highest priority - keep SD loaded if possible
+            "llm": 2,  # Medium priority
+            "tts": 1,  # Low priority
+            "stt": 1,  # Low priority
+        }
+
+        target_priority = priority_map.get(target_model_type, 2)
+
+        # Get all loaded models that can be unloaded
+        candidates = []
+        for model_id, state in self._model_states.items():
+            if state not in (ModelState.LOADED, ModelState.UNLOADED):
+                # Skip models that are loading or busy
+                continue
+
+            if state == ModelState.UNLOADED:
+                continue
+
+            model_type = self._model_types.get(model_id, "unknown")
+            model_priority = priority_map.get(model_type, 2)
+
+            # Only unload models with lower or equal priority
+            if model_priority <= target_priority:
+                allocation = self.memory_allocator._allocations.get(model_id)
+                if allocation:
+                    candidates.append(
+                        (
+                            model_id,
+                            model_type,
+                            model_priority,
+                            allocation.vram_allocated_gb,
+                        )
+                    )
+
+        # Sort by priority (lowest first), then by VRAM usage (largest first)
+        candidates.sort(key=lambda x: (x[2], -x[3]))
+
+        # Determine how much memory we need
+        # For now, we'll unload all conflicting lower-priority models
+        # In the future, we could be smarter and only unload what's needed
+
+        models_to_unload = [model_id for model_id, _, _, _ in candidates]
+
+        return models_to_unload
+
+    def _emit_signal(self, signal_code, data):
+        """Emit a signal (placeholder - will be wired up to actual signal system)."""
+        # This will be connected to the actual signal emission system
+        # For now, just log
+        self.logger.debug(
+            f"Would emit signal: {signal_code} with data: {data}"
+        )
 
     def set_model_state(
         self, model_id: str, state: ModelState, model_type: str = None
