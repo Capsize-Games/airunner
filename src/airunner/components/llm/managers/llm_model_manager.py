@@ -515,6 +515,9 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         self._load_workflow_manager()
         self._update_model_status()
 
+        # Mark model as loaded
+        resource_manager.model_loaded(self.model_path)
+
     def _check_components_loaded_for_api(self) -> bool:
         """Check if required components are loaded for API mode."""
         return (
