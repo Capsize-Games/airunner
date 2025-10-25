@@ -23,6 +23,7 @@ class ChatModelFactory:
     def create_local_model(
         model: Any,
         tokenizer: Any,
+        model_path: Optional[str] = None,
         max_new_tokens: int = 500,
         temperature: float = 0.7,
         top_p: float = 0.9,
@@ -36,6 +37,7 @@ class ChatModelFactory:
         Args:
             model: Pre-loaded HuggingFace model
             tokenizer: Pre-loaded HuggingFace tokenizer
+            model_path: Path to model directory (for Mistral native tokenizer)
             max_new_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             top_p: Nucleus sampling parameter
@@ -46,9 +48,10 @@ class ChatModelFactory:
         Returns:
             ChatHuggingFaceLocal instance
         """
-        return ChatHuggingFaceLocal(
+        chat_model = ChatHuggingFaceLocal(
             model=model,
             tokenizer=tokenizer,
+            model_path=model_path,
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             top_p=top_p,
@@ -56,6 +59,12 @@ class ChatModelFactory:
             repetition_penalty=repetition_penalty,
             do_sample=do_sample,
         )
+
+        # Initialize Mistral tokenizer if available
+        if model_path:
+            chat_model._init_mistral_tokenizer()
+
+        return chat_model
 
     @staticmethod
     def create_openrouter_model(
@@ -163,6 +172,7 @@ class ChatModelFactory:
         model: Optional[Any] = None,
         tokenizer: Optional[Any] = None,
         chatbot: Optional[Any] = None,
+        model_path: Optional[str] = None,
     ) -> BaseChatModel:
         """
         Create appropriate ChatModel based on AI Runner settings.
@@ -172,6 +182,7 @@ class ChatModelFactory:
             model: Pre-loaded HuggingFace model (for local mode)
             tokenizer: Pre-loaded HuggingFace tokenizer (for local mode)
             chatbot: Chatbot settings instance
+            model_path: Path to model directory (for Mistral native tokenizer)
 
         Returns:
             Appropriate ChatModel instance
@@ -181,9 +192,14 @@ class ChatModelFactory:
         """
         # Local HuggingFace model
         if getattr(llm_settings, "use_local_llm", True):
-            if not model or not tokenizer:
+            if not model:
+                raise ValueError("Local LLM mode requires pre-loaded model")
+
+            # Tokenizer is optional for Mistral3 models (they use mistral_common)
+            # For other models, tokenizer is required
+            if not tokenizer and not model_path:
                 raise ValueError(
-                    "Local LLM mode requires pre-loaded model and tokenizer"
+                    "Local LLM mode requires either tokenizer or model_path for Mistral3 models"
                 )
 
             # Get generation parameters from chatbot settings
@@ -203,7 +219,10 @@ class ChatModelFactory:
                 }
 
             return ChatModelFactory.create_local_model(
-                model=model, tokenizer=tokenizer, **params
+                model=model,
+                tokenizer=tokenizer,
+                model_path=model_path,
+                **params
             )
 
         # OpenRouter
@@ -278,7 +297,7 @@ class ChatModelFactory:
         # Default to local if nothing else specified
         if model and tokenizer:
             return ChatModelFactory.create_local_model(
-                model=model, tokenizer=tokenizer
+                model=model, tokenizer=tokenizer, model_path=model_path
             )
 
         raise ValueError(

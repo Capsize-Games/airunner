@@ -260,10 +260,15 @@ For detailed architecture documentation, see `FEATURE_ROADMAP.md` and the compon
 
 ### ✨ LLM Vendors
 
-- **Default local model:** Ministral 8b instruct 4bit
-- **Ollama:**: A variety of local models to choose from (requires Ollama CLI)
-- **OpenRouter**: Remove server-side LLMs (requires API key)
-- **Huggingface**: Coming soon
+- **Default local model:** Llama 3.1 8B Instruct (4bit)
+  - Excellent tool calling support (82.6% BFCL, 76.1% API-Bank)
+  - 128K context window, ~4GB VRAM in 4-bit quantization
+  - Alternative: Qwen 2.5 7B Instruct (excellent tools, 3.5GB, no gating)
+  - Alternative: Command R 8B (RAG-optimized, great tool calling)
+  - Alternative: Ministral 8B Instruct (weaker tool calling: 31.6% vs 76.1%)
+- **Ollama:** A variety of local models to choose from (requires Ollama CLI)
+- **OpenRouter:** Remote server-side LLMs (requires API key)
+- **Huggingface:** Coming soon
 
 </div>
 

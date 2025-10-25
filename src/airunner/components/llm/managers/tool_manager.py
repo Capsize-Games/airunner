@@ -135,7 +135,7 @@ class ToolManager(
             from airunner.components.llm.data.llm_tool import LLMTool
 
             custom_tools = []
-            enabled_tools = LLMTool.objects.filter(enabled=True)
+            enabled_tools = LLMTool.objects.filter_by(enabled=True) or []
 
             for tool_record in enabled_tools:
                 try:

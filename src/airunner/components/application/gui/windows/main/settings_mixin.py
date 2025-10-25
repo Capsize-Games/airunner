@@ -1528,6 +1528,8 @@ class SettingsMixin:
                 self.settings_mixin_shared_instance.chatbot = chatbot
             except Exception as e:
                 self.logger.error(f"Error getting chatbot by id: {e}")
+            
+            if chatbot is None:
                 chatbot = self.create_chatbot("Default")
                 self.settings_mixin_shared_instance.chatbot = chatbot
         return self.settings_mixin_shared_instance.chatbot
@@ -1537,20 +1539,11 @@ class SettingsMixin:
     ):
         # Update/invalidate local settings cache first
         try:
-            # Debug: log generator settings updates to trace unexpected overwrites
-            try:
-                if setting_name == "generator_settings":
-                    self.logger.debug(
-                        f"__settings_updated called for generator_settings: {column_name} = {val}"
-                    )
-            except Exception:
-                pass
             self.settings_mixin_shared_instance.on_settings_updated(
                 setting_name, column_name, val
             )
-        except Exception:
-            # Avoid breaking update flow due to cache issues
-            pass
+        except Exception as e:
+            self.logger.error(f"Error updating settings cache in SettingsMixinSharedInstance: {e}")
         if hasattr(self, "api") and self.api:
             self.api.application_settings_changed(
                 setting_name=setting_name,

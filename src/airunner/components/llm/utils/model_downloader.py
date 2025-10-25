@@ -1,0 +1,283 @@
+"""
+HuggingFace model downloader without using HF Hub.
+
+Downloads models directly from HuggingFace's file hosting with progress tracking.
+Supports downloading specific files (e.g., safetensors, tokenizer, config).
+"""
+
+import os
+import requests
+from pathlib import Path
+from typing import List, Optional, Callable, Dict
+from urllib.parse import urljoin
+import json
+
+
+class HuggingFaceDownloader:
+    """
+    Download models from HuggingFace without using their Hub client.
+
+    This downloader:
+    - Makes direct HTTP requests to HuggingFace's CDN
+    - Provides progress callbacks for GUI integration
+    - Doesn't cache or phone home
+    - Works offline after initial download
+    """
+
+    BASE_URL = "https://huggingface.co"
+
+    # Essential files for different model types
+    REQUIRED_FILES = {
+        "llm": [
+            "config.json",
+            "generation_config.json",
+            "tokenizer_config.json",
+            "tokenizer.json",
+            "special_tokens_map.json",
+        ],
+        "mistral": [
+            # Keep a minimal core set for Mistral models; some Mistral
+            # repos do not include optional or engine-specific files.
+            "config.json",
+            "generation_config.json",
+            "tokenizer_config.json",
+            "tokenizer.json",
+            "special_tokens_map.json",
+        ],
+    }
+
+    def __init__(self, cache_dir: Optional[str] = None):
+        """
+        Initialize downloader.
+
+        Args:
+            cache_dir: Directory to store downloaded models
+        """
+        if cache_dir is None:
+            cache_dir = os.path.expanduser(
+                "~/.local/share/airunner/text/models/llm/causallm"
+            )
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def get_model_files(
+        self, repo_id: str, revision: str = "main"
+    ) -> List[Dict[str, any]]:
+        """
+        Get list of files in a HuggingFace repository.
+
+        Args:
+            repo_id: Repository ID (e.g., "mistralai/Ministral-8B-Instruct-2410")
+            revision: Git revision/branch (default: "main")
+
+        Returns:
+            List of file info dicts with 'path', 'size', etc.
+        """
+        # Use HuggingFace's API to list files
+        api_url = (
+            f"https://huggingface.co/api/models/{repo_id}/tree/{revision}"
+        )
+
+        # Get HuggingFace API token from settings
+        from airunner.utils.settings.get_qsettings import get_qsettings
+
+        settings = get_qsettings()
+        api_key = settings.value("huggingface/api_key", "")
+
+        # Prepare headers with authentication if available
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        try:
+            response = requests.get(api_url, headers=headers, timeout=30)
+            response.raise_for_status()
+            files = response.json()
+            return files
+        except Exception as e:
+            raise RuntimeError(f"Failed to list files for {repo_id}: {e}")
+
+    def download_file(
+        self,
+        repo_id: str,
+        filename: str,
+        local_dir: str,
+        revision: str = "main",
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+    ) -> Path:
+        """
+        Download a single file from HuggingFace.
+
+        Args:
+            repo_id: Repository ID (e.g., "mistralai/Ministral-8B-Instruct-2410")
+            filename: File to download (e.g., "model-00001-of-00002.safetensors")
+            local_dir: Local directory to save file
+            revision: Git revision/branch
+            progress_callback: Optional callback(downloaded_bytes, total_bytes)
+
+        Returns:
+            Path to downloaded file
+        """
+        # Construct download URL
+        url = f"{self.BASE_URL}/{repo_id}/resolve/{revision}/{filename}"
+
+        local_path = Path(local_dir) / filename
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Check if file already exists
+        if local_path.exists():
+            print(f"File already exists: {local_path}")
+            return local_path
+
+        print(f"Downloading {filename} from {repo_id}...")
+
+        # Get HuggingFace API token from settings
+        from airunner.utils.settings.get_qsettings import get_qsettings
+
+        settings = get_qsettings()
+        api_key = settings.value("huggingface/api_key", "")
+
+        # Prepare headers with authentication if available
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        try:
+            # Stream download with progress tracking
+            response = requests.get(
+                url, headers=headers, stream=True, timeout=60
+            )
+            response.raise_for_status()
+
+            total_size = int(response.headers.get("content-length", 0))
+            downloaded = 0
+
+            with open(local_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+
+                        if progress_callback and total_size > 0:
+                            progress_callback(downloaded, total_size)
+
+            print(f"Downloaded: {local_path}")
+            return local_path
+
+        except Exception as e:
+            # Cleanup partial download
+            if local_path.exists():
+                local_path.unlink()
+            raise RuntimeError(
+                f"Failed to download {filename} from {repo_id}: {e}"
+            )
+
+    def download_model(
+        self,
+        repo_id: str,
+        local_dir: Optional[str] = None,
+        model_type: str = "llm",
+        include_patterns: Optional[List[str]] = None,
+        exclude_patterns: Optional[List[str]] = None,
+        revision: str = "main",
+        progress_callback: Optional[Callable[[str, int, int], None]] = None,
+    ) -> Path:
+        """
+        Download a complete model from HuggingFace.
+
+        Args:
+            repo_id: Repository ID (e.g., "mistralai/Ministral-8B-Instruct-2410")
+            local_dir: Local directory (default: cache_dir/repo_name)
+            model_type: "llm" or "mistral" (determines required files)
+            include_patterns: File patterns to include (e.g., ["*.safetensors", "*.json"])
+            exclude_patterns: File patterns to exclude (e.g., ["*.bin"])
+            revision: Git revision/branch
+            progress_callback: Optional callback(filename, downloaded_bytes, total_bytes)
+
+        Returns:
+            Path to model directory
+        """
+        if local_dir is None:
+            model_name = repo_id.split("/")[-1]
+            local_dir = self.cache_dir / model_name
+        else:
+            local_dir = Path(local_dir)
+
+        local_dir.mkdir(parents=True, exist_ok=True)
+
+        # Get list of files
+        files = self.get_model_files(repo_id, revision)
+
+        # Filter files
+        required_files = self.REQUIRED_FILES.get(
+            model_type, self.REQUIRED_FILES["llm"]
+        )
+
+        files_to_download = []
+        for file_info in files:
+            filename = file_info.get("path", "")
+
+            # Skip directories
+            if file_info.get("type") == "directory":
+                continue
+
+            # Always download required files
+            if filename in required_files:
+                files_to_download.append(filename)
+                continue
+
+            # Apply include/exclude patterns
+            if include_patterns:
+                if not any(
+                    self._match_pattern(filename, p) for p in include_patterns
+                ):
+                    continue
+
+            if exclude_patterns:
+                if any(
+                    self._match_pattern(filename, p) for p in exclude_patterns
+                ):
+                    continue
+
+            files_to_download.append(filename)
+
+        # Download files
+        print(f"Downloading {len(files_to_download)} files for {repo_id}...")
+        for filename in files_to_download:
+
+            def file_progress(downloaded, total):
+                if progress_callback:
+                    progress_callback(filename, downloaded, total)
+
+            self.download_file(
+                repo_id,
+                filename,
+                local_dir,
+                revision,
+                file_progress,
+            )
+
+        print(f"Model downloaded to: {local_dir}")
+        return local_dir
+
+    @staticmethod
+    def _match_pattern(filename: str, pattern: str) -> bool:
+        """Simple pattern matching (supports * wildcard)."""
+        import fnmatch
+
+        return fnmatch.fnmatch(filename, pattern)
+
+
+# Example usage
+if __name__ == "__main__":
+    downloader = HuggingFaceDownloader()
+
+    # Download Ministral-8B-Instruct-2410 (separate safetensors only)
+    model_path = downloader.download_model(
+        repo_id="mistralai/Ministral-8B-Instruct-2410",
+        model_type="mistral",
+        include_patterns=["*.safetensors", "*.json"],
+        exclude_patterns=["*.bin", "*consolidated*"],
+        progress_callback=lambda f, d, t: print(f"{f}: {d}/{t} bytes"),
+    )
+    print(f"Model ready at: {model_path}")

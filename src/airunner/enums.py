@@ -35,6 +35,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    DOWNLOAD_LOG_UPDATE = "download_log_update_signal"
     DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"
     NEW_DOCUMENT = "new_document_signal"
     SAVE_STATE = "save_state_signal"
@@ -74,6 +75,10 @@ class SignalCode(Enum):
     LLM_FINE_TUNE_PROGRESS = "llm_fine_tune_progress"
     LLM_FINE_TUNE_COMPLETE = "llm_fine_tune_complete"
     LLM_FINE_TUNE_CANCEL = "llm_fine_tune_cancel"
+    LLM_START_QUANTIZATION = "llm_start_quantization"
+    LLM_QUANTIZATION_PROGRESS = "llm_quantization_progress"
+    LLM_QUANTIZATION_COMPLETE = "llm_quantization_complete"
+    LLM_QUANTIZATION_FAILED = "llm_quantization_failed"
     APPLICATION_TOOL_CHANGED_SIGNAL = "tool_changed_signal"
     APPLICATION_ACTIVE_GRID_AREA_UPDATED = "active_grid_area_updated"
     GENERATE_MASK = "generate_mask"
@@ -169,9 +174,16 @@ class SignalCode(Enum):
     WRITE_FILE = "write_file_signal"
     ADD_CHATBOT_MESSAGE_SIGNAL = "add_chatbot_message_signal"
     DOWNLOAD_PROGRESS = "download_progress"
+    UPDATE_DOWNLOAD_PROGRESS = "update_download_progress"
+    UPDATE_FILE_DOWNLOAD_PROGRESS = "update_file_download_progress"
     UPDATE_DOWNLOAD_LOG = "update_download_log"
     CLEAR_DOWNLOAD_STATUS_BAR = "clear_download_status_bar"
     SET_DOWNLOAD_STATUS_LABEL = "set_download_status_label"
+    LLM_MODEL_DOWNLOAD_REQUIRED = "llm_model_download_required"
+    HUGGINGFACE_DOWNLOAD_WORKER_READY = "huggingface_download_worker_ready"
+    HUGGINGFACE_DOWNLOAD_COMPLETE = "huggingface_download_complete"
+    HUGGINGFACE_DOWNLOAD_FAILED = "huggingface_download_failed"
+    CANCEL_HUGGINGFACE_DOWNLOAD = "cancel_huggingface_download"
     CHANGE_SCHEDULER_SIGNAL = "change_scheduler_signal"
     LOG_LOGGED_SIGNAL = "log_logged_signal"
     MODEL_STATUS_CHANGED_SIGNAL = "model_status_changed_signal"
@@ -612,7 +624,6 @@ AVAILABLE_LANGUAGES = {
 
 class ModelService(enum.Enum):
     LOCAL = "local"
-    HUGGINGFACE = "huggingface"
     OPENROUTER = "openrouter"
     OLLAMA = "ollama"
 

@@ -1,6 +1,7 @@
 from typing import Optional, Dict
 import glob
 import logging
+import os
 import os.path
 import signal
 import traceback
@@ -10,6 +11,10 @@ from PySide6.QtCore import QObject, QTimer
 from PySide6.QtGui import QGuiApplication, Qt, QWindow
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTranslator, QLocale
+
+# CRITICAL: Set PyTorch CUDA memory allocator config BEFORE importing torch
+# This prevents fragmentation issues when loading large quantized models
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 from airunner.components.settings.data.language_settings import (
     LanguageSettings,
@@ -37,7 +42,6 @@ from airunner.settings import (
 )
 from airunner.components.server.local_http_server import LocalHttpServerThread
 from airunner.components.splash_screen.splash_screen import SplashScreen
-import os
 import subprocess
 import sys
 from airunner.settings import LOCAL_SERVER_PORT
@@ -450,6 +454,18 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 for attr in dir(window.ui):
                     widget = getattr(window.ui, attr)
                     if isinstance(widget, QWebEngineView):
+                        # Check if a custom page has already been set
+                        current_page = widget.page()
+                        if (
+                            current_page
+                            and type(current_page).__name__ != "QWebEnginePage"
+                        ):
+                            # A custom page is already set, don't override it
+                            print(
+                                f"[App] Skipping page override for {attr}, already has custom page: {type(current_page)}"
+                            )
+                            continue
+
                         settings = widget.settings()
                         settings.setAttribute(
                             QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows,
@@ -458,6 +474,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
                         settings.setAttribute(
                             QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls,
                             True,
+                        )
+                        print(
+                            f"[App] Setting CapturingWebEnginePage for {attr}"
                         )
                         widget.setPage(CapturingWebEnginePage(widget))
         except Exception as e:

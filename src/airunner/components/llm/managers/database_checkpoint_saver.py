@@ -2,6 +2,7 @@
 
 import logging
 import json
+import uuid
 from typing import Optional, Dict, Any, Iterator, Tuple
 from collections.abc import Sequence
 
@@ -43,6 +44,7 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         config: RunnableConfig,
         checkpoint: Checkpoint,
         metadata: CheckpointMetadata,
+        new_versions: Optional[Dict[str, Any]] = None,
     ) -> RunnableConfig:
         """Save a checkpoint to the database.
 
@@ -50,6 +52,7 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             config: Runtime configuration
             checkpoint: Checkpoint data to save
             metadata: Checkpoint metadata
+            new_versions: Optional version information
 
         Returns:
             Updated configuration with checkpoint ID
@@ -59,19 +62,30 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             if "messages" in checkpoint.get("channel_values", {}):
                 messages = checkpoint["channel_values"]["messages"]
 
-                # Clear existing messages and add new ones
-                self.message_history.clear()
-                self.message_history.add_messages(messages)
+                # Only update if message count changed or content differs
+                existing_messages = self.message_history.messages
+                if len(messages) != len(existing_messages):
+                    # Clear and re-add all messages
+                    self.message_history.clear()
+                    self.message_history.add_messages(messages)
+                    self.logger.debug(
+                        f"Saved checkpoint with {len(messages)} messages to conversation {self.message_history.conversation_id}"
+                    )
+                else:
+                    self.logger.debug(
+                        f"Skipping checkpoint save - message count unchanged ({len(messages)})"
+                    )
 
-                self.logger.debug(
-                    f"Saved checkpoint with {len(messages)} messages to conversation {self.message_history.conversation_id}"
-                )
+            # Generate a proper UUID for the checkpoint if not present
+            checkpoint_id = checkpoint.get("id")
+            if not checkpoint_id:
+                checkpoint_id = str(uuid.uuid4())
 
             # Return config with thread info
             return {
                 "configurable": {
                     "thread_id": str(self.message_history.conversation_id),
-                    "checkpoint_id": checkpoint.get("id", ""),
+                    "checkpoint_id": checkpoint_id,
                 }
             }
 
@@ -95,10 +109,10 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             if not messages:
                 return None
 
-            # Build checkpoint
+            # Build checkpoint with proper UUID
             checkpoint = Checkpoint(
                 v=1,
-                id=str(self.message_history.conversation_id),
+                id=str(uuid.uuid4()),
                 ts="",
                 channel_values={
                     "messages": messages,
@@ -125,6 +139,23 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                 f"Error retrieving checkpoint: {e}", exc_info=True
             )
             return None
+
+    def put_writes(
+        self,
+        config: RunnableConfig,
+        writes: Sequence[Tuple[str, Any]],
+        task_id: str,
+    ) -> None:
+        """Store intermediate writes from graph execution.
+
+        Args:
+            config: Runtime configuration
+            writes: Sequence of (channel, value) writes to store
+            task_id: Unique identifier for the task
+        """
+        # For our simple implementation, we don't need to store intermediate writes
+        # The final state will be saved via put()
+        pass
 
     def list(
         self,

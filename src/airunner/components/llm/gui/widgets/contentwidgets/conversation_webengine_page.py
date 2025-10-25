@@ -13,7 +13,7 @@ class ConversationWebEnginePage(QWebEnginePage):
     def __init__(self, qt_parent, widget_for_signal):
         super().__init__(qt_parent)
         self._parent_widget = widget_for_signal
-        # Enable local content access to remote URLs and JS
+        # Enable local content access for file:// URLs
         view = getattr(widget_for_signal, "ui", None)
         if view and hasattr(view, "stage"):
             settings = view.stage.settings()
@@ -23,10 +23,22 @@ class ConversationWebEnginePage(QWebEnginePage):
             settings.setAttribute(
                 QWebEngineSettings.LocalContentCanAccessFileUrls, True
             )
+            settings.setAttribute(
+                QWebEngineSettings.AllowRunningInsecureContent, True
+            )
             settings.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
             settings.setAttribute(
                 QWebEngineSettings.JavascriptCanAccessClipboard, True
             )
+            settings.setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
+            print(
+                "[ConversationPage] WebEngine settings configured for local file access"
+            )
+
+    def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+        """Capture JavaScript console messages for debugging"""
+        print(f"[ConversationPage JS] {message} (line {lineNumber})")
+        super().javaScriptConsoleMessage(level, message, lineNumber, sourceID)
 
     def acceptNavigationRequest(
         self,

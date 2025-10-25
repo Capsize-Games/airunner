@@ -1,6 +1,6 @@
 import os
 import threading
-from typing import Dict, Optional, Type, List, Tuple
+from typing import Dict, Optional, List, Tuple
 
 from airunner.enums import SignalCode, ModelService
 from airunner.components.application.workers.worker import Worker
@@ -14,8 +14,19 @@ from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 from airunner.components.llm.utils.document_extraction import extract_text
 from airunner.components.llm.training_presets import (
     TrainingScenario,
-    get_preset,
 )
+from airunner.components.llm.gui.windows.huggingface_download_dialog import (
+    HuggingFaceDownloadDialog,
+)
+from airunner.components.llm.managers.download_huggingface import (
+    DownloadHuggingFaceModel,
+)
+from airunner.components.llm.config.provider_config import (
+    LLMProviderConfig,
+)
+from airunner.components.llm.managers.llm_response import LLMResponse
+from PySide6.QtCore import QThread
+from PySide6.QtWidgets import QApplication
 
 
 class LLMGenerateWorker(Worker):
@@ -23,6 +34,13 @@ class LLMGenerateWorker(Worker):
         self.signal_handlers = self._create_signal_handlers()
         self.context_manager = ContextManager()
         self._model_manager: Optional[LLMModelManager] = None
+        self._model_manager_lock = threading.Lock()
+        self._download_dialog_showing = (
+            False  # Flag to prevent multiple download dialogs
+        )
+        self._download_dialog = None  # Store reference to keep dialog alive
+        self.manager_thread: Optional[QThread] = None
+        self.download_manager: Optional["DownloadHuggingFaceModel"] = None
         super().__init__()
         self._llm_thread = None
 
@@ -48,6 +66,9 @@ class LLMGenerateWorker(Worker):
             SignalCode.INDEX_DOCUMENT: self.on_index_document_signal,
             SignalCode.LLM_START_FINE_TUNE: self.on_llm_start_fine_tune_signal,
             SignalCode.LLM_FINE_TUNE_CANCEL: self.on_llm_fine_tune_cancel_signal,
+            SignalCode.LLM_START_QUANTIZATION: self.on_llm_start_quantization_signal,
+            SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED: self.on_llm_model_download_required_signal,
+            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE: self.on_huggingface_download_complete_signal,
         }
 
     @property
@@ -67,23 +88,29 @@ class LLMGenerateWorker(Worker):
         )
 
     @property
+    def has_model_manager(self) -> bool:
+        """Check if model manager exists without creating it."""
+        return self._model_manager is not None
+
+    @property
     def model_manager(self) -> LLMModelManager:
         """Get the unified model manager for all backends."""
-        if not self._model_manager:
-            self._model_manager = LLMModelManager()
+        with self._model_manager_lock:
+            if self._model_manager is None:
+                self._model_manager = LLMModelManager()
 
-            # Configure the manager based on selected service
-            if self.use_openrouter:
-                self._model_manager.llm_settings.use_local_llm = False
-                self._model_manager.llm_settings.use_openrouter = True
-            elif self.use_ollama:
-                self._model_manager.llm_settings.use_local_llm = False
-                self._model_manager.llm_settings.use_ollama = True
-            else:
-                # Local HuggingFace
-                self._model_manager.llm_settings.use_local_llm = True
+                # Configure the manager based on selected service
+                if self.use_openrouter:
+                    self._model_manager.llm_settings.use_local_llm = False
+                    self._model_manager.llm_settings.use_openrouter = True
+                elif self.use_ollama:
+                    self._model_manager.llm_settings.use_local_llm = False
+                    self._model_manager.llm_settings.use_ollama = True
+                else:
+                    # Local HuggingFace
+                    self._model_manager.llm_settings.use_local_llm = True
 
-        return self._model_manager
+            return self._model_manager
 
     def on_conversation_deleted_signal(self, data):
         self.model_manager.on_conversation_deleted(data)
@@ -93,12 +120,13 @@ class LLMGenerateWorker(Worker):
 
     def on_llm_model_changed_signal(self, data: Dict):
         # Reset the model manager to ensure it's re-evaluated on next access
-        self._model_manager = None
+        with self._model_manager_lock:
+            self._model_manager = None
         self.unload_llm()
 
     def on_rag_load_documents_signal(self, data: Dict):
         """Handle the signal to load documents into the RAG engine."""
-        if not self.model_manager or not self.model_manager.agent:
+        if not self.has_model_manager or not self.model_manager.agent:
             return
 
         if data.get("clear_documents", False):
@@ -121,8 +149,8 @@ class LLMGenerateWorker(Worker):
     def on_quit_application_signal(self):
         self.logger.debug("Quitting LLM")
         self.running = False
-        if self.model_manager:
-            self.model_manager.unload()
+        if self._model_manager:
+            self._model_manager.unload()
         if self._llm_thread is not None:
             self._llm_thread.join()
 
@@ -130,33 +158,34 @@ class LLMGenerateWorker(Worker):
         self.unload_llm(data)
 
     def unload_llm(self, data: Optional[Dict] = None):
-        if not self.model_manager:
+        if not self._model_manager:
             return
         data = data or {}
-        self.model_manager.unload()
+        self._model_manager.unload()
         callback = data.get("callback", None)
         if callback:
             callback(data)
 
     def on_llm_load_model_signal(self, data):
         # Reset model manager to ensure proper selection based on current settings
-        self._model_manager = None
+        with self._model_manager_lock:
+            self._model_manager = None
         self._load_llm_thread(data)
 
     def on_llm_clear_history_signal(self, data: Optional[Dict] = None):
-        if self.model_manager:
-            self.model_manager.clear_history(data)
+        if self._model_manager:
+            self._model_manager.clear_history(data)
 
     def on_llm_request_signal(self, message: dict):
         self.add_to_queue(message)
 
     def llm_on_interrupt_process_signal(self):
-        if self.model_manager:
-            self.model_manager.do_interrupt()
+        if self._model_manager:
+            self._model_manager.do_interrupt()
 
     def on_llm_reload_rag_index_signal(self):
-        if self.model_manager:
-            self.model_manager.reload_rag_engine()
+        if self._model_manager:
+            self._model_manager.reload_rag_engine()
 
     def on_rag_index_all_documents_signal(self, data: Dict):
         """Handle manual document indexing request."""
@@ -600,6 +629,71 @@ class LLMGenerateWorker(Worker):
             SignalCode.LLM_FINE_TUNE_CANCEL, {"message": "Cancelled by user"}
         )
 
+    def on_llm_start_quantization_signal(self, data: dict):
+        """
+        Handle manual quantization request from UI.
+
+        Unlike the old GPTQModel approach (which created separate files on disk),
+        this now uses the same bitsandbytes auto-quantization that happens during
+        model loading. This is the recommended approach as it:
+        - Happens at load time (no separate disk files)
+        - Works reliably across all model types
+        - Uses less disk space
+
+        Args:
+            data: Contains bits for quantization level
+        """
+        bits = data.get("bits", 4)
+
+        self.logger.info(
+            f"Manual quantization requested: {bits}-bit (will apply during next model load)"
+        )
+
+        # Update the settings to use the specified quantization level
+        dtype_map = {
+            2: "2bit",
+            4: "4bit",
+            8: "8bit",
+        }
+
+        if bits not in dtype_map:
+            error_msg = (
+                f"Invalid quantization level: {bits}. Must be 2, 4, or 8."
+            )
+            self.logger.error(error_msg)
+            self.emit_signal(
+                SignalCode.LLM_QUANTIZATION_FAILED,
+                {"error": error_msg},
+            )
+            return
+
+        # Update settings
+        from airunner.settings import SETTINGS_MANAGER
+
+        SETTINGS_MANAGER.llm_generator_settings.dtype = dtype_map[bits]
+        SETTINGS_MANAGER.save_settings()
+
+        self.logger.info(
+            f"Quantization level set to {bits}-bit. "
+            "This will take effect when the model is next loaded."
+        )
+
+        # Emit success - quantization will happen automatically on next load
+        self.emit_signal(
+            SignalCode.LLM_QUANTIZATION_COMPLETE,
+            {
+                "bits": bits,
+                "message": f"Quantization set to {bits}-bit (applies on next model load)",
+            },
+        )
+
+    def _run_quantization(self, data: Dict):
+        """
+        Deprecated - kept for compatibility but no longer used.
+        Quantization now happens automatically during model loading.
+        """
+        pass
+
     def _index_selected_documents_thread(self, file_paths: list):
         """Run selective indexing in a separate thread to keep UI responsive."""
         if not self._ensure_agent_loaded():
@@ -813,10 +907,10 @@ class LLMGenerateWorker(Worker):
             self._load_llm_thread()
 
     def handle_message(self, message):
-        if self.model_manager:
-            self.model_manager.handle_request(
-                message, self.context_manager.all_contexts()
-            )
+        # Access model_manager property to create it if needed
+        self.model_manager.handle_request(
+            message, self.context_manager.all_contexts()
+        )
 
     def _load_llm_thread(self, data=None):
         self._llm_thread = threading.Thread(
@@ -829,8 +923,8 @@ class LLMGenerateWorker(Worker):
 
     def _load_llm(self, data=None):
         data = data or {}
-        if self.model_manager is not None:
-            self.model_manager.load()
+        if self._model_manager is not None:
+            self._model_manager.load()
         callback = data.get("callback", None)
         if callback:
             callback(data)
@@ -840,3 +934,131 @@ class LLMGenerateWorker(Worker):
         Unload the LLM model and free VRAM/resources. This method is required for model load balancing.
         """
         self.unload_llm(data)
+
+    def on_llm_model_download_required_signal(self, data: Dict):
+        """Handle model download required signal - show download dialog."""
+        # Prevent multiple dialogs from appearing simultaneously
+        if self._download_dialog_showing:
+            self.logger.debug(
+                "Download dialog already showing, ignoring duplicate signal"
+            )
+            return
+
+        model_path = data.get("model_path", "")
+        model_name = data.get("model_name", "Unknown Model")
+        repo_id = data.get("repo_id", "")
+
+        self.logger.info(
+            f"Model download required: {model_name} at {model_path}"
+        )
+
+        if not repo_id:
+            self.logger.error("No repo_id provided in download request")
+            return
+
+        # Get main window
+        app = QApplication.instance()
+        main_window = None
+        for widget in app.topLevelWidgets():
+            if widget.__class__.__name__ == "MainWindow":
+                main_window = widget
+                break
+
+        if not main_window:
+            self.logger.error(
+                "Cannot show download dialog - main window not found"
+            )
+            return
+
+        # Get model info from config using repo_id
+        model_info = None
+        for provider_models in [LLMProviderConfig.LOCAL_MODELS]:
+            for model_id, info in provider_models.items():
+                if info.get("repo_id") == repo_id:
+                    model_info = info
+                    break
+            if model_info:
+                break
+
+        if not model_info:
+            self.logger.error(f"Model info not found for repo_id: {repo_id}")
+            return
+
+        # Set flag to prevent duplicate dialogs
+        self._download_dialog_showing = True
+
+        try:
+            # Create and show download dialog
+            self._download_dialog = HuggingFaceDownloadDialog(
+                parent=main_window,
+                model_name=model_info.get("name", repo_id),
+                model_path=model_path,
+            )
+
+            # Create download manager as a worker
+            from airunner.utils.application.create_worker import create_worker
+
+            self.download_manager = create_worker(DownloadHuggingFaceModel)
+
+            # Start download (this will create and start worker threads internally)
+            self.download_manager.download(
+                repo_id=repo_id,
+                model_type=model_info.get("model_type", "llm"),
+                output_dir=os.path.dirname(model_path),
+                setup_quantization=True,
+                quantization_bits=4,
+            )
+
+            # Show dialog non-modally (doesn't block event loop)
+            self._download_dialog.show()
+        except Exception as e:
+            # Always reset flag on error
+            self._download_dialog_showing = False
+            self._download_dialog = None
+            self.logger.error(f"Error showing download dialog: {e}")
+
+    def on_huggingface_download_complete_signal(self, data: Dict):
+        """
+        Handle HuggingFace download completion.
+
+        After download completes, automatically retry loading the model.
+        This enables the seamless workflow: download → auto-quantize → load.
+
+        Args:
+            data: Download completion data containing model_path
+        """
+        # Reset the download dialog flag and clean up reference
+        self._download_dialog_showing = False
+        self._download_dialog = None
+
+        model_path = data.get("model_path", "")
+        self.logger.info(f"Download complete for model at: {model_path}")
+
+        # Inform user and trigger auto-load
+        try:
+            self.api.llm.send_llm_text_streamed_signal(
+                LLMResponse(
+                    message="📦 Download complete! Loading model with automatic quantization...\n",
+                    is_end_of_message=False,
+                )
+            )
+        except Exception:
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                {
+                    "response": LLMResponse(
+                        message="📦 Download complete! Loading model with automatic quantization...\n",
+                        is_end_of_message=False,
+                    )
+                },
+            )
+
+        # Automatically trigger model loading
+        # This will use the automatic quantization workflow
+        if self.model_manager:
+            self.logger.info("Triggering automatic model load after download")
+            self.model_manager.load()
+        else:
+            self.logger.warning(
+                "Model manager not available after download - cannot auto-load"
+            )

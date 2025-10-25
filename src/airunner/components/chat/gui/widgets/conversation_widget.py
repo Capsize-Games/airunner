@@ -11,7 +11,10 @@ from airunner.components.conversations.conversation_history_manager import (
 from airunner.components.llm.data.conversation import Conversation
 from airunner.components.llm.gui.widgets.loading_widget import LoadingWidget
 from airunner.enums import SignalCode, TemplateName
-from airunner.components.llm.gui.widgets.contentwidgets import ChatBridge
+from airunner.components.llm.gui.widgets.contentwidgets import (
+    ChatBridge,
+    ConversationWebEnginePage,
+)
 from airunner.components.chat.gui.widgets.templates.conversation_ui import (
     Ui_conversation,
 )
@@ -54,7 +57,32 @@ class ConversationWidget(BaseWidget):
         self._streamed_messages = []
         self.loading_widget = LoadingWidget(self)
         self.loading_widget.hide()
+        self._page_ready = False  # Flag to prevent early template rendering
         super().__init__()
+
+        # Set the custom page immediately after super().__init__()
+        if hasattr(self, "ui") and hasattr(self.ui, "stage"):
+            custom_page = ConversationWebEnginePage(self.ui.stage, self)
+            self.ui.stage.setPage(custom_page)
+            # Add load handlers for debugging
+            self.ui.stage.loadStarted.connect(
+                lambda: print("[ConversationWidget] Load started")
+            )
+            self.ui.stage.loadFinished.connect(
+                lambda ok: print(f"[ConversationWidget] Load finished: {ok}")
+            )
+            self.ui.stage.loadProgress.connect(
+                lambda progress: print(
+                    f"[ConversationWidget] Load progress: {progress}%"
+                )
+            )
+            # Mark page as ready and NOW render the template
+            self._page_ready = True
+            print(
+                "[ConversationWidget] Rendering template after custom page setup"
+            )
+            self.render_template()
+
         self.token_buffer = []
         # Add a streaming buffer to ensure proper token ordering
         self._current_stream_tokens = []
@@ -104,6 +132,9 @@ class ConversationWidget(BaseWidget):
 
     @property
     def web_engine_view(self) -> Optional[object]:
+        # Return None during initialization until custom page is set
+        if not getattr(self, "_page_ready", False):
+            return None
         return self.ui.stage
 
     @property
@@ -287,9 +318,6 @@ class ConversationWidget(BaseWidget):
             messages (List[Dict[str, Any]]): List of message dicts (sender, text, timestamp, etc).
         """
         simplified_messages = []
-        self.logger.debug(
-            f"set_conversation called with {len(messages) if messages is not None else 0} messages"
-        )
         for msg in messages:
             content = msg.get("text") or msg.get("content") or ""
             # Format content for MathJax compatibility

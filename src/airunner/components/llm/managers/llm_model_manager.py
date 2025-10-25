@@ -10,7 +10,12 @@ from transformers.utils.quantization_config import (
     BitsAndBytesConfig,
     GPTQConfig,
 )
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import (
+    AutoModel,
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    AutoConfig,
+)
 from transformers.generation.streamers import TextIteratorStreamer
 from langchain_core.messages import AIMessage
 
@@ -25,6 +30,10 @@ from airunner.components.application.managers.base_model_manager import (
 from airunner.components.llm.adapters import ChatModelFactory
 from airunner.components.llm.managers.tool_manager import ToolManager
 from airunner.components.llm.managers.workflow_manager import WorkflowManager
+from airunner.components.llm.managers.quantization_mixin import (
+    QuantizationMixin,
+)
+from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.enums import (
     ModelType,
     ModelStatus,
@@ -37,13 +46,12 @@ from airunner.settings import (
 )
 from airunner.utils.memory import clear_memory
 from airunner.utils.settings.get_qsettings import get_qsettings
-from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.managers.llm_settings import LLMSettings
 
 
-class LLMModelManager(BaseModelManager, TrainingMixin):
+class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
     """
     Handler for Large Language Model operations in AI Runner.
 
@@ -73,6 +81,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
     # Other components
     _history: Optional[List] = []
+    _interrupted: bool = False
 
     # Settings
     llm_settings: LLMSettings
@@ -95,6 +104,57 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         self.llm_settings = LLMSettings()
         self._pending_conversation_message = None
         self._conversation_history_manager = ConversationHistoryManager()
+        """
+        Initialize the LLM handler.
+
+        Args:
+            *args: Variable length argument list passed to parent classes.
+            **kwargs: Arbitrary keyword arguments passed to parent classes.
+        """
+        import traceback
+
+        print(f"\n{'='*80}")
+        print(f"LLMModelManager.__init__ called - instance {id(self)}")
+        print(f"Traceback:")
+        for line in traceback.format_stack()[:-1]:
+            print(line.strip())
+        print(f"{'='*80}\n")
+
+        super().__init__(*args, **kwargs)
+        # Initialize the instance status *after* the base class init
+        self._model_status = {ModelType.LLM: ModelStatus.UNLOADED}
+        self.llm_settings = LLMSettings()
+        self._pending_conversation_message = None
+        self._conversation_history_manager = ConversationHistoryManager()
+
+    @property
+    def supports_function_calling(self) -> bool:
+        """Check if the current model supports function calling."""
+        from airunner.components.llm.config.provider_config import (
+            LLMProviderConfig,
+        )
+
+        try:
+            # Extract model name from path
+            model_path = self.model_path
+            if not model_path:
+                return False
+
+            # Find model key from path
+            for (
+                model_key,
+                model_info,
+            ) in LLMProviderConfig.LOCAL_MODELS.items():
+                if model_key in model_path or model_info["name"] in model_path:
+                    return model_info.get("function_calling", False)
+
+            # Unknown model - assume no function calling
+            return False
+        except Exception as e:
+            self.logger.warning(
+                f"Could not determine function calling support: {e}"
+            )
+            return False
 
     @property
     def system_prompt(self) -> str:
@@ -105,7 +165,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
         if hasattr(self, "chatbot") and self.chatbot:
             parts.append(
-                f"You are {self.chatbot.bot_name}, a helpful AI assistant."
+                f"You are {self.chatbot.botname}, a helpful AI assistant."
             )
 
             if (
@@ -220,35 +280,29 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         path = self._current_model_path.lower()
         return "instruct" in path and "llama" in path
 
-    @property
-    def _quantization_config(
-        self,
-    ) -> Optional[Union[BitsAndBytesConfig, GPTQConfig]]:
+    def _get_available_vram_gb(self) -> float:
         """
-        Get the appropriate quantization configuration based on dtype settings.
+        Get available VRAM in gigabytes.
 
         Returns:
-            Optional[Union[BitsAndBytesConfig, GPTQConfig]]: Configuration for model quantization,
-            or None if no quantization is specified.
+            float: Available VRAM in GB, or 0 if CUDA not available
         """
-        config = None
-        if self.llm_dtype == "8bit":
-            config = BitsAndBytesConfig(
-                llm_int8_threshold=6.0,
-                llm_int8_has_fp16_weight=False,
-                bnb_4bit_compute_dtype=torch.bfloat16,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-            )
-        elif self.llm_dtype == "4bit":
-            config = BitsAndBytesConfig(
-                load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16
-            )
-        elif self.llm_dtype == "2bit":
-            config = GPTQConfig(
-                bits=2, dataset="c4", tokenizer=self._tokenizer
-            )
-        return config
+        if not torch.cuda.is_available():
+            return 0.0
+
+        try:
+            # Get total and allocated memory
+            total_memory = torch.cuda.get_device_properties(0).total_memory
+            allocated_memory = torch.cuda.memory_allocated(0)
+
+            # Calculate available memory in GB
+            available_memory = total_memory - allocated_memory
+            available_gb = available_memory / (1024**3)
+
+            return available_gb
+        except Exception as e:
+            self.logger.warning(f"Could not detect VRAM: {e}")
+            return 0.0
 
     @property
     def use_cache(self) -> bool:
@@ -277,31 +331,140 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
     @property
     def model_name(self) -> str:
-        return "causallm/w4ffl35/Ministral-8B-Instruct-2410-doublequant"
+        """Extract model name from model path."""
+        if not self.llm_generator_settings.model_path:
+            raise ValueError(
+                "No model path configured. Please select a model in LLM settings."
+            )
+        # Extract the last part of the path as model name
+        return os.path.basename(
+            os.path.normpath(self.llm_generator_settings.model_path)
+        )
 
     @property
     def model_path(self) -> str:
         """
-        Get the filesystem path to the model files.
+        Get the filesystem path to the model files from settings.
 
         Returns:
             str: Absolute path to the model directory.
+
+        Raises:
+            ValueError: If no model path is configured in settings.
         """
-        return os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "text",
-                "models",
-                "llm",
-                self.model_name,
+        if not self.llm_generator_settings.model_path:
+            raise ValueError(
+                "No model path configured. Please select a model in LLM settings."
             )
+        return os.path.expanduser(self.llm_generator_settings.model_path)
+
+    def _check_model_exists(self) -> bool:
+        """
+        Check if the model exists at the expected path with all necessary files.
+
+        Returns:
+            bool: True if model exists with all required files, False otherwise
+        """
+        if not self.llm_settings.use_local_llm:
+            # API-based models don't need local files
+            return True
+
+        model_path = self.model_path
+        if not os.path.exists(model_path):
+            self.logger.info(f"Model path does not exist: {model_path}")
+            return False
+
+        # Check for essential model files
+        # tokenizer_config.json is optional - some models use different tokenizer files
+        essential_files = ["config.json"]
+        safetensors_found = False
+
+        try:
+            files_in_dir = os.listdir(model_path)
+            self.logger.debug(f"Files in {model_path}: {files_in_dir}")
+
+            for file in files_in_dir:
+                if file.endswith(".safetensors"):
+                    safetensors_found = True
+                    self.logger.debug(f"Found safetensors file: {file}")
+                    break
+
+            has_essential = all(
+                os.path.exists(os.path.join(model_path, f))
+                for f in essential_files
+            )
+
+            if not has_essential:
+                missing = [
+                    f
+                    for f in essential_files
+                    if not os.path.exists(os.path.join(model_path, f))
+                ]
+                self.logger.info(f"Missing essential files: {missing}")
+
+            if not safetensors_found:
+                self.logger.info(
+                    f"No .safetensors files found in {model_path}"
+                )
+
+            result = has_essential and safetensors_found
+            self.logger.info(
+                f"Model exists check: {result} (has_essential={has_essential}, safetensors_found={safetensors_found})"
+            )
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error checking model files: {e}")
+            return False
+
+    def _trigger_model_download(self) -> bool:
+        """
+        Trigger model download via signal.
+
+        Returns:
+            bool: True if download should proceed, False if canceled
+        """
+        self.logger.info(
+            f"Model not found at {self.model_path}, triggering download"
         )
+
+        # Find repo_id for this model from config
+        from airunner.components.llm.config.provider_config import (
+            LLMProviderConfig,
+        )
+
+        repo_id = None
+        for model_id, model_info in LLMProviderConfig.LOCAL_MODELS.items():
+            if model_info["name"] == self.model_name:
+                repo_id = model_info["repo_id"]
+                break
+
+        if not repo_id:
+            self.logger.error(
+                f"Could not find repo_id for model: {self.model_name}"
+            )
+            return False
+
+        # Emit signal to show download dialog
+        self.emit_signal(
+            SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
+            {
+                "model_path": self.model_path,
+                "model_name": self.model_name,
+                "repo_id": repo_id,
+            },
+        )
+
+        # Return False to indicate loading should wait for download
+        return False
 
     def load(self) -> None:
         """
         Load the LLM model and associated components.
 
         This method handles the complete loading process, including:
+        - Validating model path is configured
+        - Checking if model exists (trigger download if needed)
         - Checking if the model is already loaded
         - Loading the tokenizer and model (for local LLM)
         - Creating the appropriate ChatModel via factory
@@ -316,10 +479,63 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         ):
             return
 
+        # Validate model path is configured
+        try:
+            _ = self.model_path  # This will raise ValueError if not configured
+        except ValueError as e:
+            self.logger.error(str(e))
+            # Emit an LLMResponse so GUI callbacks receive the expected object
+            try:
+                self.api.llm.send_llm_text_streamed_signal(
+                    LLMResponse(message=f"❌ {str(e)}", is_end_of_message=True)
+                )
+            except Exception:
+                # Fallback to the raw emit if api.llm is not available
+                self.emit_signal(
+                    SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                    {
+                        "response": LLMResponse(
+                            message=f"❌ {str(e)}", is_end_of_message=True
+                        )
+                    },
+                )
+            self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+            return
+
+        # Check if model exists (for local models only)
+        if self.llm_settings.use_local_llm and not self._check_model_exists():
+            # Only trigger download once - set status to FAILED to prevent re-triggering
+            if self.model_status[ModelType.LLM] != ModelStatus.FAILED:
+                self._trigger_model_download()
+                self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+            # Don't proceed with loading - wait for download to complete
+            return
+
         # Set status to LOADING before calling unload to avoid recursion/hang
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self.unload()
         self._current_model_path = self.model_path
+
+        # Inform user about automatic quantization (for local models)
+        if self.llm_settings.use_local_llm:
+            vram_gb = self._get_available_vram_gb()
+            quant_info = self._get_quantization_info(vram_gb)
+
+            from airunner.components.llm.managers.llm_response import (
+                LLMResponse,
+            )
+
+            self.emit_signal(
+                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                {
+                    "response": LLMResponse(
+                        message=f"🔧 Auto-selecting quantization: {quant_info['level']} "
+                        f"({quant_info['description']}) based on {vram_gb:.1f}GB available VRAM\n",
+                        is_end_of_message=False,
+                        action=LLMActionType.CHAT,
+                    )
+                },
+            )
 
         # Load components based on settings
         if self.llm_settings.use_local_llm:
@@ -353,6 +569,24 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 self.emit_signal(
                     SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True}
                 )
+                # Send an LLMResponse object so UI handlers get the correct type
+                try:
+                    self.api.llm.send_llm_text_streamed_signal(
+                        LLMResponse(
+                            message="✅ Model loaded successfully (API mode)\n",
+                            is_end_of_message=False,
+                        )
+                    )
+                except Exception:
+                    self.emit_signal(
+                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                        {
+                            "response": LLMResponse(
+                                message="✅ Model loaded successfully (API mode)\n",
+                                is_end_of_message=False,
+                            )
+                        },
+                    )
                 return
         else:
             # Local mode: need model, tokenizer, chat_model, and workflow_manager
@@ -366,6 +600,26 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 self.emit_signal(
                     SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True}
                 )
+
+                # Inform user of successful loading
+                # Send an LLMResponse object so UI handlers get the correct type
+                try:
+                    self.api.llm.send_llm_text_streamed_signal(
+                        LLMResponse(
+                            message="✅ Model loaded and ready for chat\n",
+                            is_end_of_message=False,
+                        )
+                    )
+                except Exception:
+                    self.emit_signal(
+                        SignalCode.LLM_TEXT_STREAMED_SIGNAL,
+                        {
+                            "response": LLMResponse(
+                                message="✅ Model loaded and ready for chat\n",
+                                is_end_of_message=False,
+                            )
+                        },
+                    )
 
                 # Process pending conversation if any
                 if getattr(self, "_pending_conversation_message", None):
@@ -384,7 +638,8 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         if needs_model_and_tokenizer:
             if not self._model:
                 self.logger.error("Model failed to load")
-            if not self._tokenizer:
+            # Don't check tokenizer for Mistral3 - it uses mistral_common instead
+            if not self._tokenizer and not self._is_mistral3_model():
                 self.logger.error("Tokenizer failed to load")
 
         self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
@@ -451,11 +706,12 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
         This can be called to stop a generation that is in progress.
         """
-        # For now, interruption is not directly supported in streaming
-        # TODO: Implement proper interruption mechanism
-        self.logger.warning(
-            "Interrupt requested but not yet implemented for workflow manager"
-        )
+        self._interrupted = True
+        self.logger.info("Interrupt requested - will stop generation")
+
+        # Also set interrupt on the chat model if it supports it
+        if self._chat_model and hasattr(self._chat_model, "set_interrupted"):
+            self._chat_model.set_interrupted(True)
 
     def on_conversation_deleted(self, data: Dict) -> None:
         """Handle conversation deletion event."""
@@ -470,9 +726,19 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
         if conversation:
             Conversation.make_current(conversation.id)
+            self.logger.info(
+                f"Starting new conversation with ID: {conversation.id}"
+            )
 
         if self._workflow_manager:
-            self._workflow_manager.clear_memory()
+            # Update workflow manager to use the new conversation ID
+            if conversation:
+                self._workflow_manager.set_conversation_id(conversation.id)
+                self.logger.debug(
+                    f"Updated workflow manager to conversation {conversation.id}"
+                )
+            else:
+                self._workflow_manager.clear_memory()
 
     def _get_or_create_conversation(
         self, data: Dict
@@ -481,14 +747,23 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         conversation_id = data.get("conversation_id")
 
         if not conversation_id:
+            # No conversation_id provided - create a new one
             conversation = Conversation.create()
-            data["conversation_id"] = conversation.id
-            self.update_llm_generator_settings(
-                current_conversation_id=conversation.id
-            )
-            return conversation
+            if conversation:
+                data["conversation_id"] = conversation.id
+                self.update_llm_generator_settings(
+                    current_conversation_id=conversation.id
+                )
+                return conversation
+            return None
 
-        return Conversation.objects.get(conversation_id)
+        # Conversation ID provided - load and set it as current
+        conversation = Conversation.objects.get(conversation_id)
+        if conversation:
+            self.update_llm_generator_settings(
+                current_conversation_id=conversation_id
+            )
+        return conversation
 
     def add_chatbot_response_to_history(self, message: str) -> None:
         """
@@ -571,41 +846,325 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
 
         self.logger.debug(f"Loading tokenizer from {self.model_path}")
         try:
-            self._tokenizer = AutoTokenizer.from_pretrained(
+            # Load config to check model type
+            config = AutoConfig.from_pretrained(
                 self.model_path,
                 local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                device_map=self.device,
-                trust_remote_code=False,
-                torch_dtype=self.torch_dtype,
+                trust_remote_code=True,
             )
-            self.logger.debug("Tokenizer loaded")
+
+            # Check if this is a Mistral3 model (multimodal conditional generation)
+            is_mistral3 = (
+                hasattr(config, "model_type")
+                and config.model_type == "mistral3"
+            ) or (
+                hasattr(config, "architectures")
+                and any(
+                    "Mistral3" in arch for arch in (config.architectures or [])
+                )
+            )
+
+            if is_mistral3:
+                self.logger.info(
+                    "Detected Mistral3 model - tokenizer will be handled by chat adapter using mistral_common"
+                )
+                # Mistral3 models use Tekken tokenizer which is NOT HuggingFace compatible
+                # The model directory has tekken.json, which requires mistral_common package
+                # Set tokenizer to None here - the chat adapter will handle it
+                tekken_path = os.path.join(self.model_path, "tekken.json")
+                if not os.path.exists(tekken_path):
+                    raise FileNotFoundError(
+                        f"tekken.json not found at {tekken_path}. "
+                        f"Ensure the model is fully downloaded."
+                    )
+
+                self.logger.info(
+                    f"✓ Found tekken.json at {tekken_path} - will use mistral_common for tokenization"
+                )
+                # Don't set self._tokenizer - leave it None for Mistral3
+                # The chat adapter (chat_huggingface_local.py) will initialize
+                # MistralTokenizer when needed for function calling
+                return
+            else:
+                # Standard tokenizer loading for other models
+                # Try first with trust_remote_code=False for security
+                try:
+                    self._tokenizer = AutoTokenizer.from_pretrained(
+                        self.model_path,
+                        local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                        trust_remote_code=False,
+                    )
+                except (KeyError, Exception) as e:
+                    self.logger.warning(
+                        f"Failed to load tokenizer with trust_remote_code=False: {type(e).__name__}"
+                    )
+                    self.logger.info("Retrying with trust_remote_code=True")
+                    try:
+                        self._tokenizer = AutoTokenizer.from_pretrained(
+                            self.model_path,
+                            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                            trust_remote_code=True,
+                        )
+                    except KeyError as ke:
+                        self.logger.warning(
+                            f"Tokenizer class not in TOKENIZER_MAPPING: {type(ke).__name__}"
+                        )
+                        self.logger.info(
+                            "Trying with use_fast=False to use slow tokenizer"
+                        )
+                        self._tokenizer = AutoTokenizer.from_pretrained(
+                            self.model_path,
+                            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                            trust_remote_code=True,
+                            use_fast=False,
+                        )
+
+            self.logger.debug("Tokenizer loaded successfully")
 
             # Configure tokenizer settings
             if self._tokenizer:
                 self._tokenizer.use_default_system_prompt = False
         except Exception as e:
-            self.logger.error(f"Error loading tokenizer: {e}")
+            self.logger.error(
+                f"Error loading tokenizer: {type(e).__name__}: {str(e)}"
+            )
+            import traceback
+
+            self.logger.error(
+                f"Tokenizer traceback:\n{traceback.format_exc()}"
+            )
             self._tokenizer = None
             self.logger.error("Tokenizer failed to load")
 
     def _load_model(self) -> None:
-        """Load the LLM model and apply enabled adapters."""
+        """Load the LLM model, using pre-quantized version if available."""
         if self._model is not None:
             return
 
-        try:
-            self._model = AutoModelForCausalLM.from_pretrained(
-                self.model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                use_cache=self.use_cache,
-                trust_remote_code=False,
-                torch_dtype=self.torch_dtype,
-                device_map=self.device,
-                attn_implementation=self.attn_implementation,
+        # Clear GPU memory before loading to ensure maximum available space
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            import gc
+
+            gc.collect()
+            free_memory = torch.cuda.mem_get_info()[0] / (1024**3)
+            total_memory = torch.cuda.get_device_properties(0).total_memory / (
+                1024**3
             )
+            self.logger.info(
+                f"GPU memory before loading: {free_memory:.2f}GB free / {total_memory:.2f}GB total"
+            )
+
+        try:
+            # Determine which quantization level to use
+            dtype = self.llm_dtype
+            self.logger.info(f"Current dtype setting: {dtype}")
+            if not dtype or dtype == "auto":
+                dtype = self._auto_select_quantization()
+                self.llm_generator_settings.dtype = dtype
+                self.logger.info(f"✓ Auto-selected quantization: {dtype}")
+            else:
+                self.logger.info(f"Using configured dtype: {dtype}")
+
+            # Determine model path and quantization config
+            model_path_to_load = self.model_path
+            quantization_config = None
+
+            # BitsAndBytes: Runtime quantization (cannot be saved to disk)
+            # AWQ/GPTQ: Can check for pre-quantized models on disk
+            if dtype in ["8bit", "4bit"]:
+                self.logger.info(
+                    f"Using BitsAndBytes runtime {dtype} quantization"
+                )
+
+                # Create BitsAndBytes runtime quantization config
+                if dtype == "8bit":
+                    quantization_config = BitsAndBytesConfig(
+                        load_in_8bit=True,
+                        llm_int8_threshold=6.0,
+                        llm_int8_has_fp16_weight=False,
+                        llm_int8_enable_fp32_cpu_offload=True,
+                    )
+                    self.logger.info(
+                        "Created 8-bit BitsAndBytes config with CPU offload"
+                    )
+                elif dtype == "4bit":
+                    quantization_config = BitsAndBytesConfig(
+                        load_in_4bit=True,
+                        bnb_4bit_compute_dtype=torch.float16,
+                        bnb_4bit_use_double_quant=True,
+                        bnb_4bit_quant_type="nf4",
+                    )
+                    self.logger.info("Created 4-bit BitsAndBytes config")
+            elif dtype == "2bit":
+                # For 2-bit, we could use GPTQ (requires calibration)
+                # For now, log a warning
+                self.logger.warning(
+                    "2-bit quantization requires GPTQ/AWQ with calibration dataset"
+                )
+                self.logger.warning("Falling back to 4-bit BitsAndBytes")
+                quantization_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.float16,
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_quant_type="nf4",
+                )
+            else:
+                # No quantization - load in full precision
+                self.logger.info(
+                    f"Loading full precision model (no quantization) - dtype={dtype}"
+                )
+
+            # Load config to check model type
+            config = AutoConfig.from_pretrained(
+                model_path_to_load,
+                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
+                trust_remote_code=True,
+            )
+
+            # Check if this is a Mistral3 model
+            is_mistral3 = (
+                hasattr(config, "model_type")
+                and config.model_type == "mistral3"
+            ) or (
+                hasattr(config, "architectures")
+                and any(
+                    "Mistral3" in arch for arch in (config.architectures or [])
+                )
+            )
+
+            # Prepare model loading kwargs
+            model_kwargs = {
+                "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
+                "trust_remote_code": True,
+                "attn_implementation": self.attn_implementation,
+            }
+
+            # Add quantization config if available
+            if quantization_config is not None:
+                model_kwargs["quantization_config"] = quantization_config
+                # CRITICAL: Use "auto" device_map for quantization
+                # BitsAndBytes requires device_map="auto" to properly distribute layers
+                model_kwargs["device_map"] = "auto"
+                # Use correct dtype parameter (not torch_dtype which is deprecated)
+                model_kwargs["dtype"] = self.torch_dtype
+
+                # Set max_memory based on quantization type
+                if torch.cuda.is_available():
+                    if dtype == "8bit":
+                        # 8-bit supports CPU offload - use conservative GPU limit
+                        model_kwargs["max_memory"] = {
+                            0: "13GB",  # Reserve ~2.5GB for CUDA overhead
+                            "cpu": "18GB",  # Allow CPU offload
+                        }
+                        self.logger.info(
+                            f"✓ Applying 8-bit quantization with CPU offload"
+                        )
+                        self.logger.info(
+                            f"  Using device_map='auto', dtype={self.torch_dtype}, max_memory=13GB GPU + 18GB CPU"
+                        )
+                    elif dtype == "4bit":
+                        # 4-bit GPU-only - balance between model weights and activation memory
+                        # Model weights: ~11.5GB, need ~1.5GB for activations during inference
+                        model_kwargs["max_memory"] = {
+                            0: "14GB",  # Leave ~1.5GB for activation memory during generation
+                        }
+                        self.logger.info(
+                            f"✓ Applying 4-bit quantization (GPU-only)"
+                        )
+                        self.logger.info(
+                            f"  Using device_map='auto', dtype={self.torch_dtype}, max_memory=14GB GPU (reserves 1.5GB for activations)"
+                        )
+                    else:
+                        # Other quantization types
+                        self.logger.info(f"✓ Applying {dtype} quantization")
+                        self.logger.info(
+                            f"  Using device_map='auto', dtype={self.torch_dtype}"
+                        )
+                else:
+                    self.logger.info(
+                        f"✓ Applying {dtype} quantization (no CUDA)"
+                    )
+                    self.logger.info(
+                        f"  Using device_map='auto', dtype={self.torch_dtype}"
+                    )
+            else:
+                # No quantization - use explicit device and torch_dtype
+                model_kwargs["torch_dtype"] = self.torch_dtype
+                model_kwargs["device_map"] = self.device
+                self.logger.warning(
+                    "No quantization config - loading in full precision!"
+                )
+
+            # Mistral3 models don't accept use_cache in __init__
+            # They're multimodal models with different parameter signatures
+            if not is_mistral3:
+                model_kwargs["use_cache"] = self.use_cache
+
+            # Load model with appropriate class
+            if is_mistral3:
+                # Mistral3 requires Mistral3ForConditionalGeneration
+                self.logger.info(
+                    "Loading Mistral3 model with Mistral3ForConditionalGeneration"
+                )
+                try:
+                    from transformers.models.mistral3 import (
+                        Mistral3ForConditionalGeneration,
+                    )
+
+                    self._model = (
+                        Mistral3ForConditionalGeneration.from_pretrained(
+                            model_path_to_load,
+                            **model_kwargs,
+                        )
+                    )
+                    self.logger.info("✓ Mistral3 model loaded successfully")
+                except ImportError:
+                    raise ImportError(
+                        "Mistral3ForConditionalGeneration not available. "
+                        "Ensure transformers supports Mistral3 models."
+                    )
+            else:
+                # Standard CausalLM loading for other models
+                try:
+                    self._model = AutoModelForCausalLM.from_pretrained(
+                        model_path_to_load,
+                        **model_kwargs,
+                    )
+                    self.logger.debug(
+                        "Model loaded successfully with AutoModelForCausalLM"
+                    )
+                except ValueError as ve:
+                    # If AutoModelForCausalLM doesn't recognize the config,
+                    # try generic AutoModel which can load any architecture
+                    if "Unrecognized configuration class" in str(ve):
+                        self.logger.warning(
+                            f"AutoModelForCausalLM doesn't recognize model architecture: {type(ve).__name__}"
+                        )
+                        self.logger.info(
+                            "Falling back to AutoModel.from_pretrained() for custom architecture"
+                        )
+                        self._model = AutoModel.from_pretrained(
+                            model_path_to_load,
+                            **model_kwargs,
+                        )
+                        self.logger.debug(
+                            "Model loaded successfully with AutoModel"
+                        )
+                    else:
+                        raise
+
+            # Note: BitsAndBytes quantization cannot be saved to disk (runtime-only)
+            # For persistent quantized models, consider using AWQ or GPTQ
+
             self._load_adapters()
         except Exception as e:
-            self.logger.error(f"Error loading model: {e}")
+            self.logger.error(
+                f"Error loading model: {type(e).__name__}: {str(e)}"
+            )
+            import traceback
+
+            self.logger.error(f"Model traceback:\n{traceback.format_exc()}")
             self._model = None
 
     def _get_enabled_adapter_names(self) -> List[str]:
@@ -626,8 +1185,13 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
         """Query database for adapters matching the given names."""
         if not adapter_names:
             return []
-        adapters = FineTunedModel.objects.all()
-        return [a for a in adapters if a.name in adapter_names]
+        try:
+            adapters = FineTunedModel.objects.all()
+            return [a for a in adapters if a.name in adapter_names]
+        except Exception as e:
+            # Table might not exist if migrations haven't run
+            self.logger.error(f"Error querying adapters: {e}")
+            return []
 
     def _apply_adapter(self, adapter: FineTunedModel) -> bool:
         """Apply a single adapter to the model."""
@@ -689,6 +1253,7 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 model=self._model,
                 tokenizer=self._tokenizer,
                 chatbot=getattr(self, "chatbot", None),
+                model_path=self._current_model_path,
             )
 
             self.logger.info(
@@ -731,26 +1296,35 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                     "Tool manager not loaded, workflow will have no tools"
                 )
 
-            # Get current conversation ID if available
-            conversation_id = None
-            try:
-                from airunner.settings import SETTINGS
-
-                conversation_id = (
-                    SETTINGS.llm_generator_settings.current_conversation_id
+            # Only pass tools if model supports function calling
+            # Otherwise, keep tools=None to avoid injecting tool schemas
+            tools_to_use = None
+            if self.supports_function_calling and self.tools:
+                tools_to_use = self.tools
+                self.logger.info(
+                    f"Model supports function calling - passing {len(self.tools)} tools"
                 )
-            except Exception:
-                pass
+            else:
+                if not self.supports_function_calling:
+                    self.logger.info(
+                        "Model does not support function calling - no tools will be passed"
+                    )
+                else:
+                    self.logger.info(
+                        "No tools available - workflow will run without tools"
+                    )
 
+            # Initialize workflow manager without conversation ID
+            # The conversation ID will be set explicitly when needed
             self._workflow_manager = WorkflowManager(
                 system_prompt=self.system_prompt,
                 chat_model=self._chat_model,
-                tools=self.tools,
+                tools=tools_to_use,
                 max_tokens=2000,
-                conversation_id=conversation_id,
+                conversation_id=None,
             )
             self.logger.info(
-                f"Workflow manager loaded with conversation ID: {conversation_id}"
+                "Workflow manager loaded (conversation ID will be set on first use)"
             )
         except Exception as e:
             self.logger.error(
@@ -875,31 +1449,101 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
                 f"Updated workflow system prompt for action {action}"
             )
 
-        # Stream from workflow manager
+            # Update tools based on action type
+            if self._tool_manager:
+                action_tools = self._tool_manager.get_tools_for_action(action)
+                self._workflow_manager.update_tools(action_tools)
+                self.logger.debug(
+                    f"Updated workflow with {len(action_tools)} tools for action {action}"
+                )
+
         complete_response = ""
+        sequence_counter = 0
+        self._interrupted = False  # Reset interrupt flag
+
+        if not self._workflow_manager:
+            self.logger.error("Workflow manager is not initialized")
+            return {"response": "Error: workflow unavailable"}
+
+        def handle_streaming_token(token_text: str) -> None:
+            """Forward streaming tokens to the GUI and accumulate response."""
+            nonlocal complete_response, sequence_counter
+
+            if not token_text:
+                return
+            complete_response += token_text
+            sequence_counter += 1
+            self.api.llm.send_llm_text_streamed_signal(
+                LLMResponse(
+                    node_id=llm_request.node_id if llm_request else None,
+                    message=token_text,
+                    is_end_of_message=False,
+                    is_first_message=(sequence_counter == 1),
+                    sequence_number=sequence_counter,
+                )
+            )
+
+        self._workflow_manager.set_token_callback(handle_streaming_token)
+
         try:
-            for message in self._workflow_manager.stream(prompt):
-                if isinstance(message, AIMessage) and message.content:
-                    chunk = message.content
-                    complete_response += chunk
+            # Clear GPU cache before inference to maximize available memory
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
 
-                    # Send streaming response
-                    self.api.llm.send_llm_text_streamed_signal(
-                        LLMResponse(
-                            node_id=(
-                                llm_request.node_id if llm_request else None
-                            ),
-                            message=chunk,
-                            is_end_of_message=False,
-                        )
+            result = self._workflow_manager.invoke(prompt)
+
+            # Check if generation was interrupted
+            if self._interrupted:
+                self.logger.info("Generation interrupted by user")
+                interrupt_msg = "\n\n[Generation interrupted]"
+                complete_response += interrupt_msg
+                self.api.llm.send_llm_text_streamed_signal(
+                    LLMResponse(
+                        node_id=llm_request.node_id if llm_request else None,
+                        message=interrupt_msg,
+                        is_end_of_message=True,
+                        sequence_number=sequence_counter + 1,
                     )
-        except Exception as e:
-            self.logger.error(f"Error during generation: {e}", exc_info=True)
-            complete_response = f"Error: {str(e)}"
+                )
+                result = {"messages": []}
+        except Exception as exc:
+            self.logger.error(f"Error during generation: {exc}", exc_info=True)
+            error_message = f"Error: {exc}"
+            complete_response = error_message
+            self.api.llm.send_llm_text_streamed_signal(
+                LLMResponse(
+                    node_id=llm_request.node_id if llm_request else None,
+                    message=error_message,
+                    is_end_of_message=False,
+                )
+            )
+            result = {"messages": []}
+        finally:
+            self._workflow_manager.set_token_callback(None)
+            self._interrupted = False  # Reset flag
 
-        # Send final message
-        if action is LLMActionType.CHAT:
-            self._send_final_message(llm_request)
+        if result and "messages" in result:
+            final_messages = [
+                message
+                for message in result["messages"]
+                if isinstance(message, AIMessage)
+            ]
+            if final_messages:
+                final_content = final_messages[-1].content or ""
+                # Ensure the complete response reflects the final content
+                if final_content:
+                    complete_response = final_content
+
+        # Send final message with sequence number
+        sequence_counter += 1
+        self.api.llm.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                is_end_of_message=True,
+                sequence_number=sequence_counter,
+            )
+        )
 
         return {"response": complete_response}
 
