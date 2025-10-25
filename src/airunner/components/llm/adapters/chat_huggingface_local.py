@@ -78,9 +78,11 @@ class ChatHuggingFaceLocal(BaseChatModel):
 
     model: Any
     tokenizer: Any
-    model_path: Optional[str] = None  # Path to model directory
+    model_path: Optional[str] = None
     use_mistral_native: bool = False  # Use Mistral native function calling
-    max_new_tokens: int = 500
+    use_json_mode: bool = False  # Use structured JSON output for tool calling
+    tool_calling_mode: str = "react"  # "native", "json", or "react"
+    max_new_tokens: int = 512
     temperature: float = 0.7
     top_p: float = 0.9
     top_k: int = 50
@@ -93,6 +95,63 @@ class ChatHuggingFaceLocal(BaseChatModel):
     class Config:
         arbitrary_types_allowed = True
 
+    def model_post_init(self, __context: Any) -> None:
+        """Called after Pydantic model initialization."""
+        # Auto-detect tool calling capability
+        self._detect_tool_calling_mode()
+
+        # Initialize Mistral tokenizer if using native mode
+        if self.use_mistral_native and self.tool_calling_mode == "native":
+            self._init_mistral_tokenizer()
+
+    def _detect_tool_calling_mode(self) -> None:
+        """
+        Auto-detect which tool calling mode to use based on model.
+
+        Priority:
+        1. Native (Mistral with tekken.json) - best reliability
+        2. Structured JSON (Qwen, Llama-3.1, Phi-3) - good reliability
+        3. ReAct (fallback for all models) - okay reliability
+        """
+        if not self.model_path:
+            self.tool_calling_mode = "react"
+            return
+
+        model_path_lower = self.model_path.lower()
+
+        # Check for Mistral with tekken.json (native support)
+        tekken_path = os.path.join(self.model_path, "tekken.json")
+        if os.path.exists(tekken_path) and "mistral" in model_path_lower:
+            self.tool_calling_mode = "native"
+            self.use_mistral_native = True
+            return
+
+        # Check for models with good JSON output capability
+        json_capable_models = [
+            "qwen2.5",
+            "qwen2",
+            "llama-3.1",
+            "llama-3.2",
+            "phi-3",
+            "gemma-2",
+            "deepseek",
+        ]
+
+        if any(model in model_path_lower for model in json_capable_models):
+            self.tool_calling_mode = "json"
+            self.use_json_mode = True
+            print(
+                f"✓ Structured JSON tool calling ENABLED for {self.model_path}"
+            )
+            print(f"  Model supports reliable JSON output for tool calls")
+            return
+
+        # Fallback to ReAct pattern
+        self.tool_calling_mode = "react"
+        print(
+            f"ℹ Using ReAct pattern for tool calling (model: {self.model_path})"
+        )
+
     @property
     def logger(self):
         """Lazy logger initialization."""
@@ -103,9 +162,15 @@ class ChatHuggingFaceLocal(BaseChatModel):
     def set_interrupted(self, value: bool) -> None:
         """Set interrupt flag to stop generation."""
         self._interrupted = value
+        if value:
+            self.logger.info(f"ChatModel interrupt flag set to {value}")
 
     def should_stop_generation(self) -> bool:
         """Check if generation should be interrupted."""
+        if self._interrupted:
+            self.logger.info(
+                "should_stop_generation returning True - interrupting!"
+            )
         return self._interrupted
 
     @property
@@ -269,7 +334,9 @@ class ChatHuggingFaceLocal(BaseChatModel):
                     generated_tokens.tolist()
                 )
             )
-            print(f"[DEBUG] Mistral raw response: {response_text[:500]}")
+            self.logger.debug(
+                f"Mistral decoded response length: {len(response_text)}"
+            )
         elif self.tokenizer:
             response_text = self.tokenizer.decode(
                 generated_tokens, skip_special_tokens=True
@@ -282,20 +349,33 @@ class ChatHuggingFaceLocal(BaseChatModel):
 
         # Parse tool calls if tools are bound
         tool_calls = None
+
         if self.tools:
-            if self.use_mistral_native:
-                print(
-                    f"[DEBUG] Parsing Mistral tool calls from response: {response_text[:200]}"
-                )
+            if self.tool_calling_mode == "native" and self.use_mistral_native:
                 tool_calls, response_text = self._parse_mistral_tool_calls(
                     response_text
                 )
-                print(f"[DEBUG] Extracted tool_calls: {tool_calls}")
-                print(f"[DEBUG] Cleaned response text: {response_text[:200]}")
+                if tool_calls:
+                    self.logger.debug(
+                        f"Mistral native extracted {len(tool_calls)} tool call(s)"
+                    )
+            elif self.tool_calling_mode == "json" and self.use_json_mode:
+                tool_calls, response_text = self._parse_json_mode_tool_calls(
+                    response_text
+                )
+                if tool_calls:
+                    self.logger.debug(
+                        f"JSON mode extracted {len(tool_calls)} tool call(s)"
+                    )
             else:
+                # ReAct pattern fallback
                 tool_calls, response_text = self._parse_tool_calls(
                     response_text
                 )
+                if tool_calls:
+                    self.logger.debug(
+                        f"ReAct extracted {len(tool_calls)} tool call(s)"
+                    )
 
         # Create chat generation
         message = AIMessage(content=response_text, tool_calls=tool_calls or [])
@@ -319,8 +399,8 @@ class ChatHuggingFaceLocal(BaseChatModel):
             inputs = {
                 "input_ids": torch.tensor([prompt]).to(self.model.device)
             }
-            print(
-                f"[DEBUG] Using Mistral native tokenization with {len(prompt)} tokens"
+            self.logger.debug(
+                f"Using Mistral native tokenization with {len(prompt)} tokens"
             )
         else:
             inputs = self.tokenizer(
@@ -383,6 +463,7 @@ class ChatHuggingFaceLocal(BaseChatModel):
         thread = threading.Thread(
             target=self.model.generate, kwargs=generation_kwargs
         )
+        thread.daemon = True  # Allow thread to be killed when interrupted
         thread.start()
 
         # Accumulate full response for tool call parsing (needed for Mistral native)
@@ -390,7 +471,19 @@ class ChatHuggingFaceLocal(BaseChatModel):
 
         try:
             for text in streamer:
+                # CRITICAL: Check interrupt BEFORE processing token
+                # This is the ONLY place the interrupt can actually work
+                # because the model.generate() thread doesn't check stopping_criteria
                 if self._interrupted:
+                    self.logger.info(
+                        "Stream interrupted - breaking immediately"
+                    )
+                    # Clear the streamer queue to unblock the generation thread
+                    try:
+                        while not streamer.text_queue.empty():
+                            streamer.text_queue.get_nowait()
+                    except:
+                        pass
                     break
 
                 if not text:
@@ -405,20 +498,44 @@ class ChatHuggingFaceLocal(BaseChatModel):
         finally:
             thread.join()
 
-        # After streaming completes, parse for tool calls if using Mistral native
-        if self.tools and self.use_mistral_native and full_response:
+        # After streaming completes, parse for tool calls based on mode
+        if self.tools and full_response:
             response_text = "".join(full_response)
-            print(
-                f"[DEBUG] Mistral full streamed response: {response_text[:500]}"
-            )
-            tool_calls, _ = self._parse_mistral_tool_calls(response_text)
-            print(f"[DEBUG] Extracted tool_calls from stream: {tool_calls}")
+            tool_calls = None
+
+            if self.tool_calling_mode == "native" and self.use_mistral_native:
+                tool_calls, _ = self._parse_mistral_tool_calls(response_text)
+                if tool_calls:
+                    self.logger.debug(
+                        f"Mistral native extracted {len(tool_calls)} tool call(s) from stream"
+                    )
+            elif self.tool_calling_mode == "json" and self.use_json_mode:
+                tool_calls, cleaned_text = self._parse_json_mode_tool_calls(
+                    response_text
+                )
+                if tool_calls:
+                    self.logger.debug(
+                        f"JSON mode extracted {len(tool_calls)} tool call(s) from stream"
+                    )
+            else:
+                # ReAct pattern fallback
+                tool_calls, cleaned_text = self._parse_tool_calls(
+                    response_text
+                )
+                if tool_calls:
+                    self.logger.debug(
+                        f"ReAct extracted {len(tool_calls)} tool call(s) from stream"
+                    )
 
             # If tool calls found, yield a final chunk with tool_calls
             if tool_calls:
-                final_chunk = ChatGenerationChunk(
-                    message=AIMessageChunk(content="", tool_calls=tool_calls)
+                # Create AIMessageChunk with tool_calls properly set
+                # Set as direct attribute (LangChain AIMessageChunk pattern)
+                final_message = AIMessageChunk(
+                    content="", additional_kwargs={"tool_calls": tool_calls}
                 )
+                final_message.tool_calls = tool_calls
+                final_chunk = ChatGenerationChunk(message=final_message)
                 yield final_chunk
 
     def _messages_to_prompt(self, messages: List[BaseMessage]) -> str:
@@ -498,9 +615,7 @@ class ChatHuggingFaceLocal(BaseChatModel):
                 )
             )
 
-        print(f"[DEBUG] Encoding {len(mistral_tools)} tools for Mistral")
-        if mistral_tools:
-            print(f"[DEBUG] First tool: {mistral_tools[0].function.name}")
+        self.logger.debug(f"Encoding {len(mistral_tools)} tools for Mistral")
 
         # Convert messages to Mistral format
         mistral_messages = []
@@ -514,10 +629,9 @@ class ChatHuggingFaceLocal(BaseChatModel):
             elif isinstance(msg, AIMessage):
                 mistral_messages.append(AssistantMessage(content=msg.content))
 
-        print(
-            f"[DEBUG] Converting {len(mistral_messages)} messages to Mistral format"
+        self.logger.debug(
+            f"Converting {len(mistral_messages)} messages to Mistral format"
         )
-        print(f"[DEBUG] Last message: {mistral_messages[-1].content[:100]}")
 
         # Create completion request
         completion_request = ChatCompletionRequest(
@@ -529,10 +643,8 @@ class ChatHuggingFaceLocal(BaseChatModel):
             completion_request
         ).tokens
 
-        print(f"[DEBUG] Encoded to {len(tokens)} tokens")
+        self.logger.debug(f"Encoded to {len(tokens)} tokens")
         return tokens
-
-        # Convert messages to Mistral format
         mistral_messages = []
         for msg in messages:
             if isinstance(msg, SystemMessage):
@@ -658,10 +770,127 @@ class ChatHuggingFaceLocal(BaseChatModel):
 
         return (tool_calls if tool_calls else None, cleaned_text)
 
+    def _parse_json_mode_tool_calls(
+        self, response_text: str
+    ) -> tuple[Optional[List[dict]], str]:
+        """Parse tool calls from structured JSON mode output.
+
+        For models like Qwen2.5, Llama-3.1, Phi-3 that can output clean JSON.
+        Expected format: {"tool": "tool_name", "arguments": {...}}
+
+        Args:
+            response_text: The model's response text
+
+        Returns:
+            Tuple of (tool_calls list or None, cleaned response text)
+        """
+        tool_calls = []
+        cleaned_text = response_text
+
+        # Try parsing entire response as JSON first (most reliable)
+        try:
+            data = json.loads(response_text.strip())
+            if isinstance(data, dict) and ("tool" in data or "name" in data):
+                tool_name = data.get("tool") or data.get("name")
+                tool_args = data.get("arguments", {})
+
+                tool_calls.append(
+                    {
+                        "name": tool_name,
+                        "args": tool_args,
+                        "id": str(uuid.uuid4()),
+                    }
+                )
+                self.logger.debug(f"Parsed JSON tool call: {tool_name}")
+                cleaned_text = ""  # Tool call was entire response
+                return (tool_calls, cleaned_text)
+        except json.JSONDecodeError:
+            pass
+
+        # Try extracting JSON from code blocks: ```json {...} ```
+        json_block_pattern = r"```json\s*(\{[^`]+\})\s*```"
+        matches = re.findall(json_block_pattern, response_text, re.DOTALL)
+
+        for match in matches:
+            try:
+                data = json.loads(match)
+                if "tool" in data or "name" in data:
+                    tool_name = data.get("tool") or data.get("name")
+                    tool_args = data.get("arguments", {})
+
+                    tool_calls.append(
+                        {
+                            "name": tool_name,
+                            "args": tool_args,
+                            "id": str(uuid.uuid4()),
+                        }
+                    )
+                    print(f"✓ Parsed JSON block tool call: {tool_name}")
+            except json.JSONDecodeError as e:
+                print(f"⚠ Failed to parse JSON block: {e}")
+                continue
+
+        # Remove JSON blocks from response
+        cleaned_text = re.sub(
+            json_block_pattern, "", response_text, flags=re.DOTALL
+        )
+
+        # Try extracting JSON from anywhere in text (less reliable)
+        if not tool_calls:
+            json_pattern = r'\{[^{}]*"tool"[^{}]*\}|\{[^{}]*"name"[^{}]*\}'
+            matches = re.findall(json_pattern, response_text, re.DOTALL)
+
+            for match in matches:
+                try:
+                    data = json.loads(match)
+                    if "tool" in data or "name" in data:
+                        tool_name = data.get("tool") or data.get("name")
+                        tool_args = data.get("arguments", {})
+
+                        tool_calls.append(
+                            {
+                                "name": tool_name,
+                                "args": tool_args,
+                                "id": str(uuid.uuid4()),
+                            }
+                        )
+                        print(f"✓ Parsed embedded JSON tool call: {tool_name}")
+                        cleaned_text = cleaned_text.replace(match, "").strip()
+                except json.JSONDecodeError:
+                    continue
+
+        cleaned_text = cleaned_text.strip()
+        return (tool_calls if tool_calls else None, cleaned_text)
+
+    def parse_tool_calls_from_response(
+        self, response_text: str
+    ) -> tuple[Optional[List[dict]], str]:
+        """Parse tool calls using the appropriate mode-specific parser.
+
+        This is the public method that the workflow should call.
+        It dispatches to the correct parser based on tool_calling_mode.
+
+        Args:
+            response_text: The complete model response text
+
+        Returns:
+            Tuple of (tool_calls list or None, cleaned response text)
+        """
+        if not self.tools:
+            return (None, response_text)
+
+        if self.tool_calling_mode == "native" and self.use_mistral_native:
+            return self._parse_mistral_tool_calls(response_text)
+        elif self.tool_calling_mode == "json" and self.use_json_mode:
+            return self._parse_json_mode_tool_calls(response_text)
+        else:
+            # ReAct pattern fallback
+            return self._parse_tool_calls(response_text)
+
     def _parse_tool_calls(
         self, response_text: str
     ) -> tuple[Optional[List[dict]], str]:
-        """Parse tool calls from model response (fallback format).
+        """Parse tool calls from model response (ReAct fallback format).
 
         Args:
             response_text: The model's response text

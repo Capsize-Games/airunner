@@ -22,6 +22,7 @@ from airunner.components.model_management.memory_allocator import (
     MemoryAllocator,
     MemoryAllocation,
 )
+from airunner.utils.application.signal_mediator import SignalMediator
 
 
 class ModelState(Enum):
@@ -75,6 +76,7 @@ class ModelResourceManager:
             return
 
         self.logger = logging.getLogger(__name__)
+        self.signal_mediator = SignalMediator()
         self.hardware_profiler = HardwareProfiler()
         self.quantization_strategy = QuantizationStrategy()
         self.registry = ModelRegistry()
@@ -305,33 +307,47 @@ class ModelResourceManager:
             )
 
             try:
-                # Emit signal to unload the model
-                from airunner.enums import SignalCode, ModelType
+                # CRITICAL: Use synchronous API calls instead of async signals
+                # This ensures models are ACTUALLY unloaded before we try to load the new one
+                # Async signals were causing race conditions where SD would try to load
+                # before LLM was fully unloaded, leading to VRAM exhaustion
 
-                # Map model type string to ModelType enum
-                type_map = {
-                    "llm": ModelType.LLM,
-                    "text_to_image": ModelType.SD,
-                    "tts": ModelType.TTS,
-                    "stt": ModelType.STT,
-                }
-
-                model_type_enum = type_map.get(model_type, ModelType.LLM)
-
-                # Emit unload signal based on model type
                 if model_type == "llm":
-                    self._emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, {})
+                    # Import here to avoid circular dependency
+                    from airunner.components.llm.managers.llm_model_manager import (
+                        LLMModelManager,
+                    )
+
+                    manager = LLMModelManager()
+                    manager.unload()
+                    self.logger.info(
+                        "LLM unloaded synchronously for auto-swap"
+                    )
+
                 elif model_type == "text_to_image":
-                    self._emit_signal(SignalCode.SD_UNLOAD_SIGNAL, {})
+                    # SD unload via API
+                    from airunner.components.application.api.api import API
+
+                    api = API()
+                    api.art.unload()
+                    self.logger.info("SD unloaded synchronously for auto-swap")
+
                 elif model_type == "tts":
+                    from airunner.enums import SignalCode
+
                     self._emit_signal(SignalCode.TTS_DISABLE_SIGNAL, {})
+
                 elif model_type == "stt":
+                    from airunner.enums import SignalCode
+
                     self._emit_signal(SignalCode.STT_DISABLE_SIGNAL, {})
 
                 unloaded.append(model_id)
 
             except Exception as e:
-                self.logger.error(f"Failed to unload {model_id}: {e}")
+                self.logger.error(
+                    f"Failed to unload {model_id}: {e}", exc_info=True
+                )
                 return {
                     "success": False,
                     "unloaded_models": unloaded,
@@ -407,12 +423,8 @@ class ModelResourceManager:
         return models_to_unload
 
     def _emit_signal(self, signal_code, data):
-        """Emit a signal (placeholder - will be wired up to actual signal system)."""
-        # This will be connected to the actual signal emission system
-        # For now, just log
-        self.logger.debug(
-            f"Would emit signal: {signal_code} with data: {data}"
-        )
+        """Emit signal via SignalMediator."""
+        self.signal_mediator.emit(signal_code, data)
 
     def set_model_state(
         self, model_id: str, state: ModelState, model_type: str = None

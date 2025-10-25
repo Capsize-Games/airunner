@@ -5,10 +5,85 @@ All tools for creating, editing, and managing images in AI Runner.
 """
 
 import json
+import logging
 from typing import Annotated, Any
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
+from airunner.components.llm.config.model_capabilities import ModelCapability
 from airunner.enums import ImagePreset
+
+logger = logging.getLogger(__name__)
+
+
+def enhance_prompt_with_specialized_model(
+    prompt: str, second_prompt: str = ""
+) -> tuple[str, str]:
+    """
+    Enhance prompts using a specialized small model.
+
+    Uses a 2-3B parameter model optimized for prompt enhancement rather than
+    the primary conversational LLM. This provides better, more detailed prompts
+    for Stable Diffusion while keeping the primary model focused on conversation.
+
+    Args:
+        prompt: Main prompt to enhance
+        second_prompt: Secondary prompt to enhance
+
+    Returns:
+        Tuple of (enhanced_prompt, enhanced_second_prompt)
+    """
+    try:
+        from airunner.components.llm.managers.llm_model_manager import (
+            LLMModelManager,
+        )
+
+        manager = LLMModelManager()
+
+        # Enhance main prompt
+        enhancement_request = f"""You are a Stable Diffusion prompt expert. Enhance this prompt with rich details, art styles, lighting, composition, and quality tags.
+
+Original prompt: {prompt}
+
+Enhanced prompt (detailed, specific, no explanations):"""
+
+        enhanced_prompt = manager.use_specialized_model(
+            ModelCapability.PROMPT_ENHANCEMENT,
+            enhancement_request,
+            max_tokens=256,
+        )
+
+        # If enhancement failed, use original
+        if not enhanced_prompt:
+            logger.warning("Prompt enhancement failed, using original prompt")
+            return prompt, second_prompt
+
+        enhanced_prompt = enhanced_prompt.strip()
+
+        # Enhance second prompt if provided
+        enhanced_second = second_prompt
+        if second_prompt:
+            second_request = f"""You are a Stable Diffusion prompt expert. Enhance this background/atmosphere prompt with details about colors, mood, lighting, and environment.
+
+Original: {second_prompt}
+
+Enhanced (detailed, specific, no explanations):"""
+
+            enhanced_second = manager.use_specialized_model(
+                ModelCapability.PROMPT_ENHANCEMENT,
+                second_request,
+                max_tokens=128,
+            )
+            if enhanced_second:
+                enhanced_second = enhanced_second.strip()
+            else:
+                enhanced_second = second_prompt
+
+        logger.info(f"Prompt enhanced: '{prompt}' -> '{enhanced_prompt}'")
+        return enhanced_prompt, enhanced_second
+
+    except Exception as e:
+        logger.error(f"Error enhancing prompt: {e}", exc_info=True)
+        return prompt, second_prompt
 
 
 @tool(
@@ -59,10 +134,16 @@ def generate_image(
     if preset not in valid_presets:
         preset = ImagePreset.ILLUSTRATION.value
 
-    # Trigger image generation
+    # Enhance prompts using specialized model
+    logger.info(f"Enhancing prompts for image generation")
+    enhanced_prompt, enhanced_second = enhance_prompt_with_specialized_model(
+        prompt, second_prompt
+    )
+
+    # Trigger image generation with enhanced prompts
     api.art.llm_image_generated(
-        prompt=prompt,
-        second_prompt=second_prompt,
+        prompt=enhanced_prompt,
+        second_prompt=enhanced_second,
         preset=preset,
         width=width,
         height=height,
@@ -71,8 +152,10 @@ def generate_image(
     return json.dumps(
         {
             "status": "generating",
-            "prompt": prompt,
-            "second_prompt": second_prompt,
+            "prompt": enhanced_prompt,
+            "second_prompt": enhanced_second,
+            "original_prompt": prompt,
+            "original_second_prompt": second_prompt,
             "preset": preset,
             "width": width,
             "height": height,

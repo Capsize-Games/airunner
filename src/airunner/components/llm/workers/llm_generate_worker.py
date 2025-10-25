@@ -173,17 +173,43 @@ class LLMGenerateWorker(Worker):
             self._model_manager.clear_history(data)
 
     def on_llm_request_signal(self, message: dict):
+        """
+        Handle incoming LLM generation request.
+
+        CRITICAL: Reset interrupt flag here so user can continue conversation
+        after canceling. The interrupt flag is meant to skip the CURRENT
+        interrupted message, not future messages.
+        """
+        if self._interrupted:
+            self.logger.info("Clearing interrupt flag - new message received")
+            self._interrupted = False
+
         self.add_to_queue(message)
 
     def llm_on_interrupt_process_signal(self):
-        """Handle interrupt signal - stop ongoing generation."""
+        """Handle interrupt signal - stop ongoing generation and clear queue."""
         self._interrupted = True
 
+        # CRITICAL: Clear the queue to prevent minutes-long delays
+        # Without this, queued messages from before the interrupt
+        # would still be processed, causing the "delayed response" issue
+        self.clear_queue()
+        self.logger.info("Interrupted and cleared LLM generation queue")
+
         if hasattr(self, "_model_manager") and self._model_manager is not None:
+            self.logger.info(
+                f"Calling do_interrupt on model_manager {id(self._model_manager)}"
+            )
             try:
                 self._model_manager.do_interrupt()
             except Exception as e:
-                self.logger.error(f"Error calling do_interrupt(): {e}")
+                self.logger.error(
+                    f"Error calling do_interrupt(): {e}", exc_info=True
+                )
+        else:
+            self.logger.warning(
+                f"Model manager not available for interrupt: {getattr(self, '_model_manager', 'NO ATTR')}"
+            )
 
     def on_llm_reload_rag_index_signal(self):
         if self._model_manager:
@@ -909,28 +935,22 @@ class LLMGenerateWorker(Worker):
             self._load_llm_thread()
 
     def handle_message(self, message):
-        self.logger.info(
-            f"handle_message called on worker instance {id(self)}"
-        )
+        """
+        Process queued messages for LLM generation.
+
+        The interrupt flag is NOT reset here - it's reset in on_llm_request_signal
+        when a NEW message arrives. This ensures:
+        1. Interrupted message is skipped
+        2. Flag persists to prevent queue backup from processing
+        3. Next user message clears the flag and processes normally
+        """
         # Check if interrupted before processing
         if self._interrupted:
-            self.logger.info(
-                "Skipping message - worker interrupted before processing"
-            )
-            self._interrupted = False  # Reset for next message
+            self.logger.info("Skipping message - worker interrupted")
             return
 
-        # Access model_manager property to create it if needed
-        # and pass the interrupt flag to it
         manager = self.model_manager
-
-        if self._interrupted and hasattr(manager, "do_interrupt"):
-            manager.do_interrupt()
-            self._interrupted = False
-            return
-
         manager.handle_request(message, self.context_manager.all_contexts())
-        self._interrupted = False
 
     def _load_llm_thread(self, data=None):
         self._llm_thread = threading.Thread(

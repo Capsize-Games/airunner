@@ -65,12 +65,20 @@ class WorkflowManager:
         self._build_and_compile_workflow()
 
     def _initialize_model(self):
-        """Bind tools to the chat model if provided."""
-        # Skip tool binding if no tools provided
+        """
+        Configure model for tool calling using ReAct pattern.
+
+        Instead of dumping full tool schemas (which overwhelms models), we:
+        1. Bind tools to chat model for native function calling (if supported)
+        2. For local models, add COMPACT tool list to system prompt
+        3. Let LangGraph's ToolNode handle parsing and execution
+        """
+        # Skip if no tools provided
         if not self._tools or len(self._tools) == 0:
             self.logger.info("No tools provided - skipping tool binding")
             return
 
+        # Try to bind tools for native function calling
         if hasattr(self._chat_model, "bind_tools"):
             try:
                 self._chat_model = self._chat_model.bind_tools(self._tools)
@@ -78,43 +86,149 @@ class WorkflowManager:
                     f"Successfully bound {len(self._tools)} tools to chat model"
                 )
 
-                # Add tool schemas to system prompt for local models
+                # For local models without native function calling,
+                # add COMPACT tool descriptions (not full schemas)
                 if hasattr(self._chat_model, "get_tool_schemas_text"):
-                    tool_schemas = self._chat_model.get_tool_schemas_text()
-                    if tool_schemas:
+                    # Create compact tool list instead of verbose schemas
+                    compact_tools = self._create_compact_tool_list()
+                    if compact_tools:
                         self._system_prompt = (
-                            f"{self._system_prompt}\n\n{tool_schemas}"
-                        )
-                        self.logger.info("Added tool schemas to system prompt")
-
-            except NotImplementedError:
-                self.logger.warning(
-                    f"Local HuggingFace models don't support native function calling. "
-                    f"Using prompt-based tool calling instead."
-                )
-                # Still add tool schemas to system prompt for prompt-based calling
-                if hasattr(self._chat_model, "get_tool_schemas_text"):
-                    tool_schemas = self._chat_model.get_tool_schemas_text()
-                    if tool_schemas:
-                        self._system_prompt = (
-                            f"{self._system_prompt}\n\n{tool_schemas}"
+                            f"{self._system_prompt}\n\n{compact_tools}"
                         )
                         self.logger.info(
-                            "Added tool schemas to system prompt for prompt-based calling"
+                            f"Added compact tool list ({len(self._tools)} tools) to system prompt"
                         )
+
+            except NotImplementedError:
+                self.logger.info(
+                    "Model doesn't support native function calling - "
+                    "using LangChain ReAct pattern"
+                )
+                # Add compact tool list for ReAct pattern
+                compact_tools = self._create_compact_tool_list()
+                if compact_tools:
+                    self._system_prompt = (
+                        f"{self._system_prompt}\n\n{compact_tools}"
+                    )
+                    self.logger.info(
+                        f"Added ReAct tool list ({len(self._tools)} tools)"
+                    )
+
             except Exception as e:
                 import traceback
 
                 self.logger.warning(
-                    f"Could not bind tools to model: {type(e).__name__}: {e}"
+                    f"Could not bind tools: {type(e).__name__}: {e}"
                 )
-                self.logger.debug(f"Full traceback: {traceback.format_exc()}")
+                self.logger.debug(f"Traceback: {traceback.format_exc()}")
         elif self._tools:
             self.logger.warning(
-                f"Chat model does not support bind_tools(), {len(self._tools)} tools will not be used"
+                f"Chat model does not support bind_tools() - tools will not be available"
+            )
+
+    def _create_compact_tool_list(self) -> str:
+        """
+        Create a compact, readable tool list instead of verbose schemas.
+
+        Instead of:
+            ```
+            @tool
+            def generate_image(...):
+                '''Long docstring...'''
+                Args:
+                    prompt (str): ...
+                    width (int): ...
+            ```
+
+        We generate:
+            Available tools:
+            - generate_image(prompt, width, height) - Generate an image from text
+            - search_documents(query, max_results) - Search knowledge base
+
+        This is:
+        - Much more compact (~50 tokens vs 500+ per tool)
+        - Easier for models to parse
+        - Standard ReAct pattern
+        """
+        if not self._tools:
+            return ""
+
+        tool_descriptions = []
+        tool_descriptions.append("You have access to the following tools:")
+        tool_descriptions.append("")
+
+        for tool in self._tools:
+            # Get tool metadata
+            # StructuredTool objects have .name attribute but not .__name__
+            tool_name = getattr(tool, "name", None)
+            if tool_name is None:
+                # Fallback for regular functions
+                tool_name = getattr(tool, "__name__", "unknown_tool")
+
+            tool_desc = getattr(tool, "description", "")
+
+            # Extract function signature
+            if hasattr(tool, "func"):
+                import inspect
+
+                sig = inspect.signature(tool.func)
+                params = [
+                    p
+                    for p in sig.parameters.keys()
+                    if p not in ["api", "agent", "self"]
+                ]
+                param_str = ", ".join(params)
+            else:
+                param_str = "..."
+
+            # Clean description (first sentence only)
+            short_desc = (
+                tool_desc.split(".")[0] if tool_desc else "No description"
+            )
+
+            # Format: - tool_name(arg1, arg2) - Short description
+            tool_descriptions.append(
+                f"- {tool_name}({param_str}) - {short_desc}"
+            )
+
+        tool_descriptions.append("")
+
+        # Add mode-specific instructions based on chat model's tool calling mode
+        tool_calling_mode = getattr(
+            self._chat_model, "tool_calling_mode", "react"
+        )
+
+        if tool_calling_mode == "json":
+            # JSON mode: Clean structured output
+            tool_descriptions.append(
+                "To use a tool, respond with ONLY a JSON object (no markdown, no explanation):\n"
+                '{"tool": "tool_name", "arguments": {"arg1": "value1", "arg2": "value2"}}\n\n'
+                "Examples:\n"
+                '{"tool": "search_web", "arguments": {"query": "Python tutorials"}}\n'
+                '{"tool": "generate_image", "arguments": {"prompt": "sunset", "size": "1024x1024"}}\n\n'
+                "After the tool executes, you'll receive the result and can continue the conversation."
+            )
+        elif tool_calling_mode == "native":
+            # Native mode: Minimal instructions (tokenizer handles it)
+            tool_descriptions.append(
+                "Use tools when needed. The system will handle tool execution automatically."
             )
         else:
-            self.logger.debug("No tools to bind")
+            # ReAct mode: Action/Observation format (fallback)
+            tool_descriptions.append(
+                "To use a tool, respond EXACTLY in this format:\n"
+                "Action: tool_name\n"
+                'Action Input: {"arg1": "value1", "arg2": "value2"}\n\n'
+                "After using a tool, you'll receive:\n"
+                "Observation: [tool result]\n\n"
+                "Then continue reasoning or provide your final answer."
+            )
+
+        result = "\n".join(tool_descriptions)
+        self.logger.debug(
+            f"Compact tool list ({tool_calling_mode} mode): {len(result)} chars vs ~{len(self._tools) * 500} for full schemas"
+        )
+        return result
 
     def _build_and_compile_workflow(self):
         """Build and compile the LangGraph workflow."""
@@ -176,10 +290,28 @@ class WorkflowManager:
             start_on="human",
         )
 
+        # Check if there are any ToolMessages in the conversation
+        # If yes, the model should respond conversationally, not with tool JSON
+        has_tool_results = any(
+            msg.__class__.__name__ == "ToolMessage" for msg in trimmed_messages
+        )
+
         # Escape curly braces in system prompt for LangChain template compatibility
         escaped_system_prompt = self._system_prompt.replace("{", "{{").replace(
             "}", "}}"
         )
+
+        # Add context-aware instruction for JSON mode
+        tool_calling_mode = getattr(
+            self._chat_model, "tool_calling_mode", "react"
+        )
+        if has_tool_results and tool_calling_mode == "json":
+            # After tool execution, instruct model to respond normally
+            escaped_system_prompt += (
+                "\n\nIMPORTANT: You have just used a tool and received the result. "
+                "Now respond to the user conversationally with your answer. "
+                "Do NOT output JSON format anymore."
+            )
 
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -201,19 +333,17 @@ class WorkflowManager:
 
                     chunk_message = getattr(chunk, "message", chunk)
                     text = getattr(chunk_message, "content", "") or ""
+
+                    # Always capture last chunk (might have tool_calls with no content)
+                    last_chunk_message = chunk_message
+
+                    # Skip content processing if empty, but still capture chunk for tool_calls
                     if not text:
                         continue
+
                     streamed_content.append(text)
-                    last_chunk_message = chunk_message
-                    if self._token_callback:
-                        try:
-                            self._token_callback(text)
-                        except Exception as callback_error:
-                            self.logger.error(
-                                "Token callback failed: %s",
-                                callback_error,
-                                exc_info=True,
-                            )
+                    # DON'T stream to GUI yet - wait until we know if it's a tool call or not
+                    # (we'll send the complete response after parsing)
 
                 if streamed_content:
                     additional_kwargs = {}
@@ -229,21 +359,39 @@ class WorkflowManager:
                     # Parse tool calls from complete streamed response
                     complete_content = "".join(streamed_content)
                     if self._tools and hasattr(
-                        self._chat_model, "_parse_tool_calls"
+                        self._chat_model, "parse_tool_calls_from_response"
                     ):
                         parsed_tool_calls, cleaned_content = (
-                            self._chat_model._parse_tool_calls(
+                            self._chat_model.parse_tool_calls_from_response(
                                 complete_content
                             )
                         )
                         if parsed_tool_calls:
+                            self.logger.debug(
+                                f"Parsed {len(parsed_tool_calls)} tool calls from response"
+                            )
                             tool_calls = parsed_tool_calls
                             complete_content = cleaned_content
+
+                    # Now that we've parsed tool calls, stream the content to GUI
+                    # (will be empty if it was a pure tool call, so GUI won't show JSON)
+                    if complete_content and self._token_callback:
+                        try:
+                            self._token_callback(complete_content)
+                        except Exception as callback_error:
+                            self.logger.error(
+                                "Token callback failed: %s",
+                                callback_error,
+                                exc_info=True,
+                            )
 
                     response_message = AIMessage(
                         content=complete_content,
                         additional_kwargs=additional_kwargs,
                         tool_calls=tool_calls or [],
+                    )
+                    print(
+                        f"[DEBUG WORKFLOW] AIMessage content: {response_message.content[:200]}"
                     )
             except Exception as exc:
                 self.logger.error(
@@ -300,14 +448,24 @@ class WorkflowManager:
         input_messages = [HumanMessage(user_input)]
         config = {"configurable": {"thread_id": self._thread_id}}
 
+        # Use stream_mode="values" to get updates more frequently
+        # This allows interrupt checking to happen more often
         for event in self._compiled_workflow.stream(
             {"messages": input_messages},
             config,
-            stream_mode="messages",
+            stream_mode="values",
         ):
-            message = event[0]
-            if isinstance(message, AIMessage) and message.content:
-                yield message
+            # Check interrupt flag on each event
+            if self._interrupted:
+                break
+            # Yield the entire state for each update
+            if "messages" in event and event["messages"]:
+                last_message = event["messages"][-1]
+                if (
+                    isinstance(last_message, AIMessage)
+                    and last_message.content
+                ):
+                    yield last_message
 
     def update_system_prompt(self, system_prompt: str):
         """Update the system prompt and rebuild the workflow."""

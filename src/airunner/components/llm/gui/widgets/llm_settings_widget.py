@@ -548,11 +548,31 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         else:
             context_str = str(context)
 
-        # Get function calling support
-        func_calling = "Yes ⚡" if model_info.get("function_calling") else "No"
+        # Get tool calling mode with appropriate icon
+        tool_mode = model_info.get("tool_calling_mode", "react")
+        tool_mode_icons = {
+            "native": "⚡",  # Lightning bolt for native (fastest/best)
+            "json": "📋",  # Clipboard for JSON (structured)
+            "react": "📝",  # Memo for ReAct (text-based)
+        }
+        tool_icon = tool_mode_icons.get(tool_mode, "")
+
+        # Capitalize mode name for display
+        tool_mode_display = (
+            tool_mode.upper()
+            if tool_mode == "json"
+            else tool_mode.capitalize()
+        )
+
+        # Get function calling status
+        func_calling = model_info.get("function_calling", False)
+        if func_calling:
+            tool_info = f"{tool_mode_display} {tool_icon}"
+        else:
+            tool_info = "No"
 
         # Build info string
-        info = f"VRAM: {vram} GB | Context: {context_str} tokens | Tool Calling: {func_calling}"
+        info = f"VRAM: {vram} GB | Context: {context_str} tokens | Tool Calling: {tool_info}"
         self.ui.model_info_label.setText(info)
 
     def update_chatbot(self, key, val):
