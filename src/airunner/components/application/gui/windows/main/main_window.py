@@ -278,10 +278,7 @@ class MainWindow(
             SignalCode.WRITE_FILE: self.on_write_file_signal,
             SignalCode.TOGGLE_FULLSCREEN_SIGNAL: self.on_toggle_fullscreen_signal,
             SignalCode.TOGGLE_TTS_SIGNAL: self.on_toggle_tts,
-            SignalCode.TOGGLE_SD_SIGNAL: self.on_toggle_sd,
             SignalCode.TOGGLE_LLM_SIGNAL: self.on_toggle_llm,
-            SignalCode.UNLOAD_NON_SD_MODELS: self.on_unload_non_sd_models,
-            SignalCode.LOAD_NON_SD_MODELS: self.on_load_non_sd_models,
             SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL: self._action_reset_settings,
             SignalCode.APPLICATION_RESET_PATHS_SIGNAL: self.on_reset_paths_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
@@ -1126,26 +1123,6 @@ class MainWindow(
         else:
             self.showFullScreen()
 
-    def on_unload_non_sd_models(self, data: Dict = None):
-        """
-        Unload all non-SD models and load Stable Diffusion using the load balancer.
-        """
-        self.model_load_balancer.switch_to_art_mode()
-        callback = data.get("callback", None) if data else None
-        if callback:
-            callback()
-
-    def on_load_non_sd_models(self, data: Dict = None):
-        """
-        Reload previously unloaded non-SD models using the load balancer.
-        Optionally accepts 'models' list in data to load additional specific models.
-        """
-        models = data.get("models", None) if data else None
-        self.model_load_balancer.switch_to_non_art_mode(models)
-        callback = data.get("callback", None) if data else None
-        if callback:
-            callback(data)
-
     def on_toggle_llm(self, data: Dict = None, val=None):
         if val is None:
             val = data.get(
@@ -1158,18 +1135,6 @@ class MainWindow(
             SignalCode.LLM_LOAD_SIGNAL,
             SignalCode.LLM_UNLOAD_SIGNAL,
             "llm_enabled",
-            data,
-        )
-
-    def on_toggle_sd(self, data: Dict):
-        val = data.get("enabled", False)
-        self._update_action_button(
-            ModelType.SD,
-            self.ui.actionToggle_Stable_Diffusion,
-            val,
-            SignalCode.SD_LOAD_SIGNAL,
-            SignalCode.SD_UNLOAD_SIGNAL,
-            "sd_enabled",
             data,
         )
 
