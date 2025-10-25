@@ -83,17 +83,17 @@ class HardwareProfiler:
         return torch.cuda.get_device_name(0)
 
     def _get_cpu_count(self) -> int:
-        """Get physical CPU core count safely."""
+        """Get CPU core count safely."""
         try:
-            count = psutil.cpu_count(logical=False)
-            return count if count is not None else psutil.cpu_count()
-        except (PermissionError, OSError) as e:
-            self.logger.warning(f"Could not detect CPU count: {e}")
-            try:
-                count = psutil.cpu_count()
-                return count if count is not None else 1
-            except Exception:
-                return 1
+            # Try logical count first (more reliable in restricted environments)
+            count = psutil.cpu_count()
+            if count is not None:
+                return count
+        except Exception:
+            pass
+
+        # Fallback to safe default
+        return 1
 
     def is_ampere_or_newer(self) -> bool:
         """Check if GPU is Ampere (3.x series) or newer."""

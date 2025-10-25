@@ -2,9 +2,6 @@ from airunner.components.home_stage.gui.widgets.templates.home_stage_ui import (
     Ui_home_stage_widget,
 )
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.home_stage.gui.widgets.system_resources_panel_widget import (
-    SystemResourcesPanelWidget,
-)
 from airunner.components.home_stage.gui.widgets.training_widget import (
     TrainingWidget,
 )
@@ -23,12 +20,9 @@ class HomeStageWidget(BaseWidget):
 
         grid_layout = self.ui.gridLayout
 
-        # Three-column layout: Training | System Resources | Model Status
+        # Two-column layout: Training | Model Status
         self.training_panel = TrainingWidget()
         grid_layout.addWidget(self.training_panel, 0, 0)
 
-        self.system_resources_panel = SystemResourcesPanelWidget()
-        grid_layout.addWidget(self.system_resources_panel, 0, 1)
-
         self.model_status_panel = ModelStatusWidget()
-        grid_layout.addWidget(self.model_status_panel, 0, 2)
+        grid_layout.addWidget(self.model_status_panel, 0, 1)

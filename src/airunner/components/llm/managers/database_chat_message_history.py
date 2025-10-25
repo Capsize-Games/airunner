@@ -117,6 +117,24 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
         try:
             import datetime
 
+            # Skip ToolMessages - they're internal workflow state
+            if message.__class__.__name__ == "ToolMessage":
+                self.logger.debug(
+                    "Skipping ToolMessage - internal workflow state"
+                )
+                return
+
+            # Skip AIMessages with tool_calls - they're internal workflow instructions
+            if (
+                isinstance(message, AIMessage)
+                and hasattr(message, "tool_calls")
+                and message.tool_calls
+            ):
+                self.logger.debug(
+                    "Skipping AIMessage with tool_calls - internal workflow instruction"
+                )
+                return
+
             # Convert LangChain message to database format
             role = "user"
             name = "User"

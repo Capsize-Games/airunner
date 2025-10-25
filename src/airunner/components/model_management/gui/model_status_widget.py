@@ -87,14 +87,13 @@ class ModelStatusWidget(QWidget):
 
     def _update_memory_bars(self):
         """Update VRAM and RAM usage bars."""
-        profile = self.manager.hardware_profiler.get_hardware_profile()
+        profile = self.manager.hardware_profiler.get_profile()
 
-        self._update_memory_bar(
-            "vram", profile.vram_used_gb, profile.vram_total_gb
-        )
-        self._update_memory_bar(
-            "ram", profile.ram_used_gb, profile.ram_total_gb
-        )
+        vram_used = profile.total_vram_gb - profile.available_vram_gb
+        ram_used = profile.total_ram_gb - profile.available_ram_gb
+
+        self._update_memory_bar("vram", vram_used, profile.total_vram_gb)
+        self._update_memory_bar("ram", ram_used, profile.total_ram_gb)
 
     def _update_memory_bar(self, name: str, used: float, total: float):
         """Update a single memory bar."""
@@ -133,22 +132,23 @@ class ModelStatusWidget(QWidget):
             self.models_layout.addWidget(no_models_label)
             return
 
-        for model_id, state in active_models.items():
-            model_widget = self._create_model_entry(model_id, state)
+        for model_info in active_models:
+            model_widget = self._create_model_entry(model_info)
             self.models_layout.addWidget(model_widget)
 
-    def _create_model_entry(self, model_id: str, state: str) -> QWidget:
+    def _create_model_entry(self, model_info) -> QWidget:
         """Create a single model status entry."""
         container = QWidget()
         layout = QHBoxLayout(container)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        model_name = model_id.split("/")[-1][:30]
+        model_name = model_info.model_id.split("/")[-1][:30]
         name_label = QLabel(model_name)
         layout.addWidget(name_label, 1)
 
-        state_label = QLabel(state)
-        state_label.setStyleSheet(self._get_state_style(state))
+        state_text = model_info.state.value.upper()
+        state_label = QLabel(state_text)
+        state_label.setStyleSheet(self._get_state_style(state_text))
         layout.addWidget(state_label)
 
         return container
