@@ -10,7 +10,6 @@ from langchain.tools import tool
 class FileTools:
     """Mixin class providing file system and document management tools."""
 
-
     def list_files_tool(self) -> Callable:
         """List files in a directory."""
 

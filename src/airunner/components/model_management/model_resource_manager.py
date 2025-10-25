@@ -159,9 +159,38 @@ class ModelResourceManager:
         metadata = self.registry.get_model(model_id)
         if not metadata:
             self.logger.warning(
-                f"Model {model_id} not in registry - allowing load without validation"
+                f"Model {model_id} not in registry - checking for conflicts anyway"
             )
-            return {"can_load": True, "reason": "Model not in registry"}
+            # Even if not in registry, check if there are conflicting models loaded
+            # and attempt to swap if auto_swap is enabled
+            if auto_swap:
+                # Check if any models are currently loaded
+                active_models = self.get_active_models()
+                if active_models:
+                    self.logger.info(
+                        f"Found {len(active_models)} active models while loading unregistered model"
+                    )
+                    # Attempt to swap to make room
+                    swap_result = self.request_model_swap(model_id, model_type)
+                    if (
+                        swap_result["success"]
+                        and swap_result["unloaded_models"]
+                    ):
+                        self.logger.info(
+                            f"Auto-swapped {len(swap_result['unloaded_models'])} models for unregistered model"
+                        )
+                        return {
+                            "can_load": True,
+                            "reason": "Model not in registry but made room via auto-swap",
+                            "swapped_models": swap_result["unloaded_models"],
+                        }
+
+            # Allow load but warn
+            return {
+                "can_load": True,
+                "reason": "Model not in registry - no validation performed",
+                "swapped_models": [],
+            }
 
         hardware = self.hardware_profiler.get_profile()
         quantization = self.quantization_strategy.select_quantization(
@@ -406,18 +435,24 @@ class ModelResourceManager:
             if state == ModelState.UNLOADED:
                 continue
 
+            # Try to get allocation info, but still report model even without it
+            # (unregistered models may not have allocations)
             allocation = self.memory_allocator._allocations.get(model_id)
-            if allocation:
-                active_models.append(
-                    ActiveModelInfo(
-                        model_id=model_id,
-                        model_type=self._model_types.get(model_id, "unknown"),
-                        state=state,
-                        vram_allocated_gb=allocation.vram_allocated_gb,
-                        ram_allocated_gb=allocation.ram_allocated_gb,
-                        can_unload=(state == ModelState.LOADED),
-                    )
+
+            active_models.append(
+                ActiveModelInfo(
+                    model_id=model_id,
+                    model_type=self._model_types.get(model_id, "unknown"),
+                    state=state,
+                    vram_allocated_gb=(
+                        allocation.vram_allocated_gb if allocation else 0.0
+                    ),
+                    ram_allocated_gb=(
+                        allocation.ram_allocated_gb if allocation else 0.0
+                    ),
+                    can_unload=(state == ModelState.LOADED),
                 )
+            )
 
         return active_models
 
@@ -456,29 +491,36 @@ class ModelResourceManager:
                 f"{busy[0].model_type.upper()} is currently processing. Please wait.",
             )
 
-        # Check if we have enough VRAM for the requested model
-        if model_id:
-            metadata = self.registry.get_model(model_id)
-            if metadata:
-                hardware = self.hardware_profiler.get_profile()
-                available_vram = self._get_available_vram_with_allocations()
+        # Check if there are conflicting models loaded
+        # Block if trying to load a different type while another is loaded
+        if active:
+            # Get list of active model types (excluding the one we're trying to load)
+            active_types = set(m.model_type for m in active)
 
-                # Estimate required VRAM (will be refined during prepare_model_loading)
-                min_required = metadata.min_vram_gb
+            # If there are any active models, check if we have enough VRAM
+            hardware = self.hardware_profiler.get_profile()
+            available_vram = hardware.available_vram_gb
 
-                if available_vram < min_required:
-                    active_models_str = ", ".join(
-                        [
-                            f"{m.model_type.upper()} ({m.vram_allocated_gb:.1f}GB)"
-                            for m in active
-                        ]
-                    )
-                    return False, (
-                        f"Insufficient VRAM for {model_type.upper()}.\n\n"
-                        f"Required: {min_required:.1f}GB\n"
-                        f"Available: {available_vram:.1f}GB\n"
-                        f"Active models: {active_models_str}"
-                    )
+            # Estimate VRAM needed (conservative estimate if model not in registry)
+            if model_id:
+                metadata = self.registry.get_model(model_id)
+                min_required = (
+                    metadata.min_vram_gb if metadata else 4.0
+                )  # Default 4GB for unregistered models
+            else:
+                min_required = 4.0  # Default estimate
+
+            if available_vram < min_required:
+                active_models_str = ", ".join(
+                    [f"{m.model_type.upper()}" for m in active]
+                )
+                return False, (
+                    f"Insufficient VRAM for {model_type.upper()}.\n\n"
+                    f"Required: ~{min_required:.1f}GB\n"
+                    f"Available: {available_vram:.1f}GB\n"
+                    f"Active models: {active_models_str}\n\n"
+                    f"Please close other models first."
+                )
 
         return True, "OK"
 

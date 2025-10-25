@@ -14,7 +14,6 @@ from airunner.enums import SignalCode
 class RAGTools:
     """Mixin class providing RAG and document search tools."""
 
-
     def rag_search_tool(self) -> Callable:
         """Retrieve relevant information from RAG documents."""
 

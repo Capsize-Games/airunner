@@ -11,7 +11,6 @@ from airunner.components.user.data.user import User
 class UserDataTools:
     """Mixin class providing user data management tools."""
 
-
     def store_user_data_tool(self) -> Callable:
         """Store user information."""
 

@@ -11,7 +11,6 @@ from airunner.enums import SignalCode
 class KnowledgeTools:
     """Mixin class providing knowledge and memory management tools."""
 
-
     def record_knowledge_tool(self) -> Callable:
         """Record factual knowledge about user or conversation."""
 

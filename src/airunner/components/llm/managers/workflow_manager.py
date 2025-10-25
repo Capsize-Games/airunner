@@ -58,6 +58,7 @@ class WorkflowManager:
         self._workflow = None
         self._compiled_workflow = None
         self._token_callback: Optional[Callable[[str], None]] = None
+        self._interrupted = False
         self.logger = logging.getLogger(__name__)
 
         self._initialize_model()
@@ -195,6 +196,9 @@ class WorkflowManager:
         if hasattr(self._chat_model, "stream"):
             try:
                 for chunk in self._chat_model.stream(formatted_prompt):
+                    if self._interrupted:
+                        break
+
                     chunk_message = getattr(chunk, "message", chunk)
                     text = getattr(chunk_message, "content", "") or ""
                     if not text:
@@ -321,3 +325,13 @@ class WorkflowManager:
     ) -> None:
         """Register a callback for streaming tokens during model execution."""
         self._token_callback = callback
+
+    def set_interrupted(self, value: bool) -> None:
+        """Set the interrupted flag to stop generation."""
+        self._interrupted = value
+        if value:
+            self.logger.info("Workflow interrupted flag set")
+
+    def is_interrupted(self) -> bool:
+        """Check if generation has been interrupted."""
+        return self._interrupted
