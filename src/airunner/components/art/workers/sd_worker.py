@@ -449,4 +449,3 @@ class SDWorker(Worker):
                 "message": message,
             },
         )
-        self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, {"enabled": False})

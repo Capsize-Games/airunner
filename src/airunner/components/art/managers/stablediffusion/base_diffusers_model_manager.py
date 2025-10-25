@@ -780,6 +780,23 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.logger.error("No model selected")
             self.change_model_status(self.model_type, ModelStatus.FAILED)
             return
+
+        # Integrate with ModelResourceManager
+        from airunner.components.model_management import ModelResourceManager
+
+        resource_manager = ModelResourceManager()
+        prepare_result = resource_manager.prepare_model_loading(
+            model_id=self.model_path,
+            model_type="text_to_image",
+        )
+
+        if not prepare_result["can_load"]:
+            self.logger.error(
+                f"Cannot load SD model: {prepare_result.get('reason', 'Unknown reason')}"
+            )
+            self.change_model_status(self.model_type, ModelStatus.FAILED)
+            return
+
         self._load_safety_checker()
 
         if (
@@ -802,6 +819,9 @@ class BaseDiffusersModelManager(BaseModelManager):
             self._load_deep_cache()
             self._make_memory_efficient()
             self._finalize_load_stable_diffusion()
+
+            # Mark model as loaded
+            resource_manager.model_loaded(self.model_path)
 
     def unload(self):
         if self.sd_is_loading or self.sd_is_unloaded:
@@ -844,6 +864,12 @@ class BaseDiffusersModelManager(BaseModelManager):
         clear_memory(self._device_index)
 
         self.change_model_status(self.model_type, ModelStatus.UNLOADED)
+
+        # Cleanup via ModelResourceManager
+        from airunner.components.model_management import ModelResourceManager
+
+        resource_manager = ModelResourceManager()
+        resource_manager.cleanup_model(self.model_path, "text_to_image")
 
     def handle_generate_signal(self, message: Optional[Dict] = None):
         self.image_request = message.get("image_request", None)

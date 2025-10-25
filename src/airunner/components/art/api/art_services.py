@@ -154,20 +154,3 @@ class ARTAPIService(APIServiceBase):
 
     def update_generator_form_values(self):
         self.emit_signal(SignalCode.GENERATOR_FORM_UPDATE_VALUES_SIGNAL)
-
-    def toggle_sd(self, enabled=False, callback=None, finalize=None):
-        self.emit_signal(
-            SignalCode.TOGGLE_SD_SIGNAL,
-            {"enabled": enabled, "callback": callback, "finalize": finalize},
-        )
-
-    def load_non_sd(self, data: Optional[Dict] = None, callback=None):
-        data = data or {}
-        if callback:
-            data["callback"] = callback
-        self.emit_signal(SignalCode.LOAD_NON_SD_MODELS, data)
-
-    def unload_non_sd(self, callback):
-        self.emit_signal(
-            SignalCode.UNLOAD_NON_SD_MODELS, dict(callback=callback)
-        )
