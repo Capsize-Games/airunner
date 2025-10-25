@@ -11,7 +11,7 @@ extras_require = {
         "controlnet_aux==0.0.10",
         "safetensors==0.6.2",
         "compel==2.1.1",
-        "transformers==4.56.1",
+        "transformers==4.57.1",
         "datasets==4.0.0",
         "peft==0.17.1",
     ],
@@ -50,6 +50,8 @@ extras_require = {
         "lingua-language-detector==2.1.0",
         "markdown==3.8",
         "libzim==3.7.0",
+        # Mistral native function calling and Mistral3 tokenization
+        "mistral_common>=1.8.5",
         # llama-index (for RAG only)
         "llama-index-core>=0.13",
         "llama-index-readers-file>=0.5.0",

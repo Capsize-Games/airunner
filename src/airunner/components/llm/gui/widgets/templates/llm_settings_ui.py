@@ -18,9 +18,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
     QFrame, QGridLayout, QGroupBox, QHBoxLayout,
     QHeaderView, QLabel, QLayout, QLineEdit,
-    QProgressBar, QPushButton, QScrollArea, QSizePolicy,
-    QSpacerItem, QTableWidget, QTableWidgetItem, QVBoxLayout,
-    QWidget)
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
 
@@ -377,25 +376,86 @@ class Ui_llm_settings_widget(object):
 
         self.gridLayout_4.addWidget(self.groupBox, 2, 0, 1, 1)
 
-        self.remote_model_path = QGroupBox(llm_settings_widget)
-        self.remote_model_path.setObjectName(u"remote_model_path")
-        self.remote_model_path.setFont(font3)
-        self.verticalLayout_2 = QVBoxLayout(self.remote_model_path)
+        self.model_selection_group = QGroupBox(llm_settings_widget)
+        self.model_selection_group.setObjectName(u"model_selection_group")
+        self.model_selection_group.setFont(font3)
+        self.verticalLayout_2 = QVBoxLayout(self.model_selection_group)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(9, 9, 9, 9)
-        self.model_path = QLineEdit(self.remote_model_path)
+        self.model_dropdown = QComboBox(self.model_selection_group)
+        self.model_dropdown.setObjectName(u"model_dropdown")
+        self.model_dropdown.setEditable(True)
+
+        self.verticalLayout_2.addWidget(self.model_dropdown)
+
+        self.model_path = QLineEdit(self.model_selection_group)
         self.model_path.setObjectName(u"model_path")
 
         self.verticalLayout_2.addWidget(self.model_path)
 
-        self.progressBar = QProgressBar(self.remote_model_path)
-        self.progressBar.setObjectName(u"progressBar")
-        self.progressBar.setValue(24)
+        self.quantization_layout = QVBoxLayout()
+        self.quantization_layout.setObjectName(u"quantization_layout")
+        self.quantization_label = QLabel(self.model_selection_group)
+        self.quantization_label.setObjectName(u"quantization_label")
+        self.quantization_label.setFont(font1)
 
-        self.verticalLayout_2.addWidget(self.progressBar)
+        self.quantization_layout.addWidget(self.quantization_label)
+
+        self.quantization_dropdown = QComboBox(self.model_selection_group)
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.setObjectName(u"quantization_dropdown")
+        self.quantization_dropdown.setEnabled(False)
+        self.quantization_dropdown.setFont(font1)
+
+        self.quantization_layout.addWidget(self.quantization_dropdown)
 
 
-        self.gridLayout_4.addWidget(self.remote_model_path, 3, 0, 1, 1)
+        self.verticalLayout_2.addLayout(self.quantization_layout)
+
+        self.model_info_label = QLabel(self.model_selection_group)
+        self.model_info_label.setObjectName(u"model_info_label")
+        font4 = QFont()
+        font4.setPointSize(9)
+        font4.setBold(False)
+        font4.setItalic(True)
+        self.model_info_label.setFont(font4)
+        self.model_info_label.setWordWrap(True)
+
+        self.verticalLayout_2.addWidget(self.model_info_label)
+
+        self.download_model_button = QPushButton(self.model_selection_group)
+        self.download_model_button.setObjectName(u"download_model_button")
+        self.download_model_button.setEnabled(False)
+
+        self.verticalLayout_2.addWidget(self.download_model_button)
+
+        self.start_quantize_button = QPushButton(self.model_selection_group)
+        self.start_quantize_button.setObjectName(u"start_quantize_button")
+        self.start_quantize_button.setEnabled(False)
+
+        self.verticalLayout_2.addWidget(self.start_quantize_button)
+
+        self.delete_buttons_layout = QHBoxLayout()
+        self.delete_buttons_layout.setObjectName(u"delete_buttons_layout")
+        self.delete_safetensors_button = QPushButton(self.model_selection_group)
+        self.delete_safetensors_button.setObjectName(u"delete_safetensors_button")
+        self.delete_safetensors_button.setEnabled(False)
+
+        self.delete_buttons_layout.addWidget(self.delete_safetensors_button)
+
+        self.delete_quantized_button = QPushButton(self.model_selection_group)
+        self.delete_quantized_button.setObjectName(u"delete_quantized_button")
+        self.delete_quantized_button.setEnabled(False)
+
+        self.delete_buttons_layout.addWidget(self.delete_quantized_button)
+
+
+        self.verticalLayout_2.addLayout(self.delete_buttons_layout)
+
+
+        self.gridLayout_4.addWidget(self.model_selection_group, 3, 0, 1, 1)
 
         self.adapters_group = QGroupBox(llm_settings_widget)
         self.adapters_group.setObjectName(u"adapters_group")
@@ -435,8 +495,7 @@ class Ui_llm_settings_widget(object):
         self.pushButton.clicked.connect(llm_settings_widget.reset_settings_to_default_clicked)
         self.do_sample.toggled.connect(llm_settings_widget.do_sample_toggled)
         self.use_cache.clicked["bool"].connect(llm_settings_widget.toggle_use_cache)
-        self.model_service.currentTextChanged.connect(llm_settings_widget.on_model_service_currentTextChanged)
-        self.model_path.textChanged.connect(llm_settings_widget.on_model_path_textChanged)
+        self.quantization_dropdown.currentIndexChanged.connect(llm_settings_widget.on_quantization_changed)
 
         QMetaObject.connectSlotsByName(llm_settings_widget)
     # setupUi
@@ -470,8 +529,22 @@ class Ui_llm_settings_widget(object):
         self.min_length.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.min_length", None))
         self.min_length.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Min Length", None))
         self.label_2.setText(QCoreApplication.translate("llm_settings_widget", u"LLM Settings", None))
-        self.groupBox.setTitle(QCoreApplication.translate("llm_settings_widget", u"Model service", None))
-        self.remote_model_path.setTitle(QCoreApplication.translate("llm_settings_widget", u"Custom path", None))
+        self.groupBox.setTitle(QCoreApplication.translate("llm_settings_widget", u"Provider", None))
+        self.model_selection_group.setTitle(QCoreApplication.translate("llm_settings_widget", u"Model", None))
+        self.model_path.setPlaceholderText(QCoreApplication.translate("llm_settings_widget", u"Model path or identifier", None))
+        self.quantization_label.setText(QCoreApplication.translate("llm_settings_widget", u"Quantization:", None))
+        self.quantization_dropdown.setItemText(0, QCoreApplication.translate("llm_settings_widget", u"2-bit (50% VRAM, -15% quality)", None))
+        self.quantization_dropdown.setItemText(1, QCoreApplication.translate("llm_settings_widget", u"4-bit (balanced, recommended)", None))
+        self.quantization_dropdown.setItemText(2, QCoreApplication.translate("llm_settings_widget", u"8-bit (200% VRAM, best quality)", None))
+
+        self.model_info_label.setText(QCoreApplication.translate("llm_settings_widget", u"VRAM: -- GB | Context: -- tokens | Tool Calling: --", None))
+        self.download_model_button.setText(QCoreApplication.translate("llm_settings_widget", u"Download Model from HuggingFace", None))
+        self.start_quantize_button.setText(QCoreApplication.translate("llm_settings_widget", u"Start Manual Quantization", None))
+#if QT_CONFIG(tooltip)
+        self.start_quantize_button.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Manually quantize model to disk (creates separate files). Automatic quantization during loading is recommended instead.", None))
+#endif // QT_CONFIG(tooltip)
+        self.delete_safetensors_button.setText(QCoreApplication.translate("llm_settings_widget", u"Delete Original Files", None))
+        self.delete_quantized_button.setText(QCoreApplication.translate("llm_settings_widget", u"Delete Quantized", None))
         self.adapters_group.setTitle(QCoreApplication.translate("llm_settings_widget", u"LoRA Adapters", None))
         ___qtablewidgetitem = self.adapters_table.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("llm_settings_widget", u"Enabled", None));

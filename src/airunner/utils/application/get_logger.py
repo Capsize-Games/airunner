@@ -13,12 +13,23 @@ class Logger:
             logger.handlers.clear()
 
         handler = logging.StreamHandler()
-        # Use the standard LogRecord attributes (module, funcName, lineno)
-        handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(module)s - %(funcName)s - %(lineno)d - %(message)s"
-            )
+
+        # Formatter: timestamp - logger name - level - Caller - message
+        fmt = (
+            "%(asctime)s - %(name)s - %(levelname)s - %(caller)s - %(message)s"
         )
+
+        class SafeFormatter(logging.Formatter):
+            def format(self, record):
+                # Ensure 'caller' is present so formatting never fails
+                if not hasattr(record, "caller"):
+                    try:
+                        record.caller = f"{record.module}::{record.funcName} - {record.lineno}"
+                    except Exception:
+                        record.caller = "<unknown>::<unknown> - 0"
+                return super().format(record)
+
+        handler.setFormatter(SafeFormatter(fmt))
 
         logger.addHandler(handler)
 
@@ -35,24 +46,95 @@ class Logger:
         # modules call it, but return an empty dict.
         return {}
 
+    def _infer_caller_class_name(self) -> str:
+        """Inspect the stack to find the caller's class name (if any).
+
+        Returns the class name if the caller is a method, otherwise returns
+        the module name as a fallback.
+        """
+        try:
+            frame = inspect.currentframe()
+            # climb out of this helper and the wrapper method to reach the caller
+            if frame is None:
+                return ""
+            caller = frame.f_back.f_back
+            if caller is None:
+                return ""
+            locals_ = caller.f_locals
+            if "self" in locals_:
+                try:
+                    return locals_["self"].__class__.__name__
+                except Exception:
+                    pass
+            if "cls" in locals_:
+                try:
+                    return locals_["cls"].__name__
+                except Exception:
+                    pass
+            # Fallback to module name
+            return caller.f_globals.get("__name__", "")
+        except Exception:
+            return ""
+
+    def _find_caller(self) -> str:
+        """Return formatted caller info 'Class::func - lineno' or 'module::func - lineno'."""
+        try:
+            for frame_info in inspect.stack()[2:]:
+                frame = frame_info.frame
+                module = frame.f_globals.get("__name__", "")
+                if module == __name__:
+                    continue
+                func_name = frame_info.function
+                lineno = frame_info.lineno
+                locals_ = frame.f_locals
+                class_name = None
+                if "self" in locals_:
+                    try:
+                        class_name = locals_["self"].__class__.__name__
+                    except Exception:
+                        class_name = None
+                elif "cls" in locals_:
+                    try:
+                        class_name = locals_["cls"].__name__
+                    except Exception:
+                        class_name = None
+
+                if class_name:
+                    return f"{class_name}::{func_name} - {lineno}"
+                return f"{module}::{func_name} - {lineno}"
+        except Exception:
+            return "<unknown>::<unknown> - 0"
+
     def debug(self, message: str, *args, **kwargs):
-        self._logger.debug(message, *args, **kwargs)
+        extra = kwargs.pop("extra", {}) or {}
+        extra.setdefault("caller", self._find_caller())
+        self._logger.debug(message, *args, extra=extra, **kwargs)
 
     def error(self, message: str, *args, **kwargs):
-        self._logger.error(message, *args, **kwargs)
+        extra = kwargs.pop("extra", {}) or {}
+        extra.setdefault("caller", self._find_caller())
+        self._logger.error(message, *args, extra=extra, **kwargs)
 
     def exception(self, message: str, *args, **kwargs):
         # Use the logger's exception method so exc_info=True is set
-        self._logger.exception(message, *args, **kwargs)
+        extra = kwargs.pop("extra", {}) or {}
+        extra.setdefault("caller", self._find_caller())
+        self._logger.exception(message, *args, extra=extra, **kwargs)
 
     def info(self, message: str, *args, **kwargs):
-        self._logger.info(message, *args, **kwargs)
+        extra = kwargs.pop("extra", {}) or {}
+        extra.setdefault("caller", self._find_caller())
+        self._logger.info(message, *args, extra=extra, **kwargs)
 
     def warning(self, message: str, *args, **kwargs):
-        self._logger.warning(message, *args, **kwargs)
+        extra = kwargs.pop("extra", {}) or {}
+        extra.setdefault("caller", self._find_caller())
+        self._logger.warning(message, *args, extra=extra, **kwargs)
 
     def critical(self, message: str, *args, **kwargs):
-        self._logger.critical(message, *args, **kwargs)
+        extra = kwargs.pop("extra", {}) or {}
+        extra.setdefault("caller", self._find_caller())
+        self._logger.critical(message, *args, extra=extra, **kwargs)
 
 
 def get_logger(name: str, level: int = logging.DEBUG) -> Logger:

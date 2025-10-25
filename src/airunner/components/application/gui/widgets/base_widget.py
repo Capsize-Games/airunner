@@ -352,17 +352,76 @@ class BaseWidget(AbstractBaseWidget):
 
     def _render_template(self, element, template_name: str, **kwargs):
         """
-        Load a Jinja2 template from the local HTTP server, passing kwargs as query parameters for server-side rendering.
+        Load a Jinja2 template, render it, and set it directly using setHtml with a file:// base URL.
+        No network access required - everything loads from local filesystem.
         """
-        # Build the URL to the template on the local server
-        base_url = f"https://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}/static/html/{template_name}"
-        # Pass kwargs as query parameters (JSON-encode complex values)
-        query = urlencode(
-            {k: v if isinstance(v, str) else str(v) for k, v in kwargs.items()}
+        import os
+        import jinja2
+        from PySide6.QtCore import QUrl
+        from pathlib import Path
+
+        # Search for the template in common locations
+        # __file__ is .../components/application/gui/widgets/base_widget.py
+        # Go up to airunner/ directory (5 levels up)
+        airunner_root = Path(__file__).parent.parent.parent.parent.parent
+        possible_dirs = [
+            airunner_root / "components" / "chat" / "gui" / "static" / "html",
+            airunner_root / "components" / "llm" / "gui" / "static" / "html",
+            airunner_root / "static" / "html",
+        ]
+
+        template_dir = None
+        for dir_path in possible_dirs:
+            if (dir_path / template_name).exists():
+                template_dir = str(dir_path)
+                break
+
+        if not template_dir:
+            print(
+                f"[BaseWidget] ERROR: Template {template_name} not found in any of {possible_dirs}"
+            )
+            return
+
+        # Set up Jinja2 environment
+        loader = jinja2.FileSystemLoader(template_dir)
+        env = jinja2.Environment(
+            loader=loader,
+            autoescape=jinja2.select_autoescape(["html", "xml"]),
         )
-        url = f"{base_url}?{query}" if query else base_url
-        # Load the URL in the QWebEngineView
-        element.setUrl(url)
+
+        # Render the template
+        try:
+            template = env.get_template(template_name)
+            html_content = template.render(**kwargs)
+
+            # Use HTTP server URL - construct the full URL to the template
+            # Server runs on http://127.0.0.1:5005, static files served from /static/
+            # Pass context variables as query parameters for Jinja2 rendering
+            import urllib.parse
+            import json
+
+            query_params = []
+            for key, value in kwargs.items():
+                # JSON encode complex values, simple string for primitives
+                if isinstance(value, (dict, list)):
+                    query_params.append(
+                        f"{key}={urllib.parse.quote(json.dumps(value))}"
+                    )
+                else:
+                    query_params.append(
+                        f"{key}={urllib.parse.quote(str(value))}"
+                    )
+            query_string = "&".join(query_params) if query_params else ""
+            template_url = f"http://127.0.0.1:5005/static/html/{template_name}?{query_string}"
+            print(f"[BaseWidget] Loading template from URL: {template_url}")
+            element.setUrl(QUrl(template_url))
+        except Exception as e:
+            print(
+                f"[BaseWidget] Error rendering template {template_name}: {e}"
+            )
+            import traceback
+
+            traceback.print_exc()
 
     def set_status_message_text(self, message: str):
         """

@@ -63,10 +63,6 @@ from airunner.settings import (
     AIRUNNER_ART_ENABLED,
 )
 from airunner.utils.settings import get_qsettings
-from airunner.components.llm.managers.agent.actions.bash_execute import (
-    bash_execute,
-)
-from airunner.components.llm.managers.agent.actions.show_path import show_path
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.application.data.shortcut_keys import ShortcutKeys
 from airunner.components.art.data.image_filter import ImageFilter
@@ -110,6 +106,56 @@ from airunner.components.plugins.plugin_loader import PluginLoader
 from airunner.components.application.gui.windows.main.nsfw_warning_dialog import (
     show_nsfw_warning_dialog,
 )
+
+
+# Utility functions moved from deleted agent.actions
+def bash_execute(command: str) -> str:
+    """
+    Execute a bash command and return the output.
+
+    Args:
+        command: The bash command to execute
+
+    Returns:
+        The command output or error message
+    """
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            command, shell=True, capture_output=True, text=True, timeout=30
+        )
+        return result.stdout if result.returncode == 0 else result.stderr
+    except subprocess.TimeoutExpired:
+        return "Command timed out after 30 seconds"
+    except Exception as e:
+        return f"Error executing command: {str(e)}"
+
+
+def show_path(path: str) -> None:
+    """
+    Open the given path in the system file manager.
+
+    Args:
+        path: The file or directory path to show
+    """
+    import subprocess
+    import platform
+    import os
+
+    if not os.path.exists(path):
+        return
+
+    system = platform.system()
+    try:
+        if system == "Windows":
+            os.startfile(path)
+        elif system == "Darwin":  # macOS
+            subprocess.run(["open", path])
+        else:  # Linux
+            subprocess.run(["xdg-open", path])
+    except Exception:
+        pass  # Silently fail if we can't open the path
 
 
 class MainWindow(
@@ -229,7 +275,6 @@ class MainWindow(
             SignalCode.SD_SAVE_PROMPT_SIGNAL: self.on_save_stablediffusion_prompt_signal,
             SignalCode.QUIT_APPLICATION: self.handle_quit_application_signal,
             SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL: self.on_nsfw_content_detected_signal,
-            SignalCode.BASH_EXECUTE_SIGNAL: self.on_bash_execute_signal,
             SignalCode.WRITE_FILE: self.on_write_file_signal,
             SignalCode.TOGGLE_FULLSCREEN_SIGNAL: self.on_toggle_fullscreen_signal,
             SignalCode.TOGGLE_TTS_SIGNAL: self.on_toggle_tts,
@@ -414,10 +459,12 @@ class MainWindow(
 
     @Slot()
     def on_actionBrowse_AI_Runner_Path_triggered(self):
-        path = self.path_settings.base_path
-        if path == "":
-            path = AIRUNNER_BASE_PATH
-        show_path(path)
+        # Note: show_path functionality removed with old agent system
+        # path = self.path_settings.base_path
+        # if path == "":
+        #     path = AIRUNNER_BASE_PATH
+        # TODO: Implement file browser opening if needed
+        pass
 
     @Slot()
     def on_actionDownload_Model_triggered(self):
@@ -840,17 +887,6 @@ class MainWindow(
         with open("output.txt", "w") as f:
             f.write(message)
 
-    @staticmethod
-    def on_bash_execute_signal(data: Dict) -> str:
-        """
-        Takes a message from the LLM and strips bash commands from it.
-        Passes bash command to the bash_execute function.
-        :param data: Dict
-        :return:
-        """
-        args = data["args"]
-        return bash_execute(args[0])
-
     def on_theme_changed_signal(self, data: Dict):
         template = data.get("template", TemplateName.SYSTEM_DEFAULT)
         self.set_stylesheet(
@@ -1071,8 +1107,10 @@ class MainWindow(
         self.close()
 
     def show_settings_path(self, name, default_path=None):
-        path = getattr(self.path_settings, name)
-        show_path(default_path if default_path and path == "" else path)
+        # Note: show_path functionality removed with old agent system
+        # path = getattr(self.path_settings, name)
+        # TODO: Implement file browser opening if needed
+        pass
 
     def toggle_nsfw_filter(self):
         self.set_nsfw_filter_tooltip()

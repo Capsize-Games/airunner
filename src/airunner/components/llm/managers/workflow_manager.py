@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Annotated, Optional, List, Callable
 from typing_extensions import TypedDict
 
@@ -56,19 +57,63 @@ class WorkflowManager:
         )
         self._workflow = None
         self._compiled_workflow = None
+        self._token_callback: Optional[Callable[[str], None]] = None
+        self.logger = logging.getLogger(__name__)
 
         self._initialize_model()
         self._build_and_compile_workflow()
 
     def _initialize_model(self):
         """Bind tools to the chat model if provided."""
-        if self._tools and hasattr(self._chat_model, "bind_tools"):
+        # Skip tool binding if no tools provided
+        if not self._tools or len(self._tools) == 0:
+            self.logger.info("No tools provided - skipping tool binding")
+            return
+
+        if hasattr(self._chat_model, "bind_tools"):
             try:
                 self._chat_model = self._chat_model.bind_tools(self._tools)
+                self.logger.info(
+                    f"Successfully bound {len(self._tools)} tools to chat model"
+                )
+
+                # Add tool schemas to system prompt for local models
+                if hasattr(self._chat_model, "get_tool_schemas_text"):
+                    tool_schemas = self._chat_model.get_tool_schemas_text()
+                    if tool_schemas:
+                        self._system_prompt = (
+                            f"{self._system_prompt}\n\n{tool_schemas}"
+                        )
+                        self.logger.info("Added tool schemas to system prompt")
+
+            except NotImplementedError:
+                self.logger.warning(
+                    f"Local HuggingFace models don't support native function calling. "
+                    f"Using prompt-based tool calling instead."
+                )
+                # Still add tool schemas to system prompt for prompt-based calling
+                if hasattr(self._chat_model, "get_tool_schemas_text"):
+                    tool_schemas = self._chat_model.get_tool_schemas_text()
+                    if tool_schemas:
+                        self._system_prompt = (
+                            f"{self._system_prompt}\n\n{tool_schemas}"
+                        )
+                        self.logger.info(
+                            "Added tool schemas to system prompt for prompt-based calling"
+                        )
             except Exception as e:
-                # Some models might not support tool binding
-                # In that case, tools will be handled differently
-                pass
+                import traceback
+
+                self.logger.warning(
+                    f"Could not bind tools to model: {type(e).__name__}: {e}"
+                )
+                self.logger.debug(f"Full traceback: {traceback.format_exc()}")
+        elif self._tools:
+            self.logger.warning(
+                f"Chat model does not support bind_tools(), {len(self._tools)} tools will not be used"
+            )
+        else:
+            self.logger.debug("No tools to bind")
 
     def _build_and_compile_workflow(self):
         """Build and compile the LangGraph workflow."""
@@ -105,7 +150,16 @@ class WorkflowManager:
     def _route_after_model(self, state: WorkflowState) -> str:
         """Route to tools if model made tool calls, otherwise end."""
         last_message = state["messages"][-1]
-        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        has_tool_calls = (
+            hasattr(last_message, "tool_calls") and last_message.tool_calls
+        )
+        self.logger.debug(
+            f"Routing: has_tool_calls={has_tool_calls}, message_type={type(last_message).__name__}"
+        )
+        if has_tool_calls:
+            self.logger.info(
+                f"Model requested {len(last_message.tool_calls)} tool calls"
+            )
             return "tools"
         return "end"
 
@@ -121,24 +175,96 @@ class WorkflowManager:
             start_on="human",
         )
 
+        # Escape curly braces in system prompt for LangChain template compatibility
+        escaped_system_prompt = self._system_prompt.replace("{", "{{").replace(
+            "}", "}}"
+        )
+
         prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", self._system_prompt),
+                ("system", escaped_system_prompt),
                 MessagesPlaceholder(variable_name="messages"),
             ]
         )
         formatted_prompt = prompt.invoke({"messages": trimmed_messages})
-        response = self._chat_model.invoke(formatted_prompt)
 
-        return {"messages": [response]}
+        streamed_content: List[str] = []
+        last_chunk_message: Optional[BaseMessage] = None
+        response_message: Optional[AIMessage] = None
 
-    def update_system_prompt(self, system_prompt: str):
-        """Update the system prompt for the workflow.
+        if hasattr(self._chat_model, "stream"):
+            try:
+                for chunk in self._chat_model.stream(formatted_prompt):
+                    chunk_message = getattr(chunk, "message", chunk)
+                    text = getattr(chunk_message, "content", "") or ""
+                    if not text:
+                        continue
+                    streamed_content.append(text)
+                    last_chunk_message = chunk_message
+                    if self._token_callback:
+                        try:
+                            self._token_callback(text)
+                        except Exception as callback_error:
+                            self.logger.error(
+                                "Token callback failed: %s",
+                                callback_error,
+                                exc_info=True,
+                            )
 
-        Args:
-            system_prompt: New system prompt to use
-        """
-        self._system_prompt = system_prompt
+                if streamed_content:
+                    additional_kwargs = {}
+                    tool_calls = None
+                    if last_chunk_message is not None:
+                        additional_kwargs = getattr(
+                            last_chunk_message, "additional_kwargs", {}
+                        )
+                        tool_calls = getattr(
+                            last_chunk_message, "tool_calls", None
+                        )
+
+                    # Parse tool calls from complete streamed response
+                    complete_content = "".join(streamed_content)
+                    if self._tools and hasattr(
+                        self._chat_model, "_parse_tool_calls"
+                    ):
+                        parsed_tool_calls, cleaned_content = (
+                            self._chat_model._parse_tool_calls(
+                                complete_content
+                            )
+                        )
+                        if parsed_tool_calls:
+                            tool_calls = parsed_tool_calls
+                            complete_content = cleaned_content
+
+                    response_message = AIMessage(
+                        content=complete_content,
+                        additional_kwargs=additional_kwargs,
+                        tool_calls=tool_calls or [],
+                    )
+            except Exception as exc:
+                self.logger.error(
+                    "Error during streamed model call: %s", exc, exc_info=True
+                )
+                streamed_content = []
+                response_message = None
+
+        if response_message is None:
+            response_message = self._chat_model.invoke(formatted_prompt)
+            if (
+                self._token_callback
+                and hasattr(response_message, "content")
+                and response_message.content
+            ):
+                try:
+                    self._token_callback(response_message.content)
+                except Exception as callback_error:
+                    self.logger.error(
+                        "Token callback failed: %s",
+                        callback_error,
+                        exc_info=True,
+                    )
+
+        return {"messages": [response_message]}
 
     def clear_memory(self):
         """Clear the conversation memory/history."""
@@ -166,7 +292,7 @@ class WorkflowManager:
         )
 
     def stream(self, user_input: str):
-        """Stream the workflow execution with user input."""
+        """Stream the workflow execution with user input, yielding messages."""
         input_messages = [HumanMessage(user_input)]
         config = {"configurable": {"thread_id": self._thread_id}}
 
@@ -189,3 +315,9 @@ class WorkflowManager:
         self._tools = tools
         self._initialize_model()  # Re-bind tools
         self._build_and_compile_workflow()
+
+    def set_token_callback(
+        self, callback: Optional[Callable[[str], None]]
+    ) -> None:
+        """Register a callback for streaming tokens during model execution."""
+        self._token_callback = callback

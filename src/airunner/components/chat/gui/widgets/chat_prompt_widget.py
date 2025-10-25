@@ -118,7 +118,27 @@ class ChatPromptWidget(BaseWidget):
 
     @Slot()
     def on_clear_conversation_button_clicked(self):
-        self.api.llm.clear_history()
+        """Create a new conversation and clear the display."""
+        # Create a new conversation in the database
+        new_conversation = Conversation.create()
+        if new_conversation:
+            self.logger.info(
+                f"Created new conversation with ID: {new_conversation.id}"
+            )
+            # Make it the current conversation
+            Conversation.make_current(new_conversation.id)
+            # Update GUI state
+            self.conversation_id = new_conversation.id
+            self.conversation = new_conversation
+            # Clear the display
+            if hasattr(self.ui, "conversation"):
+                self.ui.conversation.clear_conversation()
+            # Tell the backend to use this new conversation
+            self.api.llm.clear_history(conversation_id=new_conversation.id)
+        else:
+            self.logger.error("Failed to create new conversation")
+            # Fallback to old behavior
+            self.api.llm.clear_history()
 
     @Slot(bool)
     def on_history_button_toggled(self, checked: bool):
