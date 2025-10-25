@@ -10,29 +10,27 @@ from transformers.utils.quantization_config import (
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner.utils.memory import clear_memory
+from airunner.components.model_management.hardware_profiler import (
+    HardwareProfiler,
+)
 
 
 class QuantizationMixin:
     """Mixin for LLM model quantization functionality."""
 
+    @property
+    def _hardware_profiler(self) -> HardwareProfiler:
+        """Lazy initialization of hardware profiler."""
+        if not hasattr(self, "_hw_profiler_instance"):
+            self._hw_profiler_instance = HardwareProfiler()
+        return self._hw_profiler_instance
+
     def _get_available_vram_gb(self) -> float:
         """Get available VRAM in gigabytes."""
-        if not torch.cuda.is_available():
-            return 0.0
-        try:
-            free_memory, total_memory = torch.cuda.mem_get_info()
-            return free_memory / (1024**3)
-        except Exception as e:
-            self.logger.warning(f"Could not detect VRAM: {e}")
-            return 0.0
+        return self._hardware_profiler._get_available_vram_gb()
 
     def _auto_select_quantization(self) -> str:
-        """
-        Automatically select quantization level based on available VRAM.
-
-        Returns:
-            str: Quantization level ("2bit", "4bit", "8bit", or "32bit")
-        """
+        """Automatically select quantization level based on available VRAM."""
         available_vram = self._get_available_vram_gb()
         self.logger.info(f"Available VRAM: {available_vram:.2f} GB")
 
@@ -80,24 +78,22 @@ class QuantizationMixin:
 
     def _get_quantized_model_path(self, base_path: str, bits: str) -> str:
         """
-        Get the path for a quantized AWQ/GPTQ model.
-
-        Note: BitsAndBytes quantization is runtime-only and cannot be saved.
+        Get the path for a BitsAndBytes quantized model.
 
         Args:
             base_path: Base model path
             bits: Quantization level ("4bit", "8bit")
 
         Returns:
-            str: Path to quantized model directory
+            str: Path to quantized model directory (e.g., model-4bit/)
         """
         base_dir = os.path.dirname(base_path)
         model_name = os.path.basename(base_path)
-        return os.path.join(base_dir, f"{model_name}-awq-{bits}")
+        return os.path.join(base_dir, f"{model_name}-{bits}")
 
     def _check_quantized_model_exists(self, quant_path: str) -> bool:
         """
-        Check if an AWQ/GPTQ quantized model exists and is valid.
+        Check if a BitsAndBytes quantized model exists and is valid.
 
         Args:
             quant_path: Path to quantized model
@@ -144,10 +140,11 @@ class QuantizationMixin:
 
     def _save_quantized_model(self, dtype: str, original_path: str) -> None:
         """
-        NOTE: BitsAndBytes quantization cannot be saved to disk.
+        Save a BitsAndBytes quantized model to disk.
 
-        BitsAndBytes is runtime-only. For persistent quantized models,
-        use AWQ or GPTQ which require calibration and offline quantization.
+        Since BitsAndBytes PR#753 (merged Nov 2023), 4-bit/8-bit models CAN be
+        saved and loaded using save_pretrained/from_pretrained. This creates a
+        persistent quantized model that loads much faster than runtime quantization.
 
         Args:
             dtype: Quantization level ("4bit", "8bit", etc.)
@@ -156,12 +153,31 @@ class QuantizationMixin:
         if not self._model or not dtype or dtype == "none":
             return
 
+        if dtype not in ["4bit", "8bit"]:
+            self.logger.info(
+                f"Quantization saving not supported for dtype={dtype}"
+            )
+            return
+
+        quantized_path = self._get_quantized_model_path(original_path, dtype)
+
+        if self._check_quantized_model_exists(quantized_path):
+            self.logger.info(
+                f"Quantized model already exists at {quantized_path}"
+            )
+            return
+
         self.logger.info(
-            f"BitsAndBytes {dtype} quantization is runtime-only and cannot be saved to disk."
+            f"Saving BitsAndBytes {dtype} quantized model to {quantized_path}"
         )
-        self.logger.info(
-            "To save quantized models, consider using AWQ (auto-awq) or GPTQ (auto-gptq) quantization."
-        )
+
+        try:
+            self._create_quantized_model(
+                original_path, dtype, current=1, total=1
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to save quantized model: {e}")
+            raise
 
     def _ensure_quantized_models(self, base_model_path: str) -> None:
         """

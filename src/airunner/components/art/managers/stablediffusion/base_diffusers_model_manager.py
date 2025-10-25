@@ -201,6 +201,15 @@ class BaseDiffusersModelManager(BaseModelManager):
 
         self.image_export_worker = create_worker(ImageExportWorker)
 
+    @property
+    def hardware_profiler(self):
+        """Get hardware profiler for memory detection."""
+        from airunner.components.art.managers.stablediffusion.memory_utils import (
+            get_hardware_profiler,
+        )
+
+        return get_hardware_profiler()
+
     def _initialize_model_status(self):
         self._model_status[self.model_type] = ModelStatus.UNLOADED
 
