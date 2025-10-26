@@ -11,9 +11,7 @@ Manages the agent's comprehensive memory system including:
 import logging
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
-from pathlib import Path
 
-from langchain_core.documents import Document
 from langchain_core.vectorstores import InMemoryVectorStore
 
 from airunner.components.knowledge.data.models import (
@@ -21,7 +19,6 @@ from airunner.components.knowledge.data.models import (
     ConversationSummary,
 )
 from airunner.components.data.session_manager import session_scope
-from airunner.enums import SignalCode
 
 
 logger = logging.getLogger(__name__)

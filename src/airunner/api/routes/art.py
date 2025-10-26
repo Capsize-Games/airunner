@@ -5,10 +5,9 @@ Integrates with ARTAPIService and JobTracker for asynchronous image generation.
 """
 
 import logging
-import base64
 import io
 from typing import Optional, List
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 

@@ -280,5 +280,5 @@ class SignalMediator(metaclass=SingletonMeta):
             for signal in self.signals[code]:
                 try:
                     signal.signal.emit(data)
-                except RuntimeError as e:
+                except RuntimeError:
                     pass

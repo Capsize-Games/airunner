@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 
 from PySide6.QtCore import QTimer, Slot, Qt
-from PySide6.QtWidgets import QApplication, QScrollArea, QWidget
+from PySide6.QtWidgets import QApplication
 from PySide6.QtWebChannel import QWebChannel
 from llama_cloud import MessageRole
 
@@ -18,7 +18,6 @@ from airunner.components.llm.gui.widgets.contentwidgets import (
 from airunner.components.chat.gui.widgets.templates.conversation_ui import (
     Ui_conversation,
 )
-import logging
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.llm.utils import strip_names_from_message

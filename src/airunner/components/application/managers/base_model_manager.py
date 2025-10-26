@@ -39,7 +39,7 @@ from airunner.components.application.managers.model_status_manager import (
 )
 
 try:
-    from flash_attn import flash_attn_varlen_func, flash_attn_func
+    from flash_attn import flash_attn_func
 except ImportError:
     flass_attn_varlen_func = None
     flash_attn_func = None

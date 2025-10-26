@@ -1,6 +1,5 @@
 """Knowledge management and memory tools."""
 
-import logging
 from typing import Callable
 
 from langchain.tools import tool

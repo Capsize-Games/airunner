@@ -1,7 +1,6 @@
 """Custom LangGraph checkpointer that persists to the Conversation database."""
 
 import logging
-import json
 import uuid
 from typing import Optional, Dict, Any, Iterator, Tuple
 from collections.abc import Sequence
@@ -14,7 +13,6 @@ from langgraph.checkpoint.base import (
 )
 from langchain_core.runnables import RunnableConfig
 
-from airunner.components.llm.data.conversation import Conversation
 from airunner.components.llm.managers.database_chat_message_history import (
     DatabaseChatMessageHistory,
 )
@@ -193,7 +191,6 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         """
         # For our simple implementation, we don't need to store intermediate writes
         # The final state will be saved via put()
-        pass
 
     def list(
         self,

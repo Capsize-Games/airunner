@@ -6,7 +6,6 @@ maintains them in a human-readable markdown file, and indexes them with RAG
 for efficient retrieval.
 """
 
-import os
 import re
 import json
 import logging

@@ -7,7 +7,6 @@ Provides form fields for fact properties with validation.
 
 import logging
 from typing import Optional
-import json
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDialog, QMessageBox

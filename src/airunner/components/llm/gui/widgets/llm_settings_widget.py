@@ -1,6 +1,6 @@
 import os
 import json
-from PySide6.QtCore import Slot, Qt, QTimer
+from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QWidget, QTableWidgetItem, QCheckBox, QHBoxLayout
 
 from airunner.components.llm.data.chatbot import Chatbot
@@ -15,9 +15,6 @@ from airunner.components.application.gui.windows.main.ai_model_mixin import (
 from airunner.enums import ModelService, SignalCode
 from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.components.llm.managers.download_huggingface import (
-    DownloadHuggingFaceModel,
-)
 
 
 class LLMSettingsWidget(BaseWidget, AIModelMixin):
@@ -285,7 +282,6 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
 
     def _toggle_model_path_visibility(self, val: bool):
         """Deprecated - kept for compatibility."""
-        pass
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -797,8 +793,8 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
         stage = data.get("stage", "")
         progress = data.get("progress", 0.0)
         bits = data.get("bits", "")
-        current = data.get("current", 0)
-        total = data.get("total", 1)
+        data.get("current", 0)
+        data.get("total", 1)
 
         self.logger.info(
             f"Quantization {bits}-bit: {stage} - {int(progress)}%"
@@ -853,7 +849,6 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
     def on_delete_safetensors_button_clicked(self):
         """Handle delete safetensors button click - delete original model files after confirmation."""
         from PySide6.QtWidgets import QMessageBox
-        import shutil
 
         model_path = self.ui.model_path.text()
 

@@ -1,6 +1,5 @@
 """File system and document tools."""
 
-import logging
 import os
 from typing import Callable
 

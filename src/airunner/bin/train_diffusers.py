@@ -1,7 +1,6 @@
 import argparse
 import logging
 import os
-from typing import Optional
 
 from airunner.components.art.trainers import (
     SDLoRATrainer,

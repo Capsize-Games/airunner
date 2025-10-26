@@ -119,7 +119,7 @@ class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
         try:
             process = psutil.Process(os.getpid())
             memory_info = process.memory_info()
-        except Exception as _e:
+        except Exception:
             return
         used = memory_info.rss / (1024.0**3)  # Resident Set Size
         total = psutil.virtual_memory().total / (1024.0**3)

@@ -5,7 +5,6 @@ import logging
 
 from PIL.Image import Image
 from PySide6.QtWidgets import QComboBox, QWidget, QVBoxLayout
-from PySide6.QtCore import QSizeF
 
 from airunner.components.nodegraph.gui.widgets.nodes.art.base_art_node import (
     BaseArtNode,

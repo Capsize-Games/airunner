@@ -25,7 +25,6 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 
 
 # Import tools to register them
-import airunner.components.llm.tools
 
 
 class AgentCoordinator(MediatorMixin, SettingsMixin):

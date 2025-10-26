@@ -3,11 +3,10 @@ import urllib.parse
 import posixpath
 from http.server import SimpleHTTPRequestHandler
 from socketserver import ThreadingTCPServer
-from PySide6.QtCore import QThread, QFileSystemWatcher, QTimer
+from PySide6.QtCore import QThread
 import jinja2
 import mimetypes
 import json
-import ssl
 import logging
 import functools
 
@@ -220,7 +219,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         # Check if this is a static file within a project directory (e.g. game/css/file.css, game/js/file.js)
         path_parts = rel_path_no_query.split("/")
         if len(path_parts) >= 3:  # e.g. ["game", "css", "file.css"]
-            project_name = path_parts[0]
+            path_parts[0]
             static_type = path_parts[1]  # "css", "js", "images", etc.
             if static_type in [
                 "css",
@@ -544,7 +543,6 @@ class LocalHttpServerThread(QThread):
 
     def run(self):
         import logging
-        from airunner.settings import AIRUNNER_BASE_PATH
 
         static_dirs = [
             os.path.abspath(

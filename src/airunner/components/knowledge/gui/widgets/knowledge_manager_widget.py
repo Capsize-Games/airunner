@@ -7,9 +7,8 @@ Displays all facts with search, filtering, and CRUD operations.
 
 import logging
 from typing import Dict
-from datetime import datetime
 
-from PySide6.QtCore import Slot, Qt
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import (
     QTableWidgetItem,
     QMessageBox,
@@ -296,8 +295,6 @@ class KnowledgeManagerWidget(BaseWidget):
 
     def save_state(self):
         """Save widget state"""
-        pass
 
     def restore_state(self):
         """Restore widget state"""
-        pass

@@ -1,6 +1,5 @@
 import os
 import time
-from typing import Optional
 
 import torch
 from diffusers import (
@@ -11,7 +10,6 @@ from diffusers import (
     StableDiffusionXLPipeline,
 )
 from diffusers.optimization import get_scheduler as get_diffusers_scheduler
-from diffusers.models.attention_processor import AttnProcessor2_0
 from transformers import (
     AutoTokenizer,
     CLIPTextModel,

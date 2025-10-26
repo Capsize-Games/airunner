@@ -9,8 +9,6 @@ from langchain_core.messages import (
     HumanMessage,
     AIMessage,
     SystemMessage,
-    message_to_dict,
-    messages_from_dict,
 )
 
 from airunner.components.llm.data.conversation import Conversation

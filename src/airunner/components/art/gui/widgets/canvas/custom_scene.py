@@ -892,9 +892,9 @@ class CustomScene(
         self.initialize_image()
 
     def on_settings_changed(self, data):
-        table = data["setting_name"]
-        column_name = data["column_name"]
-        value = data["value"]
+        data["setting_name"]
+        data["column_name"]
+        data["value"]
 
     def on_canvas_copy_image_signal(self):
         self._copy_image(self.current_active_image)
@@ -2211,21 +2211,21 @@ class CustomScene(
                 pil_image = convert_binary_to_image(base64image)
                 if pil_image is not None:
                     pil_image = pil_image.convert("RGBA")
-            except AttributeError as e:
+            except AttributeError:
                 pil_image = None
             except PIL.UnidentifiedImageError as e:
                 pil_image = None
-            except Exception as e:
+            except Exception:
                 pil_image = None
 
         if pil_image is not None:
             try:
                 img = ImageQt.ImageQt(pil_image)
-            except AttributeError as e:
+            except AttributeError:
                 img = None
-            except IsADirectoryError as e:
+            except IsADirectoryError:
                 img = None
-            except Exception as e:
+            except Exception:
                 img = None
             self.image = img
         else:
@@ -2322,7 +2322,7 @@ class CustomScene(
             self.stop_painter()
             self.painter = QPainter(image)
             self._painter_target = image
-        except TypeError as _e:
+        except TypeError:
             self.painter = None
             self._painter_target = None
 
@@ -2466,7 +2466,6 @@ class CustomScene(
             self.logger.error(
                 "xclip not found. Cannot copy image to clipboard."
             )
-            pass
         return image
 
     @profile
@@ -3035,7 +3034,7 @@ class CustomScene(
                         original_item_positions[layer_item] = QPointF(
                             abs_x, abs_y
                         )
-                    except Exception as e:
+                    except Exception:
                         current_pos = layer_item.pos()
                         original_item_positions[layer_item] = current_pos
 

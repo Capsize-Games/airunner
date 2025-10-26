@@ -1,9 +1,8 @@
 """Tests for RAGTools, KnowledgeTools, ImageTools, and FileTools mixins."""
 
 import unittest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 from pathlib import Path
-import tempfile
 
 from airunner.components.llm.managers.tools.rag_tools import RAGTools
 from airunner.components.llm.managers.tools.knowledge_tools import (

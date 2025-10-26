@@ -57,7 +57,6 @@ from airunner.settings import (
     AIRUNNER_STATUS_NORMAL_COLOR_DARK,
     AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE,
     AIRUNNER_DISCORD_URL,
-    AIRUNNER_BASE_PATH,
     AIRUNNER_BUG_REPORT_LINK,
     AIRUNNER_VULNERABILITY_REPORT_LINK,
     AIRUNNER_ART_ENABLED,
@@ -315,7 +314,7 @@ class MainWindow(
                 logger=getattr(self, "logger", None)
             )
             self.worker_manager.initialize_workers()
-        except Exception as e:
+        except Exception:
             self.worker_manager = None
         self.model_load_balancer = ModelLoadBalancer(
             self.worker_manager,

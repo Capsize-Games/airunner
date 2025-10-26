@@ -1,6 +1,5 @@
 """Widget displaying real-time model loading status and VRAM usage."""
 
-from typing import Dict
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
     QWidget,

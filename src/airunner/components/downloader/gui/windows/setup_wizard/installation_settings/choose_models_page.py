@@ -1,9 +1,6 @@
 from PySide6.QtWidgets import (
     QCheckBox,
     QVBoxLayout,
-    QHBoxLayout,
-    QGroupBox,
-    QLabel,
     QScrollArea,
     QWidget,
 )
@@ -111,7 +108,7 @@ class ChooseModelsPage(BaseWizard):
         # For each version, create a header with "Core files" and "Controlnet" checkboxes and a scroll area for models
         for version in sorted(version_map.keys()):
             # Section header (group box)
-            from PySide6.QtWidgets import QGroupBox, QLabel, QHBoxLayout
+            from PySide6.QtWidgets import QGroupBox
 
             # Create a version group and a master checkbox that controls the whole section
             version_group = QGroupBox(self)

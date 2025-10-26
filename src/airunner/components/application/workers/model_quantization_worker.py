@@ -1,10 +1,8 @@
 """Qt worker for model quantization using bitsandbytes (runtime quantization)."""
 
-import os
 import time
 from pathlib import Path
 from queue import Queue
-from typing import Optional
 from PySide6.QtCore import QObject, Signal
 
 from airunner.enums import SignalCode

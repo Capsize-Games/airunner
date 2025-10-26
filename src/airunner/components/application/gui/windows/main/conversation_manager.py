@@ -1,4 +1,3 @@
-from typing import Optional
 
 
 class ConversationManager:
@@ -25,4 +24,3 @@ class ConversationManager:
         if self.logger:
             self.logger.info(f"Saving prompt: {data}")
         # Implement actual save logic here
-        pass

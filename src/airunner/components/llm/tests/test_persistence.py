@@ -1,7 +1,6 @@
 """Tests for database persistence layer (chat history and checkpointing)."""
 
 import unittest
-from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
 
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage

@@ -10,7 +10,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from airunner.components.knowledge.user_knowledge_manager import (
     UserKnowledgeManager,
 )
-from airunner.components.knowledge.data import Fact, FactCategory
 
 
 def test_hybrid_approach():

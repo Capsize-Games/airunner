@@ -6,7 +6,6 @@ This module provides ConversationWebEnginePage, a QWebEnginePage subclass that p
 
 from PySide6.QtCore import QUrl
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
-from airunner.enums import SignalCode
 
 
 class ConversationWebEnginePage(QWebEnginePage):

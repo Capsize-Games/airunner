@@ -9,8 +9,6 @@ import os
 import requests
 from pathlib import Path
 from typing import List, Optional, Callable, Dict
-from urllib.parse import urljoin
-import json
 
 
 class HuggingFaceDownloader:

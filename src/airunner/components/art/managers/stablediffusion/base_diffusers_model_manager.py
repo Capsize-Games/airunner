@@ -1032,7 +1032,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                             )
                 except PipeNotLoadedException as e:
                     self.logger.error(e)
-                except InterruptedException as e:
+                except InterruptedException:
                     code = EngineResponseCode.INTERRUPTED
                 except Exception as e:
                     code = EngineResponseCode.ERROR
@@ -1045,7 +1045,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 if self.image_request.callback:
                     self.image_request.callback(response)
                 self.api.worker_response(code=code, message=response)
-        except InterruptedException as e:
+        except InterruptedException:
             self.logger.debug("Image generation interrupted")
             self._current_state = HandlerState.READY
             self.api.worker_response(
@@ -1576,7 +1576,7 @@ class BaseDiffusersModelManager(BaseModelManager):
                 lora_base_path, weight_name=filename, adapter_name=adapter_name
             )
             self._loaded_lora[lora.path] = lora
-        except AttributeError as _e:
+        except AttributeError:
             message = "This model does not support LORA"
             do_disable_lora = True
         except RuntimeError:
@@ -2027,7 +2027,6 @@ class BaseDiffusersModelManager(BaseModelManager):
             self.logger.info("Textual inversion unloaded")
         except Exception as e:
             self.logger.error(f"Failed to unload textual inversion: {e}")
-            pass
 
     def _unload_textual_inversion_manager(self):
         self.logger.debug("Unloading textual inversion manager")

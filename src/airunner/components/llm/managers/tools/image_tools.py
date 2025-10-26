@@ -1,6 +1,5 @@
 """Image generation and canvas tools."""
 
-import logging
 from typing import Callable
 import os
 

@@ -14,7 +14,6 @@ if os.environ.get("DEV_ENV", "1") == "1":
         # environment variables will be read directly from the OS
         pass
 
-from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.settings import (
     AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY,
     AIRUNNER_LLM_USE_WEATHER_PROMPT,

@@ -6,9 +6,8 @@ Provides common test patterns and utilities for component testing.
 
 from typing import Dict, List, Any, Optional
 import unittest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock
 import tempfile
-import os
 from pathlib import Path
 
 
@@ -125,7 +124,6 @@ class WidgetTestCase(BaseTestCase):
     def tearDownClass(cls):
         """Clean up QApplication."""
         # Don't quit the app if it was already running
-        pass
 
 
 def with_temp_directory(func):

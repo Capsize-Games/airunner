@@ -16,9 +16,7 @@ import torch
 from transformers import BitsAndBytesConfig
 
 if TYPE_CHECKING:
-    from airunner.components.llm.managers.llm_model_manager import (
-        LLMModelManager,
-    )
+    pass
 
 
 class QuantizationConfigMixin:

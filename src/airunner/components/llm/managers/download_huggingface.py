@@ -31,7 +31,6 @@ class DownloadHuggingFaceModel(Worker):
 
     def handle_message(self, message: Any):
         """Not used - downloads triggered via download() method."""
-        pass
 
     def download(
         self,
@@ -86,4 +85,3 @@ if __name__ == "__main__":
         model_type="mistral",
     )
     """
-    pass

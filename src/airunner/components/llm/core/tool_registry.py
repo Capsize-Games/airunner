@@ -6,7 +6,7 @@ Tools are automatically discovered and routed based on their metadata.
 """
 
 from dataclasses import dataclass
-from typing import Callable, Dict, Optional, Any, List
+from typing import Callable, Dict, Optional, List
 from enum import Enum
 
 

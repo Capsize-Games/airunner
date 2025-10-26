@@ -18,10 +18,9 @@ Usage:
 import ast
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
-from typing import List, Dict, Any, Set, Tuple
+from typing import List, Dict, Any, Set
 from dataclasses import dataclass, field, asdict
 from collections import defaultdict
 

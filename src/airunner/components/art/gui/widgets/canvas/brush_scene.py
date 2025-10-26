@@ -186,7 +186,7 @@ class BrushScene(CustomScene):
         needs_pen_setup = painter is None
 
         if ensure_start or ensure_last or painter is None:
-            previous_target = self._painter_target
+            self._painter_target
             self._rebind_active_painter()
             painter = self.painter
             if painter is None:

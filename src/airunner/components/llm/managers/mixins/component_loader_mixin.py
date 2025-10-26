@@ -8,7 +8,7 @@ This mixin handles:
 """
 
 import gc
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import torch
 
@@ -17,9 +17,7 @@ from airunner.components.llm.managers.tool_manager import ToolManager
 from airunner.components.llm.managers.workflow_manager import WorkflowManager
 
 if TYPE_CHECKING:
-    from airunner.components.llm.managers.llm_model_manager import (
-        LLMModelManager,
-    )
+    pass
 
 
 class ComponentLoaderMixin:

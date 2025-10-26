@@ -1,11 +1,9 @@
 """Web searching and scraping tools."""
 
-import logging
 from typing import Callable
 
 from langchain.tools import tool
 
-from airunner.enums import SignalCode
 
 
 class WebTools:

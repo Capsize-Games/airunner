@@ -50,7 +50,7 @@ class GenerateImageNode(BaseArtNode):
         self.api.art.send_request(image_request)
 
     def _on_image_generated(self, data: Dict):
-        code = data.get("code", None)
+        data.get("code", None)
         msg = data.get("message", None)
 
         # If the worker returned an ImageResponse, handle normally.

@@ -1,8 +1,8 @@
 """Tests for ConversationTools mixin."""
 
 import unittest
-from unittest.mock import Mock, MagicMock, patch
-from datetime import datetime, timedelta
+from unittest.mock import Mock
+from datetime import datetime
 
 from airunner.components.llm.managers.tools.conversation_tools import (
     ConversationTools,

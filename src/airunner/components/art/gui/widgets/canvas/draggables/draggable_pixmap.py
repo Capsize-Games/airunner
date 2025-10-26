@@ -7,7 +7,6 @@ from airunner.enums import CanvasToolName
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,
-    ViewState,
 )
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,

@@ -27,7 +27,6 @@ class PathManager:
                 f"show_settings_path called for: {name} (functionality disabled)"
             )
         # TODO: Implement file browser opening if needed
-        pass
 
     def set_path_settings(self, main_window, key, val):
         if self.logger:

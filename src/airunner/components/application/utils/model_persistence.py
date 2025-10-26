@@ -2,7 +2,7 @@
 
 import os
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from airunner.components.data.session_manager import session_scope
 

@@ -7,20 +7,8 @@ Follows project standards: docstrings, type hints, logging.
 import logging
 from typing import Any
 import torch
-from airunner.utils.memory import is_ampere_or_newer
 from airunner.components.model_management.hardware_profiler import (
     HardwareProfiler,
-)
-from airunner.settings import (
-    AIRUNNER_MEM_USE_LAST_CHANNELS,
-    AIRUNNER_MEM_USE_ENABLE_VAE_SLICING,
-    AIRUNNER_MEM_USE_ATTENTION_SLICING,
-    AIRUNNER_MEM_USE_TILED_VAE,
-    AIRUNNER_MEM_USE_ACCELERATED_TRANSFORMERS,
-    AIRUNNER_MEM_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD,
-    AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD,
-    AIRUNNER_MEM_USE_TOME_SD,
-    AIRUNNER_MEM_TOME_SD_RATIO,
 )
 
 logger = logging.getLogger(__name__)

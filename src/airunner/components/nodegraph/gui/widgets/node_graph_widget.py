@@ -3,15 +3,11 @@ import json
 import logging
 from typing import Dict, Tuple, Optional, List, Any
 
-from networkx.classes import nodes
 
 from airunner.components.nodegraph.gui.widgets.nodes.core.variable_getter_node import (
     VariableGetterNode,
 )
 from airunner.components.nodegraph.gui.widgets.nodes.io.print import PrintNode
-from airunner.components.settings.data.application_settings import (
-    ApplicationSettings,
-)
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
 from PySide6.QtWidgets import (
     QLineEdit,
@@ -308,7 +304,7 @@ class NodeGraphWidget(BaseWidget):
         tab_widget = self._nodes_palette._tab_widget
 
         for i in range(tab_widget.count()):
-            tab_text = tab_widget.tabText(i)
+            tab_widget.tabText(i)
             category = None
 
             # Find the category for this tab
@@ -2117,17 +2113,16 @@ class NodeGraphWidget(BaseWidget):
     def _on_nodegraph_pan_changed(self, data: Dict):
         """Signal handler for NODEGRAPH_PAN signal."""
         try:
-            center_x = int(data.get("center_x", 0) or 0)
-            center_y = int(data.get("center_y", 0) or 0)
+            int(data.get("center_x", 0) or 0)
+            int(data.get("center_y", 0) or 0)
         except (TypeError, ValueError):
-            center_x = 0
-            center_y = 0
+            pass
 
         # Get current zoom since we're only updating center
         try:
-            zoom = int(self.application_settings.nodegraph_zoom)
+            int(self.application_settings.nodegraph_zoom)
         except (TypeError, ValueError):
-            zoom = 0
+            pass
 
         self._save_state()
 

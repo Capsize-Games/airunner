@@ -12,7 +12,7 @@ import platform
 import subprocess
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional
 from enum import Enum
 
 

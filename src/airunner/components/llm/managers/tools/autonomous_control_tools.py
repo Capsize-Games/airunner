@@ -1,6 +1,6 @@
 """Autonomous application control tools - giving the LLM full control over the application."""
 
-from typing import Callable, Optional, List, Dict, Any
+from typing import Callable, Optional
 import json
 
 from langchain.tools import tool

@@ -5,7 +5,7 @@ and executable LangGraph workflows.
 """
 
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from pathlib import Path
 from airunner.components.nodegraph.gui.widgets.custom_node_graph import (
     CustomNodeGraph,

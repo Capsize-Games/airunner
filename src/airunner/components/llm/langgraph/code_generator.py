@@ -5,7 +5,7 @@ allowing visual graphs to be exported as standalone scripts.
 """
 
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from pathlib import Path
 import textwrap
 

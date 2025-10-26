@@ -287,7 +287,7 @@ class InstallWorker(
                         requested_callback=self._safe_progress_emit,
                     )
                     total_success += 1
-                except Exception as e:
+                except Exception:
                     total_failed += 1
 
         # Download Upscaler x4 files if enabled
@@ -1650,7 +1650,7 @@ class InstallPage(BaseWizard):
                     pass
             else:
                 pass
-        except Exception as e:
+        except Exception:
             pass
 
         # Also try to enable the Back button if it was disabled
@@ -1663,7 +1663,7 @@ class InstallPage(BaseWizard):
                 )
                 if back_button:
                     back_button.setEnabled(True)
-        except Exception as e:
+        except Exception:
             pass
 
     def _check_completion_fallback(self):
