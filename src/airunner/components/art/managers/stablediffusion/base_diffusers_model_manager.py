@@ -7,6 +7,9 @@ from compel import (
 )
 
 from airunner.components.art.data.lora import Lora
+from airunner.components.art.utils.model_file_checker import (
+    ModelFileChecker,
+)
 from airunner.components.art.workers.image_export_worker import (
     ImageExportWorker,
 )
@@ -18,6 +21,7 @@ from airunner.enums import (
     ModelType,
     HandlerState,
     ModelAction,
+    SignalCode,
 )
 from airunner.utils.application.create_worker import create_worker
 from airunner.utils.memory import clear_memory
@@ -220,6 +224,12 @@ class BaseDiffusersModelManager(
         if self.model_path is None or self.model_path == "":
             self.logger.error("No model selected")
             self.change_model_status(self.model_type, ModelStatus.FAILED)
+            return
+
+        # Check for missing files and trigger download if needed
+        should_download, download_info = self._check_and_trigger_download()
+        if should_download:
+            # Download in progress, will retry load after completion
             return
 
         # Integrate with ModelResourceManager
@@ -496,3 +506,85 @@ class BaseDiffusersModelManager(
         ):
             self._pipe.__controlnet = self.controlnet
             self._pipe.processor = self.controlnet_processor
+
+    def _check_and_trigger_download(self) -> tuple:
+        """Check for missing model files and trigger download if needed.
+
+        Returns:
+            Tuple of (should_wait_for_download, download_info)
+        """
+        # Get model version and pipeline action from settings
+        version = getattr(self, "version", None)
+        pipeline_action = getattr(self, "pipeline_action", "txt2img")
+
+        if not version:
+            # Can't check without version info
+            return False, {}
+
+        # Check if files are missing
+        should_download, download_info = (
+            ModelFileChecker.should_trigger_download(
+                model_path=self.model_path,
+                model_type="art",
+                version=version,
+                pipeline_action=pipeline_action,
+            )
+        )
+
+        if not should_download:
+            if "error" in download_info:
+                self.logger.error(
+                    f"Model files missing: {download_info.get('error')}"
+                )
+            return False, download_info
+
+        # Files are missing and we have a HuggingFace repo ID
+        repo_id = download_info.get("repo_id")
+        missing_files = download_info.get("missing_files", [])
+
+        self.logger.info(
+            f"Missing {len(missing_files)} files for {repo_id}, triggering download"
+        )
+
+        # Emit signal to trigger download dialog
+        self.emit_signal(
+            SignalCode.ART_MODEL_DOWNLOAD_REQUIRED,
+            {
+                "repo_id": repo_id,
+                "model_path": self.model_path,
+                "missing_files": missing_files,
+                "version": version,
+                "pipeline_action": pipeline_action,
+            },
+        )
+
+        # Register handler for download completion to retry load
+        self.register(
+            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+            self._on_model_download_complete,
+        )
+
+        return True, download_info
+
+    def _on_model_download_complete(self, data: Dict):
+        """Handle model download completion and retry loading.
+
+        Args:
+            data: Download completion data with model_path
+        """
+        downloaded_path = data.get("model_path", "")
+
+        # Check if this download was for our model
+        if downloaded_path and downloaded_path in self.model_path:
+            self.logger.info(
+                f"Model download complete for {downloaded_path}, retrying load"
+            )
+
+            # Unregister handler
+            self.unregister(
+                SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                self._on_model_download_complete,
+            )
+
+            # Retry loading
+            self.load()

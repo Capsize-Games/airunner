@@ -184,6 +184,13 @@ class SignalCode(Enum):
     HUGGINGFACE_DOWNLOAD_COMPLETE = "huggingface_download_complete"
     HUGGINGFACE_DOWNLOAD_FAILED = "huggingface_download_failed"
     CANCEL_HUGGINGFACE_DOWNLOAD = "cancel_huggingface_download"
+    START_HUGGINGFACE_DOWNLOAD = "start_huggingface_download"
+    CIVITAI_DOWNLOAD_WORKER_READY = "civitai_download_worker_ready"
+    CIVITAI_DOWNLOAD_COMPLETE = "civitai_download_complete"
+    CIVITAI_DOWNLOAD_FAILED = "civitai_download_failed"
+    CANCEL_CIVITAI_DOWNLOAD = "cancel_civitai_download"
+    FLUX_MODEL_DOWNLOAD_REQUIRED = "flux_model_download_required"
+    ART_MODEL_DOWNLOAD_REQUIRED = "art_model_download_required"
     CHANGE_SCHEDULER_SIGNAL = "change_scheduler_signal"
     LOG_LOGGED_SIGNAL = "log_logged_signal"
     MODEL_STATUS_CHANGED_SIGNAL = "model_status_changed_signal"
@@ -451,6 +458,8 @@ class StableDiffusionVersion(Enum):
     SDXL_HYPER = "SDXL Hyper"
     SD1_5 = "SD 1.5"
     X4_UPSCALER = "x4-upscaler"
+    FLUX_DEV = "FLUX.1-dev"
+    FLUX_SCHNELL = "FLUX.1-schnell"
 
 
 class Language(Enum):
