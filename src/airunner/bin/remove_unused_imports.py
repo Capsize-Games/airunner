@@ -31,7 +31,7 @@ from typing import List
 
 # Permanent exclusions - always skip these
 PERMANENT_EXCLUSIONS = [
-    "*_ui.py",  # Auto-generated Qt UI files
+    "_ui.py",  # Auto-generated Qt UI files (don't modify generated code)
     "alembic",  # Database migrations
     "/data/",  # Data models (may have imports for SQLAlchemy)
     "vendor",  # Third-party vendored code
@@ -175,7 +175,7 @@ Examples:
   %(prog)s --verbose                # Show detailed output
 
 Permanent exclusions (always skipped):
-  - *_ui.py files (auto-generated)
+  - *_ui.py files (auto-generated Qt UI - don't modify generated code)
   - alembic/ (database migrations)
   - data/ directories (SQLAlchemy models)
   - vendor/ (third-party code)
