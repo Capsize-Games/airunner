@@ -19,8 +19,6 @@ from airunner.components.art.managers.stablediffusion.image_response import (
 from airunner.enums import (
     HandlerState,
     EngineResponseCode,
-    ModelStatus,
-    ModelType,
 )
 from airunner.settings import (
     CUDA_ERROR,

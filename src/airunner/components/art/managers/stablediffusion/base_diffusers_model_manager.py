@@ -6,7 +6,6 @@ from compel import (
     DiffusersTextualInversionManager,
 )
 
-from airunner.components.art.data.embedding import Embedding
 from airunner.components.art.data.lora import Lora
 from airunner.components.art.workers.image_export_worker import (
     ImageExportWorker,
@@ -20,13 +19,9 @@ from airunner.enums import (
     HandlerState,
     ModelAction,
 )
-from airunner.components.application.exceptions import (
-    PipeNotLoadedException,
-)
 from airunner.utils.application.create_worker import create_worker
 from airunner.utils.memory import clear_memory
 
-from airunner.components.art.managers.stablediffusion.rect import Rect
 from airunner.components.art.managers.stablediffusion import (
     image_generation,
     utils,

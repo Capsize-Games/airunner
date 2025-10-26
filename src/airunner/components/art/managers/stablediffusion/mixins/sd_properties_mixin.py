@@ -31,16 +31,9 @@ from airunner.enums import (
     GeneratorSection,
     ModelStatus,
     ModelType,
-    ImagePreset,
     StableDiffusionVersion,
 )
 from airunner.settings import (
-    AIRUNNER_PHOTO_REALISTIC_NEGATIVE_PROMPT,
-    AIRUNNER_ILLUSTRATION_NEGATIVE_PROMPT,
-    AIRUNNER_PAINTING_NEGATIVE_PROMPT,
-    AIRUNNER_PHOTO_REALISTIC_PROMPT,
-    AIRUNNER_ILLUSTRATION_PROMPT,
-    AIRUNNER_PAINTING_PROMPT,
     AIRUNNER_MEM_SD_DEVICE,
 )
 from airunner.utils.application import get_torch_device

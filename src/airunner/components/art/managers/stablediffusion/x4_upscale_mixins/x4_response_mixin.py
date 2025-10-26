@@ -106,11 +106,60 @@ class X4ResponseMixin:
         Returns:
             Dictionary with comprehensive operation metadata.
         """
-        try:
-            controlnet_settings = self.controlnet_settings
-        except Exception:
-            controlnet_settings = None
+        controlnet_settings = self._safe_controlnet_settings()
 
+        return self._compose_response_metadata(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            saved_path=saved_path,
+            noise_level=noise_level,
+            controlnet_settings=controlnet_settings,
+        )
+
+    def _safe_controlnet_settings(self):
+        """Safely retrieve controlnet settings if available.
+
+        Returns:
+            The controlnet settings object or None if not present.
+        """
+        try:
+            return self.controlnet_settings
+        except Exception:
+            return None
+
+    def _compose_response_metadata(
+        self,
+        prompt: str,
+        negative_prompt: str,
+        steps: int,
+        guidance_scale: float,
+        saved_path: Optional[str],
+        noise_level: int,
+        controlnet_settings: Optional[object],
+    ) -> Dict:
+        """Compose the response metadata dictionary.
+
+        This helper centralizes construction of the response payload so the
+        public method remains concise for static analysis tools.
+        """
+        base = self._base_response_metadata(
+            prompt, negative_prompt, steps, guidance_scale, saved_path
+        )
+        base["controlnet_settings"] = controlnet_settings
+        base["noise_level"] = noise_level
+        return base
+
+    def _base_response_metadata(
+        self,
+        prompt: str,
+        negative_prompt: str,
+        steps: int,
+        guidance_scale: float,
+        saved_path: Optional[str],
+    ) -> Dict:
+        """Build the core response metadata dict shared across generators."""
         return {
             "current_prompt": prompt,
             "current_prompt_2": "",
@@ -126,7 +175,6 @@ class X4ResponseMixin:
             "application_settings": self.application_settings,
             "path_settings": self.path_settings,
             "metadata_settings": self.metadata_settings,
-            "controlnet_settings": controlnet_settings,
             "is_txt2img": False,
             "is_img2img": True,
             "is_inpaint": False,
@@ -134,7 +182,6 @@ class X4ResponseMixin:
             "mask_blur": 0,
             "saved_path": saved_path,
             "generator": "x4_upscaler",
-            "noise_level": noise_level,
         }
 
     def _queue_export(self, images: List[Image.Image], data: Dict):
@@ -221,9 +268,7 @@ class X4ResponseMixin:
             total: Total progress value (e.g., 100 for percentage).
         """
         try:
-            # Normalize to 0-1 percentage
-            percent = 0.0 if total == 0 else float(current) / float(total)
-            percent = max(0.0, min(1.0, percent))
+            percent = self._normalize_progress(current, total)
 
             # Emit upscale-specific progress
             self.emit_signal(
@@ -231,22 +276,8 @@ class X4ResponseMixin:
                 {"current": current, "total": total, "percent": percent},
             )
 
-            # Emit generic SD progress (0-100 range for UI)
-            try:
-                step = int(percent * 100)
-            except Exception:
-                step = 0
-
-            # Prevent backward progress during tiled operations
-            try:
-                last = getattr(self, "_last_progress_percent", None)
-                if last is None:
-                    emit_step = step
-                else:
-                    emit_step = max(int(last), step)
-                    self._last_progress_percent = emit_step
-            except Exception:
-                emit_step = step
+            step = self._percent_to_step(percent)
+            emit_step = self._prevent_backward_progress(step)
 
             self.emit_signal(
                 SignalCode.SD_PROGRESS_SIGNAL,
@@ -254,3 +285,38 @@ class X4ResponseMixin:
             )
         except Exception:
             pass
+
+    def _normalize_progress(self, current: int, total: int) -> float:
+        """Normalize a current/total pair to a clamped 0.0-1.0 float."""
+        try:
+            if total == 0:
+                return 0.0
+            percent = float(current) / float(total)
+            return max(0.0, min(1.0, percent))
+        except Exception:
+            return 0.0
+
+    def _percent_to_step(self, percent: float) -> int:
+        """Convert a 0.0-1.0 percent into an integer 0-100 step value."""
+        try:
+            return int(percent * 100)
+        except Exception:
+            return 0
+
+    def _prevent_backward_progress(self, step: int) -> int:
+        """Ensure progress never moves backward during tiled operations.
+
+        Updates internal _last_progress_percent state and returns the
+        step value that should be emitted.
+        """
+        try:
+            last = getattr(self, "_last_progress_percent", None)
+            if last is None:
+                self._last_progress_percent = step
+                return step
+
+            emit_step = max(int(last), step)
+            self._last_progress_percent = emit_step
+            return emit_step
+        except Exception:
+            return step

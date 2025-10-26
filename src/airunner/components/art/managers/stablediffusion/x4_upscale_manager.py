@@ -12,8 +12,6 @@ All implementation details delegated to mixins.
 """
 
 import gc
-import os
-from contextlib import nullcontext
 
 from diffusers import StableDiffusionUpscalePipeline
 
@@ -24,6 +22,11 @@ from airunner.components.art.managers.stablediffusion.x4_upscale_mixins import (
     X4PropertiesMixin,
     X4PipelineSetupMixin,
     X4DataPreparationMixin,
+    X4DataUtilsMixin,
+    X4UpscalingExecutionMixin,
+    X4UpscalingTilingMixin,
+    X4OOMMixin,
+    X4ResponseIOMixin,
     X4UpscalingCoreMixin,
     X4TilingMixin,
     X4ImageProcessingMixin,
@@ -38,6 +41,11 @@ class X4UpscaleManager(
     X4PropertiesMixin,
     X4PipelineSetupMixin,
     X4DataPreparationMixin,
+    X4DataUtilsMixin,
+    X4UpscalingExecutionMixin,
+    X4UpscalingTilingMixin,
+    X4OOMMixin,
+    X4ResponseIOMixin,
     X4UpscalingCoreMixin,
     X4TilingMixin,
     X4ImageProcessingMixin,

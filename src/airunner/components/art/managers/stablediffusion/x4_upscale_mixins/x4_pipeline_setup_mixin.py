@@ -8,7 +8,6 @@ for the Stable Diffusion X4 upscaler.
 import os
 from typing import Any, Dict
 
-import torch
 from diffusers import StableDiffusionUpscalePipeline
 
 from airunner.enums import ModelStatus, ModelType
@@ -18,7 +17,7 @@ from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 class X4PipelineSetupMixin:
     """Pipeline loading and configuration for X4UpscaleManager."""
 
-    def load(self):
+    def load(self) -> None:
         """Load the X4 upscaler pipeline from disk.
 
         Loads the StableDiffusionUpscalePipeline with appropriate settings for
@@ -39,23 +38,11 @@ class X4PipelineSetupMixin:
             file_directory = os.path.dirname(self.model_path)
             data = self._prepare_pipe_data()
 
-            # Load pipeline (same for CUDA and CPU, but data may differ)
-            self._pipe = StableDiffusionUpscalePipeline.from_pretrained(
-                file_directory, **data
-            )
-
-            self._configure_pipeline()
+            # Instantiate and configure pipeline via a helper
+            self._instantiate_pipeline(file_directory, data)
 
             # Log pipeline details for debugging
-            try:
-                dev = getattr(self._pipe, "device", None)
-                self.logger.info(
-                    "x4 upscaler loaded on device=%s dtype=%s",
-                    dev,
-                    self.data_type,
-                )
-            except Exception:
-                pass
+            self._log_pipeline_device_info()
 
             self.change_model_status(ModelType.UPSCALER, ModelStatus.LOADED)
         except Exception as exc:
@@ -75,15 +62,21 @@ class X4PipelineSetupMixin:
             return
 
         self._make_memory_efficient()
+        self._enable_pipeline_memory_features()
+        # Move pipeline to device
+        try:
+            self._move_pipe_to_device()
+        except Exception:
+            pass
 
-        # Enable attention slicing for memory efficiency
+    def _enable_pipeline_memory_features(self):
+        """Enable optional memory features (attention slicing, xformers, offload)."""
         try:
             if hasattr(self._pipe, "enable_attention_slicing"):
                 self._pipe.enable_attention_slicing()
         except Exception:
             pass
 
-        # Enable xformers for better memory and speed
         try:
             if hasattr(
                 self._pipe, "enable_xformers_memory_efficient_attention"
@@ -92,18 +85,36 @@ class X4PipelineSetupMixin:
         except Exception:
             pass
 
-        # Enable CPU offload to reduce VRAM usage
         try:
             if hasattr(self._pipe, "enable_model_cpu_offload"):
                 self._pipe.enable_model_cpu_offload()
         except Exception:
             pass
 
-        # Move pipeline to device
+    def _log_pipeline_device_info(self):
+        """Log device and dtype info for the loaded pipeline (best-effort)."""
         try:
-            self._move_pipe_to_device()
+            dev = getattr(self._pipe, "device", None)
+            self.logger.info(
+                "x4 upscaler loaded on device=%s dtype=%s",
+                dev,
+                self.data_type,
+            )
         except Exception:
             pass
+
+    def _instantiate_pipeline(
+        self, file_directory: str, data: Dict[str, Any]
+    ) -> None:
+        """Instantiate the StableDiffusionUpscalePipeline from pretrained files.
+
+        Separated out for clarity and to keep `load()` concise.
+        """
+        # Load pipeline (same for CUDA and CPU, but data may differ)
+        self._pipe = StableDiffusionUpscalePipeline.from_pretrained(
+            file_directory, **data
+        )
+        self._configure_pipeline()
 
     def _prepare_pipe_data(self) -> Dict[str, Any]:
         """Prepare configuration data for pipeline loading.

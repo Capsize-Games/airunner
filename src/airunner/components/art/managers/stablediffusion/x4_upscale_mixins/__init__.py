@@ -30,18 +30,38 @@ from airunner.components.art.managers.stablediffusion.x4_upscale_mixins.x4_respo
 from airunner.components.art.managers.stablediffusion.x4_upscale_mixins.x4_tiling_mixin import (
     X4TilingMixin,
 )
+from airunner.components.art.managers.stablediffusion.x4_upscale_mixins.x4_upscaling_execution_mixin import (
+    X4UpscalingExecutionMixin,
+)
+from airunner.components.art.managers.stablediffusion.x4_upscale_mixins.x4_upscaling_tiling_mixin import (
+    X4UpscalingTilingMixin,
+)
 from airunner.components.art.managers.stablediffusion.x4_upscale_mixins.x4_upscaling_core_mixin import (
     X4UpscalingCoreMixin,
 )
 from airunner.components.art.managers.stablediffusion.x4_upscale_mixins.x4_utility_mixin import (
     X4UtilityMixin,
 )
+from airunner.components.art.managers.stablediffusion.x4_upscale_mixins.x4_response_io_mixin import (
+    X4ResponseIOMixin,
+)
+from airunner.components.art.managers.stablediffusion.x4_upscale_mixins.x4_data_utils_mixin import (
+    X4DataUtilsMixin,
+)
+from airunner.components.art.managers.stablediffusion.x4_upscale_mixins.x4_oom_mixin import (
+    X4OOMMixin,
+)
 
 __all__ = [
     "X4PropertiesMixin",
     "X4PipelineSetupMixin",
     "X4DataPreparationMixin",
+    "X4DataUtilsMixin",
     "X4UpscalingCoreMixin",
+    "X4UpscalingExecutionMixin",
+    "X4UpscalingTilingMixin",
+    "X4OOMMixin",
+    "X4ResponseIOMixin",
     "X4TilingMixin",
     "X4ImageProcessingMixin",
     "X4ResponseMixin",
