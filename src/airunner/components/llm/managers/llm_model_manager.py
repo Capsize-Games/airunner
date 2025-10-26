@@ -42,7 +42,10 @@ from airunner.components.llm.managers.workflow_manager import WorkflowManager
 from airunner.components.llm.managers.quantization_mixin import (
     QuantizationMixin,
 )
-from airunner.components.llm.managers.mixins import StatusManagementMixin
+from airunner.components.llm.managers.mixins import (
+    StatusManagementMixin,
+    ValidationMixin,
+)
 from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.components.llm.managers.agent.rag_mixin import RAGMixin
 from airunner.components.model_management.hardware_profiler import (
@@ -71,6 +74,7 @@ from airunner.components.llm.managers.llm_settings import LLMSettings
 class LLMModelManager(
     BaseModelManager,
     StatusManagementMixin,
+    ValidationMixin,
     RAGMixin,
     QuantizationMixin,
     TrainingMixin,
@@ -345,123 +349,6 @@ class LLMModelManager(
             )
         return os.path.expanduser(self.llm_generator_settings.model_path)
 
-    def _check_model_exists(self) -> bool:
-        """
-        Check if the model exists at the expected path with all necessary files.
-
-        Returns:
-            bool: True if model exists with all required files, False otherwise
-        """
-        if not self.llm_settings.use_local_llm:
-            # API-based models don't need local files
-            return True
-
-        model_path = self.model_path
-        if not os.path.exists(model_path):
-            self.logger.info(f"Model path does not exist: {model_path}")
-            return False
-
-        # tokenizer_config.json is optional - some models use different tokenizer files
-        essential_files = ["config.json"]
-        safetensors_found = False
-
-        try:
-            files_in_dir = os.listdir(model_path)
-
-            for file in files_in_dir:
-                if file.endswith(".safetensors"):
-                    safetensors_found = True
-                    break
-
-            has_essential = all(
-                os.path.exists(os.path.join(model_path, f))
-                for f in essential_files
-            )
-
-            if not has_essential:
-                missing = [
-                    f
-                    for f in essential_files
-                    if not os.path.exists(os.path.join(model_path, f))
-                ]
-                self.logger.info(f"Missing essential files: {missing}")
-
-            if not safetensors_found:
-                self.logger.info(
-                    f"No .safetensors files found in {model_path}"
-                )
-
-            result = has_essential and safetensors_found
-            self.logger.info(
-                f"Model exists check: {result} (has_essential={has_essential}, safetensors_found={safetensors_found})"
-            )
-            return result
-
-        except Exception as e:
-            self.logger.error(f"Error checking model files: {e}")
-            return False
-
-    def _trigger_model_download(self) -> bool:
-        """Trigger model download via signal."""
-        self.logger.info(
-            f"Model not found at {self.model_path}, triggering download"
-        )
-
-        repo_id = None
-        for model_id, model_info in LLMProviderConfig.LOCAL_MODELS.items():
-            if model_info["name"] == self.model_name:
-                repo_id = model_info["repo_id"]
-                break
-
-        if not repo_id:
-            self.logger.error(
-                f"Could not find repo_id for model: {self.model_name}"
-            )
-            return False
-
-        self.emit_signal(
-            SignalCode.LLM_MODEL_DOWNLOAD_REQUIRED,
-            {
-                "model_path": self.model_path,
-                "model_name": self.model_name,
-                "repo_id": repo_id,
-            },
-        )
-
-        return False
-
-    def _validate_model_path(self) -> bool:
-        """Verify model path is set and registered."""
-        if not self.model_path:
-            self.logger.error("Model path is not set")
-            return False
-
-        resource_manager = ModelResourceManager()
-        model_metadata = resource_manager.registry.get_model(self.model_path)
-
-        if not model_metadata:
-            self.logger.warning(
-                f"Model {self.model_path} not in registry - loading without validation"
-            )
-
-        return True
-
-    def _check_and_download_model(self) -> bool:
-        """Check if model exists and trigger download if needed.
-
-        Returns:
-            True if model exists or download triggered, False otherwise
-        """
-        if not self.llm_settings.use_local_llm:
-            return True
-
-        if not self._check_model_exists():
-            if self.model_status[ModelType.LLM] != ModelStatus.FAILED:
-                self._trigger_model_download()
-                self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
-            return False
-        return True
-
     def _load_local_llm_components(self) -> None:
         """Load tokenizer and model for local LLM."""
         if self.llm_settings.use_local_llm:
@@ -522,21 +409,6 @@ class LLMModelManager(
 
         # Mark model as loaded
         resource_manager.model_loaded(self.model_path)
-
-    def _check_components_loaded_for_api(self) -> bool:
-        """Check if required components are loaded for API mode."""
-        return (
-            self._chat_model is not None and self._workflow_manager is not None
-        )
-
-    def _check_components_loaded_for_local(self) -> bool:
-        """Check if required components are loaded for local mode."""
-        return (
-            self._model is not None
-            and self._tokenizer is not None
-            and self._chat_model is not None
-            and self._workflow_manager is not None
-        )
 
     def unload(self) -> None:
         """Unload all LLM components and clear GPU memory."""
