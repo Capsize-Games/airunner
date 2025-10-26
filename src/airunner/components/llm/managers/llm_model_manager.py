@@ -43,10 +43,11 @@ from airunner.components.llm.managers.quantization_mixin import (
     QuantizationMixin,
 )
 from airunner.components.llm.managers.mixins import (
-    StatusManagementMixin,
-    ValidationMixin,
     ConversationManagementMixin,
+    QuantizationConfigMixin,
+    StatusManagementMixin,
     TokenizerLoaderMixin,
+    ValidationMixin,
 )
 from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.components.llm.managers.agent.rag_mixin import RAGMixin
@@ -75,10 +76,11 @@ from airunner.components.llm.managers.llm_settings import LLMSettings
 
 class LLMModelManager(
     BaseModelManager,
-    StatusManagementMixin,
-    ValidationMixin,
     ConversationManagementMixin,
+    QuantizationConfigMixin,
+    StatusManagementMixin,
     TokenizerLoaderMixin,
+    ValidationMixin,
     RAGMixin,
     QuantizationMixin,
     TrainingMixin,
@@ -692,62 +694,6 @@ class LLMModelManager(
             f"GPU memory before loading: {free_memory:.2f}GB free / {total_memory:.2f}GB total"
         )
 
-    def _select_dtype(self) -> str:
-        """Select and configure quantization dtype."""
-        dtype = self.llm_dtype
-        self.logger.info(f"Current dtype setting: {dtype}")
-
-        if not dtype or dtype == "auto":
-            dtype = self._auto_select_quantization()
-            self.llm_generator_settings.dtype = dtype
-            self.logger.info(f"✓ Auto-selected quantization: {dtype}")
-        else:
-            self.logger.info(f"Using configured dtype: {dtype}")
-
-        return dtype
-
-    def _create_bitsandbytes_config(
-        self, dtype: str
-    ) -> Optional[BitsAndBytesConfig]:
-        """Create BitsAndBytes quantization configuration."""
-        if dtype not in ["8bit", "4bit", "2bit"]:
-            self.logger.info(
-                f"Loading full precision model (no quantization) - dtype={dtype}"
-            )
-            return None
-
-        self.logger.info(f"Using BitsAndBytes runtime {dtype} quantization")
-
-        if dtype == "8bit":
-            config = BitsAndBytesConfig(
-                load_in_8bit=True,
-                llm_int8_threshold=6.0,
-                llm_int8_has_fp16_weight=False,
-                llm_int8_enable_fp32_cpu_offload=True,
-            )
-            self.logger.info(
-                "Created 8-bit BitsAndBytes config with CPU offload"
-            )
-            return config
-
-        if dtype in ["4bit", "2bit"]:
-            if dtype == "2bit":
-                self.logger.warning(
-                    "2-bit quantization requires GPTQ/AWQ with calibration dataset"
-                )
-                self.logger.warning("Falling back to 4-bit BitsAndBytes")
-
-            config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_compute_dtype=torch.float16,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-            )
-            self.logger.info("Created 4-bit BitsAndBytes config")
-            return config
-
-        return None
-
     def _detect_mistral3_model(self, config: AutoConfig) -> bool:
         """Check if model configuration indicates Mistral3 architecture."""
         is_mistral3_type = (
@@ -770,35 +716,6 @@ class LLMModelManager(
             model_kwargs["use_cache"] = self.use_cache
 
         return model_kwargs
-
-    def _configure_quantization_memory(self, dtype: str) -> Dict[str, Any]:
-        """Configure memory limits for quantization."""
-        if not torch.cuda.is_available():
-            self.logger.info(f"✓ Applying {dtype} quantization (no CUDA)")
-            self.logger.info(
-                f"  Using device_map='auto', dtype={self.torch_dtype}"
-            )
-            return {}
-
-        if dtype == "8bit":
-            self.logger.info("✓ Applying 8-bit quantization with CPU offload")
-            self.logger.info(
-                f"  Using device_map='auto', dtype={self.torch_dtype}, max_memory=13GB GPU + 18GB CPU"
-            )
-            return {0: "13GB", "cpu": "18GB"}
-
-        if dtype == "4bit":
-            self.logger.info("✓ Applying 4-bit quantization (GPU-only)")
-            self.logger.info(
-                f"  Using device_map='auto', dtype={self.torch_dtype}, max_memory=14GB GPU (reserves 1.5GB for activations)"
-            )
-            return {0: "14GB"}
-
-        self.logger.info(f"✓ Applying {dtype} quantization")
-        self.logger.info(
-            f"  Using device_map='auto', dtype={self.torch_dtype}"
-        )
-        return {}
 
     def _apply_quantization_to_kwargs(
         self,
@@ -981,96 +898,6 @@ class LLMModelManager(
                     f"Could not save quantized model: {e}. "
                     f"Will use runtime quantization on next load."
                 )
-
-    def _save_loaded_model_quantized(
-        self,
-        original_path: str,
-        dtype: str,
-        quantization_config: "BitsAndBytesConfig",
-    ) -> None:
-        """
-        Save the currently loaded BitsAndBytes quantized model to disk.
-
-        We manually inject the quantization_config into config.json because
-        transformers doesn't always preserve it automatically.
-        """
-        quantized_path = self._get_quantized_model_path(original_path, dtype)
-
-        if self._check_quantized_model_exists(quantized_path):
-            self.logger.info(
-                f"Quantized model already exists at {quantized_path}"
-            )
-            return
-
-        import os
-        import shutil
-
-        try:
-            os.makedirs(quantized_path, exist_ok=True)
-            self.logger.info(
-                f"Saving BitsAndBytes {dtype} quantized model to {quantized_path}"
-            )
-
-            # Save model with BitsAndBytes quantization preserved
-            self._model.save_pretrained(
-                quantized_path, safe_serialization=True, max_shard_size="5GB"
-            )
-
-            # Manually inject quantization_config into config.json
-            # This is critical - transformers doesn't always save it automatically
-            config_path = os.path.join(quantized_path, "config.json")
-            with open(config_path, "r") as f:
-                config = json.load(f)
-
-            # Add quantization_config to the saved config
-            config["quantization_config"] = {
-                "load_in_4bit": dtype == "4bit",
-                "load_in_8bit": dtype == "8bit",
-                "llm_int8_threshold": 6.0,
-                "llm_int8_has_fp16_weight": False,
-                "bnb_4bit_compute_dtype": "float16",
-                "bnb_4bit_use_double_quant": True,
-                "bnb_4bit_quant_type": "nf4",
-                "quant_method": "bitsandbytes",
-            }
-
-            with open(config_path, "w") as f:
-                json.dump(config, f, indent=2)
-
-            self.logger.info(
-                f"✓ Injected quantization_config into {config_path}"
-            )
-
-            # Copy tokenizer files (NOT config.json - we already saved that with quantization_config)
-            config_files = [
-                "generation_config.json",
-                "tokenizer_config.json",
-                "tokenizer.json",
-                "special_tokens_map.json",
-            ]
-
-            if self._is_mistral3_model():
-                config_files.append("tekken.json")
-
-            for file in config_files:
-                src = os.path.join(original_path, file)
-                if os.path.exists(src):
-                    dst = os.path.join(quantized_path, file)
-                    shutil.copy2(src, dst)
-
-            self.logger.info(
-                f"✓ BitsAndBytes {dtype} quantized model saved successfully. "
-                f"Future loads will use this saved version (no re-quantization needed)."
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to save quantized model: {e}")
-            # Clean up partial save
-            if os.path.exists(quantized_path):
-                try:
-                    shutil.rmtree(quantized_path)
-                except Exception:
-                    pass
-            raise
 
     def _get_enabled_adapter_names(self) -> List[str]:
         """Retrieve enabled adapter names from QSettings."""
