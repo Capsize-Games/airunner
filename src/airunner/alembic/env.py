@@ -43,6 +43,7 @@ from airunner.components.knowledge.data.models import (
     KnowledgeFact,
     ConversationSummary,
 )
+from airunner.components.video.data.video_project import VideoProject
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

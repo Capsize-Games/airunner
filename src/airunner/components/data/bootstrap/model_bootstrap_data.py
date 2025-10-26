@@ -90,6 +90,28 @@ ai_art_models = [
         "model_type": "art",
         "is_default": True,
     },
+    {
+        "name": "FLUX.1 Dev",
+        "path": "black-forest-labs/FLUX.1-dev",
+        "branch": "main",
+        "version": "FLUX",
+        "category": "stablediffusion",
+        "pipeline_action": "txt2img",
+        "enabled": True,
+        "model_type": "art",
+        "is_default": True,
+    },
+    {
+        "name": "FLUX.1 Schnell",
+        "path": "black-forest-labs/FLUX.1-schnell",
+        "branch": "main",
+        "version": "FLUX",
+        "category": "stablediffusion",
+        "pipeline_action": "txt2img",
+        "enabled": True,
+        "model_type": "art",
+        "is_default": True,
+    },
 ]
 
 llm_models = [

@@ -20,7 +20,8 @@ from transformers import (
 )
 
 from airunner.components.tts.managers.tts_model_manager import TTSModelManager
-from airunner.enums import ModelType, ModelStatus, SpeechT5Voices
+from airunner.components.art.utils.model_file_checker import ModelFileChecker
+from airunner.enums import ModelType, ModelStatus, SpeechT5Voices, SignalCode
 from airunner.components.tts.managers.tts_request import TTSRequest
 from airunner.utils.memory import clear_memory
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
@@ -149,7 +150,7 @@ class SpeechT5ModelManager(TTSModelManager):
         self.change_model_status(ModelType.TTS, ModelStatus.FAILED)
 
     # Refactored load/unload methods for better error handling
-    def load(self, target_model=None):
+    def load(self, target_model=None, retry: bool = False):
         if self.status is ModelStatus.LOADING:
             return
         if self.status in (
@@ -159,6 +160,16 @@ class SpeechT5ModelManager(TTSModelManager):
         ):
             self.unload()
         self.logger.debug(f"Loading text-to-speech")
+
+        # Check for missing files and trigger download if needed
+        if not retry:
+            should_download, download_info = self._check_and_trigger_download()
+            if should_download:
+                self.logger.info(
+                    "SpeechT5 model files missing, download triggered"
+                )
+                return False
+
         self._set_status_loading()
         self._load_model()
         self._load_vocoder()
@@ -462,10 +473,45 @@ class SpeechT5ModelManager(TTSModelManager):
         self._paused = False
 
     def interrupt_process_signal(self):
+        """
+        Interrupt any current speech generation process.
+        """
+        self.logger.debug("Interrupt text-to-speech processing...")
         self._do_interrupt = True
-        self._cancel_generated_speech = False
-        self._paused = True
-        self._text_queue = Queue()
+
+    def _check_and_trigger_download(self):
+        """Check for missing model files and trigger download if needed.
+
+        Returns:
+            Tuple of (should_download, download_info)
+        """
+        # Check for the main SpeechT5 model
+        model_id = "microsoft/speecht5_tts"
+        model_path = self.model_path
+
+        should_download, download_info = (
+            ModelFileChecker.should_trigger_download(
+                model_path=model_path,
+                model_type="tts_speecht5",
+                model_id=model_id,
+            )
+        )
+
+        if should_download:
+            self.logger.info(
+                f"SpeechT5 model files missing: {download_info.get('missing_files', [])}"
+            )
+            self.emit_signal(
+                SignalCode.START_HUGGINGFACE_DOWNLOAD,
+                {
+                    "repo_id": download_info["repo_id"],
+                    "model_path": model_path,
+                    "model_type": "tts_speecht5",
+                    "callback": lambda: self.load(retry=True),
+                },
+            )
+
+        return should_download, download_info
 
     def cleanup(self):
         """Clean up resources when the handler is no longer needed."""

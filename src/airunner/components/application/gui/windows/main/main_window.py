@@ -222,6 +222,7 @@ class MainWindow(
         ("message-square", "chat_button"),
         ("home", "home_button"),
         ("radio", "visualizer_button"),
+        ("video", "video_button"),
         ("arrow-down-circle", "actionDownload_Model"),
         ("book", "knowledgebase_button"),
         ("file-text", "menuDocuments"),
@@ -652,6 +653,7 @@ class MainWindow(
             "document_editor_button": self.ui.document_editor_tab,
             "workflow_editor_button": self.ui.agent_workflow_tab,
             "visualizer_button": self.ui.visualizer_tab,
+            "video_button": self.ui.video_tab,
         }
 
     def _restore_tab(self):
@@ -711,6 +713,10 @@ class MainWindow(
     @Slot(bool)
     def on_workflow_editor_button_toggled(self, val: bool):
         self._set_current_button_and_tab("workflow_editor_button")
+
+    @Slot(bool)
+    def on_video_button_toggled(self, val: bool):
+        self._set_current_button_and_tab("video_button")
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):

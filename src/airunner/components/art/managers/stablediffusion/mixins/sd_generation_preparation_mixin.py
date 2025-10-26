@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 import PIL
 from PIL.Image import Image
 
-from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
+from airunner.components.art.managers.stablediffusion.noise_sampler import (
     DeterministicSDENoiseSampler,
 )
 from airunner.settings import AIRUNNER_MIN_NUM_INFERENCE_STEPS_IMG2IMG

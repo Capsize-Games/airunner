@@ -303,6 +303,10 @@ class SignalCode(Enum):
     VIDEO_UNLOAD_SIGNAL = "video_unload_signal"
     VIDEO_GENERATE_SIGNAL = "video_generate_signal"
     VIDEO_GENERATED_SIGNAL = "video_generated_signal"
+    VIDEO_GENERATION_STARTED_SIGNAL = "video_generation_started_signal"
+    VIDEO_GENERATION_FAILED_SIGNAL = "video_generation_failed_signal"
+    VIDEO_MODEL_CHANGED_SIGNAL = "video_model_changed_signal"
+    VIDEO_MODEL_DOWNLOAD_REQUIRED = "video_model_download_required"
     INTERRUPT_VIDEO_GENERATION_SIGNAL = "interrupt_video_generation_signal"
     VIDEO_PROGRESS_SIGNAL = "video_progress_signal"
     VIDEO_FRAME_UPDATE_SIGNAL = "video_frame_update_signal"
@@ -526,6 +530,9 @@ class ModelType(Enum):
     LLM = "LLM Model"
     LLM_TOKENIZER = "LLM Tokenizer"
     VIDEO = "Video Model"
+    HUNYUAN_VIDEO = "HunyuanVideo"
+    COGVIDEOX = "CogVideoX"
+    ANIMATEDIFF = "AnimateDiff"
 
 
 class HandlerState(Enum):

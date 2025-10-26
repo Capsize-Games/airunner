@@ -27,6 +27,7 @@ from airunner.components.documents.gui.widgets.documents import DocumentsWidget
 from airunner.components.home_stage.gui.widgets.home_stage_widget import HomeStageWidget
 from airunner.components.llm.gui.widgets.generator_form.generator_form_widget import GeneratorForm
 from airunner.components.nodegraph.gui.widgets.node_graph_widget import NodeGraphWidget
+from airunner.components.video.gui.widgets.video_widget import VideoWidget
 from airunner.components.voice_visualizer.gui.widgets.voice_visualizer_widget import VoiceVisualizerWidget
 import airunner.feather_rc
 
@@ -322,6 +323,20 @@ class Ui_MainWindow(object):
 
         self.action_sidebar.addWidget(self.visualizer_button)
 
+        self.video_button = QPushButton(self.actionsidebar)
+        self.video_button.setObjectName(u"video_button")
+        self.video_button.setMinimumSize(QSize(35, 35))
+        self.video_button.setMaximumSize(QSize(35, 35))
+        self.video_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon34 = QIcon()
+        icon34.addFile(u":/light/icons/feather/light/video.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.video_button.setIcon(icon34)
+        self.video_button.setIconSize(QSize(20, 20))
+        self.video_button.setCheckable(True)
+        self.video_button.setFlat(True)
+
+        self.action_sidebar.addWidget(self.video_button)
+
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.action_sidebar.addItem(self.verticalSpacer)
@@ -344,9 +359,9 @@ class Ui_MainWindow(object):
         self.knowledgebase_button.setMinimumSize(QSize(35, 35))
         self.knowledgebase_button.setMaximumSize(QSize(35, 35))
         self.knowledgebase_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon34 = QIcon()
-        icon34.addFile(u":/light/icons/feather/light/book.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.knowledgebase_button.setIcon(icon34)
+        icon35 = QIcon()
+        icon35.addFile(u":/light/icons/feather/light/book.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.knowledgebase_button.setIcon(icon35)
         self.knowledgebase_button.setIconSize(QSize(20, 20))
         self.knowledgebase_button.setCheckable(True)
         self.knowledgebase_button.setFlat(True)
@@ -463,6 +478,17 @@ class Ui_MainWindow(object):
         self.gridLayout_14.addWidget(self.visualizer, 0, 0, 1, 1)
 
         self.center_tab_container.addTab(self.visualizer_tab, "")
+        self.video_tab = QWidget()
+        self.video_tab.setObjectName(u"video_tab")
+        self.gridLayout_video = QGridLayout(self.video_tab)
+        self.gridLayout_video.setObjectName(u"gridLayout_video")
+        self.gridLayout_video.setContentsMargins(0, 0, 0, 0)
+        self.video_widget = VideoWidget(self.video_tab)
+        self.video_widget.setObjectName(u"video_widget")
+
+        self.gridLayout_video.addWidget(self.video_widget, 0, 0, 1, 1)
+
+        self.center_tab_container.addTab(self.video_tab, "")
 
         self.gridLayout_4.addWidget(self.center_tab_container, 0, 0, 1, 1)
 
@@ -696,6 +722,10 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.visualizer_button.setText("")
 #if QT_CONFIG(tooltip)
+        self.video_button.setToolTip(QCoreApplication.translate("MainWindow", u"Video Generation", None))
+#endif // QT_CONFIG(tooltip)
+        self.video_button.setText("")
+#if QT_CONFIG(tooltip)
         self.chat_button.setToolTip(QCoreApplication.translate("MainWindow", u"Toggle Chat", None))
 #endif // QT_CONFIG(tooltip)
         self.chat_button.setText("")
@@ -712,6 +742,7 @@ class Ui_MainWindow(object):
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.agent_workflow_tab), QCoreApplication.translate("MainWindow", u"Agent Workflow", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.document_editor_tab), QCoreApplication.translate("MainWindow", u"Document Editor", None))
         self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.visualizer_tab), QCoreApplication.translate("MainWindow", u"Visualizer", None))
+        self.center_tab_container.setTabText(self.center_tab_container.indexOf(self.video_tab), QCoreApplication.translate("MainWindow", u"Video", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuArt.setTitle(QCoreApplication.translate("MainWindow", u"Art", None))
         self.menuChat.setTitle(QCoreApplication.translate("MainWindow", u"Chat", None))
