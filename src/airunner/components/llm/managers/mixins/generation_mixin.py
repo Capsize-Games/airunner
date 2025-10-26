@@ -20,9 +20,7 @@ from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.enums import LLMActionType
 
 if TYPE_CHECKING:
-    from airunner.components.llm.managers.llm_model_manager import (
-        LLMModelManager,
-    )
+    pass
 
 
 class GenerationMixin:

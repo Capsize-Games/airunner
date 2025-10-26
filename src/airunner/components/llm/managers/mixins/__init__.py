@@ -15,11 +15,20 @@ from airunner.components.llm.managers.mixins.generation_mixin import (
 from airunner.components.llm.managers.mixins.model_loader_mixin import (
     ModelLoaderMixin,
 )
+from airunner.components.llm.managers.mixins.property_mixin import (
+    PropertyMixin,
+)
 from airunner.components.llm.managers.mixins.quantization_config_mixin import (
     QuantizationConfigMixin,
 )
+from airunner.components.llm.managers.mixins.specialized_model_mixin import (
+    SpecializedModelMixin,
+)
 from airunner.components.llm.managers.mixins.status_management_mixin import (
     StatusManagementMixin,
+)
+from airunner.components.llm.managers.mixins.system_prompt_mixin import (
+    SystemPromptMixin,
 )
 from airunner.components.llm.managers.mixins.tokenizer_loader_mixin import (
     TokenizerLoaderMixin,
@@ -34,8 +43,11 @@ __all__ = [
     "ConversationManagementMixin",
     "GenerationMixin",
     "ModelLoaderMixin",
+    "PropertyMixin",
     "QuantizationConfigMixin",
+    "SpecializedModelMixin",
     "StatusManagementMixin",
+    "SystemPromptMixin",
     "TokenizerLoaderMixin",
     "ValidationMixin",
 ]
