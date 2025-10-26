@@ -45,6 +45,7 @@ class ConversationWidget(BaseWidget):
             SignalCode.BOT_MOOD_UPDATED: self.on_bot_mood_updated_signal,
             SignalCode.CHATBOT_CHANGED: self.on_chatbot_changed,
             SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_text_generate_signal,
+            SignalCode.LLM_TOOL_STATUS_SIGNAL: self.on_tool_status_update,
         }
         self.ui_update_timer = QTimer(self)
         self.ui_update_timer.setInterval(50)
@@ -191,14 +192,22 @@ class ConversationWidget(BaseWidget):
             )
         )
         self.set_conversation_widgets(messages, skip_scroll=True)
+        # Restore tool statuses from database when loading a conversation
+        self._restore_tool_statuses()
 
     def clear_conversation(self) -> None:
         """Clear all conversation state and UI."""
+        import traceback
+
+        self.logger.debug(
+            f"[CONVERSATION] clear_conversation called from:\n{''.join(traceback.format_stack()[-4:-1])}"
+        )
         self._conversation = None
         self._conversation_id = None
         self.conversation_history = []
         self._streamed_messages = []
-        self.set_conversation([])
+        # Use explicit clear signal instead of set_conversation([])
+        self._chat_bridge.clear_messages()
         self._clear_conversation_widgets()
 
     def on_add_bot_message_to_conversation(self, data: Dict):
@@ -317,6 +326,13 @@ class ConversationWidget(BaseWidget):
         Args:
             messages (List[Dict[str, Any]]): List of message dicts (sender, text, timestamp, etc).
         """
+        # If empty list, use clear_messages signal instead
+        if not messages:
+            self.logger.warning(
+                "[CONVERSATION] set_conversation called with empty list - this should use clear_messages instead"
+            )
+            return
+
         simplified_messages = []
         for msg in messages:
             content = msg.get("text") or msg.get("content") or ""
@@ -348,6 +364,34 @@ class ConversationWidget(BaseWidget):
             self._chat_bridge.set_messages(simplified_messages)
 
         self.wait_for_js_ready(send)
+
+    def _restore_tool_statuses(self):
+        """Restore tool statuses from conversation metadata."""
+        if not self._conversation:
+            return
+
+        user_data = self._conversation.user_data or {}
+        tool_statuses = user_data.get("tool_statuses", [])
+
+        self.logger.debug(
+            f"[TOOL STATUS] Restoring {len(tool_statuses)} tool statuses from database"
+        )
+
+        # Send each tool status to JavaScript for rendering
+        # Only send completed statuses (starting statuses are transient)
+        for tool_status in tool_statuses:
+            status = tool_status.get("status", "")
+            if status == "completed":
+                self.logger.debug(
+                    f"[TOOL STATUS] Restoring completed status: {tool_status.get('tool_id')}"
+                )
+                self._chat_bridge.updateToolStatus(
+                    tool_status.get("tool_id", ""),
+                    tool_status.get("tool_name", ""),
+                    tool_status.get("query", ""),
+                    status,
+                    tool_status.get("details", "") or "",
+                )
 
     def _handle_scroll_request(self) -> None:
         """Handle scroll request from JavaScript and delegate to parent scroll area."""
@@ -468,15 +512,23 @@ class ConversationWidget(BaseWidget):
         self.set_conversation(self._streamed_messages)
 
     def _clear_conversation(self, skip_update: bool = False):
+        import traceback
+
+        self.logger.debug(
+            f"[CONVERSATION] _clear_conversation called (skip_update={skip_update}) from:\n{''.join(traceback.format_stack()[-4:-1])}"
+        )
         self.conversation = None
         self.conversation_history = []
         self._streamed_messages = []
-        self.set_conversation([])
+        # Use explicit clear signal instead of set_conversation([])
+        if not skip_update:
+            self._chat_bridge.clear_messages()
         self._clear_conversation_widgets(skip_update=skip_update)
 
     def _clear_conversation_widgets(self, skip_update: bool = False):
         """Clear the HTML conversation view."""
-        self.set_conversation([])
+        if not skip_update:
+            self._chat_bridge.clear_messages()
 
     def on_clear_conversation(self):
         self._clear_conversation()
@@ -599,6 +651,103 @@ class ConversationWidget(BaseWidget):
         )
         self.set_conversation(self._streamed_messages)
 
+    def on_tool_status_update(self, data: Dict[str, Any]):
+        """Handle tool status updates and display them in the UI.
+
+        Args:
+            data: Tool status data containing:
+                - tool_id: Unique identifier for the tool call
+                - tool_name: Name of the tool (e.g., "search_web")
+                - query: Query being executed
+                - status: "starting" or "completed"
+                - details: Optional details (e.g., domain names for web search)
+                - conversation_id: ID of the conversation
+                - timestamp: When the status changed
+        """
+        self.logger.debug(f"[TOOL STATUS] Received signal: {data}")
+
+        tool_id = data.get("tool_id")
+        tool_name = data.get("tool_name")
+        query = data.get("query")
+        status = data.get("status")
+        details = data.get("details", "")
+        conversation_id = data.get("conversation_id")
+        timestamp = data.get("timestamp")
+
+        if not all([tool_id, tool_name, query, status]):
+            self.logger.warning(
+                f"[TOOL STATUS] Missing required fields in data: {data}"
+            )
+            return
+
+        # Only process if this is for the current conversation
+        if (
+            conversation_id
+            and self.conversation
+            and conversation_id != self.conversation.id
+        ):
+            self.logger.debug(
+                f"[TOOL STATUS] Ignoring status for different conversation"
+            )
+            return
+
+        self.logger.info(
+            f"[TOOL STATUS] Processing {status} status for {tool_name}: {query}"
+        )
+
+        # Save to database (conversation.user_data)
+        if self.conversation:
+            user_data = self.conversation.user_data or {}
+            tool_statuses = user_data.get("tool_statuses", [])
+
+            # Check if this tool_id already exists (update instead of append)
+            existing_idx = None
+            for idx, ts in enumerate(tool_statuses):
+                if ts.get("tool_id") == tool_id:
+                    existing_idx = idx
+                    break
+
+            tool_status_entry = {
+                "tool_id": tool_id,
+                "tool_name": tool_name,
+                "query": query,
+                "status": status,
+                "details": details,
+                "timestamp": timestamp,
+            }
+
+            if existing_idx is not None:
+                # Update existing entry
+                tool_statuses[existing_idx] = tool_status_entry
+                self.logger.debug(
+                    f"[TOOL STATUS] Updated existing entry at index {existing_idx}"
+                )
+            else:
+                # Append new entry
+                tool_statuses.append(tool_status_entry)
+                self.logger.debug(f"[TOOL STATUS] Appended new entry")
+
+            user_data["tool_statuses"] = tool_statuses
+            self.conversation.user_data = user_data
+            Conversation.objects.update(
+                pk=self.conversation.id, user_data=user_data
+            )
+            self.logger.debug(
+                f"[TOOL STATUS] Saved to database: {len(tool_statuses)} total statuses"
+            )
+
+        # Send to JavaScript for rendering
+        self.logger.debug(
+            f"[TOOL STATUS] Calling _chat_bridge.updateToolStatus"
+        )
+        self._chat_bridge.updateToolStatus(
+            tool_id,
+            tool_name,
+            query,
+            status,
+            details or "",  # Ensure empty string instead of None
+        )
+
     def _get_view(self):
         """Return the QWebEngineView used for rendering the conversation."""
         return self.ui.stage if self.ui and hasattr(self.ui, "stage") else None
@@ -698,30 +847,46 @@ class ConversationWidget(BaseWidget):
             # Update or create bot message
             if self._active_stream_message_index is None:
                 # Always create a new message for a new stream to avoid overwriting prior answers
-                self._streamed_messages.append(
-                    {
-                        "name": self.chatbot.botname,
-                        "content": combined_content,
-                        "role": MessageRole.ASSISTANT.value,
-                        "is_bot": True,
-                    }
-                )
+                new_message = {
+                    "name": self.chatbot.botname,
+                    "content": combined_content,
+                    "role": MessageRole.ASSISTANT.value,
+                    "is_bot": True,
+                }
+                self._streamed_messages.append(new_message)
                 self._active_stream_message_index = (
                     len(self._streamed_messages) - 1
                 )
+                # Use appendMessage instead of set_conversation to avoid clearing
+                # Format the message like set_conversation does
+                fmt = FormatterExtended.format_content(combined_content)
+                formatted_message = {
+                    "content": fmt["content"],
+                    "content_type": fmt["type"],
+                    "id": self._active_stream_message_index,
+                    "timestamp": "",
+                    "name": self.chatbot.botname,
+                    "is_bot": True,
+                }
+                self._chat_bridge.append_message(formatted_message)
             else:
+                # Just update the existing message content during streaming
                 self._streamed_messages[self._active_stream_message_index][
                     "content"
                 ] = combined_content
-
-            # Assign IDs and update conversation
-            self._streamed_messages = self._assign_message_ids(
-                self._streamed_messages
-            )
-            self.set_conversation(self._streamed_messages)
+                # Use incremental update instead of rebuilding entire conversation
+                # Format the content before sending
+                fmt = FormatterExtended.format_content(combined_content)
+                self._chat_bridge.update_last_message_content(fmt["content"])
 
         if last_token_was_end:
             self._finalize_stream_state()
+            # Do final full conversation update to ensure IDs are assigned
+            if self._streamed_messages:
+                self._streamed_messages = self._assign_message_ids(
+                    self._streamed_messages
+                )
+                self.set_conversation(self._streamed_messages)
 
     def _finalize_stream_state(self, partial: bool = False):
         """Reset streaming state after a message completes.

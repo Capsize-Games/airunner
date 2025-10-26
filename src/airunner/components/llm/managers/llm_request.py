@@ -319,12 +319,14 @@ class LLMRequest:
             LLMActionType.WORKFLOW_INTERACTION,
         ):
             # Commands/Decisions: Precise, deterministic
+            # NOTE: High max_new_tokens allows complete tool calls + explanations
+            # and multi-step reasoning without truncation
             return cls(
                 do_sample=False,  # Deterministic
                 temperature=0.1,  # Very precise
                 repetition_penalty=1.0,  # No penalty needed
                 no_repeat_ngram_size=0,  # Allow any patterns
-                max_new_tokens=100,  # Short, focused
+                max_new_tokens=2048,  # Allow full responses without truncation
                 top_k=5,  # Very focused
                 top_p=0.95,
             )

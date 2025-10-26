@@ -43,6 +43,7 @@ from airunner.components.llm.managers.quantization_mixin import (
     QuantizationMixin,
 )
 from airunner.components.llm.managers.training_mixin import TrainingMixin
+from airunner.components.llm.managers.agent.rag_mixin import RAGMixin
 from airunner.components.model_management.hardware_profiler import (
     HardwareProfiler,
 )
@@ -66,7 +67,9 @@ from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.managers.llm_settings import LLMSettings
 
 
-class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
+class LLMModelManager(
+    BaseModelManager, RAGMixin, QuantizationMixin, TrainingMixin
+):
     """
     Handler for Large Language Model operations in AI Runner.
 
@@ -103,6 +106,9 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        # Explicitly initialize RAGMixin since it's in the inheritance chain
+        # This ensures all private attributes (_retriever, _embedding, etc.) are created
+        RAGMixin.__init__(self)
         self._model_status = {ModelType.LLM: ModelStatus.UNLOADED}
         self.llm_settings = LLMSettings()
         self._pending_conversation_message = None
@@ -290,6 +296,32 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
         return os.path.basename(
             os.path.normpath(self.llm_generator_settings.model_path)
         )
+
+    @property
+    def llm(self):
+        """
+        Get the LlamaIndex-compatible LLM wrapper for RAG.
+
+        This property is required by RAGMixin to initialize the RAG system.
+        Returns None if the chat model hasn't been loaded yet.
+
+        Returns:
+            LlamaIndex LLM wrapper or None
+        """
+        if self._chat_model is None:
+            return None
+
+        # LlamaIndex needs a LlamaIndex-compatible LLM, not a LangChain one
+        # For now, return the LangChain chat model and let LlamaIndex handle conversion
+        # If this causes issues, we'll need to wrap it properly
+        try:
+            from llama_index.llms.langchain import LangChainLLM
+
+            return LangChainLLM(llm=self._chat_model)
+        except Exception:
+            # If LlamaIndex LangChain adapter isn't available, return the chat model
+            # and hope LlamaIndex can work with it directly
+            return self._chat_model
 
     @property
     def model_path(self) -> str:
@@ -1531,6 +1563,15 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
             self.logger.info(
                 f"ChatModel created: {type(self._chat_model).__name__}"
             )
+
+            # Now that chat model is loaded, initialize RAG system
+            # RAGMixin._setup_rag() checks if llm is available
+            if hasattr(self, "_setup_rag"):
+                self.logger.info(
+                    "Initializing RAG system now that LLM is loaded"
+                )
+                self._setup_rag()
+
         except Exception as e:
             self.logger.error(f"Error creating ChatModel: {e}", exc_info=True)
             self._chat_model = None
@@ -1541,9 +1582,10 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
             return
 
         try:
-            rag_manager = getattr(self, "rag_manager", None)
-            self._tool_manager = ToolManager(rag_manager=rag_manager)
-            self.logger.info("Tool manager loaded")
+            # Pass self as rag_manager since LLMModelManager now inherits RAGMixin
+            # This gives tools access to the active document indexes
+            self._tool_manager = ToolManager(rag_manager=self)
+            self.logger.info("Tool manager loaded with RAG capabilities")
         except Exception as e:
             self.logger.error(
                 f"Error loading tool manager: {e}", exc_info=True
@@ -1821,8 +1863,23 @@ class LLMModelManager(BaseModelManager, QuantizationMixin, TrainingMixin):
             # CRITICAL: Use stream() instead of invoke() to allow interrupt checking
             # invoke() is completely blocking and ignores interrupt flags
             # stream() checks the interrupt flag on each token, allowing fast response
+
+            # Prepare generation kwargs from LLMRequest
+            generation_kwargs = llm_request.to_dict() if llm_request else {}
+            # Remove non-generation parameters
+            for key in [
+                "do_tts_reply",
+                "use_cache",
+                "node_id",
+                "use_memory",
+                "role",
+            ]:
+                generation_kwargs.pop(key, None)
+
             result_messages = []
-            for message in self._workflow_manager.stream(prompt):
+            for message in self._workflow_manager.stream(
+                prompt, generation_kwargs
+            ):
                 # Check interrupt flag during streaming
                 if self._interrupted:
                     self.logger.info(
