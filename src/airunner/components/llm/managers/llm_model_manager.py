@@ -42,6 +42,7 @@ from airunner.components.llm.managers.workflow_manager import WorkflowManager
 from airunner.components.llm.managers.quantization_mixin import (
     QuantizationMixin,
 )
+from airunner.components.llm.managers.mixins import StatusManagementMixin
 from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.components.llm.managers.agent.rag_mixin import RAGMixin
 from airunner.components.model_management.hardware_profiler import (
@@ -68,7 +69,11 @@ from airunner.components.llm.managers.llm_settings import LLMSettings
 
 
 class LLMModelManager(
-    BaseModelManager, RAGMixin, QuantizationMixin, TrainingMixin
+    BaseModelManager,
+    StatusManagementMixin,
+    RAGMixin,
+    QuantizationMixin,
+    TrainingMixin,
 ):
     """
     Handler for Large Language Model operations in AI Runner.
@@ -441,22 +446,6 @@ class LLMModelManager(
 
         return True
 
-    def _send_error_response(self, message: str) -> None:
-        """Send error message to GUI."""
-        try:
-            self.api.llm.send_llm_text_streamed_signal(
-                LLMResponse(message=message, is_end_of_message=True)
-            )
-        except Exception:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {
-                    "response": LLMResponse(
-                        message=message, is_end_of_message=True
-                    )
-                },
-            )
-
     def _check_and_download_model(self) -> bool:
         """Check if model exists and trigger download if needed.
 
@@ -472,23 +461,6 @@ class LLMModelManager(
                 self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
             return False
         return True
-
-    def _send_quantization_info(self) -> None:
-        """Send quantization selection info to GUI."""
-        vram_gb = self._get_available_vram_gb()
-        quant_info = self._get_quantization_info(vram_gb)
-
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-            {
-                "response": LLMResponse(
-                    message=f"🔧 Auto-selecting quantization: {quant_info['level']} "
-                    f"({quant_info['description']}) based on {vram_gb:.1f}GB available VRAM\n",
-                    is_end_of_message=False,
-                    action=LLMActionType.CHAT,
-                )
-            },
-        )
 
     def _load_local_llm_components(self) -> None:
         """Load tokenizer and model for local LLM."""
@@ -565,69 +537,6 @@ class LLMModelManager(
             and self._chat_model is not None
             and self._workflow_manager is not None
         )
-
-    def _send_success_message(self, is_api: bool) -> None:
-        """Send success message to GUI."""
-        message = (
-            "✅ Model loaded successfully (API mode)\n"
-            if is_api
-            else "✅ Model loaded and ready for chat\n"
-        )
-
-        try:
-            self.api.llm.send_llm_text_streamed_signal(
-                LLMResponse(message=message, is_end_of_message=False)
-            )
-        except Exception:
-            self.emit_signal(
-                SignalCode.LLM_TEXT_STREAMED_SIGNAL,
-                {
-                    "response": LLMResponse(
-                        message=message, is_end_of_message=False
-                    )
-                },
-            )
-
-    def _handle_pending_conversation(self) -> None:
-        """Process pending conversation if one exists."""
-        if getattr(self, "_pending_conversation_message", None):
-            self.logger.info(
-                "Processing pending conversation load after workflow manager became available."
-            )
-            self.load_conversation(self._pending_conversation_message)
-            self._pending_conversation_message = None
-
-    def _log_component_failures(self) -> None:
-        """Log which components failed to load."""
-        if not self._chat_model:
-            self.logger.error("ChatModel failed to load")
-        if not self._workflow_manager:
-            self.logger.error("Workflow manager failed to load")
-        if self.llm_settings.use_local_llm:
-            if not self._model:
-                self.logger.error("Model failed to load")
-            if not self._tokenizer and not self._is_mistral3_model():
-                self.logger.error("Tokenizer failed to load")
-
-    def _update_model_status(self) -> None:
-        """Update model status based on what's loaded."""
-        is_api = self.llm_settings.use_api
-
-        if is_api and self._check_components_loaded_for_api():
-            self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
-            self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True})
-            self._send_success_message(is_api=True)
-            return
-
-        if not is_api and self._check_components_loaded_for_local():
-            self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
-            self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True})
-            self._send_success_message(is_api=False)
-            self._handle_pending_conversation()
-            return
-
-        self._log_component_failures()
-        self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
 
     def unload(self) -> None:
         """Unload all LLM components and clear GPU memory."""
