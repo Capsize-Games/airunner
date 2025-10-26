@@ -387,7 +387,10 @@ class SDWorker(Worker):
 
     def on_change_scheduler_signal(self, data: Dict):
         if self.model_manager:
-            self.model_manager.load_scheduler(data["scheduler"])
+            scheduler_name = data["scheduler"]
+            self.update_generator_settings(scheduler=scheduler_name)
+            # Reload the scheduler in the pipeline
+            self.model_manager._load_scheduler(scheduler_name)
 
     def on_model_status_changed_signal(self, message: Dict):
         if self.model_manager and message["model"] == ModelType.SD:
