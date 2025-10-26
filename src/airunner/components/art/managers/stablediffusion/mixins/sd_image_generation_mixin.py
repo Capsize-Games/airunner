@@ -239,7 +239,7 @@ class SDImageGenerationMixin:
         self.api.art.progress_update(step=_i, total=self.image_request.steps)
         return callback_kwargs
 
-    def __interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
+    def _interrupt_callback(self, _pipe, _i, _t, callback_kwargs):
         """
         Interrupt-aware callback during generation.
 

@@ -11,7 +11,11 @@ import numpy as np
 from PIL import Image
 
 from PySide6.QtCore import Qt, QTimer, Slot
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QMessageBox,
+    QGraphicsScene,
+)
 from PySide6.QtGui import QImage, QPixmap
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
@@ -39,6 +43,14 @@ class VideoWidget(BaseWidget):
 
     def __init__(self, *args, **kwargs):
         """Initialize the video widget."""
+        # Initialize state variables BEFORE super().__init__()
+        self._current_video_frames: List[np.ndarray] = []
+        self._current_frame_index: int = 0
+        self._is_playing: bool = False
+        self._source_image_path: Optional[str] = None
+        self._generating: bool = False
+        self._playback_timer = None
+
         # Signal handlers
         self.signal_handlers = {
             SignalCode.VIDEO_PROGRESS_SIGNAL: self.on_video_progress,
@@ -47,57 +59,35 @@ class VideoWidget(BaseWidget):
             SignalCode.VIDEO_GENERATION_FAILED_SIGNAL: self.on_generation_failed,
         }
 
-        # State
-        self._current_video_frames: List[np.ndarray] = []
-        self._current_frame_index: int = 0
-        self._is_playing: bool = False
-        self._source_image_path: Optional[str] = None
-        self._generating: bool = False
-
-        # Playback timer
-        self._playback_timer = QTimer()
-        self._playback_timer.timeout.connect(self._advance_frame)
-
+        # Call parent constructor
         super().__init__(*args, **kwargs)
 
-        # Connect UI signals
-        self._connect_signals()
+    def initialize_ui(self) -> None:
+        """Initialize UI components after widget setup."""
+        try:
+            super().initialize_ui()
+        except Exception as e:
+            self.logger.error(f"VideoWidget UI initialization failed: {e}")
+            return
 
-        # Update UI state
-        self._update_ui_state()
+        try:
+            self._setup_playback_timer()
+            self._update_ui_state()
+        except Exception as e:
+            self.logger.error(
+                f"VideoWidget component initialization failed: {e}"
+            )
 
-    def _connect_signals(self):
-        """Connect UI element signals to handlers."""
-        # Model selector
-        self.ui.model_selector.currentIndexChanged.connect(
-            self.on_model_changed
-        )
-
-        # Playback controls
-        self.ui.btn_play.clicked.connect(self.on_play_clicked)
-        self.ui.btn_pause.clicked.connect(self.on_pause_clicked)
-        self.ui.btn_stop.clicked.connect(self.on_stop_clicked)
-        self.ui.btn_prev_frame.clicked.connect(self.on_prev_frame)
-        self.ui.btn_next_frame.clicked.connect(self.on_next_frame)
-        self.ui.timeline_slider.valueChanged.connect(self.on_timeline_changed)
-
-        # Generation controls
-        self.ui.btn_generate.clicked.connect(self.on_generate_clicked)
-        self.ui.btn_cancel.clicked.connect(self.on_cancel_clicked)
-        self.ui.checkbox_img2vid.toggled.connect(self.on_img2vid_toggled)
-        self.ui.btn_browse_source.clicked.connect(self.on_browse_source)
-        self.ui.btn_clear_source.clicked.connect(self.on_clear_source)
-
-        # Export
-        self.ui.btn_export.clicked.connect(self.on_export_clicked)
-
-        # Settings
-        self.ui.btn_model_settings.clicked.connect(
-            self.on_model_settings_clicked
-        )
+    def _setup_playback_timer(self) -> None:
+        """Set up the playback timer."""
+        self._playback_timer = QTimer(self)
+        self._playback_timer.timeout.connect(self._advance_frame)
 
     def _update_ui_state(self):
         """Update UI element states based on current state."""
+        if not hasattr(self, "ui") or self.ui is None:
+            return
+
         # Enable/disable based on generation state
         is_generating = self._generating
         self.ui.btn_generate.setEnabled(not is_generating)
@@ -174,11 +164,11 @@ class VideoWidget(BaseWidget):
             f"Video generation failed:\n\n{error}",
         )
 
-    # ===== UI Event Handlers =====
+    # ===== UI Event Handlers (Auto-connected via @Slot naming convention) =====
 
     @Slot()
-    def on_model_changed(self):
-        """Handle video model selection change."""
+    def on_model_selector_currentIndexChanged(self):
+        """Handle video model selection change (auto-connected)."""
         model_name = self.ui.model_selector.currentText()
         self.logger.info(f"Video model changed to: {model_name}")
 
@@ -191,8 +181,8 @@ class VideoWidget(BaseWidget):
             self.ui.spinbox_frames.setMaximum(256)
 
     @Slot()
-    def on_generate_clicked(self):
-        """Handle generate button click."""
+    def on_btn_generate_clicked(self) -> None:
+        """Handle generate button click (auto-connected)."""
         # Validate inputs
         prompt = self.ui.prompt_input.toPlainText().strip()
         if not prompt:
@@ -259,21 +249,21 @@ class VideoWidget(BaseWidget):
         )
 
     @Slot()
-    def on_cancel_clicked(self):
-        """Handle cancel button click."""
+    def on_btn_cancel_clicked(self):
+        """Handle cancel button click (auto-connected)."""
         self.emit_signal(SignalCode.INTERRUPT_VIDEO_GENERATION_SIGNAL, {})
         self._generating = False
         self.ui.progress_bar.setFormat("Cancelled")
         self._update_ui_state()
 
     @Slot(bool)
-    def on_img2vid_toggled(self, checked: bool):
-        """Handle image-to-video checkbox toggle."""
+    def on_checkbox_img2vid_toggled(self, checked: bool):
+        """Handle image-to-video checkbox toggle (auto-connected)."""
         self._update_ui_state()
 
     @Slot()
-    def on_browse_source(self):
-        """Handle browse source image button click."""
+    def on_btn_browse_source_clicked(self):
+        """Handle browse source image button click (auto-connected)."""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select Source Image",
@@ -286,15 +276,15 @@ class VideoWidget(BaseWidget):
             self.ui.lineedit_source_path.setText(file_path)
 
     @Slot()
-    def on_clear_source(self):
-        """Handle clear source image button click."""
+    def on_btn_clear_source_clicked(self):
+        """Handle clear source image button click (auto-connected)."""
         self._source_image_path = None
         self.ui.lineedit_source_path.clear()
 
     @Slot()
-    def on_play_clicked(self):
-        """Handle play button click."""
-        if not self._current_video_frames:
+    def on_btn_play_clicked(self) -> None:
+        """Handle play button click (auto-connected)."""
+        if not self._current_video_frames or not self._playback_timer:
             return
 
         self._is_playing = True
@@ -303,15 +293,21 @@ class VideoWidget(BaseWidget):
         self._update_ui_state()
 
     @Slot()
-    def on_pause_clicked(self):
-        """Handle pause button click."""
+    def on_btn_pause_clicked(self) -> None:
+        """Handle pause button click (auto-connected)."""
+        if not self._playback_timer:
+            return
+
         self._is_playing = False
         self._playback_timer.stop()
         self._update_ui_state()
 
     @Slot()
-    def on_stop_clicked(self):
-        """Handle stop button click."""
+    def on_btn_stop_clicked(self) -> None:
+        """Handle stop button click (auto-connected)."""
+        if not self._playback_timer:
+            return
+
         self._is_playing = False
         self._playback_timer.stop()
         self._current_frame_index = 0
@@ -319,29 +315,29 @@ class VideoWidget(BaseWidget):
         self._update_ui_state()
 
     @Slot()
-    def on_prev_frame(self):
-        """Handle previous frame button click."""
+    def on_btn_prev_frame_clicked(self):
+        """Handle previous frame button click (auto-connected)."""
         if self._current_frame_index > 0:
             self._current_frame_index -= 1
             self._update_frame_display()
 
     @Slot()
-    def on_next_frame(self):
-        """Handle next frame button click."""
+    def on_btn_next_frame_clicked(self):
+        """Handle next frame button click (auto-connected)."""
         if self._current_frame_index < len(self._current_video_frames) - 1:
             self._current_frame_index += 1
             self._update_frame_display()
 
     @Slot(int)
-    def on_timeline_changed(self, value: int):
-        """Handle timeline slider change."""
+    def on_timeline_slider_valueChanged(self, value: int):
+        """Handle timeline slider change (auto-connected)."""
         if 0 <= value < len(self._current_video_frames):
             self._current_frame_index = value
             self._update_frame_display()
 
     @Slot()
-    def on_export_clicked(self):
-        """Handle export button click."""
+    def on_btn_export_clicked(self) -> None:
+        """Handle export button click (auto-connected)."""
         if not self._current_video_frames:
             return
 
@@ -364,8 +360,8 @@ class VideoWidget(BaseWidget):
             )
 
     @Slot()
-    def on_model_settings_clicked(self):
-        """Handle model settings button click."""
+    def on_btn_model_settings_clicked(self):
+        """Handle model settings button click (auto-connected)."""
         # TODO: Open model settings dialog
         self.logger.info("Model settings clicked (not implemented)")
 
@@ -374,7 +370,7 @@ class VideoWidget(BaseWidget):
     def _advance_frame(self):
         """Advance to next frame during playback."""
         if not self._current_video_frames:
-            self.on_stop_clicked()
+            self.on_btn_stop_clicked()
             return
 
         self._current_frame_index += 1
@@ -427,8 +423,6 @@ class VideoWidget(BaseWidget):
         # Scale to fit preview
         scene = self.ui.video_preview.scene()
         if scene is None:
-            from PySide6.QtWidgets import QGraphicsScene
-
             scene = QGraphicsScene()
             self.ui.video_preview.setScene(scene)
 

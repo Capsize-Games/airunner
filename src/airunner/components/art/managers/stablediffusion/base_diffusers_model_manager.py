@@ -177,6 +177,36 @@ class BaseDiffusersModelManager(
         """Return list of outpaint pipeline classes (overridden in subclasses)."""
         return []
 
+    @property
+    def use_compel(self) -> bool:
+        """Get whether to use Compel for prompt weighting.
+
+        Returns:
+            True if Compel should be used for prompt processing.
+        """
+        if self.image_request:
+            return self.image_request.use_compel
+        return True  # Default to True if no image_request
+
+    def _get_scheduler_base_config(
+        self, scheduler_class
+    ) -> Optional[Dict[str, Any]]:
+        """Get base configuration for a scheduler from the current pipeline.
+
+        Args:
+            scheduler_class: The scheduler class to get config for
+
+        Returns:
+            Dictionary with scheduler config or None if not available
+        """
+        if (
+            self._pipe
+            and hasattr(self._pipe, "scheduler")
+            and self._pipe.scheduler
+        ):
+            return self._pipe.scheduler.config
+        return None
+
     def reload(self):
         """Reload the model by unloading and loading again."""
         self.logger.debug("Reloading stable diffusion")
@@ -253,6 +283,25 @@ class BaseDiffusersModelManager(
 
             # Mark model as loaded
             resource_manager.model_loaded(self.model_path)
+
+    def load_controlnet(self):
+        """
+        Load ControlNet model if enabled.
+
+        Public method to load ControlNet model and processor.
+        Skips loading if ControlNet is not enabled or already loading.
+        """
+        if not self.controlnet_enabled or self.controlnet_is_loading:
+            return
+
+        self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADING)
+        try:
+            self._load_controlnet_model()
+            self._load_controlnet_processor()
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.LOADED)
+        except Exception as e:
+            self.logger.error(f"Failed to load ControlNet: {e}", exc_info=True)
+            self.change_model_status(ModelType.CONTROLNET, ModelStatus.FAILED)
 
     def unload(self):
         """

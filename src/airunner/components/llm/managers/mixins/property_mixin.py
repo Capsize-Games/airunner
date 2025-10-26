@@ -88,7 +88,7 @@ class PropertyMixin:
         Returns:
             Available VRAM in GB
         """
-        if not hasattr(self, "_hw_profiler"):
+        if not hasattr(self, "_hw_profiler") or self._hw_profiler is None:
             self._hw_profiler = HardwareProfiler()
         return self._hw_profiler._get_available_vram_gb()
 
