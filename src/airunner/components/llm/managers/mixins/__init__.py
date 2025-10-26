@@ -9,6 +9,9 @@ from airunner.components.llm.managers.mixins.component_loader_mixin import (
 from airunner.components.llm.managers.mixins.conversation_management_mixin import (
     ConversationManagementMixin,
 )
+from airunner.components.llm.managers.mixins.generation_mixin import (
+    GenerationMixin,
+)
 from airunner.components.llm.managers.mixins.model_loader_mixin import (
     ModelLoaderMixin,
 )
@@ -29,6 +32,7 @@ __all__ = [
     "AdapterLoaderMixin",
     "ComponentLoaderMixin",
     "ConversationManagementMixin",
+    "GenerationMixin",
     "ModelLoaderMixin",
     "QuantizationConfigMixin",
     "StatusManagementMixin",
