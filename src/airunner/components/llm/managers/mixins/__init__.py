@@ -10,10 +10,14 @@ from airunner.components.llm.managers.mixins.status_management_mixin import (
 from airunner.components.llm.managers.mixins.validation_mixin import (
     ValidationMixin,
 )
+from airunner.components.llm.managers.mixins.conversation_management_mixin import (
+    ConversationManagementMixin,
+)
 
 __all__ = [
     "StatusManagementMixin",
     "ValidationMixin",
+    "ConversationManagementMixin",
 ]
 __all__ = [
     "StatusManagementMixin",

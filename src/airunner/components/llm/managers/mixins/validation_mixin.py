@@ -54,36 +54,64 @@ class ValidationMixin:
         Returns:
             True if all essential files present, False otherwise.
         """
-        essential_files = ["config.json"]
-
         try:
-            files_in_dir = os.listdir(model_path)
-            safetensors_found = any(
-                f.endswith(".safetensors") for f in files_in_dir
-            )
-
-            has_essential = self._check_essential_files(
-                model_path, essential_files
-            )
-
-            if not has_essential:
-                self._log_missing_files(model_path, essential_files)
-
-            if not safetensors_found:
-                self.logger.info(
-                    f"No .safetensors files found in {model_path}"
-                )
-
-            result = has_essential and safetensors_found
-            self.logger.info(
-                f"Model exists check: {result} "
-                f"(essential={has_essential}, safetensors={safetensors_found})"
-            )
-            return result
-
+            return self._check_model_files_exist(model_path)
         except Exception as e:
             self.logger.error(f"Error checking model files: {e}")
             return False
+
+    def _check_model_files_exist(
+        self: "LLMModelManager", model_path: str
+    ) -> bool:
+        """Check if required model files exist in directory.
+
+        Args:
+            model_path: Path to model directory.
+
+        Returns:
+            True if config and safetensors files exist.
+        """
+        files_in_dir = os.listdir(model_path)
+        safetensors_found = any(
+            f.endswith(".safetensors") for f in files_in_dir
+        )
+
+        essential_files = ["config.json"]
+        has_essential = self._check_essential_files(
+            model_path, essential_files
+        )
+
+        self._log_file_check_results(
+            model_path, essential_files, has_essential, safetensors_found
+        )
+
+        return has_essential and safetensors_found
+
+    def _log_file_check_results(
+        self: "LLMModelManager",
+        model_path: str,
+        essential_files: List[str],
+        has_essential: bool,
+        safetensors_found: bool,
+    ) -> None:
+        """Log results of file existence check.
+
+        Args:
+            model_path: Path to model directory.
+            essential_files: List of required filenames.
+            has_essential: Whether essential files were found.
+            safetensors_found: Whether safetensors files were found.
+        """
+        if not has_essential:
+            self._log_missing_files(model_path, essential_files)
+
+        if not safetensors_found:
+            self.logger.info(f"No .safetensors files found in {model_path}")
+
+        self.logger.info(
+            f"Model exists check: {has_essential and safetensors_found} "
+            f"(essential={has_essential}, safetensors={safetensors_found})"
+        )
 
     def _check_essential_files(
         self: "LLMModelManager",
