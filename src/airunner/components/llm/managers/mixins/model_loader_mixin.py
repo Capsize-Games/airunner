@@ -10,7 +10,6 @@ This mixin handles:
 - Runtime quantization
 """
 
-import gc
 import traceback
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
@@ -22,9 +21,10 @@ from transformers import (
     BitsAndBytesConfig,
 )
 
-from airunner.data.models.settings_models import LLMProvider
 from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner.utils.memory.clear_memory import clear_memory
+from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 
 if TYPE_CHECKING:
     from airunner.components.llm.managers.llm_model_manager import (
@@ -44,21 +44,16 @@ class ModelLoaderMixin:
     def _log_gpu_memory_status(self) -> None:
         """Log current GPU memory usage.
 
-        Clears cache and garbage collects before logging to get accurate
-        free memory measurement.
+        Uses utility functions to clear memory and get GPU stats.
         """
         if not torch.cuda.is_available():
             return
 
-        torch.cuda.empty_cache()
-        gc.collect()
-        free_memory = torch.cuda.mem_get_info()[0] / (1024**3)
-        total_memory = torch.cuda.get_device_properties(0).total_memory / (
-            1024**3
-        )
+        clear_memory(device=0)
+        stats = gpu_memory_stats(torch.device("cuda:0"))
         self.logger.info(
-            f"GPU memory before loading: {free_memory:.2f}GB free / "
-            f"{total_memory:.2f}GB total"
+            f"GPU memory before loading: {stats['free']:.2f}GB free / "
+            f"{stats['total']:.2f}GB total"
         )
 
     def _detect_mistral3_model(self, config: AutoConfig) -> bool:
