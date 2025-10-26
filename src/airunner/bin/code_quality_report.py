@@ -481,14 +481,15 @@ def main():
             "alembic",
             "/data/",
             "vendor",
+            "/gui/",
         ],
-        help="Patterns to exclude from analysis (alembic, data, vendor always excluded)",
+        help="Patterns to exclude from analysis (alembic, data, vendor, gui always excluded)",
     )
 
     args = parser.parse_args()
 
     # Always exclude these patterns regardless of user input
-    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py"]
+    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py", "/gui/"]
 
     # Merge user exclusions with permanent ones
     all_exclusions = list(set(args.exclude + permanent_exclusions))
