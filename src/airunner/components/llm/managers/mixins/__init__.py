@@ -13,11 +13,15 @@ from airunner.components.llm.managers.mixins.validation_mixin import (
 from airunner.components.llm.managers.mixins.conversation_management_mixin import (
     ConversationManagementMixin,
 )
+from airunner.components.llm.managers.mixins.tokenizer_loader_mixin import (
+    TokenizerLoaderMixin,
+)
 
 __all__ = [
     "StatusManagementMixin",
     "ValidationMixin",
     "ConversationManagementMixin",
+    "TokenizerLoaderMixin",
 ]
 __all__ = [
     "StatusManagementMixin",

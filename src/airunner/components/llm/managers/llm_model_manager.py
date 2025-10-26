@@ -46,6 +46,7 @@ from airunner.components.llm.managers.mixins import (
     StatusManagementMixin,
     ValidationMixin,
     ConversationManagementMixin,
+    TokenizerLoaderMixin,
 )
 from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.components.llm.managers.agent.rag_mixin import RAGMixin
@@ -77,6 +78,7 @@ class LLMModelManager(
     StatusManagementMixin,
     ValidationMixin,
     ConversationManagementMixin,
+    TokenizerLoaderMixin,
     RAGMixin,
     QuantizationMixin,
     TrainingMixin,
@@ -674,107 +676,6 @@ class LLMModelManager(
     def on_section_changed(self) -> None:
         """Handle section change events."""
         pass
-
-    def _is_mistral3_config(self, config: AutoConfig) -> bool:
-        """Check if config indicates Mistral3 model."""
-        is_mistral3_type = (
-            hasattr(config, "model_type") and config.model_type == "mistral3"
-        )
-        is_mistral3_arch = hasattr(config, "architectures") and any(
-            "Mistral3" in arch for arch in (config.architectures or [])
-        )
-        return is_mistral3_type or is_mistral3_arch
-
-    def _handle_mistral3_tokenizer(self) -> bool:
-        """Handle Mistral3 Tekken tokenizer setup.
-
-        Returns:
-            True if Mistral3 tokenizer handled, False otherwise
-        """
-        self.logger.info(
-            "Detected Mistral3 model - tokenizer will be handled by chat adapter using mistral_common"
-        )
-
-        tekken_path = os.path.join(self.model_path, "tekken.json")
-        if not os.path.exists(tekken_path):
-            raise FileNotFoundError(
-                f"tekken.json not found at {tekken_path}. "
-                f"Ensure the model is fully downloaded."
-            )
-
-        self.logger.info(
-            f"✓ Found tekken.json at {tekken_path} - will use mistral_common for tokenization"
-        )
-        return True
-
-    def _load_standard_tokenizer(self) -> None:
-        """Load standard HuggingFace tokenizer with fallbacks."""
-        try:
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                trust_remote_code=False,
-            )
-        except (KeyError, Exception) as e:
-            self.logger.warning(
-                f"Failed to load tokenizer with trust_remote_code=False: {type(e).__name__}"
-            )
-            self._load_tokenizer_with_trust_remote_code()
-
-    def _load_tokenizer_with_trust_remote_code(self) -> None:
-        """Load tokenizer with trust_remote_code=True and fallbacks."""
-        self.logger.info("Retrying with trust_remote_code=True")
-        try:
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                trust_remote_code=True,
-            )
-        except KeyError as ke:
-            self.logger.warning(
-                f"Tokenizer class not in TOKENIZER_MAPPING: {type(ke).__name__}"
-            )
-            self._load_slow_tokenizer()
-
-    def _load_slow_tokenizer(self) -> None:
-        """Load slow tokenizer as final fallback."""
-        self.logger.info("Trying with use_fast=False to use slow tokenizer")
-        self._tokenizer = AutoTokenizer.from_pretrained(
-            self.model_path,
-            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            trust_remote_code=True,
-            use_fast=False,
-        )
-
-    def _load_tokenizer(self) -> None:
-        """Load the tokenizer for the selected model."""
-        if self._tokenizer is not None:
-            return
-
-        try:
-            config = AutoConfig.from_pretrained(
-                self.model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                trust_remote_code=True,
-            )
-
-            if self._is_mistral3_config(config):
-                if self._handle_mistral3_tokenizer():
-                    return
-            else:
-                self._load_standard_tokenizer()
-
-            if self._tokenizer:
-                self._tokenizer.use_default_system_prompt = False
-        except Exception as e:
-            self.logger.error(
-                f"Error loading tokenizer: {type(e).__name__}: {str(e)}"
-            )
-            self.logger.error(
-                f"Tokenizer traceback:\n{traceback.format_exc()}"
-            )
-            self._tokenizer = None
-            self.logger.error("Tokenizer failed to load")
 
     def _log_gpu_memory_status(self) -> None:
         """Log current GPU memory usage."""
