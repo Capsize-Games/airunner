@@ -19,6 +19,19 @@ depends_on = None
 
 def upgrade():
     """Add auto_extract_knowledge column to llm_generator_settings table."""
+    # Check if column already exists
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
+
+    # Get existing columns
+    columns = [
+        col["name"] for col in inspector.get_columns("llm_generator_settings")
+    ]
+
+    if "auto_extract_knowledge" in columns:
+        # Column already exists, skip
+        return
+
     # Add column with default True for automatic knowledge extraction
     op.add_column(
         "llm_generator_settings",
