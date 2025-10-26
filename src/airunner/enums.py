@@ -236,6 +236,10 @@ class SignalCode(Enum):
     KNOWLEDGE_FACTS_RELOAD_REQUESTED = (
         "knowledge_facts_reload_requested_signal"
     )
+    KNOWLEDGE_EXTRACT_FROM_CONVERSATION = (
+        "knowledge_extract_from_conversation_signal"
+    )
+    KNOWLEDGE_EXTRACTION_COMPLETE = "knowledge_extraction_complete_signal"
 
     # Autonomous control signals
     SCHEDULE_TASK_SIGNAL = "schedule_task_signal"

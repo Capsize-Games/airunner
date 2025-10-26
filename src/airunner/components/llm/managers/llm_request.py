@@ -150,7 +150,8 @@ class LLMRequest:
             num_beams=num_beams,
             num_return_sequences=num_return_sequences,
             repetition_penalty=repetition_penalty / 100.0,
-            temperature=temperature / 10000.0,
+            temperature=temperature
+            / 1000.0,  # Fixed: was /10000.0 causing 0.1 instead of 1.0
             top_k=top_k,  # Ensure top_k is correctly passed through
             top_p=top_p / 1000.0,
             use_cache=use_cache,
