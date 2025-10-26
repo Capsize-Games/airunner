@@ -759,7 +759,7 @@ class CustomGraphicsView(
                     self._remove_layer_image_item(target)
                 # Other items: just remove from scene
                 else:
-                    layer_id = getattr(target, "layer_id", None)
+                    getattr(target, "layer_id", None)
                     self._remove_layer_image_item(target)
                     try:
                         if target.scene():

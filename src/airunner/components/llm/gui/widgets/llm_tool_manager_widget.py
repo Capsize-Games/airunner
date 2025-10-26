@@ -241,8 +241,6 @@ class LLMToolManagerWidget(BaseWidget):
 
     def save_state(self):
         """Save widget state"""
-        pass
 
     def restore_state(self):
         """Restore widget state"""
-        pass

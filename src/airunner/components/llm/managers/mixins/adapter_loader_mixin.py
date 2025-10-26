@@ -15,9 +15,7 @@ from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 from airunner.utils.settings.get_qsettings import get_qsettings
 
 if TYPE_CHECKING:
-    from airunner.components.llm.managers.llm_model_manager import (
-        LLMModelManager,
-    )
+    pass
 
 # Optional import for PEFT support
 try:

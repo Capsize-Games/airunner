@@ -16,7 +16,6 @@ class French(LanguageBase):
         if tokenized is None:
             tokenized = self.tokenizer.tokenize(text)
         # import pdb; pdb.set_trace()
-        phs = []
         ph_groups = []
         for t in tokenized:
             if not t.startswith("#"):

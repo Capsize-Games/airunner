@@ -33,11 +33,9 @@ __author__ = "VoiceVisualizer Project"
 
 import ctypes
 import os
-import sys
 from ctypes import c_void_p, c_char_p, c_int, c_float, POINTER
 from PySide6.QtWidgets import QWidget
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from PySide6.QtCore import QObject
 import shiboken6
 
 
@@ -164,11 +162,9 @@ class VoiceVisualizerWidget:
             print(
                 "⚠ Warning: PySide6 not available, using system Qt libraries"
             )
-            pass
         except Exception as e:
             # Handle other potential errors gracefully
             print(f"⚠ Warning: Could not set up PySide6 library path: {e}")
-            pass
 
         return False
 

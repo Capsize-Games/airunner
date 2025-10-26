@@ -12,18 +12,15 @@ Example usage:
 
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 from functools import lru_cache
 
 # Import all dependencies (assume they are installed as optional extras)
 import aiohttp
 from ddgs import DDGS
-from googleapiclient.discovery import build as build_google_service
-import wikipedia
 import xml.etree.ElementTree as ET
 import os
 import urllib.parse
-import json
 
 
 class AggregatedSearchTool:

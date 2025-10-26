@@ -223,7 +223,7 @@ class AIRunnerDaemon:
                 ModelResourceManager,
             )
 
-            manager = ModelResourceManager()
+            ModelResourceManager()
 
             for model_id in preload_list:
                 try:

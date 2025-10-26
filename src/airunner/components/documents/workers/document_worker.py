@@ -1,5 +1,5 @@
 import os
-from PySide6.QtCore import QFileSystemWatcher, QThread, QEventLoop
+from PySide6.QtCore import QFileSystemWatcher, QEventLoop
 
 from airunner.enums import SignalCode
 from airunner.components.application.workers.worker import Worker
@@ -128,7 +128,6 @@ class DocumentWorker(Worker):
 
     def handle_message(self, message):
         """Handle messages from the queue."""
-        pass
 
     def run(self):
         """Worker run loop - process events for QFileSystemWatcher and handle messages."""

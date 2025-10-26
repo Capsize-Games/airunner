@@ -4,7 +4,7 @@ This node allows users to define the state structure for their
 LangGraph workflow visually.
 """
 
-from typing import Dict, Any
+from typing import Dict
 from airunner.vendor.nodegraphqt.constants import NodePropWidgetEnum
 from airunner.components.nodegraph.gui.widgets.nodes.langgraph.base_langgraph_node import (
     BaseLangGraphNode,

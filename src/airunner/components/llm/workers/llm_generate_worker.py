@@ -720,7 +720,6 @@ class LLMGenerateWorker(Worker):
         Deprecated - kept for compatibility but no longer used.
         Quantization now happens automatically during model loading.
         """
-        pass
 
     def _index_selected_documents_thread(self, file_paths: list):
         """Run selective indexing in a separate thread to keep UI responsive."""

@@ -1,5 +1,3 @@
-import pickle
-import os
 import re
 
 from airunner.vendor.melo.text import symbols
@@ -194,7 +192,6 @@ class English(LanguageBase):
             return phones, tones, word2ph
         if tokenized is None:
             tokenized = self.tokenizer.tokenize(text)
-        phs = []
         ph_groups = []
         for t in tokenized:
             if not t.startswith("#"):

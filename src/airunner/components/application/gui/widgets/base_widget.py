@@ -6,7 +6,6 @@ import os
 from PySide6 import QtGui
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QTimer
-from urllib.parse import urlencode
 from airunner.enums import CanvasToolName, TemplateName
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.components.application.gui.windows.main.settings_mixin import (
@@ -14,8 +13,6 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
 )
 from airunner.settings import (
     CONTENT_WIDGETS_BASE_PATH,
-    LOCAL_SERVER_HOST,
-    LOCAL_SERVER_PORT,
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import create_worker
@@ -258,7 +255,7 @@ class BaseWidget(AbstractBaseWidget):
                     )
                 )
             )
-        except AttributeError as _e:
+        except AttributeError:
             pass
 
     def get_form_element(self, element):
@@ -355,7 +352,6 @@ class BaseWidget(AbstractBaseWidget):
         Load a Jinja2 template, render it, and set it directly using setHtml with a file:// base URL.
         No network access required - everything loads from local filesystem.
         """
-        import os
         import jinja2
         from PySide6.QtCore import QUrl
         from pathlib import Path
@@ -392,7 +388,7 @@ class BaseWidget(AbstractBaseWidget):
         # Render the template
         try:
             template = env.get_template(template_name)
-            html_content = template.render(**kwargs)
+            template.render(**kwargs)
 
             # Use HTTP server URL - construct the full URL to the template
             # Server runs on http://127.0.0.1:5005, static files served from /static/

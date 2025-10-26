@@ -1,10 +1,9 @@
 """Code execution and tool creation tools."""
 
-import logging
 import math
 import sys
 from io import StringIO
-from typing import Callable, Optional
+from typing import Callable
 
 from langchain.tools import tool
 

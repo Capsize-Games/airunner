@@ -21,15 +21,12 @@ from transformers import (
     BitsAndBytesConfig,
 )
 
-from airunner.enums import SignalCode
 from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
 from airunner.utils.memory.clear_memory import clear_memory
 from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 
 if TYPE_CHECKING:
-    from airunner.components.llm.managers.llm_model_manager import (
-        LLMModelManager,
-    )
+    pass
 
 # Optional import for Mistral3 support
 try:

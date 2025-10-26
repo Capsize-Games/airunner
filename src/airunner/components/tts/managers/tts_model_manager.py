@@ -16,7 +16,6 @@ class CombinedMeta(BaseModelManagerMeta, ABCMeta):
     Combined metaclass for BaseModelManager and ABCMeta.
     """
 
-    pass
 
 
 class TTSModelManager(BaseModelManager, ABC, metaclass=CombinedMeta):

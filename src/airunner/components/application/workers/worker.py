@@ -51,7 +51,6 @@ class Worker(
         This method is kept for backward compatibility
         but actual thread management is handled by create_worker
         """
-        pass
 
     def start(self):
         """Start the worker's processing loop"""

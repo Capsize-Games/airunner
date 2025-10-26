@@ -10,11 +10,10 @@ Handles the complete lifecycle of an LLM request:
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Any
 from dataclasses import replace
 
 from airunner.components.llm.managers.llm_request import LLMRequest
-from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.enums import LLMActionType
 
 

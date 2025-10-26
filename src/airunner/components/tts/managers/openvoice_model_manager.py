@@ -287,13 +287,11 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Placeholder for unblocking TTS generator signal.
         """
-        pass
 
     def interrupt_process_signal(self):
         """
         Placeholder for interrupting the TTS process.
         """
-        pass
 
     def _initialize(self):
         """

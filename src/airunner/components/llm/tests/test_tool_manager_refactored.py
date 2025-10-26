@@ -1,7 +1,7 @@
 """Tests for refactored ToolManager with mixin architecture."""
 
 import unittest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock
 
 from airunner.components.llm.managers.tool_manager import ToolManager
 from airunner.components.llm.tests.base_test_case import BaseTestCase

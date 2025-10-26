@@ -90,7 +90,6 @@ class SubWorkflowNode(BaseCoreNode):
 
         # For now, we just have the standard exec in/out ports
         # Additional data ports could be derived from analyzing the workflow
-        pass
 
     def execute(self, input_data):
         """

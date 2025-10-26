@@ -1,4 +1,3 @@
-import os
 
 from airunner.components.art.managers.stablediffusion.download_civitai import (
     CivitAIDownloader,

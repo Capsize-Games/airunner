@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Callable
 
 from airunner.utils.application.background_worker import BackgroundWorker
 

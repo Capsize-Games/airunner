@@ -1,6 +1,6 @@
 from typing import Optional, Dict
 from PySide6.QtWidgets import QGraphicsItem
-from PySide6.QtCore import Qt, QPointF
+from PySide6.QtCore import QPointF
 from airunner.enums import CanvasToolName
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,

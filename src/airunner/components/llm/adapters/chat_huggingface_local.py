@@ -20,7 +20,7 @@ import os
 import torch
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.base import LanguageModelInput
-from langchain_core.runnables import Runnable, RunnableConfig
+from langchain_core.runnables import Runnable
 from langchain_core.messages import (
     BaseMessage,
     AIMessage,

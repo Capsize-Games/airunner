@@ -36,6 +36,7 @@ PERMANENT_EXCLUSIONS = [
     "/data/",  # Data models (may have imports for SQLAlchemy)
     "__pycache__",
     ".venv",
+    "__init__.py",
     "venv",
     "build",
     "dist",

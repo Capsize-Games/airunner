@@ -150,7 +150,6 @@ class ConversationManagementMixin:
         Args:
             message: The chatbot's response message.
         """
-        pass
 
     def load_conversation(self: "LLMModelManager", message: Dict) -> None:
         """Load an existing conversation into the chat workflow.

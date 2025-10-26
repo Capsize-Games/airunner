@@ -5,12 +5,9 @@ from PySide6.QtCore import (
     Signal,
     Qt,
     QEvent,
-    QTimer,
-    QFileSystemWatcher,
 )
 from PySide6.QtGui import (
     QIcon,
-    QStandardItemModel,
     QStandardItem,
     QAction,
 )
@@ -18,8 +15,6 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QMenu,
     QMessageBox,
-    QApplication,
-    QProgressDialog,
 )
 
 from airunner.enums import SignalCode
@@ -98,7 +93,7 @@ class DocumentsWidget(BaseWidget):
         # inject a virtual "Kiwix Zim Files" folder without creating it on
         # disk). We'll list local documents from `documents_path` and add a
         # top-level virtual folder for ZIM files stored in the ZimFile model.
-        from PySide6.QtGui import QStandardItemModel, QStandardItem
+        from PySide6.QtGui import QStandardItemModel
 
         self.documents_model = QStandardItemModel(self)
         self.ui.documentsTreeView.setModel(self.documents_model)

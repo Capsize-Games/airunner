@@ -10,7 +10,6 @@ from airunner.components.model_management.hardware_profiler import (
 from airunner.components.model_management.quantization_strategy import (
     QuantizationStrategy,
     QuantizationLevel,
-    QuantizationConfig,
 )
 from airunner.components.model_management.model_registry import (
     ModelRegistry,
@@ -20,7 +19,6 @@ from airunner.components.model_management.model_registry import (
 )
 from airunner.components.model_management.memory_allocator import (
     MemoryAllocator,
-    MemoryAllocation,
 )
 from airunner.utils.application.signal_mediator import SignalMediator
 
@@ -507,7 +505,7 @@ class ModelResourceManager:
         # Block if trying to load a different type while another is loaded
         if active:
             # Get list of active model types (excluding the one we're trying to load)
-            active_types = set(m.model_type for m in active)
+            set(m.model_type for m in active)
 
             # If there are any active models, check if we have enough VRAM
             hardware = self.hardware_profiler.get_profile()

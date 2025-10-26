@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
 from airunner.enums import CanvasToolName
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,
-    ViewState,
 )
 
 if TYPE_CHECKING:

@@ -1024,7 +1024,7 @@ class RAGMixin:
                 )
 
                 docs = reader.load_data()
-                num_chunks = len(docs)
+                len(docs)
 
                 # Emit progress - embedding phase
                 if hasattr(self, "emit_signal"):

@@ -12,8 +12,6 @@ See:
 - src/airunner/components/application/workers/model_quantization_worker.py
 """
 
-import os
-import torch
 from pathlib import Path
 from typing import Optional, Literal, Callable
 import logging

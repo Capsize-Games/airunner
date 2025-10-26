@@ -1,4 +1,3 @@
-from PySide6 import QtWidgets
 from PySide6.QtGui import QUndoCommand
 
 
@@ -493,7 +492,7 @@ class PortVisibleCmd(QUndoCommand):
         node_view.draw_node()
 
         # redraw the connected pipes in the scene.
-        ports = node_view.inputs + node_view.outputs
+        node_view.inputs + node_view.outputs
         for port in node_view.inputs + node_view.outputs:
             for pipe in port.connected_pipes:
                 pipe.update()

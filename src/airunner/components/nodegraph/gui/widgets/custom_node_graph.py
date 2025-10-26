@@ -1,4 +1,3 @@
-from airunner.enums import SignalCode
 from airunner.vendor.nodegraphqt import (
     NodeGraph,
     PropertiesBinWidget,

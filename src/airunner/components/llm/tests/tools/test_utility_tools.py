@@ -1,8 +1,7 @@
 """Tests for WebTools, CodeTools, SystemTools, and UserDataTools mixins."""
 
 import unittest
-from unittest.mock import Mock, MagicMock, patch
-import json
+from unittest.mock import Mock, patch
 
 from airunner.components.llm.managers.tools.web_tools import WebTools
 from airunner.components.llm.managers.tools.code_tools import CodeTools

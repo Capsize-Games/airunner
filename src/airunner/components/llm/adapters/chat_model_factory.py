@@ -1,6 +1,6 @@
 """Factory for creating LangChain ChatModel instances based on AI Runner settings."""
 
-from typing import Any, Optional, List, Callable
+from typing import Any, Optional
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from airunner.components.llm.adapters.chat_huggingface_local import (

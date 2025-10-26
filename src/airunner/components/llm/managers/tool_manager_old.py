@@ -1,11 +1,9 @@
 import os
 import json
 import logging
-from typing import List, Callable, Optional, Dict, Any
+from typing import List, Callable, Optional, Any
 from langchain.tools import tool
 
-from airunner.components.llm.data.conversation import Conversation
-from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 from airunner.components.user.data.user import User
 from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
@@ -45,7 +43,7 @@ class ToolManager(MediatorMixin, SettingsMixin):
 
                 context_parts = []
                 for i, doc in enumerate(results, 1):
-                    source = doc.metadata.get("source", "unknown")
+                    doc.metadata.get("source", "unknown")
                     content = (
                         doc.page_content[:500]
                         if len(doc.page_content) > 500

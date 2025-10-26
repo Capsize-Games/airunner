@@ -6,7 +6,7 @@ of agent, API, and other required context.
 """
 
 import logging
-from typing import Any, Dict, Optional, Callable
+from typing import Any, Optional, Callable
 from llama_index.core.tools import FunctionTool
 
 from airunner.components.llm.core.tool_registry import ToolRegistry, ToolInfo

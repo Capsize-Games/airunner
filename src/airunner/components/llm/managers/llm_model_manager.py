@@ -1,21 +1,11 @@
-import gc
 import random
 import os
-import traceback
 import torch
 from datetime import datetime
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List
 
-from peft import PeftModel
-from transformers.utils.quantization_config import (
-    BitsAndBytesConfig,
-    GPTQConfig,
-)
 from transformers import (
-    AutoModel,
     AutoModelForCausalLM,
-    AutoTokenizer,
-    AutoConfig,
 )
 from transformers.generation.streamers import TextIteratorStreamer
 from langchain_core.messages import AIMessage
@@ -30,11 +20,9 @@ from airunner.components.conversations.conversation_history_manager import (
 )
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.components.llm.config.model_capabilities import ModelCapability
-from airunner.components.llm.data.conversation import Conversation
 from airunner.components.application.managers.base_model_manager import (
     BaseModelManager,
 )
-from airunner.components.llm.adapters import ChatModelFactory
 from airunner.components.llm.managers.tool_manager import ToolManager
 from airunner.components.llm.managers.workflow_manager import WorkflowManager
 from airunner.components.llm.managers.quantization_mixin import (
@@ -62,14 +50,11 @@ from airunner.enums import (
     ModelType,
     ModelStatus,
     LLMActionType,
-    SignalCode,
 )
 from airunner.settings import (
     AIRUNNER_MAX_SEED,
-    AIRUNNER_LOCAL_FILES_ONLY,
 )
 from airunner.utils.memory import clear_memory
-from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.managers.llm_settings import LLMSettings

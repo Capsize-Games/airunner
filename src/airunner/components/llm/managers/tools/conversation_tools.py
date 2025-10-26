@@ -1,6 +1,6 @@
 """Conversation management and autonomous control tools."""
 
-from typing import Callable, Optional, List, Dict, Any
+from typing import Callable, Optional
 from datetime import datetime, timedelta
 
 from langchain.tools import tool

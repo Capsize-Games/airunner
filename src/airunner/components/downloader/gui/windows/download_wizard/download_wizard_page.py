@@ -29,7 +29,6 @@ class DownloadWizardPage(BaseWizard):
         Placeholder for download function
         :return:
         """
-        pass
 
     @Slot()
     def cancel(self):
