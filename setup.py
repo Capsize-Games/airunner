@@ -32,6 +32,7 @@ extras_require = {
         "pyinstaller==6.12.0",
         "flake8==7.2.0",
         "mypy==1.16.0",
+        "autoflake==2.3.1",
     ],
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",
@@ -232,6 +233,7 @@ setup(
             "airunner-daemon=airunner.services.daemon:main",
             "airunner-service=airunner.bin.airunner_service:main",
             "airunner-quality-report=airunner.bin.code_quality_report:main",
+            "airunner-remove-unused-imports=airunner.bin.remove_unused_imports:main",
         ],
     },
 )

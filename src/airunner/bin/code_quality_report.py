@@ -479,11 +479,20 @@ def main():
             "venv",
             "build",
             "dist",
+            "alembic",
+            "/data/",
+            "vendor",
         ],
-        help="Patterns to exclude from analysis",
+        help="Patterns to exclude from analysis (alembic, data, vendor always excluded)",
     )
 
     args = parser.parse_args()
+
+    # Always exclude these patterns regardless of user input
+    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py"]
+
+    # Merge user exclusions with permanent ones
+    all_exclusions = list(set(args.exclude + permanent_exclusions))
 
     # Determine root path
     if args.path:
@@ -508,7 +517,7 @@ def main():
         sys.exit(1)
 
     # Find Python files
-    python_files = find_python_files(root_path, args.exclude)
+    python_files = find_python_files(root_path, all_exclusions)
 
     if not python_files:
         print(
