@@ -231,6 +231,7 @@ setup(
             "airunner-train-diffusers=airunner.bin.train_diffusers:main",
             "airunner-daemon=airunner.services.daemon:main",
             "airunner-service=airunner.bin.airunner_service:main",
+            "airunner-quality-report=airunner.bin.code_quality_report:main",
         ],
     },
 )
