@@ -1,5 +1,8 @@
 """LLMModelManager mixins for focused responsibility separation."""
 
+from airunner.components.llm.managers.mixins.adapter_loader_mixin import (
+    AdapterLoaderMixin,
+)
 from airunner.components.llm.managers.mixins.conversation_management_mixin import (
     ConversationManagementMixin,
 )
@@ -20,6 +23,7 @@ from airunner.components.llm.managers.mixins.validation_mixin import (
 )
 
 __all__ = [
+    "AdapterLoaderMixin",
     "ConversationManagementMixin",
     "ModelLoaderMixin",
     "QuantizationConfigMixin",

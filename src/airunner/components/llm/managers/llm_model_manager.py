@@ -1,7 +1,6 @@
 import gc
 import random
 import os
-import json
 import traceback
 import torch
 from datetime import datetime
@@ -32,7 +31,6 @@ from airunner.components.conversations.conversation_history_manager import (
 from airunner.components.llm.config.provider_config import LLMProviderConfig
 from airunner.components.llm.config.model_capabilities import ModelCapability
 from airunner.components.llm.data.conversation import Conversation
-from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 from airunner.components.application.managers.base_model_manager import (
     BaseModelManager,
 )
@@ -43,6 +41,7 @@ from airunner.components.llm.managers.quantization_mixin import (
     QuantizationMixin,
 )
 from airunner.components.llm.managers.mixins import (
+    AdapterLoaderMixin,
     ConversationManagementMixin,
     ModelLoaderMixin,
     QuantizationConfigMixin,
@@ -77,6 +76,7 @@ from airunner.components.llm.managers.llm_settings import LLMSettings
 
 class LLMModelManager(
     BaseModelManager,
+    AdapterLoaderMixin,
     ConversationManagementMixin,
     ModelLoaderMixin,
     QuantizationConfigMixin,
@@ -681,72 +681,6 @@ class LLMModelManager(
         """Handle section change events."""
         self.logger.info("Section changed, clearing history")
         self.clear_history()
-
-    def _get_enabled_adapter_names(self) -> List[str]:
-        """Retrieve enabled adapter names from QSettings."""
-        try:
-            qs = get_qsettings()
-            enabled_adapters_json = qs.value(
-                "llm_settings/enabled_adapters", "[]"
-            )
-            return json.loads(enabled_adapters_json)
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Error parsing enabled adapters JSON: {e}")
-            return []
-
-    def _get_enabled_adapters(
-        self, adapter_names: List[str]
-    ) -> List[FineTunedModel]:
-        """Query database for adapters matching the given names."""
-        if not adapter_names:
-            return []
-        try:
-            adapters = FineTunedModel.objects.all()
-            return [a for a in adapters if a.name in adapter_names]
-        except Exception as e:
-            # Table might not exist if migrations haven't run
-            self.logger.error(f"Error querying adapters: {e}")
-            return []
-
-    def _apply_adapter(self, adapter: FineTunedModel) -> bool:
-        """Apply a single adapter to the model."""
-        if not adapter.adapter_path or not os.path.exists(
-            adapter.adapter_path
-        ):
-            self.logger.warning(
-                f"Adapter '{adapter.name}' path does not exist"
-            )
-            return False
-
-        try:
-            self._model = PeftModel.from_pretrained(
-                self._model, adapter.adapter_path
-            )
-            self._model.eval()
-            return True
-        except Exception as e:
-            self.logger.error(f"Error loading adapter '{adapter.name}': {e}")
-            return False
-
-    def _load_adapters(self) -> None:
-        """Load all enabled adapters onto the base model."""
-        if PeftModel is None:
-            return
-
-        try:
-            adapter_names = self._get_enabled_adapter_names()
-            if not adapter_names:
-                return
-
-            enabled_adapters = self._get_enabled_adapters(adapter_names)
-            loaded_count = sum(
-                self._apply_adapter(a) for a in enabled_adapters
-            )
-
-            if loaded_count > 0:
-                self.logger.info(f"Loaded {loaded_count} adapter(s)")
-        except Exception as e:
-            self.logger.error(f"Error loading adapters: {e}")
 
     def _load_chat_model(self) -> None:
         """
