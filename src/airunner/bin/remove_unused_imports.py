@@ -34,7 +34,6 @@ PERMANENT_EXCLUSIONS = [
     "_ui.py",  # Auto-generated Qt UI files (don't modify generated code)
     "alembic",  # Database migrations
     "/data/",  # Data models (may have imports for SQLAlchemy)
-    "vendor",  # Third-party vendored code
     "__pycache__",
     ".venv",
     "venv",
