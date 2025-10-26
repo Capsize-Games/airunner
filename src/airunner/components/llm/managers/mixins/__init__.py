@@ -3,6 +3,9 @@
 from airunner.components.llm.managers.mixins.adapter_loader_mixin import (
     AdapterLoaderMixin,
 )
+from airunner.components.llm.managers.mixins.component_loader_mixin import (
+    ComponentLoaderMixin,
+)
 from airunner.components.llm.managers.mixins.conversation_management_mixin import (
     ConversationManagementMixin,
 )
@@ -24,6 +27,7 @@ from airunner.components.llm.managers.mixins.validation_mixin import (
 
 __all__ = [
     "AdapterLoaderMixin",
+    "ComponentLoaderMixin",
     "ConversationManagementMixin",
     "ModelLoaderMixin",
     "QuantizationConfigMixin",
