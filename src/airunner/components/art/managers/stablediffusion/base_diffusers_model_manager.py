@@ -1337,6 +1337,14 @@ class BaseDiffusersModelManager(BaseModelManager):
         try:
             self._set_pipe(self.config_path, data)
             self.change_model_status(self.model_type, ModelStatus.LOADED)
+
+            # Notify ModelResourceManager that model loaded successfully
+            from airunner.components.model_management import (
+                ModelResourceManager,
+            )
+
+            resource_manager = ModelResourceManager()
+            resource_manager.model_loaded(self.model_path)
         except (
             FileNotFoundError,
             EnvironmentError,
