@@ -44,6 +44,7 @@ from airunner.components.llm.managers.quantization_mixin import (
 )
 from airunner.components.llm.managers.mixins import (
     ConversationManagementMixin,
+    ModelLoaderMixin,
     QuantizationConfigMixin,
     StatusManagementMixin,
     TokenizerLoaderMixin,
@@ -77,6 +78,7 @@ from airunner.components.llm.managers.llm_settings import LLMSettings
 class LLMModelManager(
     BaseModelManager,
     ConversationManagementMixin,
+    ModelLoaderMixin,
     QuantizationConfigMixin,
     StatusManagementMixin,
     TokenizerLoaderMixin,
@@ -677,227 +679,8 @@ class LLMModelManager(
 
     def on_section_changed(self) -> None:
         """Handle section change events."""
-        pass
-
-    def _log_gpu_memory_status(self) -> None:
-        """Log current GPU memory usage."""
-        if not torch.cuda.is_available():
-            return
-
-        torch.cuda.empty_cache()
-        gc.collect()
-        free_memory = torch.cuda.mem_get_info()[0] / (1024**3)
-        total_memory = torch.cuda.get_device_properties(0).total_memory / (
-            1024**3
-        )
-        self.logger.info(
-            f"GPU memory before loading: {free_memory:.2f}GB free / {total_memory:.2f}GB total"
-        )
-
-    def _detect_mistral3_model(self, config: AutoConfig) -> bool:
-        """Check if model configuration indicates Mistral3 architecture."""
-        is_mistral3_type = (
-            hasattr(config, "model_type") and config.model_type == "mistral3"
-        )
-        is_mistral3_arch = hasattr(config, "architectures") and any(
-            "Mistral3" in arch for arch in (config.architectures or [])
-        )
-        return is_mistral3_type or is_mistral3_arch
-
-    def _prepare_base_model_kwargs(self, is_mistral3: bool) -> Dict[str, Any]:
-        """Prepare base kwargs for model loading."""
-        model_kwargs = {
-            "local_files_only": AIRUNNER_LOCAL_FILES_ONLY,
-            "trust_remote_code": True,
-            "attn_implementation": self.attn_implementation,
-        }
-
-        if not is_mistral3:
-            model_kwargs["use_cache"] = self.use_cache
-
-        return model_kwargs
-
-    def _apply_quantization_to_kwargs(
-        self,
-        model_kwargs: Dict[str, Any],
-        quantization_config: Optional[BitsAndBytesConfig],
-        dtype: str,
-    ) -> None:
-        """Apply quantization configuration to model kwargs."""
-        if quantization_config is None:
-            model_kwargs["torch_dtype"] = self.torch_dtype
-            model_kwargs["device_map"] = self.device
-            self.logger.warning(
-                "No quantization config - loading in full precision!"
-            )
-            return
-
-        model_kwargs["quantization_config"] = quantization_config
-        model_kwargs["device_map"] = "auto"
-        model_kwargs["dtype"] = self.torch_dtype
-
-        max_memory = self._configure_quantization_memory(dtype)
-        if max_memory:
-            model_kwargs["max_memory"] = max_memory
-
-    def _load_model_from_pretrained(
-        self, model_path: str, is_mistral3: bool, model_kwargs: Dict[str, Any]
-    ) -> None:
-        """Load model from pretrained weights."""
-        if is_mistral3:
-            self._load_mistral3_model(model_path, model_kwargs)
-        else:
-            self._load_standard_model(model_path, model_kwargs)
-
-    def _load_mistral3_model(
-        self, model_path: str, model_kwargs: Dict[str, Any]
-    ) -> None:
-        """Load Mistral3 model."""
-        self.logger.info(
-            "Loading Mistral3 model with Mistral3ForConditionalGeneration"
-        )
-        if Mistral3ForConditionalGeneration is None:
-            raise ImportError(
-                "Mistral3ForConditionalGeneration not available. "
-                "Ensure transformers supports Mistral3 models."
-            )
-        self._model = Mistral3ForConditionalGeneration.from_pretrained(
-            model_path, **model_kwargs
-        )
-        self.logger.info("✓ Mistral3 model loaded successfully")
-
-    def _load_standard_model(
-        self, model_path: str, model_kwargs: Dict[str, Any]
-    ) -> None:
-        """Load standard causal LM model with fallback."""
-        try:
-            self._model = AutoModelForCausalLM.from_pretrained(
-                model_path, **model_kwargs
-            )
-        except ValueError as ve:
-            if "Unrecognized configuration class" in str(ve):
-                self.logger.warning(
-                    f"AutoModelForCausalLM doesn't recognize model architecture: {type(ve).__name__}"
-                )
-                self.logger.info(
-                    "Falling back to AutoModel.from_pretrained() for custom architecture"
-                )
-                self._model = AutoModel.from_pretrained(
-                    model_path, **model_kwargs
-                )
-            else:
-                raise
-
-    def _load_model(self) -> None:
-        """Load the LLM model with appropriate quantization."""
-        if self._model is not None:
-            return
-
-        self._log_gpu_memory_status()
-
-        try:
-            dtype = self._select_dtype()
-
-            # Check if a pre-quantized model exists on disk
-            quantized_path = self._get_quantized_model_path(
-                self.model_path, dtype
-            )
-
-            if dtype in [
-                "4bit",
-                "8bit",
-            ] and self._check_quantized_model_exists(quantized_path):
-                self.logger.info(
-                    f"✓ Found existing {dtype} quantized model at {quantized_path}"
-                )
-                self._load_pre_quantized_model(quantized_path, dtype)
-            else:
-                # No pre-quantized model - load with runtime quantization
-                if dtype in ["4bit", "8bit"]:
-                    self.logger.info(
-                        f"No pre-quantized {dtype} model found - will quantize at runtime and save"
-                    )
-                self._load_with_runtime_quantization(dtype)
-
-            self._load_adapters()
-
-        except Exception as e:
-            self.logger.error(
-                f"Error loading model: {type(e).__name__}: {str(e)}"
-            )
-            self.logger.error(f"Model traceback:\n{traceback.format_exc()}")
-            self._model = None
-
-    def _load_pre_quantized_model(
-        self, quantized_path: str, dtype: str
-    ) -> None:
-        """
-        Load a pre-saved BitsAndBytes quantized model from disk.
-
-        The saved config.json already contains the quantization_config,
-        so transformers will automatically recognize it's quantized.
-        We must NOT pass a quantization_config here, as that would try
-        to re-quantize already-quantized weights (causing uint8 error).
-        """
-        self.logger.info(
-            f"Loading pre-saved {dtype} quantized model from {quantized_path}"
-        )
-
-        config = AutoConfig.from_pretrained(
-            quantized_path,
-            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            trust_remote_code=True,
-        )
-
-        is_mistral3 = self._detect_mistral3_model(config)
-        model_kwargs = self._prepare_base_model_kwargs(is_mistral3)
-
-        # Don't pass quantization_config - it's already in the saved config.json
-        # Just set device_map and dtype for loading
-        model_kwargs["device_map"] = "auto"
-        model_kwargs["torch_dtype"] = self.torch_dtype
-
-        self._load_model_from_pretrained(
-            quantized_path, is_mistral3, model_kwargs
-        )
-
-        self.logger.info(
-            f"✓ Pre-quantized {dtype} model loaded successfully from disk"
-        )
-
-    def _load_with_runtime_quantization(self, dtype: str) -> None:
-        """Load model with runtime BitsAndBytes quantization."""
-        quantization_config = self._create_bitsandbytes_config(dtype)
-
-        model_path = self.model_path
-        config = AutoConfig.from_pretrained(
-            model_path,
-            local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-            trust_remote_code=True,
-        )
-
-        is_mistral3 = self._detect_mistral3_model(config)
-        model_kwargs = self._prepare_base_model_kwargs(is_mistral3)
-        self._apply_quantization_to_kwargs(
-            model_kwargs, quantization_config, dtype
-        )
-        self._load_model_from_pretrained(model_path, is_mistral3, model_kwargs)
-
-        # Save quantized model for faster future loads
-        # We need to manually inject quantization_config into config.json
-        if dtype in ["4bit", "8bit"]:
-            try:
-                self.logger.info(
-                    f"Saving {dtype} quantized model for faster future loads..."
-                )
-                self._save_loaded_model_quantized(
-                    model_path, dtype, quantization_config
-                )
-            except Exception as e:
-                self.logger.warning(
-                    f"Could not save quantized model: {e}. "
-                    f"Will use runtime quantization on next load."
-                )
+        self.logger.info("Section changed, clearing history")
+        self.clear_history()
 
     def _get_enabled_adapter_names(self) -> List[str]:
         """Retrieve enabled adapter names from QSettings."""
