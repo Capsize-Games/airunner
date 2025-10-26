@@ -70,41 +70,87 @@ class X4DataPreparationMixin:
         settings = getattr(self, "generator_settings", None)
         defaults = ImageRequest()
 
-        # Extract prompt parameters
-        prompt = data.get("prompt", getattr(settings, "prompt", "")) or ""
-        negative_prompt = (
-            data.get(
-                "negative_prompt", getattr(settings, "negative_prompt", "")
-            )
-            or ""
+        # Extract prompts and basic fields
+        prompt, negative_prompt = self._extract_prompts(data, settings)
+
+        # Numeric and normalized fields
+        steps = self._parse_steps(getattr(settings, "steps", defaults.steps))
+        guidance_scale = self._normalize_guidance_scale(
+            data.get("scale", getattr(settings, "scale", None))
+        )
+        seed = self._parse_int(
+            getattr(settings, "seed", defaults.seed), defaults.seed
+        )
+        strength = self._parse_strength(
+            getattr(settings, "strength", 100), defaults.strength
         )
 
-        # Extract and validate steps
-        steps = getattr(settings, "steps", defaults.steps) or defaults.steps
-        try:
-            steps = max(1, int(steps))
-        except (TypeError, ValueError):
-            steps = defaults.steps
+        normalized = self._normalize_request_fields(
+            settings=settings,
+            defaults=defaults,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            seed=seed,
+            strength=strength,
+            image=image,
+        )
 
-        # Extract and normalize guidance scale
-        scale_raw = data.get("scale", getattr(settings, "scale", None))
-        guidance_scale = self._normalize_guidance_scale(scale_raw)
+        return self._assemble_image_request(**normalized)
 
-        # Extract and validate seed
-        seed = getattr(settings, "seed", defaults.seed)
-        try:
-            seed = int(seed)
-        except (TypeError, ValueError):
-            seed = defaults.seed
+    def _normalize_request_fields(self, **kwargs):
+        """Return kwargs unchanged (hook for future normalization).
 
-        # Extract and normalize strength
-        strength_raw = getattr(settings, "strength", 100)
-        try:
-            strength = (float(strength_raw) or 100) / 100
-        except (TypeError, ValueError):
-            strength = defaults.strength
+        Kept as a separate function to reduce size of the public builder
+        and to provide an explicit extension point for future validation.
+        """
+        return kwargs
 
-        return ImageRequest(
+    def _assemble_image_request(
+        self,
+        settings,
+        defaults,
+        prompt,
+        negative_prompt,
+        steps,
+        guidance_scale,
+        seed,
+        strength,
+        image,
+    ):
+        """Assemble and return an ImageRequest from given normalized fields.
+
+        This method delegates the construction of kwargs to a small helper
+        to keep its own size under the quality threshold.
+        """
+        kwargs = self._build_image_request_kwargs(
+            settings,
+            defaults,
+            prompt,
+            negative_prompt,
+            steps,
+            guidance_scale,
+            seed,
+            strength,
+            image,
+        )
+        return ImageRequest(**kwargs)
+
+    def _build_image_request_kwargs(
+        self,
+        settings,
+        defaults,
+        prompt,
+        negative_prompt,
+        steps,
+        guidance_scale,
+        seed,
+        strength,
+        image,
+    ):
+        """Construct keyword arguments for ImageRequest instantiation."""
+        return dict(
             pipeline_action="upscale_x4",
             generator_name=getattr(
                 settings, "generator_name", defaults.generator_name
@@ -128,6 +174,43 @@ class X4DataPreparationMixin:
             width=image.width,
             height=image.height,
         )
+
+    def _extract_prompts(self, data, settings):
+        """Extract prompt and negative_prompt from data or settings.
+
+        Returns a tuple (prompt, negative_prompt) defaulting to empty strings.
+        """
+        prompt = data.get("prompt", getattr(settings, "prompt", "")) or ""
+        negative_prompt = (
+            data.get(
+                "negative_prompt", getattr(settings, "negative_prompt", "")
+            )
+            or ""
+        )
+        return prompt, negative_prompt
+
+    def _parse_steps(self, steps_value):
+        """Parse and normalize steps, ensuring at least 1."""
+        defaults = ImageRequest()
+        try:
+            return max(1, int(steps_value or defaults.steps))
+        except (TypeError, ValueError):
+            return defaults.steps
+
+    def _parse_int(self, raw, default):
+        """Parse integer, returning default on failure."""
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return default
+
+    def _parse_strength(self, raw, default):
+        """Parse strength percentage (e.g., 100 -> 1.0) and return float."""
+        try:
+            val = float(raw)
+            return (val or 100) / 100
+        except (TypeError, ValueError):
+            return default
 
     def _build_pipeline_kwargs(
         self,
@@ -161,7 +244,21 @@ class X4DataPreparationMixin:
             "noise_level": noise_level,
         }
 
-        # Handle prompts for single images vs batches
+        # Add prompt fields (handles single vs batch images)
+        self._prepare_prompts_in_kwargs(kwargs, image, prompt, negative_prompt)
+
+        # Filter out None values
+        return {
+            key: value for key, value in kwargs.items() if value is not None
+        }
+
+    def _prepare_prompts_in_kwargs(
+        self, kwargs, image, prompt, negative_prompt
+    ):
+        """Populate 'prompt' and 'negative_prompt' in kwargs appropriately.
+
+        For batched images, replicate prompts into lists matching batch size.
+        """
         if prompt:
             kwargs["prompt"] = (
                 [prompt] * len(image)
@@ -175,11 +272,6 @@ class X4DataPreparationMixin:
                 if self._is_image_sequence(image)
                 else negative_prompt
             )
-
-        # Filter out None values
-        return {
-            key: value for key, value in kwargs.items() if value is not None
-        }
 
     def _normalize_guidance_scale(
         self, value: Optional[Union[int, float]]

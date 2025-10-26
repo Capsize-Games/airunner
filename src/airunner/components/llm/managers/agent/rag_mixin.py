@@ -57,4 +57,3 @@ class RAGMixin(
         # Reload after changes
         my_instance.reload_rag()
     """
-    pass

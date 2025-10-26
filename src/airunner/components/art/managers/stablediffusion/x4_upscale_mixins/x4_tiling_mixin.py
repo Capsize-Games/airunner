@@ -80,27 +80,44 @@ class X4TilingMixin:
         )
 
         try:
-            # Handle alpha channel if present
+            # Choose composite or simple paste based on alpha presence
             if "A" in tile.getbands():
-                try:
-                    # Composite over white background
-                    tile_rgba = tile.convert("RGBA")
-                    white_bg = Image.new(
-                        "RGBA", tile_rgba.size, (255, 255, 255, 255)
-                    )
-                    composed = Image.alpha_composite(
-                        white_bg, tile_rgba
-                    ).convert("RGB")
-                    canvas.paste(composed, dest_box)
-                except Exception:
-                    # Fallback to mask-based paste
-                    mask = tile.split()[-1]
-                    canvas.paste(tile.convert("RGBA"), dest_box, mask)
+                X4TilingMixin._paste_tile_composite(canvas, tile, dest_box)
             else:
-                canvas.paste(tile.convert("RGB"), dest_box)
+                X4TilingMixin._paste_tile_simple(canvas, tile, dest_box)
         except Exception:
             # Best-effort paste on error
             try:
                 canvas.paste(tile, dest_box)
             except Exception:
                 pass
+
+    @staticmethod
+    def _paste_tile_composite(
+        canvas: Image.Image,
+        tile: Image.Image,
+        dest_box: Tuple[int, int, int, int],
+    ):
+        """Paste an RGBA tile onto the canvas using alpha compositing.
+
+        Falls back to mask-based paste when alpha_composite fails.
+        """
+        try:
+            tile_rgba = tile.convert("RGBA")
+            white_bg = Image.new("RGBA", tile_rgba.size, (255, 255, 255, 255))
+            composed = Image.alpha_composite(white_bg, tile_rgba).convert(
+                "RGB"
+            )
+            canvas.paste(composed, dest_box)
+        except Exception:
+            mask = tile.split()[-1]
+            canvas.paste(tile.convert("RGBA"), dest_box, mask)
+
+    @staticmethod
+    def _paste_tile_simple(
+        canvas: Image.Image,
+        tile: Image.Image,
+        dest_box: Tuple[int, int, int, int],
+    ):
+        """Paste a non-alpha tile onto the canvas after RGB conversion."""
+        canvas.paste(tile.convert("RGB"), dest_box)

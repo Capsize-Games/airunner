@@ -14,7 +14,6 @@ from compel import (
     Compel,
     DiffusersTextualInversionManager,
 )
-from diffusers import SchedulerMixin
 from transformers import CLIPFeatureExtractor
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 
