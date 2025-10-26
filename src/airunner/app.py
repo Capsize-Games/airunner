@@ -97,8 +97,13 @@ class App(MediatorMixin, SettingsMixin, QObject):
         initialize_gui: bool = True,  # New flag to control GUI initialization
     ):
         """
-        Initialize the application and run as a GUI application or a socket server.
-        :param main_window_class: The main window class to use for the application.
+        Initialize the application.
+
+        Args:
+            no_splash: Skip splash screen display (GUI mode only)
+            main_window_class: Custom main window class (GUI mode only)
+            window_class_params: Parameters for main window (GUI mode only)
+            initialize_gui: If False, run in headless mode (no GUI)
         """
         self.main_window_class_ = main_window_class
         self.window_class_params = window_class_params or {}
@@ -107,6 +112,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self.splash = None
         self.initialize_gui = initialize_gui  # Store the flag
         self.http_server_thread = None
+        self.is_running = False
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
@@ -120,41 +126,68 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self._ensure_mathjax()
 
         # Start HTTPS server for static assets (MathJax and content widgets)
-        static_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "static")
-        )
-        # Find all components/**/gui/static directories
-        components_static_dirs = glob.glob(
-            os.path.join(
-                os.path.dirname(__file__), "components", "**", "gui", "static"
-            ),
-            recursive=True,
-        )
-        # Add user web dir if it exists
-        static_search_dirs = [static_dir] + components_static_dirs
-        if os.path.isdir(self.user_web_dir):
-            static_search_dirs.append(self.user_web_dir)
-        mathjax_dir = os.path.join(
-            static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
-        )
-        if self.initialize_gui and os.path.isdir(mathjax_dir):
-            logging.info("Starting local HTTPS server for static assets.")
-            self.http_server_thread = LocalHttpServerThread(
-                directory=static_dir,
-                additional_directories=static_search_dirs[1:],
-                port=LOCAL_SERVER_PORT,
-                lna_enabled=LNA_ENABLED,  # Pass LNA mode to server
+        # Only needed in GUI mode
+        if self.initialize_gui:
+            static_dir = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "static")
             )
-            self.http_server_thread.start()
-            self.start()
-            self.set_translations()
-            self.run()
-        elif self.initialize_gui:
-            print(
-                f"ERROR: MathJax directory not found: {mathjax_dir}\nPlease run the MathJax setup script or follow the manual instructions in the README."
+            # Find all components/**/gui/static directories
+            components_static_dirs = glob.glob(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "components",
+                    "**",
+                    "gui",
+                    "static",
+                ),
+                recursive=True,
             )
-            raise RuntimeError(
-                "MathJax is required for LaTeX rendering. See README.md for setup instructions."
+            # Add user web dir if it exists
+            static_search_dirs = [static_dir] + components_static_dirs
+            if os.path.isdir(self.user_web_dir):
+                static_search_dirs.append(self.user_web_dir)
+            mathjax_dir = os.path.join(
+                static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
+            )
+            if os.path.isdir(mathjax_dir):
+                logging.info("Starting local HTTPS server for static assets.")
+                self.http_server_thread = LocalHttpServerThread(
+                    directory=static_dir,
+                    additional_directories=static_search_dirs[1:],
+                    port=LOCAL_SERVER_PORT,
+                    lna_enabled=LNA_ENABLED,  # Pass LNA mode to server
+                )
+                self.http_server_thread.start()
+                self.start()
+                self.set_translations()
+                self.run()
+            else:
+                print(
+                    f"ERROR: MathJax directory not found: {mathjax_dir}\nPlease run the MathJax setup script or follow the manual instructions in the README."
+                )
+                raise RuntimeError(
+                    "MathJax is required for LaTeX rendering. See README.md for setup instructions."
+                )
+        else:
+            # Headless mode - just initialize core systems
+            logging.info("Running in headless mode (no GUI)")
+            self.is_running = True
+
+        # Initialize knowledge extraction system (works in both GUI and headless modes)
+        self._initialize_knowledge_system()
+
+    def _initialize_knowledge_system(self):
+        """Initialize the automatic knowledge extraction system."""
+        try:
+            from airunner.components.knowledge import (
+                initialize_knowledge_system,
+            )
+
+            initialize_knowledge_system()
+            logging.info("Knowledge extraction system initialized")
+        except Exception as e:
+            logging.error(
+                f"Failed to initialize knowledge system: {e}", exc_info=True
             )
 
     def on_update_locale_signal(self, data: dict):
@@ -489,9 +522,32 @@ class App(MediatorMixin, SettingsMixin, QObject):
             )
 
     def quit(self):
+        """Stop HTTP server and cleanup resources."""
         if self.http_server_thread:
             self.http_server_thread.stop()
             self.http_server_thread.wait()
+
+    def cleanup(self):
+        """
+        Cleanup resources when shutting down.
+        Safe to call in both GUI and headless mode.
+        """
+        logging.info("Cleaning up App resources...")
+
+        try:
+            # Stop HTTP server if running
+            self.quit()
+
+            # Emit shutdown signal for components to cleanup
+            self.emit_signal(SignalCode.APPLICATION_SHUTDOWN_SIGNAL, {})
+
+            # Mark as not running
+            self.is_running = False
+
+            logging.info("App cleanup complete")
+
+        except Exception as e:
+            logging.error(f"Error during App cleanup: {e}", exc_info=True)
 
     def _ensure_mathjax(self):
         # Only run setup if MathJax is not present

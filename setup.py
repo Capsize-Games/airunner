@@ -194,6 +194,9 @@ setup(
         "setuptools==80.9.0",
         "etils[epath]==1.12.2",
         "jinja2==3.1.6",
+        "pyyaml==6.0.2",
+        "fastapi==0.115.0",
+        "uvicorn[standard]==0.34.0",
     ],
     extras_require=extras_require,
     package_data={
@@ -226,6 +229,8 @@ setup(
             "airunner-create-theme=airunner.bin.airunner_create_theme:main",
             "airunner-create-component=airunner.bin.airunner_create_component:main",
             "airunner-train-diffusers=airunner.bin.train_diffusers:main",
+            "airunner-daemon=airunner.services.daemon:main",
+            "airunner-service=airunner.bin.airunner_service:main",
         ],
     },
 )
