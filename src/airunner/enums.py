@@ -166,7 +166,6 @@ class SignalCode(Enum):
     QUIT_APPLICATION = "quit"
     TOGGLE_FULLSCREEN_SIGNAL = "fullscreen_signal"
     TOGGLE_TTS_SIGNAL = "toggle_tts_signal"
-    TOGGLE_SD_SIGNAL = "toggle_sd_signal"
     TOGGLE_LLM_SIGNAL = "toggle_llm_signal"
     START_AUTO_IMAGE_GENERATION_SIGNAL = "start_auto_image_generation_signal"
     STOP_AUTO_IMAGE_GENERATION_SIGNAL = "stop_auto_image_generation_signal"
@@ -252,9 +251,6 @@ class SignalCode(Enum):
     MASK_UPDATED = "mask_updated"
     HISTORY_UPDATED = "history_updated"
     CANVAS_IMAGE_UPDATED_SIGNAL = "canvas_image_updated_signal"
-
-    UNLOAD_NON_SD_MODELS = "unload_non_sd_models"
-    LOAD_NON_SD_MODELS = "load_non_sd_models"
 
     SD_PIPELINE_LOADED_SIGNAL = "sd_pipeline_loaded_signal"
     MISSING_REQUIRED_MODELS = "missing_required_models"

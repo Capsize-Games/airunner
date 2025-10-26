@@ -470,16 +470,11 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def finalize_image_generated_by_llm(self, _data):
         """
         Callback function to be called after the image has been generated.
+
+        ModelResourceManager will automatically handle model swapping as needed
+        when the LLM is used next, so we can directly call the finalize method.
         """
-        self.api.art.toggle_sd(
-            enabled=False,
-            callback=lambda _d: self.api.art.load_non_sd(
-                # Reload only the LLM explicitly. TTS/STT should reload only
-                # if they had been enabled prior to switching to art mode.
-                {"models": [ModelType.LLM]},
-                callback=self.api.llm.finalize_image_generated_by_llm,
-            ),
-        )
+        self.api.llm.finalize_image_generated_by_llm(_data)
 
     ##########################################################################
     # End LLM Generated Image handlers
