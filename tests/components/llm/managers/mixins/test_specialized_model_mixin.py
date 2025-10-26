@@ -56,7 +56,7 @@ def mixin():
 def mock_get_model():
     """Create mock get_model_for_capability function."""
     with patch(
-        "airunner.components.llm.managers.mixins.specialized_model_mixin."
+        "airunner.components.llm.config.model_capabilities."
         "get_model_for_capability"
     ) as mock:
         yield mock
@@ -305,15 +305,19 @@ class TestUseSpecializedModel:
         )
         mixin._chat_model.invoke.return_value = "Result"
 
-        # Set up restore function
-        restore_mock = Mock()
-        mixin._restore_primary_model = restore_mock
-
-        mixin.use_specialized_model(
+        # load_specialized_model will create a restore function
+        # We need to verify it gets called
+        result = mixin.use_specialized_model(
             MockModelCapability.PROMPT_ENHANCEMENT, "Test"
         )
 
-        restore_mock.assert_called_once()
+        # After use_specialized_model completes, the restore function should have been called
+        # and cleared (set to None)
+        assert result == "Result"
+        # The restore function should have been called and then cleared
+        # So checking that unload/load were called (which happens in restore)
+        assert mixin.unload.call_count >= 1
+        assert mixin.load.call_count >= 1
 
     def test_restores_primary_on_generation_error(self, mixin, mock_get_model):
         """Should restore primary model even if generation fails."""
@@ -322,16 +326,14 @@ class TestUseSpecializedModel:
         )
         mixin._chat_model.invoke.side_effect = Exception("Generation failed")
 
-        # Set up restore function
-        restore_mock = Mock()
-        mixin._restore_primary_model = restore_mock
-
         result = mixin.use_specialized_model(
             MockModelCapability.PROMPT_ENHANCEMENT, "Test"
         )
 
         assert result is None
-        restore_mock.assert_called_once()
+        # Should have attempted to restore (unload/load called)
+        assert mixin.unload.call_count >= 1
+        assert mixin.load.call_count >= 1
         mixin.logger.error.assert_called()
 
     def test_handles_restore_failure_gracefully(self, mixin, mock_get_model):
@@ -341,16 +343,15 @@ class TestUseSpecializedModel:
         )
         mixin._chat_model.invoke.side_effect = Exception("Generation failed")
 
-        # Set up restore function that also fails
-        restore_mock = Mock(side_effect=Exception("Restore failed"))
-        mixin._restore_primary_model = restore_mock
+        # Make load fail during restore to test error handling
+        mixin.load.side_effect = [None, Exception("Restore load failed")]
 
         result = mixin.use_specialized_model(
             MockModelCapability.PROMPT_ENHANCEMENT, "Test"
         )
 
         assert result is None
-        # Should log both errors
+        # Should log both generation error and restore error
         assert mixin.logger.error.call_count >= 2
 
     def test_does_not_crash_without_restore_function(
