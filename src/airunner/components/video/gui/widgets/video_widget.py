@@ -5,7 +5,6 @@ Provides UI for generating videos using various models (HunyuanVideo, CogVideoX,
 with real-time preview, timeline controls, and export functionality.
 """
 
-import os
 from typing import Optional, List
 import numpy as np
 from PIL import Image
@@ -22,7 +21,7 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.video.gui.widgets.templates.video_widget_ui import (
     Ui_video_widget,
 )
-from airunner.enums import SignalCode, ModelType
+from airunner.enums import SignalCode
 
 
 class VideoWidget(BaseWidget):

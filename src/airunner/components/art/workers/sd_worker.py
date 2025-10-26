@@ -472,12 +472,9 @@ class SDWorker(Worker):
         Args:
             data: Download info with repo_id, model_path, missing_files, etc.
         """
-        from airunner.components.art.gui.dialogs.model_download_dialog import (
-            ModelDownloadDialog,
-        )
 
         repo_id = data.get("repo_id")
-        model_path = data.get("model_path")
+        data.get("model_path")
         missing_files = data.get("missing_files", [])
         version = data.get("version", "")
 

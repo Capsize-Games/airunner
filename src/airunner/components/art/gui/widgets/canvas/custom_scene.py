@@ -38,6 +38,10 @@ from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
 from airunner.components.data.session_manager import session_scope
+from airunner.components.model_management import (
+    ModelResourceManager,
+    CanvasMemoryTracker,
+)
 
 import requests  # Added for HTTP(S) image download
 
@@ -374,7 +378,12 @@ class CustomScene(
         self._original_item_positions = value
 
     @property
-    def current_tool(self):
+    def current_tool(self) -> Optional[CanvasToolName]:
+        """Get the currently active canvas tool.
+
+        Returns:
+            The active CanvasToolName, or None if no tool is active.
+        """
         return (
             None
             if self.application_settings.current_tool is None
@@ -382,11 +391,24 @@ class CustomScene(
         )
 
     @property
-    def settings_key(self):
+    def settings_key(self) -> str:
+        """Get the current settings key from the property.
+
+        Returns:
+            The settings key string.
+        """
         return self.property("settings_key")
 
     @property
-    def current_settings(self):
+    def current_settings(self) -> Any:
+        """Get the current settings object based on settings_key.
+
+        Returns:
+            The active settings object (controlnet, image_to_image, outpaint, or drawing_pad).
+
+        Raises:
+            ValueError: If settings_key doesn't match any known settings type.
+        """
         settings = None
         if self.settings_key == "controlnet_settings":
             settings = self.controlnet_settings
@@ -403,7 +425,12 @@ class CustomScene(
         return settings
 
     @property
-    def image_pivot_point(self):
+    def image_pivot_point(self) -> QPointF:
+        """Get the current image pivot point from settings.
+
+        Returns:
+            QPointF representing the pivot point coordinates, or (0, 0) if not available.
+        """
         if hasattr(self.current_settings, "x_pos") and hasattr(
             self.current_settings, "y_pos"
         ):
@@ -1330,11 +1357,6 @@ class CustomScene(
     def _update_canvas_memory_allocation(self):
         """Update ModelResourceManager with current canvas memory usage."""
         try:
-            from airunner.components.model_management import (
-                ModelResourceManager,
-                CanvasMemoryTracker,
-            )
-
             resource_manager = ModelResourceManager()
             tracker = CanvasMemoryTracker()
 
