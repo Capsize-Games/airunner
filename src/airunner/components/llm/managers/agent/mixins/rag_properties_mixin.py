@@ -81,6 +81,9 @@ class RAGPropertiesMixin:
         """
         if self._embedding is None:
             try:
+                # Default embedding model - same as used in rag_mixin.py
+                model_name = "intfloat/e5-large"
+
                 device = "cpu"
                 if torch.cuda.is_available():
                     device = "cuda"
@@ -93,7 +96,7 @@ class RAGPropertiesMixin:
                 if hasattr(self, "logger"):
                     self.logger.info(
                         f"Initializing embedding model on {device}: "
-                        f"{self.knowledge_settings.embedding_model_name}"
+                        f"{model_name}"
                     )
 
                 # Set quantization flag if using CPU or limited GPU memory
@@ -101,11 +104,11 @@ class RAGPropertiesMixin:
                 # quantization_flag = device == "cpu"
 
                 self._embedding = HuggingFaceEmbedding(
-                    model_name=self.knowledge_settings.embedding_model_name,
+                    model_name=model_name,
                     device=device,
                     trust_remote_code=True,
-                    # embed_batch_size=self.knowledge_settings.embed_batch_size,
-                    # text_instruction=self.knowledge_settings.text_instruction,
+                    # embed_batch_size=self.embed_batch_size,
+                    # text_instruction=self.text_instruction,
                     local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                 )
 
@@ -120,7 +123,8 @@ class RAGPropertiesMixin:
                         f"Failed to initialize embedding model: {e}",
                         exc_info=True,
                     )
-                raise
+                # Don't raise - return None to allow RAG setup to skip gracefully
+                return None
 
         return self._embedding
 

@@ -64,7 +64,7 @@ class RAGLifecycleMixin:
             # Check if embedding model is available
             # Note: We don't need Settings.llm since LangChain handles chat flow
             # We only need embedding model for document retrieval
-            if not hasattr(self, "embedding"):
+            if not hasattr(self, "embedding") or self.embedding is None:
                 if hasattr(self, "logger"):
                     self.logger.debug(
                         "Deferring RAG setup - embedding model not yet available"

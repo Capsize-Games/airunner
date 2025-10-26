@@ -66,6 +66,7 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             airunner_path,
             os.path.join(airunner_path, "data"),
             os.path.join(os.path.expanduser("~"), ".triton/cache/"),
+            os.path.join(os.path.expanduser("~"), ".cache/llama_index/"),
             "/dev/",
             "/proc/",
             site_packages_path,

@@ -79,7 +79,7 @@ class SDGenerationPreparationMixin:
             "height": int(self.image_request.height),
             "clip_skip": int(self.image_request.clip_skip),
             "num_inference_steps": int(self.image_request.steps),
-            "callback_on_step_end": self.__interrupt_callback,
+            "callback_on_step_end": self._interrupt_callback,
             "generator": self.generator,
             # Use 1 as default if images_per_batch is None
             "num_images_per_prompt": (

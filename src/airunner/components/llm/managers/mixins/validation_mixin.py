@@ -204,12 +204,30 @@ class ValidationMixin:
 
         Checks that model path is configured. Warns if model is not
         in the resource manager registry but allows loading anyway.
+        Emits an error signal if the model path is not set.
 
         Returns:
             True if path is valid, False if not set.
         """
-        if not self.model_path:
-            self.logger.error("Model path is not set")
+        try:
+            if not self.model_path:
+                self.logger.error("Model path is not set")
+                self.emit_signal(
+                    SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                    {
+                        "message": "No LLM model selected. Please go to Settings > LLM and select a model."
+                    },
+                )
+                return False
+        except ValueError as e:
+            # Catch the ValueError raised by the property when path is not configured
+            self.logger.error(f"Model path validation failed: {e}")
+            self.emit_signal(
+                SignalCode.APPLICATION_STATUS_ERROR_SIGNAL,
+                {
+                    "message": "No LLM model selected. Please go to Settings > LLM and select a model."
+                },
+            )
             return False
 
         self._check_model_registry()

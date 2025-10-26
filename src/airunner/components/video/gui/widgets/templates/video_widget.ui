@@ -183,9 +183,6 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="styleSheet">
-          <string notr="true">background-color: #1a1a1a;</string>
-         </property>
          <property name="frameShape">
           <enum>QFrame::NoFrame</enum>
          </property>
@@ -403,7 +400,7 @@
                </size>
               </property>
               <property name="text">
-               <string>💾 Export</string>
+               <string>Export</string>
               </property>
               <property name="toolTip">
                <string>Export Video</string>
