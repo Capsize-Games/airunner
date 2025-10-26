@@ -468,6 +468,11 @@ def main():
         "--json", action="store_true", help="Output results as JSON"
     )
     parser.add_argument(
+        "--include-gui",
+        action="store_true",
+        help="Include GUI folder files in analysis (normally excluded)",
+    )
+    parser.add_argument(
         "--exclude",
         nargs="+",
         default=[
@@ -483,13 +488,17 @@ def main():
             "vendor",
             "/gui/",
         ],
-        help="Patterns to exclude from analysis (alembic, data, vendor, gui always excluded)",
+        help="Patterns to exclude from analysis (alembic, data, vendor, _ui.py always excluded)",
     )
 
     args = parser.parse_args()
 
     # Always exclude these patterns regardless of user input
-    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py", "/gui/"]
+    permanent_exclusions = ["alembic", "/data/", "vendor", "_ui.py"]
+
+    # Conditionally add /gui/ to permanent exclusions
+    if not args.include_gui:
+        permanent_exclusions.append("/gui/")
 
     # Merge user exclusions with permanent ones
     all_exclusions = list(set(args.exclude + permanent_exclusions))

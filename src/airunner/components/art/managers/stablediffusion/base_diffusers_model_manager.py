@@ -16,6 +16,9 @@ from airunner.components.art.workers.image_export_worker import (
 from airunner.components.application.managers.base_model_manager import (
     BaseModelManager,
 )
+from airunner.components.art.managers.stablediffusion.noise_sampler import (
+    DeterministicSDENoiseSampler,
+)
 from airunner.enums import (
     ModelStatus,
     ModelType,
@@ -39,29 +42,6 @@ from airunner.components.art.managers.stablediffusion.mixins import (
     SDGenerationPreparationMixin,
     SDImageGenerationMixin,
 )
-
-
-class DeterministicSDENoiseSampler:
-    """
-    Deterministic noise sampler for DPM++ SDE schedulers.
-
-    Ensures consistent results across different batch sizes by using
-    per-seed generators for noise sampling, similar to AUTOMATIC1111's
-    BrownianTreeNoiseSampler approach.
-    """
-
-    def __init__(self, seed: int, device: torch.device):
-        self.seed = seed
-        self.device = device
-        self.generator = torch.Generator(device=device).manual_seed(seed)
-
-    def __call__(self, shape, dtype=None):
-        """Generate deterministic noise tensor."""
-        if dtype is None:
-            dtype = torch.float32
-        return torch.randn(
-            shape, generator=self.generator, device=self.device, dtype=dtype
-        )
 
 
 class BaseDiffusersModelManager(
