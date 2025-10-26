@@ -118,6 +118,42 @@ class CodeAnalyzer(ast.NodeVisitor):
             )
         )
 
+    def _count_code_lines(self, node: ast.AST) -> int:
+        """Count actual code lines, excluding docstrings and blank lines.
+
+        Args:
+            node: AST node (FunctionDef or ClassDef) to count lines for.
+
+        Returns:
+            Number of non-blank, non-docstring lines.
+        """
+        if not hasattr(node, "lineno") or not hasattr(node, "end_lineno"):
+            return 0
+
+        start_line = node.lineno
+        end_line = node.end_lineno
+
+        # Get the docstring if it exists
+        docstring = ast.get_docstring(node)
+        docstring_lines = 0
+        if docstring:
+            # Count docstring lines (including quotes)
+            docstring_lines = (
+                len(docstring.splitlines()) + 2
+            )  # +2 for triple quotes
+
+        # Count non-blank lines
+        code_lines = 0
+        for i in range(start_line - 1, end_line):
+            if i < len(self.lines):
+                line = self.lines[i].strip()
+                # Skip blank lines and comment-only lines
+                if line and not line.startswith("#"):
+                    code_lines += 1
+
+        # Subtract docstring lines
+        return max(0, code_lines - docstring_lines)
+
     def visit_Import(self, node: ast.Import):
         """Check import statements."""
         # Check if import is inline (inside function/class)
@@ -162,15 +198,15 @@ class CodeAnalyzer(ast.NodeVisitor):
         was_in_function = self.in_function
         self.in_function = True
 
-        # Check function length
+        # Check function length (excluding docstrings and blank lines)
         if hasattr(node, "end_lineno") and node.end_lineno:
-            func_lines = node.end_lineno - node.lineno + 1
+            func_lines = self._count_code_lines(node)
             if func_lines > 20:
                 self.add_issue(
                     node.lineno,
                     "long_function",
                     "warning",
-                    f"Function '{node.name}' is {func_lines} lines (>20 recommended)",
+                    f"Function '{node.name}' is {func_lines} code lines (≤20 recommended)",
                 )
 
         # Check for docstring (public functions only)
@@ -221,15 +257,15 @@ class CodeAnalyzer(ast.NodeVisitor):
         was_in_class = self.in_class
         self.in_class = True
 
-        # Check class length
+        # Check class length (excluding docstrings and blank lines)
         if hasattr(node, "end_lineno") and node.end_lineno:
-            class_lines = node.end_lineno - node.lineno + 1
+            class_lines = self._count_code_lines(node)
             if class_lines > 200:
                 self.add_issue(
                     node.lineno,
                     "long_class",
                     "warning",
-                    f"Class '{node.name}' is {class_lines} lines (>200 recommended, consider mixins)",
+                    f"Class '{node.name}' is {class_lines} code lines (≤200 recommended, consider mixins)",
                 )
 
         # Check for docstring (public classes only)

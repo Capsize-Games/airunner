@@ -45,6 +45,7 @@ from airunner.components.llm.managers.quantization_mixin import (
 from airunner.components.llm.managers.mixins import (
     StatusManagementMixin,
     ValidationMixin,
+    ConversationManagementMixin,
 )
 from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.components.llm.managers.agent.rag_mixin import RAGMixin
@@ -75,6 +76,7 @@ class LLMModelManager(
     BaseModelManager,
     StatusManagementMixin,
     ValidationMixin,
+    ConversationManagementMixin,
     RAGMixin,
     QuantizationMixin,
     TrainingMixin,
@@ -668,90 +670,6 @@ class LLMModelManager(
             self.logger.warning(
                 f"Workflow manager not available: {self._workflow_manager}"
             )
-
-    def on_conversation_deleted(self, data: Dict) -> None:
-        """Handle conversation deletion event."""
-        if self._workflow_manager:
-            self._workflow_manager.clear_memory()
-
-    def clear_history(self, data: Optional[Dict] = None) -> None:
-        """Clear chat history and set up a new conversation."""
-        data = data or {}
-        conversation = self._get_or_create_conversation(data)
-
-        if conversation:
-            Conversation.make_current(conversation.id)
-            self.logger.info(
-                f"Starting new conversation with ID: {conversation.id}"
-            )
-
-        if self._workflow_manager:
-            if conversation:
-                self._workflow_manager.set_conversation_id(conversation.id)
-            else:
-                self._workflow_manager.clear_memory()
-
-    def _get_or_create_conversation(
-        self, data: Dict
-    ) -> Optional[Conversation]:
-        """Get existing conversation or create a new one."""
-        conversation_id = data.get("conversation_id")
-
-        if not conversation_id:
-            # No conversation_id provided - create a new one
-            conversation = Conversation.create()
-            if conversation:
-                data["conversation_id"] = conversation.id
-                self.update_llm_generator_settings(
-                    current_conversation_id=conversation.id
-                )
-                return conversation
-            return None
-
-        # Conversation ID provided - load and set it as current
-        conversation = Conversation.objects.get(conversation_id)
-        if conversation:
-            self.update_llm_generator_settings(
-                current_conversation_id=conversation_id
-            )
-        return conversation
-
-    def add_chatbot_response_to_history(self, message: str) -> None:
-        """Add a chatbot-generated response to the chat history."""
-        pass
-
-    def load_conversation(self, message: Dict) -> None:
-        """Load an existing conversation into the chat workflow."""
-        conversation_id = message.get("conversation_id")
-
-        if self._workflow_manager is not None:
-            if conversation_id and hasattr(
-                self._workflow_manager, "set_conversation_id"
-            ):
-                self._workflow_manager.set_conversation_id(conversation_id)
-                self.logger.info(
-                    f"Updated workflow manager with conversation ID: {conversation_id}"
-                )
-            else:
-                self.logger.info(
-                    f"Workflow manager loaded. Conversation {conversation_id} context available."
-                )
-            self._pending_conversation_message = None
-        else:
-            self.logger.warning(
-                f"Workflow manager not loaded. Will use ConversationHistoryManager for conversation ID: {conversation_id}."
-            )
-            self._pending_conversation_message = message
-
-    def reload_rag_engine(self) -> None:
-        """Reload the Retrieval-Augmented Generation engine."""
-        if self._tool_manager:
-            self._unload_tool_manager()
-            self._load_tool_manager()
-            if self._workflow_manager:
-                self._workflow_manager.update_tools(self.tools)
-        else:
-            self.logger.warning("Cannot reload RAG - tool manager not loaded")
 
     def on_section_changed(self) -> None:
         """Handle section change events."""
