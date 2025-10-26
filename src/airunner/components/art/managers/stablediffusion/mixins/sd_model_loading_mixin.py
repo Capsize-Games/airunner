@@ -314,7 +314,6 @@ class SDModelLoadingMixin:
                 base_config = {}
 
             self._scheduler = scheduler_class.from_config(base_config)
-            self._apply_scheduler_presets(scheduler_record)
 
             if self._pipe is not None:
                 self._pipe.scheduler = self._scheduler
