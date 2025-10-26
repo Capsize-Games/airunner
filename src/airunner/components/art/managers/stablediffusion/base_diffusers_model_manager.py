@@ -16,9 +16,6 @@ from airunner.components.art.workers.image_export_worker import (
 from airunner.components.application.managers.base_model_manager import (
     BaseModelManager,
 )
-from airunner.components.art.managers.stablediffusion.noise_sampler import (
-    DeterministicSDENoiseSampler,
-)
 from airunner.enums import (
     ModelStatus,
     ModelType,

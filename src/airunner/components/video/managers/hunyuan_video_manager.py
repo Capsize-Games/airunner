@@ -6,9 +6,7 @@ for high-quality image-to-video generation.
 """
 
 import os
-import uuid
 from typing import Dict, Optional, Any
-import logging
 
 import torch
 import numpy as np
@@ -32,7 +30,6 @@ from airunner.vendor.framepack.diffusers_helper import (
     clip_vision,
     hunyuan,
     memory as memory_utils,
-    utils as general,
 )
 from airunner.vendor.framepack.diffusers_helper.utils import (
     crop_or_pad_yield_mask,
@@ -377,7 +374,7 @@ class HunyuanVideoManager(BaseVideoManager):
         seed = data.get("seed", 42)
         latent_window_size = data.get("latent_window_size", 9)
         num_frames = data.get("num_frames", 121)
-        callback = data.get("callback")
+        data.get("callback")
 
         # Calculate video length
         fps = data.get("fps", 30)

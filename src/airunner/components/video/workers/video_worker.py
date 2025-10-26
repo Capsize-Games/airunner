@@ -6,7 +6,6 @@ pipeline asynchronously.
 """
 
 from typing import Any, Dict, Optional
-import logging
 
 from airunner.components.application.workers.worker import Worker
 from airunner.enums import SignalCode, QueueType

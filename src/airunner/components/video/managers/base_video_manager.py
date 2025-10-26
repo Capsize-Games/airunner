@@ -7,10 +7,7 @@ following the same pattern as BaseDiffusersModelManager for Stable Diffusion.
 
 from abc import ABC, abstractmethod
 from typing import Dict, Optional, Any
-import logging
 
-import torch
-from PySide6.QtCore import QObject
 
 from airunner.components.application.managers.base_model_manager import (
     BaseModelManager,
@@ -61,7 +58,6 @@ class BaseVideoManager(BaseModelManager, ABC):
         Returns:
             True if successful, False otherwise
         """
-        pass
 
     @abstractmethod
     def _unload_model(self) -> bool:
@@ -71,7 +67,6 @@ class BaseVideoManager(BaseModelManager, ABC):
         Returns:
             True if successful, False otherwise
         """
-        pass
 
     @abstractmethod
     def generate_video(self, **kwargs) -> Optional[str]:
@@ -95,7 +90,6 @@ class BaseVideoManager(BaseModelManager, ABC):
         Returns:
             Path to generated video file, or None if failed
         """
-        pass
 
     def load_model(self, options: Optional[Dict[str, Any]] = None) -> bool:
         """
