@@ -1,25 +1,13 @@
-import random
-import os
-import torch
-from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 from transformers import (
     AutoModelForCausalLM,
 )
 from transformers.generation.streamers import TextIteratorStreamer
-from langchain_core.messages import AIMessage
-
-try:
-    from transformers.models.mistral3 import Mistral3ForConditionalGeneration
-except ImportError:
-    Mistral3ForConditionalGeneration = None
 
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
-from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.components.llm.config.model_capabilities import ModelCapability
 from airunner.components.application.managers.base_model_manager import (
     BaseModelManager,
 )
@@ -34,30 +22,24 @@ from airunner.components.llm.managers.mixins import (
     ConversationManagementMixin,
     GenerationMixin,
     ModelLoaderMixin,
+    PropertyMixin,
     QuantizationConfigMixin,
+    SpecializedModelMixin,
     StatusManagementMixin,
+    SystemPromptMixin,
     TokenizerLoaderMixin,
     ValidationMixin,
 )
 from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.components.llm.managers.agent.rag_mixin import RAGMixin
-from airunner.components.model_management.hardware_profiler import (
-    HardwareProfiler,
-)
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
 )
 from airunner.enums import (
     ModelType,
     ModelStatus,
-    LLMActionType,
-)
-from airunner.settings import (
-    AIRUNNER_MAX_SEED,
 )
 from airunner.utils.memory import clear_memory
-from airunner.components.llm.managers.llm_request import LLMRequest
-from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.managers.llm_settings import LLMSettings
 
 
@@ -68,8 +50,11 @@ class LLMModelManager(
     ConversationManagementMixin,
     GenerationMixin,
     ModelLoaderMixin,
+    PropertyMixin,
     QuantizationConfigMixin,
+    SpecializedModelMixin,
     StatusManagementMixin,
+    SystemPromptMixin,
     TokenizerLoaderMixin,
     ValidationMixin,
     RAGMixin,
@@ -119,232 +104,8 @@ class LLMModelManager(
         self.llm_settings = LLMSettings()
         self._pending_conversation_message = None
         self._conversation_history_manager = ConversationHistoryManager()
-
-    @property
-    def supports_function_calling(self) -> bool:
-        """Check if the current model supports function calling."""
-        try:
-            model_path = self.model_path
-            if not model_path:
-                return False
-
-            for (
-                model_key,
-                model_info,
-            ) in LLMProviderConfig.LOCAL_MODELS.items():
-                if model_key in model_path or model_info["name"] in model_path:
-                    return model_info.get("function_calling", False)
-
-            return False
-        except Exception as e:
-            self.logger.warning(
-                f"Could not determine function calling support: {e}"
-            )
-            return False
-
-    @property
-    def system_prompt(self) -> str:
-        """Generate the system prompt for the LLM."""
-        parts = []
-
-        if hasattr(self, "chatbot") and self.chatbot:
-            parts.append(
-                f"You are {self.chatbot.botname}, a helpful AI assistant."
-            )
-
-            if (
-                hasattr(self.chatbot, "personality")
-                and self.chatbot.personality
-            ):
-                parts.append(f"Personality: {self.chatbot.personality}")
-        else:
-            parts.append("You are a helpful AI assistant.")
-
-        now = datetime.now()
-        parts.append(
-            f"Current date and time: {now.strftime('%Y-%m-%d %H:%M:%S')}"
-        )
-
-        if (
-            self.llm_settings.use_chatbot_mood
-            and hasattr(self, "chatbot")
-            and self.chatbot
-            and hasattr(self.chatbot, "use_mood")
-            and self.chatbot.use_mood
-        ):
-            parts.append(
-                f"\nYou have access to an update_mood tool. "
-                f"Every {self.llm_settings.update_mood_after_n_turns} conversation turns, "
-                f"reflect on the conversation and update your emotional state by calling the "
-                f"update_mood tool with a one-word emotion (e.g., happy, sad, excited, thoughtful, "
-                f"confused) and a matching emoji (e.g., 😊, 😢, 🤔, 😐). "
-                f"Your mood should reflect your personality and the context of the conversation."
-            )
-
-        return "\n\n".join(parts)
-
-    def get_system_prompt_for_action(self, action: LLMActionType) -> str:
-        """Generate a system prompt tailored to the specific action type.
-
-        Args:
-            action: The type of action being performed
-
-        Returns:
-            System prompt with action-specific instructions
-        """
-        base_prompt = self.system_prompt
-
-        if action == LLMActionType.CHAT:
-            base_prompt += (
-                "\n\nMode: CHAT"
-                "\nFocus on natural conversation. You may use conversation management tools "
-                "(clear_conversation, toggle_tts) and data storage tools as needed, but avoid "
-                "image generation or RAG search unless explicitly requested by the user."
-            )
-
-        elif action == LLMActionType.GENERATE_IMAGE:
-            base_prompt += (
-                "\n\nMode: IMAGE GENERATION"
-                "\nYour primary focus is generating images. Use the generate_image tool "
-                "to create images based on user descriptions. You may also use canvas tools "
-                "(clear_canvas, open_image) to manage the workspace."
-            )
-
-        elif action == LLMActionType.PERFORM_RAG_SEARCH:
-            base_prompt += (
-                "\n\nMode: DOCUMENT SEARCH"
-                "\nYour primary focus is searching through uploaded documents. Use the rag_search "
-                "tool to find relevant information in the document database. You may also use "
-                "search_web for supplementary internet searches."
-            )
-
-        elif action == LLMActionType.APPLICATION_COMMAND:
-            base_prompt += (
-                "\n\nMode: AUTO (Full Capabilities)"
-                "\nYou have access to all tools and should autonomously determine which tools "
-                "to use based on the user's request. Analyze the intent and choose the most "
-                "appropriate tools to fulfill the user's needs."
-            )
-
-        return base_prompt
-
-    @property
-    def tools(self) -> List:
-        """Get all available tools from tool manager."""
-        if self._tool_manager:
-            return self._tool_manager.get_all_tools()
-        return []
-
-    @property
-    def is_mistral(self) -> bool:
-        """
-        Check if the current model is a Mistral model.
-
-        Returns:
-            bool: True if the model is a Mistral model, False otherwise.
-        """
-        if not self._current_model_path:
-            return False
-        path = self._current_model_path.lower()
-        return "mistral" in path
-
-    @property
-    def is_llama_instruct(self) -> bool:
-        """
-        Check if the current model is a LLaMA instruct model.
-
-        Returns:
-            bool: True if the model is a LLaMA instruct model, False otherwise.
-        """
-        if not self._current_model_path:
-            return False
-        path = self._current_model_path.lower()
-        return "instruct" in path and "llama" in path
-
-    def _get_available_vram_gb(self) -> float:
-        """Get available VRAM in gigabytes."""
-        if not hasattr(self, "_hw_profiler"):
-            self._hw_profiler = HardwareProfiler()
-        return self._hw_profiler._get_available_vram_gb()
-
-    @property
-    def use_cache(self) -> bool:
-        """
-        Determine whether to use model caching based on settings.
-
-        Returns:
-            bool: True if cache should be used, False otherwise.
-        """
-        if self.llm_generator_settings.override_parameters:
-            return self.llm_generator_settings.use_cache
-        return self.chatbot.use_cache
-
-    @property
-    def model_version(self) -> str:
-        """
-        Get the model version to use based on settings.
-
-        Returns:
-            str: The model version identifier.
-        """
-        model_version = self.chatbot.model_version
-        if self.llm_generator_settings.override_parameters:
-            model_version = self.llm_generator_settings.model_version
-        return model_version
-
-    @property
-    def model_name(self) -> str:
-        """Extract model name from model path."""
-        if not self.llm_generator_settings.model_path:
-            raise ValueError(
-                "No model path configured. Please select a model in LLM settings."
-            )
-        return os.path.basename(
-            os.path.normpath(self.llm_generator_settings.model_path)
-        )
-
-    @property
-    def llm(self):
-        """
-        Get the LlamaIndex-compatible LLM wrapper for RAG.
-
-        This property is required by RAGMixin to initialize the RAG system.
-        Returns None if the chat model hasn't been loaded yet.
-
-        Returns:
-            LlamaIndex LLM wrapper or None
-        """
-        if self._chat_model is None:
-            return None
-
-        # LlamaIndex needs a LlamaIndex-compatible LLM, not a LangChain one
-        # For now, return the LangChain chat model and let LlamaIndex handle conversion
-        # If this causes issues, we'll need to wrap it properly
-        try:
-            from llama_index.llms.langchain import LangChainLLM
-
-            return LangChainLLM(llm=self._chat_model)
-        except Exception:
-            # If LlamaIndex LangChain adapter isn't available, return the chat model
-            # and hope LlamaIndex can work with it directly
-            return self._chat_model
-
-    @property
-    def model_path(self) -> str:
-        """
-        Get the filesystem path to the model files from settings.
-
-        Returns:
-            str: Absolute path to the model directory.
-
-        Raises:
-            ValueError: If no model path is configured in settings.
-        """
-        if not self.llm_generator_settings.model_path:
-            raise ValueError(
-                "No model path configured. Please select a model in LLM settings."
-            )
-        return os.path.expanduser(self.llm_generator_settings.model_path)
+        self._current_model_path = None
+        self._hw_profiler = None
 
     def _load_local_llm_components(self) -> None:
         """Load tokenizer and model for local LLM."""
@@ -426,175 +187,6 @@ class LLMModelManager(
 
         clear_memory(self.device)
         self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
-
-    def load_specialized_model(
-        self,
-        capability: "ModelCapability",
-        return_to_primary: bool = True,
-    ) -> Optional[Any]:
-        """
-        Load a specialized model for a specific task.
-
-        This method is used by tools to load specialized models (e.g., prompt
-        enhancer, code generator) for specific tasks. It handles model swapping
-        through the resource manager and can optionally return to the primary
-        model after the task completes.
-
-        Args:
-            capability: The capability needed (from ModelCapability enum)
-            return_to_primary: Whether to swap back to primary model after use
-
-        Returns:
-            The loaded chat model, or None if loading failed
-
-        Example:
-            # In a tool:
-            from airunner.components.llm.config.model_capabilities import ModelCapability
-
-            manager = LLMModelManager()
-            model = manager.load_specialized_model(
-                ModelCapability.PROMPT_ENHANCEMENT
-            )
-            if model:
-                enhanced = model.invoke("Enhance this: " + prompt)
-                # Model auto-swaps back to primary after this method returns
-        """
-        from airunner.components.llm.config.model_capabilities import (
-            get_model_for_capability,
-        )
-
-        # Get the model spec for this capability
-        model_spec = get_model_for_capability(capability)
-        if not model_spec:
-            self.logger.warning(
-                f"No model registered for capability: {capability}"
-            )
-            return None
-
-        # Store the current primary model info
-        if return_to_primary:
-            primary_model_path = self._current_model_path or self.model_path
-
-        # Check if we're already using the right model
-        current_path = self._current_model_path or self.model_path
-        if current_path == model_spec.model_path:
-            self.logger.info(
-                f"Already using {model_spec.model_path} for {capability}"
-            )
-            return self._chat_model
-
-        # Use resource manager to swap models
-        self.logger.info(
-            f"Loading specialized model {model_spec.model_path} for {capability}"
-        )
-
-        # Unload current model
-        self.unload()
-
-        # Temporarily override model path
-        original_model_path = self.llm_generator_settings.model_path
-        self.llm_generator_settings.model_path = model_spec.model_path
-
-        try:
-            # Load the specialized model
-            self.load()
-
-            if return_to_primary:
-                # Store function to restore primary model
-                self._restore_primary_model = lambda: self._do_restore_primary(
-                    primary_model_path, original_model_path
-                )
-
-            return self._chat_model
-
-        except Exception as e:
-            self.logger.error(
-                f"Failed to load specialized model: {e}", exc_info=True
-            )
-            # Restore original settings
-            self.llm_generator_settings.model_path = original_model_path
-            return None
-
-    def _do_restore_primary(
-        self, primary_model_path: str, original_setting: str
-    ) -> None:
-        """Internal helper to restore primary model."""
-        self.logger.info(f"Restoring primary model: {primary_model_path}")
-        self.unload()
-        self.llm_generator_settings.model_path = original_setting
-        self.load()
-        self._restore_primary_model = None
-
-    def use_specialized_model(
-        self,
-        capability: "ModelCapability",
-        prompt: str,
-        max_tokens: int = 512,
-    ) -> Optional[str]:
-        """
-        Convenience method to use a specialized model for a single generation.
-
-        This loads the specialized model, generates a response, and automatically
-        swaps back to the primary model.
-
-        Args:
-            capability: The capability needed
-            prompt: The prompt to send to the specialized model
-            max_tokens: Maximum tokens to generate
-
-        Returns:
-            Generated text, or None if generation failed
-
-        Example:
-            # In a tool:
-            manager = LLMModelManager()
-            enhanced_prompt = manager.use_specialized_model(
-                ModelCapability.PROMPT_ENHANCEMENT,
-                "Enhance this Stable Diffusion prompt: a cat"
-            )
-        """
-        model = self.load_specialized_model(capability, return_to_primary=True)
-        if not model:
-            return None
-
-        try:
-            # Generate with the specialized model
-            response = model.invoke(prompt)
-
-            # Extract text from response
-            if isinstance(response, AIMessage):
-                result = response.content
-            elif isinstance(response, str):
-                result = response
-            else:
-                result = str(response)
-
-            # Restore primary model if needed
-            if (
-                hasattr(self, "_restore_primary_model")
-                and self._restore_primary_model
-            ):
-                self._restore_primary_model()
-
-            return result
-
-        except Exception as e:
-            self.logger.error(
-                f"Failed to generate with specialized model: {e}",
-                exc_info=True,
-            )
-            # Try to restore primary model even on error
-            if (
-                hasattr(self, "_restore_primary_model")
-                and self._restore_primary_model
-            ):
-                try:
-                    self._restore_primary_model()
-                except Exception as restore_error:
-                    self.logger.error(
-                        f"Failed to restore primary model: {restore_error}"
-                    )
-            return None
 
     def handle_request(
         self,
