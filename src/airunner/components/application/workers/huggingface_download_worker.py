@@ -3,75 +3,53 @@
 import os
 import threading
 from pathlib import Path
-from typing import Dict, Any
 import requests
 
-from airunner.components.application.workers.worker import Worker
-from airunner.enums import SignalCode, QueueType
+from airunner.components.application.workers.base_download_worker import (
+    BaseDownloadWorker,
+)
+from airunner.enums import SignalCode
 from airunner.components.llm.utils.model_downloader import (
     HuggingFaceDownloader,
 )
 from airunner.utils.settings.get_qsettings import get_qsettings
+from airunner.settings import MODELS_DIR
 
 
-class HuggingFaceDownloadWorker(Worker):
+class HuggingFaceDownloadWorker(BaseDownloadWorker):
     """Worker for downloading HuggingFace models with parallel file downloading."""
-
-    queue_type = QueueType.GET_NEXT_ITEM
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.downloader = HuggingFaceDownloader()
-        self._model_path = None
-        self._temp_dir = None
-        self._total_downloaded = 0
-        self._total_size = 0
-        self._file_threads: Dict[str, threading.Thread] = {}
-        self._file_progress: Dict[str, int] = {}
-        self._file_sizes: Dict[str, int] = {}
-        self._completed_files = set()
-        self._failed_files = set()
-        self._lock = threading.Lock()
-        self.is_cancelled = False
 
-    def handle_message(self, message: Any):
-        """Process download request from queue."""
-        repo_id = message.get("repo_id")
-        model_type = message.get("model_type", "llm")
-        output_dir = message.get("output_dir")
+    @property
+    def _complete_signal(self) -> SignalCode:
+        """Signal to emit on successful download completion."""
+        return SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE
 
-        try:
-            self._download_model(repo_id, model_type, output_dir)
-        except Exception as e:
-            self.logger.error(f"Download failed: {e}")
-            self.emit_signal(
-                SignalCode.HUGGINGFACE_DOWNLOAD_FAILED, {"error": str(e)}
-            )
+    @property
+    def _failed_signal(self) -> SignalCode:
+        """Signal to emit on download failure."""
+        return SignalCode.HUGGINGFACE_DOWNLOAD_FAILED
 
     def _download_model(self, repo_id: str, model_type: str, output_dir: str):
-        """Download model files."""
-        self.is_cancelled = False
-        self._completed_files.clear()
-        self._failed_files.clear()
-        self._file_progress.clear()
-        self._file_sizes.clear()
-        self._file_threads.clear()
+        """Download model files from HuggingFace.
 
+        Args:
+            repo_id: HuggingFace repository ID (e.g., "black-forest-labs/FLUX.1-dev")
+            model_type: Type of model (llm, flux, etc.)
+            output_dir: Directory to save the model
+
+        """
         settings = get_qsettings()
         api_key = settings.value("huggingface/api_key", "")
 
         if not output_dir:
-            from airunner.settings import MODELS_DIR
-
             output_dir = os.path.join(MODELS_DIR, "text/models/llm/causallm")
 
         model_name = repo_id.split("/")[-1]
-        model_path = Path(output_dir) / model_name
-        temp_dir = model_path / ".downloading"
-        temp_dir.mkdir(parents=True, exist_ok=True)
-
-        self._model_path = model_path
-        self._temp_dir = temp_dir
+        model_path = self._initialize_download(output_dir, model_name)
 
         self.emit_signal(
             SignalCode.UPDATE_DOWNLOAD_LOG,
@@ -82,9 +60,7 @@ class HuggingFaceDownloadWorker(Worker):
         try:
             all_files = self.downloader.get_model_files(repo_id)
         except Exception as e:
-            self.emit_signal(
-                SignalCode.HUGGINGFACE_DOWNLOAD_FAILED, {"error": str(e)}
-            )
+            self.emit_signal(self._failed_signal, {"error": str(e)})
             return
 
         # Filter files to download
@@ -129,7 +105,7 @@ class HuggingFaceDownloadWorker(Worker):
                 {"message": "All files already downloaded!"},
             )
             self.emit_signal(
-                SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+                self._complete_signal,
                 {"model_path": str(model_path)},
             )
             return
@@ -144,6 +120,7 @@ class HuggingFaceDownloadWorker(Worker):
             },
         )
 
+        # Start download threads
         for file_info in files_to_download:
             if self.is_cancelled:
                 return
@@ -165,7 +142,7 @@ class HuggingFaceDownloadWorker(Worker):
                     repo_id,
                     filename,
                     file_size,
-                    temp_dir,
+                    self._temp_dir,
                     model_path,
                     api_key,
                 ),
@@ -181,32 +158,13 @@ class HuggingFaceDownloadWorker(Worker):
             },
         )
 
-        while not self.is_cancelled:
-            all_done = len(self._completed_files) + len(
-                self._failed_files
-            ) == len(files_to_download)
-            if all_done:
-                break
-            threading.Event().wait(0.1)
-
-        if self.is_cancelled:
-            self.emit_signal(
-                SignalCode.UPDATE_DOWNLOAD_LOG,
-                {"message": "Download cancelled by user"},
-            )
-            self._cleanup_temp_files()
-            return
-
-        if self._failed_files:
-            error_msg = f"Failed to download {len(self._failed_files)} files"
-            self.emit_signal(
-                SignalCode.HUGGINGFACE_DOWNLOAD_FAILED, {"error": error_msg}
-            )
+        # Wait for completion
+        if not self._wait_for_completion(len(files_to_download)):
             return
 
         self._cleanup_temp_files()
         self.emit_signal(
-            SignalCode.HUGGINGFACE_DOWNLOAD_COMPLETE,
+            self._complete_signal,
             {"model_path": str(model_path)},
         )
 
@@ -219,7 +177,16 @@ class HuggingFaceDownloadWorker(Worker):
         model_path: Path,
         api_key: str,
     ):
-        """Download a single file (runs in Python thread)."""
+        """Download a single file from HuggingFace (runs in Python thread).
+
+        Args:
+            repo_id: HuggingFace repository ID
+            filename: Name of file to download
+            file_size: Expected size in bytes
+            temp_dir: Temporary download directory
+            model_path: Final model directory
+            api_key: HuggingFace API key (optional)
+        """
         temp_path = temp_dir / filename
         final_path = model_path / filename
 
@@ -265,67 +232,14 @@ class HuggingFaceDownloadWorker(Worker):
                     final_path.unlink()
                 temp_path.rename(final_path)
 
-                with self._lock:
-                    self._completed_files.add(filename)
-
-                self.emit_signal(
-                    SignalCode.UPDATE_DOWNLOAD_LOG,
-                    {"message": f"✓ Completed {filename}"},
-                )
+                self._mark_file_complete(filename)
 
         except Exception as e:
             self.logger.error(f"Failed to download {filename}: {e}")
-            with self._lock:
-                self._failed_files.add(filename)
+            self._mark_file_failed(filename)
 
             if temp_path.exists():
                 try:
                     temp_path.unlink()
                 except Exception:
                     pass
-
-    def _update_file_progress(
-        self, filename: str, downloaded: int, total: int
-    ):
-        """Update progress for a single file."""
-        with self._lock:
-            old_progress = self._file_progress.get(filename, 0)
-            self._file_progress[filename] = downloaded
-            self._total_downloaded += downloaded - old_progress
-
-        self.emit_signal(
-            SignalCode.UPDATE_FILE_DOWNLOAD_PROGRESS,
-            {"filename": filename, "downloaded": downloaded, "total": total},
-        )
-
-        if self._total_size > 0:
-            overall_progress = (
-                self._total_downloaded / self._total_size
-            ) * 100.0
-            self.emit_signal(
-                SignalCode.UPDATE_DOWNLOAD_PROGRESS,
-                {"progress": overall_progress},
-            )
-
-    def _cleanup_temp_files(self):
-        """Clean up temporary download directory."""
-        if self._temp_dir and self._temp_dir.exists():
-            try:
-                import shutil
-
-                shutil.rmtree(self._temp_dir)
-                self.emit_signal(
-                    SignalCode.UPDATE_DOWNLOAD_LOG,
-                    {"message": "Cleaned up temporary files"},
-                )
-            except Exception as e:
-                self.logger.error(f"Failed to cleanup temp files: {e}")
-
-    def cancel(self):
-        """Cancel the current download."""
-        self.logger.info("Cancelling all downloads...")
-        self.is_cancelled = True
-        self.emit_signal(
-            SignalCode.UPDATE_DOWNLOAD_LOG,
-            {"message": "Cancelling all downloads..."},
-        )
