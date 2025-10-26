@@ -19,21 +19,56 @@ class RAGTools:
 
         @tool
         def rag_search(query: str) -> str:
-            """Search through uploaded documents for relevant information.
+            """Search through LOADED documents in memory for relevant information.
+
+            IMPORTANT: This only works if documents have been loaded into memory first.
+            Documents must be actively loaded before searching them.
+
+            If this tool fails because documents aren't loaded, you should:
+            1. First use search_knowledge_base_documents to find relevant documents
+            2. Ask the user to load those documents into memory
+            3. Then try rag_search again
+
+            OR use search_web to find information online instead.
 
             Args:
                 query: Search query for finding relevant document content
 
             Returns:
-                Relevant excerpts from documents or error message
+                Relevant excerpts from loaded documents or error message explaining why search failed
             """
+            logger = logging.getLogger(__name__)
+            logger.info(f"rag_search called with query: {query}")
+            logger.debug(
+                f"rag_manager available: {self.rag_manager is not None}"
+            )
+
             if not self.rag_manager:
-                return "RAG system not available"
+                # Clear instruction to model: don't retry this tool, try something else
+                error_msg = (
+                    "TOOL UNAVAILABLE: No documents are currently loaded in memory for RAG search. "
+                    "The document index is empty. "
+                    "You have two options:\n"
+                    "1. Use search_web to find information online instead\n"
+                    "2. Tell the user that documents need to be loaded before searching them\n"
+                    "DO NOT call rag_search again - it will fail with the same error."
+                )
+                logger.warning(error_msg)
+                return error_msg
 
             try:
                 results = self.rag_manager.search(query, k=3)
+                logger.info(
+                    f"rag_manager.search returned {len(results) if results else 0} results"
+                )
+
                 if not results:
-                    return "No relevant information found in documents"
+                    msg = (
+                        f"No relevant information found for '{query}' in loaded documents. "
+                        "Try search_web instead to find information online."
+                    )
+                    logger.info(msg)
+                    return msg
 
                 context_parts = []
                 for i, doc in enumerate(results, 1):
@@ -43,11 +78,20 @@ class RAGTools:
                         if len(doc.page_content) > 500
                         else doc.page_content
                     )
-                    context_parts.append(f"[Source {i}]\n{content}")
+                    context_parts.append(f"[Source {i}: {source}]\n{content}")
+                    logger.debug(
+                        f"Result {i} from source: {source}, length: {len(doc.page_content)}"
+                    )
 
-                return "\n\n".join(context_parts)
+                result_text = "\n\n".join(context_parts)
+                logger.info(
+                    f"Returning {len(context_parts)} document excerpts, total length: {len(result_text)}"
+                )
+                return result_text
             except Exception as e:
-                return f"Error searching documents: {str(e)}"
+                error_msg = f"Error searching documents: {str(e)}"
+                logger.error(error_msg, exc_info=True)
+                return error_msg
 
         return rag_search
 

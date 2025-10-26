@@ -27,9 +27,11 @@ from llama_index.core.schema import NodeWithScore, QueryBundle
 
 from airunner.enums import EngineResponseCode, SignalCode
 from airunner.components.llm.managers.agent import HtmlFileReader
-from airunner.components.llm.managers.agent.chat_engine import (
-    ConversationAwareContextChatEngine,
-)
+
+# NOTE: LlamaIndex chat engine not used - we use LangChain workflows instead
+# from airunner.components.llm.managers.agent.chat_engine import (
+#     ConversationAwareContextChatEngine,
+# )
 from airunner.settings import (
     AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE,
     AIRUNNER_LOCAL_FILES_ONLY,
@@ -41,9 +43,11 @@ from airunner.components.zimreader.llamaindex_zim_reader import (
 from airunner.components.documents.data.models.document import (
     Document as DBDocument,
 )
-from airunner.components.llm.managers.agent.tools import (
-    RAGEngineTool,
-)
+
+# NOTE: RAGEngineTool not used - we integrate with LangChain tools instead
+# from airunner.components.llm.managers.agent.tools import (
+#     RAGEngineTool,
+# )
 import shutil
 import gc
 from bs4 import BeautifulSoup
@@ -125,26 +129,31 @@ class RAGMixin:
     """Per-document RAG implementation with lazy loading for scalability."""
 
     def __init__(self):
-        self.__document_reader: Optional[SimpleDirectoryReader] = None
-        self.__index: Optional[VectorStoreIndex] = None
-        self.__retriever: Optional[VectorIndexRetriever] = None
-        self.__embedding: Optional[HuggingFaceEmbedding] = None
-        self.__rag_engine: Optional[ConversationAwareContextChatEngine] = None
-        self._rag_engine_tool: Optional[Any] = None
-        self.__text_splitter: Optional[SentenceSplitter] = None
+        self._document_reader: Optional[SimpleDirectoryReader] = None
+        self._index: Optional[VectorStoreIndex] = None
+        self._retriever: Optional[VectorIndexRetriever] = None
+        self._embedding: Optional[HuggingFaceEmbedding] = None
+        # NOTE: RAG engine not used - LangChain handles chat flow
+        # self._rag_engine: Optional[ConversationAwareContextChatEngine] = None
+        # self._rag_engine_tool: Optional[Any] = None
+        self._text_splitter: Optional[SentenceSplitter] = None
         self._target_files: Optional[List[str]] = None
-        self.__doc_metadata_cache: Dict[str, Dict[str, Any]] = {}
-        self.__cache_validated: bool = False
+        self._doc_metadata_cache: Dict[str, Dict[str, Any]] = {}
+        self._cache_validated: bool = False
 
         # Per-document index architecture
-        self.__index_registry: Optional[Dict[str, Any]] = None
-        self.__doc_indexes_cache: Dict[str, VectorStoreIndex] = {}
-        self.__loaded_doc_ids: List[str] = []
+        self._index_registry: Optional[Dict[str, Any]] = None
+        self._doc_indexes_cache: Dict[str, VectorStoreIndex] = {}
+        self._loaded_doc_ids: List[str] = []
 
         self._setup_rag()
 
     def _setup_rag(self):
-        """Setup RAG components."""
+        """Setup RAG components.
+
+        This method is safe to call multiple times - it will only initialize once.
+        It can be called during __init__() or deferred until after model loading.
+        """
         try:
             # If the parent/manager has requested to skip agent/RAG load (for
             # example during finetune preparation to conserve GPU memory), then
@@ -156,25 +165,86 @@ class RAGMixin:
                     )
                 return
 
+            # Check if embedding model is available
+            # Note: We don't need Settings.llm since LangChain handles chat flow
+            # We only need embedding model for document retrieval
+            if not hasattr(self, "embedding"):
+                if hasattr(self, "logger"):
+                    self.logger.debug(
+                        "Deferring RAG setup - embedding model not yet available"
+                    )
+                return
+
             # Set up LlamaIndex settings
-            Settings.llm = self.llm
+            # Only set embedding and text splitter - LangChain handles LLM
             Settings.embed_model = self.embedding
             Settings.node_parser = self.text_splitter
 
             # Check for old unified index and migrate if needed
             self._detect_and_migrate_old_index()
 
-            self.logger.info("RAG system initialized successfully")
+            if hasattr(self, "logger"):
+                self.logger.info("RAG system initialized successfully")
         except Exception as e:
-            self.logger.error(f"Error setting up RAG: {str(e)}")
+            if hasattr(self, "logger"):
+                self.logger.error(
+                    f"Error setting up RAG: {str(e)}", exc_info=True
+                )
+
+    def search(self, query: str, k: int = 3) -> List[Any]:
+        """
+        Search for relevant documents using the retriever.
+
+        This is the main search method used by rag_tools.py.
+
+        Args:
+            query: Search query
+            k: Number of results to return
+
+        Returns:
+            List of Document objects with page_content and metadata
+        """
+        if not self.retriever:
+            if hasattr(self, "logger"):
+                self.logger.warning("No retriever available for search")
+            return []
+
+        try:
+            from llama_index.core.schema import QueryBundle
+
+            query_bundle = QueryBundle(query_str=query)
+            nodes = self.retriever.retrieve(query_bundle)
+
+            # Convert LlamaIndex nodes to LangChain-style documents
+            from langchain_core.documents import Document
+
+            results = []
+            for node in nodes[:k]:  # Limit to k results
+                doc = Document(
+                    page_content=node.node.text,
+                    metadata=node.node.metadata or {},
+                )
+                results.append(doc)
+
+            if hasattr(self, "logger"):
+                self.logger.info(
+                    f"Search for '{query}' returned {len(results)} results"
+                )
+
+            return results
+
+        except Exception as e:
+            if hasattr(self, "logger"):
+                self.logger.error(f"Error during search: {e}")
+            return []
 
     @property
     def text_splitter(self) -> SentenceSplitter:
-        if not self.__text_splitter:
-            self.__text_splitter = SentenceSplitter(
+        if not self._text_splitter:
+            self._text_splitter = SentenceSplitter(
                 chunk_size=512, chunk_overlap=50
             )
-        return self.__text_splitter
+        return self._text_splitter
 
     @property
     def doc_indexes_dir(self) -> str:
@@ -197,14 +267,29 @@ class RAGMixin:
     @property
     def index_registry(self) -> Dict[str, Any]:
         """Get or load the index registry."""
-        if self.__index_registry is None:
-            self.__index_registry = self._load_registry()
-        return self.__index_registry
+        if self._index_registry is None:
+            self._index_registry = self._load_registry()
+        return self._index_registry
 
     @property
     def embedding(self) -> HuggingFaceEmbedding:
-        if not self.__embedding:
+        if not self._embedding:
             self.logger.debug("Loading embeddings...")
+
+            # Set LlamaIndex cache directory to a writable location
+            # Default ~/.cache/llama_index may not have write permissions
+            cache_dir = os.path.expanduser(
+                os.path.join(
+                    self.path_settings.base_path,
+                    "text",
+                    "other",
+                    "cache",
+                    "llama_index",
+                )
+            )
+            os.makedirs(cache_dir, exist_ok=True)
+            os.environ["LLAMA_INDEX_CACHE_DIR"] = cache_dir
+
             path = os.path.expanduser(
                 os.path.join(
                     self.path_settings.base_path,
@@ -235,7 +320,7 @@ class RAGMixin:
 
                 # Pass model_kwargs if available; HuggingFaceEmbedding will
                 # forward them to the underlying transformers model loader.
-                self.__embedding = HuggingFaceEmbedding(
+                self._embedding = HuggingFaceEmbedding(
                     model_name=path,
                     local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
                     device=device,
@@ -253,7 +338,7 @@ class RAGMixin:
                     response = AIRUNNER_CUDA_OUT_OF_MEMORY_MESSAGE
                 self.logger.error(error_message)
                 self.api.worker_response(code, response)
-        return self.__embedding
+        return self._embedding
 
     @property
     def target_files(self) -> Optional[List[str]]:
@@ -281,11 +366,11 @@ class RAGMixin:
     def target_files(self, value: Optional[List[str]]):
         """Set target files and reset index."""
         self._target_files = value
-        self.__index = None
-        self.__retriever = None
-        self.__document_reader = None
-        self.__doc_metadata_cache.clear()
-        self.__cache_validated = False
+        self._index = None
+        self._retriever = None
+        self._document_reader = None
+        self._doc_metadata_cache.clear()
+        self._cache_validated = False
 
     def _calculate_file_hash(self, file_path: str) -> Optional[str]:
         """Calculate SHA256 hash of file content for change detection."""
@@ -309,7 +394,7 @@ class RAGMixin:
         Returns:
             True if cache is valid and can be used, False if rebuild needed.
         """
-        if self.__cache_validated:
+        if self._cache_validated:
             return True
 
         persist_dir = self.storage_persist_dir
@@ -358,7 +443,7 @@ class RAGMixin:
                 return False
 
             self.logger.info("Cache integrity validated successfully")
-            self.__cache_validated = True
+            self._cache_validated = True
             return True
 
         except Exception as e:
@@ -463,8 +548,8 @@ class RAGMixin:
 
     def _extract_metadata(self, file_path: str) -> Dict[str, Any]:
         """Extract metadata for a document."""
-        if file_path in self.__doc_metadata_cache:
-            return self.__doc_metadata_cache[file_path]
+        if file_path in self._doc_metadata_cache:
+            return self._doc_metadata_cache[file_path]
 
         filename = os.path.basename(file_path)
         file_ext = os.path.splitext(filename)[1].lower()
@@ -485,7 +570,7 @@ class RAGMixin:
             if hasattr(db_doc, "indexed_at") and db_doc.indexed_at:
                 metadata["indexed_at"] = db_doc.indexed_at.isoformat()
 
-        self.__doc_metadata_cache[file_path] = metadata
+        self._doc_metadata_cache[file_path] = metadata
         return metadata
 
     def _load_registry(self) -> Dict[str, Any]:
@@ -509,7 +594,7 @@ class RAGMixin:
         try:
             os.makedirs(self.doc_indexes_dir, exist_ok=True)
             with open(self.registry_path, "w") as f:
-                json.dump(self.__index_registry, f, indent=2)
+                json.dump(self._index_registry, f, indent=2)
             self.logger.debug("Registry saved successfully")
         except Exception as e:
             self.logger.error(f"Error saving registry: {e}")
@@ -618,12 +703,12 @@ class RAGMixin:
             self.logger.debug("No target files specified")
             return None
 
-        if not self.__document_reader:
+        if not self._document_reader:
             self.logger.debug(
                 f"Creating unified document reader for {len(self.target_files)} files"
             )
             try:
-                self.__document_reader = SimpleDirectoryReader(
+                self._document_reader = SimpleDirectoryReader(
                     input_files=self.target_files,
                     file_extractor={
                         ".pdf": PDFReader(),
@@ -640,7 +725,7 @@ class RAGMixin:
             except Exception as e:
                 self.logger.error(f"Error creating document reader: {str(e)}")
                 return None
-        return self.__document_reader
+        return self._document_reader
 
     @property
     def documents(self) -> List[Document]:
@@ -676,8 +761,8 @@ class RAGMixin:
             VectorStoreIndex or None if loading fails
         """
         # Check cache first
-        if doc_id in self.__doc_indexes_cache:
-            return self.__doc_indexes_cache[doc_id]
+        if doc_id in self._doc_indexes_cache:
+            return self._doc_indexes_cache[doc_id]
 
         # Get doc info from registry
         doc_info = self.index_registry["documents"].get(doc_id)
@@ -698,8 +783,8 @@ class RAGMixin:
             doc_index = load_index_from_storage(storage_context)
 
             # Cache it
-            self.__doc_indexes_cache[doc_id] = doc_index
-            self.__loaded_doc_ids.append(doc_id)
+            self._doc_indexes_cache[doc_id] = doc_index
+            self._loaded_doc_ids.append(doc_id)
 
             self.logger.debug(
                 f"Loaded index for document {doc_info['file_name']}"
@@ -712,10 +797,10 @@ class RAGMixin:
 
     def _unload_doc_index(self, doc_id: str):
         """Unload a document's index from memory."""
-        if doc_id in self.__doc_indexes_cache:
-            del self.__doc_indexes_cache[doc_id]
-            if doc_id in self.__loaded_doc_ids:
-                self.__loaded_doc_ids.remove(doc_id)
+        if doc_id in self._doc_indexes_cache:
+            del self._doc_indexes_cache[doc_id]
+            if doc_id in self._loaded_doc_ids:
+                self._loaded_doc_ids.remove(doc_id)
             self.logger.debug(f"Unloaded index for document {doc_id}")
 
     @property
@@ -844,7 +929,7 @@ class RAGMixin:
                     success_count += 1
 
             # Emit completion
-            self.__cache_validated = True
+            self._cache_validated = True
 
             if hasattr(self, "emit_signal"):
                 self.emit_signal(
@@ -957,7 +1042,7 @@ class RAGMixin:
                 # Index chunks (this is the slow part)
                 for doc in docs:
                     doc.metadata.update(self._extract_metadata(db_doc.path))
-                    self.__index.insert(doc)
+                    self._index.insert(doc)
 
                 self._mark_document_indexed(db_doc.path)
 
@@ -1064,7 +1149,7 @@ class RAGMixin:
         self.logger.info(
             f"Creating vector index from {len(all_docs)} chunks (this may take a while)..."
         )
-        self.__index = VectorStoreIndex.from_documents(
+        self._index = VectorStoreIndex.from_documents(
             all_docs,
             embed_model=self.embedding,
             show_progress=True,  # Show progress in console
@@ -1139,10 +1224,10 @@ class RAGMixin:
         Only loads documents marked as active=True in the database.
         No automatic filtering - users manually control which documents to search.
         """
-        if not self.__retriever:
+        if not self._retriever:
             # Create multi-index retriever for active documents only
             try:
-                self.__retriever = MultiIndexRetriever(
+                self._retriever = MultiIndexRetriever(
                     rag_mixin=self,
                     similarity_top_k=5,
                 )
@@ -1153,7 +1238,7 @@ class RAGMixin:
             except Exception as e:
                 self.logger.error(f"Error creating multi-index retriever: {e}")
 
-        return self.__retriever
+        return self._retriever
 
     @property
     def rag_system_prompt(self) -> str:
@@ -1182,96 +1267,25 @@ class RAGMixin:
             "------\n"
         )
 
-    @property
-    def rag_engine(self) -> Optional[ConversationAwareContextChatEngine]:
-        """Get RAG chat engine with unified document access."""
-        if not self.__rag_engine:
-            if not self.retriever:
-                self.logger.error("No retriever available for RAG engine")
-                return None
+    # NOTE: These chat engine methods are not used with LangChain integration
+    # We only use the retriever to get relevant documents, then pass them to LangChain
+    #
+    # @property
+    # def rag_engine(self) -> Optional[ConversationAwareContextChatEngine]:
+    #     """Get RAG chat engine with unified document access."""
+    #     ...
+    #
+    # def create_contextual_rag_engine(...) -> Optional[ConversationAwareContextChatEngine]:
+    #     """Create a RAG engine for a specific query context."""
+    #     ...
 
-            try:
-                self.logger.debug(
-                    "Creating conversation-aware RAG chat engine..."
-                )
-                self.__rag_engine = ConversationAwareContextChatEngine(
-                    retriever=self.retriever,
-                    memory=self.chat_memory,
-                    prefix_messages=[],  # Will be set via update_system_prompt
-                    llm=self.llm,
-                    context_window_turns=3,  # Include last 3 conversation turns for context
-                )
-                # Set system prompt after creation
-                self.__rag_engine.update_system_prompt(self.rag_system_prompt)
-                self.logger.debug(
-                    "Conversation-aware RAG chat engine created successfully"
-                )
-            except Exception as e:
-                self.logger.error(f"Error creating RAG chat engine: {e}")
-                return None
-        return self.__rag_engine
-
-    def create_contextual_rag_engine(
-        self,
-        query: str,
-        doc_ids: Optional[List[str]] = None,
-        similarity_top_k: int = 5,
-    ) -> Optional[ConversationAwareContextChatEngine]:
-        """Create a RAG engine for a specific query context.
-
-        Args:
-            query: The user's query
-            doc_ids: Optional list of document IDs to focus on
-            similarity_top_k: Number of chunks to retrieve
-
-        Returns:
-            Configured RAG chat engine
-        """
-        retriever = self.get_retriever_for_query(
-            query=query, similarity_top_k=similarity_top_k, doc_ids=doc_ids
-        )
-
-        if not retriever:
-            return None
-
-        try:
-            engine = ConversationAwareContextChatEngine(
-                retriever=retriever,
-                memory=self.chat_memory,
-                prefix_messages=[],
-                llm=self.llm,
-                context_window_turns=3,
-            )
-            engine.update_system_prompt(self.rag_system_prompt)
-            self.logger.debug(
-                "Created contextual conversation-aware RAG engine"
-            )
-            return engine
-        except Exception as e:
-            self.logger.error(f"Error creating contextual RAG engine: {e}")
-            return None
-
-    @property
-    def rag_engine_tool(self) -> Optional[Any]:
-        """Get RAG engine tool."""
-        if not self._rag_engine_tool:
-            if not self.rag_engine:
-                self.logger.error("No RAG engine available for tool")
-                return None
-
-            try:
-                self.logger.info("Creating RAG engine tool")
-                # Changed return_direct=False so RAG feeds context to CHAT instead of returning directly
-                self._rag_engine_tool = RAGEngineTool.from_defaults(
-                    chat_engine=self.rag_engine,
-                    agent=self,
-                    return_direct=False,
-                )
-                self.logger.debug("RAG engine tool created successfully")
-            except Exception as e:
-                self.logger.error(f"Error creating RAG engine tool: {e}")
-                return None
-        return self._rag_engine_tool
+    # NOTE: rag_engine_tool property not used with LangChain integration
+    # LangChain tools directly call the retriever via rag_search() in rag_tools.py
+    #
+    # @property
+    # def rag_engine_tool(self) -> Optional[Any]:
+    #     """Get RAG engine tool."""
+    #     ...
 
     def _detect_old_unified_index(self) -> bool:
         """Check if old unified index exists."""
@@ -1357,13 +1371,13 @@ class RAGMixin:
 
     def _save_index(self):
         """Save unified index to disk."""
-        if not self.__index:
+        if not self._index:
             return
 
         try:
             persist_dir = str(self.storage_persist_dir)
             os.makedirs(persist_dir, exist_ok=True)
-            self.__index.storage_context.persist(persist_dir=persist_dir)
+            self._index.storage_context.persist(persist_dir=persist_dir)
             self.logger.info(f"Unified index saved to {persist_dir}")
         except Exception as e:
             self.logger.error(f"Error saving index: {e}")
@@ -1386,18 +1400,18 @@ class RAGMixin:
     def reload_rag(self):
         """Reload RAG components."""
         self.logger.debug("Reloading RAG...")
-        self.__index = None
-        self.__retriever = None
-        self.__rag_engine = None
-        self.__document_reader = None
+        self._index = None
+        self._retriever = None
+        self._rag_engine = None
+        self._document_reader = None
         self._rag_engine_tool = None
-        self.__doc_metadata_cache.clear()
-        self.__cache_validated = False
+        self._doc_metadata_cache.clear()
+        self._cache_validated = False
 
         # Clear per-document index caches
-        self.__doc_indexes_cache.clear()
-        self.__loaded_doc_ids.clear()
-        self.__index_registry = None
+        self._doc_indexes_cache.clear()
+        self._loaded_doc_ids.clear()
+        self._index_registry = None
 
     def clear_rag_documents(self):
         """Clear all RAG documents and reset components."""
@@ -1415,26 +1429,26 @@ class RAGMixin:
             self.target_files = None
 
             # Properly unload embedding model
-            if self.__embedding is not None:
+            if self._embedding is not None:
                 try:
                     # Try to access and delete the internal model if it exists
-                    if hasattr(self.__embedding, "_model"):
+                    if hasattr(self._embedding, "_model"):
                         self.logger.debug(
                             "Deleting embedding internal model..."
                         )
-                        del self.__embedding._model
-                    if hasattr(self.__embedding, "model"):
+                        del self._embedding._model
+                    if hasattr(self._embedding, "model"):
                         self.logger.debug(
                             "Deleting embedding model attribute..."
                         )
-                        del self.__embedding.model
+                        del self._embedding.model
                     # Delete the embedding wrapper
                     self.logger.debug("Deleting embedding wrapper...")
-                    del self.__embedding
+                    del self._embedding
                 except Exception as e:
                     self.logger.warning(f"Error deleting embedding: {e}")
-            self.__embedding = None
-            self.__text_splitter = None
+            self._embedding = None
+            self._text_splitter = None
 
             # Force garbage collection
             gc.collect()
@@ -1463,8 +1477,8 @@ class RAGMixin:
                 },
             )
 
-            if self.__index:
-                self.__index.insert(doc)
+            if self._index:
+                self._index.insert(doc)
                 self.logger.info(
                     f"Inserted HTML content '{source_name}' into unified index"
                 )

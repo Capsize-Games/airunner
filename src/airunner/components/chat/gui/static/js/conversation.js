@@ -35,8 +35,14 @@ function initializeChatView() {
         }
         chatBridge.appendMessage.connect(appendMessage);
         chatBridge.clearMessages.connect(clearMessages);
+        chatBridge.toolStatusUpdate.connect(handleToolStatusUpdate);
         chatBridge.setMessages.connect(function (msgs) {
-            clearMessages();
+            console.log(`[TOOL STATUS DEBUG] setMessages called with ${msgs.length} messages`);
+
+            // Always preserve tool statuses when setting messages
+            // Use clearMessages signal explicitly if you want to clear everything
+            clearMessagesKeepToolStatus();
+
             enableAutoScroll();
             const renderPromises = msgs.map(m => appendMessage(m, false));
             Promise.all(renderPromises).then(() => {
@@ -46,6 +52,32 @@ function initializeChatView() {
                     setTimeout(smoothScrollToBottom, 300);
                 }
             });
+        });
+        chatBridge.updateLastMessageContent.connect(function (content) {
+            // Update only the last message's content during streaming
+            const container = document.getElementById('conversation-container');
+            if (!container) return;
+
+            // Find all message divs (exclude tool status)
+            const messages = container.querySelectorAll('.message:not(.tool-status)');
+            if (messages.length === 0) return;
+
+            const lastMessage = messages[messages.length - 1];
+            const contentDiv = lastMessage.querySelector('.content');
+            if (!contentDiv) return;
+
+            // Update content with sanitized HTML
+            contentDiv.innerHTML = sanitizeContent(content);
+
+            // Trigger MathJax typesetting if needed
+            if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+                window.MathJax.typesetPromise([contentDiv]);
+            }
+
+            // Auto-scroll if enabled
+            if (window.autoScrollEnabled) {
+                smoothScrollToBottom();
+            }
         });
         window.isChatReady = true;
         if (window.chatReadyResolve) {
@@ -188,7 +220,110 @@ async function appendMessage(msg, scroll = true) {
     if (scroll && window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
 }
 
+function getToolDisplayName(toolName) {
+    const names = {
+        'search_web': 'Searching the internet',
+        'rag_search': 'Searching documents',
+        'generate_image': 'Generating image',
+        'clear_canvas': 'Clearing canvas',
+        'open_image': 'Opening image',
+        'save_data': 'Saving data',
+        'load_data': 'Loading data',
+    };
+    return names[toolName] || `Using ${toolName}`;
+}
+
+function handleToolStatusUpdate(toolId, toolName, query, status, details) {
+    console.log('[TOOL STATUS DEBUG] handleToolStatusUpdate called:', { toolId, toolName, query, status, details });
+
+    const container = document.getElementById('conversation-container');
+    if (!container) {
+        console.log('[TOOL STATUS DEBUG] Container not found');
+        return;
+    }
+
+    const toolElementId = `tool-status-${toolId}`;
+    let toolElement = document.getElementById(toolElementId);
+
+    if (status === 'starting') {
+        console.log('[TOOL STATUS DEBUG] Creating tool status element');
+        // Create new tool status element
+        if (!toolElement) {
+            toolElement = document.createElement('div');
+            toolElement.id = toolElementId;
+            toolElement.className = 'tool-status tool-status-active';
+            container.appendChild(toolElement);
+            console.log('[TOOL STATUS DEBUG] Appended new tool status element to container');
+        }
+
+        // Format the "starting" message
+        const displayName = getToolDisplayName(toolName);
+        const queryPreview = query.length > 50 ? query.substring(0, 50) + '...' : query;
+        toolElement.innerHTML = `
+            <div class="tool-status-line">
+                <span class="tool-spinner">⏳</span>
+                <span class="tool-text">${displayName} for "${queryPreview}"</span>
+            </div>
+        `;
+
+        if (window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
+    } else if (status === 'completed') {
+        console.log('[TOOL STATUS DEBUG] Updating tool status to completed');
+        // Update to "completed" status
+        if (toolElement) {
+            const displayName = getToolDisplayName(toolName);
+            const queryPreview = query.length > 50 ? query.substring(0, 50) + '...' : query;
+
+            let html = `
+                <div class="tool-status-line tool-status-completed">
+                    <span class="tool-checkmark">✅</span>
+                    <span class="tool-text">${displayName} for "${queryPreview}"</span>
+                </div>
+            `;
+
+            // Add details line if available
+            if (details && details.trim()) {
+                html += `
+                    <div class="tool-status-line tool-status-completed">
+                        <span class="tool-checkmark">✅</span>
+                        <span class="tool-text tool-details">Analyzed results (${details})</span>
+                    </div>
+                `;
+            }
+
+            toolElement.innerHTML = html;
+            toolElement.className = 'tool-status tool-status-done';
+
+            if (window.autoScrollEnabled) setTimeout(smoothScrollToBottom, 0);
+        } else {
+            console.log('[TOOL STATUS DEBUG] Tool element not found for completed status');
+        }
+    }
+}
+
+function clearMessagesKeepToolStatus() {
+    const container = document.getElementById('conversation-container');
+    if (!container) {
+        console.log('[TOOL STATUS DEBUG] Container not found');
+        return;
+    }
+
+    // Preserve tool status elements
+    const toolStatuses = Array.from(container.querySelectorAll('.tool-status'));
+    console.log(`[TOOL STATUS DEBUG] Found ${toolStatuses.length} tool status elements to preserve`);
+
+    // Clear all content
+    container.innerHTML = '';
+
+    // Re-add tool statuses at the beginning
+    toolStatuses.forEach(toolStatus => {
+        console.log('[TOOL STATUS DEBUG] Re-adding tool status:', toolStatus.textContent);
+        container.appendChild(toolStatus);
+    });
+}
+
 function clearMessages() {
+    console.log('[TOOL STATUS DEBUG] clearMessages called - clearing everything');
     const container = document.getElementById('conversation-container');
     if (container) container.innerHTML = '';
 }

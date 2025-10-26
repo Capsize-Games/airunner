@@ -58,22 +58,60 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             Updated configuration with checkpoint ID
         """
         try:
+            self.logger.info(
+                f"🔵 DatabaseCheckpointSaver.put() called for conversation {self.conversation_id}"
+            )
+
             # Extract messages from checkpoint
             if "messages" in checkpoint.get("channel_values", {}):
                 messages = checkpoint["channel_values"]["messages"]
 
-                # Only update if message count changed or content differs
+                self.logger.info(f"🔵 Checkpoint has {len(messages)} messages")
+                if messages:
+                    last_msg = messages[-1]
+                    last_msg_type = type(last_msg).__name__
+                    last_msg_content = getattr(last_msg, "content", "")[:100]
+                    self.logger.info(
+                        f"🔵 Last message type: {last_msg_type}, content preview: '{last_msg_content}'"
+                    )
+
+                # Check if we need to update
                 existing_messages = self.message_history.messages
+                needs_update = False
+
                 if len(messages) != len(existing_messages):
+                    needs_update = True
+                    self.logger.info(
+                        f"🟢 Message count changed: {len(existing_messages)} -> {len(messages)}"
+                    )
+                elif len(messages) > 0 and len(existing_messages) > 0:
+                    # Same count - check if last message content differs
+                    # This handles cases where we replace messages (e.g., forced responses)
+                    last_new = messages[-1]
+                    last_existing = existing_messages[-1]
+
+                    new_content = getattr(last_new, "content", "")
+                    existing_content = getattr(last_existing, "content", "")
+
+                    if new_content != existing_content:
+                        needs_update = True
+                        self.logger.info(
+                            f"🟢 Last message content changed (preview): '{existing_content[:50]}...' -> '{new_content[:50]}...'"
+                        )
+
+                if needs_update:
                     # Clear and re-add all messages
+                    self.logger.info(
+                        "🟢 Clearing and re-adding messages to database..."
+                    )
                     self.message_history.clear()
                     self.message_history.add_messages(messages)
-                    self.logger.debug(
-                        f"Saved checkpoint with {len(messages)} messages to conversation {self.message_history.conversation_id}"
+                    self.logger.info(
+                        f"✅ Saved checkpoint with {len(messages)} messages to conversation {self.message_history.conversation_id}"
                     )
                 else:
-                    self.logger.debug(
-                        f"Skipping checkpoint save - message count unchanged ({len(messages)})"
+                    self.logger.warning(
+                        f"⚠️ Skipping checkpoint save - no changes detected ({len(messages)} messages)"
                     )
 
             # Generate a proper UUID for the checkpoint if not present

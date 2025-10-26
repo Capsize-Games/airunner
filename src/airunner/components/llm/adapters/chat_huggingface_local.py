@@ -835,14 +835,19 @@ class ChatHuggingFaceLocal(BaseChatModel):
             json_block_pattern, "", response_text, flags=re.DOTALL
         )
 
-        # Try extracting JSON from anywhere in text (less reliable)
+        # Try extracting JSON from anywhere in text (handles nested objects)
         if not tool_calls:
-            json_pattern = r'\{[^{}]*"tool"[^{}]*\}|\{[^{}]*"name"[^{}]*\}'
+            # Match JSON objects that contain "tool" or "name" key
+            # This regex handles nested braces by matching balanced JSON structures
+            json_pattern = r'\{(?:[^{}]|(\{(?:[^{}]|\{[^{}]*\})*\}))*(?:"tool"|"name")(?:[^{}]|(\{(?:[^{}]|\{[^{}]*\})*\}))*\}'
             matches = re.findall(json_pattern, response_text, re.DOTALL)
 
-            for match in matches:
+            # The pattern captures groups, but we want the full match
+            # So we need to search instead of findall
+            for match in re.finditer(json_pattern, response_text, re.DOTALL):
+                json_str = match.group(0)
                 try:
-                    data = json.loads(match)
+                    data = json.loads(json_str)
                     if "tool" in data or "name" in data:
                         tool_name = data.get("tool") or data.get("name")
                         tool_args = data.get("arguments", {})
@@ -854,8 +859,12 @@ class ChatHuggingFaceLocal(BaseChatModel):
                                 "id": str(uuid.uuid4()),
                             }
                         )
-                        print(f"✓ Parsed embedded JSON tool call: {tool_name}")
-                        cleaned_text = cleaned_text.replace(match, "").strip()
+                        self.logger.debug(
+                            f"Parsed embedded JSON tool call: {tool_name}"
+                        )
+                        cleaned_text = cleaned_text.replace(
+                            json_str, ""
+                        ).strip()
                 except json.JSONDecodeError:
                     continue
 

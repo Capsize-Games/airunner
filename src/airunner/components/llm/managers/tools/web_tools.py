@@ -12,24 +12,71 @@ class WebTools:
     """Mixin class providing web search and scraping tools."""
 
     def search_web_tool(self) -> Callable:
-        """Search the web for information."""
+        """Search the web for information using DuckDuckGo."""
 
         @tool
         def search_web(query: str) -> str:
-            """Search the internet for information.
+            """Search the internet for information using DuckDuckGo.
 
             Args:
                 query: Search query
 
             Returns:
-                Search results
+                Formatted search results from DuckDuckGo
             """
             try:
-                self.emit_signal(
-                    SignalCode.SEARCH_WEB_SIGNAL, {"query": query}
+                # Import the aggregated search tool
+                from airunner.components.tools.search_tool import (
+                    AggregatedSearchTool,
                 )
-                return f"Searching for: {query}"
+
+                self.logger.info(f"🔍 Searching web for: {query}")
+
+                # Use DuckDuckGo search (web category)
+                results = AggregatedSearchTool.aggregated_search_sync(
+                    query, category="web"
+                )
+
+                self.logger.info(
+                    f"Search results keys: {results.keys() if results else 'None'}"
+                )
+
+                # Format results
+                if not results or "duckduckgo" not in results:
+                    self.logger.warning(
+                        f"No results dict or missing duckduckgo key for: {query}"
+                    )
+                    return f"No search results available for: {query}"
+
+                ddg_results = results["duckduckgo"]
+                self.logger.info(f"Got {len(ddg_results)} DuckDuckGo results")
+
+                if not ddg_results:
+                    self.logger.warning(
+                        f"Empty DuckDuckGo results list for: {query}"
+                    )
+                    return f"No search results available for: {query}"
+
+                # Format top 5 results
+                formatted = f"Web search results for '{query}':\n\n"
+                for i, result in enumerate(ddg_results[:5], 1):
+                    title = result.get("title", "N/A")
+                    link = result.get("link", "#")
+                    snippet = result.get("snippet", "")[
+                        :200
+                    ]  # Limit snippet length
+                    formatted += f"{i}. {title}\n"
+                    formatted += f"   URL: {link}\n"
+                    if snippet:
+                        formatted += f"   {snippet}...\n"
+                    formatted += "\n"
+
+                self.logger.info(
+                    f"✓ Formatted {len(ddg_results[:5])} search results"
+                )
+                return formatted
             except Exception as e:
+                self.logger.error(f"Web search error: {e}", exc_info=True)
                 return f"Error searching web: {str(e)}"
 
         return search_web

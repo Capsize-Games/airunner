@@ -17,7 +17,7 @@ from functools import lru_cache
 
 # Import all dependencies (assume they are installed as optional extras)
 import aiohttp
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from googleapiclient.discovery import build as build_google_service
 import wikipedia
 import xml.etree.ElementTree as ET

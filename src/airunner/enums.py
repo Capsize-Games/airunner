@@ -130,6 +130,7 @@ class SignalCode(Enum):
     LLM_TEXT_STREAMED_SIGNAL = "llm_text_streamed_signal"
     LLM_TEXT_GENERATE_REQUEST_SIGNAL = "llm_text_generate_request_signal"
     LLM_TOKEN_SIGNAL = "llm_token_signal"
+    LLM_TOOL_STATUS_SIGNAL = "llm_tool_status_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
     LORA_UPDATED_SIGNAL = "lora_updated_signal"
     LORA_DELETE_SIGNAL = "delete_lora_signal"
