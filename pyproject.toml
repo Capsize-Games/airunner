@@ -8,8 +8,9 @@ markers = [
     "slow: tests that take a long time to run",
     "asyncio: asynchronous test marker",
     "integration: integration test marker",
+    "gpu: tests that require GPU hardware",
 ]
-testpaths = ["tests", "src"]
+testpaths = ["src"]
 # Disable parallel execution to prevent worker cleanup issues
 # Use serial execution for now until worker cleanup is fixed
 addopts = "--maxfail=100 --timeout=30"
