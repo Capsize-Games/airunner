@@ -6,7 +6,7 @@ capabilities including LLM, art generation, TTS, and STT.
 """
 
 import logging
-from typing import Optional
+from typing import Optional, Any
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -33,7 +33,9 @@ async def lifespan(app: FastAPI):
 
 
 def create_app(
-    allowed_origins: Optional[list] = None, enable_cors: bool = True
+    allowed_origins: Optional[list] = None,
+    enable_cors: bool = True,
+    app_instance: Optional[Any] = None,
 ) -> FastAPI:
     """
     Create and configure FastAPI application.
@@ -41,10 +43,12 @@ def create_app(
     Args:
         allowed_origins: List of allowed CORS origins
         enable_cors: Whether to enable CORS
+        app_instance: Optional AI Runner app instance for dependency injection
 
     Returns:
         Configured FastAPI application
     """
+    # Store app_instance in app state if provided
     app = FastAPI(
         title="AI Runner API",
         description="REST and WebSocket API for AI Runner",
@@ -53,6 +57,9 @@ def create_app(
         redoc_url="/redoc",
         lifespan=lifespan,
     )
+
+    if app_instance:
+        app.state.airunner_app = app_instance
 
     # Configure CORS
     if enable_cors:
