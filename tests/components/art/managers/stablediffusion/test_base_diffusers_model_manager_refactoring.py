@@ -192,10 +192,7 @@ def test_generation_methods_accessible():
     assert hasattr(BaseDiffusersModelManager, "_get_results")
     assert hasattr(BaseDiffusersModelManager, "interrupt_image_generation")
     assert hasattr(BaseDiffusersModelManager, "_callback")
-    assert hasattr(
-        BaseDiffusersModelManager,
-        "_BaseDiffusersModelManager__interrupt_callback",
-    )
+    # __interrupt_callback was removed - interrupt handled differently now
 
 
 def test_coordination_methods_accessible():
@@ -220,7 +217,7 @@ def test_coordination_methods_accessible():
 
 def test_helper_class_exists():
     """Test that DeterministicSDENoiseSampler helper class still exists."""
-    from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
+    from airunner.components.art.managers.stablediffusion.noise_sampler import (
         DeterministicSDENoiseSampler,
     )
 

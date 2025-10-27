@@ -2863,6 +2863,7 @@ class CustomScene(
         self.undo_history = []
         self.redo_history = []
         self._history_transactions.clear()
+        self._structure_history_transaction = None
         if self.api and hasattr(self.api, "art"):
             self.api.art.canvas.clear_history()
 

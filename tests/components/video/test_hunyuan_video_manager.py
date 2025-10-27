@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch, MagicMock
 from airunner.components.video.managers.hunyuan_video_manager import (
     HunyuanVideoManager,
 )
-from airunner.enums import SignalCode
+from airunner.enums import SignalCode, ModelType
 
 
 @pytest.fixture
@@ -36,8 +36,7 @@ class TestHunyuanVideoManager:
 
     def test_initialization(self, manager):
         """Test manager initializes with correct defaults."""
-        assert manager.model_name == "hunyuan_video"
-        assert manager.model_identifier == "tencent/HunyuanVideo"
+        assert manager.model_type == ModelType.HUNYUAN_VIDEO
         assert manager.text_encoder is None
         assert manager.text_encoder_2 is None
         assert manager.vae is None

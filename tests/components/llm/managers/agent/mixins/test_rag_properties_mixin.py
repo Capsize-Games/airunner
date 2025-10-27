@@ -19,12 +19,23 @@ class TestableRAGPropertiesMixin(RAGPropertiesMixin):
         self.logger = Mock()
         self.path_settings = Mock()
         self.path_settings.base_path = "/test/base"
+        self.knowledge_settings = Mock()
+        self.knowledge_settings.chunk_size = 512
+        self.knowledge_settings.chunk_overlap = 50
         self.system_prompt = "Test system prompt"
         self.botname = "TestBot"
         self._text_splitter = None
         self._index_registry = None
         self._embedding = None
         self._target_files = None
+
+    def _load_registry(self):
+        """Mock implementation of _load_registry from RAGIndexManagementMixin."""
+        return {"documents": {}, "version": "1.0"}
+
+    def _get_active_document_names(self):
+        """Mock implementation of _get_active_document_names from RAGDocumentMixin."""
+        return []
 
 
 class TestTextSplitter:
@@ -68,9 +79,7 @@ class TestDocIndexesDir:
 
         result = mixin.doc_indexes_dir
 
-        expected = os.path.expanduser(
-            "/test/base/text/other/cache/per_document_indexes"
-        )
+        expected = os.path.expanduser("/test/base/rag/doc_indexes")
         assert result == expected
 
 
@@ -84,7 +93,7 @@ class TestRegistryPath:
         result = mixin.registry_path
 
         expected = os.path.expanduser(
-            "/test/base/text/other/cache/per_document_indexes/registry.json"
+            "/test/base/rag/doc_indexes/index_registry.json"
         )
         assert result == expected
 

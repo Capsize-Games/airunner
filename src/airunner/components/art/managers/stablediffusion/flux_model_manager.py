@@ -85,8 +85,9 @@ class FluxModelManager(BaseDiffusersModelManager, ModelManagerInterface):
     @property
     def outpaint_pipelines(self) -> tuple:
         """Get outpaint/inpaint pipeline classes for FLUX."""
-        return (FluxInpaintPipeline,) @ property
+        return (FluxInpaintPipeline,)
 
+    @property
     def pipeline_map(self) -> Dict[str, Any]:
         """
         Map operation types to FLUX pipeline classes.
