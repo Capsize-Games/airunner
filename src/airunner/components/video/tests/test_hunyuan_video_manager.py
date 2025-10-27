@@ -4,6 +4,7 @@ Unit tests for HunyuanVideoManager.
 Tests model loading, unloading, parameter validation, and cancellation.
 """
 
+import os
 import pytest
 import torch
 import numpy as np
@@ -259,7 +260,8 @@ class TestHunyuanVideoManager:
 
     def test_outputs_folder_creation(self, manager):
         """Test outputs folder is created."""
-        assert manager.outputs_folder.endswith("outputs")
+        assert manager.outputs_folder.endswith("hunyuanvideo")
+        assert os.path.exists(manager.outputs_folder)
 
 
 class TestHunyuanVideoManagerIntegration:
