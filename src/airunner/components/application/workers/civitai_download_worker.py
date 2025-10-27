@@ -290,6 +290,23 @@ class CivitAIDownloadWorker(BaseDownloadWorker):
 
                 response.raise_for_status()
 
+                # Validate content-type before writing to disk
+                # Prevents writing error responses containing API keys
+                content_type = response.headers.get("content-type", "").lower()
+                valid_types = [
+                    "application/octet-stream",
+                    "application/x-",
+                    "image/",
+                    "video/",
+                    "model/",
+                    "application/zip",
+                ]
+                if not any(ct in content_type for ct in valid_types):
+                    self.logger.error(
+                        f"Invalid content-type for download: {content_type}"
+                    )
+                    return False
+
                 content_length = response.headers.get("content-length")
                 if content_length:
                     file_size = int(content_length)

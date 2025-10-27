@@ -278,8 +278,10 @@ class InstallWorker(
                                 self.parent.update_download_log(
                                     {"message": msg}
                                 )
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                self.logger.exception(
+                                    f"Failed to update download log: {e}"
+                                )
                     self.hf_downloader.download_model(
                         requested_path=model["path"],
                         requested_file_name=filename,
@@ -287,8 +289,12 @@ class InstallWorker(
                         requested_callback=self._safe_progress_emit,
                     )
                     total_success += 1
-                except Exception:
+                except Exception as e:
                     total_failed += 1
+                    self.logger.exception(
+                        f"Failed to download model file: {filename} "
+                        f"for model path: {model.get('path', '<no-path>')}: {e}"
+                    )
 
         # Download Upscaler x4 files if enabled
         try:
