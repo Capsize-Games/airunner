@@ -68,7 +68,7 @@ class TestWebTools(BaseTestCase):
         mock_get.return_value = mock_response
 
         tool = self.tools.search_web_tool()
-        result = tool(query="test query")
+        result = self.invoke_tool(tool, query="test query")
 
         self.assertIn("Search results", result)
 
@@ -90,7 +90,7 @@ class TestWebTools(BaseTestCase):
         mock_get.return_value = mock_response
 
         tool = self.tools.web_scraper_tool()
-        result = tool(url="https://example.com")
+        result = self.invoke_tool(tool, url="https://example.com")
 
         self.assertIn("Title", result)
         self.assertIn("Content", result)
@@ -115,31 +115,31 @@ class TestCodeTools(BaseTestCase):
         tool = self.tools.calculator_tool()
 
         # Addition
-        result = tool(expression="2 + 2")
+        result = self.invoke_tool(tool, expression="2 + 2")
         self.assertIn("4", result)
 
         # Multiplication
-        result = tool(expression="5 * 6")
+        result = self.invoke_tool(tool, expression="5 * 6")
         self.assertIn("30", result)
 
         # Complex expression
-        result = tool(expression="(10 + 5) * 2")
+        result = self.invoke_tool(tool, expression="(10 + 5) * 2")
         self.assertIn("30", result)
 
     def test_calculator_with_functions(self):
         """Test calculator with math functions."""
         tool = self.tools.calculator_tool()
 
-        result = tool(expression="sqrt(16)")
+        result = self.invoke_tool(tool, expression="sqrt(16)")
         self.assertIn("4", result)
 
-        result = tool(expression="sin(0)")
+        result = self.invoke_tool(tool, expression="sin(0)")
         self.assertIn("0", result)
 
     def test_calculator_invalid_expression(self):
         """Test calculator with invalid expression."""
         tool = self.tools.calculator_tool()
-        result = tool(expression="invalid / code")
+        result = self.invoke_tool(tool, expression="invalid / code")
 
         self.assertIn("Error", result)
 
@@ -153,21 +153,21 @@ class TestCodeTools(BaseTestCase):
     def test_execute_python_simple_code(self):
         """Test executing simple Python code."""
         tool = self.tools.execute_python_tool()
-        result = tool(code="print('Hello, World!')")
+        result = self.invoke_tool(tool, code="print('Hello, World!')")
 
         self.assertIn("Hello, World!", result)
 
     def test_execute_python_with_return_value(self):
         """Test executing Python code with return value."""
         tool = self.tools.execute_python_tool()
-        result = tool(code="x = 10\ny = 20\nprint(x + y)")
+        result = self.invoke_tool(tool, code="x = 10\ny = 20\nprint(x + y)")
 
         self.assertIn("30", result)
 
     def test_execute_python_with_error(self):
         """Test executing Python code with syntax error."""
         tool = self.tools.execute_python_tool()
-        result = tool(code="invalid python syntax !!!")
+        result = self.invoke_tool(tool, code="invalid python syntax !!!")
 
         self.assertIn("Error", result)
 
@@ -196,7 +196,7 @@ class TestSystemTools(BaseTestCase):
     def test_clear_conversation_emits_signal(self):
         """Test that clear_conversation emits the correct signal."""
         tool = self.tools.clear_conversation_tool()
-        result = tool()
+        result = self.invoke_tool(tool)
 
         self.assertIn("Cleared conversation", result)
         self.tools.emit_signal.assert_called_with(
@@ -213,7 +213,7 @@ class TestSystemTools(BaseTestCase):
     def test_quit_application_emits_signal(self):
         """Test that quit_application emits the correct signal."""
         tool = self.tools.quit_application_tool()
-        result = tool()
+        result = self.invoke_tool(tool)
 
         self.assertIn("Quitting application", result)
         self.tools.emit_signal.assert_called_with(
@@ -230,7 +230,7 @@ class TestSystemTools(BaseTestCase):
     def test_toggle_tts_on(self):
         """Test toggling TTS on."""
         tool = self.tools.toggle_tts_tool()
-        result = tool(enabled=True)
+        result = self.invoke_tool(tool, enabled=True)
 
         self.assertIn("TTS enabled", result)
         self.tools.emit_signal.assert_called_with(
@@ -240,7 +240,7 @@ class TestSystemTools(BaseTestCase):
     def test_toggle_tts_off(self):
         """Test toggling TTS off."""
         tool = self.tools.toggle_tts_tool()
-        result = tool(enabled=False)
+        result = self.invoke_tool(tool, enabled=False)
 
         self.assertIn("TTS disabled", result)
         self.tools.emit_signal.assert_called_with(
@@ -257,7 +257,7 @@ class TestSystemTools(BaseTestCase):
     def test_update_mood_emits_signal(self):
         """Test that update_mood emits the correct signal."""
         tool = self.tools.update_mood_tool()
-        result = tool(mood="happy")
+        result = self.invoke_tool(tool, mood="happy")
 
         self.assertIn("Updated mood", result)
         self.tools.emit_signal.assert_called_with(
@@ -275,7 +275,7 @@ class TestSystemTools(BaseTestCase):
         """Test emitting signal with data."""
         tool = self.tools.emit_signal_tool()
         data = {"key": "value", "number": 42}
-        result = tool(signal_code="CUSTOM_SIGNAL", data=data)
+        result = self.invoke_tool(tool, signal_code="CUSTOM_SIGNAL", data=data)
 
         self.assertIn("Emitted signal", result)
         # Note: emit_signal is called twice - once in the tool, once for logging

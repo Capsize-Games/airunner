@@ -48,7 +48,7 @@ class TestAutonomousControlTools(BaseTestCase):
     def test_get_application_state_returns_json(self):
         """Test that get_application_state returns valid JSON."""
         tool = self.tools.get_application_state_tool()
-        result = tool()
+        result = self.invoke_tool(tool)
 
         # Should be valid JSON string
         state = json.loads(result)
@@ -65,7 +65,7 @@ class TestAutonomousControlTools(BaseTestCase):
     def test_schedule_task_immediate(self):
         """Test scheduling an immediate task."""
         tool = self.tools.schedule_task_tool()
-        result = tool(
+        result = self.invoke_tool(tool, 
             task_name="test_task",
             description="Test task description",
             when="now",
@@ -89,7 +89,7 @@ class TestAutonomousControlTools(BaseTestCase):
         """Test scheduling task with parameters."""
         tool = self.tools.schedule_task_tool()
         params = {"image_prompt": "a cat", "steps": 30}
-        result = tool(
+        result = self.invoke_tool(tool, 
             task_name="generate_image",
             description="Generate cat image",
             when="in 5 minutes",
@@ -113,7 +113,7 @@ class TestAutonomousControlTools(BaseTestCase):
     def test_set_application_mode_autonomous(self):
         """Test setting application to autonomous mode."""
         tool = self.tools.set_application_mode_tool()
-        result = tool(mode="autonomous", reason="Testing autonomous mode")
+        result = self.invoke_tool(tool, mode="autonomous", reason="Testing autonomous mode")
 
         self.assertIn("Set application mode", result)
         self.assertIn("autonomous", result)
@@ -127,7 +127,7 @@ class TestAutonomousControlTools(BaseTestCase):
     def test_set_application_mode_validation(self):
         """Test that invalid modes are rejected."""
         tool = self.tools.set_application_mode_tool()
-        result = tool(mode="invalid_mode", reason="Test")
+        result = self.invoke_tool(tool, mode="invalid_mode", reason="Test")
 
         self.assertIn("must be one of", result.lower())
 
@@ -141,7 +141,7 @@ class TestAutonomousControlTools(BaseTestCase):
     def test_request_user_input_approval(self):
         """Test requesting user approval."""
         tool = self.tools.request_user_input_tool()
-        result = tool(
+        result = self.invoke_tool(tool, 
             prompt="Delete old files?",
             input_type="approval",
             context={"file_count": 42},
@@ -172,7 +172,7 @@ class TestAutonomousControlTools(BaseTestCase):
     def test_propose_action_with_rationale(self):
         """Test proposing an action with rationale."""
         tool = self.tools.propose_action_tool()
-        result = tool(
+        result = self.invoke_tool(tool, 
             action="cleanup_cache",
             rationale="Cache is taking up 5GB of disk space",
             confidence=0.85,
@@ -223,7 +223,7 @@ class TestAutonomousControlTools(BaseTestCase):
         mock_disk.return_value = MagicMock(percent=70.0)
 
         tool = self.tools.monitor_system_health_tool()
-        result = tool()
+        result = self.invoke_tool(tool)
 
         self.assertIn("CPU usage", result)
         self.assertIn("45.0%", result)
@@ -241,7 +241,7 @@ class TestAutonomousControlTools(BaseTestCase):
         """Test logging agent decision with context."""
         tool = self.tools.log_agent_decision_tool()
         context = {"user_request": "summarize document", "token_count": 5000}
-        result = tool(
+        result = self.invoke_tool(tool, 
             decision="split_into_chunks",
             reasoning="Document too large for single pass",
             context=context,
