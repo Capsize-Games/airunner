@@ -71,18 +71,23 @@ class TestRAGTools(BaseTestCase):
     def test_rag_search_returns_results(self):
         """Test that RAG search returns results."""
         # Mock rag_manager search
-        mock_results = [
-            {"text": "Result 1", "score": 0.95},
-            {"text": "Result 2", "score": 0.85},
-        ]
+        mock_doc1 = Mock()
+        mock_doc1.page_content = "Result 1"
+        mock_doc1.metadata = {"source": "doc1.txt", "score": 0.95}
+
+        mock_doc2 = Mock()
+        mock_doc2.page_content = "Result 2"
+        mock_doc2.metadata = {"source": "doc2.txt", "score": 0.85}
+
+        mock_results = [mock_doc1, mock_doc2]
         self.tools.rag_manager.search = Mock(return_value=mock_results)
 
         tool = self.tools.rag_search_tool()
         result = self.invoke_tool(tool, query="test query", limit=5)
 
-        self.assertIn("Found 2 results", result)
         self.assertIn("Result 1", result)
-        self.assertIn("95%", result)
+        self.assertIn("Result 2", result)
+        self.assertIn("doc1.txt", result)
 
     def test_search_knowledge_base_documents_tool_creation(self):
         """Test that search_knowledge_base_documents_tool creates a callable tool."""

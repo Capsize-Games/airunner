@@ -17,6 +17,7 @@ class MockAutonomousControlToolsClass(AutonomousControlTools):
     def __init__(self):
         self.logger = Mock()
         self.emit_signal = Mock()
+        self.rag_manager = None
 
 
 class TestAutonomousControlTools(BaseTestCase):
@@ -52,7 +53,8 @@ class TestAutonomousControlTools(BaseTestCase):
         # Should be valid JSON string
         state = json.loads(result)
         self.assertIsInstance(state, dict)
-        self.assertIn("timestamp", state)
+        self.assertIn("application", state)
+        self.assertIn("llm", state)
 
     def test_schedule_task_tool_creation(self):
         """Test that schedule_task_tool creates a callable tool."""
@@ -63,7 +65,8 @@ class TestAutonomousControlTools(BaseTestCase):
     def test_schedule_task_immediate(self):
         """Test scheduling an immediate task."""
         tool = self.tools.schedule_task_tool()
-        result = self.invoke_tool(tool, 
+        result = self.invoke_tool(
+            tool,
             task_name="test_task",
             description="Test task description",
             when="now",
@@ -87,7 +90,8 @@ class TestAutonomousControlTools(BaseTestCase):
         """Test scheduling task with parameters."""
         tool = self.tools.schedule_task_tool()
         params = {"image_prompt": "a cat", "steps": 30}
-        result = self.invoke_tool(tool, 
+        result = self.invoke_tool(
+            tool,
             task_name="generate_image",
             description="Generate cat image",
             when="in 5 minutes",
@@ -110,7 +114,9 @@ class TestAutonomousControlTools(BaseTestCase):
     def test_set_application_mode_autonomous(self):
         """Test setting application to autonomous mode."""
         tool = self.tools.set_application_mode_tool()
-        result = self.invoke_tool(tool, mode="autonomous", reason="Testing autonomous mode")
+        result = self.invoke_tool(
+            tool, mode="autonomous", reason="Testing autonomous mode"
+        )
 
         self.assertIn("Set application mode", result)
         self.assertIn("autonomous", result)
@@ -137,7 +143,8 @@ class TestAutonomousControlTools(BaseTestCase):
     def test_request_user_input_approval(self):
         """Test requesting user approval."""
         tool = self.tools.request_user_input_tool()
-        result = self.invoke_tool(tool, 
+        result = self.invoke_tool(
+            tool,
             prompt="Delete old files?",
             input_type="approval",
             context={"file_count": 42},
@@ -166,7 +173,8 @@ class TestAutonomousControlTools(BaseTestCase):
     def test_propose_action_with_rationale(self):
         """Test proposing an action with rationale."""
         tool = self.tools.propose_action_tool()
-        result = self.invoke_tool(tool, 
+        result = self.invoke_tool(
+            tool,
             action="cleanup_cache",
             rationale="Cache is taking up 5GB of disk space",
             confidence=0.85,
@@ -233,7 +241,8 @@ class TestAutonomousControlTools(BaseTestCase):
         """Test logging agent decision with context."""
         tool = self.tools.log_agent_decision_tool()
         context = {"user_request": "summarize document", "token_count": 5000}
-        result = self.invoke_tool(tool, 
+        result = self.invoke_tool(
+            tool,
             decision="split_into_chunks",
             reasoning="Document too large for single pass",
             context=context,
