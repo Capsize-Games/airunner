@@ -487,6 +487,7 @@ def main():
             "/data/",
             "vendor",
             "/gui/",
+            "__init__.py",
         ],
         help="Patterns to exclude from analysis (alembic, data, vendor, _ui.py always excluded)",
     )

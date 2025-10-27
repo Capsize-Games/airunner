@@ -1,7 +1,7 @@
 """Mixin providing AI model, LoRA, and embedding management operations."""
 
 from typing import List, Optional
-from sqlalchemy.orm import session_scope
+from airunner.components.data.session_manager import session_scope
 from airunner.components.art.data.ai_models import AIModels
 from airunner.components.art.data.lora import Lora
 from airunner.components.art.data.embedding import Embedding
