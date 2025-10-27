@@ -6,6 +6,8 @@ line-length = 79
 markers = [
     "gui: tests that require Qt GUI components (may cause thread issues when run in bulk)",
     "slow: tests that take a long time to run",
+    "asyncio: asynchronous test marker",
+    "integration: integration test marker",
 ]
 testpaths = ["tests", "src"]
 # Use loadscope for better test grouping and faster execution
