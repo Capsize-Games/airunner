@@ -1,45 +1,45 @@
 """Mixin providing utility and chatbot management operations."""
 
 from typing import Optional
-from sqlalchemy.orm import session_scope
+from airunner.components.data.session_manager import session_scope
 from airunner.components.llm.data.chatbot import Chatbot
 from airunner.components.llm.data.target_files import TargetFiles
 from airunner.components.settings.data.path_settings import PathSettings
 from airunner.components.settings.data.application_settings import (
     ApplicationSettings,
 )
-from airunner.components.settings.data.active_grid_settings import (
+from airunner.components.art.data.active_grid_settings import (
     ActiveGridSettings,
 )
-from airunner.components.settings.data.controlnet_settings import (
+from airunner.components.art.data.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner.components.settings.data.image_to_image_settings import (
+from airunner.components.art.data.image_to_image_settings import (
     ImageToImageSettings,
 )
-from airunner.components.settings.data.outpaint_settings import (
+from airunner.components.art.data.outpaint_settings import (
     OutpaintSettings,
 )
-from airunner.components.settings.data.drawing_pad_settings import (
+from airunner.components.art.data.drawingpad_settings import (
     DrawingPadSettings,
 )
-from airunner.components.settings.data.metadata_settings import (
+from airunner.components.art.data.metadata_settings import (
     MetadataSettings,
 )
-from airunner.components.settings.data.generator_settings import (
+from airunner.components.art.data.generator_settings import (
     GeneratorSettings,
 )
-from airunner.components.settings.data.llm_generator_settings import (
+from airunner.components.llm.data.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner.components.settings.data.speech_t5_settings import (
+from airunner.components.tts.data.models.speech_t5_settings import (
     SpeechT5Settings,
 )
-from airunner.components.settings.data.espeak_settings import EspeakSettings
-from airunner.components.settings.data.stt_settings import STTSettings
-from airunner.components.settings.data.brush_settings import BrushSettings
-from airunner.components.settings.data.grid_settings import GridSettings
-from airunner.components.settings.data.memory_settings import MemorySettings
+from airunner.components.tts.data.models.espeak_settings import EspeakSettings
+from airunner.components.stt.data.stt_settings import STTSettings
+from airunner.components.art.data.brush_settings import BrushSettings
+from airunner.components.art.data.grid_settings import GridSettings
+from airunner.components.art.data.memory_settings import MemorySettings
 from airunner.components.application.gui.windows.main.settings_mixin_shared_instance import (
     SettingsMixinSharedInstance,
 )

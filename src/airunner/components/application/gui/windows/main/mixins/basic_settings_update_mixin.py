@@ -4,30 +4,30 @@ from typing import Any, Dict, Type, Optional
 from airunner.components.settings.data.application_settings import (
     ApplicationSettings,
 )
-from airunner.components.settings.data.speech_t5_settings import (
+from airunner.components.tts.data.models.speech_t5_settings import (
     SpeechT5Settings,
 )
-from airunner.components.settings.data.espeak_settings import EspeakSettings
-from airunner.components.settings.data.grid_settings import GridSettings
-from airunner.components.settings.data.active_grid_settings import (
+from airunner.components.tts.data.models.espeak_settings import EspeakSettings
+from airunner.components.art.data.grid_settings import GridSettings
+from airunner.components.art.data.active_grid_settings import (
     ActiveGridSettings,
 )
 from airunner.components.settings.data.path_settings import PathSettings
-from airunner.components.settings.data.memory_settings import MemorySettings
-from airunner.components.settings.data.llm_generator_settings import (
+from airunner.components.art.data.memory_settings import MemorySettings
+from airunner.components.llm.data.llm_generator_settings import (
     LLMGeneratorSettings,
 )
-from airunner.components.settings.data.whisper_settings import (
+from airunner.components.stt.data.whisper_settings import (
     WhisperSettings,
 )
-from airunner.components.settings.data.generator_settings import (
+from airunner.components.art.data.generator_settings import (
     GeneratorSettings,
 )
-from airunner.components.settings.data.controlnet_settings import (
+from airunner.components.art.data.controlnet_settings import (
     ControlnetSettings,
 )
-from airunner.components.llm.data.saved_prompt import SavedPrompt
-from airunner.components.settings.data.font_settings import FontSetting
+from airunner.components.art.data.saved_prompt import SavedPrompt
+from airunner.components.settings.data.font_setting import FontSetting
 
 
 class BasicSettingsUpdateMixin:
