@@ -111,9 +111,24 @@ class HunyuanVideoManager(BaseVideoManager):
     FLUX_MODEL_ID = "lllyasviel/flux_redux_bfl"
     TRANSFORMER_MODEL_ID = "lllyasviel/FramePackI2V_HY"
 
-    def __init__(self, *args, **kwargs):
-        """Initialize the HunyuanVideo manager."""
+    def __init__(
+        self, config: Optional[Dict[str, Any]] = None, *args, **kwargs
+    ):
+        """Initialize the HunyuanVideo manager.
+
+        Args:
+            config: Optional configuration dictionary to override defaults:
+                - high_vram: Keep models in GPU memory (default: auto-detect)
+                - use_teacache: Enable teacache for speedup (default: True)
+                - gpu_memory_preservation: GB to preserve (default: 6.0)
+                - mp4_crf: Video quality, lower is better (default: 23)
+                - num_inference_steps: Denoising steps (default: 50)
+                - guidance_scale: CFG scale (default: 6.0)
+        """
         super().__init__(*args, **kwargs)
+
+        # Apply config overrides if provided
+        config = config or {}
 
         # Model components
         self.text_encoder = None
@@ -125,11 +140,15 @@ class HunyuanVideoManager(BaseVideoManager):
         self.feature_extractor = None
         self.transformer = None
 
-        # Configuration
-        self.high_vram = False
-        self.use_teacache = True
-        self.gpu_memory_preservation = 6.0
-        self.mp4_crf = 23  # Video quality (lower is better)
+        # Configuration (with config overrides)
+        self.high_vram = config.get("high_vram", False)
+        self.use_teacache = config.get("use_teacache", True)
+        self.gpu_memory_preservation = config.get(
+            "gpu_memory_preservation", 6.0
+        )
+        self.mp4_crf = config.get("mp4_crf", 23)
+        self.num_inference_steps = config.get("num_inference_steps", 50)
+        self.guidance_scale = config.get("guidance_scale", 6.0)
 
         # Output directory
         self.outputs_folder = os.path.join(
@@ -143,18 +162,20 @@ class HunyuanVideoManager(BaseVideoManager):
         # Cancellation flag
         self._cancel_requested = False
 
-    def _load_model(self, options: Dict[str, Any]) -> bool:
+    def _load_model(self, options: Optional[Dict[str, Any]] = None) -> bool:
         """
         Load the HunyuanVideo model and all components.
 
         Args:
-            options: Configuration options
+            options: Configuration options (optional)
                 - high_vram: If True, keep models in GPU memory (default: auto-detect)
                 - use_teacache: Enable teacache for speedup (default: True)
 
         Returns:
             True if successful
         """
+        options = options or {}
+
         try:
             self.logger.info("Loading HunyuanVideo model...")
 
@@ -355,14 +376,24 @@ class HunyuanVideoManager(BaseVideoManager):
         # Validate inputs
         init_image = kwargs.get("init_image")
         prompt = kwargs.get("prompt", "")
+        num_frames = kwargs.get("num_frames", 121)
+        fps = kwargs.get("fps", 30)
 
         if init_image is None:
             self.logger.error("init_image is required for HunyuanVideo")
-            return None
+            raise ValueError("Input image is required")
 
         if not prompt:
             self.logger.error("prompt is required for HunyuanVideo")
-            return None
+            raise ValueError("Prompt cannot be empty")
+
+        if num_frames < 1:
+            self.logger.error(f"Invalid num_frames: {num_frames}")
+            raise ValueError("num_frames must be at least 1")
+
+        if fps <= 0:
+            self.logger.error(f"Invalid fps: {fps}")
+            raise ValueError("fps must be greater than 0")
 
         # Prepare generation data
         data = self._prepare_generation_data(**kwargs)
@@ -373,11 +404,9 @@ class HunyuanVideoManager(BaseVideoManager):
         steps = data.get("num_inference_steps", 25)
         seed = data.get("seed", 42)
         latent_window_size = data.get("latent_window_size", 9)
-        num_frames = data.get("num_frames", 121)
-        data.get("callback")
+        callback = data.get("callback")
 
         # Calculate video length
-        fps = data.get("fps", 30)
         total_second_length = num_frames / fps
 
         self.logger.info(
