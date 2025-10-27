@@ -65,6 +65,7 @@ class SignalCode(Enum):
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"
     APPLICATION_RESET_SETTINGS_SIGNAL = "reset_settings_signal"
     APPLICATION_RESET_PATHS_SIGNAL = "reset_paths_signal"
+    APPLICATION_QUIT_SIGNAL = "application_quit_signal"
     APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL = (
         "stop_image_generator_progress_bar_signal"
     )
