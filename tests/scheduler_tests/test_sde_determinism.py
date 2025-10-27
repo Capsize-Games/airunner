@@ -17,7 +17,7 @@ sys.path.insert(
 )
 
 import torch
-from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
+from airunner.components.art.managers.stablediffusion.noise_sampler import (
     DeterministicSDENoiseSampler,
 )
 
