@@ -106,12 +106,31 @@ class RecurringEvent(BaseModel):
         elif self.recurrence_type == "weekly":
             next_date = current + timedelta(weeks=self.interval)
         elif self.recurrence_type == "monthly":
-            # Simple monthly increment (doesn't handle edge cases perfectly)
-            month = current.month + self.interval
-            year = current.year + (month - 1) // 12
-            month = ((month - 1) % 12) + 1
-            day = min(current.day, self.day_of_month or current.day)
-            next_date = current.replace(year=year, month=month, day=day)
+            # Monthly increment: move forward by interval months and clamp day
+            import calendar as _calendar
+
+            month = current.month - 1 + self.interval
+            year = current.year + month // 12
+            month = (month % 12) + 1
+
+            # Determine desired day: prefer configured day_of_month if provided,
+            # otherwise keep the current day. Then clamp to the last day of target month.
+            desired_day = (
+                self.day_of_month
+                if self.day_of_month is not None
+                else current.day
+            )
+            last_day = _calendar.monthrange(year, month)[1]
+            day = min(desired_day, last_day)
+
+            # If the current time has hour/minute/second, preserve them; otherwise default to 00:00
+            try:
+                next_date = current.replace(year=year, month=month, day=day)
+            except ValueError:
+                # Fallback: set to the last valid day
+                next_date = current.replace(
+                    year=year, month=month, day=last_day
+                )
         elif self.recurrence_type == "yearly":
             next_date = current.replace(year=current.year + self.interval)
         else:

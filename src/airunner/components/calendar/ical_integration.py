@@ -82,9 +82,20 @@ class ICalIntegration:
                     "all_day": False,
                 }
 
-                # Handle all-day events
-                if hasattr(component.get("dtstart").dt, "date"):
-                    event_data["all_day"] = True
+                # Handle all-day events: dtstart.dt may be a date or datetime
+                dtstart_val = component.get("dtstart").dt
+                try:
+                    # all-day events in ical are typically date objects, not datetimes
+                    from datetime import date
+
+                    if isinstance(dtstart_val, date) and not isinstance(
+                        dtstart_val, datetime
+                    ):
+                        event_data["all_day"] = True
+                except Exception:
+                    # Fallback: preserve previous behavior if introspection fails
+                    if hasattr(dtstart_val, "date"):
+                        event_data["all_day"] = True
 
                 # Extract categories
                 categories = component.get("categories")

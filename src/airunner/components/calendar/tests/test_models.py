@@ -420,3 +420,59 @@ class TestRecurringEventModel:
 
         assert "FREQ=WEEKLY" in rrule
         assert "COUNT=10" in rrule
+
+
+def test_monthly_recurrence_jan31_to_feb_clamps():
+    """Jan 31 should produce Feb 28 (or 29 on leap years) when advancing monthly."""
+    start = datetime(2025, 1, 31, 10, 0)
+
+    recurring = RecurringEvent(
+        title="End of Month",
+        recurrence_type="monthly",
+        interval=1,
+        start_date=start,
+    )
+
+    next_occ = recurring.get_next_occurrence(start)
+
+    # 2025 is not a leap year, so Feb has 28 days
+    expected = datetime(2025, 2, 28, 10, 0)
+    assert next_occ == expected
+
+
+def test_monthly_recurrence_explicit_day_of_month_clamps():
+    """When day_of_month is explicitly set to 31, next month with fewer days clamps to last day."""
+    start = datetime(2025, 1, 15, 9, 0)
+
+    recurring = RecurringEvent(
+        title="Monthly By Day",
+        recurrence_type="monthly",
+        interval=1,
+        day_of_month=31,
+        start_date=start,
+    )
+
+    next_occ = recurring.get_next_occurrence(start)
+
+    # February 2025 -> 28
+    expected = datetime(2025, 2, 28, 9, 0)
+    assert next_occ == expected
+
+
+def test_monthly_recurrence_none_day_preserves_then_clamps():
+    """If day_of_month is None, the current day is used then clamped in shorter months."""
+    start = datetime(2025, 3, 31, 8, 0)
+
+    recurring = RecurringEvent(
+        title="Preserve Current Day",
+        recurrence_type="monthly",
+        interval=1,
+        day_of_month=None,
+        start_date=start,
+    )
+
+    next_occ = recurring.get_next_occurrence(start)
+
+    # April has 30 days, so expect April 30
+    expected = datetime(2025, 4, 30, 8, 0)
+    assert next_occ == expected

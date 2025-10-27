@@ -2,7 +2,15 @@
 
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    Boolean,
+    Text,
+    ForeignKey,
+)
 from sqlalchemy.orm import relationship
 from airunner.components.data.models.base import BaseModel
 
@@ -40,6 +48,7 @@ class Event(BaseModel):
     is_recurring = Column(Boolean, default=False, nullable=False, index=True)
     recurring_event_id = Column(
         Integer,
+        ForeignKey("recurring_events.id"),
         nullable=True,
         index=True,
         comment="Reference to recurring_events.id if part of series",
