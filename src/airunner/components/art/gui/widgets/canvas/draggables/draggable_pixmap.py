@@ -60,7 +60,20 @@ class DraggablePixmap(
         except ValueError:
             return None
 
-    def _resolve_layer_id(self) -> Optional[int]:
+    def _resolve_layer_id(
+        self,
+        layer_id: Optional[int] = None,
+        model_class_: Optional[type] = None,
+    ) -> Optional[int]:
+        """Override to handle layer context for draggable pixmaps.
+
+        Args:
+            layer_id: Explicit layer ID (ignored if layer context is disabled)
+            model_class_: Model class for fallback (ignored if layer context is disabled)
+
+        Returns:
+            Resolved layer ID or None
+        """
         if not self._use_layer_context:
             return None
         if self._layer_id_override is not None:

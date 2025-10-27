@@ -120,13 +120,14 @@ class TestCreateBlankSurface:
         assert surface.height() == 768
 
     def test_create_blank_surface_zero_size(self, qapp):
-        """Blank surface should handle zero size."""
+        """Blank surface should enforce minimum 1x1 size."""
         scene = CustomScene(canvas_type="image")
 
         surface = scene._create_blank_surface(0, 0)
 
-        assert surface.width() == 0
-        assert surface.height() == 0
+        # Qt doesn't allow 0x0 images, minimum is 1x1
+        assert surface.width() == 1
+        assert surface.height() == 1
 
     def test_create_blank_surface_one_pixel(self, qapp):
         """Blank surface should handle 1x1 size."""
