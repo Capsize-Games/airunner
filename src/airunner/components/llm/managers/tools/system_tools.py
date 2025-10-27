@@ -22,7 +22,7 @@ class SystemTools:
                 Confirmation message
             """
             try:
-                self.emit_signal(SignalCode.CLEAR_HISTORY_SIGNAL)
+                self.emit_signal(SignalCode.LLM_CLEAR_HISTORY_SIGNAL)
                 return "Conversation history cleared"
             except Exception as e:
                 return f"Error clearing conversation: {str(e)}"

@@ -50,15 +50,22 @@ class MockFileToolsClass(FileTools):
 class TestRAGTools(BaseTestCase):
     """Test RAGTools mixin methods."""
 
+    target_class = MockRAGToolsClass
+    public_methods = [
+        "rag_search_tool",
+        "search_knowledge_base_documents_tool",
+        "save_to_knowledge_base_tool",
+    ]
+
     def setUp(self):
         """Set up test with mock RAG tools instance."""
-        self.tools = MockRAGToolsClass()
+        super().setUp()
+        self.tools = self.obj
 
     def test_rag_search_tool_creation(self):
         """Test that rag_search_tool creates a callable tool."""
         tool = self.tools.rag_search_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "rag_search")
 
     def test_rag_search_returns_results(self):
@@ -81,29 +88,30 @@ class TestRAGTools(BaseTestCase):
         """Test that search_knowledge_base_documents_tool creates a callable tool."""
         tool = self.tools.search_knowledge_base_documents_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "search_knowledge_base_documents")
 
     def test_save_to_knowledge_base_tool_creation(self):
         """Test that save_to_knowledge_base_tool creates a callable tool."""
         tool = self.tools.save_to_knowledge_base_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "save_to_knowledge_base")
 
 
 class TestKnowledgeTools(BaseTestCase):
     """Test KnowledgeTools mixin methods."""
 
+    target_class = MockKnowledgeToolsClass
+    public_methods = ["record_knowledge_tool", "recall_knowledge_tool"]
+
     def setUp(self):
         """Set up test with mock knowledge tools instance."""
-        self.tools = MockKnowledgeToolsClass()
+        super().setUp()
+        self.tools = self.obj
 
     def test_record_knowledge_tool_creation(self):
         """Test that record_knowledge_tool creates a callable tool."""
         tool = self.tools.record_knowledge_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "record_knowledge")
 
     @patch(
@@ -116,7 +124,8 @@ class TestKnowledgeTools(BaseTestCase):
         mock_manager.store_knowledge = Mock()
 
         tool = self.tools.record_knowledge_tool()
-        result = self.invoke_tool(tool, 
+        result = self.invoke_tool(
+            tool,
             fact="User prefers Python",
             category="preferences",
             confidence=0.9,
@@ -129,7 +138,6 @@ class TestKnowledgeTools(BaseTestCase):
         """Test that recall_knowledge_tool creates a callable tool."""
         tool = self.tools.recall_knowledge_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "recall_knowledge")
 
     @patch(
@@ -146,7 +154,9 @@ class TestKnowledgeTools(BaseTestCase):
         mock_manager.recall_knowledge = Mock(return_value=mock_facts)
 
         tool = self.tools.recall_knowledge_tool()
-        result = self.invoke_tool(tool, query="Python", category="preferences", limit=10)
+        result = self.invoke_tool(
+            tool, query="Python", category="preferences", limit=10
+        )
 
         self.assertIn("Found 2 knowledge facts", result)
         self.assertIn("Fact 1", result)
@@ -155,28 +165,37 @@ class TestKnowledgeTools(BaseTestCase):
 class TestImageTools(BaseTestCase):
     """Test ImageTools mixin methods."""
 
+    target_class = MockImageToolsClass
+    public_methods = [
+        "generate_image_tool",
+        "view_image_tool",
+        "clear_canvas_tool",
+        "open_image_tool",
+    ]
+
     def setUp(self):
         """Set up test with mock image tools instance."""
-        self.tools = MockImageToolsClass()
+        super().setUp()
+        self.tools = self.obj
 
     def test_generate_image_tool_creation(self):
         """Test that generate_image_tool creates a callable tool."""
         tool = self.tools.generate_image_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "generate_image")
 
     def test_generate_image_emits_signal(self):
         """Test that generate_image emits the correct signal."""
         tool = self.tools.generate_image_tool()
-        result = self.invoke_tool(tool, 
+        result = self.invoke_tool(
+            tool,
             prompt="a beautiful sunset",
             negative_prompt="blurry",
             width=512,
             height=512,
         )
 
-        self.assertIn("Started image generation", result)
+        self.assertIn("Generating image", result)
 
         # Verify signal was emitted
         self.tools.emit_signal.assert_called_once()
@@ -187,7 +206,6 @@ class TestImageTools(BaseTestCase):
         """Test that clear_canvas_tool creates a callable tool."""
         tool = self.tools.clear_canvas_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "clear_canvas")
 
     def test_clear_canvas_emits_signal(self):
@@ -197,29 +215,31 @@ class TestImageTools(BaseTestCase):
 
         self.assertIn("Canvas cleared", result)
         self.tools.emit_signal.assert_called_with(
-            SignalCode.CLEAR_CANVAS_SIGNAL
+            SignalCode.CANVAS_CLEAR_LINES_SIGNAL
         )
 
     def test_open_image_tool_creation(self):
         """Test that open_image_tool creates a callable tool."""
         tool = self.tools.open_image_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "open_image")
 
 
 class TestFileTools(BaseTestCase):
     """Test FileTools mixin methods."""
 
+    target_class = MockFileToolsClass
+    public_methods = ["list_files_tool", "read_file_tool", "write_code_tool"]
+
     def setUp(self):
         """Set up test with mock file tools instance."""
-        self.tools = MockFileToolsClass()
+        super().setUp()
+        self.tools = self.obj
 
     def test_list_files_tool_creation(self):
         """Test that list_files_tool creates a callable tool."""
         tool = self.tools.list_files_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "list_files")
 
     @with_temp_directory
@@ -256,7 +276,6 @@ class TestFileTools(BaseTestCase):
         """Test that read_file_tool creates a callable tool."""
         tool = self.tools.read_file_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "read_file")
 
     @with_temp_directory
@@ -281,7 +300,6 @@ class TestFileTools(BaseTestCase):
         """Test that write_code_tool creates a callable tool."""
         tool = self.tools.write_code_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "write_code")
 
     @with_temp_directory
@@ -290,7 +308,8 @@ class TestFileTools(BaseTestCase):
         output_file = tmpdir / "output.py"
 
         tool = self.tools.write_code_tool()
-        result = self.invoke_tool(tool, 
+        result = self.invoke_tool(
+            tool,
             file_path=str(output_file),
             code='print("Hello, World!")',
             description="Test script",

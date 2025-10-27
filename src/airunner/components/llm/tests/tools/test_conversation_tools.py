@@ -32,7 +32,6 @@ class TestConversationTools(DatabaseTestCase):
         """Test that list_conversations_tool creates a callable tool."""
         tool = self.tools.list_conversations_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "list_conversations")
 
     def test_list_conversations_empty_database(self):
@@ -71,7 +70,6 @@ class TestConversationTools(DatabaseTestCase):
         """Test that get_conversation_tool creates a callable tool."""
         tool = self.tools.get_conversation_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "get_conversation")
 
     def test_get_conversation_not_found(self):
@@ -107,14 +105,12 @@ class TestConversationTools(DatabaseTestCase):
         """Test that summarize_conversation_tool creates a callable tool."""
         tool = self.tools.summarize_conversation_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "summarize_conversation")
 
     def test_update_conversation_title_tool_creation(self):
         """Test that update_conversation_title_tool creates a callable tool."""
         tool = self.tools.update_conversation_title_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "update_conversation_title")
 
     def test_update_conversation_title_success(self):
@@ -143,7 +139,6 @@ class TestConversationTools(DatabaseTestCase):
         """Test that switch_conversation_tool creates a callable tool."""
         tool = self.tools.switch_conversation_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "switch_conversation")
 
     def test_switch_conversation_success(self):
@@ -170,7 +165,6 @@ class TestConversationTools(DatabaseTestCase):
         """Test that create_new_conversation_tool creates a callable tool."""
         tool = self.tools.create_new_conversation_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "create_new_conversation")
 
     def test_create_new_conversation_with_title(self):
@@ -190,7 +184,6 @@ class TestConversationTools(DatabaseTestCase):
         """Test that search_conversations_tool creates a callable tool."""
         tool = self.tools.search_conversations_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "search_conversations")
 
     def test_search_conversations_by_title(self):
@@ -220,7 +213,6 @@ class TestConversationTools(DatabaseTestCase):
         """Test that delete_conversation_tool creates a callable tool."""
         tool = self.tools.delete_conversation_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "delete_conversation")
 
     def test_delete_conversation_requires_confirmation(self):

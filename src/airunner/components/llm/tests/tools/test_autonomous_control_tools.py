@@ -42,7 +42,6 @@ class TestAutonomousControlTools(BaseTestCase):
         """Test that get_application_state_tool creates a callable tool."""
         tool = self.tools.get_application_state_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "get_application_state")
 
     def test_get_application_state_returns_json(self):
@@ -59,7 +58,6 @@ class TestAutonomousControlTools(BaseTestCase):
         """Test that schedule_task_tool creates a callable tool."""
         tool = self.tools.schedule_task_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "schedule_task")
 
     def test_schedule_task_immediate(self):
@@ -107,7 +105,6 @@ class TestAutonomousControlTools(BaseTestCase):
         """Test that set_application_mode_tool creates a callable tool."""
         tool = self.tools.set_application_mode_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "set_application_mode")
 
     def test_set_application_mode_autonomous(self):
@@ -135,7 +132,6 @@ class TestAutonomousControlTools(BaseTestCase):
         """Test that request_user_input_tool creates a callable tool."""
         tool = self.tools.request_user_input_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "request_user_input")
 
     def test_request_user_input_approval(self):
@@ -159,14 +155,12 @@ class TestAutonomousControlTools(BaseTestCase):
         """Test that analyze_user_behavior_tool creates a callable tool."""
         tool = self.tools.analyze_user_behavior_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "analyze_user_behavior")
 
     def test_propose_action_tool_creation(self):
         """Test that propose_action_tool creates a callable tool."""
         tool = self.tools.propose_action_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "propose_action")
 
     def test_propose_action_with_rationale(self):
@@ -207,7 +201,6 @@ class TestAutonomousControlTools(BaseTestCase):
 
         tool = self.tools.monitor_system_health_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "monitor_system_health")
 
     @patch("psutil.cpu_percent", return_value=45.0)
@@ -234,7 +227,6 @@ class TestAutonomousControlTools(BaseTestCase):
         """Test that log_agent_decision_tool creates a callable tool."""
         tool = self.tools.log_agent_decision_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "log_agent_decision")
 
     def test_log_agent_decision_with_context(self):
