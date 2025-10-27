@@ -1,3 +1,13 @@
 [tool.black]
 exclude = '.*_ui\.py$'
 line-length = 79
+
+[tool.pytest.ini_options]
+markers = [
+    "gui: tests that require Qt GUI components (may cause thread issues when run in bulk)",
+    "slow: tests that take a long time to run",
+]
+testpaths = ["tests", "src"]
+# Use loadscope for better test grouping and faster execution
+# Reduce maxfail to stop early on widespread failures
+addopts = "-n auto --dist=loadscope --maxfail=100"

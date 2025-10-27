@@ -13,7 +13,7 @@ from typing import List, Dict, Optional, Set
 from pathlib import Path
 from datetime import datetime
 
-from airunner.components.knowledge.data import Fact, FactCategory
+from airunner.components.knowledge.fact_models import Fact, FactCategory
 from airunner.settings import AIRUNNER_USER_DATA_PATH
 
 
@@ -596,7 +596,7 @@ Output (JSON array only):"""
         Returns:
             List of core facts sorted by confidence and recency
         """
-        from airunner.components.knowledge.data import FactCategory
+        from airunner.components.knowledge.fact_models import FactCategory
 
         core_categories = [
             FactCategory.IDENTITY,

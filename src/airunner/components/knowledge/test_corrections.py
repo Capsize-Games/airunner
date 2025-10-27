@@ -5,7 +5,7 @@ Test knowledge correction, update, and deletion functionality.
 from airunner.components.knowledge.user_knowledge_manager import (
     UserKnowledgeManager,
 )
-from airunner.components.knowledge.data import Fact, FactCategory
+from airunner.components.knowledge.fact_models import Fact, FactCategory
 
 
 def test_crud_operations():

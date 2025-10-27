@@ -10,6 +10,7 @@ from airunner.components.model_management.memory_allocator import (
 )
 from airunner.components.model_management.model_resource_manager import (
     ModelResourceManager,
+    ModelState,
 )
 from airunner.components.model_management.canvas_memory_tracker import (
     CanvasMemoryTracker,
@@ -21,5 +22,6 @@ __all__ = [
     "ModelRegistry",
     "MemoryAllocator",
     "ModelResourceManager",
+    "ModelState",
     "CanvasMemoryTracker",
 ]
