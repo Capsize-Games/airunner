@@ -38,6 +38,9 @@ from airunner.components.art.data.image_to_image_settings import (
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
+from airunner.components.calendar.data.event import Event
+from airunner.components.calendar.data.reminder import Reminder
+from airunner.components.calendar.data.recurring_event import RecurringEvent
 from airunner.components.llm.data.llm_tool import LLMTool
 from airunner.components.knowledge.data.models import (
     KnowledgeFact,
