@@ -861,7 +861,7 @@ class HunyuanVideoManager(BaseVideoManager):
         self.emit_signal(
             SignalCode.VIDEO_PROGRESS_SIGNAL,
             {
-                "percent": percent,
+                "progress": percent,
                 "message": message,
                 "model_type": self.model_type,
             },
