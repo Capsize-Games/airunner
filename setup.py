@@ -178,7 +178,7 @@ setup(
     packages=find_packages("src"),
     python_requires=">=3.13.3",
     install_requires=[
-        "pip==25.2",
+        "pip==25.3",
         "torch",
         "torchvision",
         "torchaudio",
@@ -188,7 +188,7 @@ setup(
         "tokenizers==0.22.0",
         "optimum==1.25.1",
         "numpy==2.2.5",
-        "pillow==10.4.0",
+        "pillow==12.0.0",
         "alembic==1.15.2",
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
