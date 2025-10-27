@@ -173,11 +173,11 @@ class TestCodeTools(BaseTestCase):
         self.assertIn("30", result)
 
     def test_execute_python_with_error(self):
-        """Test executing Python code with syntax error."""
+        """Test Python execution with syntax error."""
         tool = self.tools.execute_python_tool()
-        result = self.invoke_tool(tool, code="invalid python syntax !!!")
+        result = self.invoke_tool(tool, code="invalid syntax code")
 
-        self.assertIn("Error", result)
+        self.assertIn("Execution error", result)
 
     def test_create_tool_tool_creation(self):
         """Test that create_tool_tool creates a callable tool."""
@@ -286,8 +286,10 @@ class TestSystemTools(BaseTestCase):
     def test_emit_signal_with_data(self):
         """Test emitting signal with data."""
         tool = self.tools.emit_signal_tool()
-        data = {"key": "value", "number": 42}
-        result = self.invoke_tool(tool, signal_code="CUSTOM_SIGNAL", data=data)
+        import json
+
+        data = json.dumps({"key": "value", "number": 42})
+        result = self.invoke_tool(tool, signal_name="CUSTOM_SIGNAL", data=data)
 
         self.assertIn("Emitted signal", result)
         # Note: emit_signal is called twice - once in the tool, once for logging
