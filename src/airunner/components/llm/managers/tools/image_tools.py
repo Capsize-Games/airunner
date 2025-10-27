@@ -27,7 +27,7 @@ class ImageTools:
             """
             try:
                 self.emit_signal(
-                    SignalCode.SD_GENERATE_IMAGE_FROM_PROMPT_SIGNAL,
+                    SignalCode.SD_GENERATE_IMAGE_SIGNAL,
                     {
                         "prompt": prompt,
                         "negative_prompt": negative_prompt,
@@ -50,7 +50,7 @@ class ImageTools:
                 Confirmation message
             """
             try:
-                self.emit_signal(SignalCode.CLEAR_CANVAS_SIGNAL)
+                self.emit_signal(SignalCode.CANVAS_CLEAR_LINES_SIGNAL)
                 return "Canvas cleared"
             except Exception as e:
                 return f"Error clearing canvas: {str(e)}"

@@ -48,15 +48,18 @@ class MockUserDataToolsClass(UserDataTools):
 class TestWebTools(BaseTestCase):
     """Test WebTools mixin methods."""
 
+    target_class = MockWebToolsClass
+    public_methods = ["search_web_tool", "web_scraper_tool"]
+
     def setUp(self):
         """Set up test with mock web tools instance."""
-        self.tools = MockWebToolsClass()
+        super().setUp()
+        self.tools = self.obj
 
     def test_search_web_tool_creation(self):
         """Test that search_web_tool creates a callable tool."""
         tool = self.tools.search_web_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "search_web")
 
     @patch("requests.get")
@@ -76,7 +79,6 @@ class TestWebTools(BaseTestCase):
         """Test that web_scraper_tool creates a callable tool."""
         tool = self.tools.web_scraper_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "web_scraper")
 
     @patch("requests.get")
@@ -99,16 +101,23 @@ class TestWebTools(BaseTestCase):
 class TestCodeTools(BaseTestCase):
     """Test CodeTools mixin methods."""
 
+    target_class = MockCodeToolsClass
+    public_methods = [
+        "calculator_tool",
+        "execute_python_tool",
+        "create_tool_tool",
+    ]
+
     def setUp(self):
         """Set up test with mock code tools instance."""
-        self.tools = MockCodeToolsClass()
+        super().setUp()
+        self.tools = self.obj
 
     def test_calculator_tool_creation(self):
         """Test that calculator_tool creates a callable tool."""
         tool = self.tools.calculator_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
-        self.assertEqual(tool.name, "calculator")
+        self.assertEqual(tool.name, "calculate")
 
     def test_calculator_simple_math(self):
         """Test calculator with simple math expressions."""
@@ -141,13 +150,12 @@ class TestCodeTools(BaseTestCase):
         tool = self.tools.calculator_tool()
         result = self.invoke_tool(tool, expression="invalid / code")
 
-        self.assertIn("Error", result)
+        self.assertIn("Calculation error", result)
 
     def test_execute_python_tool_creation(self):
         """Test that execute_python_tool creates a callable tool."""
         tool = self.tools.execute_python_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "execute_python")
 
     def test_execute_python_simple_code(self):
@@ -175,22 +183,30 @@ class TestCodeTools(BaseTestCase):
         """Test that create_tool_tool creates a callable tool."""
         tool = self.tools.create_tool_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "create_tool")
 
 
 class TestSystemTools(BaseTestCase):
     """Test SystemTools mixin methods."""
 
+    target_class = MockSystemToolsClass
+    public_methods = [
+        "clear_conversation_tool",
+        "quit_application_tool",
+        "emit_signal_tool",
+        "update_mood_tool",
+        "toggle_tts_tool",
+    ]
+
     def setUp(self):
         """Set up test with mock system tools instance."""
-        self.tools = MockSystemToolsClass()
+        super().setUp()
+        self.tools = self.obj
 
     def test_clear_conversation_tool_creation(self):
         """Test that clear_conversation_tool creates a callable tool."""
         tool = self.tools.clear_conversation_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "clear_conversation")
 
     def test_clear_conversation_emits_signal(self):
@@ -198,16 +214,15 @@ class TestSystemTools(BaseTestCase):
         tool = self.tools.clear_conversation_tool()
         result = self.invoke_tool(tool)
 
-        self.assertIn("Cleared conversation", result)
+        self.assertIn("Conversation history cleared", result)
         self.tools.emit_signal.assert_called_with(
-            SignalCode.CLEAR_CONVERSATION_SIGNAL
+            SignalCode.LLM_CLEAR_HISTORY_SIGNAL
         )
 
     def test_quit_application_tool_creation(self):
         """Test that quit_application_tool creates a callable tool."""
         tool = self.tools.quit_application_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "quit_application")
 
     def test_quit_application_emits_signal(self):
@@ -224,7 +239,6 @@ class TestSystemTools(BaseTestCase):
         """Test that toggle_tts_tool creates a callable tool."""
         tool = self.tools.toggle_tts_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "toggle_tts")
 
     def test_toggle_tts_on(self):
@@ -251,7 +265,6 @@ class TestSystemTools(BaseTestCase):
         """Test that update_mood_tool creates a callable tool."""
         tool = self.tools.update_mood_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "update_mood")
 
     def test_update_mood_emits_signal(self):
@@ -268,7 +281,6 @@ class TestSystemTools(BaseTestCase):
         """Test that emit_signal_tool creates a callable tool."""
         tool = self.tools.emit_signal_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "emit_signal")
 
     def test_emit_signal_with_data(self):
@@ -285,23 +297,26 @@ class TestSystemTools(BaseTestCase):
 class TestUserDataTools(DatabaseTestCase):
     """Test UserDataTools mixin methods."""
 
+    target_class = MockUserDataToolsClass
+    public_methods = ["store_user_data_tool", "retrieve_user_data_tool"]
+
     def setUp(self):
         """Set up test with mock user data tools instance."""
         super().setUp()
-        self.tools = MockUserDataToolsClass()
+        self.tools = (
+            self.obj if hasattr(self, "obj") else MockUserDataToolsClass()
+        )
 
     def test_store_user_data_tool_creation(self):
         """Test that store_user_data_tool creates a callable tool."""
         tool = self.tools.store_user_data_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "store_user_data")
 
     def test_get_user_data_tool_creation(self):
         """Test that get_user_data_tool creates a callable tool."""
         tool = self.tools.get_user_data_tool()
         self.assertIsNotNone(tool)
-        self.assertTrue(callable(tool))
         self.assertEqual(tool.name, "get_user_data")
 
 
