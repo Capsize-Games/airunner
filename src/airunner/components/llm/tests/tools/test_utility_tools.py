@@ -79,7 +79,7 @@ class TestWebTools(BaseTestCase):
         """Test that web_scraper_tool creates a callable tool."""
         tool = self.tools.web_scraper_tool()
         self.assertIsNotNone(tool)
-        self.assertEqual(tool.name, "web_scraper")
+        self.assertEqual(tool.name, "scrape_website")
 
     @patch("requests.get")
     def test_web_scraper_success(self, mock_get):
@@ -300,7 +300,7 @@ class TestUserDataTools(DatabaseTestCase):
     """Test UserDataTools mixin methods."""
 
     target_class = MockUserDataToolsClass
-    public_methods = ["store_user_data_tool", "retrieve_user_data_tool"]
+    public_methods = ["store_user_data_tool", "get_user_data_tool"]
 
     def setUp(self):
         """Set up test with mock user data tools instance."""
