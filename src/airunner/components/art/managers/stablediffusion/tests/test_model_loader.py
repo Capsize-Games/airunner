@@ -66,8 +66,6 @@ def test_unload_functions_noop(monkeypatch):
 
 
 def test_load_compel_proc_and_unload(monkeypatch):
-    types.SimpleNamespace()
-
     class C:
         def __init__(self, **kwargs):
             pass

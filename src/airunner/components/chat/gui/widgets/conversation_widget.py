@@ -66,19 +66,21 @@ class ConversationWidget(BaseWidget):
             self.ui.stage.setPage(custom_page)
             # Add load handlers for debugging
             self.ui.stage.loadStarted.connect(
-                lambda: print("[ConversationWidget] Load started")
+                lambda: self.logger.debug("[ConversationWidget] Load started")
             )
             self.ui.stage.loadFinished.connect(
-                lambda ok: print(f"[ConversationWidget] Load finished: {ok}")
+                lambda ok: self.logger.debug(
+                    f"[ConversationWidget] Load finished: {ok}"
+                )
             )
             self.ui.stage.loadProgress.connect(
-                lambda progress: print(
+                lambda progress: self.logger.debug(
                     f"[ConversationWidget] Load progress: {progress}%"
                 )
             )
             # Mark page as ready and NOW render the template
             self._page_ready = True
-            print(
+            self.logger.debug(
                 "[ConversationWidget] Rendering template after custom page setup"
             )
             self.render_template()
