@@ -81,3 +81,4 @@ cache/.webcache
 
 .mypy_cache/**
 FEATURE_ROADMAP.md
+logs
