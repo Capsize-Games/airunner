@@ -10,6 +10,6 @@ markers = [
     "integration: integration test marker",
 ]
 testpaths = ["tests", "src"]
-# Use loadscope for better test grouping and faster execution
-# Reduce maxfail to stop early on widespread failures
-addopts = "-n auto --dist=loadscope --maxfail=100"
+# Disable parallel execution to prevent worker cleanup issues
+# Use serial execution for now until worker cleanup is fixed
+addopts = "--maxfail=100 --timeout=30"

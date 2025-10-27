@@ -7,13 +7,10 @@ from typing import Optional, List
 
 
 class LLMAPIService(APIServiceBase):
-    def __init__(self, emit_signal=None):
-        super().__init__(emit_signal)
-        self._emit_signal = emit_signal
+    """LLM API service providing signal-based LLM operations."""
 
-    def emit_signal(self, code, data=None):
-        if self._emit_signal:
-            self._emit_signal(code, data)
+    def __init__(self):
+        super().__init__()
 
     def chatbot_changed(self):
         self.emit_signal(SignalCode.CHATBOT_CHANGED)

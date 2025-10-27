@@ -15,14 +15,14 @@ from typing import Optional, Dict, List
 
 
 class ARTAPIService(APIServiceBase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.canvas = CanvasAPIService(emit_signal=self.emit_signal)
-        self.embeddings = EmbeddingAPIServices(emit_signal=self.emit_signal)
-        self.lora = LoraAPIServices(emit_signal=self.emit_signal)
-        self.image_filter = ImageFilterAPIServices(
-            emit_signal=self.emit_signal
-        )
+    """Art generation API service providing signal-based art operations."""
+
+    def __init__(self):
+        super().__init__()
+        self.canvas = CanvasAPIService()
+        self.embeddings = EmbeddingAPIServices()
+        self.lora = LoraAPIServices()
+        self.image_filter = ImageFilterAPIServices()
 
     def update_batch_images(self, images: List[Image]):
         self.emit_signal(
