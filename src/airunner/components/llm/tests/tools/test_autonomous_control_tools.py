@@ -22,9 +22,21 @@ class MockAutonomousControlToolsClass(AutonomousControlTools):
 class TestAutonomousControlTools(BaseTestCase):
     """Test AutonomousControlTools mixin methods."""
 
+    target_class = MockAutonomousControlToolsClass
+    public_methods = [
+        "get_application_state_tool",
+        "schedule_task_tool",
+        "propose_action_tool",
+        "request_user_input_tool",
+        "log_agent_decision_tool",
+        "analyze_user_behavior_tool",
+        "monitor_system_health_tool",
+    ]
+
     def setUp(self):
         """Set up test with mock autonomous control tools instance."""
-        self.tools = MockAutonomousControlToolsClass()
+        super().setUp()
+        self.tools = self.obj  # Alias for backwards compatibility
 
     def test_get_application_state_tool_creation(self):
         """Test that get_application_state_tool creates a callable tool."""
