@@ -38,7 +38,7 @@ class TestConversationTools(DatabaseTestCase):
     def test_list_conversations_empty_database(self):
         """Test listing conversations when database is empty."""
         tool = self.tools.list_conversations_tool()
-        result = tool(limit=10)
+        result = self.invoke_tool(tool, limit=10)
         self.assertIn("No conversations found", result)
 
     def test_list_conversations_with_data(self):
@@ -60,7 +60,7 @@ class TestConversationTools(DatabaseTestCase):
         )
 
         tool = self.tools.list_conversations_tool()
-        result = tool(limit=10)
+        result = self.invoke_tool(tool, limit=10)
 
         self.assertIn("Found 2 conversations", result)
         self.assertIn("Test Conv 1", result)
@@ -77,7 +77,7 @@ class TestConversationTools(DatabaseTestCase):
     def test_get_conversation_not_found(self):
         """Test getting a non-existent conversation."""
         tool = self.tools.get_conversation_tool()
-        result = tool(conversation_id=99999)
+        result = self.invoke_tool(tool, conversation_id=99999)
         self.assertIn("not found", result.lower())
 
     def test_get_conversation_with_messages(self):
@@ -96,7 +96,7 @@ class TestConversationTools(DatabaseTestCase):
         )
 
         tool = self.tools.get_conversation_tool()
-        result = tool(conversation_id=conv.id, include_messages=True)
+        result = self.invoke_tool(tool, conversation_id=conv.id, include_messages=True)
 
         self.assertIn("Test Conv", result)
         self.assertIn("2 messages", result)
@@ -128,7 +128,7 @@ class TestConversationTools(DatabaseTestCase):
         )
 
         tool = self.tools.update_conversation_title_tool()
-        result = tool(conversation_id=conv.id, new_title="New Title")
+        result = self.invoke_tool(tool, conversation_id=conv.id, new_title="New Title")
 
         self.assertIn("Updated title", result)
         self.assertIn("New Title", result)
@@ -157,7 +157,7 @@ class TestConversationTools(DatabaseTestCase):
         )
 
         tool = self.tools.switch_conversation_tool()
-        result = tool(conversation_id=conv.id)
+        result = self.invoke_tool(tool, conversation_id=conv.id)
 
         self.assertIn("Switched to conversation", result)
 
@@ -176,7 +176,7 @@ class TestConversationTools(DatabaseTestCase):
     def test_create_new_conversation_with_title(self):
         """Test creating new conversation with custom title."""
         tool = self.tools.create_new_conversation_tool()
-        result = tool(title="My New Conversation")
+        result = self.invoke_tool(tool, title="My New Conversation")
 
         self.assertIn("Created new conversation", result)
         self.assertIn("My New Conversation", result)
@@ -211,7 +211,7 @@ class TestConversationTools(DatabaseTestCase):
         )
 
         tool = self.tools.search_conversations_tool()
-        result = tool(query="Python", limit=10)
+        result = self.invoke_tool(tool, query="Python", limit=10)
 
         self.assertIn("Python Tutorial", result)
         self.assertNotIn("JavaScript", result)
@@ -234,7 +234,7 @@ class TestConversationTools(DatabaseTestCase):
         )
 
         tool = self.tools.delete_conversation_tool()
-        result = tool(conversation_id=conv.id, confirm=False)
+        result = self.invoke_tool(tool, conversation_id=conv.id, confirm=False)
 
         self.assertIn("WARNING", result)
         self.assertIn("confirm=True", result)
@@ -253,7 +253,7 @@ class TestConversationTools(DatabaseTestCase):
         )
 
         tool = self.tools.delete_conversation_tool()
-        result = tool(conversation_id=conv.id, confirm=True)
+        result = self.invoke_tool(tool, conversation_id=conv.id, confirm=True)
 
         self.assertIn("Cannot delete the current active conversation", result)
 

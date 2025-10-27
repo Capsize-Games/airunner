@@ -71,7 +71,7 @@ class TestRAGTools(BaseTestCase):
         self.tools.rag_manager.search = Mock(return_value=mock_results)
 
         tool = self.tools.rag_search_tool()
-        result = tool(query="test query", limit=5)
+        result = self.invoke_tool(tool, query="test query", limit=5)
 
         self.assertIn("Found 2 results", result)
         self.assertIn("Result 1", result)
@@ -116,7 +116,7 @@ class TestKnowledgeTools(BaseTestCase):
         mock_manager.store_knowledge = Mock()
 
         tool = self.tools.record_knowledge_tool()
-        result = tool(
+        result = self.invoke_tool(tool, 
             fact="User prefers Python",
             category="preferences",
             confidence=0.9,
@@ -146,7 +146,7 @@ class TestKnowledgeTools(BaseTestCase):
         mock_manager.recall_knowledge = Mock(return_value=mock_facts)
 
         tool = self.tools.recall_knowledge_tool()
-        result = tool(query="Python", category="preferences", limit=10)
+        result = self.invoke_tool(tool, query="Python", category="preferences", limit=10)
 
         self.assertIn("Found 2 knowledge facts", result)
         self.assertIn("Fact 1", result)
@@ -169,7 +169,7 @@ class TestImageTools(BaseTestCase):
     def test_generate_image_emits_signal(self):
         """Test that generate_image emits the correct signal."""
         tool = self.tools.generate_image_tool()
-        result = tool(
+        result = self.invoke_tool(tool, 
             prompt="a beautiful sunset",
             negative_prompt="blurry",
             width=512,
@@ -193,7 +193,7 @@ class TestImageTools(BaseTestCase):
     def test_clear_canvas_emits_signal(self):
         """Test that clear_canvas emits the correct signal."""
         tool = self.tools.clear_canvas_tool()
-        result = tool()
+        result = self.invoke_tool(tool)
 
         self.assertIn("Canvas cleared", result)
         self.tools.emit_signal.assert_called_with(
@@ -232,7 +232,7 @@ class TestFileTools(BaseTestCase):
         (tmpdir / "subdir" / "file3.txt").write_text("content3")
 
         tool = self.tools.list_files_tool()
-        result = tool(directory=str(tmpdir))
+        result = self.invoke_tool(tool, directory=str(tmpdir))
 
         self.assertIn("file1.txt", result)
         self.assertIn("file2.py", result)
@@ -247,7 +247,7 @@ class TestFileTools(BaseTestCase):
         (tmpdir / "other.txt").write_text("content3")
 
         tool = self.tools.list_files_tool()
-        result = tool(directory=str(tmpdir), pattern="*.py")
+        result = self.invoke_tool(tool, directory=str(tmpdir), pattern="*.py")
 
         self.assertIn("test.py", result)
         self.assertNotIn("test.txt", result)
@@ -266,14 +266,14 @@ class TestFileTools(BaseTestCase):
         test_file.write_text("Hello, World!")
 
         tool = self.tools.read_file_tool()
-        result = tool(file_path=str(test_file))
+        result = self.invoke_tool(tool, file_path=str(test_file))
 
         self.assertIn("Hello, World!", result)
 
     def test_read_file_not_found(self):
         """Test reading non-existent file."""
         tool = self.tools.read_file_tool()
-        result = tool(file_path="/nonexistent/file.txt")
+        result = self.invoke_tool(tool, file_path="/nonexistent/file.txt")
 
         self.assertIn("Error", result)
 
@@ -290,7 +290,7 @@ class TestFileTools(BaseTestCase):
         output_file = tmpdir / "output.py"
 
         tool = self.tools.write_code_tool()
-        result = tool(
+        result = self.invoke_tool(tool, 
             file_path=str(output_file),
             code='print("Hello, World!")',
             description="Test script",

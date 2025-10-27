@@ -66,6 +66,25 @@ class BaseTestCase(unittest.TestCase):
                 f"{self.target_class.__name__} is missing public property: {prop}",
             )
 
+    @staticmethod
+    def invoke_tool(tool, **kwargs):
+        """
+        Helper to invoke LangChain tools with keyword arguments.
+
+        Converts kwargs to the format expected by tool.invoke().
+
+        Args:
+            tool: The LangChain tool to invoke
+            **kwargs: Keyword arguments to pass to the tool
+
+        Returns:
+            The result of invoking the tool
+
+        Example:
+            result = self.invoke_tool(tool, query="test", limit=5)
+        """
+        return tool.invoke(kwargs) if kwargs else tool.invoke({})
+
 
 class DatabaseTestCase(BaseTestCase):
     """
