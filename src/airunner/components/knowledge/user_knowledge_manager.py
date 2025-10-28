@@ -4,11 +4,17 @@ User knowledge manager for persistent fact storage.
 Automatically extracts and stores facts about the user from conversations,
 maintains them in a human-readable markdown file, and indexes them with RAG
 for efficient retrieval.
+
+.. deprecated:: 2.0.0
+    UserKnowledgeManager is deprecated and will be removed in version 3.0.0.
+    Use :class:`~airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager` instead.
+    To migrate your existing knowledge data, run: ``airunner-migrate-knowledge``
 """
 
 import re
 import json
 import logging
+import warnings
 from typing import List, Dict, Optional, Set
 from pathlib import Path
 from datetime import datetime
@@ -23,9 +29,25 @@ class UserKnowledgeManager:
 
     This system continuously grows by extracting facts from conversations
     and maintains them in both human-readable and machine-searchable formats.
+
+    .. deprecated:: 2.0.0
+        UserKnowledgeManager is deprecated and will be removed in version 3.0.0.
+        Use :class:`~airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager` instead.
+        Run ``airunner-migrate-knowledge`` to migrate your existing knowledge data to the new database system.
+
+    See Also:
+        :class:`~airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager`:
+            The new knowledge memory system with database storage and enhanced RAG.
     """
 
     def __init__(self):
+        warnings.warn(
+            "UserKnowledgeManager is deprecated and will be removed in version 3.0.0. "
+            "Use KnowledgeMemoryManager instead. "
+            "Run 'airunner-migrate-knowledge' to migrate your data.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.logger = logging.getLogger(__name__)
         self.knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"
         self.facts_json = self.knowledge_dir / "user_facts.json"
