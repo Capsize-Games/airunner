@@ -61,16 +61,38 @@ class CanvasFilterMixin:
             filter_object: Filter instance with a filter() method that accepts
                 a PIL Image and returns a filtered PIL Image.
         """
+        if hasattr(self, "logger") and self.logger:
+            self.logger.info(
+                f"_apply_filter called with filter: {filter_object}"
+            )
+            self.logger.info(f"Settings key: {self.settings_key}")
+
         if self.settings_key != "drawing_pad_settings":
+            if hasattr(self, "logger") and self.logger:
+                self.logger.warning(
+                    f"Filter not applied - wrong settings_key: {self.settings_key}"
+                )
             return
         try:
             layer_id = self._add_image_to_undo()
             current = self.current_active_image
+            if hasattr(self, "logger") and self.logger:
+                self.logger.info(
+                    f"Current active image: {current.size if current else None}"
+                )
             if current is None:
+                if hasattr(self, "logger") and self.logger:
+                    self.logger.warning("No current active image to filter")
                 return
 
             try:
+                if hasattr(self, "logger") and self.logger:
+                    self.logger.info(f"Applying filter to image...")
                 filtered_image = filter_object.filter(current)
+                if hasattr(self, "logger") and self.logger:
+                    self.logger.info(
+                        f"Filter applied successfully, result: {filtered_image.size if filtered_image else None}"
+                    )
             except Exception:
                 if hasattr(self, "logger") and self.logger:
                     self.logger.exception("Filter application failed")
@@ -81,6 +103,8 @@ class CanvasFilterMixin:
             self._load_image_from_object(image=filtered_image)
             self._flush_pending_image()
             self._commit_layer_history_transaction(layer_id, "image")
+            if hasattr(self, "logger") and self.logger:
+                self.logger.info("Filter applied and committed to history")
         except Exception:
             if hasattr(self, "logger") and self.logger:
                 self.logger.exception("Unexpected error applying filter")

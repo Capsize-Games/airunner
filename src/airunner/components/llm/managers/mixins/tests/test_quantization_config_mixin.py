@@ -1,12 +1,7 @@
 """Tests for QuantizationConfigMixin."""
 
-import json
-import os
-import shutil
-from typing import Any, Dict
-from unittest.mock import Mock, MagicMock, patch, mock_open
+from unittest.mock import Mock, patch, mock_open
 
-import pytest
 import torch
 from transformers import BitsAndBytesConfig
 

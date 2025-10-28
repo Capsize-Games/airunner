@@ -4,8 +4,7 @@ These tests verify that the refactored RAGMixin works correctly after
 extracting into 6 mixins + retriever class.
 """
 
-from unittest.mock import Mock, patch
-import pytest
+from unittest.mock import Mock
 
 
 class TestRAGMixinRefactoring:

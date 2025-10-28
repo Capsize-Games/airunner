@@ -277,4 +277,3 @@ class LayerSettingsUpdateMixin:
         """
         # Placeholder for actual notification implementation
         # This would be __settings_updated in the original class
-        pass

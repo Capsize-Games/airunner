@@ -1,7 +1,7 @@
 """Unit tests for CanvasTransformMixin."""
 
 import unittest
-from unittest.mock import Mock, MagicMock, patch, call
+from unittest.mock import Mock, patch
 from PIL import Image
 
 from airunner.components.art.gui.widgets.canvas.mixins.canvas_transform_mixin import (
@@ -172,7 +172,7 @@ class TestCanvasTransformMixin(unittest.TestCase):
     def test_cut_image_copy_failed(self):
         """Test cut operation when copy fails."""
         with patch.object(self.canvas, "_copy_image", return_value=None):
-            result = self.canvas._cut_image(self.test_image)
+            self.canvas._cut_image(self.test_image)
 
             # Should not delete or modify history
             self.canvas.delete_image.assert_not_called()

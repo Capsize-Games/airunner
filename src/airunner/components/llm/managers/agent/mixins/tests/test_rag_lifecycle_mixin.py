@@ -3,9 +3,7 @@
 Following red/green/refactor TDD pattern with comprehensive coverage.
 """
 
-import gc
-from unittest.mock import Mock, patch, MagicMock, call
-import pytest
+from unittest.mock import Mock, patch
 from airunner.components.llm.managers.agent.mixins.rag_lifecycle_mixin import (
     RAGLifecycleMixin,
 )
@@ -61,7 +59,7 @@ class TestInit:
     def test_calls_setup_rag(self):
         """Should call _setup_rag during initialization."""
         with patch.object(RAGLifecycleMixin, "_setup_rag") as mock_setup:
-            mixin = RAGLifecycleMixin()
+            RAGLifecycleMixin()
 
         mock_setup.assert_called_once()
 

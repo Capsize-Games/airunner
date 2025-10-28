@@ -4,11 +4,9 @@ These tests focus on the dynamic canvas expansion and measurement calculations
 that are fragile and prone to bugs.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
-from PySide6.QtCore import QPointF, QRectF
+from unittest.mock import Mock
+from PySide6.QtCore import QPointF
 from PySide6.QtGui import QImage
-from PIL import Image
 
 from airunner.components.art.gui.widgets.canvas.custom_scene import (
     CustomScene,

@@ -4,7 +4,6 @@ Basic tests for the core LangGraph functionality.
 """
 
 import pytest
-from typing import Dict, Any
 from airunner.components.llm.langgraph.state import (
     BaseAgentState,
     RAGAgentState,

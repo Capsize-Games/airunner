@@ -4,7 +4,6 @@ import pytest
 
 from airunner.components.model_management.hardware_profiler import (
     HardwareProfiler,
-    HardwareProfile,
 )
 
 # Skip hardware profiler tests - platform-specific

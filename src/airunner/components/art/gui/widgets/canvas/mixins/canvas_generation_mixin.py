@@ -5,7 +5,6 @@ placement, persistence, and history management.
 """
 
 from typing import Optional, Dict
-from PIL import Image
 
 
 class CanvasGenerationMixin:

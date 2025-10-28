@@ -1,9 +1,7 @@
 """Tests for ModelFileChecker utility."""
 
-import os
 import tempfile
 from pathlib import Path
-import pytest
 
 from airunner.components.art.utils.model_file_checker import ModelFileChecker
 

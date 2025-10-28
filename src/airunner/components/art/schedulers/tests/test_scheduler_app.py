@@ -10,9 +10,6 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 import logging
-from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
-    BaseDiffusersModelManager,
-)
 
 # Set up logging to see all debug output
 logging.basicConfig(

@@ -1,7 +1,7 @@
 """iCal import/export functionality for calendar events."""
 
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict
 from icalendar import Calendar, Event as ICalEvent
 from airunner.components.calendar.data.event import Event
 from airunner.components.calendar.data.recurring_event import RecurringEvent
@@ -16,7 +16,6 @@ class ICalIntegration:
 
     def __init__(self):
         """Initialize iCal integration."""
-        pass
 
     def export_to_ical(self, events: List[Event]) -> str:
         """Export events to iCal format.

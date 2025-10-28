@@ -43,15 +43,6 @@ def test_mro_correct():
     from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
         BaseDiffusersModelManager,
     )
-    from airunner.components.art.managers.stablediffusion.mixins import (
-        SDPropertiesMixin,
-        SDPipelineManagementMixin,
-        SDModelLoadingMixin,
-        SDModelUnloadingMixin,
-        SDMemoryManagementMixin,
-        SDGenerationPreparationMixin,
-        SDImageGenerationMixin,
-    )
 
     mro = BaseDiffusersModelManager.__mro__
     mro_classes = [cls.__name__ for cls in mro]

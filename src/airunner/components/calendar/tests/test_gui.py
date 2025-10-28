@@ -2,8 +2,7 @@
 
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
-from PySide6.QtCore import Qt, QDate
+from unittest.mock import patch
 from PySide6.QtWidgets import QApplication
 from airunner.components.calendar.gui.widgets.calendar_widget import (
     CalendarWidget,

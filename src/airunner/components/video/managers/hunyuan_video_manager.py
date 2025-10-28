@@ -404,7 +404,7 @@ class HunyuanVideoManager(BaseVideoManager):
         steps = data.get("num_inference_steps", 25)
         seed = data.get("seed", 42)
         latent_window_size = data.get("latent_window_size", 9)
-        callback = data.get("callback")
+        data.get("callback")
 
         # Calculate video length
         total_second_length = num_frames / fps

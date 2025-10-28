@@ -4,10 +4,7 @@ Tests the validation mixin functionality including model path validation,
 file existence checking, and component loading verification.
 """
 
-import pytest
-import os
-from unittest.mock import Mock, MagicMock, patch
-from typing import Dict, List
+from unittest.mock import Mock, patch
 
 from airunner.components.llm.managers.mixins.validation_mixin import (
     ValidationMixin,

@@ -606,6 +606,13 @@ class CustomGraphicsView(
                 self.active_grid_area = None
             return
 
+        # Skip repositioning during drag to prevent interference
+        if self.scene and getattr(self.scene, "is_dragging", False):
+            self.logger.info(
+                "[ACTIVE GRID] Skipping show_active_grid_area - is_dragging is True"
+            )
+            return
+
         # Create if it doesn't exist
         if not self.active_grid_area:
             self.active_grid_area = ActiveGridArea()
@@ -1364,6 +1371,13 @@ class CustomGraphicsView(
             return
 
         if self.active_grid_area:
+            self.logger.info(
+                f"[ACTIVE GRID] update_active_grid_area_position called - current scenePos: {self.active_grid_area.scenePos().x()}, {self.active_grid_area.scenePos().y()}"
+            )
+            self.logger.info(
+                f"[ACTIVE GRID] Settings pos: {self.active_grid_settings.pos_x}, {self.active_grid_settings.pos_y}"
+            )
+
             manager = CanvasPositionManager()
             view_state = ViewState(
                 canvas_offset=QPointF(
@@ -1375,7 +1389,16 @@ class CustomGraphicsView(
             # Convert absolute position to display position
             abs_pos = QPointF(*self.active_grid_settings.pos)
             display_pos = manager.absolute_to_display(abs_pos, view_state)
+
+            self.logger.info(
+                f"[ACTIVE GRID] Setting position to display_pos: {display_pos.x()}, {display_pos.y()}"
+            )
             self.active_grid_area.setPos(display_pos)
+
+            actual_pos = self.active_grid_area.scenePos()
+            self.logger.info(
+                f"[ACTIVE GRID] After setPos, actual scenePos: {actual_pos.x()}, {actual_pos.y()}"
+            )
 
     def updateImagePositions(
         self, original_item_positions: Dict[str, QPointF] = None

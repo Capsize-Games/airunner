@@ -10,7 +10,6 @@ These tests verify that layer images maintain correct positions during:
 
 import types
 from types import SimpleNamespace
-from unittest.mock import Mock
 
 import pytest
 

@@ -4,9 +4,7 @@ Tests the conversation management mixin functionality including conversation
 creation, loading, clearing, and RAG engine management.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
-from typing import Dict, Optional
+from unittest.mock import Mock, patch
 
 from airunner.components.llm.managers.mixins.conversation_management_mixin import (
     ConversationManagementMixin,

@@ -433,4 +433,3 @@ class ModelManagementMixin:
             val: New value.
         """
         # Placeholder for actual notification implementation
-        pass

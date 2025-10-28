@@ -1,19 +1,25 @@
 """
-Test script to verify Mistral3 (Magistral-Small-2509) loading.
-
-This tests:
-1. MistralTokenizer loading from tekken.json
-2. Model loading with correct parameters (no use_cache for Mistral3)
+Test Mistral3 (Magistral-Small-2509) loading with different approaches.
 """
 
-import os
 import logging
-from transformers import AutoConfig, AutoModel
+import os
+from transformers import (
+    AutoConfig,
+    AutoTokenizer,
+    AutoModelForCausalLM,
+)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-MODEL_PATH = "/home/joe/.local/share/airunner/text/models/llm/causallm/Magistral-Small-2509"
+# Use environment variable or test path
+MODEL_PATH = os.environ.get(
+    "AIRUNNER_TEST_MODEL_PATH",
+    os.path.expanduser(
+        "~/.local/share/airunner/text/models/llm/causallm/Magistral-Small-2509"
+    ),
+)
 
 
 def test_tokenizer():

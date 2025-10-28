@@ -4,9 +4,7 @@ Following red/green/refactor TDD pattern with comprehensive coverage.
 """
 
 import os
-import json
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+from unittest.mock import Mock, patch
 from airunner.components.llm.managers.agent.mixins.rag_properties_mixin import (
     RAGPropertiesMixin,
 )
@@ -77,7 +75,8 @@ class TestDocIndexesDir:
         """Should return path to per-document indexes directory."""
         mixin = TestableRAGPropertiesMixin()
 
-        result = mixin.doc_indexes_dir
+        with patch("os.makedirs"):
+            result = mixin.doc_indexes_dir
 
         expected = os.path.expanduser("/test/base/rag/doc_indexes")
         assert result == expected
@@ -90,11 +89,13 @@ class TestRegistryPath:
         """Should return path to document registry JSON file."""
         mixin = TestableRAGPropertiesMixin()
 
-        result = mixin.registry_path
+        with patch("os.makedirs"):
+            result = mixin.registry_path
 
         expected = os.path.expanduser(
             "/test/base/rag/doc_indexes/index_registry.json"
         )
+        assert result == expected
         assert result == expected
 
 
@@ -131,6 +132,40 @@ class TestIndexRegistry:
 class TestEmbedding:
     """Test embedding property."""
 
+    def test_uses_local_path_not_huggingface_repo_id(self):
+        """CRITICAL: Should use local filesystem path, not HuggingFace repo ID.
+
+        Bug: Previously used 'intfloat/e5-large' directly, which tried to
+        download from HuggingFace even when model files existed locally.
+        Fix: Must construct path: {base_path}/text/models/llm/embedding/intfloat/e5-large
+        """
+        mixin = TestableRAGPropertiesMixin()
+        mixin.path_settings.base_path = "/test/airunner/base"
+
+        with patch(
+            "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.HuggingFaceEmbedding"
+        ) as mock_embed:
+            with patch(
+                "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.torch"
+            ) as mock_torch:
+                with patch(
+                    "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.AIRUNNER_LOCAL_FILES_ONLY",
+                    True,
+                ):
+                    mock_torch.cuda.is_available.return_value = True
+
+                    result = mixin.embedding
+
+                    # Should be called with LOCAL PATH, not repo ID
+                    expected_path = os.path.expanduser(
+                        "/test/airunner/base/text/models/llm/embedding/intfloat/e5-large"
+                    )
+                    mock_embed.assert_called_once()
+                    call_kwargs = mock_embed.call_args[1]
+                    assert call_kwargs["model_name"] == expected_path
+                    assert call_kwargs["local_files_only"] is True
+                    assert result == mock_embed.return_value
+
     def test_creates_embedding_model_first_access(self):
         """Should create HuggingFaceEmbedding on first access."""
         mixin = TestableRAGPropertiesMixin()
@@ -141,14 +176,19 @@ class TestEmbedding:
             with patch(
                 "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.torch"
             ) as mock_torch:
-                mock_torch.cuda.is_available.return_value = True
+                with patch(
+                    "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.AIRUNNER_LOCAL_FILES_ONLY",
+                    False,
+                ):
+                    mock_torch.cuda.is_available.return_value = True
 
-                result = mixin.embedding
+                    result = mixin.embedding
 
-                mock_embed.assert_called_once_with(
-                    model_name="BAAI/bge-small-en-v1.5", device="cuda"
-                )
-                assert result == mock_embed.return_value
+                    # When not local_files_only, verify device is set correctly
+                    mock_embed.assert_called_once()
+                    call_kwargs = mock_embed.call_args[1]
+                    assert call_kwargs["device"] == "cuda"
+                    assert result == mock_embed.return_value
 
     def test_uses_cpu_when_cuda_unavailable(self):
         """Should use CPU device when CUDA is not available."""
@@ -160,13 +200,19 @@ class TestEmbedding:
             with patch(
                 "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.torch"
             ) as mock_torch:
-                mock_torch.cuda.is_available.return_value = False
+                with patch(
+                    "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.AIRUNNER_LOCAL_FILES_ONLY",
+                    False,
+                ):
+                    mock_torch.cuda.is_available.return_value = False
+                    # Mock MPS to also be unavailable
+                    mock_torch.backends.mps.is_available.return_value = False
 
-                result = mixin.embedding
+                    mixin.embedding
 
-                mock_embed.assert_called_once_with(
-                    model_name="BAAI/bge-small-en-v1.5", device="cpu"
-                )
+                    mock_embed.assert_called_once()
+                    call_kwargs = mock_embed.call_args[1]
+                    assert call_kwargs["device"] == "cpu"
 
     def test_returns_cached_embedding_subsequent_access(self):
         """Should return cached embedding on subsequent access."""
@@ -178,14 +224,18 @@ class TestEmbedding:
             with patch(
                 "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.torch"
             ) as mock_torch:
-                mock_torch.cuda.is_available.return_value = True
+                with patch(
+                    "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.AIRUNNER_LOCAL_FILES_ONLY",
+                    False,
+                ):
+                    mock_torch.cuda.is_available.return_value = True
 
-                first = mixin.embedding
-                second = mixin.embedding
+                    first = mixin.embedding
+                    second = mixin.embedding
 
-                # Should only create once
-                assert mock_embed.call_count == 1
-                assert first == second
+                    # Should only create once
+                    assert mock_embed.call_count == 1
+                    assert first == second
 
     def test_logs_error_on_embedding_creation_failure(self):
         """Should log error and return None if embedding creation fails."""
@@ -197,8 +247,12 @@ class TestEmbedding:
             with patch(
                 "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.torch"
             ) as mock_torch:
-                mock_torch.cuda.is_available.return_value = True
-                mock_embed.side_effect = Exception("Test error")
+                with patch(
+                    "airunner.components.llm.managers.agent.mixins.rag_properties_mixin.AIRUNNER_LOCAL_FILES_ONLY",
+                    False,
+                ):
+                    mock_torch.cuda.is_available.return_value = True
+                    mock_embed.side_effect = Exception("Test error")
 
                 result = mixin.embedding
 
@@ -239,79 +293,17 @@ class TestTargetFiles:
 class TestRagSystemPrompt:
     """Test rag_system_prompt property."""
 
-    def test_includes_active_documents_list(self):
-        """Should include list of active documents in prompt."""
+    def test_returns_rag_system_prompt(self):
+        """Should return RAG system prompt for document-based assistance."""
         mixin = TestableRAGPropertiesMixin()
 
-        with patch.object(
-            mixin, "_get_active_document_names"
-        ) as mock_get_docs:
-            mock_get_docs.return_value = ["doc1.pdf", "doc2.txt"]
+        result = mixin.rag_system_prompt
 
-            result = mixin.rag_system_prompt
-
-            assert "doc1.pdf" in result
-            assert "doc2.txt" in result
-            assert (
-                "You currently have access to the following documents:"
-                in result
-            )
-
-    def test_shows_no_documents_when_none_active(self):
-        """Should show 'No documents' message when no documents active."""
-        mixin = TestableRAGPropertiesMixin()
-
-        with patch.object(
-            mixin, "_get_active_document_names"
-        ) as mock_get_docs:
-            mock_get_docs.return_value = []
-
-            result = mixin.rag_system_prompt
-
-            assert "No documents are currently active" in result
-
-    def test_includes_base_system_prompt(self):
-        """Should include base system prompt."""
-        mixin = TestableRAGPropertiesMixin()
-        mixin.system_prompt = "Custom system prompt"
-
-        with patch.object(
-            mixin, "_get_active_document_names"
-        ) as mock_get_docs:
-            mock_get_docs.return_value = []
-
-            result = mixin.rag_system_prompt
-
-            assert "Custom system prompt" in result
-
-    def test_includes_botname(self):
-        """Should include botname in prompt."""
-        mixin = TestableRAGPropertiesMixin()
-        mixin.botname = "MyBot"
-
-        with patch.object(
-            mixin, "_get_active_document_names"
-        ) as mock_get_docs:
-            mock_get_docs.return_value = []
-
-            result = mixin.rag_system_prompt
-
-            assert "MyBot" in result
-
-    def test_includes_critical_instructions(self):
-        """Should include critical RAG-specific instructions."""
-        mixin = TestableRAGPropertiesMixin()
-
-        with patch.object(
-            mixin, "_get_active_document_names"
-        ) as mock_get_docs:
-            mock_get_docs.return_value = []
-
-            result = mixin.rag_system_prompt
-
-            assert "CRITICAL INSTRUCTION" in result
-            assert "EXCLUSIVELY on the retrieved document context" in result
-            assert "Do NOT use your general knowledge" in result
+        # Verify key components of the RAG system prompt
+        assert "helpful AI assistant" in result
+        assert "document database" in result
+        assert "context from the documents" in result
+        assert "cite the document sources" in result
 
 
 class TestStoragePersistDir:

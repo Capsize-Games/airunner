@@ -1,6 +1,6 @@
 """Mixin providing image-related property access with layer composition."""
 
-from typing import Optional, Any
+from typing import Optional
 
 from PIL import Image
 

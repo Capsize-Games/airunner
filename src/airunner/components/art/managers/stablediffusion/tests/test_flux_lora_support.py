@@ -6,7 +6,7 @@ LoRA methods from BaseDiffusersModelManager.
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 from pathlib import Path
 
 

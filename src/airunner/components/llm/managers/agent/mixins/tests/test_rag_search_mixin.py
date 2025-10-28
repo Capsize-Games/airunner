@@ -3,8 +3,7 @@
 Following red/green/refactor TDD pattern with comprehensive coverage.
 """
 
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+from unittest.mock import Mock, patch
 from airunner.components.llm.managers.agent.mixins.rag_search_mixin import (
     RAGSearchMixin,
 )

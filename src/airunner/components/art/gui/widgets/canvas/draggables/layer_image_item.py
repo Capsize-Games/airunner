@@ -14,14 +14,14 @@ from airunner.components.art.gui.widgets.canvas.draggables.draggable_pixmap impo
 class LayerImageItem(DraggablePixmap):
     def __init__(
         self,
-        pixmap,
+        qimage,
         *,
         layer_id: Optional[int] = None,
         layer_image_data: Optional[Dict] = None,
     ):
         self._layer_id: Optional[int] = layer_id
         self.layer_image_data = layer_image_data or {}
-        super().__init__(pixmap, layer_id=layer_id)
+        super().__init__(qimage, layer_id=layer_id)
         self.set_layer_context(layer_id)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
 

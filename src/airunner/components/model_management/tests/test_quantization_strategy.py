@@ -3,7 +3,6 @@ import unittest
 from airunner.components.model_management.quantization_strategy import (
     QuantizationStrategy,
     QuantizationLevel,
-    QuantizationConfig,
 )
 from airunner.components.model_management.hardware_profiler import (
     HardwareProfile,

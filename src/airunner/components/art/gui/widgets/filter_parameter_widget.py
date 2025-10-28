@@ -182,9 +182,9 @@ QCheckBox::indicator:checked {
         # Update the filter_value object
         self.filter_value.value = str(value)
 
-        # Notify callback
+        # Notify callback (callback expects no arguments - it's preview_filter)
         if self.on_value_changed:
-            self.on_value_changed(self.filter_value.name, value)
+            self.on_value_changed()
 
     def get_value(self):
         """Get the current value from the widget."""

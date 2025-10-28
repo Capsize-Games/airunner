@@ -5,17 +5,22 @@ This simulates the actual loading flow from llm_model_manager.py
 """
 
 import logging
+import os
 from transformers import (
     AutoConfig,
     AutoTokenizer,
-    AutoModel,
-    AutoModelForCausalLM,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-MODEL_PATH = "/home/joe/.local/share/airunner/text/models/llm/causallm/Magistral-Small-2509"
+# Use environment variable or test path
+MODEL_PATH = os.environ.get(
+    "AIRUNNER_TEST_MODEL_PATH",
+    os.path.expanduser(
+        "~/.local/share/airunner/text/models/llm/causallm/Magistral-Small-2509"
+    ),
+)
 
 
 def test_full_loading_flow():
@@ -122,7 +127,7 @@ def test_full_loading_flow():
         logger.info("   Attempting AutoModelForCausalLM...")
         try:
             # We don't actually load it, just test if it would work
-            from transformers.models.auto import AutoModelForCausalLM
+            pass
 
             logger.info(
                 "   Note: Skipping actual model loading to save memory/time"

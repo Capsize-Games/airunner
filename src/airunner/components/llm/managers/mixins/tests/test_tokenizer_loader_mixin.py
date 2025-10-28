@@ -1,7 +1,7 @@
 """Tests for TokenizerLoaderMixin."""
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from transformers import AutoConfig
 
 from airunner.components.llm.managers.mixins.tokenizer_loader_mixin import (

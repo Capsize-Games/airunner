@@ -1,7 +1,6 @@
 """Unit tests for GenerationMixin."""
 
-from typing import Dict, Any, List
-from unittest.mock import Mock, MagicMock, patch, call
+from unittest.mock import Mock, patch
 import pytest
 from langchain_core.messages import AIMessage
 

@@ -5,7 +5,7 @@ quantization configuration, and error handling.
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch, call
+from unittest.mock import Mock, patch
 from transformers import AutoConfig, BitsAndBytesConfig
 import torch
 

@@ -5,8 +5,7 @@ Validates tool registration, execution, and integration.
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
-from typing import Annotated
+from unittest.mock import Mock
 
 from airunner.components.llm.core.tool_registry import (
     ToolRegistry,

@@ -4,15 +4,13 @@ Tests the status management mixin functionality including status updates,
 success/error messaging, and component state logging.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch, call
-from typing import Dict
+from unittest.mock import Mock
 
 from airunner.components.llm.managers.mixins.status_management_mixin import (
     StatusManagementMixin,
 )
 from airunner.components.llm.managers.llm_response import LLMResponse
-from airunner.enums import SignalCode, ModelType, ModelStatus, LLMActionType
+from airunner.enums import SignalCode, ModelType, ModelStatus
 
 
 class TestableStatusMixin(StatusManagementMixin):

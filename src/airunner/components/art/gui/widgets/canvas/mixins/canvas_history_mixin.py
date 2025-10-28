@@ -2,11 +2,14 @@
 
 from typing import Dict, Any, Optional
 from dataclasses import asdict, is_dataclass
-from PIL import Image
 from PySide6.QtCore import QPointF
 from PIL import ImageQt
 
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.art.utils.canvas_position_manager import (
+    CanvasPositionManager,
+    ViewState,
+)
 from airunner.utils.image import convert_binary_to_image
 
 
@@ -178,11 +181,6 @@ class CanvasHistoryMixin:
                     )
                 except (AttributeError, IndexError):
                     grid_comp = QPointF(0, 0)
-
-                from airunner.components.art.utils.canvas_position_manager import (
-                    CanvasPositionManager,
-                    ViewState,
-                )
 
                 manager = CanvasPositionManager()
                 view_state = ViewState(

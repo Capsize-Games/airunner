@@ -8,12 +8,9 @@ This module tests component loading and unloading functionality including:
 - Component unloading and memory cleanup
 """
 
-import gc
 import sys
-from unittest.mock import Mock, MagicMock, patch, call
+from unittest.mock import Mock, MagicMock, patch
 
-import pytest
-import torch
 
 # Mock heavy dependencies before importing the mixin
 sys.modules["airunner.components.llm.adapters"] = MagicMock()

@@ -6,7 +6,6 @@ WebSocket connections, and error handling.
 """
 
 import pytest
-import asyncio
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
 

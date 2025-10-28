@@ -417,3 +417,4 @@ SLASH_COMMANDS = {
     "s": LLMActionType.SEARCH,
     "w": LLMActionType.WORKFLOW,
 }
+

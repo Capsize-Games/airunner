@@ -1,7 +1,7 @@
 """Unit tests for CanvasDragDropMixin."""
 
 import unittest
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
+from unittest.mock import Mock, patch
 from PIL import Image
 import io
 

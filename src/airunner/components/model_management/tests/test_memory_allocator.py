@@ -2,7 +2,6 @@ import unittest
 
 from airunner.components.model_management.memory_allocator import (
     MemoryAllocator,
-    MemoryAllocation,
 )
 from airunner.components.model_management.quantization_strategy import (
     QuantizationConfig,
