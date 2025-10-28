@@ -11,8 +11,44 @@ Generates an LLM-friendly report of code quality issues including:
 - Unused imports
 - Other code quality issues
 
-Usage:
-    airunner-quality-report [--path PATH] [--verbose] [--json]
+Command-line flags (new and existing):
+
+- --path PATH
+    Path to analyze. Defaults to `src/airunner` (automatically discovered by looking for
+    the project's `setup.py` when not provided).
+
+- --verbose
+    Show a detailed breakdown of issues grouped by file.
+
+- --json
+    Output JSON (summary + issues) for programmatic consumption.
+
+- --include-gui
+    Include files under GUI-related folders in the analysis. By default GUI files are
+    excluded to speed up reports; use this flag to analyze GUI code as well.
+
+- --exclude PATTERN [PATTERN ...]
+    Additional substring patterns to exclude from analysis. The script always excludes
+    `alembic`, `/data/`, `vendor`, and `_ui.py` files regardless of this option.
+
+- --class-lines N
+    Threshold (in code lines) above which a class will be reported as `long_class`.
+    Default: 200. Use a larger value to tolerate big classes or a smaller value to be
+    stricter.
+
+- --filter CAT1,CAT2,...
+    Comma-separated list of issue categories to include in the final report. If set,
+    only issues whose `category` matches one of the supplied names will be shown. Examples:
+    `--filter=long_class,missing_docstring` or `--filter=unused_import`.
+
+Examples:
+
+    # Run a human-readable report including GUI files and a higher class size threshold
+    airunner-quality-report --include-gui --class-lines 300
+
+    # Output only long_class and missing_docstring issues as JSON
+    airunner-quality-report --json --filter=long_class,missing_docstring
+
 """
 
 import ast
@@ -85,9 +121,15 @@ class QualityReport:
 
 
 class CodeAnalyzer(ast.NodeVisitor):
-    """AST visitor for analyzing Python code quality."""
+    """AST visitor for analyzing Python code quality.
 
-    def __init__(self, file_path: str, source: str):
+    Supports a configurable class line threshold so callers can control
+    when a "long_class" issue is emitted.
+    """
+
+    def __init__(
+        self, file_path: str, source: str, class_line_threshold: int = 200
+    ):
         """
         Initialize analyzer.
 
@@ -103,7 +145,10 @@ class CodeAnalyzer(ast.NodeVisitor):
         self.all_imports: Set[str] = set()
         self.used_names: Set[str] = set()
         self.in_function = False
+
         self.in_class = False
+        # Threshold to consider a class 'long'. Default is 200 lines.
+        self.class_line_threshold = class_line_threshold
 
     def add_issue(self, line: int, category: str, severity: str, message: str):
         """Add an issue to the list."""
@@ -259,12 +304,15 @@ class CodeAnalyzer(ast.NodeVisitor):
         # Check class length (excluding docstrings and blank lines)
         if hasattr(node, "end_lineno") and node.end_lineno:
             class_lines = self._count_code_lines(node)
-            if class_lines > 200:
+            if class_lines > self.class_line_threshold:
                 self.add_issue(
                     node.lineno,
                     "long_class",
                     "warning",
-                    f"Class '{node.name}' is {class_lines} code lines (≤200 recommended, consider mixins)",
+                    (
+                        f"Class '{node.name}' is {class_lines} code lines "
+                        f"(≤{self.class_line_threshold} recommended, consider mixins)"
+                    ),
                 )
 
         # Check for docstring (public classes only)
@@ -308,7 +356,9 @@ class CodeAnalyzer(ast.NodeVisitor):
                     )
 
 
-def analyze_file(file_path: Path) -> List[Issue]:
+def analyze_file(
+    file_path: Path, class_line_threshold: int = 200
+) -> List[Issue]:
     """
     Analyze a single Python file.
 
@@ -322,7 +372,7 @@ def analyze_file(file_path: Path) -> List[Issue]:
         source = file_path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(file_path))
 
-        analyzer = CodeAnalyzer(str(file_path), source)
+        analyzer = CodeAnalyzer(str(file_path), source, class_line_threshold)
         analyzer.visit(tree)
         analyzer.check_unused_imports()
 
@@ -486,10 +536,26 @@ def main():
             "alembic",
             "/data/",
             "vendor",
-            "/gui/",
             "__init__.py",
         ],
         help="Patterns to exclude from analysis (alembic, data, vendor, _ui.py always excluded)",
+    )
+
+    parser.add_argument(
+        "--class-lines",
+        type=int,
+        default=200,
+        help="Threshold (in code lines) above which a class is reported as long (default: 200)",
+    )
+
+    parser.add_argument(
+        "--filter",
+        type=str,
+        default=None,
+        help=(
+            "Comma-separated list of issue categories to include in the final report. "
+            "Example: --filter=long_class,missing_docstring"
+        ),
     )
 
     args = parser.parse_args()
@@ -540,7 +606,7 @@ def main():
     total_lines = 0
 
     for py_file in python_files:
-        issues = analyze_file(py_file)
+        issues = analyze_file(py_file, class_line_threshold=args.class_lines)
         for issue in issues:
             report.add_issue(issue)
 
@@ -555,19 +621,32 @@ def main():
     report.total_lines = total_lines
 
     # Output report
+    # If a filter was provided, reduce issues to only those categories
+    filtered_report = report
+    if args.filter:
+        wanted = set([c.strip() for c in args.filter.split(",") if c.strip()])
+        filtered = [i for i in report.issues if i.category in wanted]
+        filtered_report = QualityReport(
+            issues=filtered,
+            files_analyzed=report.files_analyzed,
+            total_lines=report.total_lines,
+        )
+
     if args.json:
         # JSON output for programmatic parsing
         output = {
-            "summary": report.get_summary(),
-            "issues": [asdict(issue) for issue in report.issues],
+            "summary": filtered_report.get_summary(),
+            "issues": [asdict(issue) for issue in filtered_report.issues],
         }
         print(json.dumps(output, indent=2))
     else:
         # Human/LLM-readable format
-        print_compact_report(report, args.verbose)
+        print_compact_report(filtered_report, args.verbose)
 
     # Exit code based on severity
-    has_errors = any(issue.severity == "error" for issue in report.issues)
+    has_errors = any(
+        issue.severity == "error" for issue in filtered_report.issues
+    )
     sys.exit(1 if has_errors else 0)
 
 
