@@ -10,10 +10,7 @@ from typing import Optional
 
 import requests
 from PIL import Image
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent
-from PySide6.QtWidgets import QApplication, QGraphicsScene
-from PySide6.QtGui import QImage
 
 
 class CanvasDragDropMixin:

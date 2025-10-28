@@ -1,6 +1,6 @@
 """Unit tests for PropertyMixin."""
 
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import Mock, patch
 import pytest
 
 from airunner.components.llm.managers.mixins.property_mixin import (

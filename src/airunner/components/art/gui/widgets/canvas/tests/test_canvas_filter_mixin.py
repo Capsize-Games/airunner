@@ -1,7 +1,7 @@
 """Unit tests for CanvasFilterMixin."""
 
 import unittest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 from PIL import Image
 
 from airunner.components.art.gui.widgets.canvas.mixins.canvas_filter_mixin import (

@@ -12,19 +12,10 @@ images would drift or not stay centered during window resize.
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock
 from PySide6.QtCore import QPointF, QSize, QRectF
-from PySide6.QtWidgets import QGraphicsView
 
-from airunner.components.art.gui.widgets.canvas.custom_view import (
-    CustomGraphicsView,
-)
 from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
-from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
-from airunner.components.art.data.active_grid_settings import (
-    ActiveGridSettings,
-)
 from airunner.components.art.utils.canvas_position_manager import (
     CanvasPositionManager,
     ViewState,
@@ -113,16 +104,32 @@ def mock_scene(qapp):
     scene.logger = MagicMock()
     scene.update = MagicMock()
     scene.item = None  # The legacy single item (for backward compat)
+    scene.original_item_positions = {}  # Add this for update_image_position
 
     # Mock views
     mock_view = MagicMock()
     mock_view._grid_compensation_offset = QPointF(0, 0)
     scene.views = MagicMock(return_value=[mock_view])
 
-    # Bind the real update_image_position method
+    # Bind the real methods from CustomScene
     scene.update_image_position = CustomScene.update_image_position.__get__(
         scene, CustomScene
     )
+    scene._update_main_item_position = (
+        CustomScene._update_main_item_position.__get__(scene, CustomScene)
+    )
+    scene._update_layer_items_positions = (
+        CustomScene._update_layer_items_positions.__get__(scene, CustomScene)
+    )
+    scene._ensure_layer_has_original_position = (
+        CustomScene._ensure_layer_has_original_position.__get__(
+            scene, CustomScene
+        )
+    )
+    scene._apply_layer_item_position = (
+        CustomScene._apply_layer_item_position.__get__(scene, CustomScene)
+    )
+    scene._get_layer_specific_settings = MagicMock(return_value=None)
 
     return scene
 
@@ -333,12 +340,16 @@ class TestScenePositionUpdate:
 
     def test_scene_uses_position_manager(self, mock_scene):
         """Test that scene uses CanvasPositionManager for coordinate conversion."""
-        # Create a mock layer item
+        # Create a mock layer item with proper method returns
         mock_layer_item = MagicMock()
+        # Ensure pos() returns a QPointF that differs enough from target
+        # to trigger the setPos call (> 1 pixel difference)
         mock_layer_item.pos.return_value = QPointF(0, 0)
         mock_layer_item.boundingRect.return_value = QRectF(0, 0, 512, 512)
         mock_layer_item.isVisible.return_value = True
         mock_layer_item.mapRectToScene.return_value = QRectF(0, 0, 512, 512)
+        # Reset mock to clear any prior calls
+        mock_layer_item.reset_mock()
 
         layer_id = 1
         mock_scene._layer_items = {layer_id: mock_layer_item}
@@ -363,7 +374,10 @@ class TestScenePositionUpdate:
         # display = absolute - (canvas_offset - grid_compensation)
         # display = 100 - (50 - 20), 200 - (30 - 15)
         # display = 100 - 30, 200 - 15 = (70, 185)
-        assert mock_layer_item.setPos.called
+        assert mock_layer_item.setPos.called, (
+            f"setPos was not called. pos() calls: {mock_layer_item.pos.call_count}, "
+            f"prepareGeometryChange calls: {mock_layer_item.prepareGeometryChange.call_count}"
+        )
         call_args = mock_layer_item.setPos.call_args[0]
         assert call_args[0] == pytest.approx(70.0)
         assert call_args[1] == pytest.approx(185.0)

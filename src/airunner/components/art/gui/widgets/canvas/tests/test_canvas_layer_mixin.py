@@ -58,6 +58,11 @@ class TestCanvasLayerMixin:
         mock_drawing_pad = MagicMock()
         mock_drawing_pad.image = sample_image
 
+        # Create mock Qt objects before the test
+        mock_qimage = MagicMock()
+        mock_pixmap = MagicMock()
+        mock_item = MagicMock()
+
         with patch.object(CanvasLayer.objects, "get", return_value=mock_layer):
             with patch.object(
                 DrawingPadSettings.objects,
@@ -73,25 +78,18 @@ class TestCanvasLayerMixin:
 
                     # Mock QImage conversion using the utility function
                     with patch(
-                        "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.pil_to_qimage"
-                    ) as mock_pil_to_qimage:
-                        mock_qimage = MagicMock()
-                        mock_pil_to_qimage.return_value = mock_qimage
-
-                        # Mock Qt widgets
+                        "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.pil_to_qimage",
+                        return_value=mock_qimage,
+                    ):
+                        # Mock Qt widgets to prevent actual Qt object creation
                         with patch(
-                            "PySide6.QtWidgets.QGraphicsPixmapItem"
-                        ) as mock_pixmap_item_class:
+                            "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.QPixmap.fromImage",
+                            return_value=mock_pixmap,
+                        ):
                             with patch(
-                                "PySide6.QtGui.QPixmap"
-                            ) as mock_pixmap_class:
-                                mock_pixmap = MagicMock()
-                                mock_pixmap_class.fromImage.return_value = (
-                                    mock_pixmap
-                                )
-                                mock_item = MagicMock()
-                                mock_pixmap_item_class.return_value = mock_item
-
+                                "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.QGraphicsPixmapItem",
+                                return_value=mock_item,
+                            ):
                                 # Execute
                                 layer_mixin._create_new_layer_item(
                                     layer_id, sample_layer_data
@@ -100,9 +98,6 @@ class TestCanvasLayerMixin:
                                 # Verify
                                 mock_convert.assert_called_once_with(
                                     sample_image
-                                )
-                                mock_pil_to_qimage.assert_called_once_with(
-                                    mock_pil_image
                                 )
                                 layer_mixin.addItem.assert_called_once()
                                 assert layer_id in layer_mixin._layer_items
@@ -225,3 +220,64 @@ class TestCanvasLayerMixin:
                         # Verify - no item should be created
                         layer_mixin.addItem.assert_not_called()
                         assert layer_id not in layer_mixin._layer_items
+
+    def test_layer_item_is_layer_image_item_not_qgraphicspixmapitem(
+        self, layer_mixin, sample_layer_data, sample_image
+    ):
+        """Test that _create_new_layer_item uses LayerImageItem instead of
+        QGraphicsPixmapItem.
+
+        Regression test for bug where QGraphicsPixmapItem was used,
+        which doesn't have updateImage() method needed for undo operations.
+        LayerImageItem provides updateImage() and other layer-specific
+        functionality.
+        """
+        from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
+            LayerImageItem,
+        )
+
+        layer_id = 1
+
+        # Mock CanvasLayer with image data
+        mock_layer = MagicMock(spec=CanvasLayer)
+        mock_layer.id = layer_id
+
+        # Mock DrawingPadSettings with image
+        mock_drawing_pad = MagicMock(spec=DrawingPadSettings)
+        mock_drawing_pad.image = sample_image
+
+        # Mock PIL Image
+        mock_pil_image = Image.new("RGB", (100, 100), color="red")
+
+        with patch.object(CanvasLayer.objects, "get", return_value=mock_layer):
+            with patch.object(
+                DrawingPadSettings.objects,
+                "filter_by_first",
+                return_value=mock_drawing_pad,
+            ):
+                with patch(
+                    "airunner.utils.image.convert_binary_to_image",
+                    return_value=mock_pil_image,
+                ):
+                    # Execute
+                    layer_mixin._create_new_layer_item(
+                        layer_id, sample_layer_data
+                    )
+
+                    # Verify item was created and is a LayerImageItem
+                    assert layer_id in layer_mixin._layer_items
+                    item = layer_mixin._layer_items[layer_id]
+
+                    # Critical: Must be LayerImageItem, not QGraphicsPixmapItem
+                    assert isinstance(
+                        item, LayerImageItem
+                    ), f"Expected LayerImageItem, got {type(item)}"
+
+                    # Verify LayerImageItem has updateImage method
+                    # (this is what failed with QGraphicsPixmapItem)
+                    assert hasattr(
+                        item, "updateImage"
+                    ), "LayerImageItem missing updateImage method"
+
+                    # Verify it was initialized with correct parameters
+                    layer_mixin.addItem.assert_called_once()

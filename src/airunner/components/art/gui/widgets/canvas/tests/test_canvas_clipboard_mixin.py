@@ -1,11 +1,11 @@
 """Unit tests for CanvasClipboardMixin."""
 
 import unittest
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import MagicMock, patch
 from PIL import Image
 import io
 from PySide6.QtGui import QImage
-from PySide6.QtCore import QByteArray, QUrl
+from PySide6.QtCore import QByteArray
 from airunner.components.art.gui.widgets.canvas.mixins.canvas_clipboard_mixin import (
     CanvasClipboardMixin,
 )

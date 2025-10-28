@@ -1,7 +1,7 @@
 """LangChain tools for calendar event management."""
 
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from datetime import datetime
+from typing import Optional
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel as PydanticBaseModel, Field
 from airunner.components.calendar.data.event import Event

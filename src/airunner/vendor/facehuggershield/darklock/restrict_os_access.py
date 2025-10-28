@@ -383,8 +383,8 @@ class RestrictOSAccess(metaclass=Singleton):
         - allow_any: if True, allows any file operation on this thread for the duration of the context. Use sparingly.
 
         Example:
-            with RestrictOSAccess().user_override(paths=["/home/joe/Desktop"]):
-                open('/home/joe/Desktop/1.png', 'rb')  # allowed inside context
+            with RestrictOSAccess().user_override(paths=["/tmp/workspace"]):
+                open('/tmp/workspace/file.png', 'rb')  # allowed inside context
 
         This operates per-thread using thread-local storage to avoid broad process-wide disabling.
         """

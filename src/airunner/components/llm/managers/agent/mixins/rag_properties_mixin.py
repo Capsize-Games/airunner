@@ -81,8 +81,18 @@ class RAGPropertiesMixin:
         """
         if self._embedding is None:
             try:
-                # Default embedding model - same as used in rag_mixin.py
-                model_name = "intfloat/e5-large"
+                # Construct local path to embedding model files
+                # Must use local filesystem path, not HuggingFace repo ID
+                model_name = os.path.expanduser(
+                    os.path.join(
+                        self.path_settings.base_path,
+                        "text",
+                        "models",
+                        "llm",
+                        "embedding",
+                        "intfloat/e5-large",
+                    )
+                )
 
                 device = "cpu"
                 if torch.cuda.is_available():

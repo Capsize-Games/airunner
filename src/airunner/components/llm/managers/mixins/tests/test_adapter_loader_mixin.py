@@ -4,10 +4,8 @@ Tests adapter name retrieval from settings, adapter querying from database,
 PEFT adapter application, and comprehensive adapter loading workflows.
 """
 
-import json
-import os
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 
 from airunner.components.llm.managers.mixins.adapter_loader_mixin import (
     AdapterLoaderMixin,

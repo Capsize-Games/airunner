@@ -4,14 +4,20 @@ Handles image persistence operations including export, import, load from files/U
 and asynchronous image data persistence to the database.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 import os
 import weakref
-from typing import Optional, Dict
 from PIL import Image
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtCore import Slot
 from airunner.utils.image import export_image
 from airunner.settings import AIRUNNER_VALID_IMAGE_FILES
+from airunner.utils.image.dispatch_persist_result import (
+    dispatch_persist_result,
+)
+from airunner.utils.image.persist_image_worker import persist_image_worker
+
+PERSIST_EXECUTOR = ThreadPoolExecutor(max_workers=1)
 
 
 class CanvasPersistenceMixin:
@@ -140,15 +146,8 @@ class CanvasPersistenceMixin:
         self._persist_generation += 1
         generation = self._persist_generation
 
-        # Import here to avoid circular dependency
-        from airunner.components.art.gui.widgets.canvas.custom_scene import (
-            _PERSIST_EXECUTOR,
-            _persist_image_worker,
-            _dispatch_persist_result,
-        )
-
-        future = _PERSIST_EXECUTOR.submit(
-            _persist_image_worker,
+        future = PERSIST_EXECUTOR.submit(
+            persist_image_worker,
             self.settings_key,
             layer_id,
             "image",
@@ -159,7 +158,7 @@ class CanvasPersistenceMixin:
         )
         self._active_persist_future = future
         future.add_done_callback(
-            lambda fut, scene_ref=weakref.ref(self): _dispatch_persist_result(
+            lambda fut, scene_ref=weakref.ref(self): dispatch_persist_result(
                 scene_ref, fut
             )
         )

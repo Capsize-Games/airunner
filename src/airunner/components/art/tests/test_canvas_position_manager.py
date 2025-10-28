@@ -3,7 +3,6 @@
 These tests ensure the positioning system works correctly and catches regressions.
 """
 
-import pytest
 from PySide6.QtCore import QPointF
 
 from airunner.components.art.utils.canvas_position_manager import (

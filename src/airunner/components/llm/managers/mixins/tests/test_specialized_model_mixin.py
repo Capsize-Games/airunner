@@ -1,7 +1,6 @@
 """Unit tests for SpecializedModelMixin."""
 
-from typing import Optional, Any
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
+from unittest.mock import Mock, patch
 import pytest
 from langchain_core.messages import AIMessage
 

@@ -183,7 +183,6 @@ class StatusWidget(BaseWidget):
         if element_name != "":
             getattr(self.ui, element_name).setStyleSheet(styles)
             getattr(self.ui, element_name).setToolTip(tool_tip)
-        QApplication.processEvents()
 
     def set_sd_status_text(self):
         if self.version != self.generator_settings.version:
@@ -230,4 +229,3 @@ class StatusWidget(BaseWidget):
             self.ui.system_message.setStyleSheet("QLabel { color: #ff0000; }")
         else:
             self.ui.system_message.setStyleSheet("QLabel { color: #ffffff; }")
-        QApplication.processEvents()

@@ -1,6 +1,5 @@
 """Tests for calendar data models."""
 
-import pytest
 from datetime import datetime, timedelta
 from airunner.components.calendar.data.event import Event
 from airunner.components.calendar.data.reminder import Reminder

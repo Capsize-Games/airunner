@@ -9,7 +9,7 @@ import pytest
 import torch
 import numpy as np
 from PIL import Image
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 
 from airunner.components.video.managers.hunyuan_video_manager import (
     HunyuanVideoManager,

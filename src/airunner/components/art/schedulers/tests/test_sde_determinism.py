@@ -41,7 +41,7 @@ def test_deterministic_sde_noise():
     noise1_batch2 = sampler1(shape)  # Second call should be different
 
     noise2_batch1 = sampler2(shape)
-    noise2_batch2 = sampler2(shape)
+    sampler2(shape)
 
     print(f"\nDevice: {device}")
     print(f"Seed: {seed}")

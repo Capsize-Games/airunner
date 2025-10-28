@@ -6,6 +6,9 @@ including layer visibility, deletion, reordering, and transaction management.
 
 from typing import List, Dict, Any, Iterable
 
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QGraphicsPixmapItem
+
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.drawingpad_settings import (
     DrawingPadSettings,
@@ -21,7 +24,10 @@ from airunner.components.model_management import (
     ModelResourceManager,
     CanvasMemoryTracker,
 )
-from airunner.utils.image import pil_to_qimage
+from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
+    LayerImageItem,
+)
+from airunner.utils.image import pil_to_qimage, convert_binary_to_image
 
 
 class CanvasLayerMixin:
@@ -279,8 +285,6 @@ class CanvasLayerMixin:
         if not drawing_pad or not drawing_pad.image:
             return
 
-        from airunner.utils.image import convert_binary_to_image
-
         image = convert_binary_to_image(drawing_pad.image)
         if image is None:
             return
@@ -289,10 +293,11 @@ class CanvasLayerMixin:
         if qimage is None:
             return
 
-        from PySide6.QtWidgets import QGraphicsPixmapItem
-        from PySide6.QtGui import QPixmap
-
-        item = QGraphicsPixmapItem(QPixmap.fromImage(qimage))
+        item = LayerImageItem(
+            qimage,
+            layer_id=layer_id,
+            layer_image_data=data,
+        )
         item.setVisible(data["visible"])
         item.setOpacity(data["opacity"])
         item.setZValue(data["order"])

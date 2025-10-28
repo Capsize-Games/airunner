@@ -1,10 +1,8 @@
 """Tests for BaseDownloadWorker abstract class."""
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch, call
+from unittest.mock import patch
 from pathlib import Path
 import tempfile
-import threading
 
 from airunner.components.application.workers.base_download_worker import (
     BaseDownloadWorker,
@@ -25,11 +23,9 @@ class ConcreteDownloadWorker(BaseDownloadWorker):
 
     def _download_model(self, **kwargs):
         """Minimal implementation for testing."""
-        pass
 
     def _download_file(self, **kwargs):
         """Minimal implementation for testing."""
-        pass
 
 
 class TestBaseDownloadWorker:

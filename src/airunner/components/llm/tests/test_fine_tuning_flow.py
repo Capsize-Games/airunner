@@ -6,11 +6,8 @@ progress callbacks, adapter saving, and database persistence.
 """
 
 import pytest
-import tempfile
 import os
-from unittest.mock import Mock, MagicMock, patch, call
-from pathlib import Path
-from typing import List, Tuple, Dict
+from unittest.mock import Mock
 
 from airunner.components.llm.managers.training_mixin import TrainingMixin
 from airunner.components.llm.training_presets import (
@@ -18,7 +15,6 @@ from airunner.components.llm.training_presets import (
     TrainingPreset,
     TRAINING_PRESETS,
 )
-from airunner.enums import SignalCode
 
 
 class MockModelManager(TrainingMixin):
@@ -195,7 +191,7 @@ class TestFinetuningWorkerFlow:
 
         self.worker_methods["setup_model"].return_value = False
 
-        examples = self.worker_methods["prepare_examples"](data, data["files"])
+        self.worker_methods["prepare_examples"](data, data["files"])
         model_setup = self.worker_methods["setup_model"]("test_adapter")
 
         if not model_setup:
@@ -216,7 +212,7 @@ class TestFinetuningWorkerFlow:
         self.worker_methods["execute_training"].return_value = False
 
         examples = self.worker_methods["prepare_examples"](data, data["files"])
-        model_setup = self.worker_methods["setup_model"]("test_adapter")
+        self.worker_methods["setup_model"]("test_adapter")
         training_success = self.worker_methods["execute_training"](
             examples, "test_adapter", data
         )
@@ -259,7 +255,7 @@ class TestProgressCallbacks:
     def test_progress_callback_invoked(self):
         """Test that progress callbacks are invoked during training."""
         callback = Mock()
-        manager = MockModelManager()
+        MockModelManager()
 
         # Simulate progress update
         progress_data = {"progress": 50, "step": 100}

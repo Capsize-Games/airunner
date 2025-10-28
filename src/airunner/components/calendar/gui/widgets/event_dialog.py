@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QMessageBox,
 )
-from PySide6.QtCore import Qt, QDateTime, QDate, QTime
+from PySide6.QtCore import QDateTime, QDate, QTime
 from airunner.components.calendar.data.event import Event
 
 
