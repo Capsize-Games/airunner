@@ -88,6 +88,7 @@ class LLMModelManager(
 
     _history: Optional[List] = []
     _interrupted: bool = False
+    _current_request_id: Optional[str] = None
 
     llm_settings: LLMSettings
 
@@ -106,6 +107,7 @@ class LLMModelManager(
         self._conversation_history_manager = ConversationHistoryManager()
         self._current_model_path = None
         self._hw_profiler = None
+        self._current_request_id = None
 
     def _load_local_llm_components(self) -> None:
         """Load tokenizer and model for local LLM."""
@@ -195,6 +197,9 @@ class LLMModelManager(
     ) -> Dict[str, Any]:
         """Handle an incoming request for LLM generation."""
         self.logger.info(f"handle_request called on instance {id(self)}")
+
+        # Store request_id for use in response correlation
+        self._current_request_id = data.get("request_id")
 
         # CRITICAL: Clear ALL interrupt flags at the start of a new request
         # This ensures that a new user message can be processed even if
