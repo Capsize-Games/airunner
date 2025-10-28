@@ -11,6 +11,7 @@ markers = [
     "gpu: tests that require GPU hardware",
     "eval: evaluation tests for LLM/model quality testing",
     "streaming: tests for streaming response functionality",
+    "llm_required: tests that require an LLM model to be loaded",
 ]
 testpaths = ["src"]
 # Disable parallel execution to prevent worker cleanup issues
