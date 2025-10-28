@@ -7,7 +7,7 @@ for long-term memory and context preservation.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 
 from airunner.components.knowledge.knowledge_memory_manager import (
     KnowledgeMemoryManager,
@@ -154,7 +154,7 @@ class SummaryGenerator:
             query = session.query(KnowledgeFact).filter(
                 KnowledgeFact.created_at >= start_date,
                 KnowledgeFact.created_at <= end_date,
-                KnowledgeFact.enabled == True,  # noqa: E712
+                KnowledgeFact.enabled.is_(True),
             )
 
             if conversation_id:

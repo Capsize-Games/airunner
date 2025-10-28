@@ -111,7 +111,7 @@ class ContextInjectionMixin:
         enhanced_prompt = "\n".join(enhanced_parts)
 
         self.logger.debug(
-            f"Injected context ({len(context.split(chr(10))) if context else 0} lines)"
+            f"Injected context ({len(context.split('\n')) if context else 0} lines)"
         )
 
         return enhanced_prompt

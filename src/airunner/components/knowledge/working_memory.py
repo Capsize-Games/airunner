@@ -7,8 +7,7 @@ context injection into LLM prompts.
 
 import logging
 from collections import OrderedDict
-from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
 from airunner.components.knowledge.knowledge_memory_manager import (
     KnowledgeMemoryManager,
@@ -123,10 +122,13 @@ class WorkingMemory:
         self, category: Optional[str] = None, limit: int = 10
     ) -> None:
         """
-        Refresh cache from database with recent facts.
+        Replace cache content with recent facts from database.
+
+        This method clears the current cache and loads the most recent facts
+        from the database, replacing any previously cached facts.
 
         Args:
-            category: Category to refresh (None = all)
+            category: Category to load (None = all)
             limit: Number of facts to load
         """
         self.clear()

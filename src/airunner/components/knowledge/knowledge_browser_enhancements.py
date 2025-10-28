@@ -6,8 +6,7 @@ knowledge manager widget.
 """
 
 import logging
-from typing import List, Optional, Set
-from pathlib import Path
+from typing import Set
 
 from PySide6.QtWidgets import (
     QFileDialog,
