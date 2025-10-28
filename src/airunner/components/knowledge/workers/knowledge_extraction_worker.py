@@ -14,11 +14,10 @@ from airunner.enums import SignalCode, QueueType
 from airunner.components.knowledge.knowledge_memory_manager import (
     KnowledgeMemoryManager,
 )
-
-# Import FactCategory - use module import to avoid data/ directory conflict
-from airunner.components.knowledge import data as knowledge_data
-
-FactCategory = knowledge_data.FactCategory
+from airunner.components.knowledge.enums import (
+    KnowledgeFactCategory,
+    KnowledgeSource,
+)
 
 
 class KnowledgeExtractionWorker(Worker):
@@ -133,8 +132,12 @@ class KnowledgeExtractionWorker(Worker):
             List of extracted facts with format:
             [{"text": "...", "category": "...", "confidence": 0.9}, ...]
         """
-        # Build extraction prompt
-        categories = ", ".join([cat.value for cat in FactCategory])
+        # Build extraction prompt with user-focused categories
+        # Focus on user categories since we're extracting from user conversations
+        user_categories = [
+            cat.value for cat in KnowledgeFactCategory if cat.is_user_category
+        ]
+        categories_str = ", ".join(user_categories)
 
         extraction_prompt = f"""Extract factual information about the user from this conversation turn.
 Only extract clear, verifiable facts. Do not extract opinions, questions, or uncertain information.
@@ -144,13 +147,26 @@ Assistant: {bot_response}
 
 Return a JSON array of facts. Each fact should have:
 - "text": The factual statement (e.g., "User has back pain")
-- "category": One of [{categories}]
+- "category": One of [{categories_str}]
 - "confidence": Float 0.0-1.0 indicating certainty
 
+Category Guide:
+- user_identity: Name, age, gender, pronouns
+- user_location: Where user lives, works, travels
+- user_preferences: Likes, dislikes, habits, routines
+- user_relationships: Family, friends, colleagues
+- user_work: Job title, company, projects, responsibilities
+- user_interests: Hobbies, topics of interest, entertainment
+- user_skills: Technical skills, abilities, talents
+- user_goals: Aspirations, plans, objectives
+- user_history: Past events, experiences, background
+- user_health: Medical conditions, symptoms, treatments, wellness
+
 Examples:
-- If user says "I have back pain" → {{"text": "User experiences back pain", "category": "health", "confidence": 0.95}}
-- If user says "I work as an engineer" → {{"text": "User works as an engineer", "category": "work", "confidence": 0.95}}
-- If user says "I might try yoga" → DO NOT EXTRACT (uncertain/future intention)
+- "I have back pain" → {{"text": "User experiences back pain", "category": "user_health", "confidence": 0.95}}
+- "I work as a software engineer" → {{"text": "User works as a software engineer", "category": "user_work", "confidence": 0.95}}
+- "I love hiking" → {{"text": "User enjoys hiking", "category": "user_interests", "confidence": 0.95}}
+- "I might try yoga" → DO NOT EXTRACT (uncertain/future intention)
 
 Return ONLY valid JSON array, no other text:
 """
@@ -196,19 +212,34 @@ Return ONLY valid JSON array, no other text:
                     if not fact_text:
                         continue
 
-                    # Validate category
-                    if category not in [cat.value for cat in FactCategory]:
-                        self.logger.warning(
-                            f"Invalid category '{category}', using 'other'"
-                        )
-                        category = "other"
+                    # Validate category - convert legacy categories if needed
+                    valid_categories = [
+                        cat.value for cat in KnowledgeFactCategory
+                    ]
+                    if category not in valid_categories:
+                        # Try legacy category mapping
+                        try:
+                            mapped_cat = (
+                                KnowledgeFactCategory.from_legacy_category(
+                                    category
+                                )
+                            )
+                            category = mapped_cat.value
+                            self.logger.info(
+                                f"Mapped legacy category '{fact_data.get('category')}' to '{category}'"
+                            )
+                        except (ValueError, KeyError):
+                            self.logger.warning(
+                                f"Invalid category '{category}', using 'other'"
+                            )
+                            category = KnowledgeFactCategory.OTHER.value
 
                     # Add fact to database
                     fact = self.km.add_fact(
                         text=fact_text,
                         category=category,
                         confidence=confidence,
-                        source="auto_extracted",
+                        source=KnowledgeSource.CONVERSATION.value,
                         conversation_id=conversation_id,
                     )
 
