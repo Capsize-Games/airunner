@@ -1,9 +1,9 @@
 """Tests for CanvasSceneManagementMixin layer item updates."""
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 from PIL import Image
-from PySide6.QtCore import QPoint, QPointF
+from PySide6.QtCore import QPoint
 from PySide6.QtGui import QImage
 
 

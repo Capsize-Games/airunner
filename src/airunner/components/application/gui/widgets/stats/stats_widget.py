@@ -4,7 +4,7 @@ import subprocess
 import psutil
 import torch
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QTableWidgetItem, QApplication
+from PySide6.QtWidgets import QTableWidgetItem
 from airunner.enums import SignalCode
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.components.application.gui.widgets.base_widget import BaseWidget

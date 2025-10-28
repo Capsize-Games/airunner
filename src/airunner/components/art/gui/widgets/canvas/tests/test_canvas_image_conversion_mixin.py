@@ -8,8 +8,7 @@ Tests cover PIL Image <-> QImage conversion with:
 Following red/green/refactor TDD methodology.
 """
 
-import pytest
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import Mock, PropertyMock
 from PIL import Image
 from PySide6.QtGui import QImage
 

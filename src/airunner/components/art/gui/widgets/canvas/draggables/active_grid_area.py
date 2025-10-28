@@ -3,7 +3,7 @@ from typing import Optional
 from PIL.ImageQt import QImage
 
 from PySide6.QtCore import QRect, QPointF
-from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, Qt
+from PySide6.QtGui import QBrush, QColor, QPen, QPainter, Qt
 from PySide6.QtWidgets import QGraphicsItem
 
 from airunner.enums import SignalCode, CanvasToolName

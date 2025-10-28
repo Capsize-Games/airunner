@@ -140,14 +140,14 @@ class TestPixelFilter:
         f = PixelFilter(number_of_colors=24, base_size=256, smoothing=0)
 
         # Filter first image
-        result1 = f.filter(test_image)
+        f.filter(test_image)
         first_image_id = f.image_id
 
         # Create different image
         test_image2 = Image.new("RGB", (128, 128), color="red")
 
         # Filter second image
-        result2 = f.filter(test_image2)
+        f.filter(test_image2)
 
         # Should have different image_id
         assert f.image_id != first_image_id

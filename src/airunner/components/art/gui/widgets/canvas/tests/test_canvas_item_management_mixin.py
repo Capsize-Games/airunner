@@ -8,8 +8,7 @@ Tests cover canvas item creation and management with:
 Following red/green/refactor TDD methodology.
 """
 
-import pytest
-from unittest.mock import Mock, PropertyMock, MagicMock
+from unittest.mock import Mock, PropertyMock
 from PySide6.QtGui import QImage
 from PySide6.QtCore import QPointF, QRectF
 
