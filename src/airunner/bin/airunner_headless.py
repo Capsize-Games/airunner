@@ -7,13 +7,13 @@ the HTTP API server for /llm, /art, /stt, /tts endpoints.
 
 Usage:
     airunner-headless
-    airunner-headless --host 0.0.0.0 --port 8080
+    airunner-headless --host 0.0.0.0 --port 8188
     airunner-headless --help
 
 Environment Variables:
     AIRUNNER_HEADLESS: Set to 1 (automatically set by this script)
     AIRUNNER_HTTP_HOST: Override host (default: 0.0.0.0)
-    AIRUNNER_HTTP_PORT: Override port (default: 8080)
+    AIRUNNER_HTTP_PORT: Override port (default: 8188)
     AIRUNNER_LLM_ON: Enable LLM service (default: 1)
     AIRUNNER_TTS_ON: Enable TTS service (default: 0)
     AIRUNNER_STT_ON: Enable STT service (default: 0)
@@ -21,14 +21,14 @@ Environment Variables:
     AIRUNNER_CN_ON: Enable ControlNet (default: 0)
 
 Examples:
-    # Start with defaults (0.0.0.0:8080)
+    # Start with defaults (0.0.0.0:8188)
     airunner-headless
 
     # Start on custom port
     airunner-headless --port 9000
 
     # Start on localhost only
-    airunner-headless --host 127.0.0.1 --port 8080
+    airunner-headless --host 127.0.0.1 --port 8188
 
     # Enable all services
     AIRUNNER_LLM_ON=1 AIRUNNER_SD_ON=1 airunner-headless
@@ -63,8 +63,8 @@ def main():
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("AIRUNNER_HTTP_PORT", "8080")),
-        help="Port to listen on (default: 8080)",
+        default=int(os.environ.get("AIRUNNER_HTTP_PORT", "8188")),
+        help="Port to listen on (default: 8188)",
     )
 
     parser.add_argument(
