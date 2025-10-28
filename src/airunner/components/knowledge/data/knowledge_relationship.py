@@ -4,7 +4,7 @@ Knowledge relationship model for tracking connections between facts.
 Enables relationship graphs, entity linking, and fact verification chains.
 """
 
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, JSON
 from sqlalchemy.sql import func
 from airunner.components.data.models.base import BaseModel
 from airunner.components.knowledge.enums import (

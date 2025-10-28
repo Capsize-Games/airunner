@@ -34,6 +34,9 @@ class EntityExtractionWorker(Worker):
 
     queue_type = QueueType.GET_LAST_ITEM  # Process most recent request
 
+    # Default entity type for invalid/unknown entities
+    DEFAULT_ENTITY_TYPE = EntityType.CONCEPT.value
+
     def __init__(self):
         super().__init__()
         self.logger = logging.getLogger(__name__)
@@ -185,9 +188,9 @@ Return ONLY valid JSON array, no other text. If no entities found, return []:
                             EntityType(entity_type)
                         except ValueError:
                             self.logger.warning(
-                                f"Invalid entity type '{entity_type}', using 'concept'"
+                                f"Invalid entity type '{entity_type}', using '{self.DEFAULT_ENTITY_TYPE}'"
                             )
-                            entity_type = EntityType.CONCEPT.value
+                            entity_type = self.DEFAULT_ENTITY_TYPE
 
                         # Check if relationship already exists
                         existing = (
