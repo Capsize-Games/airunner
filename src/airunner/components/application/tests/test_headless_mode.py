@@ -22,7 +22,8 @@ def test_headless_mode_env_variable(monkeypatch):
     app = App()
 
     assert app.initialize_gui is False
-    assert app.api_server_thread is None  # Not started yet, only after run()
+    assert app.api_server_thread is not None  # Server started in headless mode
+    assert app.api_server_thread.is_alive()  # Thread is running
 
 
 def test_headless_mode_explicit_flag():

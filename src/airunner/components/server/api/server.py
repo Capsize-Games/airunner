@@ -13,7 +13,6 @@ import threading
 import uuid
 from http.server import BaseHTTPRequestHandler
 from typing import Optional
-from airunner.components.application.api.api import API
 from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.art.managers.stablediffusion.image_response import (
@@ -21,7 +20,18 @@ from airunner.components.art.managers.stablediffusion.image_response import (
 )
 from airunner.enums import LLMActionType
 
-api = API()
+# Lazy import to avoid circular dependency
+_api = None
+
+
+def get_api():
+    """Get or create the API singleton instance."""
+    global _api
+    if _api is None:
+        from airunner.components.application.api.api import API
+
+        _api = API()
+    return _api
 
 
 class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
@@ -219,6 +229,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     complete_event.set()
 
         # Send LLM request with request_id and callback
+        api = get_api()
         api.llm.send_request(
             prompt=prompt,
             action=action,
@@ -266,6 +277,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     complete_event.set()
 
         # Send LLM request with request_id and callback
+        api = get_api()
         api.llm.send_request(
             prompt=prompt,
             action=action,
