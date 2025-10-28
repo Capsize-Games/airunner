@@ -8,8 +8,6 @@ Create Date: 2025-10-28 13:23:15.005536
 
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
 from airunner.utils.db import add_table, drop_table
 from airunner.components.knowledge.data.knowledge_relationship import (
     KnowledgeRelationship,

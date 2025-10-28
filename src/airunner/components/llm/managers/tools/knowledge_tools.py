@@ -72,6 +72,7 @@ class KnowledgeTools:
                 valid_categories = [cat.value for cat in KnowledgeFactCategory]
                 if category not in valid_categories:
                     # Try legacy category mapping
+                    original_category = category
                     try:
                         mapped_cat = (
                             KnowledgeFactCategory.from_legacy_category(
@@ -80,11 +81,11 @@ class KnowledgeTools:
                         )
                         category = mapped_cat.value
                         self.logger.info(
-                            f"Mapped legacy category '{category}' to '{mapped_cat.value}'"
+                            f"Mapped legacy category '{original_category}' to '{mapped_cat.value}'"
                         )
                     except (ValueError, KeyError):
                         self.logger.warning(
-                            f"Invalid category '{category}', using 'other'"
+                            f"Invalid category '{original_category}', using 'other'"
                         )
                         category = KnowledgeFactCategory.OTHER.value
 
