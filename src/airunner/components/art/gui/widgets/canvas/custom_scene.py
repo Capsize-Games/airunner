@@ -610,10 +610,10 @@ class CustomScene(
 
         if table_name and column_name:
             try:
-                self._SettingsMixin__settings_updated(
-                    table_name,
-                    column_name,
-                    binary,
+                self._notify_setting_updated(
+                    setting_name=table_name,
+                    column_name=column_name,
+                    val=binary,
                 )
             except Exception as exc:  # pragma: no cover - defensive
                 if hasattr(self, "logger") and self.logger:
