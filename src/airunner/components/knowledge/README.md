@@ -136,6 +136,13 @@ search_knowledge_base_documents(query: str, k: int = 10)
 Broad search across ALL documents (like a search engine) to find relevant documents before loading them into RAG.
 
 ## Legacy System (UserKnowledgeManager)
+
+> ⚠️ **DEPRECATED**: `UserKnowledgeManager` is deprecated as of version 2.0.0 and will be removed in version 3.0.0.
+> 
+> **Migration Required**: Use `KnowledgeMemoryManager` instead (see above). Run `airunner-migrate-knowledge` to migrate your data.
+> 
+> See [CHANGELOG.md](../../CHANGELOG.md#migration-guide-userknowledgemanager--knowledgememorymanager) for migration guide.
+
 **Purpose:** Continuously extract and store facts about the user from conversations.
 
 **Features:**
@@ -147,11 +154,11 @@ Broad search across ALL documents (like a search engine) to find relevant docume
 - Category-based organization (identity, preferences, work, etc.)
 - Manual editing support (edit JSON directly)
 
-**Usage:**
+**Usage (DEPRECATED - Use KnowledgeMemoryManager instead):**
 ```python
 from airunner.components.knowledge.user_knowledge_manager import UserKnowledgeManager
 
-km = UserKnowledgeManager()
+km = UserKnowledgeManager()  # Will show deprecation warning
 
 # Extract facts from conversation (handles corrections automatically)
 facts = km.extract_facts_from_text(
