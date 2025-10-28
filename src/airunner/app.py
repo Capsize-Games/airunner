@@ -225,6 +225,27 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 f"Failed to initialize knowledge system: {e}", exc_info=True
             )
 
+    def _initialize_headless_workers(self):
+        """Initialize essential workers for headless mode.
+
+        Only initializes workers needed for API functionality:
+        - LLMGenerateWorker: Handles LLM text generation requests
+        """
+        try:
+            from airunner.components.application.workers.worker import (
+                create_worker,
+            )
+            from airunner.components.llm.workers.llm_generate_worker import (
+                LLMGenerateWorker,
+            )
+
+            self._llm_generate_worker = create_worker(LLMGenerateWorker)
+            logging.info("Headless workers initialized (LLM)")
+        except Exception as e:
+            logging.error(
+                f"Failed to initialize headless workers: {e}", exc_info=True
+            )
+
     def _run_knowledge_migration_if_needed(self):
         """Run one-time migration from JSON to database if not already done.
 
@@ -509,6 +530,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
         """
         import signal as sig
         import time
+
+        # Initialize LLM worker for headless mode
+        self._initialize_headless_workers()
 
         logging.info("AI Runner headless mode - server running")
         logging.info("Press Ctrl+C to stop")
