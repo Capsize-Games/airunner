@@ -79,7 +79,7 @@ class SettingsPropertyMixin:
             settings.setValue(key, value)
         settings.endGroup()
         settings.sync()
-        self._SettingsMixin__settings_updated(
+        self._notify_setting_updated(
             setting_name="window_settings", column_name=None, val=None
         )
 
