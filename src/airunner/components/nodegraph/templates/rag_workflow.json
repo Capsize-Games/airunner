@@ -1,0 +1,103 @@
+{
+    "name": "RAG Workflow",
+    "description": "Retrieval-Augmented Generation workflow that searches a knowledge base and generates responses based on retrieved context",
+    "category": "knowledge",
+    "tags": [
+        "rag",
+        "search",
+        "knowledge",
+        "retrieval"
+    ],
+    "author": "AI Runner",
+    "version": "1.0",
+    "variables": {
+        "collection_name": "default",
+        "top_k": 5,
+        "temperature": 0.7
+    },
+    "nodes": [
+        {
+            "node_identifier": "ai_runner.nodes.InputNode",
+            "name": "user_input",
+            "pos_x": 100,
+            "pos_y": 200,
+            "properties": {
+                "label": "User Question",
+                "description": "The user's question or query"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.RAGSearchNode",
+            "name": "search_knowledge",
+            "pos_x": 300,
+            "pos_y": 200,
+            "properties": {
+                "collection_name": "{{collection_name}}",
+                "top_k": "{{top_k}}",
+                "description": "Search knowledge base for relevant documents"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.PromptTemplateNode",
+            "name": "format_prompt",
+            "pos_x": 500,
+            "pos_y": 200,
+            "properties": {
+                "template": "Context:\n{context}\n\nQuestion: {question}\n\nAnswer:",
+                "description": "Format retrieved context with user question"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.LLMNode",
+            "name": "generate_answer",
+            "pos_x": 700,
+            "pos_y": 200,
+            "properties": {
+                "temperature": "{{temperature}}",
+                "description": "Generate answer based on context"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.OutputNode",
+            "name": "final_answer",
+            "pos_x": 900,
+            "pos_y": 200,
+            "properties": {
+                "label": "Answer",
+                "description": "Final generated answer"
+            }
+        }
+    ],
+    "connections": [
+        {
+            "output_node_name": "user_input",
+            "output_port": "output",
+            "input_node_name": "search_knowledge",
+            "input_port": "query"
+        },
+        {
+            "output_node_name": "search_knowledge",
+            "output_port": "documents",
+            "input_node_name": "format_prompt",
+            "input_port": "context"
+        },
+        {
+            "output_node_name": "user_input",
+            "output_port": "output",
+            "input_node_name": "format_prompt",
+            "input_port": "question"
+        },
+        {
+            "output_node_name": "format_prompt",
+            "output_port": "output",
+            "input_node_name": "generate_answer",
+            "input_port": "input"
+        },
+        {
+            "output_node_name": "generate_answer",
+            "output_port": "output",
+            "input_node_name": "final_answer",
+            "input_port": "input"
+        }
+    ]
+}

@@ -68,3 +68,10 @@ class ApplicationSettings(BaseModel):
     nodegraph_center_y = Column(Integer, default=0)
     detected_language = Column(String, default=AvailableLanguage.EN.value)
     use_detected_language = Column(Boolean, default=True)
+    # Service settings
+    run_in_background = Column(Boolean, default=False)
+    start_at_login = Column(Boolean, default=False)
+    http_server_enabled = Column(Boolean, default=True)
+    http_server_host = Column(String, default="127.0.0.1")
+    http_server_port = Column(Integer, default=5005)
+    lna_enabled = Column(Boolean, default=False)
