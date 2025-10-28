@@ -75,3 +75,5 @@ class ApplicationSettings(BaseModel):
     http_server_host = Column(String, default="127.0.0.1")
     http_server_port = Column(Integer, default=5005)
     lna_enabled = Column(Boolean, default=False)
+    # Knowledge migration
+    knowledge_migrated = Column(Boolean, default=False)
