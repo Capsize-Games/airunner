@@ -295,12 +295,12 @@ class SettingsLoaderMixin:
 
             make_transient(instance)
         except Exception:
-            # Fallback to expunge if make_transient fails
-            try:
-                # Instance is already in a session context, try to expunge
-                pass
-            except Exception:
-                pass
+            # Fallback: If make_transient fails, instance may already be detached
+            # or session is in an invalid state. Log and continue.
+            logger = get_logger("AI Runner SettingsMixin", AIRUNNER_LOG_LEVEL)
+            logger.debug(
+                f"Could not make instance of {model_class_.__name__} transient"
+            )
 
     @staticmethod
     def _handle_load_error(error: Exception, model_class_: Type[Any]) -> Any:

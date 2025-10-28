@@ -58,6 +58,9 @@ class SettingsMixin(
         """Initialize settings mixin with layer tracking."""
         super().__init__(*args, **kwargs)
 
+        # Cache logger instance to avoid repeated creation
+        self._logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
+
         # Initialize layer selection tracking
         self._selected_layer_ids = set()
 
@@ -86,9 +89,9 @@ class SettingsMixin(
         """Get logger instance.
 
         Returns:
-            Logger instance.
+            Cached logger instance.
         """
-        return get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
+        return self._logger
 
     @property
     def settings_mixin_shared_instance(self) -> SettingsMixinSharedInstance:
