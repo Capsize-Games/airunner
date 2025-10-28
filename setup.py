@@ -26,6 +26,8 @@ extras_require = {
     ],
     "dev": [  # Development dependencies
         "pytest",
+        "pytest-timeout",
+        "responses>=0.25.0",
         "python-dotenv==1.0.1",
         "coverage==7.8.0",
         "black==25.1.0",
