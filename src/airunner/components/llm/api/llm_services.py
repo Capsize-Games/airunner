@@ -23,7 +23,21 @@ class LLMAPIService(APIServiceBase):
         action: LLMActionType = LLMActionType.CHAT,
         do_tts_reply: bool = True,
         node_id: Optional[str] = None,
+        request_id: Optional[str] = None,
+        callback: Optional[callable] = None,
     ):
+        """Send an LLM generation request.
+
+        Args:
+            prompt: The user's input text
+            command: Optional command string
+            llm_request: Optional LLM parameters
+            action: The action type (CHAT, CODE, etc.)
+            do_tts_reply: Whether to convert reply to speech
+            node_id: Optional node identifier
+            request_id: Optional unique request identifier for correlation
+            callback: Optional callback function for responses
+        """
         # Use action-optimized defaults if no explicit request provided
         llm_request = llm_request or LLMRequest.for_action(action)
         llm_request.do_tts_reply = do_tts_reply
@@ -39,6 +53,14 @@ class LLMAPIService(APIServiceBase):
         }
         if node_id is not None:
             data["node_id"] = node_id
+
+        if request_id is not None:
+            data["request_id"] = request_id
+
+            # Register pending request if callback provided
+            if callback:
+                self.register_pending_request(request_id, callback)
+
         self.emit_signal(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, data)
 
     def clear_history(self, **kwargs):

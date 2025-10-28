@@ -196,42 +196,50 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         """
         self._set_headers(200, content_type="application/x-ndjson")
 
-        # Create queue for collecting streamed responses
-        response_queue = queue.Queue()
+        # Register callback to collect streaming responses
         complete_event = threading.Event()
 
-        # Callback to collect responses
-        def response_callback(response: LLMResponse):
-            response_queue.put(response)
-            if response.is_end_of_message:
-                complete_event.set()
+        def stream_callback(data: dict):
+            """Callback for streaming responses."""
+            response = data.get("response")
+            if response:
+                response_data = {
+                    "message": response.message,
+                    "is_first_message": response.is_first_message,
+                    "is_end_of_message": response.is_end_of_message,
+                    "sequence_number": getattr(response, "sequence_number", 0),
+                    "action": getattr(response, "action", str(action)),
+                }
+                self.wfile.write(
+                    json.dumps(response_data).encode("utf-8") + b"\n"
+                )
+                self.wfile.flush()
 
-        # Send LLM request via API
-        # Note: This uses the signal-based API which will emit responses
-        # For headless mode, we need to implement request-response correlation
-        # For now, use stub responses
-        # TODO: Implement proper signal-based request correlation in issue #1894
+                if response.is_end_of_message:
+                    complete_event.set()
 
-        # STUB: Send fake streaming responses
-        chunks = ["The", " capital", " of", " France", " is", " Paris", "."]
-        for i, chunk in enumerate(chunks):
-            response = LLMResponse(
-                message=chunk,
-                is_first_message=(i == 0),
-                is_end_of_message=(i == len(chunks) - 1),
-                sequence_number=i,
-                action=(
-                    action.value if hasattr(action, "value") else str(action)
-                ),
-            )
-            response_data = {
-                "message": response.message,
-                "is_first_message": response.is_first_message,
-                "is_end_of_message": response.is_end_of_message,
-                "sequence_number": response.sequence_number,
-                "action": response.action,
+        # Send LLM request with request_id and callback
+        api.llm.send_request(
+            prompt=prompt,
+            action=action,
+            llm_request=llm_request,
+            request_id=request_id,
+            callback=stream_callback,
+        )
+
+        # Wait for completion (with timeout)
+        if not complete_event.wait(timeout=120):
+            # Timeout - send error response
+            error_response = {
+                "message": "Request timeout",
+                "is_first_message": True,
+                "is_end_of_message": True,
+                "sequence_number": 0,
+                "error": True,
             }
-            self.wfile.write(json.dumps(response_data).encode("utf-8") + b"\n")
+            self.wfile.write(
+                json.dumps(error_response).encode("utf-8") + b"\n"
+            )
             self.wfile.flush()
 
     def _handle_llm_non_stream(
@@ -245,17 +253,49 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         """Handle non-streaming LLM response as single JSON object."""
         self._set_headers(200)
 
-        # STUB: Return fake complete response
-        # TODO: Implement proper signal-based request correlation in issue #1894
-        response_data = {
-            "message": "The capital of France is Paris.",
-            "is_first_message": True,
-            "is_end_of_message": True,
-            "sequence_number": 0,
-            "action": (
-                action.value if hasattr(action, "value") else str(action)
-            ),
-        }
+        # Collect all response chunks
+        complete_message = []
+        complete_event = threading.Event()
+
+        def collect_callback(data: dict):
+            """Callback to collect response chunks."""
+            response = data.get("response")
+            if response:
+                complete_message.append(response.message)
+                if response.is_end_of_message:
+                    complete_event.set()
+
+        # Send LLM request with request_id and callback
+        api.llm.send_request(
+            prompt=prompt,
+            action=action,
+            llm_request=llm_request,
+            request_id=request_id,
+            callback=collect_callback,
+        )
+
+        # Wait for completion (with timeout)
+        if complete_event.wait(timeout=120):
+            # Success - return complete message
+            response_data = {
+                "message": "".join(complete_message),
+                "is_first_message": True,
+                "is_end_of_message": True,
+                "sequence_number": 0,
+                "action": (
+                    action.value if hasattr(action, "value") else str(action)
+                ),
+            }
+        else:
+            # Timeout
+            response_data = {
+                "message": "Request timeout",
+                "is_first_message": True,
+                "is_end_of_message": True,
+                "sequence_number": 0,
+                "error": True,
+            }
+
         self.wfile.write(json.dumps(response_data).encode("utf-8"))
 
     def _handle_art(self, data):
