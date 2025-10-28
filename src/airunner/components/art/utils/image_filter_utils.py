@@ -128,13 +128,11 @@ def build_filter_kwargs(
                 value = int(value)
             except (ValueError, TypeError):
                 LOG.warning(f"Failed to convert {fv.name}={value} to int")
-                pass
         elif fv.value_type == "float":
             try:
                 value = float(value)
             except (ValueError, TypeError):
                 LOG.warning(f"Failed to convert {fv.name}={value} to float")
-                pass
         elif fv.value_type == "bool":
             value = value == "True" if isinstance(value, str) else bool(value)
 
@@ -165,14 +163,12 @@ def build_filter_kwargs(
                 LOG.info(f"    Converted to int: {value}")
             except (ValueError, TypeError) as e:
                 LOG.warning(f"    Failed to convert to int: {e}")
-                pass
         elif fv.value_type == "float":
             try:
                 value = float(value)
                 LOG.info(f"    Converted to float: {value}")
             except (ValueError, TypeError) as e:
                 LOG.warning(f"    Failed to convert to float: {e}")
-                pass
         elif fv.value_type == "bool":
             value = value == "True" if isinstance(value, str) else bool(value)
             LOG.info(f"    Converted to bool: {value}")

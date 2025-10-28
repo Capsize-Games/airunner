@@ -4,8 +4,7 @@ This test ensures that the fix for filter display works correctly
 when layers are present.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 from PIL import Image
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QImage

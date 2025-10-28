@@ -3,7 +3,6 @@
 Tests the FilterParameterWidget and related functionality.
 """
 
-import pytest
 from unittest.mock import MagicMock
 
 

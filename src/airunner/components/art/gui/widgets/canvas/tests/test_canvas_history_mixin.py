@@ -1,8 +1,7 @@
 """Unit tests for CanvasHistoryMixin undo/redo functionality."""
 
 import pytest
-from unittest.mock import MagicMock, PropertyMock
-from PySide6.QtCore import QPointF
+from unittest.mock import MagicMock
 
 from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
 

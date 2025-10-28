@@ -8,13 +8,8 @@ Tests cover image initialization, refresh, and deletion operations with:
 Following red/green/refactor TDD methodology.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
 from PIL import Image
-from PySide6.QtCore import QPoint, QPointF
-from PySide6.QtGui import QImage
 
-from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
 
 
 class TestSetImage:
@@ -135,7 +130,7 @@ class TestRefreshImage:
         # Add view to scene (required for refresh)
         from PySide6.QtWidgets import QGraphicsView
 
-        view = QGraphicsView(scene)
+        QGraphicsView(scene)
 
         # Refresh should not raise
         scene.refresh_image()
@@ -152,7 +147,7 @@ class TestRefreshImage:
         # Add view to scene
         from PySide6.QtWidgets import QGraphicsView
 
-        view = QGraphicsView(scene)
+        QGraphicsView(scene)
 
         # Refresh without image - should handle gracefully
         scene.refresh_image()
@@ -171,7 +166,7 @@ class TestRefreshImage:
         # Add view
         from PySide6.QtWidgets import QGraphicsView
 
-        view = QGraphicsView(scene)
+        QGraphicsView(scene)
 
         initial_pos = scene.item.pos() if scene.item else None
 
@@ -284,7 +279,7 @@ class TestImageInitializationEdgeCases:
         # Add view
         from PySide6.QtWidgets import QGraphicsView
 
-        view = QGraphicsView(scene)
+        QGraphicsView(scene)
 
         # Call refresh multiple times
         for _ in range(5):
@@ -311,7 +306,7 @@ class TestImageInitializationEdgeCases:
         # Add view
         from PySide6.QtWidgets import QGraphicsView
 
-        view = QGraphicsView(scene)
+        QGraphicsView(scene)
 
         scene.refresh_image()
 

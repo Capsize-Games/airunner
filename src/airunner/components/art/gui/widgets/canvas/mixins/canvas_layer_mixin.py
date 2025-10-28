@@ -6,8 +6,6 @@ including layer visibility, deletion, reordering, and transaction management.
 
 from typing import List, Dict, Any, Iterable
 
-from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QGraphicsPixmapItem
 
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.drawingpad_settings import (

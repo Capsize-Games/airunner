@@ -376,7 +376,6 @@ class GetAgentTool(BaseTool):
 class ListTemplatesInput(PydanticBaseModel):
     """Input schema for list_templates tool."""
 
-    pass
 
 
 class ListTemplatesTool(BaseTool):

@@ -6,8 +6,6 @@ import logging
 import os
 from transformers import (
     AutoConfig,
-    AutoTokenizer,
-    AutoModelForCausalLM,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
