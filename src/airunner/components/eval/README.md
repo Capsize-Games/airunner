@@ -14,6 +14,19 @@ This framework provides:
 
 ### Quick Start
 
+#### Prerequisites
+
+**IMPORTANT**: Evaluation tests require an actual LLM model to be configured and loaded.
+
+1. **Install AI Runner**: `pip install -e .`
+2. **Download Models**: Run `airunner-setup` to download an LLM model
+3. **Configure Settings**: Ensure an LLM model is selected in settings
+
+To check if a model is configured:
+```bash
+python -c "from airunner.components.llm.data.llm_generator_settings import LLMGeneratorSettings; s = LLMGeneratorSettings.objects.first(); print(f'Model: {s.model_name if s else \"NOT CONFIGURED\"}')"
+```
+
 #### 1. Start Headless Server
 
 ```bash
@@ -21,18 +34,26 @@ This framework provides:
 airunner-headless --port 8188
 ```
 
+**Note**: The server will load the configured LLM model on first request. This may take 30-60 seconds.
+
 #### 2. Run Evaluation Tests
 
 ```bash
 # Terminal 2: Run eval tests (requires LLM model loaded)
-pytest src/airunner/components/eval/tests/test_real_eval.py -v -m llm_required
+pytest src/airunner/components/eval/tests/test_real_eval.py -v
 
 # Run specific category
 pytest src/airunner/components/eval/tests/test_real_eval.py::TestMathReasoning -v
 
-# Run without LLM requirement (smoke tests only)
-pytest src/airunner/components/eval/tests/ -v -m "eval and not llm_required"
+# Increase timeout for slow model loading (if needed)
+pytest src/airunner/components/eval/tests/test_real_eval.py -v --timeout=300
 ```
+
+**Common Issues:**
+
+- **Timeout Error**: Model loading takes longer than 30s default timeout. Use `--timeout=300` or pre-load model.
+- **No Response**: No LLM model configured. Run `airunner-setup` to download a model.
+- **Port Conflict**: Another server running on 8188. Use `pkill -f airunner-headless` to stop it.
 
 ### Components
 

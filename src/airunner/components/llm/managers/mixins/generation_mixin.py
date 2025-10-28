@@ -83,6 +83,7 @@ class GenerationMixin:
                     is_end_of_message=False,
                     is_first_message=(sequence_counter[0] == 1),
                     sequence_number=sequence_counter[0],
+                    request_id=getattr(self, "_current_request_id", None),
                 )
             )
 
@@ -108,6 +109,7 @@ class GenerationMixin:
                 message=interrupt_msg,
                 is_end_of_message=True,
                 sequence_number=sequence_counter + 1,
+                request_id=getattr(self, "_current_request_id", None),
             )
         )
         return interrupt_msg
@@ -131,6 +133,7 @@ class GenerationMixin:
                 node_id=llm_request.node_id if llm_request else None,
                 message=error_message,
                 is_end_of_message=False,
+                request_id=getattr(self, "_current_request_id", None),
             )
         )
         return error_message
@@ -276,6 +279,7 @@ class GenerationMixin:
                 node_id=llm_request.node_id if llm_request else None,
                 is_end_of_message=True,
                 sequence_number=sequence_counter[0],
+                request_id=getattr(self, "_current_request_id", None),
             )
         )
 
@@ -293,6 +297,7 @@ class GenerationMixin:
             LLMResponse(
                 node_id=llm_request.node_id if llm_request else None,
                 is_end_of_message=True,
+                request_id=getattr(self, "_current_request_id", None),
             )
         )
 

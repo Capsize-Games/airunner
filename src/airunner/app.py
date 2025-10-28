@@ -178,6 +178,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             # Headless mode - just initialize core systems
             logging.info("Running in headless mode (no GUI)")
             self._init_headless_services()
+            # Note: Call run() after __init__ to start headless event loop
             self.is_running = True
 
         # Initialize knowledge extraction system (works in both GUI and headless modes)
@@ -186,8 +187,18 @@ class App(MediatorMixin, SettingsMixin, QObject):
     def _init_headless_services(self):
         """Initialize services for headless mode (no GUI).
 
-        Starts the HTTP API server and signal mediator without Qt GUI components.
+        Creates minimal Qt event loop and starts HTTP API server.
         """
+        # Create QCoreApplication for Qt event loop (needed by workers)
+        # This is minimal Qt without any GUI components
+        from PySide6.QtCore import QCoreApplication
+
+        self.app = QCoreApplication.instance()
+        if self.app is None:
+            self.app = QCoreApplication([])
+        self.app.api = self
+        logging.info("Qt Core event loop initialized (headless mode)")
+
         # Start API server for /llm, /art, /stt, /tts endpoints
         from airunner.components.server.api.api_server_thread import (
             APIServerThread,
@@ -232,7 +243,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         - LLMGenerateWorker: Handles LLM text generation requests
         """
         try:
-            from airunner.components.application.workers.worker import (
+            from airunner.utils.application.create_worker import (
                 create_worker,
             )
             from airunner.components.llm.workers.llm_generate_worker import (
@@ -526,10 +537,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
     def run_headless(self):
         """Run in headless mode without GUI.
 
-        Keeps the API server running and handles signals until interrupted.
+        Uses Qt event loop to process worker signals while server runs.
         """
-        import signal as sig
-        import time
+        from PySide6.QtCore import QTimer
 
         # Initialize LLM worker for headless mode
         self._initialize_headless_workers()
@@ -537,32 +547,20 @@ class App(MediatorMixin, SettingsMixin, QObject):
         logging.info("AI Runner headless mode - server running")
         logging.info("Press Ctrl+C to stop")
 
-        # Set up signal handlers for graceful shutdown
-        shutdown_requested = [
-            False
-        ]  # Use list to allow modification in nested function
-
-        def signal_handler(signum, frame):
-            if not shutdown_requested[0]:
-                shutdown_requested[0] = True
-                logging.info("Shutdown signal received")
-                self.cleanup()
-                logging.info("Shutdown complete")
-                sys.exit(0)
-
-        sig.signal(sig.SIGINT, signal_handler)
-        sig.signal(sig.SIGTERM, signal_handler)
+        # Qt event loop blocks Python signal handlers, so we need to
+        # periodically allow Python to process signals
+        # This timer does nothing but allows KeyboardInterrupt to be caught
+        timer = QTimer()
+        timer.start(500)  # Wake up every 500ms
+        timer.timeout.connect(lambda: None)
 
         try:
-            # Keep the main thread alive while server runs in background
-            while self.is_running and not shutdown_requested[0]:
-                time.sleep(0.5)
+            # Run Qt event loop (processes worker signals)
+            sys.exit(self.app.exec())
         except KeyboardInterrupt:
             logging.info("Interrupted by user")
-            shutdown_requested[0] = True
-        finally:
-            if not shutdown_requested[0]:
-                self.cleanup()
+            self.cleanup()
+            sys.exit(0)
 
     def _post_splash_startup(self):
         self.show_main_application(self.app)
