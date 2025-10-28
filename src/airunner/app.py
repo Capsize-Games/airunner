@@ -185,9 +185,80 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
             initialize_knowledge_system()
             logging.info("Knowledge extraction system initialized")
+
+            # Run one-time knowledge migration if needed
+            self._run_knowledge_migration_if_needed()
         except Exception as e:
             logging.error(
                 f"Failed to initialize knowledge system: {e}", exc_info=True
+            )
+
+    def _run_knowledge_migration_if_needed(self):
+        """Run one-time migration from JSON to database if not already done."""
+        try:
+            # Check if migration already completed
+            if self.application_settings.knowledge_migrated:
+                logging.debug("Knowledge migration already completed")
+                return
+
+            # Check if legacy JSON file exists
+            from pathlib import Path
+            from airunner.settings import AIRUNNER_USER_DATA_PATH
+
+            knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"
+            json_path = knowledge_dir / "user_facts.json"
+
+            if not json_path.exists():
+                # No legacy data to migrate
+                logging.info(
+                    "No legacy knowledge data found, skipping migration"
+                )
+                self._mark_migration_complete()
+                return
+
+            # Run migration
+            logging.info(
+                "Running one-time knowledge migration from JSON to database..."
+            )
+            from airunner.bin.airunner_migrate_knowledge import (
+                KnowledgeMigrator,
+            )
+
+            migrator = KnowledgeMigrator(json_path=json_path)
+            stats = migrator.migrate_all(dry_run=False, skip_backup=False)
+
+            if stats["errors"] > 0:
+                logging.warning(
+                    f"Knowledge migration completed with {stats['errors']} errors"
+                )
+            else:
+                logging.info(
+                    f"Knowledge migration successful: {stats['migrated']} facts migrated"
+                )
+
+            # Mark migration as complete
+            self._mark_migration_complete()
+
+        except Exception as e:
+            logging.error(
+                f"Failed to run knowledge migration: {e}", exc_info=True
+            )
+
+    def _mark_migration_complete(self):
+        """Mark knowledge migration as complete in settings."""
+        try:
+            from airunner.components.data.session_manager import session_scope
+
+            with session_scope() as session:
+                settings = (
+                    session.query(ApplicationSettings).filter_by(id=1).first()
+                )
+                if settings:
+                    settings.knowledge_migrated = True
+                    session.commit()
+        except Exception as e:
+            logging.error(
+                f"Failed to mark migration complete: {e}", exc_info=True
             )
 
     def on_update_locale_signal(self, data: dict):
