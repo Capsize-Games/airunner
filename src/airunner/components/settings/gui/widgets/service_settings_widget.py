@@ -182,6 +182,16 @@ class ServiceSettingsWidget(QWidget):
         # Gather settings
         settings = self.get_settings()
 
+        # Check if server settings changed before updating initial values
+        server_settings_changed = (
+            settings.get("http_server_enabled")
+            != self._initial_values.get("http_server_enabled")
+            or settings.get("http_server_host")
+            != self._initial_values.get("http_server_host")
+            or settings.get("http_server_port")
+            != self._initial_values.get("http_server_port")
+        )
+
         # Emit signal
         self.settings_changed.emit(settings)
 
@@ -189,14 +199,7 @@ class ServiceSettingsWidget(QWidget):
         self._initial_values = settings.copy()
 
         # Show confirmation if server settings changed
-        if (
-            settings.get("http_server_enabled")
-            != self._initial_values.get("http_server_enabled")
-            or settings.get("http_server_host")
-            != self._initial_values.get("http_server_host")
-            or settings.get("http_server_port")
-            != self._initial_values.get("http_server_port")
-        ):
+        if server_settings_changed:
             QMessageBox.information(
                 self,
                 "Settings Applied",

@@ -64,7 +64,7 @@ class TestWorkflowTools:
         assert "2 nodes and 1 connections" in result
 
         # Verify workflow was created
-        workflow = Workflow.objects.filter_by(name="test_workflow")[0] if Workflow.objects.filter_by(name="test_workflow") else None
+        workflow = Workflow.objects.filter_by(name="test_workflow").first()
         assert workflow is not None
         assert workflow.description == "A test workflow"
         assert len(workflow.nodes) == 2
@@ -187,7 +187,7 @@ class TestWorkflowTools:
             connections=connections,
         )
 
-        workflow = Workflow.objects.filter_by(name="detail_test")[0] if Workflow.objects.filter_by(name="detail_test") else None
+        workflow = Workflow.objects.filter_by(name="detail_test").first()
         result = get_workflow(workflow.id)
 
         assert "Workflow: detail_test" in result
@@ -213,7 +213,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="to_delete")[0] if Workflow.objects.filter_by(name="to_delete") else None
+        workflow = Workflow.objects.filter_by(name="to_delete").first()
         workflow_id = workflow.id
 
         result = delete_workflow(workflow_id)
@@ -239,7 +239,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="modify_test")[0] if Workflow.objects.filter_by(name="modify_test") else None
+        workflow = Workflow.objects.filter_by(name="modify_test").first()
 
         result = modify_workflow(
             workflow_id=workflow.id,
@@ -262,7 +262,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="add_nodes_test")[0] if Workflow.objects.filter_by(name="add_nodes_test") else None
+        workflow = Workflow.objects.filter_by(name="add_nodes_test").first()
         initial_count = len(workflow.nodes)
 
         new_nodes = [
@@ -299,7 +299,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="remove_nodes_test")[0] if Workflow.objects.filter_by(name="remove_nodes_test") else None
+        workflow = Workflow.objects.filter_by(name="remove_nodes_test").first()
 
         result = modify_workflow(
             workflow_id=workflow.id, remove_node_names=["n2", "n3"]
@@ -356,7 +356,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="no_changes_test")[0] if Workflow.objects.filter_by(name="no_changes_test") else None
+        workflow = Workflow.objects.filter_by(name="no_changes_test").first()
 
         result = modify_workflow(workflow_id=workflow.id)
 
@@ -371,7 +371,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="execute_test")[0] if Workflow.objects.filter_by(name="execute_test") else None
+        workflow = Workflow.objects.filter_by(name="execute_test").first()
 
         # Mock API
         mock_api = Mock()
