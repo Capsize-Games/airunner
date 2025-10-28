@@ -56,16 +56,14 @@ class KnowledgeGraphBuilder:
         with session_scope() as session:
             # Load facts with filters
             query = session.query(KnowledgeFact).filter(
-                KnowledgeFact.enabled == True  # noqa: E712
+                KnowledgeFact.enabled.is_(True)
             )
 
             if category:
                 query = query.filter(KnowledgeFact.category == category)
 
             if verified_only:
-                query = query.filter(
-                    KnowledgeFact.verified == True
-                )  # noqa: E712
+                query = query.filter(KnowledgeFact.verified.is_(True))
 
             if min_confidence > 0:
                 query = query.filter(
@@ -73,7 +71,6 @@ class KnowledgeGraphBuilder:
                 )
 
             facts = query.all()
-            fact_ids = {f.id for f in facts}
 
             # Load relationships
             relationships = session.query(KnowledgeRelationship).all()

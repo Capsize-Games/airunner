@@ -44,16 +44,14 @@ class KnowledgeExporter:
         """
         with session_scope() as session:
             query = session.query(KnowledgeFact).filter(
-                KnowledgeFact.enabled == True  # noqa: E712
+                KnowledgeFact.enabled.is_(True)
             )
 
             if category:
                 query = query.filter(KnowledgeFact.category == category)
 
             if verified_only:
-                query = query.filter(
-                    KnowledgeFact.verified == True
-                )  # noqa: E712
+                query = query.filter(KnowledgeFact.verified.is_(True))
 
             facts = query.all()
 
@@ -103,16 +101,14 @@ class KnowledgeExporter:
         """
         with session_scope() as session:
             query = session.query(KnowledgeFact).filter(
-                KnowledgeFact.enabled == True  # noqa: E712
+                KnowledgeFact.enabled.is_(True)
             )
 
             if category:
                 query = query.filter(KnowledgeFact.category == category)
 
             if verified_only:
-                query = query.filter(
-                    KnowledgeFact.verified == True
-                )  # noqa: E712
+                query = query.filter(KnowledgeFact.verified.is_(True))
 
             facts = query.all()
 

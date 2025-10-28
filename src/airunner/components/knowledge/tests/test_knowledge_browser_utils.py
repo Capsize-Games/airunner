@@ -6,7 +6,6 @@ import json
 import csv
 import tempfile
 from pathlib import Path
-from datetime import datetime
 import pytest
 
 from airunner.components.knowledge.knowledge_browser_utils import (

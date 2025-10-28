@@ -5,9 +5,7 @@ Tests working memory cache, summary generation, context injection,
 and memory pruning functionality.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
 
 from airunner.components.knowledge.working_memory import WorkingMemory
 from airunner.components.knowledge.summary_generator import (
@@ -17,10 +15,7 @@ from airunner.components.knowledge.summary_generator import (
 from airunner.components.knowledge.context_injection_mixin import (
     ContextInjectionMixin,
 )
-from airunner.components.knowledge.data.models import (
-    KnowledgeFact,
-    ConversationSummary,
-)
+from airunner.components.knowledge.data.models import KnowledgeFact
 
 
 class TestWorkingMemory:
