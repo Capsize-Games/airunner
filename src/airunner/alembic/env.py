@@ -47,6 +47,11 @@ from airunner.components.knowledge.data.models import (
     KnowledgeFact,
     ConversationSummary,
 )
+
+# Import required for Alembic model detection - do not remove
+from airunner.components.knowledge.data.knowledge_relationship import (
+    KnowledgeRelationship,  # noqa: F401
+)
 from airunner.components.video.data.video_project import VideoProject
 
 # this is the Alembic Config object, which provides

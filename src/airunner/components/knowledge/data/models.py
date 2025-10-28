@@ -17,6 +17,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 from airunner.components.data.models.base import BaseModel
+from airunner.components.knowledge.enums import (
+    KnowledgeFactCategory,
+    KnowledgeSource,
+)
 
 
 class KnowledgeFact(BaseModel):
@@ -85,6 +89,53 @@ class KnowledgeFact(BaseModel):
     def tag_list(self):
         """Get tags as list."""
         return self.tags if self.tags else []
+
+    @property
+    def category_enum(self) -> KnowledgeFactCategory:
+        """
+        Get category as enum.
+
+        Returns:
+            KnowledgeFactCategory enum value
+        """
+        try:
+            return KnowledgeFactCategory(self.category)
+        except ValueError:
+            # Try legacy category mapping
+            return KnowledgeFactCategory.from_legacy_category(self.category)
+
+    @property
+    def source_enum(self) -> KnowledgeSource:
+        """
+        Get source as enum.
+
+        Returns:
+            KnowledgeSource enum value
+        """
+        try:
+            return KnowledgeSource(self.source)
+        except ValueError:
+            return KnowledgeSource.CONVERSATION
+
+    @property
+    def is_user_fact(self) -> bool:
+        """Check if this is a user-specific fact."""
+        return self.category_enum.is_user_category
+
+    @property
+    def is_world_fact(self) -> bool:
+        """Check if this is world knowledge."""
+        return self.category_enum.is_world_category
+
+    @property
+    def is_temporal_fact(self) -> bool:
+        """Check if this is a temporal fact."""
+        return self.category_enum.is_temporal_category
+
+    @property
+    def is_entity_fact(self) -> bool:
+        """Check if this is an entity fact."""
+        return self.category_enum.is_entity_category
 
     def to_document(self):
         """
