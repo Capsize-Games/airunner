@@ -47,6 +47,9 @@ from airunner.components.knowledge.data.models import (
     KnowledgeFact,
     ConversationSummary,
 )
+from airunner.components.knowledge.data.knowledge_relationship import (
+    KnowledgeRelationship,
+)
 from airunner.components.video.data.video_project import VideoProject
 
 # this is the Alembic Config object, which provides
