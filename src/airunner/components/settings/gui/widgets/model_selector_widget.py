@@ -238,15 +238,16 @@ class ModelSelectorWidget(QWidget):
     @Slot()
     def _on_manage_clicked(self):
         """Handle Manage Models button click."""
-        # This will be connected externally or show a dialog
-        # For now, just emit a signal or show placeholder
-        from PySide6.QtWidgets import QMessageBox
-
-        QMessageBox.information(
-            self,
-            "Manage Models",
-            "Manage Models dialog will be implemented in the next step.",
+        from airunner.components.settings.gui.widgets.model_manager_dialog import (
+            ManageModelsDialog,
         )
+
+        dialog = ManageModelsDialog(self)
+
+        # Connect signals if needed (download/delete)
+        # These would typically be connected to actual download/delete handlers
+
+        dialog.exec()
 
     def set_provider(self, provider: str):
         """Set current provider.
