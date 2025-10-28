@@ -9,7 +9,7 @@ Manages the agent's comprehensive memory system including:
 """
 
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 from datetime import datetime, timedelta
 
 from langchain_core.vectorstores import InMemoryVectorStore
@@ -126,6 +126,9 @@ class KnowledgeMemoryManager:
             session.commit()
             session.refresh(fact)
 
+            # Detach from session to prevent DetachedInstanceError
+            session.expunge(fact)
+
             self.logger.info(f"Added fact: {text[:50]}...")
 
             # Add to vector store
@@ -222,19 +225,21 @@ class KnowledgeMemoryManager:
 
     def get_all_facts(
         self,
-        category: Optional[str] = None,
+        category: Optional[Union[str, List[str]]] = None,
         tags: Optional[List[str]] = None,
         enabled_only: bool = False,
         verified_only: bool = False,
+        source: Optional[Union[str, List[str]]] = None,
     ) -> List[KnowledgeFact]:
         """
         Get all facts with optional filtering.
 
         Args:
-            category: Filter by category
+            category: Filter by category (single string or list of categories)
             tags: Filter by tags (any match)
             enabled_only: Only get enabled facts
             verified_only: Only get verified facts
+            source: Filter by source (single string or list of sources)
 
         Returns:
             List of facts
@@ -243,7 +248,17 @@ class KnowledgeMemoryManager:
             query = session.query(KnowledgeFact)
 
             if category:
-                query = query.filter_by(category=category)
+                if isinstance(category, str):
+                    query = query.filter_by(category=category)
+                elif isinstance(category, list):
+                    query = query.filter(KnowledgeFact.category.in_(category))
+
+            if source:
+                if isinstance(source, str):
+                    query = query.filter_by(source=source)
+                elif isinstance(source, list):
+                    query = query.filter(KnowledgeFact.source.in_(source))
+
             if enabled_only:
                 query = query.filter_by(enabled=True)
             if verified_only:
@@ -255,7 +270,74 @@ class KnowledgeMemoryManager:
                     query = query.filter(KnowledgeFact.tags.contains(tag))
 
             facts = query.order_by(KnowledgeFact.created_at.desc()).all()
+
+            # Detach from session to prevent DetachedInstanceError
+            for fact in facts:
+                session.expunge(fact)
+
             return facts
+
+    def get_facts_by_category_type(
+        self,
+        is_user: bool = False,
+        is_world: bool = False,
+        is_temporal: bool = False,
+        is_entity: bool = False,
+        enabled_only: bool = True,
+    ) -> List[KnowledgeFact]:
+        """
+        Get facts by category type (user, world, temporal, entity).
+
+        Args:
+            is_user: Get user-specific facts
+            is_world: Get world knowledge facts
+            is_temporal: Get temporal facts
+            is_entity: Get entity facts
+            enabled_only: Only get enabled facts
+
+        Returns:
+            List of facts matching the category type
+        """
+        from airunner.components.knowledge.enums import KnowledgeFactCategory
+
+        categories = []
+
+        if is_user:
+            categories.extend(
+                [
+                    cat.value
+                    for cat in KnowledgeFactCategory
+                    if cat.is_user_category
+                ]
+            )
+        if is_world:
+            categories.extend(
+                [
+                    cat.value
+                    for cat in KnowledgeFactCategory
+                    if cat.is_world_category
+                ]
+            )
+        if is_temporal:
+            categories.extend(
+                [
+                    cat.value
+                    for cat in KnowledgeFactCategory
+                    if cat.is_temporal_category
+                ]
+            )
+        if is_entity:
+            categories.extend(
+                [
+                    cat.value
+                    for cat in KnowledgeFactCategory
+                    if cat.is_entity_category
+                ]
+            )
+
+        return self.get_all_facts(
+            category=categories, enabled_only=enabled_only
+        )
 
     # ========================================================================
     # RAG-based Memory Recall
@@ -458,3 +540,197 @@ class KnowledgeMemoryManager:
                     summaries["yearly"] = yearly.summary_text
 
         return summaries
+
+    # ========================================================================
+    # Relationship Queries
+    # ========================================================================
+
+    def get_fact_entities(self, fact_id: int) -> List[Dict]:
+        """
+        Get all entities mentioned in a fact.
+
+        Args:
+            fact_id: ID of the fact
+
+        Returns:
+            List of entity dictionaries with name, type, confidence
+        """
+        from airunner.components.knowledge.data.knowledge_relationship import (
+            KnowledgeRelationship,
+        )
+
+        with session_scope() as session:
+            relationships = (
+                session.query(KnowledgeRelationship)
+                .filter_by(source_fact_id=fact_id)
+                .filter(KnowledgeRelationship.entity_name.isnot(None))
+                .all()
+            )
+
+            entities = [
+                {
+                    "name": rel.entity_name,
+                    "type": rel.entity_type,
+                    "confidence": rel.confidence,
+                }
+                for rel in relationships
+            ]
+
+        return entities
+
+    def get_facts_by_entity(
+        self, entity_name: str, entity_type: Optional[str] = None
+    ) -> List[KnowledgeFact]:
+        """
+        Get all facts that mention a specific entity.
+
+        Args:
+            entity_name: Name of the entity
+            entity_type: Optional type filter (person, place, etc.)
+
+        Returns:
+            List of facts mentioning this entity
+        """
+        from airunner.components.knowledge.data.knowledge_relationship import (
+            KnowledgeRelationship,
+        )
+
+        with session_scope() as session:
+            query = (
+                session.query(KnowledgeFact)
+                .join(
+                    KnowledgeRelationship,
+                    KnowledgeFact.id == KnowledgeRelationship.source_fact_id,
+                )
+                .filter(KnowledgeRelationship.entity_name == entity_name)
+            )
+
+            if entity_type:
+                query = query.filter(
+                    KnowledgeRelationship.entity_type == entity_type
+                )
+
+            facts = query.all()
+
+            # Detach from session
+            for fact in facts:
+                session.expunge(fact)
+
+        return facts
+
+    def get_related_facts(
+        self, fact_id: int, relationship_types: Optional[List[str]] = None
+    ) -> List[Dict]:
+        """
+        Get facts related to a given fact.
+
+        Args:
+            fact_id: ID of the source fact
+            relationship_types: Optional filter for relationship types
+                (contradicts, updates, supports, relates_to)
+
+        Returns:
+            List of dicts with {fact: KnowledgeFact, relationship_type: str}
+        """
+        from airunner.components.knowledge.data.knowledge_relationship import (
+            KnowledgeRelationship,
+        )
+
+        with session_scope() as session:
+            query = (
+                session.query(KnowledgeFact, KnowledgeRelationship)
+                .join(
+                    KnowledgeRelationship,
+                    KnowledgeFact.id == KnowledgeRelationship.target_fact_id,
+                )
+                .filter(KnowledgeRelationship.source_fact_id == fact_id)
+                .filter(KnowledgeRelationship.target_fact_id.isnot(None))
+            )
+
+            if relationship_types:
+                query = query.filter(
+                    KnowledgeRelationship.relationship_type.in_(
+                        relationship_types
+                    )
+                )
+
+            results = query.all()
+
+            # Detach and format results
+            related = []
+            for fact, relationship in results:
+                session.expunge(fact)
+                related.append(
+                    {
+                        "fact": fact,
+                        "relationship_type": relationship.relationship_type,
+                        "confidence": relationship.confidence,
+                    }
+                )
+
+        return related
+
+    def add_fact_relationship(
+        self,
+        source_fact_id: int,
+        target_fact_id: int,
+        relationship_type: str,
+        confidence: float = 0.9,
+    ) -> bool:
+        """
+        Create a relationship between two facts.
+
+        Args:
+            source_fact_id: ID of source fact
+            target_fact_id: ID of target fact
+            relationship_type: Type of relationship (contradicts, updates,
+                supports, relates_to)
+            confidence: Confidence in this relationship (0.0-1.0)
+
+        Returns:
+            True if relationship was created
+        """
+        from airunner.components.knowledge.data.knowledge_relationship import (
+            KnowledgeRelationship,
+        )
+
+        try:
+            with session_scope() as session:
+                # Check if relationship already exists
+                existing = (
+                    session.query(KnowledgeRelationship)
+                    .filter_by(
+                        source_fact_id=source_fact_id,
+                        target_fact_id=target_fact_id,
+                        relationship_type=relationship_type,
+                    )
+                    .first()
+                )
+
+                if existing:
+                    self.logger.debug(
+                        f"Fact relationship already exists: {source_fact_id} -> {target_fact_id}"
+                    )
+                    return False
+
+                # Create new relationship
+                relationship = KnowledgeRelationship(
+                    source_fact_id=source_fact_id,
+                    target_fact_id=target_fact_id,
+                    relationship_type=relationship_type,
+                    confidence=confidence,
+                )
+
+                session.add(relationship)
+                session.commit()
+
+                self.logger.info(
+                    f"Created fact relationship: {source_fact_id} -[{relationship_type}]-> {target_fact_id}"
+                )
+                return True
+
+        except Exception as e:
+            self.logger.error(
+                f"Error creating fact relationship: {e}", exc_info=True
+            )
+            return False
