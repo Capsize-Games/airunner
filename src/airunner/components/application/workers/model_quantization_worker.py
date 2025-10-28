@@ -151,7 +151,17 @@ class ModelQuantizationWorker(MediatorMixin, QObject):
             hidden_size = config.get("hidden_size", 0)
             num_hidden_layers = config.get("num_hidden_layers", 0)
 
-            # Rough estimate: (vocab_size * hidden_size + num_layers * hidden_size^2) * bytes_per_param
+            # Rough VRAM estimate formula:
+            # (vocab_size * hidden_size + num_layers * hidden_size * hidden_size) * bytes_per_param
+            #
+            # This approximates:
+            # - Embedding layer: vocab_size * hidden_size parameters
+            # - Transformer layers: num_layers * (hidden_size * hidden_size) parameters
+            #
+            # Note: This is a simplified estimate that doesn't account for attention heads,
+            # intermediate layers, or activation memory. Actual VRAM usage may be higher.
+            #
+            # Reference: https://huggingface.co/docs/transformers/main/en/model_memory_anatomy
             bytes_per_param = (
                 0.5 if bits == 4 else 1
             )  # 4-bit = 0.5 bytes, 8-bit = 1 byte

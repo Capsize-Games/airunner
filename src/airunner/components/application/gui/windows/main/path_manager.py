@@ -19,15 +19,6 @@ class PathManager:
         if self.logger:
             self.logger.debug("PathManager initialized.")
 
-    def show_settings_path(self, name, default_path=None):
-        # Note: show_path functionality removed with old agent system
-        # path = getattr(self.path_settings, name)
-        if self.logger:
-            self.logger.debug(
-                f"show_settings_path called for: {name} (functionality disabled)"
-            )
-        # TODO: Implement file browser opening if needed
-
     def set_path_settings(self, main_window, key, val):
         if self.logger:
             self.logger.debug(f"Setting path: {key} = {val}")
