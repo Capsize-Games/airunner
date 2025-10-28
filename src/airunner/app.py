@@ -105,6 +105,11 @@ class App(MediatorMixin, SettingsMixin, QObject):
             window_class_params: Parameters for main window (GUI mode only)
             initialize_gui: If False, run in headless mode (no GUI)
         """
+        # Check environment variable for headless mode
+        headless_env = os.environ.get("AIRUNNER_HEADLESS", "0") == "1"
+        if headless_env:
+            initialize_gui = False
+
         self.main_window_class_ = main_window_class
         self.window_class_params = window_class_params or {}
         self.no_splash = no_splash
@@ -112,6 +117,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self.splash = None
         self.initialize_gui = initialize_gui  # Store the flag
         self.http_server_thread = None
+        self.api_server_thread = None  # New: API server for headless mode
         self.is_running = False
 
         """
@@ -171,10 +177,31 @@ class App(MediatorMixin, SettingsMixin, QObject):
         else:
             # Headless mode - just initialize core systems
             logging.info("Running in headless mode (no GUI)")
+            self._init_headless_services()
             self.is_running = True
 
         # Initialize knowledge extraction system (works in both GUI and headless modes)
         self._initialize_knowledge_system()
+
+    def _init_headless_services(self):
+        """Initialize services for headless mode (no GUI).
+
+        Starts the HTTP API server and signal mediator without Qt GUI components.
+        """
+        # Start API server for /llm, /art, /stt, /tts endpoints
+        from airunner.components.server.api.api_server_thread import (
+            APIServerThread,
+        )
+
+        host = os.environ.get("AIRUNNER_HTTP_HOST", "0.0.0.0")
+        port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8080"))
+
+        logging.info(f"Starting API server on {host}:{port}")
+        self.api_server_thread = APIServerThread(host=host, port=port)
+        self.api_server_thread.start()
+        logging.info(
+            f"API server started - /health, /llm, /art endpoints available"
+        )
 
     def _initialize_knowledge_system(self):
         """Initialize the automatic knowledge extraction system."""
@@ -460,6 +487,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
         Override this method to run the application in a different mode.
         """
         if not self.initialize_gui:
+            # Headless mode - keep server running
+            self.run_headless()
             return
 
         if not self.no_splash and not self.splash:
@@ -467,6 +496,35 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         QTimer.singleShot(50, self._post_splash_startup)
         sys.exit(self.app.exec())
+
+    def run_headless(self):
+        """Run in headless mode without GUI.
+
+        Keeps the API server running and handles signals until interrupted.
+        """
+        import signal as sig
+        import time
+
+        logging.info("AI Runner headless mode - server running")
+        logging.info("Press Ctrl+C to stop")
+
+        # Set up signal handlers for graceful shutdown
+        def signal_handler(signum, frame):
+            logging.info("Shutdown signal received")
+            self.cleanup()
+            sys.exit(0)
+
+        sig.signal(sig.SIGINT, signal_handler)
+        sig.signal(sig.SIGTERM, signal_handler)
+
+        try:
+            # Keep the main thread alive while server runs in background
+            while self.is_running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logging.info("Interrupted by user")
+        finally:
+            self.cleanup()
 
     def _post_splash_startup(self):
         self.show_main_application(self.app)
@@ -624,6 +682,10 @@ class App(MediatorMixin, SettingsMixin, QObject):
         if self.http_server_thread:
             self.http_server_thread.stop()
             self.http_server_thread.wait()
+
+        if self.api_server_thread:
+            self.api_server_thread.stop()
+            # API server thread is daemon, no need to join
 
     def cleanup(self):
         """
