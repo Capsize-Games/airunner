@@ -3,6 +3,50 @@
 from enum import Enum
 
 
+class KnowledgeRelationshipType(Enum):
+    """
+    Types of relationships between facts and entities.
+
+    Fact-to-fact relationships:
+    - CONTRADICTS: Facts that contradict each other
+    - UPDATES: New fact updates/replaces old fact
+    - SUPPORTS: Fact supports/confirms another fact
+    - RELATES_TO: General relationship
+
+    Entity relationships:
+    - MENTIONS_ENTITY: Fact mentions a specific entity
+    - ENTITY_KNOWS: Entity knows another entity
+    - ENTITY_WORKS_AT: Entity works at organization
+    - ENTITY_LIVES_IN: Entity lives in location
+    - ENTITY_MEMBER_OF: Entity is member of group
+    """
+
+    # Fact-to-fact relationships
+    CONTRADICTS = "contradicts"
+    UPDATES = "updates"
+    SUPPORTS = "supports"
+    RELATES_TO = "relates_to"
+
+    # Entity relationships
+    MENTIONS_ENTITY = "mentions_entity"
+    ENTITY_KNOWS = "entity_knows"
+    ENTITY_WORKS_AT = "entity_works_at"
+    ENTITY_LIVES_IN = "entity_lives_in"
+    ENTITY_MEMBER_OF = "entity_member_of"
+
+
+class EntityType(Enum):
+    """Types of entities that can be extracted from facts."""
+
+    PERSON = "person"
+    PLACE = "place"
+    ORGANIZATION = "organization"
+    PRODUCT = "product"
+    CONCEPT = "concept"
+    EVENT = "event"
+    DATE = "date"
+
+
 class KnowledgeFactCategory(Enum):
     """
     Categories for organizing knowledge facts.

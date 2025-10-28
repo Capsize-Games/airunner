@@ -248,6 +248,10 @@ class SignalCode(Enum):
         "knowledge_extract_from_conversation_signal"
     )
     KNOWLEDGE_EXTRACTION_COMPLETE = "knowledge_extraction_complete_signal"
+    KNOWLEDGE_EXTRACT_ENTITIES = "knowledge_extract_entities_signal"
+    KNOWLEDGE_ENTITY_EXTRACTION_COMPLETE = (
+        "knowledge_entity_extraction_complete_signal"
+    )
 
     # Autonomous control signals
     SCHEDULE_TASK_SIGNAL = "schedule_task_signal"

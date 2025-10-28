@@ -540,3 +540,197 @@ class KnowledgeMemoryManager:
                     summaries["yearly"] = yearly.summary_text
 
         return summaries
+
+    # ========================================================================
+    # Relationship Queries
+    # ========================================================================
+
+    def get_fact_entities(self, fact_id: int) -> List[Dict]:
+        """
+        Get all entities mentioned in a fact.
+
+        Args:
+            fact_id: ID of the fact
+
+        Returns:
+            List of entity dictionaries with name, type, confidence
+        """
+        from airunner.components.knowledge.data.knowledge_relationship import (
+            KnowledgeRelationship,
+        )
+
+        with session_scope() as session:
+            relationships = (
+                session.query(KnowledgeRelationship)
+                .filter_by(source_fact_id=fact_id)
+                .filter(KnowledgeRelationship.entity_name.isnot(None))
+                .all()
+            )
+
+            entities = [
+                {
+                    "name": rel.entity_name,
+                    "type": rel.entity_type,
+                    "confidence": rel.confidence,
+                }
+                for rel in relationships
+            ]
+
+        return entities
+
+    def get_facts_by_entity(
+        self, entity_name: str, entity_type: Optional[str] = None
+    ) -> List[KnowledgeFact]:
+        """
+        Get all facts that mention a specific entity.
+
+        Args:
+            entity_name: Name of the entity
+            entity_type: Optional type filter (person, place, etc.)
+
+        Returns:
+            List of facts mentioning this entity
+        """
+        from airunner.components.knowledge.data.knowledge_relationship import (
+            KnowledgeRelationship,
+        )
+
+        with session_scope() as session:
+            query = (
+                session.query(KnowledgeFact)
+                .join(
+                    KnowledgeRelationship,
+                    KnowledgeFact.id == KnowledgeRelationship.source_fact_id,
+                )
+                .filter(KnowledgeRelationship.entity_name == entity_name)
+            )
+
+            if entity_type:
+                query = query.filter(
+                    KnowledgeRelationship.entity_type == entity_type
+                )
+
+            facts = query.all()
+
+            # Detach from session
+            for fact in facts:
+                session.expunge(fact)
+
+        return facts
+
+    def get_related_facts(
+        self, fact_id: int, relationship_types: Optional[List[str]] = None
+    ) -> List[Dict]:
+        """
+        Get facts related to a given fact.
+
+        Args:
+            fact_id: ID of the source fact
+            relationship_types: Optional filter for relationship types
+                (contradicts, updates, supports, relates_to)
+
+        Returns:
+            List of dicts with {fact: KnowledgeFact, relationship_type: str}
+        """
+        from airunner.components.knowledge.data.knowledge_relationship import (
+            KnowledgeRelationship,
+        )
+
+        with session_scope() as session:
+            query = (
+                session.query(KnowledgeFact, KnowledgeRelationship)
+                .join(
+                    KnowledgeRelationship,
+                    KnowledgeFact.id == KnowledgeRelationship.target_fact_id,
+                )
+                .filter(KnowledgeRelationship.source_fact_id == fact_id)
+                .filter(KnowledgeRelationship.target_fact_id.isnot(None))
+            )
+
+            if relationship_types:
+                query = query.filter(
+                    KnowledgeRelationship.relationship_type.in_(
+                        relationship_types
+                    )
+                )
+
+            results = query.all()
+
+            # Detach and format results
+            related = []
+            for fact, relationship in results:
+                session.expunge(fact)
+                related.append(
+                    {
+                        "fact": fact,
+                        "relationship_type": relationship.relationship_type,
+                        "confidence": relationship.confidence,
+                    }
+                )
+
+        return related
+
+    def add_fact_relationship(
+        self,
+        source_fact_id: int,
+        target_fact_id: int,
+        relationship_type: str,
+        confidence: float = 0.9,
+    ) -> bool:
+        """
+        Create a relationship between two facts.
+
+        Args:
+            source_fact_id: ID of source fact
+            target_fact_id: ID of target fact
+            relationship_type: Type of relationship (contradicts, updates,
+                supports, relates_to)
+            confidence: Confidence in this relationship (0.0-1.0)
+
+        Returns:
+            True if relationship was created
+        """
+        from airunner.components.knowledge.data.knowledge_relationship import (
+            KnowledgeRelationship,
+        )
+
+        try:
+            with session_scope() as session:
+                # Check if relationship already exists
+                existing = (
+                    session.query(KnowledgeRelationship)
+                    .filter_by(
+                        source_fact_id=source_fact_id,
+                        target_fact_id=target_fact_id,
+                        relationship_type=relationship_type,
+                    )
+                    .first()
+                )
+
+                if existing:
+                    self.logger.debug(
+                        f"Fact relationship already exists: {source_fact_id} -> {target_fact_id}"
+                    )
+                    return False
+
+                # Create new relationship
+                relationship = KnowledgeRelationship(
+                    source_fact_id=source_fact_id,
+                    target_fact_id=target_fact_id,
+                    relationship_type=relationship_type,
+                    confidence=confidence,
+                )
+
+                session.add(relationship)
+                session.commit()
+
+                self.logger.info(
+                    f"Created fact relationship: {source_fact_id} -[{relationship_type}]-> {target_fact_id}"
+                )
+                return True
+
+        except Exception as e:
+            self.logger.error(
+                f"Error creating fact relationship: {e}", exc_info=True
+            )
+            return False
