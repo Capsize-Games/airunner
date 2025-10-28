@@ -46,6 +46,16 @@ from airunner.components.model_management import (
 import requests  # Added for HTTP(S) image download
 
 from airunner.enums import SignalCode, CanvasToolName, EngineResponseCode
+from airunner.components.art.gui.widgets.canvas.mixins import (
+    CanvasFilterMixin,
+    CanvasTransformMixin,
+    CanvasDragDropMixin,
+    CanvasClipboardMixin,
+    CanvasLayerMixin,
+    CanvasHistoryMixin,
+    CanvasPersistenceMixin,
+    CanvasGenerationMixin,
+)
 from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
     LayerImageItem,
 )
@@ -193,6 +203,14 @@ def _dispatch_persist_result(scene_ref, future):
 
 
 class CustomScene(
+    CanvasFilterMixin,
+    CanvasTransformMixin,
+    CanvasDragDropMixin,
+    CanvasClipboardMixin,
+    CanvasLayerMixin,
+    CanvasHistoryMixin,
+    CanvasPersistenceMixin,
+    CanvasGenerationMixin,
     MediatorMixin,
     SettingsMixin,
     QGraphicsScene,
@@ -527,100 +545,6 @@ class CustomScene(
         # Restart timer with configured debounce window
         self._persist_timer.start(self._persist_delay_ms)
 
-    def _flush_pending_image(self):
-        """Persist pending image data asynchronously to avoid UI stalls."""
-        if self._is_user_interacting or getattr(
-            self, "draw_button_down", False
-        ):
-            self._persist_timer.start(self._persist_delay_ms)
-            return
-
-        has_pending_image = self._pending_image_ref is not None
-        has_pending_binary = self._pending_image_binary is not None
-        if not has_pending_image and not has_pending_binary:
-            return
-
-        image_obj = self._pending_image_ref
-        binary = self._pending_image_binary
-
-        self._pending_image_ref = None
-        self._pending_image_binary = None
-
-        if binary is not None and binary == self._current_active_image_binary:
-            return
-
-        if binary is not None:
-            self._current_active_image_binary = binary
-
-        image_payload = None
-        if has_pending_image and isinstance(image_obj, Image.Image):
-            image_payload = image_obj
-
-        if binary is None and image_payload is None:
-            return
-
-        try:
-            layer_id = self._get_current_selected_layer_id()
-        except Exception:
-            layer_id = None
-
-        self._persist_generation += 1
-        generation = self._persist_generation
-
-        future = _PERSIST_EXECUTOR.submit(
-            _persist_image_worker,
-            self.settings_key,
-            layer_id,
-            "image",
-            image_payload,
-            binary,
-            self._raw_image_storage_enabled,
-            generation,
-        )
-        self._active_persist_future = future
-        future.add_done_callback(
-            lambda fut, scene_ref=weakref.ref(self): _dispatch_persist_result(
-                scene_ref, fut
-            )
-        )
-
-    @Slot(object)
-    def _handle_persist_result(self, payload: object):
-        if not isinstance(payload, dict):
-            return
-
-        generation = payload.get("generation", 0)
-        if generation < self._persist_generation:
-            return
-
-        self._active_persist_future = None
-
-        error = payload.get("error")
-        if error:
-            if hasattr(self, "logger") and self.logger:
-                self.logger.error(f"Image persistence failed: {error}")
-            return
-
-        binary = payload.get("binary")
-        if binary is not None:
-            self._current_active_image_binary = binary
-
-        table_name = payload.get("table_name")
-        column_name = payload.get("column_name")
-
-        if table_name and column_name:
-            try:
-                self._notify_setting_updated(
-                    setting_name=table_name,
-                    column_name=column_name,
-                    val=binary,
-                )
-            except Exception as exc:  # pragma: no cover - defensive
-                if hasattr(self, "logger") and self.logger:
-                    self.logger.error(
-                        f"Failed to notify settings update for {table_name}.{column_name}: {exc}"
-                    )
-
     def _binary_to_pil_fast(self, binary_data: bytes) -> Optional[Image.Image]:
         """Fast inverse for raw storage format; fallback to existing converter.
 
@@ -661,159 +585,6 @@ class CustomScene(
 
     def handle_cursor(self, event, apply_cursor: bool = True):
         self._handle_cursor(event, apply_cursor)
-
-    def on_clear_history_signal(self):
-        self._clear_history()
-
-    def on_export_image_signal(self):
-        image = self.current_active_image
-        if image:
-            parent_window = self.views()[0].window()
-            initial_dir = (
-                self.last_export_path if self.last_export_path else ""
-            )
-            file_dialog = QFileDialog(
-                parent_window,
-                "Save Image",
-                initial_dir,
-                f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
-            )
-            file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
-            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
-                file_path = file_dialog.selectedFiles()[0]
-                if file_path == "":
-                    return
-                self.last_export_path = os.path.dirname(file_path)
-                if not file_path.endswith(AIRUNNER_VALID_IMAGE_FILES):
-                    file_path = f"{file_path}.png"
-                export_image(image, file_path)
-
-    def on_import_image_signal(self):
-        if self.settings_key != "drawing_pad_settings":
-            return
-        file_path, _ = QFileDialog.getOpenFileName(
-            None,
-            "Open Image",
-            "",
-            f"Image Files ({' '.join(AIRUNNER_VALID_IMAGE_FILES)})",
-        )
-        if file_path == "":
-            return
-        self.on_load_image_signal(file_path)
-
-    def handle_cached_send_image_to_canvas(self):
-        image_response = self.cached_send_image_to_canvas
-        if image_response:
-            self.on_send_image_to_canvas_signal(
-                {"image_response": image_response}
-            )
-
-    def on_send_image_to_canvas_signal(self, data: Optional[Dict] = None):
-        """Handle generated image by creating a new layer."""
-        if data is None:
-            return
-
-        image_response = data.get("image_response")
-        self.cached_send_image_to_canvas = None
-        if not image_response or not image_response.images:
-            return
-
-        image = image_response.images[0]
-
-        # Get the current selected layer for the generated image
-        layer_id = self._add_image_to_undo()
-
-        # Load the image to the scene (mark as generated for proper positioning)
-        self._load_image_from_object(image=image, generated=True)
-
-        # Persist the image to the database
-        try:
-            rgba_image = (
-                image if image.mode == "RGBA" else image.convert("RGBA")
-            )
-            width, height = rgba_image.size
-            raw_binary = (
-                b"AIRAW1"
-                + width.to_bytes(4, "big")
-                + height.to_bytes(4, "big")
-                + rgba_image.tobytes()
-            )
-            self.update_drawing_pad_settings(
-                layer_id=layer_id, image=raw_binary
-            )
-            self._pending_image_binary = raw_binary
-            self._current_active_image_binary = raw_binary
-        except Exception:
-            pass
-
-        # Commit to undo history
-        self._commit_layer_history_transaction(layer_id, "image")
-
-        # Refresh the layer display
-        try:
-            self._refresh_layer_display()
-        except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.error(
-                    f"Failed to refresh layer display after image generation: {e}",
-                    exc_info=True,
-                )
-
-        # Notify other components that the canvas image changed (matches drop/paste flow)
-        try:
-            if self.api and hasattr(self.api, "art"):
-                self.api.art.canvas.image_updated()
-        except Exception as e:
-            if hasattr(self, "logger"):
-                self.logger.debug(f"image_updated notification failed: {e}")
-
-    def on_paste_image_from_clipboard(self):
-        image = self._paste_image_from_clipboard()
-        if image is None:
-            return
-        if not isinstance(image, Image.Image):
-            return
-        if self.application_settings.resize_on_paste:
-            image = self._resize_image(image)
-        self.current_active_image = image
-        self.refresh_image(image)
-
-    def on_load_image_from_path(self, message):
-        image_path = message["image_path"]
-        if image_path is None or image_path == "":
-            return
-        image = Image.open(image_path)
-        self._load_image_from_object(image)
-
-    def on_load_image_signal(self, image_path: str):
-        layer_id = self._add_image_to_undo()
-        image = self._load_image(image_path)
-        if self.application_settings.resize_on_paste:
-            image = self._resize_image(image)
-        self.current_active_image = image
-        self.initialize_image(image)
-        self._commit_layer_history_transaction(layer_id, "image")
-
-    def on_apply_filter_signal(self, message):
-        # The image_filter service emits a dict payload: {"filter_object": <instance>}
-        # Ensure we pass the actual filter instance to the internal applier.
-        if isinstance(message, dict) and "filter_object" in message:
-            filter_object = message["filter_object"]
-        else:
-            filter_object = message
-        self._apply_filter(filter_object)
-
-    def on_cancel_filter_signal(self):
-        image = self._cancel_filter()
-        if image:
-            self._load_image_from_object(image=image)
-
-    def on_preview_filter_signal(self, message):
-        filter_object: ImageFilter.Filter = message["filter_object"]
-        filtered_image = self._preview_filter(
-            self.current_active_image, filter_object
-        )
-        self._load_image_from_object(image=filtered_image)
 
     def on_image_generated_signal(self, data: Dict):
         code = data["code"]
@@ -858,34 +629,6 @@ class CustomScene(
                 callback(data)
             self.api.art.stop_progress_bar()
 
-    @profile
-    def _handle_image_generated_signal(self, data: Dict):
-        image_response: Optional[ImageResponse] = data.get("message", None)
-        if image_response is None:
-            return
-        images = image_response.images
-        if len(images) == 0:
-            pass
-        elif image_response and not getattr(image_response, "node_id", None):
-            outpaint_box_rect = image_response.active_rect
-            # Optimize: Only convert if absolutely necessary and cache conversion
-            image = images[0]
-            # Use lazy conversion - defer RGBA conversion until QImage creation
-            self._create_image(
-                image=image,
-                is_outpaint=image_response.is_outpaint,
-                outpaint_box_rect=outpaint_box_rect,
-                generated=True,
-            )
-            # Force immediate persistence to avoid race condition with undo operations
-            self._flush_pending_image()
-            # Refresh layer display to show the newly generated image
-            self._refresh_layer_display()
-            # Defer batch image update to not block UI
-            QTimer.singleShot(
-                100, lambda: self.api.art.update_batch_images(images)
-            )
-
     def display_gpu_memory_error(self, message: str):
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Icon.Critical)
@@ -922,222 +665,6 @@ class CustomScene(
         data["setting_name"]
         data["column_name"]
         data["value"]
-
-    def on_canvas_copy_image_signal(self):
-        self._copy_image(self.current_active_image)
-
-    def on_canvas_cut_image_signal(self):
-        self._cut_image(self.current_active_image)
-
-    def on_canvas_rotate_90_clockwise_signal(self):
-        self._rotate_90_clockwise()
-
-    def on_canvas_rotate_90_counterclockwise_signal(self):
-        self._rotate_90_counterclockwise()
-
-    def on_action_undo_signal(self):
-        if not self.undo_history:
-            return
-        entry = self.undo_history.pop()
-        self._apply_history_entry(entry, "before")
-        self.redo_history.append(entry)
-        self.api.art.canvas.update_history(
-            len(self.undo_history), len(self.redo_history)
-        )
-        if self.views():
-            view = self.views()[0]
-            if hasattr(view, "updateImagePositions"):
-                view.updateImagePositions()
-
-    def on_action_redo_signal(self):
-        if not self.redo_history:
-            return
-        entry = self.redo_history.pop()
-        self._apply_history_entry(entry, "after")
-        self.undo_history.append(entry)
-        self.api.art.canvas.update_history(
-            len(self.undo_history), len(self.redo_history)
-        )
-        # Update canvas memory allocation
-        self._update_canvas_memory_allocation()
-        if self.views():
-            view = self.views()[0]
-            if hasattr(view, "updateImagePositions"):
-                view.updateImagePositions()
-
-    def _apply_history_entry(self, entry: Dict[str, Any], target: str):
-        entry_type = entry.get("type")
-        if entry_type in {"layer_create", "layer_delete", "layer_reorder"}:
-            self._apply_layer_structure(entry, target)
-            return
-        layer_id = entry.get("layer_id")
-        state = entry.get(target)
-        if state is None:
-            return
-        self._apply_layer_state(layer_id, state)
-        self._refresh_layer_display()
-        if self.api and hasattr(self.api, "art"):
-            self.api.art.canvas.update_image_positions()
-        # Force scene update to refresh visuals
-        self.update()
-        # Also update all views
-        for view in self.views():
-            view.viewport().update()
-            view.update()
-
-    def _capture_layer_state(
-        self, layer_id: Optional[int]
-    ) -> Dict[str, Optional[Any]]:
-        if layer_id is None:
-            settings = self.drawing_pad_settings
-        else:
-            settings = self._get_layer_specific_settings(
-                DrawingPadSettings, layer_id=layer_id
-            )
-
-        if settings is None:
-            return {"image": None, "mask": None, "x_pos": 0, "y_pos": 0}
-
-        # Prefer in-memory pending/current binary for the image when available.
-        # Persistence of image data is done asynchronously; relying solely on
-        # the DB here can miss recent edits (mask updates are synchronous).
-        image_val = None
-        try:
-            current_selected = self._get_current_selected_layer_id()
-        except Exception:
-            current_selected = None
-
-        # If this capture is for the currently selected layer (or global),
-        # prefer the pending/current binary if present.
-        if layer_id is None or layer_id == current_selected:
-            if getattr(self, "_pending_image_binary", None) is not None:
-                image_val = self._pending_image_binary
-            elif (
-                getattr(self, "_current_active_image_binary", None) is not None
-            ):
-                image_val = self._current_active_image_binary
-
-        # Fall back to stored DB/cached settings value if no in-memory binary is present
-        if image_val is None:
-            image_val = getattr(settings, "image", None)
-
-        mask_val = getattr(settings, "mask", None)
-
-        return {
-            "image": image_val,
-            "mask": mask_val,
-            "x_pos": getattr(settings, "x_pos", 0) or 0,
-            "y_pos": getattr(settings, "y_pos", 0) or 0,
-            # Capture text_items so text changes are included in undo/redo
-            "text_items": getattr(settings, "text_items", None),
-        }
-
-    def _apply_layer_state(
-        self, layer_id: Optional[int], state: Dict[str, Optional[Any]]
-    ) -> None:
-        if layer_id is None:
-            return
-
-        updates: Dict[str, Optional[Any]] = {}
-        # Only include keys that have non-None values OR are explicitly needed
-        # to be set to None (like clearing position)
-        for key in ("image", "mask", "x_pos", "y_pos"):
-            if key in state:
-                value = state[key]
-                # Always include image/mask in updates, even if None/empty
-                # This allows undo to properly clear images
-                updates[key] = value
-
-        if updates:
-            self.update_drawing_pad_settings(layer_id=layer_id, **updates)
-
-            # Update in-memory cache for the current layer
-            image_data = state.get("image")
-            try:
-                current_layer = self._get_current_selected_layer_id()
-                if layer_id == current_layer:
-                    # Update cache even when clearing (None or empty)
-                    self._pending_image_binary = image_data
-                    self._current_active_image_binary = image_data
-            except Exception:
-                pass
-
-        layer_item = self._layer_items.get(layer_id)
-        if layer_item is not None:
-            image_data = state.get("image")
-            # Handle both setting an image and clearing it (None or empty)
-            if image_data is not None and len(image_data) > 0:
-                pil_image = convert_binary_to_image(image_data)
-                if pil_image is not None:
-                    qimage = ImageQt.ImageQt(pil_image)
-                    layer_item.updateImage(qimage)
-            else:
-                # Clear the layer by setting it to a blank/transparent image
-                blank_qimage = self._create_blank_surface()
-                layer_item.updateImage(blank_qimage)
-            x_pos = state.get("x_pos")
-            y_pos = state.get("y_pos")
-            if x_pos is not None and y_pos is not None:
-                canvas_offset = self.get_canvas_offset()
-                # QPointF does not support Python-level subtraction in all PySide6 builds.
-                # Compute visible position explicitly to avoid calling operator-.
-                layer_item.setPos(
-                    QPointF(
-                        x_pos - canvas_offset.x(), y_pos - canvas_offset.y()
-                    )
-                )
-                self.original_item_positions[layer_item] = QPointF(
-                    x_pos, y_pos
-                )
-
-    def _begin_layer_history_transaction(
-        self, layer_id: Optional[int], change_type: str
-    ) -> None:
-        # Allow None as a valid key here - None represents the global
-        # drawing pad (no specific layer). Record the "before" state so
-        # that drawing on a blank canvas (layer_id is None) is captured
-        # in the undo history.
-        before_state = self._capture_layer_state(layer_id)
-        self._history_transactions[layer_id] = {
-            "type": change_type,
-            "before": before_state,
-        }
-
-    def _commit_layer_history_transaction(
-        self, layer_id: Optional[int], change_type: Optional[str] = None
-    ) -> None:
-        # Allow committing transactions keyed by None (global drawing pad)
-        transaction = self._history_transactions.pop(layer_id, None)
-        if transaction is None:
-            return
-        if change_type is not None:
-            transaction["type"] = change_type
-        after_state = self._capture_layer_state(layer_id)
-        transaction["after"] = after_state
-
-        if transaction["before"] == transaction["after"]:
-            return
-
-        entry = {
-            "layer_id": layer_id,
-            "type": transaction.get("type", "image"),
-            "before": transaction["before"],
-            "after": transaction["after"],
-        }
-        self.undo_history.append(entry)
-        self.redo_history.clear()
-        if self.api and hasattr(self.api, "art"):
-            self.api.art.canvas.update_history(
-                len(self.undo_history), len(self.redo_history)
-            )
-        # Update canvas memory allocation
-        self._update_canvas_memory_allocation()
-
-    def _cancel_layer_history_transaction(
-        self, layer_id: Optional[int]
-    ) -> None:
-        # Allow cancelling transactions keyed by None (global drawing pad)
-        self._history_transactions.pop(layer_id, None)
 
     def _serialize_record(self, obj: Any) -> Optional[Dict[str, Any]]:
         if obj is None:
@@ -1419,19 +946,6 @@ class CustomScene(
         if self.api and hasattr(self.api, "art"):
             self.api.art.canvas.update_image_positions()
 
-    def on_layer_operation_begin(self, data: Dict[str, Any]) -> None:
-        action = data.get("action")
-        layer_ids = data.get("layer_ids") or []
-        self._begin_layer_structure_transaction(action, layer_ids)
-
-    def on_layer_operation_commit(self, data: Dict[str, Any]) -> None:
-        action = data.get("action")
-        layer_ids = data.get("layer_ids") or []
-        self._commit_layer_structure_transaction(action, layer_ids)
-
-    def on_layer_operation_cancel(self, data: Dict[str, Any]) -> None:
-        self._cancel_layer_structure_transaction()
-
     def show_event(self):
         self.handle_cached_send_image_to_canvas()
         # if not self._image_initialized:
@@ -1441,493 +955,9 @@ class CustomScene(
         #     self._layers_initialized = True
         #     self._refresh_layer_display()
 
-    # Layer management signal handlers
-    def on_layer_visibility_toggled(self, data: Dict):
-        """Handle layer visibility changes."""
-        layer_id = data.get("layer_id")
-        visible = data.get("visible")
-
-        self.logger.info(
-            f"Layer visibility toggled: layer_id={layer_id}, visible={visible}"
-        )
-
-        if layer_id in self._layer_items:
-            layer_item = self._layer_items[layer_id]
-            try:
-                # Check if the Qt object is still valid before using it
-                layer_item.setVisible(visible)
-                self.logger.info(f"Updated layer item visibility: {visible}")
-                # Also toggle any text items associated with this layer in
-                # the first view attached to this scene. The view maintains
-                # a mapping of text items to layer ids so we can update their
-                # visibility to match the layer without reparenting items.
-                try:
-                    views = self.views()
-                    if views:
-                        view = views[0]
-                        # _text_item_layer_map may not exist for non-canvas views
-                        text_map = getattr(view, "_text_item_layer_map", None)
-                        if text_map:
-                            for item, lid in list(text_map.items()):
-                                try:
-                                    if lid == layer_id:
-                                        item.setVisible(visible)
-                                except Exception:
-                                    # Item may have been deleted; ignore
-                                    continue
-                except Exception:
-                    pass
-            except RuntimeError as e:
-                if "Internal C++ object" in str(
-                    e
-                ) and "already deleted" in str(e):
-                    self.logger.warning(
-                        f"Layer item {layer_id} was already deleted, removing from cache"
-                    )
-                    # Remove the invalid reference from our cache
-                    del self._layer_items[layer_id]
-                    # Refresh the display to sync with current state
-                    self._refresh_layer_display()
-                else:
-                    # Re-raise unexpected RuntimeErrors
-                    raise
-        else:
-            self.logger.warning(
-                f"Layer item not found for layer_id={layer_id}"
-            )
-            # Try to refresh the entire display
-            self._refresh_layer_display()
-
-    def on_layer_deleted(self, data: Dict):
-        """Handle layer deletion by removing its graphics item."""
-        layer_id = data.get("layer_id")
-
-        if layer_id in self._layer_items:
-            layer_item = self._layer_items[layer_id]
-            try:
-                # Check if the item is still in a scene before removing
-                if layer_item.scene():
-                    layer_item.scene().removeItem(layer_item)
-            except RuntimeError as e:
-                if "Internal C++ object" in str(
-                    e
-                ) and "already deleted" in str(e):
-                    self.logger.info(
-                        f"Layer item {layer_id} was already deleted from Qt side"
-                    )
-                else:
-                    self.logger.warning(
-                        f"Error removing layer item {layer_id}: {e}"
-                    )
-            finally:
-                # Always remove from our tracking dictionary
-                del self._layer_items[layer_id]
-
-    def on_layer_reordered(self, data: Dict):
-        """Handle layer reordering by updating z-values."""
-        self._refresh_layer_display()
-
-    def on_layers_show_signal(self, data: Dict = None):
-        """Handle layer container refresh signal."""
-        self._current_active_image_ref = None
-        self._refresh_layer_display()
-
-    def _refresh_layer_display(self):
-        """Refresh the display of all visible layers on the canvas.
-
-        Only the main drawing pad scene and brush scene should render global layers;
-        auxiliary scenes (like input image previews) manage a single image item themselves.
-        """
-        if getattr(self, "is_dragging", False):
-            return
-
-        canvas_type = getattr(self, "canvas_type", None)
-        if canvas_type not in ("drawing_pad", "brush"):
-            return
-        # Get all layers ordered by their order property
-        layers = CanvasLayer.objects.order_by("order").all()
-
-        # Extract layer data immediately while session is active to avoid DetachedInstanceError
-        layer_data = []
-        for layer in layers:
-            layer_data.append(
-                {
-                    "id": layer.id,
-                    "visible": layer.visible,
-                    "opacity": layer.opacity,
-                    "order": layer.order,
-                }
-            )
-
-        # If we have layers, remove the old drawing pad item to prevent duplication
-        if (
-            len(layer_data) > 0
-            and hasattr(self, "item")
-            and self.item is not None
-        ):
-            try:
-                if self.item.scene():
-                    self.removeItem(self.item)
-            except (RuntimeError, AttributeError) as e:
-                # Item was already deleted or invalid
-                if hasattr(self, "logger"):
-                    self.logger.debug(f"Could not remove legacy item: {e}")
-            self.item = None
-
-        # Remove any layer items that no longer exist
-        existing_layer_ids = {data["id"] for data in layer_data}
-        items_to_remove = []
-        for layer_id, item in self._layer_items.items():
-            if layer_id not in existing_layer_ids:
-                items_to_remove.append(layer_id)
-
-        for layer_id in items_to_remove:
-            item = self._layer_items[layer_id]
-            if item.scene():
-                item.scene().removeItem(item)
-            del self._layer_items[layer_id]
-
-        # Create or update layer items for each layer
-        for layer_info in layer_data:
-            layer_id = layer_info["id"]
-            drawing_pad_settings = self._get_layer_specific_settings(
-                DrawingPadSettings, layer_id=layer_id
-            )
-
-            layer_qimage = None
-            if (
-                drawing_pad_settings
-                and drawing_pad_settings.image
-                and len(drawing_pad_settings.image) > 0
-            ):
-                pil_image = convert_binary_to_image(drawing_pad_settings.image)
-                if pil_image:
-                    layer_qimage = ImageQt.ImageQt(pil_image)
-
-            layer_item = self._layer_items.get(layer_id)
-
-            if layer_qimage is None and layer_item is not None:
-                # Reuse existing image buffer if present
-                layer_qimage = getattr(layer_item, "qimage", None)
-
-            if layer_qimage is None:
-                layer_qimage = self._create_blank_surface()
-
-            if layer_item is None:
-                layer_item = LayerImageItem(
-                    layer_qimage,
-                    layer_id=layer_id,
-                )
-                self.addItem(layer_item)
-                self._layer_items[layer_id] = layer_item
-            else:
-                if (
-                    layer_qimage is not None
-                    and getattr(layer_item, "qimage", None) is not layer_qimage
-                ):
-                    self._release_painter_for_device(
-                        getattr(layer_item, "qimage", None)
-                    )
-                    layer_item.updateImage(layer_qimage)
-                layer_item.layer_id = layer_id
-                layer_item.set_layer_context(layer_id)
-
-            layer_item.setVisible(layer_info["visible"])
-            layer_item.setOpacity(layer_info["opacity"] / 100.0)
-            # Use a base z-value and add the layer order so that
-            # higher-order layers render on top of lower-order ones.
-            # Previously this subtracted the order which inverted the
-            # stacking; switching to addition aligns model order with
-            # visual stacking (larger order => higher z).
-            layer_item.setZValue(1000 + layer_info["order"])
-
-            # Determine position for the layer item
-            if (
-                drawing_pad_settings
-                and drawing_pad_settings.x_pos is not None
-                and drawing_pad_settings.y_pos is not None
-            ):
-                x_pos = drawing_pad_settings.x_pos
-                y_pos = drawing_pad_settings.y_pos
-            else:
-                x_pos = (
-                    self.active_grid_settings.pos_x
-                    if hasattr(self, "active_grid_settings")
-                    else 0
-                )
-                y_pos = (
-                    self.active_grid_settings.pos_y
-                    if hasattr(self, "active_grid_settings")
-                    else 0
-                )
-
-                if drawing_pad_settings:
-                    try:
-                        self.update_drawing_pad_settings(
-                            x_pos=x_pos,
-                            y_pos=y_pos,
-                            layer_id=layer_id,
-                        )
-                    except Exception as e:
-                        self.logger.error(
-                            f"Failed to update drawing pad settings position: {e}"
-                        )
-
-            canvas_offset = self.get_canvas_offset()
-
-            # Get grid compensation offset from view
-            try:
-                view = (
-                    self.parent.views()[0] if hasattr(self, "parent") else None
-                )
-                grid_comp = (
-                    view.grid_compensation_offset if view else QPointF(0, 0)
-                )
-            except (AttributeError, IndexError):
-                grid_comp = QPointF(0, 0)
-
-            # Use manager to convert absolute position to display position
-            manager = CanvasPositionManager()
-            view_state = ViewState(
-                canvas_offset=canvas_offset, grid_compensation=grid_comp
-            )
-
-            abs_pos = QPointF(x_pos, y_pos)
-            visible_pos = manager.absolute_to_display(abs_pos, view_state)
-
-            layer_item.setPos(visible_pos)
-
-            self.original_item_positions[layer_item] = QPointF(x_pos, y_pos)
-
-        # Remove any items that no longer have backing settings data
-        for layer_id in list(self._layer_items.keys()):
-            if layer_id not in existing_layer_ids:
-                layer_item = self._layer_items[layer_id]
-                self._release_painter_for_device(
-                    getattr(layer_item, "qimage", None)
-                )
-                if layer_item.scene():
-                    layer_item.scene().removeItem(layer_item)
-                del self._layer_items[layer_id]
-
-        # Force a repaint of the scene and all attached views so that
-        # z-values and visibility changes are immediately applied. On
-        # some viewport backends (OpenGL) the stacking/visibility can
-        # remain stale until an explicit update is requested; toggling
-        # visibility later effectively did this, which is why users saw
-        # the correct result after toggling. Do the explicit update here
-        # to ensure correct rendering on startup.
-        try:
-            # Update the QGraphicsScene
-            self.update()
-            # Update each view's viewport
-            for v in self.views():
-                try:
-                    if v.viewport():
-                        v.viewport().update()
-                    v.update()
-                except Exception:
-                    # Non-fatal - continue updating other views
-                    continue
-        except Exception:
-            pass
-
-    def _get_active_layer_item(self) -> Optional[LayerImageItem]:
-        """Return the currently selected layer item, falling back to top-most."""
-        layer_id = self._get_current_selected_layer_id()
-        if layer_id is not None:
-            item = self._layer_items.get(layer_id)
-            if item is not None:
-                return item
-
-        if self._layer_items:
-            try:
-                return max(
-                    self._layer_items.values(), key=lambda item: item.zValue()
-                )
-            except Exception:
-                return next(iter(self._layer_items.values()))
-        return None
-
     def _release_painter_for_device(self, device: Optional[QImage]):
         if device is not None and device is self._painter_target:
             self.stop_painter()
-
-    def dragEnterEvent(self, event: QDragEnterEvent):
-        if event.mimeData().hasUrls():
-            # Accept if any URL is a valid image (local file or http(s))
-            for url in event.mimeData().urls():
-                url_str = url.toString()
-                if url_str.lower().endswith(
-                    (".png", ".jpg", ".jpeg", ".bmp", ".gif")
-                ) or url_str.startswith("http"):
-                    event.acceptProposedAction()
-                    return
-            event.ignore()
-        else:
-            super().dragEnterEvent(event)
-
-    def dragMoveEvent(self, event: QDragMoveEvent):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-        else:
-            super().dragMoveEvent(event)
-
-    def dropEvent(self, event: QDropEvent):
-        mime = event.mimeData()
-        if hasattr(self, "logger"):
-            self.logger.debug(f"Drop mime types: {mime.formats()}")
-        handled = False
-        # Try raw image data (e.g. 'image/png')
-        for fmt in mime.formats():
-            if fmt.startswith("image/"):
-                data = mime.data(fmt)
-                try:
-                    # Validate data before opening
-                    if data.size() < 10:  # Minimum size check
-                        continue
-                    data_bytes = data.data()
-                    if not data_bytes or len(data_bytes) < 10:
-                        continue
-                    img = Image.open(io.BytesIO(data_bytes))
-                    # Verify the image can be loaded
-                    img.verify()
-                    # Reopen since verify() consumes the image
-                    img = Image.open(io.BytesIO(data_bytes))
-                    layer_id = self._add_image_to_undo()
-                    if self.application_settings.resize_on_paste:
-                        img = self._resize_image(img)
-                    self.current_active_image = img
-                    self.initialize_image(img)
-
-                    # Ensure image is persisted synchronously before commit
-                    # so that future undo transactions can capture it
-                    try:
-                        rgba_image = (
-                            img if img.mode == "RGBA" else img.convert("RGBA")
-                        )
-                        width, height = rgba_image.size
-                        raw_binary = (
-                            b"AIRAW1"
-                            + width.to_bytes(4, "big")
-                            + height.to_bytes(4, "big")
-                            + rgba_image.tobytes()
-                        )
-                        # Use the same layer_id for both persistence and undo
-                        self.update_drawing_pad_settings(
-                            layer_id=layer_id, image=raw_binary
-                        )
-                        self._pending_image_binary = raw_binary
-                        self._current_active_image_binary = raw_binary
-                    except Exception:
-                        pass
-
-                    self._commit_layer_history_transaction(layer_id, "image")
-                    # Ensure UI refresh for layers and views
-                    try:
-                        self.api.art.canvas.image_updated()
-                    except Exception:
-                        pass
-                    handled = True
-                    break
-                except Exception as e:
-                    if hasattr(self, "logger"):
-                        self.logger.debug(
-                            f"Failed to load image from {fmt}: {e}"
-                        )
-                    continue
-        if not handled and mime.hasUrls():
-            for url in mime.urls():
-                url_str = url.toString()
-                img = self._load_image_from_url_or_file(url_str)
-                if img is not None:
-                    layer_id = self._add_image_to_undo()
-                    if self.application_settings.resize_on_paste:
-                        img = self._resize_image(img)
-                    self.current_active_image = img
-                    # Ensure the scene displays the newly dropped image
-                    # immediately (matching other paste/drop flows).
-                    try:
-                        self.initialize_image(img)
-                    except Exception:
-                        # Fall back to setting current_active_image only
-                        pass
-
-                    # Ensure image is persisted synchronously before commit
-                    try:
-                        rgba_image = (
-                            img if img.mode == "RGBA" else img.convert("RGBA")
-                        )
-                        width, height = rgba_image.size
-                        raw_binary = (
-                            b"AIRAW1"
-                            + width.to_bytes(4, "big")
-                            + height.to_bytes(4, "big")
-                            + rgba_image.tobytes()
-                        )
-                        # Use the same layer_id for both persistence and undo
-                        self.update_drawing_pad_settings(
-                            layer_id=layer_id, image=raw_binary
-                        )
-                        self._pending_image_binary = raw_binary
-                        self._current_active_image_binary = raw_binary
-                    except Exception:
-                        pass
-
-                    self._commit_layer_history_transaction(layer_id, "image")
-                    try:
-                        self.api.art.canvas.image_updated()
-                    except Exception:
-                        pass
-                    handled = True
-                    break
-                # fallback: try as file path
-                path = url.toLocalFile()
-                if path:
-                    img = self._load_image_from_url_or_file(path)
-                    if img is not None:
-                        layer_id = self._add_image_to_undo()
-                        if self.application_settings.resize_on_paste:
-                            img = self._resize_image(img)
-                        self.current_active_image = img
-                        self.initialize_image(img)
-
-                        # Ensure image is persisted synchronously before commit
-                        try:
-                            rgba_image = (
-                                img
-                                if img.mode == "RGBA"
-                                else img.convert("RGBA")
-                            )
-                            width, height = rgba_image.size
-                            raw_binary = (
-                                b"AIRAW1"
-                                + width.to_bytes(4, "big")
-                                + height.to_bytes(4, "big")
-                                + rgba_image.tobytes()
-                            )
-                            # Use the same layer_id for both persistence and undo
-                            self.update_drawing_pad_settings(
-                                layer_id=layer_id, image=raw_binary
-                            )
-                            self._pending_image_binary = raw_binary
-                            self._current_active_image_binary = raw_binary
-                        except Exception:
-                            pass
-
-                        self._commit_layer_history_transaction(
-                            layer_id, "image"
-                        )
-                        try:
-                            self.api.art.canvas.image_updated()
-                        except Exception:
-                            pass
-                        handled = True
-                        break
-        if handled:
-            event.acceptProposedAction()
-        else:
-            super().dropEvent(event)
 
     def wheelEvent(self, event):
         if not hasattr(event, "delta"):
@@ -2358,138 +1388,6 @@ class CustomScene(
         elif self.settings_key == "drawing_pad_settings":
             self.update_drawing_pad_settings(**{key: value})
 
-    def _load_image_from_object(
-        self, image: Image, is_outpaint: bool = False, generated: bool = False
-    ):
-        self._add_image_to_scene(
-            is_outpaint=is_outpaint, image=image, generated=generated
-        )
-
-    def _load_image_from_url_or_file(
-        self, url_or_path: str
-    ) -> Optional[Image.Image]:
-        """Load an image from a local file or HTTP(S) URL."""
-        if url_or_path.startswith("http://") or url_or_path.startswith(
-            "https://"
-        ):
-            try:
-                resp = requests.get(url_or_path, timeout=10)
-                resp.raise_for_status()
-                return Image.open(io.BytesIO(resp.content)).convert("RGBA")
-            except Exception as e:
-                if hasattr(self, "logger"):
-                    self.logger.error(f"Failed to download image: {e}")
-                return None
-        elif url_or_path.startswith("file://"):
-            path = url_or_path[7:]
-            if os.path.exists(path):
-                try:
-                    return Image.open(path).convert("RGBA")
-                except Exception as e:
-                    if hasattr(self, "logger"):
-                        self.logger.error(f"Failed to open file image: {e}")
-            return None
-        else:
-            if os.path.exists(url_or_path):
-                try:
-                    return Image.open(url_or_path).convert("RGBA")
-                except Exception as e:
-                    if hasattr(self, "logger"):
-                        self.logger.error(f"Failed to open file image: {e}")
-            return None
-
-    def _paste_image_from_clipboard(self):
-        clipboard = QApplication.clipboard()
-        mime = clipboard.mimeData()
-        if hasattr(self, "logger"):
-            self.logger.debug(f"Clipboard mime types: {mime.formats()}")
-        # Try image data first
-        if mime.hasImage():
-            qimg = clipboard.image()
-            if not qimg.isNull():
-                buffer = QImage(qimg)
-                ptr = buffer.bits()
-                ptr.setsize(buffer.sizeInBytes())
-                img = Image.frombuffer(
-                    "RGBA",
-                    (buffer.width(), buffer.height()),
-                    bytes(ptr),
-                    "raw",
-                    "BGRA",
-                )
-                return img
-        # Try raw image data (e.g. 'image/png') with both .data() and bytes()
-        for fmt in mime.formats():
-            if fmt.startswith("image/"):
-                data = mime.data(fmt)
-                # Try PyQt6/PySide6 QByteArray .data() and bytes()
-                for get_bytes in (lambda d: d.data(), bytes):
-                    try:
-                        # Validate data before opening
-                        data_bytes = get_bytes(data)
-                        if not data_bytes or len(data_bytes) < 10:
-                            continue
-                        img = Image.open(io.BytesIO(data_bytes))
-                        # Verify the image can be loaded
-                        img.verify()
-                        # Reopen since verify() consumes the image
-                        img = Image.open(io.BytesIO(data_bytes))
-                        if hasattr(self, "logger"):
-                            self.logger.debug(
-                                f"Loaded image from clipboard mime {fmt} using {get_bytes.__name__}"
-                            )
-                        return img
-                    except Exception as e:
-                        if hasattr(self, "logger"):
-                            self.logger.error(
-                                f"Failed to load image from clipboard mime {fmt} using {get_bytes.__name__}: {e}"
-                            )
-        # Try URLs (e.g., from browser)
-        if mime.hasUrls():
-            for url in mime.urls():
-                url_str = url.toString()
-                img = self._load_image_from_url_or_file(url_str)
-                if img is not None:
-                    return img
-        # Try text (sometimes browsers put image URL as text)
-        if mime.hasText():
-            text = mime.text()
-            if (
-                text.startswith("http://")
-                or text.startswith("https://")
-                or text.startswith("file://")
-            ):
-                img = self._load_image_from_url_or_file(text)
-                if img is not None:
-                    return img
-        if hasattr(self, "logger"):
-            self.logger.warning("No image found in clipboard for paste.")
-        return None
-
-    def _copy_image(self, image: Image) -> Image:
-        return self._move_pixmap_to_clipboard(image)
-
-    def _move_pixmap_to_clipboard(self, image: Image) -> Image:
-        if image is None:
-            self.logger.warning("No image to copy to clipboard.")
-            return None
-        if not isinstance(image, Image.Image):
-            self.logger.warning("Invalid image type.")
-            return None
-        data = io.BytesIO()
-        image.save(data, format="png")
-        data = data.getvalue()
-        try:
-            subprocess.Popen(
-                ["xclip", "-selection", "clipboard", "-t", "image/png"],
-                stdin=subprocess.PIPE,
-            ).communicate(data)
-        except FileNotFoundError:
-            self.logger.error(
-                "xclip not found. Cannot copy image to clipboard."
-            )
-        return image
-
     @profile
     def _create_image(
         self,
@@ -2509,17 +1407,6 @@ class CustomScene(
         )
 
         self.api.art.canvas.image_updated()
-
-    def _resize_image(self, image: Image) -> Image:
-        if image is None:
-            return
-
-        max_size = (
-            self.application_settings.working_width,
-            self.application_settings.working_height,
-        )
-        image.thumbnail(max_size, PIL.Image.Resampling.BICUBIC)
-        return image
 
     @profile
     def _add_image_to_scene(
@@ -2762,130 +1649,8 @@ class CustomScene(
             pass
         self.update()
 
-    def _handle_outpaint(
-        self, outpaint_box_rect: Rect, outpainted_image: Image
-    ) -> Tuple[Image.Image, QPoint, QPoint]:
-        if self.current_active_image is None:
-            point = QPoint(outpaint_box_rect.x, outpaint_box_rect.y)
-            return outpainted_image, QPoint(0, 0), point
-
-        existing_image_copy = self.current_active_image.copy()
-        width = existing_image_copy.width
-        height = existing_image_copy.height
-
-        pivot_point = self.image_pivot_point
-        root_point = QPoint(0, 0)
-        current_image_position = QPoint(0, 0)
-
-        is_drawing_left = outpaint_box_rect.x < current_image_position.x()
-        is_drawing_right = outpaint_box_rect.x > current_image_position.x()
-        is_drawing_up = outpaint_box_rect.y < current_image_position.y()
-        is_drawing_down = outpaint_box_rect.y > current_image_position.y()
-
-        x_pos = outpaint_box_rect.x
-        y_pos = outpaint_box_rect.y
-        outpaint_width = outpaint_box_rect.width
-        outpaint_height = outpaint_box_rect.height
-
-        if is_drawing_right:
-            if x_pos + outpaint_width > width:
-                width = x_pos + outpaint_width
-
-        if is_drawing_down:
-            if y_pos + outpaint_height > height:
-                height = y_pos + outpaint_height
-
-        if is_drawing_up:
-            height += current_image_position.y()
-            root_point.setY(outpaint_box_rect.y)
-
-        if is_drawing_left:
-            width += current_image_position.x()
-            root_point.setX(outpaint_box_rect.x)
-
-        new_dimensions = (width, height)
-
-        new_image = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
-        new_image_a = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
-        new_image_b = Image.new("RGBA", new_dimensions, (0, 0, 0, 0))
-
-        image_root_point = QPoint(root_point.x(), root_point.y())
-        image_pivot_point = QPoint(pivot_point.x(), pivot_point.y())
-
-        new_image_a.paste(
-            outpainted_image,
-            (int(outpaint_box_rect.x), int(outpaint_box_rect.y())),
-        )
-        new_image_b.paste(
-            existing_image_copy,
-            (current_image_position.x(), current_image_position.y()),
-        )
-
-        mask_image = self.drawing_pad_mask
-        mask = mask_image.convert("L").point(lambda p: p > 128 and 255)
-        inverted_mask = Image.eval(mask, lambda p: 255 - p)
-        pos_x = outpaint_box_rect.x
-        pos_y = outpaint_box_rect.y
-        if pos_x < 0:
-            pos_x = 0
-        if pos_y < 0:
-            pos_y = 0
-        new_mask = Image.new("L", new_dimensions, 255)
-        new_mask.paste(inverted_mask, (pos_x, pos_y))
-        new_image_b = Image.composite(
-            new_image_b, Image.new("RGBA", new_image_b.size), new_mask
-        )
-
-        new_image = Image.alpha_composite(new_image, new_image_a)
-        new_image = Image.alpha_composite(new_image, new_image_b)
-
-        return new_image, image_root_point, image_pivot_point
-
     def _set_current_active_image(self, image: Image):
         self.initialize_image(image)
-
-    def _rotate_90_clockwise(self):
-        self.rotate_image(-90)
-
-    def _rotate_90_counterclockwise(self):
-        self.rotate_image(90)
-
-    def rotate_image(self, angle: float):
-        image = self.current_active_image
-        if image is not None:
-            layer_id = self._add_image_to_undo()
-            image = image.rotate(angle, expand=True)
-            self.current_active_image = image
-            self.initialize_image(image)
-            self._commit_layer_history_transaction(layer_id, "image")
-
-    def _clear_history(self):
-        self.undo_history = []
-        self.redo_history = []
-        self._history_transactions.clear()
-        self._structure_history_transaction = None
-        if self.api and hasattr(self.api, "art"):
-            self.api.art.canvas.clear_history()
-
-    def _cut_image(self, image: Image = None) -> Image:
-        image = self._copy_image(image)
-        if image is not None:
-            layer_id = self._add_image_to_undo()
-            self.delete_image()
-            self._commit_layer_history_transaction(layer_id, "image")
-
-    def _add_image_to_undo(
-        self,
-        layer_id: Optional[int] = None,
-        change_type: str = "image",
-    ) -> Optional[int]:
-        target_layer_id = layer_id
-        if target_layer_id is None:
-            target_layer_id = self._get_current_selected_layer_id()
-        elif not isinstance(target_layer_id, int):
-            target_layer_id = self._get_current_selected_layer_id()
-        self._begin_layer_history_transaction(target_layer_id, change_type)
-        return target_layer_id
 
     def _handle_left_mouse_press(self, event):
         try:
@@ -2938,70 +1703,37 @@ class CustomScene(
         image = Image.open(image_path)
         return image
 
-    def _apply_filter(self, _filter_object: Any):
-        if self.settings_key != "drawing_pad_settings":
-            return
-        try:
-            # Preserve undo state
-            layer_id = self._add_image_to_undo()
-
-            # Ensure we have an image to operate on
-            current = self.current_active_image
-            if current is None:
-                return
-
-            # Apply the filter (filter_object.filter returns a PIL Image)
-            try:
-                filtered_image = _filter_object.filter(current)
-            except Exception:
-                # If the filter fails, log and abort applying
-                if hasattr(self, "logger") and self.logger:
-                    self.logger.exception("Filter application failed")
-                return
-
-            # Replace the active image and persist
-            self.previewing_filter = False
-            self.image_backup = None
-            self._load_image_from_object(image=filtered_image)
-
-            # Force persistence and history commit
-            self._flush_pending_image()
-            self._commit_layer_history_transaction(layer_id, "image")
-        except Exception:
-            if hasattr(self, "logger") and self.logger:
-                self.logger.exception("Unexpected error applying filter")
-
-    def _cancel_filter(self) -> Image:
-        image = None
-        if self.image_backup:
-            image = self.image_backup.copy()
-            self.image_backup = None
-        self.previewing_filter = False
-        return image
-
-    def _preview_filter(self, image: Image, filter_object: Any):
-        if self.settings_key != "drawing_pad_settings":
-            return
-        if not image:
-            return
-        if not self.previewing_filter:
-            self.image_backup = image.copy()
-            self.previewing_filter = True
-        else:
-            image = self.image_backup.copy()
-        filtered_image = filter_object.filter(image)
-        return filtered_image
-
     def update_image_position(
         self,
         canvas_offset,
         original_item_positions: Dict[str, QPointF] = None,
     ):
+        from airunner.components.art.utils.canvas_position_manager import (
+            CanvasPositionManager,
+            ViewState,
+        )
+
         original_item_positions = (
             self.original_item_positions
             if original_item_positions is None
             else original_item_positions
         )
+
+        # Get view for grid compensation offset
+        view = self.views()[0] if self.views() else None
+        grid_compensation = (
+            getattr(view, "_grid_compensation_offset", QPointF(0, 0))
+            if view
+            else QPointF(0, 0)
+        )
+
+        # Create position manager and view state
+        manager = CanvasPositionManager()
+        view_state = ViewState(
+            canvas_offset=canvas_offset,
+            grid_compensation=grid_compensation,
+        )
+
         # Update the old drawing pad item if it exists
         if self.item:
             if self.item not in original_item_positions:
@@ -3016,8 +1748,10 @@ class CustomScene(
 
             original_pos = original_item_positions[self.item]
 
-            new_x = original_pos.x() - canvas_offset.x()
-            new_y = original_pos.y() - canvas_offset.y()
+            # Use CanvasPositionManager for coordinate conversion
+            display_pos = manager.absolute_to_display(original_pos, view_state)
+            new_x = display_pos.x()
+            new_y = display_pos.y()
 
             try:
                 current_pos = self.item.pos()
@@ -3041,6 +1775,9 @@ class CustomScene(
         for layer_id, layer_item in layer_items_copy:
             try:
                 if layer_item not in original_item_positions:
+                    self.logger.info(
+                        f"[UPDATE_POS] Layer {layer_id} item (id={id(layer_item)}) NOT in original_item_positions, reading from settings"
+                    )
                     try:
                         drawing_pad_settings = (
                             self._get_layer_specific_settings(
@@ -3057,13 +1794,28 @@ class CustomScene(
                         original_item_positions[layer_item] = QPointF(
                             abs_x, abs_y
                         )
+                        self.logger.info(
+                            f"[UPDATE_POS] Layer {layer_id}: read from settings x={abs_x}, y={abs_y}"
+                        )
                     except Exception:
                         current_pos = layer_item.pos()
                         original_item_positions[layer_item] = current_pos
+                else:
+                    self.logger.info(
+                        f"[UPDATE_POS] Layer {layer_id} item (id={id(layer_item)}) FOUND in original_item_positions"
+                    )
 
                 original_pos = original_item_positions[layer_item]
-                new_x = original_pos.x() - canvas_offset.x()
-                new_y = original_pos.y() - canvas_offset.y()
+                self.logger.info(
+                    f"[UPDATE_POS] Layer {layer_id}: using position x={original_pos.x()}, y={original_pos.y()}"
+                )
+
+                # Use CanvasPositionManager for coordinate conversion
+                display_pos = manager.absolute_to_display(
+                    original_pos, view_state
+                )
+                new_x = display_pos.x()
+                new_y = display_pos.y()
 
                 current_pos = layer_item.pos()
                 if (
