@@ -23,6 +23,7 @@ class ToolCategory(Enum):
     RAG = "rag"
     MOOD = "mood"
     ANALYSIS = "analysis"
+    WORKFLOW = "workflow"
 
 
 @dataclass
