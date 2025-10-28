@@ -1,5 +1,6 @@
 """Mixin providing utility and chatbot management operations."""
 
+import os
 from typing import Optional
 from airunner.components.data.session_manager import session_scope
 from airunner.components.llm.data.chatbot import Chatbot
@@ -47,6 +48,17 @@ from airunner.components.application.gui.windows.main.settings_mixin_shared_inst
 
 class UtilityAndChatbotMixin:
     """Mixin for utility functions and chatbot management."""
+
+    @property
+    def user_web_dir(self) -> str:
+        """Return the user code directory.
+
+        Returns:
+            Path to user's web/code directory.
+        """
+        return os.path.join(
+            os.path.expanduser(self.path_settings.base_path), "code"
+        )
 
     @staticmethod
     def create_chatbot(chatbot_name: str) -> Chatbot:
