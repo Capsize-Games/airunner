@@ -205,6 +205,11 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
     def _initialize_knowledge_system(self):
         """Initialize the automatic knowledge extraction system."""
+        # Skip if knowledge system is disabled (e.g., in headless mode)
+        if os.environ.get("AIRUNNER_KNOWLEDGE_ON", "1") == "0":
+            logging.info("Knowledge system disabled")
+            return
+
         try:
             from airunner.components.knowledge import (
                 initialize_knowledge_system,
@@ -509,22 +514,31 @@ class App(MediatorMixin, SettingsMixin, QObject):
         logging.info("Press Ctrl+C to stop")
 
         # Set up signal handlers for graceful shutdown
+        shutdown_requested = [
+            False
+        ]  # Use list to allow modification in nested function
+
         def signal_handler(signum, frame):
-            logging.info("Shutdown signal received")
-            self.cleanup()
-            sys.exit(0)
+            if not shutdown_requested[0]:
+                shutdown_requested[0] = True
+                logging.info("Shutdown signal received")
+                self.cleanup()
+                logging.info("Shutdown complete")
+                sys.exit(0)
 
         sig.signal(sig.SIGINT, signal_handler)
         sig.signal(sig.SIGTERM, signal_handler)
 
         try:
             # Keep the main thread alive while server runs in background
-            while self.is_running:
-                time.sleep(1)
+            while self.is_running and not shutdown_requested[0]:
+                time.sleep(0.5)
         except KeyboardInterrupt:
             logging.info("Interrupted by user")
+            shutdown_requested[0] = True
         finally:
-            self.cleanup()
+            if not shutdown_requested[0]:
+                self.cleanup()
 
     def _post_splash_startup(self):
         self.show_main_application(self.app)
@@ -695,14 +709,24 @@ class App(MediatorMixin, SettingsMixin, QObject):
         logging.info("Cleaning up App resources...")
 
         try:
+            # Mark as not running first to stop loops
+            self.is_running = False
+
             # Stop HTTP server if running
-            self.quit()
+            if hasattr(self, "api_server_thread") and self.api_server_thread:
+                logging.info("Stopping API server...")
+                try:
+                    self.api_server_thread.shutdown()
+                    self.api_server_thread.join(timeout=2.0)
+                    logging.info("API server stopped")
+                except Exception as e:
+                    logging.warning(f"Error stopping API server: {e}")
 
             # Emit shutdown signal for components to cleanup
-            self.emit_signal(SignalCode.APPLICATION_SHUTDOWN_SIGNAL, {})
-
-            # Mark as not running
-            self.is_running = False
+            try:
+                self.emit_signal(SignalCode.APPLICATION_SHUTDOWN_SIGNAL, {})
+            except Exception as e:
+                logging.warning(f"Error emitting shutdown signal: {e}")
 
             logging.info("App cleanup complete")
 

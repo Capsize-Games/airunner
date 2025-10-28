@@ -94,6 +94,9 @@ def main():
     os.environ.setdefault("AIRUNNER_SD_ON", "0")
     os.environ.setdefault("AIRUNNER_CN_ON", "0")
 
+    # Disable knowledge system in headless mode (has GUI dependencies)
+    os.environ.setdefault("AIRUNNER_KNOWLEDGE_ON", "0")
+
     logging.info("=" * 60)
     logging.info("AI Runner Headless Server")
     logging.info("=" * 60)
