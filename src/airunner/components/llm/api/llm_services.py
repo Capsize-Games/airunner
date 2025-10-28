@@ -59,7 +59,12 @@ class LLMAPIService(APIServiceBase):
 
             # Register pending request if callback provided
             if callback:
-                self.register_pending_request(request_id, callback)
+                from airunner.utils.application.signal_mediator import (
+                    SignalMediator,
+                )
+
+                mediator = SignalMediator()
+                mediator.register_pending_request(request_id, callback)
 
         self.emit_signal(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, data)
 
