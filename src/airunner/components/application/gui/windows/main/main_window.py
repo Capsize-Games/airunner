@@ -217,6 +217,7 @@ class MainWindow(
         ("save", "actionSave_As"),
         ("image", "art_editor_button"),
         ("file-text", "document_editor_button"),
+        ("calendar", "calendar_button"),
         ("codesandbox", "workflow_editor_button"),
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
@@ -651,6 +652,7 @@ class MainWindow(
             "home_button": self.ui.home_tab,
             "art_editor_button": self.ui.art_tab,
             "document_editor_button": self.ui.document_editor_tab,
+            "calendar_button": self.ui.calendar_tab,
             "workflow_editor_button": self.ui.agent_workflow_tab,
             "visualizer_button": self.ui.visualizer_tab,
             "video_button": self.ui.video_tab,
@@ -675,6 +677,7 @@ class MainWindow(
             1: "art_editor_button",
             2: "workflow_editor_button",
             3: "document_editor_button",
+            4: "calendar_button",
         }
 
         if saved_index in buttons:
@@ -709,6 +712,10 @@ class MainWindow(
     @Slot(bool)
     def on_document_editor_button_toggled(self, val: bool):
         self._set_current_button_and_tab("document_editor_button")
+
+    @Slot(bool)
+    def on_calendar_button_toggled(self, val: bool):
+        self._set_current_button_and_tab("calendar_button")
 
     @Slot(bool)
     def on_workflow_editor_button_toggled(self, val: bool):

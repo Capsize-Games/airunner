@@ -304,6 +304,53 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="calendar_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Calendar</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/calendar.svg</normaloff>:/light/icons/feather/light/calendar.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="visualizer_button">
             <property name="minimumSize">
              <size>
@@ -737,6 +784,28 @@
                </property>
                <item row="0" column="0">
                 <widget class="DocumentEditorContainerWidget" name="widget" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="calendar_tab">
+              <attribute name="title">
+               <string>Calendar</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_calendar">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="CalendarTab" name="calendar_widget" native="true"/>
                </item>
               </layout>
              </widget>
@@ -1402,6 +1471,12 @@
    <class>DocumentEditorContainerWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/document_editor/gui/widgets/document_editor_container_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CalendarTab</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/calendar/gui/calendar_tab</header>
    <container>1</container>
   </customwidget>
   <customwidget>
