@@ -234,6 +234,7 @@ setup(
             "airunner-service=airunner.bin.airunner_service:main",
             "airunner-quality-report=airunner.bin.code_quality_report:main",
             "airunner-remove-unused-imports=airunner.bin.remove_unused_imports:main",
+            "airunner-migrate-knowledge=airunner.bin.airunner_migrate_knowledge:main",
         ],
     },
 )
