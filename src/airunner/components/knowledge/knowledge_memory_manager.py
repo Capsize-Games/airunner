@@ -9,7 +9,7 @@ Manages the agent's comprehensive memory system including:
 """
 
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 from datetime import datetime, timedelta
 
 from langchain_core.vectorstores import InMemoryVectorStore
@@ -126,6 +126,9 @@ class KnowledgeMemoryManager:
             session.commit()
             session.refresh(fact)
 
+            # Detach from session to prevent DetachedInstanceError
+            session.expunge(fact)
+
             self.logger.info(f"Added fact: {text[:50]}...")
 
             # Add to vector store
@@ -222,19 +225,21 @@ class KnowledgeMemoryManager:
 
     def get_all_facts(
         self,
-        category: Optional[str] = None,
+        category: Optional[Union[str, List[str]]] = None,
         tags: Optional[List[str]] = None,
         enabled_only: bool = False,
         verified_only: bool = False,
+        source: Optional[Union[str, List[str]]] = None,
     ) -> List[KnowledgeFact]:
         """
         Get all facts with optional filtering.
 
         Args:
-            category: Filter by category
+            category: Filter by category (single string or list of categories)
             tags: Filter by tags (any match)
             enabled_only: Only get enabled facts
             verified_only: Only get verified facts
+            source: Filter by source (single string or list of sources)
 
         Returns:
             List of facts
@@ -243,7 +248,17 @@ class KnowledgeMemoryManager:
             query = session.query(KnowledgeFact)
 
             if category:
-                query = query.filter_by(category=category)
+                if isinstance(category, str):
+                    query = query.filter_by(category=category)
+                elif isinstance(category, list):
+                    query = query.filter(KnowledgeFact.category.in_(category))
+
+            if source:
+                if isinstance(source, str):
+                    query = query.filter_by(source=source)
+                elif isinstance(source, list):
+                    query = query.filter(KnowledgeFact.source.in_(source))
+
             if enabled_only:
                 query = query.filter_by(enabled=True)
             if verified_only:
@@ -255,7 +270,74 @@ class KnowledgeMemoryManager:
                     query = query.filter(KnowledgeFact.tags.contains(tag))
 
             facts = query.order_by(KnowledgeFact.created_at.desc()).all()
+
+            # Detach from session to prevent DetachedInstanceError
+            for fact in facts:
+                session.expunge(fact)
+
             return facts
+
+    def get_facts_by_category_type(
+        self,
+        is_user: bool = False,
+        is_world: bool = False,
+        is_temporal: bool = False,
+        is_entity: bool = False,
+        enabled_only: bool = True,
+    ) -> List[KnowledgeFact]:
+        """
+        Get facts by category type (user, world, temporal, entity).
+
+        Args:
+            is_user: Get user-specific facts
+            is_world: Get world knowledge facts
+            is_temporal: Get temporal facts
+            is_entity: Get entity facts
+            enabled_only: Only get enabled facts
+
+        Returns:
+            List of facts matching the category type
+        """
+        from airunner.components.knowledge.enums import KnowledgeFactCategory
+
+        categories = []
+
+        if is_user:
+            categories.extend(
+                [
+                    cat.value
+                    for cat in KnowledgeFactCategory
+                    if cat.is_user_category
+                ]
+            )
+        if is_world:
+            categories.extend(
+                [
+                    cat.value
+                    for cat in KnowledgeFactCategory
+                    if cat.is_world_category
+                ]
+            )
+        if is_temporal:
+            categories.extend(
+                [
+                    cat.value
+                    for cat in KnowledgeFactCategory
+                    if cat.is_temporal_category
+                ]
+            )
+        if is_entity:
+            categories.extend(
+                [
+                    cat.value
+                    for cat in KnowledgeFactCategory
+                    if cat.is_entity_category
+                ]
+            )
+
+        return self.get_all_facts(
+            category=categories, enabled_only=enabled_only
+        )
 
     # ========================================================================
     # RAG-based Memory Recall
