@@ -194,32 +194,54 @@ class App(MediatorMixin, SettingsMixin, QObject):
             )
 
     def _run_knowledge_migration_if_needed(self):
-        """Run one-time migration from JSON to database if not already done."""
-        try:
-            # Check if migration already completed
-            if self.application_settings.knowledge_migrated:
-                logging.debug("Knowledge migration already completed")
-                return
+        """Run one-time migration from JSON to database if not already done.
 
-            # Check if legacy JSON file exists
+        Uses database-level locking to prevent race conditions when multiple
+        instances start simultaneously.
+        """
+        try:
             from pathlib import Path
             from airunner.settings import AIRUNNER_USER_DATA_PATH
+            from airunner.components.data.session_manager import session_scope
 
-            knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"
-            json_path = knowledge_dir / "user_facts.json"
-
-            if not json_path.exists():
-                # No legacy data to migrate
-                logging.info(
-                    "No legacy knowledge data found, skipping migration"
+            # Use database transaction to check and set migration flag atomically
+            with session_scope() as session:
+                # Lock the settings row to prevent concurrent migrations
+                settings = (
+                    session.query(ApplicationSettings)
+                    .filter_by(id=1)
+                    .with_for_update()  # Database-level lock
+                    .first()
                 )
-                self._mark_migration_complete()
-                return
 
-            # Run migration
-            logging.info(
-                "Running one-time knowledge migration from JSON to database..."
-            )
+                if not settings:
+                    logging.error("Application settings not found")
+                    return
+
+                # Check if migration already completed (within transaction)
+                if settings.knowledge_migrated:
+                    logging.debug("Knowledge migration already completed")
+                    return
+
+                # Check if legacy JSON file exists
+                knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"
+                json_path = knowledge_dir / "user_facts.json"
+
+                if not json_path.exists():
+                    # No legacy data to migrate
+                    logging.info(
+                        "No legacy knowledge data found, skipping migration"
+                    )
+                    settings.knowledge_migrated = True
+                    session.commit()
+                    return
+
+                # Run migration (outside transaction to avoid long locks)
+                logging.info(
+                    "Running one-time knowledge migration from JSON to database..."
+                )
+
+            # Migration runs outside the locked transaction
             from airunner.bin.airunner_migrate_knowledge import (
                 KnowledgeMigrator,
             )
@@ -227,21 +249,26 @@ class App(MediatorMixin, SettingsMixin, QObject):
             migrator = KnowledgeMigrator(json_path=json_path)
             stats = migrator.migrate_all(dry_run=False, skip_backup=False)
 
+            # Only mark complete if migration was successful
             if stats["errors"] > 0:
-                logging.warning(
-                    f"Knowledge migration completed with {stats['errors']} errors"
+                logging.error(
+                    f"Knowledge migration completed with {stats['errors']} errors. "
+                    f"Migration NOT marked complete - will retry on next startup."
                 )
-            else:
-                logging.info(
-                    f"Knowledge migration successful: {stats['migrated']} facts migrated"
-                )
+                return
 
-            # Mark migration as complete
+            logging.info(
+                f"Knowledge migration successful: {stats['migrated']} facts migrated"
+            )
+
+            # Mark migration as complete (only if no errors)
             self._mark_migration_complete()
 
         except Exception as e:
             logging.error(
-                f"Failed to run knowledge migration: {e}", exc_info=True
+                f"Failed to run knowledge migration: {e}. "
+                f"Migration NOT marked complete - will retry on next startup.",
+                exc_info=True,
             )
 
     def _mark_migration_complete(self):

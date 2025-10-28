@@ -5,8 +5,6 @@ import json
 import tempfile
 import shutil
 from pathlib import Path
-from datetime import datetime
-from unittest.mock import patch, MagicMock
 
 from airunner.bin.airunner_migrate_knowledge import (
     KnowledgeMigrator,
