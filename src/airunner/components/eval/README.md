@@ -340,17 +340,142 @@ src/airunner/components/eval/
     └── test_real_eval.py    # Real LLM-as-judge tests
 ```
 
+### Standard Benchmark Datasets
+
+The framework now includes industry-standard benchmark datasets for comprehensive evaluation:
+
+#### GSM8K (Grade School Math)
+
+8,000+ grade school math word problems requiring multi-step reasoning.
+
+```python
+from airunner.components.eval.benchmark_datasets import load_gsm8k
+
+# Load 100 random test samples
+samples = load_gsm8k(num_samples=100, split="test", seed=42)
+
+for example in samples:
+    print(f"Problem: {example.prompt}")
+    print(f"Answer: {example.answer}")
+```
+
+**Performance Baselines**:
+- GPT-3 (175B): ~17% accuracy
+- GPT-3.5-turbo: ~57% accuracy
+- GPT-4: ~92% accuracy
+- Qwen2.5-7B-Instruct: ~60-65% expected
+
+#### MATH (Competition Mathematics)
+
+12,500 competition-level math problems from AMC, AIME, and other contests.
+
+```python
+from airunner.components.eval.benchmark_datasets import load_math
+
+# Load Level 1 problems (easiest)
+easy_samples = load_math(num_samples=50, level="Level 1", seed=42)
+
+# Load Algebra problems
+algebra_samples = load_math(num_samples=50, subject="Algebra", seed=42)
+```
+
+**Subjects**: Algebra, Counting & Probability, Geometry, Intermediate Algebra, Number Theory, Prealgebra, Precalculus
+
+**Performance Baselines**:
+- GPT-3 (175B): ~5% accuracy
+- GPT-4: ~42% accuracy
+- Minerva 540B: ~50% accuracy
+- Qwen2.5-7B-Instruct: ~15-25% expected (varies by level)
+
+#### HumanEval (Code Generation)
+
+164 hand-written programming problems with function signatures and test cases.
+
+```python
+from airunner.components.eval.benchmark_datasets import load_humaneval
+
+# Load 20 random problems
+samples = load_humaneval(num_samples=20, seed=42)
+```
+
+**Performance Baselines** (pass@1):
+- GPT-3 (175B): ~0% accuracy
+- GPT-3.5-turbo: ~48% accuracy
+- GPT-4: ~67% accuracy
+- Qwen2.5-7B-Instruct: ~30-40% expected
+
+#### Running Benchmark Tests
+
+```bash
+# Run all benchmark tests
+pytest -v -m benchmark
+
+# Run only GSM8K tests
+pytest -v src/airunner/components/eval/tests/test_benchmark_eval.py::TestGSM8K
+
+# Run only MATH tests
+pytest -v src/airunner/components/eval/tests/test_benchmark_eval.py::TestMATH
+
+# Run only HumanEval tests
+pytest -v src/airunner/components/eval/tests/test_benchmark_eval.py::TestHumanEval -m code
+
+# Skip slow batch tests
+pytest -v -m "benchmark and not slow"
+```
+
+#### Benchmark Test Structure
+
+```python
+import pytest
+from airunner.components.eval.benchmark_datasets import load_gsm8k
+from airunner.components.eval.evaluators import create_correctness_evaluator
+
+@pytest.mark.benchmark
+@pytest.mark.llm_required
+def test_gsm8k_sample(airunner_client):
+    """Test with GSM8K dataset."""
+    samples = load_gsm8k(num_samples=5, seed=42)
+    evaluator = create_correctness_evaluator(airunner_client)
+    
+    for example in samples:
+        # Generate (use temp=0.0 for deterministic math)
+        response = airunner_client.generate(
+            example.prompt, 
+            temperature=0.0,
+            max_tokens=1000
+        )
+        output = response["text"]
+        
+        # Evaluate
+        result = evaluator(
+            inputs=example.prompt,
+            outputs=output,
+            reference_outputs=example.reference_output,
+        )
+        
+        # Assert
+        assert result["score"] >= 0.6, f"Failed: {result['reasoning']}"
+```
+
 ### Future Enhancements
 
+- [x] Standard benchmark datasets (GSM8K, MATH, HumanEval)
 - [ ] Add more evaluation criteria (coherence, factuality, safety)
 - [ ] Support for multi-turn conversations
 - [ ] Benchmark tracking over time
 - [ ] Integration with langsmith/openevals
 - [ ] Custom dataset upload
 - [ ] Evaluation result visualization
+- [ ] More benchmarks (MMLU, BBH, TruthfulQA, HellaSwag)
+- [ ] Code execution and testing for HumanEval
+- [ ] Automated regression testing in CI/CD
 
 ### References
 
 - **Pattern**: Based on openevals LLM-as-judge pattern
 - **Architecture**: AI Runner signal-based decoupled design
 - **Testing**: Pytest with custom fixtures and marks
+- **GSM8K**: [Training Verifiers to Solve Math Word Problems](https://arxiv.org/abs/2110.14168)
+- **MATH**: [Measuring Mathematical Problem Solving](https://github.com/hendrycks/math)
+- **HumanEval**: [Evaluating Large Language Models Trained on Code](https://arxiv.org/abs/2107.03374)
+- **Math Evaluation Harness**: [Comprehensive math benchmark suite](https://github.com/ZubinGou/math-evaluation-harness)
