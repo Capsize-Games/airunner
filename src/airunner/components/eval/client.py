@@ -149,7 +149,13 @@ class AIRunnerClient:
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+
+            # Map 'message' to 'text' for backwards compatibility
+            if "message" in data and "text" not in data:
+                data["text"] = data["message"]
+
+            return data
         except requests.RequestException as e:
             raise AIRunnerClientError(f"Generate request failed: {e}")
 
