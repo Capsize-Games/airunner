@@ -292,8 +292,8 @@ class MainWindow(
             SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL: self.on_status_error_signal,
         }
-        self.logger.debug("Starting AI Runnner")
         super().__init__()
+        self.logger.debug("Starting AI Runnner")
         enable_wayland_window_decorations(self)
         self.update_application_settings(
             sd_enabled=False,

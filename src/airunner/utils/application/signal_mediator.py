@@ -288,19 +288,56 @@ class SignalMediator(metaclass=SingletonMeta):
 
         # Check if this is a response to a pending request
         request_id = data.get("request_id")
+
+        # DEBUG: Log request correlation attempts
+        if request_id:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.debug(
+                f"[SignalMediator] Signal {code} with request_id={request_id}"
+            )
+            logger.debug(
+                f"[SignalMediator] Pending requests: {list(self._pending_requests.keys())}"
+            )
+            logger.debug(
+                f"[SignalMediator] Callbacks: {list(self._request_callbacks.keys())}"
+            )
+            logger.debug(
+                f"[SignalMediator] Match check: {request_id in self._pending_requests}"
+            )
+
         if request_id and request_id in self._pending_requests:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"[SignalMediator] ROUTING response for request_id={request_id}"
+            )
+
             # Route response to pending request queue
             with self._request_lock:
                 if request_id in self._pending_requests:
                     self._pending_requests[request_id].put(data)
+                    logger.info(
+                        f"[SignalMediator] Added to queue for {request_id}"
+                    )
 
             # Also call registered callback if exists
             with self._request_lock:
                 if request_id in self._request_callbacks:
                     try:
+                        logger.info(
+                            f"[SignalMediator] Calling callback for {request_id}"
+                        )
                         self._request_callbacks[request_id](data)
+                        logger.info(
+                            f"[SignalMediator] Callback completed for {request_id}"
+                        )
                     except Exception as e:
-                        print(f"Error in request callback: {e}")
+                        logger.error(
+                            f"Error in request callback: {e}", exc_info=True
+                        )
 
         if self.backend:
             # Delegate emission to the custom backend
