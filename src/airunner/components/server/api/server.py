@@ -213,12 +213,27 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             """Callback for streaming responses."""
             response = data.get("response")
             if response:
+                # Convert action enum to string for JSON serialization
+                action_str = getattr(response, "action", None)
+                if action_str is not None:
+                    action_str = (
+                        str(action_str.value)
+                        if hasattr(action_str, "value")
+                        else str(action_str)
+                    )
+                else:
+                    action_str = (
+                        str(action.value)
+                        if hasattr(action, "value")
+                        else str(action)
+                    )
+
                 response_data = {
                     "message": response.message,
                     "is_first_message": response.is_first_message,
                     "is_end_of_message": response.is_end_of_message,
                     "sequence_number": getattr(response, "sequence_number", 0),
-                    "action": getattr(response, "action", str(action)),
+                    "action": action_str,
                 }
                 self.wfile.write(
                     json.dumps(response_data).encode("utf-8") + b"\n"
@@ -270,11 +285,44 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         def collect_callback(data: dict):
             """Callback to collect response chunks."""
+            import logging
+
+            logger = logging.getLogger(__name__)
+            print(
+                f"[HTTP Callback {id(collect_callback)}] CALLED with data keys: {list(data.keys())}"
+            )
             response = data.get("response")
+            print(
+                f"[HTTP Callback] Response type: {type(response)}, is_end: {response.is_end_of_message if response else None}"
+            )
+            logger.info(
+                f"[HTTP Callback] Received response: message_len={len(response.message) if response else 0}, is_end={response.is_end_of_message if response else None}"
+            )
             if response:
                 complete_message.append(response.message)
+                print(
+                    f"[HTTP Callback] Complete message so far: {len(complete_message)} chunks"
+                )
                 if response.is_end_of_message:
+                    print(
+                        f"[HTTP Callback] END OF MESSAGE - setting event {id(complete_event)}"
+                    )
+                    logger.info(
+                        f"[HTTP Callback] End of message detected, setting event"
+                    )
                     complete_event.set()
+                    print(
+                        f"[HTTP Callback] Event set: {complete_event.is_set()}"
+                    )
+                else:
+                    logger.debug(
+                        f"[HTTP Callback] Not end yet, waiting for more..."
+                    )
+
+        print(
+            f"[HTTP Server] Registering callback {id(collect_callback)} for request {request_id}"
+        )
+        print(f"[HTTP Server] Event object: {id(complete_event)}")
 
         # Send LLM request with request_id and callback
         api = get_api()
@@ -284,6 +332,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             llm_request=llm_request,
             request_id=request_id,
             callback=collect_callback,
+        )
+
+        print(
+            f"[HTTP Server] Waiting for event {id(complete_event)} with 120s timeout..."
         )
 
         # Wait for completion (with timeout)

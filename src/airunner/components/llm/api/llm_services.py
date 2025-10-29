@@ -122,6 +122,8 @@ class LLMAPIService(APIServiceBase):
         # )
 
     def send_llm_text_streamed_signal(self, response: LLMResponse):
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}
-        )
+        # Include request_id at top level for SignalMediator correlation
+        data = {"response": response}
+        if response.request_id:
+            data["request_id"] = response.request_id
+        self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)
