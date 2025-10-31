@@ -128,30 +128,12 @@ class ChatHuggingFaceLocal(BaseChatModel):
             self.use_mistral_native = True
             return
 
-        # Check for models with good JSON output capability
-        json_capable_models = [
-            "qwen2.5",
-            "qwen2",
-            "llama-3.1",
-            "llama-3.2",
-            "phi-3",
-            "gemma-2",
-            "deepseek",
-        ]
-
-        if any(model in model_path_lower for model in json_capable_models):
-            self.tool_calling_mode = "json"
-            self.use_json_mode = True
-            print(
-                f"✓ Structured JSON tool calling ENABLED for {self.model_path}"
-            )
-            print(f"  Model supports reliable JSON output for tool calls")
-            return
-
-        # Fallback to ReAct pattern
+        # For all other models, use ReAct pattern
+        # LangChain's standard tool calling via bind_tools() works for most models
+        # including Qwen, Llama, etc. - no need for custom JSON parsing
         self.tool_calling_mode = "react"
         print(
-            f"ℹ Using ReAct pattern for tool calling (model: {self.model_path})"
+            f"ℹ Using LangChain standard tool calling (model: {self.model_path})"
         )
 
     @property
@@ -470,8 +452,10 @@ class ChatHuggingFaceLocal(BaseChatModel):
 
         debug_msg = f"""
 {'='*70}
-[ADAPTER DEBUG] Generation Parameters:
-  max_new_tokens: {generation_kwargs['max_new_tokens']}
+[ADAPTER STREAM DEBUG] Generation Parameters:
+  max_new_tokens FROM KWARGS: {kwargs.get('max_new_tokens', 'NOT SET')}
+  max_new_tokens FALLBACK: {self.max_new_tokens}
+  max_new_tokens FINAL: {generation_kwargs['max_new_tokens']}
   temperature: {generation_kwargs['temperature']}
   top_p: {generation_kwargs['top_p']}
   top_k: {generation_kwargs['top_k']}
@@ -480,6 +464,7 @@ class ChatHuggingFaceLocal(BaseChatModel):
   Input tokens: {inputs['input_ids'].shape[1] if 'input_ids' in inputs else 'unknown'}
   eos_token_id: {eos_token_id}
   pad_token_id: {pad_token_id}
+  ALL KWARGS KEYS: {list(kwargs.keys())}
 {'='*70}
 """
         sys.stderr.write(debug_msg)

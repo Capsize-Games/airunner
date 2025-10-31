@@ -252,6 +252,18 @@ class GenerationMixin:
 
             # Prepare generation kwargs from LLMRequest
             generation_kwargs = llm_request.to_dict() if llm_request else {}
+            print(
+                f"[GENERATION MIXIN DEBUG] llm_request.max_new_tokens={llm_request.max_new_tokens if llm_request else 'NO REQUEST'}",
+                flush=True,
+            )
+            print(
+                f"[GENERATION MIXIN DEBUG] generation_kwargs keys: {list(generation_kwargs.keys())}",
+                flush=True,
+            )
+            print(
+                f"[GENERATION MIXIN DEBUG] generation_kwargs.get('max_new_tokens')={generation_kwargs.get('max_new_tokens', 'NOT SET')}",
+                flush=True,
+            )
             # Remove non-generation parameters
             for key in [
                 "do_tts_reply",
@@ -261,6 +273,11 @@ class GenerationMixin:
                 "role",
             ]:
                 generation_kwargs.pop(key, None)
+
+            print(
+                f"[GENERATION MIXIN DEBUG] After cleanup, generation_kwargs.get('max_new_tokens')={generation_kwargs.get('max_new_tokens', 'NOT SET')}",
+                flush=True,
+            )
 
             result_messages = []
             for message in self._workflow_manager.stream(

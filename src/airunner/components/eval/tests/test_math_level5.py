@@ -9,6 +9,8 @@ import logging
 import pytest
 import sys
 import time
+from pathlib import Path
+from typing import Dict, Any
 from airunner.components.eval.benchmark_datasets import (
     extract_numeric_answer,
     normalize_answer,
@@ -36,15 +38,17 @@ def _flush_print(*args, **kwargs):
 # Override module-level print to flush by default
 print = _flush_print
 
+# Mark ALL tests in this module with longer timeout (300s = 5 minutes)
+# MATH Level 5 problems with tools can take 60-120 seconds per problem
 pytestmark = [
     pytest.mark.benchmark,
-    pytest.mark.timeout(0),  # Disable timeout for long tests
+    pytest.mark.timeout(300),  # 5 minutes for tool-based generation
 ]
 
 
 @pytest.mark.benchmark
 class TestMATHLevel5:
-    """MATH Level 5 (hardest) problems - Agent-based solving."""
+    """Test MATH Level 5 (hardest problems) with baseline and agent approaches."""
 
     @pytest.fixture(scope="class")
     def math_samples_level5(self):
@@ -94,7 +98,7 @@ class TestMATHLevel5:
             response = airunner_client.generate(
                 prompt_with_instruction,
                 temperature=0.0,
-                max_tokens=4096,  # Increased for long MATH solutions
+                max_tokens=32768,  # Very high limit to test if truncation is token-related
                 use_memory=False,
                 tool_categories=[],  # Explicitly disable tools
             )
@@ -195,24 +199,24 @@ class TestMATHLevel5:
         print(f"Problems: {len(math_samples_level5)}")
         print(f"{'='*70}\n")
 
-        POLYA_SYSTEM_PROMPT = """You are a mathematics expert. Solve problems systematically using Polya's 4-step method.
+        POLYA_SYSTEM_PROMPT = """You are a competition mathematics expert solving MATH Level 5 problems.
 
-**POLYA'S METHOD:**
-1. UNDERSTAND the problem - identify knowns, unknowns, and constraints
-2. PLAN your approach - choose appropriate mathematical methods and tools
-3. EXECUTE the plan - perform calculations using available tools
-4. VERIFY your solution - check that it makes sense
+**YOUR TASK:**
+Solve the problem step-by-step using the Polya method:
+1. Understand the problem - identify what's given and what we need to find
+2. Plan the solution - choose appropriate mathematical methods
+3. Execute the plan - work through calculations step-by-step
+4. Verify the answer - check if the solution makes sense
 
-**TOOL USAGE:**
-- polya_reasoning(problem, step, context): Get structured guidance for each Polya step
-- sympy_compute(code): Symbolic math, algebra, calculus, exact solutions
-- numpy_compute(code): Numerical methods, matrices, approximations
-- python_compute(code): General calculations with standard math libraries
+**CRITICAL RULES:**
+1. Work step-by-step through the problem
+2. Use computational tools for complex calculations to ensure accuracy
+3. Show your work clearly at each step
+4. At the very end, write your final answer in the format: \\boxed{final_answer}
+5. Do NOT add any text after the \\boxed{} answer
+6. Focus ONLY on the math problem - no discussion of dates, times, or other topics
 
-**WORKFLOW:**
-1. Use polya_reasoning to think through each step
-2. When you need to compute, use the math tools (sympy/numpy/python)
-3. After getting tool results, provide your final answer as: #### [answer]"""
+**NOTE:** Tool usage instructions will be provided automatically by the system."""
 
         evaluators = [create_correctness_evaluator(airunner_client)]
         results = []
@@ -230,17 +234,16 @@ class TestMATHLevel5:
 
             prompt_with_instruction = (
                 f"Solve this math problem:\n\n{example.prompt}\n\n"
-                "Use Polya's method: understand, plan, execute, verify.\n"
-                "Use the available tools when helpful.\n"
+                "Work through it step-by-step.\n"
                 "Provide your final answer in the format: #### [your answer]"
             )
 
             response = airunner_client.generate(
                 prompt_with_instruction,
                 temperature=0.0,
-                max_tokens=4096,  # Higher for multi-step reasoning + tools
+                max_tokens=65536,  # Very high limit - Qwen supports 131k
                 use_memory=False,
-                # system_prompt=POLYA_SYSTEM_PROMPT,  # TEMPORARILY DISABLE to test if this is the issue
+                system_prompt=POLYA_SYSTEM_PROMPT,  # Math-focused system prompt
                 tool_categories=[
                     ToolCategory.MATH.value,
                     ToolCategory.ANALYSIS.value,

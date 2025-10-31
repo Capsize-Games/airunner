@@ -105,33 +105,18 @@ class WorkflowManager:
                     flush=True,
                 )
 
-                # For local models without native function calling,
-                # add COMPACT tool descriptions (not full schemas)
-                if hasattr(self._chat_model, "get_tool_schemas_text"):
-                    # Create compact tool list instead of verbose schemas
-                    compact_tools = self._create_compact_tool_list()
-                    if compact_tools:
-                        self._system_prompt = (
-                            f"{self._system_prompt}\n\n{compact_tools}"
-                        )
-                        self.logger.info(
-                            f"Added compact tool list ({len(self._tools)} tools) to system prompt"
-                        )
+                # NOTE: Tool instructions are added in _call_model() on each generation,
+                # not here in init. This is because update_system_prompt() can overwrite
+                # self._system_prompt, and we need tool instructions re-added each time.
+                # See _call_model() line ~769 for the actual injection point.
 
             except NotImplementedError:
                 self.logger.info(
                     "Model doesn't support native function calling - "
                     "using LangChain ReAct pattern"
                 )
-                # Add compact tool list for ReAct pattern
-                compact_tools = self._create_compact_tool_list()
-                if compact_tools:
-                    self._system_prompt = (
-                        f"{self._system_prompt}\n\n{compact_tools}"
-                    )
-                    self.logger.info(
-                        f"Added ReAct tool list ({len(self._tools)} tools)"
-                    )
+                # NOTE: Tool instructions are added in _call_model(), not here.
+                # This prevents duplicate tool lists when system prompt is updated.
 
             except Exception as e:
                 import traceback
@@ -875,25 +860,12 @@ Provide a clear, conversational answer using only the information above."""
                             last_chunk_message, "tool_calls", None
                         )
 
-                    # Parse tool calls from complete streamed response
+                    # LangChain automatically populates tool_calls on AIMessage
+                    # when using bind_tools() - no manual parsing needed!
                     complete_content = "".join(streamed_content)
-                    if self._tools and hasattr(
-                        self._chat_model, "parse_tool_calls_from_response"
-                    ):
-                        parsed_tool_calls, cleaned_content = (
-                            self._chat_model.parse_tool_calls_from_response(
-                                complete_content
-                            )
-                        )
-                        if parsed_tool_calls:
-                            self.logger.debug(
-                                f"Parsed {len(parsed_tool_calls)} tool calls from response"
-                            )
-                            tool_calls = parsed_tool_calls
-                            complete_content = cleaned_content
 
-                    # Now that we've parsed tool calls, stream the content to GUI
-                    # (will be empty if it was a pure tool call, so GUI won't show JSON)
+                    # Stream the content to GUI
+                    # (will be empty if it was a pure tool call, so GUI won't show tool JSON)
                     if complete_content and self._token_callback:
                         try:
                             self._token_callback(complete_content)
