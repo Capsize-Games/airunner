@@ -129,7 +129,7 @@ class TestMATHLevel5:
             continuation = airunner_client.generate(
                 continuation_prompt,
                 temperature=0.0,
-                max_tokens=65536,
+                max_tokens=4096,  # Confirmed working value
                 use_memory=False,
                 system_prompt=system_prompt,
                 tool_categories=tool_categories,
@@ -194,7 +194,7 @@ class TestMATHLevel5:
             response = airunner_client.generate(
                 prompt_with_instruction,
                 temperature=0.0,
-                max_tokens=32768,  # Very high limit to test if truncation is token-related
+                max_tokens=4096,  # Confirmed working value
                 use_memory=False,
                 tool_categories=[],  # Explicitly disable tools
             )
@@ -352,7 +352,7 @@ Solve the problem step-by-step using the Polya method:
             response = airunner_client.generate(
                 prompt_with_instruction,
                 temperature=0.0,
-                max_tokens=65536,  # Very high limit - Qwen supports 131k
+                max_tokens=4096,  # Confirmed working value
                 use_memory=False,
                 system_prompt=POLYA_SYSTEM_PROMPT,  # Math-focused system prompt
                 tool_categories=[
