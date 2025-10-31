@@ -201,8 +201,17 @@ async def chat_completion(request: ChatCompletionRequest, req: Request):
     llm_request = LLMRequest.from_default()
     if request.max_tokens:
         llm_request.max_new_tokens = request.max_tokens
+        print(
+            f"[LLM ROUTE DEBUG] Set max_new_tokens={request.max_tokens} from request.max_tokens",
+            flush=True,
+        )
     if request.temperature:
         llm_request.temperature = request.temperature
+
+    print(
+        f"[LLM ROUTE DEBUG] Final llm_request.max_new_tokens={llm_request.max_new_tokens}",
+        flush=True,
+    )
 
     # Wait for response
     response = await wait_for_llm_response(llm_service, prompt, llm_request)
