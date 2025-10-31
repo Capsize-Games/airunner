@@ -3,18 +3,84 @@
 This mixin provides:
 - Base system prompt construction
 - Action-specific prompt customization
-- Personality integration
+- Personality integration (disabled for precision tools)
 - Timestamp inclusion
-- Mood system integration
+- Mood system integration (disabled for precision tools)
+- Context-aware prompt selection (precision vs conversational)
 """
 
 from datetime import datetime
+from typing import Optional, List
 
 from airunner.enums import LLMActionType
+from airunner.components.llm.core.tool_registry import ToolCategory
+
+
+# Precision-focused system prompt for mathematical/technical tools
+PRECISION_SYSTEM_PROMPT = """You are a precise technical assistant focused on accuracy.
+
+Current date and time: {datetime}
+
+CRITICAL: Provide exact, deterministic answers. Do not add creative flair or personality.
+Focus entirely on solving the problem correctly using the available tools when needed."""
 
 
 class SystemPromptMixin:
     """Mixin for LLM system prompt generation."""
+
+    def _should_use_precision_prompt(
+        self, tool_categories: Optional[List] = None
+    ) -> bool:
+        """Determine if precision prompt should be used instead of personality.
+
+        Args:
+            tool_categories: List of ToolCategory values being used
+
+        Returns:
+            True if precision tools are being used (MATH, etc.)
+        """
+        if not tool_categories:
+            return False
+
+        # Convert string names to ToolCategory if needed
+        category_values = []
+        for cat in tool_categories:
+            if isinstance(cat, str):
+                # Try to match by value
+                for tc in ToolCategory:
+                    if tc.value == cat:
+                        category_values.append(tc)
+                        break
+            else:
+                category_values.append(cat)
+
+        # Use precision prompt for MATH tools
+        precision_categories = {ToolCategory.MATH}
+        return any(cat in precision_categories for cat in category_values)
+
+    def get_system_prompt_with_context(
+        self,
+        action: LLMActionType,
+        tool_categories: Optional[List] = None,
+    ) -> str:
+        """Generate system prompt based on context (precision vs conversational).
+
+        Args:
+            action: The type of action being performed
+            tool_categories: Optional list of tool categories being used
+
+        Returns:
+            Appropriate system prompt for the context
+        """
+        # Use precision prompt for math/technical tools
+        if self._should_use_precision_prompt(tool_categories):
+            now = datetime.now()
+            return PRECISION_SYSTEM_PROMPT.format(
+                datetime=now.strftime("%Y-%m-%d %H:%M:%S")
+            )
+
+        # Otherwise use personality-based prompt
+        return self.get_system_prompt_for_action(action)
 
     @property
     def system_prompt(self) -> str:

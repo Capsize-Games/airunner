@@ -24,6 +24,7 @@ class ToolCategory(Enum):
     MOOD = "mood"
     ANALYSIS = "analysis"
     WORKFLOW = "workflow"
+    MATH = "math"  # Mathematical computation tools
 
 
 @dataclass

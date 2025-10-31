@@ -122,10 +122,19 @@ def main():
     logging.info("=" * 60)
 
     try:
-        # Create and run headless app
-        app = App(initialize_gui=False)
+        # Create API instance (which inherits from App)
+        # This initializes the app, workers, and HTTP server
+        from airunner.components.application.api.api import API
+
+        api = API(initialize_gui=False)
+
+        # Store API instance globally so get_api() can access it
+        from airunner.components.server.api import server
+
+        server._api = api
+
         logging.info("Starting headless server...")
-        app.run()
+        api.run()
 
     except KeyboardInterrupt:
         logging.info("Shutdown requested")

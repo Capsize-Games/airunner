@@ -9,7 +9,7 @@ Based on the openevals pattern but adapted for AI Runner's architecture.
 """
 
 import logging
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional
 from airunner.components.eval.client import AIRunnerClient
 
 
@@ -134,6 +134,34 @@ class LLMAsJudge:
         self.model = model
         self.logger = logging.getLogger(__name__)
 
+    def _format_evaluation_prompt(
+        self, inputs: str, outputs: str, reference_outputs: str
+    ) -> str:
+        """Format evaluation prompt with inputs."""
+        return self.prompt_template.format(
+            inputs=inputs,
+            outputs=outputs,
+            reference_outputs=reference_outputs,
+        )
+
+    def _get_llm_judgment(self, eval_prompt: str) -> str:
+        """Get LLM's evaluation judgment."""
+        kwargs = {
+            "use_memory": False,
+            "tool_categories": [],
+        }
+        if self.model:
+            kwargs["model"] = self.model
+
+        response = self.client.generate(
+            eval_prompt,
+            temperature=0.3,
+            max_tokens=500,
+            **kwargs,
+        )
+
+        return response.get("text", "")
+
     def __call__(
         self,
         inputs: str,
@@ -150,50 +178,40 @@ class LLMAsJudge:
         Returns:
             Dict with 'score', 'reasoning', and 'feedback_key' fields
         """
-        # Format the evaluation prompt
-        eval_prompt = self.prompt_template.format(
-            inputs=inputs,
-            outputs=outputs,
-            reference_outputs=reference_outputs,
+        eval_prompt = self._format_evaluation_prompt(
+            inputs, outputs, reference_outputs
         )
 
         try:
-            # Get LLM judgment
-            kwargs = {}
-            if self.model:
-                kwargs["model"] = self.model
-
-            response = self.client.generate(
-                eval_prompt,
-                temperature=0.3,  # Lower temperature for more consistent evaluations
-                max_tokens=500,
-                **kwargs,
-            )
-
-            evaluation_text = response.get("text", "")
-
-            # Parse the evaluation
+            evaluation_text = self._get_llm_judgment(eval_prompt)
             score, reasoning = self._parse_evaluation(evaluation_text)
-
-            result = {
-                "feedback_key": self.feedback_key,
-                "score": score,
-                "reasoning": reasoning,
-                "raw_evaluation": evaluation_text,
-            }
-
-            self.logger.debug(f"{self.feedback_key}: {score}/10 - {reasoning}")
-
-            return result
+            return self._create_result(score, reasoning, evaluation_text)
 
         except Exception as e:
-            self.logger.error(f"Evaluation failed: {e}")
-            return {
-                "feedback_key": self.feedback_key,
-                "score": 0,
-                "reasoning": f"Evaluation error: {e}",
-                "raw_evaluation": "",
-            }
+            logger.error(f"Evaluation failed: {e}")
+            return self._create_error_result(e)
+
+    def _create_result(
+        self, score: float, reasoning: str, evaluation_text: str
+    ) -> Dict[str, Any]:
+        """Create successful evaluation result."""
+        result = {
+            "feedback_key": self.feedback_key,
+            "score": score,
+            "reasoning": reasoning,
+            "raw_evaluation": evaluation_text,
+        }
+        self.logger.debug(f"{self.feedback_key}: {score}/10 - {reasoning}")
+        return result
+
+    def _create_error_result(self, error: Exception) -> Dict[str, Any]:
+        """Create error evaluation result."""
+        return {
+            "feedback_key": self.feedback_key,
+            "score": 0,
+            "reasoning": f"Evaluation error: {error}",
+            "raw_evaluation": "",
+        }
 
     def _parse_evaluation(self, text: str) -> tuple[float, str]:
         """Parse score and reasoning from LLM evaluation text.
@@ -211,23 +229,42 @@ class LLMAsJudge:
         for line in lines:
             line = line.strip()
             if line.startswith("Score:"):
-                # Extract score (handle various formats)
-                score_text = line.replace("Score:", "").strip()
-                # Remove any trailing text after the number
-                score_text = score_text.split()[0].strip("[](),")
-                try:
-                    score = float(score_text)
-                    # Normalize to 0-1 range if it's 0-10
-                    if score > 1.0:
-                        score = score / 10.0
-                except ValueError:
-                    self.logger.warning(
-                        f"Could not parse score from: {score_text}"
-                    )
+                score = self._parse_score_line(line)
             elif line.startswith("Reasoning:"):
-                reasoning = line.replace("Reasoning:", "").strip()
+                reasoning = self._parse_reasoning_line(line)
 
         return score, reasoning
+
+    def _parse_score_line(self, line: str) -> float:
+        """Parse score from a line."""
+        score_text = line.replace("Score:", "").strip()
+        score_text = score_text.split()[0].strip("[](),")
+        try:
+            score = float(score_text)
+            # Normalize to 0-1 range if it's 0-10
+            if score > 1.0:
+                score = score / 10.0
+            return score
+        except ValueError:
+            self.logger.warning(f"Could not parse score from: {score_text}")
+            return 0.0
+
+    def _parse_reasoning_line(self, line: str) -> str:
+        """Parse reasoning from a line."""
+        reasoning_text = line.replace("Reasoning:", "").strip()
+
+        if not reasoning_text:
+            return ""
+
+        # Handle duplicate text (LLM sometimes repeats itself)
+        half_len = len(reasoning_text) // 2
+        if half_len > 10:
+            first_half = reasoning_text[:half_len]
+            second_half = reasoning_text[half_len : half_len * 2]
+            if first_half == second_half:
+                return first_half
+
+        return reasoning_text
 
 
 def create_correctness_evaluator(

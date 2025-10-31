@@ -199,20 +199,33 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self.app.api = self
         logging.info("Qt Core event loop initialized (headless mode)")
 
+        # Initialize workers BEFORE starting HTTP server
+        # so they're ready to handle requests immediately
+        self._initialize_headless_workers()
+
         # Start API server for /llm, /art, /stt, /tts endpoints
-        from airunner.components.server.api.api_server_thread import (
-            APIServerThread,
-        )
+        # Skip if we're being created from within an HTTP request handler
+        # (server is already running in that case)
+        if os.environ.get("AIRUNNER_SERVER_RUNNING") != "1":
+            from airunner.components.server.api.api_server_thread import (
+                APIServerThread,
+            )
 
-        host = os.environ.get("AIRUNNER_HTTP_HOST", "0.0.0.0")
-        port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8080"))
+            host = os.environ.get("AIRUNNER_HTTP_HOST", "0.0.0.0")
+            port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8080"))
 
-        logging.info(f"Starting API server on {host}:{port}")
-        self.api_server_thread = APIServerThread(host=host, port=port)
-        self.api_server_thread.start()
-        logging.info(
-            f"API server started - /health, /llm, /art endpoints available"
-        )
+            logging.info(f"Starting API server on {host}:{port}")
+            self.api_server_thread = APIServerThread(host=host, port=port)
+            self.api_server_thread.start()
+            logging.info(
+                f"API server started - /health, /llm, /art endpoints available"
+            )
+            # Mark that server is now running
+            os.environ["AIRUNNER_SERVER_RUNNING"] = "1"
+        else:
+            logging.info(
+                "API server already running - skipping initialization"
+            )
 
     def _initialize_knowledge_system(self):
         """Initialize the automatic knowledge extraction system."""
@@ -541,8 +554,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
         """
         from PySide6.QtCore import QTimer
 
-        # Initialize LLM worker for headless mode
-        self._initialize_headless_workers()
+        # Workers are already initialized in _init_headless_services()
+        # No need to initialize again here
 
         logging.info("AI Runner headless mode - server running")
         logging.info("Press Ctrl+C to stop")

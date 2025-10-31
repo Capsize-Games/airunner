@@ -82,7 +82,9 @@ class ChatHuggingFaceLocal(BaseChatModel):
     use_mistral_native: bool = False  # Use Mistral native function calling
     use_json_mode: bool = False  # Use structured JSON output for tool calling
     tool_calling_mode: str = "react"  # "native", "json", or "react"
-    max_new_tokens: int = 512
+    max_new_tokens: int = (
+        4096  # INCREASED from 512 for complex reasoning tasks
+    )
     temperature: float = 0.7
     top_p: float = 0.9
     top_k: int = 50
@@ -350,7 +352,10 @@ class ChatHuggingFaceLocal(BaseChatModel):
         # Parse tool calls if tools are bound
         tool_calls = None
 
-        if self.tools:
+        # Check if tool parsing is disabled (for conversational responses after tools)
+        disable_tool_parsing = kwargs.get("disable_tool_parsing", False)
+
+        if self.tools and not disable_tool_parsing:
             if self.tool_calling_mode == "native" and self.use_mistral_native:
                 tool_calls, response_text = self._parse_mistral_tool_calls(
                     response_text
@@ -460,6 +465,27 @@ class ChatHuggingFaceLocal(BaseChatModel):
             "stopping_criteria": stopping_criteria,
         }
 
+        # DEBUG: Log ALL generation parameters to STDERR and logger
+        import sys
+
+        debug_msg = f"""
+{'='*70}
+[ADAPTER DEBUG] Generation Parameters:
+  max_new_tokens: {generation_kwargs['max_new_tokens']}
+  temperature: {generation_kwargs['temperature']}
+  top_p: {generation_kwargs['top_p']}
+  top_k: {generation_kwargs['top_k']}
+  repetition_penalty: {generation_kwargs['repetition_penalty']}
+  do_sample: {generation_kwargs['do_sample']}
+  Input tokens: {inputs['input_ids'].shape[1] if 'input_ids' in inputs else 'unknown'}
+  eos_token_id: {eos_token_id}
+  pad_token_id: {pad_token_id}
+{'='*70}
+"""
+        sys.stderr.write(debug_msg)
+        sys.stderr.flush()
+        self.logger.warning(debug_msg)  # Use warning level to ensure it shows
+
         thread = threading.Thread(
             target=self.model.generate, kwargs=generation_kwargs
         )
@@ -501,21 +527,70 @@ class ChatHuggingFaceLocal(BaseChatModel):
         # After streaming completes, parse for tool calls based on mode
         if self.tools and full_response:
             response_text = "".join(full_response)
+            print(
+                f"[CHAT ADAPTER DEBUG] Stream complete, response length: {len(response_text)} chars",
+                flush=True,
+            )
+            print(
+                f"[CHAT ADAPTER DEBUG] Response preview: {response_text[:300]}...",
+                flush=True,
+            )
+            print(
+                f"[CHAT ADAPTER DEBUG] Tool calling mode: {self.tool_calling_mode}",
+                flush=True,
+            )
+            print(
+                f"[CHAT ADAPTER DEBUG] use_json_mode: {self.use_json_mode}",
+                flush=True,
+            )
+
+            # Check if tool parsing is disabled (for conversational responses after tools)
+            disable_tool_parsing = kwargs.get("disable_tool_parsing", False)
+            print(
+                f"[CHAT ADAPTER DEBUG] disable_tool_parsing: {disable_tool_parsing}",
+                flush=True,
+            )
+
             tool_calls = None
 
-            if self.tool_calling_mode == "native" and self.use_mistral_native:
+            if (
+                not disable_tool_parsing
+                and self.tool_calling_mode == "native"
+                and self.use_mistral_native
+            ):
                 tool_calls, _ = self._parse_mistral_tool_calls(response_text)
                 if tool_calls:
                     self.logger.debug(
                         f"Mistral native extracted {len(tool_calls)} tool call(s) from stream"
                     )
-            elif self.tool_calling_mode == "json" and self.use_json_mode:
+            elif (
+                not disable_tool_parsing
+                and self.tool_calling_mode == "json"
+                and self.use_json_mode
+            ):
+                print(
+                    f"[CHAT ADAPTER DEBUG] Calling _parse_json_mode_tool_calls...",
+                    flush=True,
+                )
                 tool_calls, cleaned_text = self._parse_json_mode_tool_calls(
                     response_text
                 )
+                print(
+                    f"[CHAT ADAPTER DEBUG] Parse result: {len(tool_calls) if tool_calls else 0} tool calls",
+                    flush=True,
+                )
                 if tool_calls:
+                    print(
+                        f"[CHAT ADAPTER DEBUG] Tool calls: {tool_calls}",
+                        flush=True,
+                    )
                     self.logger.debug(
                         f"JSON mode extracted {len(tool_calls)} tool call(s) from stream"
+                    )
+                else:
+                    print(
+                        f"[CHAT ADAPTER DEBUG] NO TOOL CALLS FOUND in response",
+                        flush=True,
                     )
             else:
                 # ReAct pattern fallback
@@ -784,11 +859,46 @@ class ChatHuggingFaceLocal(BaseChatModel):
         Returns:
             Tuple of (tool_calls list or None, cleaned response text)
         """
+        print(
+            f"[JSON PARSE DEBUG] Parsing response of length {len(response_text)}",
+            flush=True,
+        )
+        print(
+            f"[JSON PARSE DEBUG] First 500 chars: {response_text[:500]}",
+            flush=True,
+        )
+
         tool_calls = []
         cleaned_text = response_text
 
+        # Quick fix for models that use single quotes instead of double quotes in JSON
+        # This is technically invalid JSON but common in model outputs
+        if "{'tool'" in response_text or '{"tool":' not in response_text:
+            print(
+                f"[JSON PARSE DEBUG] Attempting to fix single-quote JSON...",
+                flush=True,
+            )
+            # Simple heuristic: if we see Python-style single quotes around strings, try to fix
+            # This won't handle all cases but helps with common patterns
+            response_text_fixed = (
+                response_text.replace("':", '":')
+                .replace(": '", ': "')
+                .replace("', '", '", "')
+                .replace("'}", '"}')
+            )
+            if response_text_fixed != response_text:
+                print(
+                    f"[JSON PARSE DEBUG] Fixed some single quotes, retrying parse...",
+                    flush=True,
+                )
+                response_text = response_text_fixed
+
         # Try parsing entire response as JSON first (most reliable)
         try:
+            print(
+                f"[JSON PARSE DEBUG] Attempting to parse entire response as JSON...",
+                flush=True,
+            )
             data = json.loads(response_text.strip())
             if isinstance(data, dict) and ("tool" in data or "name" in data):
                 tool_name = data.get("tool") or data.get("name")
@@ -801,11 +911,126 @@ class ChatHuggingFaceLocal(BaseChatModel):
                         "id": str(uuid.uuid4()),
                     }
                 )
+                print(
+                    f"[JSON PARSE DEBUG] ✓ Parsed entire response as JSON tool call: {tool_name}",
+                    flush=True,
+                )
                 self.logger.debug(f"Parsed JSON tool call: {tool_name}")
                 cleaned_text = ""  # Tool call was entire response
                 return (tool_calls, cleaned_text)
-        except json.JSONDecodeError:
-            pass
+            elif isinstance(data, list):
+                # Handle array of tool calls
+                print(
+                    f"[JSON PARSE DEBUG] Response is JSON array with {len(data)} items",
+                    flush=True,
+                )
+                for item in data:
+                    if isinstance(item, dict) and (
+                        "tool" in item or "name" in item
+                    ):
+                        tool_name = item.get("tool") or item.get("name")
+                        tool_args = item.get("arguments", {})
+                        tool_calls.append(
+                            {
+                                "name": tool_name,
+                                "args": tool_args,
+                                "id": str(uuid.uuid4()),
+                            }
+                        )
+                if tool_calls:
+                    print(
+                        f"[JSON PARSE DEBUG] ✓ Parsed {len(tool_calls)} tool calls from array",
+                        flush=True,
+                    )
+                    return (tool_calls, "")
+        except json.JSONDecodeError as e:
+            print(f"[JSON PARSE DEBUG] JSON parse failed: {e}", flush=True)
+
+            # FALLBACK: Try Python literal_eval for Python-style dicts with single quotes
+            print(
+                f"[JSON PARSE DEBUG] Attempting Python ast.literal_eval fallback...",
+                flush=True,
+            )
+            try:
+                import ast
+
+                data = ast.literal_eval(response_text.strip())
+                if isinstance(data, dict) and (
+                    "tool" in data or "name" in data
+                ):
+                    tool_name = data.get("tool") or data.get("name")
+                    tool_args = data.get("arguments", {})
+
+                    tool_calls.append(
+                        {
+                            "name": tool_name,
+                            "args": tool_args,
+                            "id": str(uuid.uuid4()),
+                        }
+                    )
+                    print(
+                        f"[JSON PARSE DEBUG] ✓ Parsed Python-style dict as tool call: {tool_name}",
+                        flush=True,
+                    )
+                    self.logger.debug(
+                        f"Parsed Python dict tool call: {tool_name}"
+                    )
+                    cleaned_text = ""  # Tool call was entire response
+                    return (tool_calls, cleaned_text)
+            except (ValueError, SyntaxError) as ast_error:
+                print(
+                    f"[JSON PARSE DEBUG] Python literal_eval also failed: {ast_error}",
+                    flush=True,
+                )
+
+            # Try parsing multiple JSON objects separated by commas (invalid JSON but common model output)
+            print(
+                f"[JSON PARSE DEBUG] Attempting to split by commas and parse individually...",
+                flush=True,
+            )
+            # Split on "}, {" pattern to separate multiple objects
+            if "}, {" in response_text:
+                parts = response_text.split("}, {")
+                print(
+                    f"[JSON PARSE DEBUG] Found {len(parts)} potential JSON objects",
+                    flush=True,
+                )
+                for i, part in enumerate(parts):
+                    # Reconstruct valid JSON by adding back the braces
+                    if i > 0:
+                        part = "{" + part
+                    if i < len(parts) - 1:
+                        part = part + "}"
+                    try:
+                        data = json.loads(part.strip())
+                        if isinstance(data, dict) and (
+                            "tool" in data or "name" in data
+                        ):
+                            tool_name = data.get("tool") or data.get("name")
+                            tool_args = data.get("arguments", {})
+                            tool_calls.append(
+                                {
+                                    "name": tool_name,
+                                    "args": tool_args,
+                                    "id": str(uuid.uuid4()),
+                                }
+                            )
+                            print(
+                                f"[JSON PARSE DEBUG] ✓ Parsed object {i+1}: {tool_name}",
+                                flush=True,
+                            )
+                    except json.JSONDecodeError as e2:
+                        print(
+                            f"[JSON PARSE DEBUG] Failed to parse part {i+1}: {e2}",
+                            flush=True,
+                        )
+                        continue
+                if tool_calls:
+                    print(
+                        f"[JSON PARSE DEBUG] ✓ Parsed {len(tool_calls)} tool calls from comma-separated objects",
+                        flush=True,
+                    )
+                    return (tool_calls, "")
 
         # Try extracting JSON from code blocks: ```json {...} ```
         json_block_pattern = r"```json\s*(\{[^`]+\})\s*```"
