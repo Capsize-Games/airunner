@@ -23,8 +23,6 @@ from typing import Dict, Any, Optional, Iterator, List
 class AIRunnerClientError(Exception):
     """Base exception for AIRunnerClient errors."""
 
-    pass
-
 
 class AIRunnerClient:
     """Client library for interacting with AI Runner headless server.
@@ -130,17 +128,9 @@ class AIRunnerClient:
                 "Use generate_stream() instead."
             )
 
-        request_data = {"prompt": prompt, "stream": False}
-
-        if model is not None:
-            request_data["model"] = model
-        if max_tokens is not None:
-            request_data["max_tokens"] = max_tokens
-        if temperature is not None:
-            request_data["temperature"] = temperature
-
-        # Add any additional kwargs
-        request_data.update(kwargs)
+        request_data = self._build_request_data(
+            prompt, model, max_tokens, temperature, False, **kwargs
+        )
 
         try:
             response = requests.post(
@@ -149,15 +139,37 @@ class AIRunnerClient:
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            data = response.json()
-
-            # Map 'message' to 'text' for backwards compatibility
-            if "message" in data and "text" not in data:
-                data["text"] = data["message"]
-
-            return data
+            return self._process_response(response.json())
         except requests.RequestException as e:
             raise AIRunnerClientError(f"Generate request failed: {e}")
+
+    def _build_request_data(
+        self,
+        prompt: str,
+        model: Optional[str],
+        max_tokens: Optional[int],
+        temperature: Optional[float],
+        stream: bool,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Build request data dict for generate endpoint."""
+        request_data = {"prompt": prompt, "stream": stream}
+
+        if model is not None:
+            request_data["model"] = model
+        if max_tokens is not None:
+            request_data["max_tokens"] = max_tokens
+        if temperature is not None:
+            request_data["temperature"] = temperature
+
+        request_data.update(kwargs)
+        return request_data
+
+    def _process_response(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Process API response and map fields."""
+        if "message" in data and "text" not in data:
+            data["text"] = data["message"]
+        return data
 
     def generate_stream(
         self,
@@ -190,17 +202,9 @@ class AIRunnerClient:
             ...     if chunk.get("done"):
             ...         break
         """
-        request_data = {"prompt": prompt, "stream": True}
-
-        if model is not None:
-            request_data["model"] = model
-        if max_tokens is not None:
-            request_data["max_tokens"] = max_tokens
-        if temperature is not None:
-            request_data["temperature"] = temperature
-
-        # Add any additional kwargs
-        request_data.update(kwargs)
+        request_data = self._build_request_data(
+            prompt, model, max_tokens, temperature, True, **kwargs
+        )
 
         try:
             response = requests.post(
@@ -210,20 +214,22 @@ class AIRunnerClient:
                 timeout=self.timeout,
             )
             response.raise_for_status()
-
-            # Parse NDJSON stream
-            for line in response.iter_lines():
-                if line:
-                    try:
-                        chunk = json.loads(line)
-                        yield chunk
-                        if chunk.get("done"):
-                            break
-                    except json.JSONDecodeError as e:
-                        self.logger.warning(
-                            f"Failed to parse NDJSON chunk: {e}"
-                        )
-                        continue
+            yield from self._parse_ndjson_stream(response)
 
         except requests.RequestException as e:
             raise AIRunnerClientError(f"Streaming request failed: {e}")
+
+    def _parse_ndjson_stream(
+        self, response: requests.Response
+    ) -> Iterator[Dict[str, Any]]:
+        """Parse NDJSON stream from response."""
+        for line in response.iter_lines():
+            if line:
+                try:
+                    chunk = json.loads(line)
+                    yield chunk
+                    if chunk.get("done"):
+                        break
+                except json.JSONDecodeError as e:
+                    self.logger.warning(f"Failed to parse NDJSON chunk: {e}")
+                    continue

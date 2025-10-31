@@ -35,6 +35,9 @@ extras_require = {
         "flake8==7.2.0",
         "mypy==1.16.0",
         "autoflake==2.3.1",
+        "pandas>=2.0.0",  # For eval dataset loading (parquet)
+        "pyarrow>=14.0.0",  # For parquet file support
+        "tqdm>=4.0.0",  # For progress bars in headless downloads
     ],
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",

@@ -1,5 +1,7 @@
 import logging
+import uuid
 from datetime import datetime
+from contextlib import nullcontext
 from typing import Any, Annotated, Optional, List, Callable
 from typing_extensions import TypedDict
 
@@ -46,6 +48,7 @@ class WorkflowManager:
             conversation_id: Optional conversation ID for persistence
         """
         self._system_prompt = system_prompt
+        self._original_chat_model = chat_model  # Store original unbound model
         self._chat_model = chat_model
         self._tools = tools or []
         self._max_tokens = max_tokens
@@ -73,10 +76,22 @@ class WorkflowManager:
         2. For local models, add COMPACT tool list to system prompt
         3. Let LangGraph's ToolNode handle parsing and execution
         """
+        # Reset to original unbound model
+        self._chat_model = self._original_chat_model
+
         # Skip if no tools provided
         if not self._tools or len(self._tools) == 0:
             self.logger.info("No tools provided - skipping tool binding")
             return
+
+        # Log tool calling mode for debugging
+        tool_calling_mode = getattr(
+            self._chat_model, "tool_calling_mode", "react"
+        )
+        print(
+            f"[WORKFLOW DEBUG] Model tool_calling_mode: {tool_calling_mode}",
+            flush=True,
+        )
 
         # Try to bind tools for native function calling
         if hasattr(self._chat_model, "bind_tools"):
@@ -84,6 +99,10 @@ class WorkflowManager:
                 self._chat_model = self._chat_model.bind_tools(self._tools)
                 self.logger.info(
                     f"Successfully bound {len(self._tools)} tools to chat model"
+                )
+                print(
+                    f"[WORKFLOW DEBUG] Tools bound successfully via bind_tools()",
+                    flush=True,
                 )
 
                 # For local models without native function calling,
@@ -158,6 +177,9 @@ class WorkflowManager:
         tool_descriptions.append("")
 
         for tool in self._tools:
+            # Import ToolRegistry for metadata lookup
+            from airunner.components.llm.core.tool_registry import ToolRegistry
+
             # Get tool metadata
             # StructuredTool objects have .name attribute but not .__name__
             tool_name = getattr(tool, "name", None)
@@ -165,7 +187,14 @@ class WorkflowManager:
                 # Fallback for regular functions
                 tool_name = getattr(tool, "__name__", "unknown_tool")
 
+            # Try to get description from tool object first
             tool_desc = getattr(tool, "description", "")
+
+            # If no description, try to look up in ToolRegistry
+            if not tool_desc:
+                tool_info = ToolRegistry.get(tool_name)
+                if tool_info:
+                    tool_desc = tool_info.description
 
             # Extract function signature
             if hasattr(tool, "func"):
@@ -178,6 +207,20 @@ class WorkflowManager:
                     if p not in ["api", "agent", "self"]
                 ]
                 param_str = ", ".join(params)
+            elif hasattr(tool, "__name__"):
+                # Try to get signature from the tool itself if it's a function
+                import inspect
+
+                try:
+                    sig = inspect.signature(tool)
+                    params = [
+                        p
+                        for p in sig.parameters.keys()
+                        if p not in ["api", "agent", "self"]
+                    ]
+                    param_str = ", ".join(params)
+                except (ValueError, TypeError):
+                    param_str = "..."
             else:
                 param_str = "..."
 
@@ -201,15 +244,19 @@ class WorkflowManager:
         if tool_calling_mode == "json":
             # JSON mode: Clean structured output
             tool_descriptions.append(
-                "To use a tool, respond with ONLY a JSON object (no markdown, no explanation):\n"
-                '{"tool": "tool_name", "arguments": {"arg1": "value1", "arg2": "value2"}}\n\n'
-                "Examples:\n"
-                '{"tool": "search_web", "arguments": {"query": "Python tutorials"}}\n'
-                '{"tool": "generate_image", "arguments": {"prompt": "sunset", "size": "1024x1024"}}\n\n'
-                "To use MULTIPLE tools at once, you can output multiple JSON objects, one per line:\n"
-                '{"tool": "scrape_website", "arguments": {"url": "https://example.com"}}\n'
-                '{"tool": "scrape_website", "arguments": {"url": "https://another-site.com"}}\n\n'
-                "After the tool(s) execute, you'll receive the result(s) and can continue the conversation."
+                "To use a tool, respond with ONLY valid JSON (RFC 8259 compliant) on a SINGLE LINE:\n"
+                "- Use DOUBLE QUOTES for all strings (not single quotes)\n"
+                '- Escape special characters: \\n for newline, \\" for quote, \\\\ for backslash\n'
+                '- Format: {"tool": "tool_name", "arguments": {"arg1": "value1"}}\n\n'
+                "CRITICAL examples for code strings - note the DOUBLE QUOTES:\n"
+                '{"tool": "sympy_compute", "arguments": {"code": "import sympy as sp\\nx = sp.symbols(\\"x\\")\\nresult = sp.solve(x**2 - 4, x)"}}\n'
+                '{"tool": "python_compute", "arguments": {"code": "result = 2 + 2"}}\n\n'
+                "More examples:\n"
+                '{"tool": "search_web", "arguments": {"query": "Python tutorials"}}\n\n'
+                "To use MULTIPLE tools, output multiple JSON objects, one per line:\n"
+                '{"tool": "sympy_compute", "arguments": {"code": "x = 1"}}\n'
+                '{"tool": "sympy_compute", "arguments": {"code": "result = x + 1"}}\n\n'
+                "After tool execution, you'll receive results and can provide your final answer."
             )
         elif tool_calling_mode == "native":
             # Native mode: Minimal instructions (tokenizer handles it)
@@ -478,16 +525,23 @@ Now provide a direct, conversational answer to the user's question based on the 
                 )
 
             try:
+                from langchain_core.messages import HumanMessage
+
                 response_content = ""
                 # Call the model directly without going through _call_model
                 # to avoid adding the post-tool instruction multiple times
-                simple_prompt = f"""Based on the following tool results, answer the user's question:
+                simple_prompt_text = f"""Based on the following tool results, answer the user's question:
 
 {all_tool_content}
 
 Provide a clear, conversational answer using only the information above."""
 
-                for chunk in self._chat_model.stream(simple_prompt):
+                # Convert to message format expected by chat model
+                simple_prompt = [HumanMessage(content=simple_prompt_text)]
+
+                for chunk in self._chat_model.stream(
+                    simple_prompt, disable_tool_parsing=True
+                ):
                     chunk_content = (
                         chunk.content
                         if hasattr(chunk, "content")
@@ -539,6 +593,29 @@ Provide a clear, conversational answer using only the information above."""
         has_tool_calls = (
             hasattr(last_message, "tool_calls") and last_message.tool_calls
         )
+
+        # DEBUG: Log the last message to see what we got
+        print(
+            f"[WORKFLOW DEBUG] Last message type: {type(last_message).__name__}",
+            flush=True,
+        )
+        print(
+            f"[WORKFLOW DEBUG] Has tool_calls attribute: {hasattr(last_message, 'tool_calls')}",
+            flush=True,
+        )
+        if hasattr(last_message, "tool_calls"):
+            print(
+                f"[WORKFLOW DEBUG] tool_calls value: {last_message.tool_calls}",
+                flush=True,
+            )
+        if hasattr(last_message, "content"):
+            content_preview = (
+                last_message.content[:300] if last_message.content else "None"
+            )
+            print(
+                f"[WORKFLOW DEBUG] Message content preview: {content_preview}",
+                flush=True,
+            )
 
         # Log message history for debugging
         tool_messages = [
@@ -688,6 +765,31 @@ Provide a clear, conversational answer using only the information above."""
         escaped_system_prompt = self._system_prompt.replace("{", "{{").replace(
             "}", "}}"
         )
+
+        # CRITICAL: Add tool instructions if tools are available
+        # This must be done here (not in _initialize_model) because update_system_prompt() can overwrite it
+        if self._tools and len(self._tools) > 0:
+            compact_tools = self._create_compact_tool_list()
+            if compact_tools:
+                # Escape curly braces for LangChain template compatibility
+                compact_tools_escaped = compact_tools.replace(
+                    "{", "{{"
+                ).replace("}", "}}")
+                escaped_system_prompt = (
+                    f"{escaped_system_prompt}\n\n{compact_tools_escaped}"
+                )
+                print(
+                    f"[WORKFLOW DEBUG] Appended tool instructions ({len(self._tools)} tools) to system prompt",
+                    flush=True,
+                )
+
+        # DEBUG: Log full system prompt
+        print(
+            f"[WORKFLOW DEBUG] Full system prompt being sent to model:",
+            flush=True,
+        )
+        print(f"{escaped_system_prompt[:1000]}...", flush=True)
+        print(f"[WORKFLOW DEBUG] End of system prompt\n", flush=True)
 
         # Add context-aware instruction for JSON mode
         tool_calling_mode = getattr(
@@ -855,10 +957,26 @@ Provide a clear, conversational answer using only the information above."""
     def invoke(self, user_input: str) -> dict[str, Any]:
         """Invoke the workflow with user input."""
         input_messages = [HumanMessage(user_input)]
-        config = {"configurable": {"thread_id": self._thread_id}}
-        return self._compiled_workflow.invoke(
-            {"messages": input_messages}, config
-        )
+        config = {
+            "configurable": {"thread_id": self._thread_id},
+            "recursion_limit": 20,  # Prevent runaway tool loops
+        }
+        math_context = nullcontext()
+
+        try:
+            from airunner.components.llm.tools.math_tools import (
+                math_executor_session,
+            )
+
+            session_id = f"{self._thread_id}:{uuid.uuid4()}"
+            math_context = math_executor_session(session_id)
+        except ImportError:
+            math_context = nullcontext()
+
+        with math_context:
+            return self._compiled_workflow.invoke(
+                {"messages": input_messages}, config
+            )
 
     def stream(
         self, user_input: str, generation_kwargs: Optional[dict] = None
@@ -876,34 +994,63 @@ Provide a clear, conversational answer using only the information above."""
         if generation_kwargs:
             initial_state["generation_kwargs"] = generation_kwargs
 
-        config = {"configurable": {"thread_id": self._thread_id}}
+        config = {
+            "configurable": {"thread_id": self._thread_id},
+            "recursion_limit": 20,  # Prevent runaway tool loops (10-15 steps max for math)
+        }
 
         # Use stream_mode="values" to get updates more frequently
         # This allows interrupt checking to happen more often
-        for event in self._compiled_workflow.stream(
-            initial_state,
-            config,
-            stream_mode="values",
-        ):
-            # Check interrupt flag on each event
-            if self._interrupted:
-                break
-            # Yield the entire state for each update
-            if "messages" in event and event["messages"]:
-                last_message = event["messages"][-1]
-                if (
-                    isinstance(last_message, AIMessage)
-                    and last_message.content
-                ):
-                    yield last_message
+        math_context = nullcontext()
+
+        try:
+            from airunner.components.llm.tools.math_tools import (
+                math_executor_session,
+            )
+
+            session_id = f"{self._thread_id}:{uuid.uuid4()}"
+            math_context = math_executor_session(session_id)
+        except ImportError:
+            math_context = nullcontext()
+
+        with math_context:
+            for event in self._compiled_workflow.stream(
+                initial_state,
+                config,
+                stream_mode="values",
+            ):
+                # Check interrupt flag on each event
+                if self._interrupted:
+                    break
+                # Yield the entire state for each update
+                if "messages" in event and event["messages"]:
+                    last_message = event["messages"][-1]
+                    if (
+                        isinstance(last_message, AIMessage)
+                        and last_message.content
+                    ):
+                        yield last_message
 
     def update_system_prompt(self, system_prompt: str):
         """Update the system prompt and rebuild the workflow."""
+        print(
+            f"[WORKFLOW DEBUG] Updating system prompt to: {system_prompt[:200]}...",
+            flush=True,
+        )
         self._system_prompt = system_prompt
         self._build_and_compile_workflow()
 
     def update_tools(self, tools: List[Callable]):
         """Update the tools and rebuild the workflow."""
+        print(
+            f"[WORKFLOW DEBUG] Updating tools: {len(tools)} tools provided",
+            flush=True,
+        )
+        for tool in tools:
+            print(
+                f"[WORKFLOW DEBUG]   - Tool: {getattr(tool, '__name__', str(tool))}",
+                flush=True,
+            )
         self._tools = tools
         self._initialize_model()  # Re-bind tools
         self._build_and_compile_workflow()

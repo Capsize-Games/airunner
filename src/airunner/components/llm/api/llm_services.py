@@ -41,6 +41,13 @@ class LLMAPIService(APIServiceBase):
         # Use action-optimized defaults if no explicit request provided
         llm_request = llm_request or LLMRequest.for_action(action)
         llm_request.do_tts_reply = do_tts_reply
+
+        # DEBUG: Log max_new_tokens value
+        print(
+            f"[LLM API DEBUG] llm_request.max_new_tokens={llm_request.max_new_tokens}, action={action}",
+            flush=True,
+        )
+
         data = {
             "llm_request": True,
             "request_data": {

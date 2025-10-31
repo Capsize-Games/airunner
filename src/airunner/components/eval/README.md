@@ -427,7 +427,7 @@ pytest -v -m "benchmark and not slow"
 
 ```python
 import pytest
-from airunner.components.eval.benchmark_datasets import load_gsm8k
+
 from airunner.components.eval.evaluators import create_correctness_evaluator
 
 @pytest.mark.benchmark

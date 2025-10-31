@@ -9,6 +9,8 @@ from airunner.components.llm.tools import (
     image_tools,
     system_tools,
     conversation_tools,
+    math_tools,
+    reasoning_tools,
 )
 from airunner.components.calendar.tools import calendar_tools
 
@@ -16,5 +18,7 @@ __all__ = [
     "image_tools",
     "system_tools",
     "conversation_tools",
+    "math_tools",
+    "reasoning_tools",
     "calendar_tools",
 ]

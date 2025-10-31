@@ -24,6 +24,61 @@ from airunner.components.eval.client import AIRunnerClient
 logger = logging.getLogger(__name__)
 
 
+def _start_server_process(port: int, host: str):
+    """Start the headless server subprocess."""
+    env = os.environ.copy()
+    env["AIRUNNER_HEADLESS"] = "1"
+    env["AIRUNNER_HTTP_PORT"] = str(port)
+    env["AIRUNNER_HTTP_HOST"] = host
+
+    logger.info(f"Starting headless server on {host}:{port}")
+    server_log = open("/tmp/airunner_test_server.log", "w")
+
+    return (
+        subprocess.Popen(
+            [sys.executable, "-m", "airunner.bin.airunner_headless"],
+            env=env,
+            stdout=server_log,
+            stderr=subprocess.STDOUT,
+        ),
+        server_log,
+    )
+
+
+def _wait_for_server_health(base_url: str, timeout: int = 30) -> bool:
+    """Poll server health endpoint until ready or timeout."""
+    start_time = time.time()
+    logger.info(f"Waiting for server at {base_url}/health to be ready...")
+
+    while time.time() - start_time < timeout:
+        try:
+            logger.debug(
+                f"Attempting health check "
+                f"({time.time() - start_time:.1f}s elapsed)..."
+            )
+            response = requests.get(f"{base_url}/health", timeout=1)
+            logger.debug(f"Health check response: {response.status_code}")
+            if response.status_code == 200:
+                logger.info("Server is ready!")
+                return True
+        except requests.RequestException as e:
+            logger.debug(f"Health check failed: {e}")
+        time.sleep(0.5)
+
+    return False
+
+
+def _terminate_server_process(process: subprocess.Popen):
+    """Gracefully terminate server process."""
+    logger.info("Terminating headless server")
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        logger.warning("Server did not terminate gracefully, killing")
+        process.kill()
+
+
 @pytest.fixture(scope="session")
 def airunner_server() -> Generator[subprocess.Popen, None, None]:
     """Start headless AI Runner server for testing session.
@@ -40,68 +95,37 @@ def airunner_server() -> Generator[subprocess.Popen, None, None]:
     Raises:
         RuntimeError: If server fails to start within timeout
     """
-    # Use environment variable for port, default to 8188
     port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8188"))
     host = os.environ.get("AIRUNNER_HTTP_HOST", "127.0.0.1")
-
-    # Start headless server
-    env = os.environ.copy()
-    env["AIRUNNER_HEADLESS"] = "1"
-    env["AIRUNNER_HTTP_PORT"] = str(port)
-    env["AIRUNNER_HTTP_HOST"] = host
-
-    logger.info(f"Starting headless server on {host}:{port}")
-
-    process = subprocess.Popen(
-        [sys.executable, "-m", "airunner.bin.airunner_headless"],
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    # Wait for server to be ready (max 30 seconds)
     base_url = f"http://{host}:{port}"
-    start_time = time.time()
     timeout = 30
-    ready = False
 
-    while time.time() - start_time < timeout:
-        try:
-            response = requests.get(f"{base_url}/health", timeout=1)
-            if response.status_code == 200:
-                ready = True
-                logger.info("Server is ready")
-                break
-        except requests.RequestException:
-            pass
-        time.sleep(0.5)
+    process, server_log = _start_server_process(port, host)
+
+    ready = _wait_for_server_health(base_url, timeout)
 
     if not ready:
-        # Server failed to start, kill it and get error output
         process.terminate()
-        stdout, stderr = process.communicate(timeout=5)
+        process.wait(timeout=5)
+        server_log.close()
+        with open("/tmp/airunner_test_server.log", "r") as f:
+            log_content = f.read()
         error_msg = (
             f"Server failed to start within {timeout}s\n"
-            f"stdout: {stdout.decode()}\n"
-            f"stderr: {stderr.decode()}"
+            f"Server log:\n{log_content}"
         )
         raise RuntimeError(error_msg)
 
     yield process
 
-    # Cleanup: terminate server
-    logger.info("Terminating headless server")
-    process.terminate()
-    try:
-        process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        logger.warning("Server did not terminate gracefully, killing")
-        process.kill()
-        process.wait()
+    _terminate_server_process(process)
+    server_log.close()
 
 
 @pytest.fixture(scope="session")
-def airunner_client(airunner_server) -> AIRunnerClient:
+def airunner_client(
+    airunner_server: subprocess.Popen,
+) -> AIRunnerClient:
     """Create AIRunnerClient instance connected to test server.
 
     Depends on airunner_server fixture to ensure server is running.
@@ -128,7 +152,9 @@ def airunner_client(airunner_server) -> AIRunnerClient:
 
 
 @pytest.fixture
-def airunner_client_function_scope(airunner_server) -> AIRunnerClient:
+def airunner_client_function_scope(
+    airunner_server: subprocess.Popen,
+) -> AIRunnerClient:
     """Create function-scoped AIRunnerClient instance.
 
     Use this fixture when you need a fresh client for each test function.

@@ -20,6 +20,10 @@ from airunner.components.llm.managers.tools import (
 )
 from airunner.enums import LLMActionType
 
+# CRITICAL: Import tools to trigger ToolRegistry registration
+# This MUST happen at module load time
+from airunner.components.llm import tools  # noqa: F401
+
 
 class ToolManager(
     MediatorMixin,
@@ -245,6 +249,107 @@ class ToolManager(
             # Auto mode: all tools available
             return self.get_all_tools()
 
-        else:
-            # Default: return all tools
-            return self.get_all_tools()
+    def get_tools_by_categories(self, categories: List) -> List[Callable]:
+        """Get tools filtered by categories.
+
+        Args:
+            categories: List of ToolCategory enum values to include
+
+        Returns:
+            List of tool functions matching the specified categories
+        """
+        from airunner.components.llm.core.tool_registry import ToolRegistry
+
+        if not categories:
+            return []
+
+        filtered_tools = []
+        category_set = set(categories)
+        print(
+            f"[TOOL MANAGER DEBUG] Filtering for categories: {category_set}",
+            flush=True,
+        )
+        print(
+            f"[TOOL MANAGER DEBUG] Total tools in registry: {len(ToolRegistry.all())}",
+            flush=True,
+        )
+
+        for tool_info in ToolRegistry.all().values():
+            print(
+                f"[TOOL MANAGER DEBUG] Checking tool {tool_info.name} (category={tool_info.category})",
+                flush=True,
+            )
+            if tool_info.category in category_set:
+                print(
+                    f"[TOOL MANAGER DEBUG] Category MATCH! Getting tool function...",
+                    flush=True,
+                )
+                # Get the actual tool function
+                tool_func = self._get_tool_by_name(tool_info.name)
+                if tool_func:
+                    print(
+                        f"[TOOL MANAGER DEBUG] Added tool: {tool_info.name}",
+                        flush=True,
+                    )
+                    filtered_tools.append(tool_func)
+                else:
+                    print(
+                        f"[TOOL MANAGER DEBUG] Tool function NOT FOUND for {tool_info.name}",
+                        flush=True,
+                    )
+
+        print(
+            f"[TOOL MANAGER DEBUG] Filtered result: {len(filtered_tools)} tools",
+            flush=True,
+        )
+        self.logger.info(
+            f"Filtered to {len(filtered_tools)} tools from "
+            f"categories: {[c.value for c in categories]}"
+        )
+        return filtered_tools
+
+    def _get_tool_by_name(self, name: str) -> Optional[Callable]:
+        """Get tool function by name.
+
+        Args:
+            name: Tool function name
+
+        Returns:
+            Tool function or None if not found
+        """
+        from airunner.components.llm.core.tool_registry import ToolRegistry
+
+        # First check the NEW ToolRegistry (for @tool decorated functions)
+        tool_info = ToolRegistry.get(name)
+        if tool_info:
+            print(
+                f"[TOOL MANAGER DEBUG] Found NEW tool in registry: {name}",
+                flush=True,
+            )
+            return tool_info.func
+
+        # Fallback to OLD mixin-based tools
+        # Map tool names to their getter methods
+        tool_getters = {
+            "store_user_data": self.store_user_data_tool,
+            "get_user_data": self.get_user_data_tool,
+            "update_mood": self.update_mood_tool,
+            "clear_conversation": self.clear_conversation_tool,
+            "toggle_tts": self.toggle_tts_tool,
+            "generate_image": self.generate_image_tool,
+            "clear_canvas": self.clear_canvas_tool,
+            "open_image": self.open_image_tool,
+            "rag_search": self.rag_search_tool,
+            "search_web": self.search_web_tool,
+        }
+
+        getter = tool_getters.get(name)
+        if getter:
+            print(
+                f"[TOOL MANAGER DEBUG] Found OLD mixin tool: {name}",
+                flush=True,
+            )
+            return getter()
+
+        self.logger.warning(f"Tool getter not found for: {name}")
+        return None

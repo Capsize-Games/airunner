@@ -8,6 +8,7 @@ HTTP API endpoints for AI Runner: /llm, /art, /stt, /tts
 """
 
 import json
+import logging
 import queue
 import threading
 import uuid
@@ -19,6 +20,10 @@ from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
 from airunner.enums import LLMActionType
+from airunner.utils.application.get_logger import get_logger
+
+# Module-level logger
+logger = get_logger(__name__)
 
 # Lazy import to avoid circular dependency
 _api = None
@@ -121,11 +126,16 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             "system_prompt": "You are a helpful assistant",  // optional
             "action": "CHAT",  // optional, default: CHAT
             "stream": true,  // optional, default: true
+            "use_memory": false,  // optional, disable conversation history
             "llm_request": {  // optional LLM parameters
                 "temperature": 0.8,
                 "max_new_tokens": 100,
                 ...
             }
+            // OR top-level params (will be moved to llm_request):
+            "temperature": 0.8,
+            "max_tokens": 100,
+            ...
         }
         """
         # Parse request parameters
@@ -141,6 +151,47 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         action_str = data.get("action", "CHAT")
         stream = data.get("stream", True)
         llm_request_data = data.get("llm_request", {})
+
+        # DEBUG: Log incoming request data (using print to bypass logger issues)
+        print(
+            f"[SERVER DEBUG] Incoming request data keys: {list(data.keys())}",
+            flush=True,
+        )
+        if "tool_categories" in data:
+            print(
+                f"[SERVER DEBUG] tool_categories in request: {data['tool_categories']}",
+                flush=True,
+            )
+        else:
+            print(f"[SERVER DEBUG] NO tool_categories in request!", flush=True)
+
+        # Handle top-level LLM parameters (for convenience)
+        # Map common parameter names to LLMRequest fields
+        param_mapping = {
+            "temperature": "temperature",
+            "max_tokens": "max_new_tokens",
+            "top_p": "top_p",
+            "top_k": "top_k",
+            "repetition_penalty": "repetition_penalty",
+            "use_memory": "use_memory",
+            "tool_categories": "tool_categories",  # CRITICAL: Allow disabling tools
+        }
+
+        for client_param, llm_param in param_mapping.items():
+            if client_param in data and client_param not in [
+                "prompt",
+                "system_prompt",
+                "action",
+                "stream",
+                "llm_request",
+            ]:
+                llm_request_data[llm_param] = data[client_param]
+
+        # DEBUG: Show what got mapped
+        print(
+            f"[SERVER DEBUG] llm_request_data after mapping: {llm_request_data}",
+            flush=True,
+        )
 
         # Parse action type
         try:
@@ -181,11 +232,28 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # Start with defaults
         llm_request = LLMRequest()
 
+        import sys
+
+        sys.stderr.write(
+            f"\n[SERVER] Creating LLMRequest from params: {params}\n"
+        )
+        sys.stderr.flush()
+
         # Override with provided parameters
         for key, value in params.items():
             if hasattr(llm_request, key):
                 setattr(llm_request, key, value)
+                sys.stderr.write(f"[SERVER] Set LLMRequest.{key} = {value}\n")
+                sys.stderr.flush()
+            else:
+                logger.warning(
+                    f"Ignoring unknown LLMRequest parameter: {key}={value}"
+                )
 
+        sys.stderr.write(
+            f"[SERVER] Final LLMRequest.max_new_tokens = {llm_request.max_new_tokens}\n"
+        )
+        sys.stderr.flush()
         return llm_request
 
     def _handle_llm_stream(
@@ -245,6 +313,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         # Send LLM request with request_id and callback
         api = get_api()
+        print(
+            f"[SERVER DEBUG] Sending to API with llm_request.max_new_tokens={llm_request.max_new_tokens}",
+            flush=True,
+        )
         api.llm.send_request(
             prompt=prompt,
             action=action,
@@ -254,7 +326,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         )
 
         # Wait for completion (with timeout)
-        if not complete_event.wait(timeout=120):
+        if not complete_event.wait(
+            timeout=300
+        ):  # 5 minute timeout for longer generations
             # Timeout - send error response
             error_response = {
                 "message": "Request timeout",
@@ -285,9 +359,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         def collect_callback(data: dict):
             """Callback to collect response chunks."""
-            import logging
-
-            logger = logging.getLogger(__name__)
             print(
                 f"[HTTP Callback {id(collect_callback)}] CALLED with data keys: {list(data.keys())}"
             )
@@ -335,11 +406,13 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         )
 
         print(
-            f"[HTTP Server] Waiting for event {id(complete_event)} with 120s timeout..."
+            f"[HTTP Server] Waiting for event {id(complete_event)} with 300s timeout..."
         )
 
         # Wait for completion (with timeout)
-        if complete_event.wait(timeout=120):
+        if complete_event.wait(
+            timeout=300
+        ):  # 5 minute timeout for longer generations
             # Success - return complete message
             response_data = {
                 "message": "".join(complete_message),
