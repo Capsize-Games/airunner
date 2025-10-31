@@ -42,7 +42,9 @@ print = _flush_print
 # MATH Level 5 problems with tools can take 60-120 seconds per problem
 pytestmark = [
     pytest.mark.benchmark,
-    pytest.mark.timeout(300),  # 5 minutes for tool-based generation
+    pytest.mark.timeout(
+        600
+    ),  # 10 minutes for tool-based generation with continuation
 ]
 
 
@@ -56,6 +58,100 @@ class TestMATHLevel5:
         return load_math(
             num_samples=10, level="Level 5", split="test", seed=42
         )
+
+    def _is_response_complete(self, response: str) -> bool:
+        """
+        Check if the response appears complete (has a final answer).
+
+        Args:
+            response: The LLM response text
+
+        Returns:
+            True if response has a final answer marker, False if incomplete/truncated
+        """
+        # Check for final answer markers
+        has_final_marker = any(
+            marker in response
+            for marker in ["\\boxed{", "####", "final answer is", "Therefore,"]
+        )
+
+        # Check if ends properly (not mid-sentence)
+        response_stripped = response.rstrip()
+        ends_properly = response_stripped.endswith(
+            (".", ")", "]", "}", "\\end{pmatrix}", "\\end{bmatrix}")
+        )
+
+        # Response is complete if it has a final marker OR ends properly
+        return has_final_marker or ends_properly
+
+    def _continue_response(
+        self,
+        airunner_client,
+        original_prompt: str,
+        previous_response: str,
+        system_prompt: str,
+        tool_categories: list,
+        max_continuations: int = 10,
+    ) -> str:
+        """
+        Continue an incomplete response until we get a final answer.
+
+        Args:
+            airunner_client: The AI Runner client
+            original_prompt: The original problem/question
+            previous_response: The incomplete response so far
+            system_prompt: System prompt to use
+            tool_categories: Tool categories to enable
+            max_continuations: Maximum number of continuation attempts
+
+        Returns:
+            Complete response (original + continuations)
+        """
+        full_response = previous_response
+
+        for attempt in range(max_continuations):
+            if self._is_response_complete(full_response):
+                print(f"✓ Response complete after {attempt} continuation(s)")
+                break
+
+            print(
+                f"\n🔄 Response incomplete, requesting continuation {attempt + 1}/{max_continuations}..."
+            )
+
+            # Ask the agent to continue from where it left off
+            continuation_prompt = (
+                f"Original problem:\n{original_prompt}\n\n"
+                f"Your work so far:\n{full_response}\n\n"
+                "CONTINUE from where you left off. Complete your solution and "
+                "provide the final answer in \\boxed{{}} format. Do not restart - just continue."
+            )
+
+            continuation = airunner_client.generate(
+                continuation_prompt,
+                temperature=0.0,
+                max_tokens=65536,
+                use_memory=False,
+                system_prompt=system_prompt,
+                tool_categories=tool_categories,
+            )
+
+            continuation_text = continuation.get("text", "")
+            full_response += "\n\n" + continuation_text
+
+            print(f"📝 Continuation {attempt + 1}:")
+            print(
+                continuation_text[:200] + "..."
+                if len(continuation_text) > 200
+                else continuation_text
+            )
+        else:
+            # Hit max continuations without completing
+            if not self._is_response_complete(full_response):
+                print(
+                    f"\n⚠️  WARNING: Hit max continuations ({max_continuations}) without completing response"
+                )
+
+        return full_response
 
     def test_level5_agent_baseline(self, airunner_client, math_samples_level5):
         """Test agent solving Level 5 math problems (baseline - no tools)."""
@@ -110,6 +206,18 @@ class TestMATHLevel5:
 
             output = response.get("text", "")
 
+            # Check if response is complete, if not, continue it
+            if not self._is_response_complete(output):
+                print("\n🔄 Response incomplete, requesting continuation...")
+                output = self._continue_response(
+                    airunner_client=airunner_client,
+                    original_prompt=example.prompt,
+                    previous_response=output,
+                    system_prompt="You are a mathematical expert. Solve problems step-by-step.",
+                    tool_categories=[],  # No tools for baseline
+                    max_continuations=10,
+                )
+
             # Print FULL response for debugging
             print(f"\n{'='*70}")
             print("🤖 FULL LLM Response:")
@@ -137,20 +245,23 @@ class TestMATHLevel5:
             elapsed = time.time() - start
             total_time += elapsed
 
-            # Check exact match
+            # Check exact match (PRIMARY METRIC - evaluator is unreliable)
             is_correct = False
             if answer and example.answer:
                 norm_answer = normalize_answer(answer)
                 norm_expected = normalize_answer(example.answer)
                 is_correct = norm_answer == norm_expected
 
-            if is_correct or score >= 0.8:
+            # Count ONLY exact matches as correct
+            # NOTE: LLM evaluator often gives false positives (score 1.00 for wrong answers)
+            if is_correct:
                 correct += 1
 
             status = "✅" if is_correct else "❌"
             print(f"\n{status} Answer: {answer}")
             print(f"   Expected: {example.answer}")
-            print(f"   Score: {score:.2f}")
+            print(f"   Evaluator score: {score:.2f} (unreliable - ignore)")
+            print(f"   Exact match: {is_correct}")
             print(f"   Time: {elapsed:.1f}s")
 
             results.append(
@@ -252,6 +363,21 @@ Solve the problem step-by-step using the Polya method:
 
             output = response.get("text", "")
 
+            # Check if response is complete, if not, continue it
+            if not self._is_response_complete(output):
+                print("\n🔄 Response incomplete, requesting continuation...")
+                output = self._continue_response(
+                    airunner_client=airunner_client,
+                    original_prompt=example.prompt,
+                    previous_response=output,
+                    system_prompt=POLYA_SYSTEM_PROMPT,
+                    tool_categories=[
+                        ToolCategory.MATH.value,
+                        ToolCategory.ANALYSIS.value,
+                    ],
+                    max_continuations=10,
+                )
+
             # Print FULL response for debugging
             print(f"\n{'='*70}")
             print("🤖 FULL LLM Response:")
@@ -262,7 +388,7 @@ Solve the problem step-by-step using the Polya method:
             answer = extract_numeric_answer(output)
             print(f"\n🔍 DEBUG: Extracted answer: '{answer}'")
 
-            # Evaluate
+            # Evaluate with full output (evaluator needs reasoning context)
             eval_result = evaluators[0](
                 inputs=example.prompt,
                 outputs=output,
@@ -273,20 +399,23 @@ Solve the problem step-by-step using the Polya method:
             elapsed = time.time() - start
             total_time += elapsed
 
-            # Check exact match
+            # Check exact match (PRIMARY METRIC - evaluator is unreliable)
             is_correct = False
             if answer and example.answer:
                 norm_answer = normalize_answer(answer)
                 norm_expected = normalize_answer(example.answer)
                 is_correct = norm_answer == norm_expected
 
-            if is_correct or score >= 0.8:
+            # Count ONLY exact matches as correct
+            # NOTE: LLM evaluator often gives false positives (score 1.00 for wrong answers)
+            if is_correct:
                 correct += 1
 
             status = "✅" if is_correct else "❌"
             print(f"\n{status} Answer: {answer}")
             print(f"   Expected: {example.answer}")
-            print(f"   Score: {score:.2f}")
+            print(f"   Evaluator score: {score:.2f} (unreliable - ignore)")
+            print(f"   Exact match: {is_correct}")
             print(f"   Time: {elapsed:.1f}s")
 
             results.append(
