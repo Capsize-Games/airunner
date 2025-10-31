@@ -57,6 +57,16 @@ def extract_numeric_answer(text: str) -> Optional[str]:
     if boxed_answers:
         return boxed_answers[-1]  # Return LAST boxed answer
 
+    # Also check for matrix/vector format without \boxed:
+    # \begin{pmatrix} ... \end{pmatrix} or \begin{bmatrix} ... \end{bmatrix}
+    # Find ALL matrices and take the LAST one (final answer)
+    matrix_matches = re.findall(
+        r"\\begin\{[pb]matrix\}.+?\\end\{[pb]matrix\}", text, re.DOTALL
+    )
+    if matrix_matches:
+        # Return the LAST matrix including the begin/end tags for proper comparison
+        return matrix_matches[-1].strip()
+
     # GSM8K format: #### answer
     gsm8k_match = re.search(r"####\s*(.+?)(?:\n|$)", text)
     if gsm8k_match:
@@ -113,6 +123,22 @@ def normalize_answer(answer: str) -> str:
     """
     # Simple normalization only - NO manual LaTeX conversion
     # LaTeX conversion is now handled by LLM tool convert_to_latex()
+
+    # Normalize LaTeX fractions: \frac{a}{b} -> a/b
+    # This handles the common case where model uses \frac but expected uses /
+    import re
+
+    answer = re.sub(r"\\frac\{([^}]+)\}\{([^}]+)\}", r"\1/\2", answer)
+
+    # Normalize LaTeX line breaks in matrices (\\  or \\ both become single space)
+    answer = re.sub(r"\\\\\s*", " ", answer)
+
+    # Normalize LaTeX spacing commands
+    answer = answer.replace(r"\,", "")  # Thin space
+    answer = answer.replace(r"\ ", " ")  # Normal space
+
+    # Normalize whitespace (collapse multiple spaces to single space)
+    answer = re.sub(r"\s+", " ", answer)
 
     # Remove commas from numbers
     answer = answer.replace(",", "")
