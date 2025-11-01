@@ -115,37 +115,144 @@ def extract_numeric_answer(text: str) -> Optional[str]:
 def normalize_answer(answer: str) -> str:
     """Normalize answer for comparison.
 
+    Handles LaTeX formatting differences, whitespace, and common mathematical
+    notations to determine if two answers are mathematically equivalent.
+
     Args:
         answer: Answer string
 
     Returns:
-        Normalized answer (lowercase, stripped, no punctuation)
+        Normalized answer (lowercase, stripped, standardized formatting)
     """
-    # Simple normalization only - NO manual LaTeX conversion
-    # LaTeX conversion is now handled by LLM tool convert_to_latex()
-
-    # Normalize LaTeX fractions: \frac{a}{b} -> a/b
-    # This handles the common case where model uses \frac but expected uses /
     import re
 
-    answer = re.sub(r"\\frac\{([^}]+)\}\{([^}]+)\}", r"\1/\2", answer)
-
-    # Normalize LaTeX line breaks in matrices (\\  or \\ both become single space)
-    answer = re.sub(r"\\\\\s*", " ", answer)
-
-    # Normalize LaTeX spacing commands
+    # Normalize LaTeX spacing commands FIRST (before whitespace processing)
     answer = answer.replace(r"\,", "")  # Thin space
     answer = answer.replace(r"\ ", " ")  # Normal space
+    answer = answer.replace(r"\;", "")  # Medium space
+    answer = answer.replace(r"\:", "")  # Medium space
+    answer = answer.replace(r"\!", "")  # Negative thin space
 
-    # Normalize whitespace (collapse multiple spaces to single space)
-    answer = re.sub(r"\s+", " ", answer)
+    # Normalize whitespace (collapse multiple spaces to single space, remove ALL spaces)
+    # This handles "2\pi" vs "2 \pi" by making both "2\pi"
+    answer = re.sub(r"\s+", "", answer)
+
+    # Normalize LaTeX line breaks in matrices
+    answer = re.sub(r"\\\\\s*", "", answer)
 
     # Remove commas from numbers
     answer = answer.replace(",", "")
+
     # Lowercase
     answer = answer.lower().strip()
+
     # Remove trailing periods
     answer = answer.rstrip(".")
+
     # Remove dollar signs, percent signs
     answer = answer.replace("$", "").replace("%", "")
+
+    # Normalize pi notation: π -> pi
+    answer = answer.replace("π", "pi")
+
+    # Normalize multiplication symbols
+    answer = answer.replace(r"\cdot", "*")
+    answer = answer.replace(r"\times", "*")
+
+    # Normalize division: ÷ -> /
+    answer = answer.replace("÷", "/")
+
+    # Final cleanup
+    answer = answer.strip()
     return answer
+
+
+def answers_are_equivalent(answer1: str, answer2: str) -> bool:
+    """Check if two answers are mathematically equivalent.
+
+    Uses multiple strategies:
+    1. Exact match after normalization
+    2. Numerical comparison (if both are numbers)
+    3. Symbolic comparison using sympy (if available)
+
+    Args:
+        answer1: First answer
+        answer2: Second answer
+
+    Returns:
+        True if answers are mathematically equivalent
+    """
+    if not answer1 or not answer2:
+        return False
+
+    # Strategy 1: Exact match after normalization
+    norm1 = normalize_answer(answer1)
+    norm2 = normalize_answer(answer2)
+
+    if norm1 == norm2:
+        return True
+
+    # Strategy 2: Numerical comparison (handle floating point precision)
+    try:
+        # Try to parse as numbers
+        num1 = float(norm1)
+        num2 = float(norm2)
+        # Use relative tolerance for comparison
+        return (
+            abs(num1 - num2) < 1e-6
+            or abs(num1 - num2) / max(abs(num1), abs(num2)) < 1e-6
+        )
+    except (ValueError, ZeroDivisionError):
+        pass
+
+    # Strategy 3: Symbolic math comparison using sympy
+    try:
+        import sympy as sp
+
+        def latex_to_sympy(text: str) -> sp.Expr:
+            """Convert LaTeX to sympy expression using built-in parser."""
+            # Use sympy's built-in LaTeX parser
+            from sympy.parsing.latex import parse_latex
+
+            try:
+                # Try using sympy's LaTeX parser first
+                expr = parse_latex(text)
+                # Expand and simplify to normalize form
+                return sp.expand(sp.simplify(expr))
+            except Exception:
+                # Fallback to manual conversion for simple cases
+                # Remove spaces
+                text = text.replace(" ", "")
+                # Replace LaTeX commands with sympy equivalents
+                text = text.replace(r"\pi", "pi")
+                text = text.replace("π", "pi")
+                # Use sympify which can handle basic math notation
+                expr = sp.sympify(text)
+                return sp.expand(sp.simplify(expr))
+
+        expr1 = latex_to_sympy(answer1)
+        expr2 = latex_to_sympy(answer2)
+
+        # Check if expressions are equivalent using multiple methods
+        # Method 1: Direct equality after simplification
+        if expr1 == expr2:
+            return True
+
+        # Method 2: Check if difference simplifies to zero
+        diff = sp.simplify(expr1 - expr2)
+        if diff == 0:
+            return True
+
+        # Method 3: Expand both and compare
+        if sp.expand(expr1) == sp.expand(expr2):
+            return True
+
+        return False
+
+    except Exception as e:
+        # If sympy fails, fall back to string comparison
+        logger.debug(f"Sympy comparison failed: {e}")
+        pass
+
+    # No match found
+    return False

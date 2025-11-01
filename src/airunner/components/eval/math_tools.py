@@ -243,11 +243,39 @@ class SafePythonExecutor:
         # Capture stdout
         stdout_capture = io.StringIO()
 
+        # Handle code that might have a final expression to evaluate
+        # Split into statements and potential final expression
+        last_expr_result = None
         try:
-            with contextlib.redirect_stdout(stdout_capture):
-                exec(code, namespace)
+            # Try to compile and check if last line is an expression
+            lines = [line.strip() for line in code.split(";") if line.strip()]
+            if lines:
+                # Execute all but the last line
+                if len(lines) > 1:
+                    exec_code = "; ".join(lines[:-1])
+                    with contextlib.redirect_stdout(stdout_capture):
+                        exec(exec_code, namespace)
 
-            result = self._extract_result(namespace, stdout_capture)
+                # Try to eval the last line to capture expression result
+                last_line = lines[-1]
+                try:
+                    with contextlib.redirect_stdout(stdout_capture):
+                        last_expr_result = eval(last_line, namespace)
+                except SyntaxError:
+                    # Last line is a statement, not an expression
+                    with contextlib.redirect_stdout(stdout_capture):
+                        exec(last_line, namespace)
+                except NameError:
+                    # Last line references undefined names, execute normally
+                    with contextlib.redirect_stdout(stdout_capture):
+                        exec(last_line, namespace)
+            else:
+                with contextlib.redirect_stdout(stdout_capture):
+                    exec(code, namespace)
+
+            result = self._extract_result(
+                namespace, stdout_capture, last_expr_result
+            )
             return True, result, ""
 
         except Exception as e:
@@ -256,13 +284,20 @@ class SafePythonExecutor:
             return False, None, error_msg
 
     def _extract_result(
-        self, namespace: Dict, stdout_capture: io.StringIO
+        self,
+        namespace: Dict,
+        stdout_capture: io.StringIO,
+        last_expr: Any = None,
     ) -> Any:
-        """Extract result from namespace or stdout."""
-        # Try to get 'result' or 'answer' variable
+        """Extract result from namespace, last expression, or stdout."""
+        # Priority 1: Explicit result or answer variable
         result = namespace.get("result") or namespace.get("answer")
 
-        # If no result variable, try to get last printed value
+        # Priority 2: Last expression value (like Python REPL)
+        if result is None and last_expr is not None:
+            result = last_expr
+
+        # Priority 3: Try to get last printed value
         if result is None:
             output = stdout_capture.getvalue().strip()
             if output:
