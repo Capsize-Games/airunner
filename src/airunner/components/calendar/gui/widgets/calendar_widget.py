@@ -31,6 +31,13 @@ class CalendarWidget(BaseWidget):
     event_updated = Signal(int)  # event_id
     event_deleted = Signal(int)  # event_id
 
+    icons = [
+        ("refresh-ccw", "refresh_button"),
+        ("plus-square", "new_event_button"),
+        ("edit", "edit_event_button"),
+        ("trash", "delete_event_button"),
+    ]
+
     def __init__(self, *args, **kwargs):
         """Initialize calendar widget.
 
