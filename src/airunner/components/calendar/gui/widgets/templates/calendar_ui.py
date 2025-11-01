@@ -15,29 +15,27 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCalendarWidget, QHBoxLayout, QLabel,
-    QListWidget, QListWidgetItem, QPushButton, QSizePolicy,
-    QSpacerItem, QSplitter, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCalendarWidget, QFrame, QHBoxLayout,
+    QLabel, QListWidget, QListWidgetItem, QPushButton,
+    QSizePolicy, QSpacerItem, QSplitter, QVBoxLayout,
+    QWidget)
+import airunner.feather_rc
 
 class Ui_calendar(object):
     def setupUi(self, calendar):
         if not calendar.objectName():
             calendar.setObjectName(u"calendar")
         calendar.resize(898, 654)
-        self.main_layout = QVBoxLayout(calendar)
-        self.main_layout.setSpacing(10)
-        self.main_layout.setObjectName(u"main_layout")
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.title = QLabel(calendar)
-        self.title.setObjectName(u"title")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.title.sizePolicy().hasHeightForWidth())
-        self.title.setSizePolicy(sizePolicy)
-        self.title.setStyleSheet(u"font-size: 18px; font-weight: bold;")
+        self.verticalLayout = QVBoxLayout(calendar)
+        self.verticalLayout.setSpacing(10)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.line = QFrame(calendar)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
-        self.main_layout.addWidget(self.title)
+        self.verticalLayout.addWidget(self.line)
 
         self.splitter = QSplitter(calendar)
         self.splitter.setObjectName(u"splitter")
@@ -47,9 +45,10 @@ class Ui_calendar(object):
         self.calendar_layout = QVBoxLayout(self.calendar_container)
         self.calendar_layout.setSpacing(10)
         self.calendar_layout.setObjectName(u"calendar_layout")
-        self.calendar_layout.setContentsMargins(0, 0, 0, 0)
+        self.calendar_layout.setContentsMargins(0, 0, 10, 0)
         self.calendar_widget = QCalendarWidget(self.calendar_container)
         self.calendar_widget.setObjectName(u"calendar_widget")
+        self.calendar_widget.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.calendar_widget.setGridVisible(True)
         self.calendar_widget.setVerticalHeaderFormat(QCalendarWidget.VerticalHeaderFormat.NoVerticalHeader)
 
@@ -60,17 +59,22 @@ class Ui_calendar(object):
         self.controls_layout.setObjectName(u"controls_layout")
         self.today_button = QPushButton(self.calendar_container)
         self.today_button.setObjectName(u"today_button")
+        self.today_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         self.controls_layout.addWidget(self.today_button)
-
-        self.refresh_button = QPushButton(self.calendar_container)
-        self.refresh_button.setObjectName(u"refresh_button")
-
-        self.controls_layout.addWidget(self.refresh_button)
 
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.controls_layout.addItem(self.horizontalSpacer)
+
+        self.refresh_button = QPushButton(self.calendar_container)
+        self.refresh_button.setObjectName(u"refresh_button")
+        self.refresh_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon = QIcon()
+        icon.addFile(u":/dark/icons/feather/dark/refresh-ccw.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.refresh_button.setIcon(icon)
+
+        self.controls_layout.addWidget(self.refresh_button)
 
 
         self.calendar_layout.addLayout(self.controls_layout)
@@ -98,18 +102,34 @@ class Ui_calendar(object):
         self.event_controls.setObjectName(u"event_controls")
         self.new_event_button = QPushButton(self.events_container)
         self.new_event_button.setObjectName(u"new_event_button")
+        self.new_event_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon1 = QIcon()
+        icon1.addFile(u":/dark/icons/feather/dark/plus-square.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.new_event_button.setIcon(icon1)
 
         self.event_controls.addWidget(self.new_event_button)
 
         self.edit_event_button = QPushButton(self.events_container)
         self.edit_event_button.setObjectName(u"edit_event_button")
         self.edit_event_button.setEnabled(False)
+        self.edit_event_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon2 = QIcon()
+        icon2.addFile(u":/dark/icons/feather/dark/edit.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.edit_event_button.setIcon(icon2)
 
         self.event_controls.addWidget(self.edit_event_button)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.event_controls.addItem(self.horizontalSpacer_2)
 
         self.delete_event_button = QPushButton(self.events_container)
         self.delete_event_button.setObjectName(u"delete_event_button")
         self.delete_event_button.setEnabled(False)
+        self.delete_event_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon3 = QIcon()
+        icon3.addFile(u":/dark/icons/feather/dark/trash.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.delete_event_button.setIcon(icon3)
 
         self.event_controls.addWidget(self.delete_event_button)
 
@@ -118,7 +138,7 @@ class Ui_calendar(object):
 
         self.splitter.addWidget(self.events_container)
 
-        self.main_layout.addWidget(self.splitter)
+        self.verticalLayout.addWidget(self.splitter)
 
 
         self.retranslateUi(calendar)
@@ -128,12 +148,26 @@ class Ui_calendar(object):
 
     def retranslateUi(self, calendar):
         calendar.setWindowTitle(QCoreApplication.translate("calendar", u"Calendar", None))
-        self.title.setText(QCoreApplication.translate("calendar", u"Calendar", None))
+#if QT_CONFIG(tooltip)
+        self.today_button.setToolTip(QCoreApplication.translate("calendar", u"Today", None))
+#endif // QT_CONFIG(tooltip)
         self.today_button.setText(QCoreApplication.translate("calendar", u"Today", None))
-        self.refresh_button.setText(QCoreApplication.translate("calendar", u"Refresh", None))
+#if QT_CONFIG(tooltip)
+        self.refresh_button.setToolTip(QCoreApplication.translate("calendar", u"Refresh", None))
+#endif // QT_CONFIG(tooltip)
+        self.refresh_button.setText("")
         self.events_label.setText(QCoreApplication.translate("calendar", u"Events", None))
-        self.new_event_button.setText(QCoreApplication.translate("calendar", u"New Event", None))
-        self.edit_event_button.setText(QCoreApplication.translate("calendar", u"Edit", None))
-        self.delete_event_button.setText(QCoreApplication.translate("calendar", u"Delete", None))
+#if QT_CONFIG(tooltip)
+        self.new_event_button.setToolTip(QCoreApplication.translate("calendar", u"New Event", None))
+#endif // QT_CONFIG(tooltip)
+        self.new_event_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.edit_event_button.setToolTip(QCoreApplication.translate("calendar", u"Edit Event", None))
+#endif // QT_CONFIG(tooltip)
+        self.edit_event_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.delete_event_button.setToolTip(QCoreApplication.translate("calendar", u"Delete Event", None))
+#endif // QT_CONFIG(tooltip)
+        self.delete_event_button.setText("")
     # retranslateUi
 

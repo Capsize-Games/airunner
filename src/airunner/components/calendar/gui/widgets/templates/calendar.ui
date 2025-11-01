@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Calendar</string>
   </property>
-  <layout class="QVBoxLayout" name="main_layout">
+  <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
     <number>10</number>
    </property>
@@ -30,18 +30,9 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QLabel" name="title">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">font-size: 18px; font-weight: bold;</string>
-     </property>
-     <property name="text">
-      <string>Calendar</string>
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
     </widget>
    </item>
@@ -69,6 +60,9 @@
        </property>
        <item>
         <widget class="QCalendarWidget" name="calendar_widget">
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
          <property name="gridVisible">
           <bool>true</bool>
          </property>
@@ -84,15 +78,14 @@
          </property>
          <item>
           <widget class="QPushButton" name="today_button">
-           <property name="text">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
             <string>Today</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="refresh_button">
            <property name="text">
-            <string>Refresh</string>
+            <string>Today</string>
            </property>
           </widget>
          </item>
@@ -108,6 +101,23 @@
             </size>
            </property>
           </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="refresh_button">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>Refresh</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="../../../../../gui/resources/feather.qrc">
+             <normaloff>:/dark/icons/feather/dark/refresh-ccw.svg</normaloff>:/dark/icons/feather/dark/refresh-ccw.svg</iconset>
+           </property>
+          </widget>
          </item>
         </layout>
        </item>
@@ -150,8 +160,18 @@
          </property>
          <item>
           <widget class="QPushButton" name="new_event_button">
-           <property name="text">
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
             <string>New Event</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="../../../../../gui/resources/feather.qrc">
+             <normaloff>:/dark/icons/feather/dark/plus-square.svg</normaloff>:/dark/icons/feather/dark/plus-square.svg</iconset>
            </property>
           </widget>
          </item>
@@ -160,18 +180,51 @@
            <property name="enabled">
             <bool>false</bool>
            </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>Edit Event</string>
+           </property>
            <property name="text">
-            <string>Edit</string>
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="../../../../../gui/resources/feather.qrc">
+             <normaloff>:/dark/icons/feather/dark/edit.svg</normaloff>:/dark/icons/feather/dark/edit.svg</iconset>
            </property>
           </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
          <item>
           <widget class="QPushButton" name="delete_event_button">
            <property name="enabled">
             <bool>false</bool>
            </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="toolTip">
+            <string>Delete Event</string>
+           </property>
            <property name="text">
-            <string>Delete</string>
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="../../../../../gui/resources/feather.qrc">
+             <normaloff>:/dark/icons/feather/dark/trash.svg</normaloff>:/dark/icons/feather/dark/trash.svg</iconset>
            </property>
           </widget>
          </item>
@@ -183,6 +236,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../../../../gui/resources/feather.qrc"/>
+ </resources>
  <connections/>
 </ui>
