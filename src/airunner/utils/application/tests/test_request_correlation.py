@@ -7,7 +7,6 @@ using request_id tracking and callbacks.
 
 import pytest
 import time
-import threading
 from airunner.utils.application.signal_mediator import SignalMediator
 from airunner.enums import SignalCode
 
@@ -31,7 +30,7 @@ def test_request_response_correlation():
     mediator = SignalMediator()
 
     request_id = "test-request-456"
-    response_queue = mediator.register_pending_request(request_id)
+    mediator.register_pending_request(request_id)
 
     # Simulate sending a response with request_id
     response_data = {

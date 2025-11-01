@@ -1,12 +1,10 @@
 """Tests for SearchableComboBox widget."""
 
 import pytest
-from unittest.mock import MagicMock
 
 # Qt imports
 try:
     from PySide6.QtWidgets import QApplication
-    from PySide6.QtCore import Qt
     import sys
 
     # Create QApplication if it doesn't exist

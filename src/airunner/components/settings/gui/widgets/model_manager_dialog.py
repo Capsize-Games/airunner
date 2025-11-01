@@ -7,9 +7,8 @@ Provides a comprehensive UI for:
 - Viewing model details and disk usage
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict
 import os
-from pathlib import Path
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -29,7 +28,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, Slot
 
 from airunner.components.llm.config.provider_config import LLMProviderConfig
-from airunner.enums import SignalCode
 
 
 class ManageModelsDialog(QDialog):

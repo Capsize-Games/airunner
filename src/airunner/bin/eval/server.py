@@ -3,7 +3,6 @@
 import os
 import sys
 import logging
-import time
 
 # Set headless mode
 os.environ["AIRUNNER_HEADLESS"] = "1"

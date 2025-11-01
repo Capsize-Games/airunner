@@ -13,7 +13,6 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional
 
-from airunner.components.knowledge.fact_models import Fact, FactCategory
 from airunner.components.knowledge.data.models import KnowledgeFact
 from airunner.components.data.session_manager import session_scope
 from airunner.settings import AIRUNNER_USER_DATA_PATH
@@ -27,7 +26,6 @@ logger = logging.getLogger(__name__)
 class KnowledgeMigrationError(Exception):
     """Custom exception for migration errors."""
 
-    pass
 
 
 class KnowledgeMigrator:
