@@ -6,7 +6,6 @@ and conversational modes based on tool categories.
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
 
 from airunner.components.llm.core.tool_registry import ToolCategory
 from airunner.components.llm.managers.mixins.system_prompt_mixin import (

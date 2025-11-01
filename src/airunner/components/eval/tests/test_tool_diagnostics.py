@@ -15,14 +15,12 @@ import time
 from typing import Dict, Any, List
 from airunner.components.eval.benchmark_datasets import (
     extract_numeric_answer,
-    normalize_answer,
     answers_are_equivalent,
 )
 from airunner.components.eval.benchmark_datasets.math_dataset import load_math
 from airunner.components.eval.benchmark_datasets.gsm8k_dataset import (
     load_gsm8k,
 )
-from airunner.components.eval.evaluators import create_correctness_evaluator
 from airunner.components.llm.core.tool_registry import ToolCategory
 
 logger = logging.getLogger(__name__)

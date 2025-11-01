@@ -16,11 +16,9 @@ import logging
 import pytest
 import sys
 import time
-from pathlib import Path
 from typing import Dict, Any, List
 from airunner.components.eval.benchmark_datasets import (
     extract_numeric_answer,
-    normalize_answer,
     answers_are_equivalent,
 )
 from airunner.components.eval.benchmark_datasets.math_dataset import load_math

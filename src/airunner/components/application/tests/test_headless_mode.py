@@ -6,9 +6,6 @@ and that the API server responds to /health endpoint.
 """
 
 import pytest
-import requests
-import time
-import threading
 import os
 
 
@@ -41,8 +38,6 @@ def test_headless_health_endpoint():
     This test starts the headless server, queries /health,
     and verifies the response.
     """
-    import subprocess
-    import sys
 
     # Start headless server in subprocess
     env = os.environ.copy()

@@ -8,13 +8,10 @@ HTTP API endpoints for AI Runner: /llm, /art, /stt, /tts
 """
 
 import json
-import logging
-import queue
 import threading
 import uuid
 from http.server import BaseHTTPRequestHandler
 from typing import Optional
-from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,

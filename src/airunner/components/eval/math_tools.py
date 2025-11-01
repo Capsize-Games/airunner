@@ -8,7 +8,6 @@ Provides:
 """
 
 import re
-import sys
 import io
 import contextlib
 import threading

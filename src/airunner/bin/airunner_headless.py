@@ -42,7 +42,6 @@ import os
 # CRITICAL: Set headless mode BEFORE importing App
 os.environ["AIRUNNER_HEADLESS"] = "1"
 
-from airunner.app import App
 
 
 def main():

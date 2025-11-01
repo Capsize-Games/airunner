@@ -1,7 +1,7 @@
 """Tests for nodegraph workflow tools."""
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 from airunner.components.nodegraph.tools.workflow_tools import (
     create_workflow,
@@ -13,10 +13,6 @@ from airunner.components.nodegraph.tools.workflow_tools import (
     switch_mode,
 )
 from airunner.components.nodegraph.data.workflow import Workflow
-from airunner.components.nodegraph.data.workflow_node import WorkflowNode
-from airunner.components.nodegraph.data.workflow_connection import (
-    WorkflowConnection,
-)
 
 
 class TestWorkflowTools:

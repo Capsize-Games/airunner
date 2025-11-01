@@ -125,7 +125,6 @@ class ExpertAgent(ABC):
                 - success: Boolean indicating success
                 - metadata: Optional metadata about execution
         """
-        pass
 
     def get_available_tools(self) -> List[str]:
         """Get list of available tool names for this agent.
