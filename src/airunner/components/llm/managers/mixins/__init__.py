@@ -36,6 +36,21 @@ from airunner.components.llm.managers.mixins.tokenizer_loader_mixin import (
 from airunner.components.llm.managers.mixins.validation_mixin import (
     ValidationMixin,
 )
+from airunner.components.llm.managers.mixins.tool_management_mixin import (
+    ToolManagementMixin,
+)
+from airunner.components.llm.managers.mixins.tool_execution_mixin import (
+    ToolExecutionMixin,
+)
+from airunner.components.llm.managers.mixins.workflow_building_mixin import (
+    WorkflowBuildingMixin,
+)
+from airunner.components.llm.managers.mixins.node_functions_mixin import (
+    NodeFunctionsMixin,
+)
+from airunner.components.llm.managers.mixins.streaming_mixin import (
+    StreamingMixin,
+)
 
 __all__ = [
     "AdapterLoaderMixin",
@@ -50,4 +65,9 @@ __all__ = [
     "SystemPromptMixin",
     "TokenizerLoaderMixin",
     "ValidationMixin",
+    "ToolManagementMixin",
+    "ToolExecutionMixin",
+    "WorkflowBuildingMixin",
+    "NodeFunctionsMixin",
+    "StreamingMixin",
 ]
