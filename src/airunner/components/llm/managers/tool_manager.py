@@ -7,14 +7,9 @@ from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
 from airunner.components.llm.managers.tools import (
-    RAGTools,
-    KnowledgeTools,
     ImageTools,
     FileTools,
-    WebTools,
-    CodeTools,
     SystemTools,
-    UserDataTools,
     ConversationTools,
     AutonomousControlTools,
 )
@@ -28,14 +23,9 @@ from airunner.components.llm import tools  # noqa: F401
 class ToolManager(
     MediatorMixin,
     SettingsMixin,
-    RAGTools,
-    KnowledgeTools,
     ImageTools,
     FileTools,
-    WebTools,
-    CodeTools,
     SystemTools,
-    UserDataTools,
     ConversationTools,
     AutonomousControlTools,
 ):
@@ -43,16 +33,16 @@ class ToolManager(
 
     This class is composed of specialized tool mixins that provide different
     categories of tools:
-    - RAGTools: Document search and RAG functionality
-    - KnowledgeTools: Knowledge management and memory
     - ImageTools: Image generation and manipulation
     - FileTools: File system operations
-    - WebTools: Web search and scraping
-    - CodeTools: Code execution and tool creation
     - SystemTools: Application control
-    - UserDataTools: User data storage
     - ConversationTools: Conversation management and search
     - AutonomousControlTools: Full autonomous application control
+
+    NOTE: Most tools have been migrated to the new ToolRegistry system.
+    The tools from RAGTools, KnowledgeTools, WebTools, UserDataTools,
+    CodeTools, and AgentTools are now available via @tool decorator in
+    airunner.components.llm.tools/
     """
 
     def __init__(self, rag_manager: Optional[Any] = None):
@@ -67,38 +57,24 @@ class ToolManager(
     def get_all_tools(self) -> List[Callable]:
         """Get all available tools.
 
+        NOTE: This method returns old mixin-based tools only.
+        Tools from ToolRegistry are automatically available via the
+        @tool decorator system and don't need to be returned here.
+
         Returns:
-            List of all tool functions from all mixins
+            List of tool functions from remaining mixins
         """
         tools = [
             # Core conversation tools
-            self.rag_search_tool(),
             self.clear_conversation_tool(),
             self.update_mood_tool(),
             # Image generation tools
             self.generate_image_tool(),
             self.clear_canvas_tool(),
             self.open_image_tool(),
-            # Information & search tools
-            self.search_web_tool(),
-            self.search_knowledge_base_documents_tool(),
+            # File system tools
             self.list_files_tool(),
             self.read_file_tool(),
-            # Data management tools
-            self.store_user_data_tool(),
-            self.get_user_data_tool(),
-            self.save_to_knowledge_base_tool(),
-            # Knowledge & memory tools
-            self.record_knowledge_tool(),
-            self.recall_knowledge_tool(),
-            # Code & computation tools
-            self.write_code_tool(),
-            self.execute_python_tool(),
-            self.calculator_tool(),
-            # Meta tools (self-improvement)
-            self.create_tool_tool(),
-            # Web tools
-            self.web_scraper_tool(),
             # System tools
             self.emit_signal_tool(),
             self.quit_application_tool(),

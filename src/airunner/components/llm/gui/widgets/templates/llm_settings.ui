@@ -649,6 +649,97 @@
             </item>
            </layout>
           </item>
+          <item row="9" column="0">
+           <layout class="QGridLayout" name="gridLayout_mode_routing">
+            <property name="horizontalSpacing">
+             <number>0</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>10</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="use_mode_routing">
+              <property name="text">
+               <string>Enable Mode-Based Routing</string>
+              </property>
+              <property name="toolTip">
+               <string>Use specialized agents for author, code, research, and QA tasks</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QCheckBox" name="enable_trajectory_logging">
+              <property name="text">
+               <string>Log Trajectories (Debug)</string>
+              </property>
+              <property name="toolTip">
+               <string>Enable detailed logging of agent trajectories for debugging</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0" colspan="2">
+             <layout class="QHBoxLayout" name="horizontalLayout_mode_override">
+              <item>
+               <widget class="QLabel" name="label_mode_override">
+                <property name="text">
+                 <string>Force Mode:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="mode_override">
+                <property name="toolTip">
+                 <string>Override automatic mode detection (leave empty for automatic)</string>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Auto (Default)</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Author</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Code</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Research</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>QA</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>General</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_mode">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
           <item row="11" column="0">
            <widget class="QPushButton" name="pushButton">
             <property name="font">

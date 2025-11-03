@@ -236,6 +236,31 @@ class LLMSettingsWidget(BaseWidget, AIModelMixin):
     def toggle_use_cache(self, val: bool):
         self.update_chatbot("use_cache", val)
 
+    @Slot(bool)
+    def on_use_mode_routing_toggled(self, val: bool):
+        """Handle mode-based routing toggle."""
+        self.update_llm_generator_settings(use_mode_routing=val)
+
+    @Slot(bool)
+    def on_enable_trajectory_logging_toggled(self, val: bool):
+        """Handle trajectory logging toggle."""
+        self.update_llm_generator_settings(enable_trajectory_logging=val)
+
+    @Slot(str)
+    def on_mode_override_currentTextChanged(self, text: str):
+        """Handle mode override selection."""
+        # Map display text to internal mode value
+        mode_map = {
+            "Auto (Default)": None,
+            "Author": "author",
+            "Code": "code",
+            "Research": "research",
+            "QA": "qa",
+            "General": "general",
+        }
+        mode_value = mode_map.get(text)
+        self.update_llm_generator_settings(mode_override=mode_value)
+
     def _update_model_dropdown_visibility(self):
         """Update visibility of model selection widgets based on provider."""
         provider = self.ui.model_service.currentText()

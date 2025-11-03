@@ -11,20 +11,53 @@ from enum import Enum
 
 
 class ToolCategory(Enum):
-    """Categories for organizing tools."""
+    """
+    Categories for organizing tools.
 
+    Mode-specific categories (for mode-based agent routing):
+    - AUTHOR: Writing assistance, style improvement, grammar checking
+    - CODE: Programming tools, code execution, debugging
+    - RESEARCH: Web search, source gathering, synthesis
+    - QA: Question answering, knowledge retrieval, fact checking
+
+    Cross-mode categories (available to all modes):
+    - CHAT: Conversation management
+    - IMAGE: Image generation and manipulation
+    - SYSTEM: Core system operations, user data, agent management
+    - FILE: File operations
+    - MATH: Mathematical computations
+    - CONVERSATION: Conversation history and context
+    - MOOD: Emotional analysis and tracking
+    - ANALYSIS: General analysis tools
+    - WORKFLOW: Workflow and process management
+
+    Legacy categories (being phased out or reorganized):
+    - SEARCH: Being split into RESEARCH and QA
+    - RAG: Being split into RESEARCH and QA
+    - USER: Merged into SYSTEM
+    """
+
+    # Mode-specific categories (Phase 2+)
+    AUTHOR = "author"  # Writing assistance mode
+    CODE = "code"  # Programming assistance mode
+    RESEARCH = "research"  # Research and synthesis mode
+    QA = "qa"  # Question answering mode
+
+    # Cross-mode categories (available to all modes)
     CHAT = "chat"
     IMAGE = "image"
     SYSTEM = "system"
     FILE = "file"
-    SEARCH = "search"
-    USER = "user"
+    MATH = "math"
     CONVERSATION = "conversation"
-    RAG = "rag"
     MOOD = "mood"
     ANALYSIS = "analysis"
     WORKFLOW = "workflow"
-    MATH = "math"  # Mathematical computation tools
+
+    # Legacy categories (for backward compatibility)
+    SEARCH = "search"  # Use RESEARCH or QA instead
+    RAG = "rag"  # Use QA or RESEARCH instead
+    USER = "user"  # Use SYSTEM instead
 
 
 @dataclass

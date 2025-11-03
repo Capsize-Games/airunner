@@ -14,7 +14,6 @@ import torch
 
 from airunner.components.llm.adapters import ChatModelFactory
 from airunner.components.llm.managers.tool_manager import ToolManager
-from airunner.components.llm.managers.workflow_manager import WorkflowManager
 
 if TYPE_CHECKING:
     pass
@@ -116,6 +115,11 @@ class ComponentLoaderMixin:
                     self.logger.info(
                         "No tools available - workflow will run without tools"
                     )
+
+            # Runtime import to avoid circular dependency
+            from airunner.components.llm.managers.workflow_manager import (
+                WorkflowManager,
+            )
 
             # The conversation ID will be set explicitly when needed
             self._workflow_manager = WorkflowManager(

@@ -33,6 +33,12 @@ class TestableGenerationMixin(GenerationMixin):
         """Mock method for getting system prompt."""
         return "Default system prompt"
 
+    def get_system_prompt_with_context(
+        self, action: LLMActionType, tool_categories=None
+    ) -> str:
+        """Mock method for getting context-aware system prompt."""
+        return "Default system prompt"
+
 
 @pytest.fixture
 def mixin():
