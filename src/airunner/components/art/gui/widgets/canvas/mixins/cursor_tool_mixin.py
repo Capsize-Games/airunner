@@ -4,6 +4,7 @@ This mixin handles cursor caching, tool selection, and drag mode management.
 """
 
 from typing import Optional, Dict, Tuple
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGraphicsView
 
 from airunner.enums import CanvasToolName
@@ -62,8 +63,8 @@ class CursorToolMixin:
             if tool in (CanvasToolName.BRUSH, CanvasToolName.ERASER):
                 # Create circle cursor for brush and eraser tools
                 cursor = circle_cursor(
-                    self.Qt.GlobalColor.white,
-                    self.Qt.GlobalColor.transparent,
+                    Qt.GlobalColor.white,
+                    Qt.GlobalColor.transparent,
                     size,
                 )
                 self._cursor_cache[key] = cursor

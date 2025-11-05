@@ -211,9 +211,12 @@ class TestGetRecenteredPosition:
 
     def test_get_recentered_position(self, custom_view):
         """Test calculating recentered position."""
-        with patch.object(custom_view, "viewport_center", QPointF(400, 300)):
+        # Mock viewport() to return a mock with size() that returns QSize(800, 600)
+        mock_viewport = Mock()
+        mock_viewport.size.return_value = QSize(800, 600)
+        with patch.object(custom_view, "viewport", return_value=mock_viewport):
             x, y = custom_view.get_recentered_position(256, 256)
-            # Should center the item
+            # Should center the item (viewport center is 400, 300)
             assert x == 400 - 128  # viewport_center_x - item_center_x
             assert y == 300 - 128  # viewport_center_y - item_center_y
 
@@ -288,8 +291,9 @@ class TestViewportEvents:
         event = QResizeEvent(new_size, old_size)
         custom_view.resizeEvent(event)
 
-        # Should update tracked size but not apply compensation
-        assert custom_view._last_viewport_size == new_size
+        # Should update tracked size to actual viewport size (not event size in test)
+        # In mixin, it uses self.viewport().size() which returns actual viewport dimensions
+        assert custom_view._last_viewport_size == custom_view.viewport().size()
 
     def test_resize_event_same_size(self, custom_view):
         """Test resizeEvent with no size change."""
@@ -310,7 +314,7 @@ class TestCursorManagement:
     def test_get_cached_cursor_creates_new(self, custom_view):
         """Test get_cached_cursor creates cursor if not cached."""
         with patch(
-            "airunner.components.art.gui.widgets.canvas.custom_view.circle_cursor"
+            "airunner.components.art.gui.widgets.canvas.mixins.cursor_tool_mixin.circle_cursor"
         ) as mock_circle:
             mock_cursor = Mock()
             mock_circle.return_value = mock_cursor
