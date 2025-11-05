@@ -1,7 +1,7 @@
 """Tests for ViewportPositioningMixin."""
 
 import pytest
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QPointF, QSize
 
 from airunner.components.art.gui.widgets.canvas.mixins.viewport_positioning_mixin import (
@@ -50,11 +50,9 @@ class TestableViewportPositioningMixin(ViewportPositioningMixin):
 
     def update_active_grid_settings(self, **kwargs):
         """Mock update_active_grid_settings method."""
-        pass
 
     def _restore_text_items_from_db(self):
         """Mock _restore_text_items_from_db method."""
-        pass
 
 
 @pytest.fixture

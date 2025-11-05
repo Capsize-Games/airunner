@@ -1,7 +1,7 @@
 """Tests for GridDrawingMixin."""
 
 import pytest
-from unittest.mock import MagicMock, Mock, patch, PropertyMock, call
+from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QPointF, Qt, QSize
 
 from airunner.components.art.gui.widgets.canvas.mixins.grid_drawing_mixin import (
@@ -56,23 +56,18 @@ class TestableGridDrawingMixin(GridDrawingMixin):
 
     def set_scene_rect(self):
         """Mock set_scene_rect method."""
-        pass
 
     def update_scene(self):
         """Mock update_scene method."""
-        pass
 
     def remove_scene_item(self, item):
         """Mock remove_scene_item method."""
-        pass
 
     def update_active_grid_settings(self, **kwargs):
         """Mock update_active_grid_settings method."""
-        pass
 
     def update_active_grid_area_position(self):
         """Mock update_active_grid_area_position method."""
-        pass
 
 
 @pytest.fixture

@@ -1,41 +1,16 @@
-from typing import List, Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple
 
 from PySide6.QtCore import (
     QPointF,
-    QPoint,
-    Qt,
     QEvent,
     QSize,
-    QTimer,
-    QRectF,
 )
-from PySide6.QtWidgets import QGraphicsPixmapItem
-from PySide6.QtGui import QMouseEvent, QColor, QBrush, QFont, QPen
+from PySide6.QtGui import QColor, QBrush, QFont
 from PySide6.QtWidgets import (
-    QApplication,
     QGraphicsView,
-    QGraphicsItemGroup,
-    QGraphicsTextItem,
-    QGraphicsRectItem,
-    QMenu,
 )
-import json
 
-from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
-from airunner.components.application.gui.windows.main.settings_mixin_shared_instance import (
-    SettingsMixinSharedInstance,
-)
-from airunner.components.art.gui.widgets.canvas.draggables.draggable_text_item import (
-    DraggableTextItem,
-)
-from airunner.components.art.gui.widgets.canvas.draggables.layer_image_item import (
-    LayerImageItem,
-)
-from airunner.components.art.gui.widgets.canvas.resizable_text_item import (
-    ResizableTextItem,
-)
-from airunner.enums import CanvasToolName, SignalCode, CanvasType
+from airunner.enums import CanvasToolName, CanvasType
 from airunner.components.art.gui.widgets.canvas.grid_graphics_item import (
     GridGraphicsItem,
 )
@@ -43,62 +18,23 @@ from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.image import convert_image_to_binary
 from airunner.components.art.gui.widgets.canvas.brush_scene import BrushScene
 from airunner.components.art.gui.widgets.canvas.custom_scene import CustomScene
-from airunner.components.art.gui.widgets.canvas.draggables.active_grid_area import (
-    ActiveGridArea,
-)
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
-from airunner.components.art.gui.widgets.canvas.zoom_handler import ZoomHandler
-from airunner.gui.cursors.circle_brush import circle_cursor
-from airunner.utils.settings import get_qsettings
-from airunner.components.art.utils.canvas_position_manager import (
-    CanvasPositionManager,
-    ViewState,
-)
-from airunner.components.art.gui.widgets.canvas.text_inspector import (
-    TextInspector,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.cursor_tool_mixin import (
+from airunner.components.art.gui.widgets.canvas.mixins.view_mixins import (
     CursorToolMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.scene_management_mixin import (
     SceneManagementMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.grid_drawing_mixin import (
     GridDrawingMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.viewport_positioning_mixin import (
     ViewportPositioningMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.event_handler_mixin import (
     EventHandlerMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.text_handling_mixin import (
     TextHandlingMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.layer_item_management_mixin import (
     LayerItemManagementMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.active_grid_area_mixin import (
     ActiveGridAreaMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.pan_offset_mixin import (
     PanOffsetMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.zoom_mixin import (
     ZoomMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.initialization_mixin import (
     InitializationMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.recentering_mixin import (
     RecenteringMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.context_menu_mixin import (
     ContextMenuMixin,
-)
-from airunner.components.art.gui.widgets.canvas.mixins.position_management_mixin import (
     PositionManagementMixin,
 )
 
@@ -210,7 +146,6 @@ class CustomGraphicsView(
         """Load the canvas offset from QSettings."""
         x = self.settings.value("canvas_offset_x", 0.0)  # Default to 0
         y = self.settings.value("canvas_offset_y", 0.0)  # Default to 0
-        # Handle None values from mocked settings
         x = float(x) if x is not None else 0.0
         y = float(y) if y is not None else 0.0
         loaded_offset = QPointF(x, y)
@@ -231,9 +166,6 @@ class CustomGraphicsView(
         else:
             # Will be calculated on first recenter or in showEvent
             self.center_pos = QPointF(0, 0)
-
-        # DO NOT call update methods here - let the caller decide when to update
-        # This prevents the offset from being modified during load
 
     def save_canvas_offset(self):
         """Save the canvas offset to QSettings."""
@@ -340,15 +272,6 @@ class CustomGraphicsView(
 
         target_x = viewport_center_x - item_center_x
         target_y = viewport_center_y - item_center_y
-
-        # snapped_gx, snapped_gy = snap_to_grid(
-        #     self.grid_settings,
-        #     target_x,
-        #     target_y,
-        #     use_floor=False,
-        # )
-
-        # return int(round(snapped_gx)), int(round(snapped_gy))
         return target_x, target_y
 
     def on_mask_generator_worker_response_signal(self, message: dict):
@@ -460,14 +383,13 @@ class CustomGraphicsView(
             self.logger.error("No scene in updateImagePositions")
             return
 
-        # Use the scene's update_image_position method which handles both
-        # the old single-item system and the new layer system
         self.scene.update_image_position(
             self.canvas_offset, original_item_positions
         )
 
         # Force entire viewport update to handle negative coordinates
         self.viewport().update()
+
         # After images/positions update, restore any text items persisted to DB
         try:
             self._restore_text_items_from_db()
@@ -483,8 +405,6 @@ class CustomGraphicsView(
         """
         self.scene.enterEvent(event)
         super().enterEvent(event)
-        # Remove the forced crosshair cursor to let the custom cursor logic work
-        # self.setCursor(Qt.CursorShape.CrossCursor)  # This was forcing the plus sign cursor
 
     def leaveEvent(self, event: QEvent) -> None:
         """

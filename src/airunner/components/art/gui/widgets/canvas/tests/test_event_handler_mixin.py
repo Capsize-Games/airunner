@@ -1,8 +1,7 @@
 """Tests for EventHandlerMixin."""
 
-import pytest
-from unittest.mock import MagicMock, Mock, patch, PropertyMock
-from PySide6.QtCore import QEvent, QPointF, QRect, QSize, Qt, QTimer
+from unittest.mock import MagicMock, Mock, patch
+from PySide6.QtCore import QEvent, QPointF, QSize, Qt, QTimer
 from PySide6.QtGui import QMouseEvent, QResizeEvent, QKeyEvent
 from PySide6.QtWidgets import QGraphicsScene
 
@@ -16,39 +15,30 @@ class BaseStub:
 
     def wheelEvent(self, event):
         """Stub wheelEvent."""
-        pass
 
     def mousePressEvent(self, event):
         """Stub mousePressEvent."""
-        pass
 
     def mouseReleaseEvent(self, event):
         """Stub mouseReleaseEvent."""
-        pass
 
     def mouseMoveEvent(self, event):
         """Stub mouseMoveEvent."""
-        pass
 
     def keyPressEvent(self, event):
         """Stub keyPressEvent."""
-        pass
 
     def showEvent(self, event):
         """Stub showEvent."""
-        pass
 
     def resizeEvent(self, event):
         """Stub resizeEvent."""
-        pass
 
     def enterEvent(self, event):
         """Stub enterEvent."""
-        pass
 
     def leaveEvent(self, event):
         """Stub leaveEvent."""
-        pass
 
 
 class TestableEventHandlerMixin(EventHandlerMixin, BaseStub):

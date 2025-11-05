@@ -1,8 +1,8 @@
 """Tests for SceneManagementMixin."""
 
 import pytest
-from unittest.mock import MagicMock, Mock, patch, PropertyMock
-from PySide6.QtCore import QSize, QRectF
+from unittest.mock import MagicMock, patch
+from PySide6.QtCore import QSize
 from PySide6.QtGui import QBrush, QColor
 
 from airunner.components.art.gui.widgets.canvas.mixins.scene_management_mixin import (
@@ -31,7 +31,6 @@ class TestableSceneManagementMixin(SceneManagementMixin):
 
     def setScene(self, scene):
         """Mock setScene method."""
-        pass
 
 
 @pytest.fixture
