@@ -4,7 +4,7 @@ Tests cursor caching, tool management, and drag mode functionality.
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from PySide6.QtWidgets import QGraphicsView
 
 from airunner.components.art.gui.widgets.canvas.mixins.cursor_tool_mixin import (

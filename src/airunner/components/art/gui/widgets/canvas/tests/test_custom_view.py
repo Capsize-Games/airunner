@@ -12,17 +12,16 @@ Tests focus on:
 """
 
 import types
-from unittest.mock import MagicMock, Mock, patch
-from PySide6.QtCore import QPointF, QSize, Qt
-from PySide6.QtGui import QImage, QMouseEvent, QResizeEvent
+from unittest.mock import Mock, patch
+from PySide6.QtCore import QPointF, QSize
+from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QGraphicsView
 import pytest
 
-from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.gui.widgets.canvas.custom_view import (
     CustomGraphicsView,
 )
-from airunner.enums import CanvasToolName, CanvasType
+from airunner.enums import CanvasToolName
 
 
 @pytest.fixture

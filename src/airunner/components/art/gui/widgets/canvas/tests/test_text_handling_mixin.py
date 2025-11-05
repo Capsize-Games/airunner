@@ -1,7 +1,6 @@
 """Tests for TextHandlingMixin."""
 
 import json
-import pytest
 from unittest.mock import Mock, patch
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QColor, QFont
@@ -18,7 +17,6 @@ class BaseStub:
 
     def update_drawing_pad_settings(self, **kwargs):
         """Stub update_drawing_pad_settings."""
-        pass
 
 
 class TestableTextHandlingMixin(TextHandlingMixin, BaseStub):
