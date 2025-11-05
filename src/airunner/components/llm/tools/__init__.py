@@ -1,8 +1,36 @@
 """
-Central module for loading all LLM tools.
+Central module for loading all LLM tools and code generation infrastructure.
 
 Import this module to register all available tools with the ToolRegistry.
 """
+
+# Code generation infrastructure
+from airunner.components.llm.tools.code_session import (
+    CodeSession,
+    CodeSessionConfig,
+    CodeSessionManager,
+)
+from airunner.components.llm.tools.code_operations_handler import (
+    CodeOperationsHandler,
+    CodeOperationResult,
+)
+from airunner.components.llm.tools.code_validator import (
+    CodeValidator,
+    ValidationResult,
+    ValidationIssue,
+)
+from airunner.components.llm.tools.code_quality_manager import (
+    CodeQualityManager,
+    QualityCheckResult,
+)
+from airunner.components.llm.tools.test_runner import (
+    TestRunner,
+    TestResult,
+)
+from airunner.components.llm.tools.multi_file_code_tool import (
+    MultiFileCodeSession,
+    MultiFileCodeTool,
+)
 
 # Import all tool modules to trigger registration
 from airunner.components.llm.tools import (
@@ -28,6 +56,22 @@ from airunner.components.calendar.tools import (
 )
 
 __all__ = [
+    # Code generation infrastructure
+    "CodeSession",
+    "CodeSessionConfig",
+    "CodeSessionManager",
+    "CodeOperationsHandler",
+    "CodeOperationResult",
+    "CodeValidator",
+    "ValidationResult",
+    "ValidationIssue",
+    "CodeQualityManager",
+    "QualityCheckResult",
+    "TestRunner",
+    "TestResult",
+    "MultiFileCodeSession",
+    "MultiFileCodeTool",
+    # Tool modules
     "image_tools",
     "system_tools",
     "conversation_tools",
