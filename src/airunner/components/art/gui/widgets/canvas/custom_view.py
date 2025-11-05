@@ -77,9 +77,25 @@ from airunner.components.art.gui.widgets.canvas.mixins.event_handler_mixin impor
 from airunner.components.art.gui.widgets.canvas.mixins.text_handling_mixin import (
     TextHandlingMixin,
 )
+from airunner.components.art.gui.widgets.canvas.mixins.layer_item_management_mixin import (
+    LayerItemManagementMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.active_grid_area_mixin import (
+    ActiveGridAreaMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.pan_offset_mixin import (
+    PanOffsetMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.zoom_mixin import (
+    ZoomMixin,
+)
 
 
 class CustomGraphicsView(
+    LayerItemManagementMixin,
+    ActiveGridAreaMixin,
+    PanOffsetMixin,
+    ZoomMixin,
     CursorToolMixin,
     SceneManagementMixin,
     GridDrawingMixin,
@@ -92,28 +108,29 @@ class CustomGraphicsView(
 ):
     """Custom graphics view for AI Runner canvas with pan, zoom, and drawing capabilities.
 
-    This view manages canvas rendering, user interactions (mouse/keyboard events),
-    grid display, layer positioning, and text editing. It handles viewport transformations
-    to maintain visual consistency during window resizes and user pan/zoom operations.
+        This view manages canvas rendering, user interactions (mouse/keyboard events),
+    ```
+        grid display, layer positioning, and text editing. It handles viewport transformations
+        to maintain visual consistency during window resizes and user pan/zoom operations.
 
-    Key Features:
-    - Canvas offset management for panning
-    - Grid and active grid area display
-    - Layer image positioning with absolute/display coordinate conversion
-    - Text item creation and editing with inspector UI
-    - Zoom and viewport compensation
-    - Context menu for item deletion
-    - Cursor management based on current tool
+        Key Features:
+        - Canvas offset management for panning
+        - Grid and active grid area display
+        - Layer image positioning with absolute/display coordinate conversion
+        - Text item creation and editing with inspector UI
+        - Zoom and viewport compensation
+        - Context menu for item deletion
+        - Cursor management based on current tool
 
-    Attributes:
-        canvas_offset: User's pan position (QPointF)
-        grid_compensation_offset: Viewport compensation for grid alignment
-        center_pos: Grid origin position
-        active_grid_area: Visual representation of working area
-        grid_item: Grid lines graphics item
-        zoom_handler: Manages zoom transformations
-        _text_items: List of text items on canvas
-        _text_inspector: UI for text formatting
+        Attributes:
+            canvas_offset: User's pan position (QPointF)
+            grid_compensation_offset: Viewport compensation for grid alignment
+            center_pos: Grid origin position
+            active_grid_area: Visual representation of working area
+            grid_item: Grid lines graphics item
+            zoom_handler: Manages zoom transformations
+            _text_items: List of text items on canvas
+            _text_inspector: UI for text formatting
     """
 
     def __init__(self, *args, **kwargs):
@@ -367,20 +384,6 @@ class CustomGraphicsView(
             CanvasType.BRUSH.value,
         )
 
-    @property
-    def layers(self) -> List[CanvasLayer]:
-        return CanvasLayer.objects.filter_by(visible=True, locked=False)
-
-    @property
-    def viewport_center(self) -> QPointF:
-        """Calculate the center point of the current viewport.
-
-        Returns:
-            Center point of viewport as QPointF.
-        """
-        viewport_size = self.viewport().size()
-        return QPointF(viewport_size.width() / 2, viewport_size.height() / 2)
-
     def get_recentered_position(
         self, width: float, height: float
     ) -> Tuple[float, float]:
@@ -456,97 +459,6 @@ class CustomGraphicsView(
 
             original_item_positions[scene_item] = QPointF(pos_x, pos_y)
         return original_item_positions
-
-    def recenter_layer_positions(self) -> Dict[str, QPointF]:
-        """Recalculate and save new centered positions for all layers.
-
-        This is used when explicitly recentering (e.g., clicking recenter button).
-        It calculates new absolute positions centered in the viewport and saves them.
-        """
-        layers = CanvasLayer.objects.order_by("order").all()
-        self.logger.info(f"[RECENTER] Found {len(layers)} layers in database")
-        new_positions = {}
-        for layer in layers:
-            self.logger.info(f"[RECENTER] Processing layer {layer.id}")
-            results = DrawingPadSettings.objects.filter_by(layer_id=layer.id)
-            self.logger.info(
-                f"[RECENTER] Layer {layer.id}: found {len(results)} DrawingPadSettings"
-            )
-            if len(results) == 0:
-                self.logger.warning(
-                    f"[RECENTER] No DrawingPadSettings for layer {layer.id}"
-                )
-                continue
-
-            drawingpad_settings = results[0]
-            if not self.scene:
-                self.logger.warning(f"[RECENTER] No scene!")
-                continue
-
-            self.logger.info(
-                f"[RECENTER] Layer {layer.id}: _layer_items has {len(self.scene._layer_items)} items"
-            )
-            scene_item = self.scene._layer_items.get(layer.id)
-            if scene_item is None:
-                self.logger.warning(
-                    f"[RECENTER] No scene_item for layer {layer.id} in _layer_items: {list(self.scene._layer_items.keys())}"
-                )
-                continue
-
-            # Calculate new centered position
-            item_rect = scene_item.boundingRect()
-            image_width = item_rect.width()
-            image_height = item_rect.height()
-            pos_x, pos_y = self.get_recentered_position(
-                int(image_width), int(image_height)
-            )
-
-            # Save the new position to database
-            DrawingPadSettings.objects.update(
-                drawingpad_settings.id,
-                x_pos=pos_x,
-                y_pos=pos_y,
-            )
-
-            new_positions[scene_item] = QPointF(pos_x, pos_y)
-            self.logger.info(
-                f"[RECENTER] Layer {layer.id}: saved to DB and dict - position x={pos_x}, y={pos_y}, scene_item id={id(scene_item)}"
-            )
-
-        self.logger.info(
-            f"[RECENTER] Returning {len(new_positions)} positions"
-        )
-        return new_positions
-
-    def align_canvas_items_to_viewport(self):
-        # Don't recalculate center_pos if it was loaded from settings
-        # (this preserves the grid origin across app restarts)
-        # Only calculate if center_pos is still at the default (0,0)
-        if self.center_pos == QPointF(0, 0):
-            pos_x, pos_y = self.get_recentered_position(
-                self.application_settings.working_width,
-                self.application_settings.working_height,
-            )
-            self.center_pos = QPointF(pos_x, pos_y)
-            self.logger.info(
-                f"[ALIGN] Center pos calculated: x={pos_x}, y={pos_y}"
-            )
-        else:
-            # Use existing center_pos from loaded settings
-            pos_x = int(self.center_pos.x())
-            pos_y = int(self.center_pos.y())
-            self.logger.info(
-                f"[ALIGN] Using loaded center pos: x={pos_x}, y={pos_y}"
-            )
-
-        self.update_active_grid_settings(
-            pos_x=pos_x,
-            pos_y=pos_y,
-        )
-        # Update display positions
-        self.update_active_grid_area_position()
-
-        self.updateImagePositions(self.original_item_positions())
 
     def on_recenter_grid_signal(self):
         self.canvas_offset = QPointF(0, 0)
@@ -716,145 +628,6 @@ class CustomGraphicsView(
         if item.scene() == self.scene:
             self.scene.removeItem(item)
 
-    def show_active_grid_area(self):
-        if not self.__do_show_active_grid_area:
-            # Ensure it's removed if disabled
-            if self.active_grid_area:
-                self.remove_scene_item(self.active_grid_area)
-                self.active_grid_area = None
-            return
-
-        # Skip repositioning during drag to prevent interference
-        if self.scene and getattr(self.scene, "is_dragging", False):
-            self.logger.info(
-                "[ACTIVE GRID] Skipping show_active_grid_area - is_dragging is True"
-            )
-            return
-
-        # Create if it doesn't exist
-        if not self.active_grid_area:
-            self.active_grid_area = ActiveGridArea()
-            self.active_grid_area.setZValue(10000)
-            self.scene.addItem(self.active_grid_area)
-            # Connect the signal emitted by the updated update_position
-            self.active_grid_area.register(
-                SignalCode.APPLICATION_ACTIVE_GRID_AREA_UPDATED,
-                self.update_active_grid_area_position,  # Call view's update method
-            )
-
-        # Get the stored absolute position (defaults to 0,0 if not found)
-        # Use active_grid_settings as the primary source, QSettings as fallback/persistence
-        absolute_x = self.active_grid_settings.pos_x
-        absolute_y = self.active_grid_settings.pos_y
-
-        self.logger.info(
-            f"[LOAD GRID] Active grid absolute position from DB: x={absolute_x}, y={absolute_y}, canvas_offset=({self.canvas_offset_x}, {self.canvas_offset_y})"
-        )
-
-        # If settings are somehow None (e.g., first run), default and save
-        if absolute_x is None or absolute_y is None:
-            # Default to centering in the initial view, considering the initial offset
-            viewport_center_x = self.viewport().width() / 2
-            viewport_center_y = self.viewport().height() / 2
-            # Calculate absolute position needed to appear centered with current offset
-            absolute_x = (
-                viewport_center_x
-                + self.canvas_offset_x
-                - (self.application_settings.working_width / 2)
-            )
-            absolute_y = (
-                viewport_center_y
-                + self.canvas_offset_y
-                - (self.application_settings.working_height / 2)
-            )
-
-            # Save this initial absolute position
-            self.update_active_grid_settings(
-                pos_x=int(round(absolute_x)), pos_y=int(round(absolute_y))
-            )
-            self.settings.sync()
-
-        # Calculate and set the display position using CanvasPositionManager
-        # to account for both canvas_offset and grid_compensation
-        manager = CanvasPositionManager()
-        view_state = ViewState(
-            canvas_offset=self.canvas_offset,
-            grid_compensation=self._grid_compensation_offset,
-        )
-        absolute_pos = QPointF(absolute_x, absolute_y)
-        display_pos = manager.absolute_to_display(absolute_pos, view_state)
-
-        self.logger.info(
-            f"[LOAD GRID] Setting grid display position: x={display_pos.x()}, y={display_pos.y()} (absolute: {absolute_x}, {absolute_y}, offset: {self.canvas_offset_x}, {self.canvas_offset_y}, compensation: {self._grid_compensation_offset.x()}, {self._grid_compensation_offset.y()})"
-        )
-        self.active_grid_area.setPos(display_pos.x(), display_pos.y())
-
-        # Log actual scene position after setPos
-        actual_pos = self.active_grid_area.scenePos()
-        self.logger.info(
-            f"[LOAD GRID] Active grid actual scene position after setPos: ({actual_pos.x()}, {actual_pos.y()})"
-        )
-
-        # Ensure active grid mouse acceptance matches current tool
-        try:
-            self._update_active_grid_mouse_acceptance()
-        except Exception:
-            pass
-
-    def _update_active_grid_mouse_acceptance(self):
-        """Make the active grid area ignore mouse events while the MOVE tool is active.
-
-        When the MOVE tool is selected users need to be able to interact with items
-        beneath the active grid area. Setting accepted mouse buttons to NoButton
-        makes the item transparent to mouse events so clicks fall through.
-        """
-        if not self.active_grid_area:
-            return
-
-        try:
-            # If MOVE tool is active, let clicks pass through the active grid area
-            if self.current_tool is CanvasToolName.MOVE:
-                self.active_grid_area.setAcceptedMouseButtons(
-                    Qt.MouseButton.NoButton
-                )
-                # Also disable hover events so hover cursors don't block underlying items
-                try:
-                    self.active_grid_area.setAcceptHoverEvents(False)
-                except Exception:
-                    pass
-            else:
-                # Restore acceptance for left/right buttons when not moving
-                accepted = (
-                    Qt.MouseButton.LeftButton | Qt.MouseButton.RightButton
-                )
-                self.active_grid_area.setAcceptedMouseButtons(accepted)
-                try:
-                    self.active_grid_area.setAcceptHoverEvents(True)
-                except Exception:
-                    pass
-        except Exception:
-            # Best-effort; do not break flow if ActiveGridArea doesn't support these methods
-            self.logger.exception(
-                "Failed updating active grid mouse acceptance"
-            )
-
-    def on_zoom_level_changed_signal(self):
-        transform = self.zoom_handler.on_zoom_level_changed()
-
-        # Set the transform
-        self.setTransform(transform)
-
-        # Redraw lines
-        self.do_draw()
-
-    def wheelEvent(self, event):
-        # Only allow zooming with Ctrl, otherwise ignore scrolling
-        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            super().wheelEvent(event)
-            self.draw_grid()  # Only redraw grid on zoom
-        else:
-            event.ignore()  # Prevent QGraphicsView from scrolling
-
     def contextMenuEvent(self, event):
         """Show a delete context menu for images and text items under cursor."""
         try:
@@ -907,161 +680,6 @@ class CustomGraphicsView(
                         pass
         except Exception:
             pass
-
-    def _remove_layer_image_item(self, target):
-        try:
-            # If it's a LayerImageItem, clear the persisted layer image
-            if isinstance(target, LayerImageItem):
-                layer_id = getattr(target, "layer_id", None)
-                try:
-                    if target.scene():
-                        target.scene().removeItem(target)
-                except Exception:
-                    pass
-
-                # Remove from scene layer mapping
-                try:
-                    if self.scene and hasattr(self.scene, "_layer_items"):
-                        for k, v in list(self.scene._layer_items.items()):
-                            if v is target:
-                                del self.scene._layer_items[k]
-                                break
-                except Exception:
-                    pass
-
-                # Clear persisted image for this layer
-                try:
-                    if layer_id is not None:
-                        self.logger.info(
-                            f"Clearing persisted image for layer {layer_id}"
-                        )
-                        self.update_drawing_pad_settings(
-                            layer_id=layer_id, image=None
-                        )
-
-                        # Verify it was cleared
-                        try:
-                            settings = (
-                                DrawingPadSettings.objects.filter_by_first(
-                                    layer_id=layer_id
-                                )
-                            )
-                            if settings:
-                                has_image = settings.image is not None
-                                self.logger.info(
-                                    f"After clearing: layer {layer_id} still has image: {has_image}"
-                                )
-                            else:
-                                self.logger.warning(
-                                    f"No settings found for layer {layer_id} after update"
-                                )
-                        except Exception as e:
-                            self.logger.exception(
-                                f"Failed to verify image clear: {e}"
-                            )
-
-                        self.api.art.canvas.image_updated()
-                except Exception as e:
-                    self.logger.exception(
-                        f"Failed to clear persisted image: {e}"
-                    )
-            # If it's the scene's primary item, use scene.delete_image()
-            elif self.scene and getattr(self.scene, "item", None) is target:
-                try:
-                    self.scene.delete_image()
-                except Exception:
-                    try:
-                        self.scene.current_active_image = None
-                    except Exception:
-                        pass
-            # Generic pixmap: just remove it
-            else:
-                try:
-                    if target.scene():
-                        target.scene().removeItem(target)
-                except Exception:
-                    pass
-        except Exception:
-            try:
-                if target.scene():
-                    target.scene().removeItem(target)
-            except Exception:
-                pass
-
-    def _do_pan_update(self):
-        self.update_active_grid_area_position()
-        self.updateImagePositions()
-        self.draw_grid()
-        if self._pending_pan_event:
-            self._pending_pan_event = False
-            self._pan_update_timer.start(1)
-
-    def _finish_state_restoration(self):
-        """Called after a delay to finish state restoration and re-enable resize compensation."""
-        self._is_restoring_state = False
-
-        # Reload and reapply the canvas offset one final time to ensure it's correct
-        x = self.settings.value("canvas_offset_x", 0.0)
-        y = self.settings.value("canvas_offset_y", 0.0)
-        final_offset = QPointF(float(x), float(y))
-        self.canvas_offset = final_offset
-
-        # Update positions one final time
-        self.update_active_grid_area_position()
-        self.updateImagePositions()
-
-        self.logger.debug(
-            f"Canvas state restoration complete - final offset: ({final_offset.x()}, {final_offset.y()})"
-        )
-        self.scene.show_event()
-
-    def _apply_viewport_compensation(self, shift_x: float, shift_y: float):
-        """Apply viewport center compensation by adjusting the grid compensation offset.
-
-        This method shifts only the grid compensation offset so items appear to stay
-        centered relative to the viewport, without changing the canvas_offset value
-        or the stored absolute positions in the database.
-
-        The CanvasPositionManager will automatically apply the grid_compensation
-        when converting absolute positions to display positions, so we don't need
-        to modify the cached absolute positions.
-        """
-        if not self.scene:
-            return
-
-        # Skip if the shift is negligible
-        if abs(shift_x) < 0.5 and abs(shift_y) < 0.5:
-            return
-
-        self.logger.info(
-            f"[VIEWPORT COMPENSATION] Applying shift: ({shift_x}, {shift_y}), "
-            f"old_compensation=({self._grid_compensation_offset.x()}, {self._grid_compensation_offset.y()}), "
-            f"_is_restoring_state={self._is_restoring_state}, _initialized={self._initialized}"
-        )
-
-        # Adjust the grid compensation offset
-        # This shifts the grid origin to maintain alignment with the viewport center
-        self._grid_compensation_offset = QPointF(
-            self._grid_compensation_offset.x() + shift_x,
-            self._grid_compensation_offset.y() + shift_y,
-        )
-
-        self.logger.info(
-            f"[VIEWPORT COMPENSATION] New compensation: ({self._grid_compensation_offset.x()}, {self._grid_compensation_offset.y()})"
-        )
-
-        # DO NOT modify the scene's original_item_positions here!
-        # The CanvasPositionManager.absolute_to_display() already applies
-        # grid_compensation in its calculation:
-        # display_pos = absolute_pos - canvas_offset + grid_compensation
-        #
-        # If we shift the absolute positions here, we would be double-applying
-        # the compensation, causing items to drift during window resize.
-
-        # Update the visual positions using the new grid_compensation
-        # The position manager will automatically apply it
-        self.update_active_grid_area_position()
-        self.updateImagePositions()
 
     def set_canvas_color(
         self,
