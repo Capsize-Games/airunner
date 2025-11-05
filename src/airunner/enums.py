@@ -34,6 +34,19 @@ class ModelAction(Enum):
     GENERATE = auto()
 
 
+class CodeOperationType(Enum):
+    """Operation types for LLM code generation and manipulation."""
+
+    CREATE = "create"  # Create new file with content
+    EDIT = "edit"  # Replace entire file content
+    PATCH = "patch"  # Apply unified diff patch
+    APPEND = "append"  # Append content to existing file
+    READ = "read"  # Read file content (for context)
+    LIST = "list"  # List files in directory
+    RENAME = "rename"  # Rename/move file
+    DELETE = "delete"  # Delete file
+
+
 class SignalCode(Enum):
     DOWNLOAD_LOG_UPDATE = "download_log_update_signal"
     DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"
