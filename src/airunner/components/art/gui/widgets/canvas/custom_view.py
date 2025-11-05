@@ -23,6 +23,9 @@ import json
 
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
+from airunner.components.application.gui.windows.main.settings_mixin_shared_instance import (
+    SettingsMixinSharedInstance,
+)
 from airunner.components.art.gui.widgets.canvas.draggables.draggable_text_item import (
     DraggableTextItem,
 )
@@ -56,13 +59,63 @@ from airunner.components.art.utils.canvas_position_manager import (
 from airunner.components.art.gui.widgets.canvas.text_inspector import (
     TextInspector,
 )
+from airunner.components.art.gui.widgets.canvas.mixins.cursor_tool_mixin import (
+    CursorToolMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.scene_management_mixin import (
+    SceneManagementMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.grid_drawing_mixin import (
+    GridDrawingMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.viewport_positioning_mixin import (
+    ViewportPositioningMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.event_handler_mixin import (
+    EventHandlerMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.text_handling_mixin import (
+    TextHandlingMixin,
+)
 
 
 class CustomGraphicsView(
+    CursorToolMixin,
+    SceneManagementMixin,
+    GridDrawingMixin,
+    ViewportPositioningMixin,
+    EventHandlerMixin,
+    TextHandlingMixin,
     MediatorMixin,
     SettingsMixin,
     QGraphicsView,
 ):
+    """Custom graphics view for AI Runner canvas with pan, zoom, and drawing capabilities.
+
+    This view manages canvas rendering, user interactions (mouse/keyboard events),
+    grid display, layer positioning, and text editing. It handles viewport transformations
+    to maintain visual consistency during window resizes and user pan/zoom operations.
+
+    Key Features:
+    - Canvas offset management for panning
+    - Grid and active grid area display
+    - Layer image positioning with absolute/display coordinate conversion
+    - Text item creation and editing with inspector UI
+    - Zoom and viewport compensation
+    - Context menu for item deletion
+    - Cursor management based on current tool
+
+    Attributes:
+        canvas_offset: User's pan position (QPointF)
+        grid_compensation_offset: Viewport compensation for grid alignment
+        center_pos: Grid origin position
+        active_grid_area: Visual representation of working area
+        grid_item: Grid lines graphics item
+        zoom_handler: Manages zoom transformations
+        _text_items: List of text items on canvas
+        _text_inspector: UI for text formatting
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__()
         # state for text-area drag/creation
@@ -152,22 +205,47 @@ class CustomGraphicsView(
 
     @property
     def canvas_offset(self) -> QPointF:
+        """Get the current canvas pan offset.
+
+        Returns:
+            Current canvas offset as QPointF.
+        """
         return self._canvas_offset
 
     @canvas_offset.setter
-    def canvas_offset(self, value: QPointF):
+    def canvas_offset(self, value: QPointF) -> None:
+        """Set the canvas pan offset.
+
+        Args:
+            value: New canvas offset as QPointF.
+        """
         self._canvas_offset = value
 
     @property
     def canvas_offset_x(self) -> float:
+        """Get the X component of canvas offset.
+
+        Returns:
+            X offset in pixels.
+        """
         return self.canvas_offset.x()
 
     @property
     def canvas_offset_y(self) -> float:
+        """Get the Y component of canvas offset.
+
+        Returns:
+            Y offset in pixels.
+        """
         return self.canvas_offset.y()
 
     @property
     def zero_point(self) -> QPointF:
+        """Get a zero point QPointF(0, 0).
+
+        Returns:
+            QPointF at origin.
+        """
         return QPointF(0, 0)  # Return QPointF instead of QPoint
 
     @property
@@ -179,7 +257,10 @@ class CustomGraphicsView(
         """Load the canvas offset from QSettings."""
         x = self.settings.value("canvas_offset_x", 0.0)  # Default to 0
         y = self.settings.value("canvas_offset_y", 0.0)  # Default to 0
-        loaded_offset = QPointF(float(x), float(y))
+        # Handle None values from mocked settings
+        x = float(x) if x is not None else 0.0
+        y = float(y) if y is not None else 0.0
+        loaded_offset = QPointF(x, y)
         self.canvas_offset = loaded_offset
 
         self.logger.info(
@@ -218,6 +299,14 @@ class CustomGraphicsView(
 
     @property
     def scene(self) -> Optional[CustomScene]:
+        """Get or create the graphics scene for this view.
+
+        Creates appropriate scene type (CustomScene for image canvas,
+        BrushScene for brush canvas) based on canvas_type property.
+
+        Returns:
+            The graphics scene instance, or None if canvas_type is invalid.
+        """
         scene = self._scene
         if not scene and self.canvas_type:
             if self.canvas_type == CanvasType.IMAGE.value:
@@ -236,11 +325,21 @@ class CustomGraphicsView(
         return self._scene
 
     @scene.setter
-    def scene(self, value: Optional[CustomScene]):
+    def scene(self, value: Optional[CustomScene]) -> None:
+        """Set the graphics scene.
+
+        Args:
+            value: The scene instance to set.
+        """
         self._scene = value
 
     @property
-    def current_tool(self):
+    def current_tool(self) -> Optional[CanvasToolName]:
+        """Get the currently active canvas tool.
+
+        Returns:
+            Current tool enum value, or None if no tool selected.
+        """
         val = getattr(self.application_settings, "current_tool", None)
         try:
             return CanvasToolName(val) if val is not None else None
@@ -249,10 +348,20 @@ class CustomGraphicsView(
 
     @property
     def canvas_type(self) -> str:
+        """Get the canvas type (image/brush).
+
+        Returns:
+            Canvas type string from Qt property.
+        """
         return self.property("canvas_type")
 
     @property
-    def __do_show_active_grid_area(self):
+    def __do_show_active_grid_area(self) -> bool:
+        """Check if active grid area should be shown for this canvas type.
+
+        Returns:
+            True if canvas type supports active grid area display.
+        """
         return self.canvas_type in (
             CanvasType.IMAGE.value,
             CanvasType.BRUSH.value,
@@ -264,10 +373,26 @@ class CustomGraphicsView(
 
     @property
     def viewport_center(self) -> QPointF:
+        """Calculate the center point of the current viewport.
+
+        Returns:
+            Center point of viewport as QPointF.
+        """
         viewport_size = self.viewport().size()
         return QPointF(viewport_size.width() / 2, viewport_size.height() / 2)
 
-    def get_recentered_position(self, width, height) -> Tuple[float, float]:
+    def get_recentered_position(
+        self, width: float, height: float
+    ) -> Tuple[float, float]:
+        """Calculate position to center an item of given size in the viewport.
+
+        Args:
+            width: Width of item to center.
+            height: Height of item to center.
+
+        Returns:
+            Tuple of (x, y) coordinates for top-left corner to center the item.
+        """
         viewport_center_x = self.viewport_center.x()
         viewport_center_y = self.viewport_center.y()
 
@@ -498,13 +623,6 @@ class CustomGraphicsView(
             self.scene.original_item_positions.clear()
 
         # Clear layer-specific settings cache
-        from airunner.components.art.data.drawingpad_settings import (
-            DrawingPadSettings,
-        )
-        from airunner.components.application.gui.windows.main.settings_mixin_shared_instance import (
-            SettingsMixinSharedInstance,
-        )
-
         shared_instance = SettingsMixinSharedInstance()
         keys_to_clear = [
             key
@@ -658,11 +776,6 @@ class CustomGraphicsView(
 
         # Calculate and set the display position using CanvasPositionManager
         # to account for both canvas_offset and grid_compensation
-        from airunner.components.art.utils.canvas_position_manager import (
-            CanvasPositionManager,
-            ViewState,
-        )
-
         manager = CanvasPositionManager()
         view_state = ViewState(
             canvas_offset=self.canvas_offset,
@@ -741,71 +854,6 @@ class CustomGraphicsView(
             self.draw_grid()  # Only redraw grid on zoom
         else:
             event.ignore()  # Prevent QGraphicsView from scrolling
-
-    def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.MiddleButton:
-            self._middle_mouse_pressed = True
-            self.last_pos = event.pos()
-            event.accept()
-            return
-        # Only handle text tool logic if tool is TEXT
-        if self.current_tool is CanvasToolName.TEXT:
-            scene_pos = self.mapToScene(event.pos())
-            # If the user clicked on an existing text item (text, area, handle),
-            # let that item receive the event instead of starting a
-            # rubberband/drag-to-create operation.
-            try:
-                items = self.scene.items(scene_pos)
-            except Exception:
-                items = []
-
-            # Check if any text-related item is under the cursor
-            # (filter out grid and active grid area which shouldn't block text creation)
-            has_text_item = False
-            for item in items:
-                if isinstance(item, (QGraphicsTextItem, ResizableTextItem)):
-                    has_text_item = True
-                    break
-                # Check if it's a grid or active grid area that we should ignore
-                if isinstance(item, (GridGraphicsItem, ActiveGridArea)):
-                    continue
-                # Any other item (like handles) should also allow interaction
-                if item not in [self.scene.item]:
-                    has_text_item = True
-                    break
-
-            if has_text_item:
-                super().mousePressEvent(event)
-                return
-
-            # No existing item under cursor: begin drag-to-create
-            self._text_dragging = True
-            self._text_drag_start = scene_pos
-            try:
-                rb = QGraphicsRectItem(QRectF(scene_pos, scene_pos))
-                pen = QPen(QColor("white"))
-                pen.setStyle(Qt.PenStyle.DashLine)
-                rb.setPen(pen)
-                rb.setZValue(3000)
-                self.scene.addItem(rb)
-                self._temp_rubberband = rb
-            except Exception:
-                self._temp_rubberband = None
-
-            # Begin history transaction for the layer so the add is undoable
-            layer_id = self._get_current_selected_layer_id()
-            try:
-                if self.scene and layer_id is not None:
-                    if layer_id not in self.scene._history_transactions:
-                        self.scene._begin_layer_history_transaction(
-                            layer_id, "text"
-                        )
-            except Exception:
-                pass
-            return
-        # If not text tool, ensure all text items are not movable/editable
-        self._set_text_items_interaction(False)
-        super().mousePressEvent(event)
 
     def contextMenuEvent(self, event):
         """Show a delete context menu for images and text items under cursor."""
@@ -940,179 +988,6 @@ class CustomGraphicsView(
             except Exception:
                 pass
 
-    def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.MiddleButton:
-            self.save_canvas_offset()
-            self._middle_mouse_pressed = False
-            self.last_pos = None
-
-            # After releasing middle mouse button, trigger a cursor update
-            # Pass a fake enter event to the scene to refresh the cursor
-            if self.scene:
-                # Create a simple "dummy" event just to trigger cursor update
-                class SimpleEvent:
-                    def __init__(self):
-                        pass
-
-                    def type(self):
-                        return QEvent.Type.Enter
-
-                # Tell the scene to update the cursor based on current tool
-                self.scene.handle_cursor(SimpleEvent(), True)
-
-            event.accept()
-            return
-        # Handle completing a text-area drag
-        if self.current_tool is CanvasToolName.TEXT and self._text_dragging:
-            end_pos = self.mapToScene(event.pos())
-            start = self._text_drag_start
-            rb = self._temp_rubberband
-            # remove the temporary rubberband
-            try:
-                if rb and rb.scene() == self.scene:
-                    self.scene.removeItem(rb)
-            except Exception:
-                pass
-            self._temp_rubberband = None
-            self._text_dragging = False
-
-            # If the drag was very small, create inline text at the click
-            if start is None:
-                return
-            dx = abs(end_pos.x() - start.x())
-            dy = abs(end_pos.y() - start.y())
-            layer_id = self._get_current_selected_layer_id()
-            try:
-                if dx < 6 and dy < 6:
-                    # create inline text
-                    self._add_text_item_inline(start)
-                else:
-                    # create a resizable text area
-                    left = min(start.x(), end_pos.x())
-                    top = min(start.y(), end_pos.y())
-                    w = abs(end_pos.x() - start.x())
-                    h = abs(end_pos.y() - start.y())
-                    rect = QRectF(left, top, w, h)
-                    area = ResizableTextItem(self, rect)
-                    area.setZValue(2000)
-                    # Focus the internal text for editing
-                    try:
-                        area.text_item.setFocus()
-                        # Bind inspector to child text item
-                        if self._text_inspector:
-                            self._text_inspector.bind_to(area.text_item)
-                    except Exception:
-                        pass
-                    # add to scene and tracking lists
-                    try:
-                        self.scene.addItem(area)
-                        self._text_items.append(area)
-                        self._text_item_layer_map[area] = layer_id
-                        self._editing_text_item = area.text_item
-                        # make child handlers
-                        area.text_item.focusOutEvent = (
-                            self._make_text_focus_out_handler(area.text_item)
-                        )
-                        area.text_item.keyPressEvent = (
-                            self._make_text_key_press_handler(area.text_item)
-                        )
-                        area.text_item.itemChange = (
-                            self._make_text_item_change_handler(area.text_item)
-                        )
-                        # ensure the text width is set so it wraps
-                        area.text_item.setTextWidth(area.rect().width())
-                        # Persist
-                        self._save_text_items_to_db()
-                    except Exception:
-                        self.logger.exception("Failed creating text area")
-
-            finally:
-                # Commit the transaction after saving
-                try:
-                    if self.scene and layer_id is not None:
-                        self.scene._commit_layer_history_transaction(
-                            layer_id, "text"
-                        )
-                except Exception:
-                    pass
-            return
-        super().mouseReleaseEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self._middle_mouse_pressed:
-            delta = event.pos() - self.last_pos
-            self.canvas_offset -= delta
-            self.last_pos = event.pos()
-            self.api.art.canvas.update_grid_info(
-                {
-                    "offset_x": self.canvas_offset_x,
-                    "offset_y": self.canvas_offset_y,
-                }
-            )
-            if not self._pan_update_timer.isActive():
-                self._pan_update_timer.start(1)
-            else:
-                self._pending_pan_event = True
-            event.accept()
-            return
-        # Update rubberband during text drag
-        if self.current_tool is CanvasToolName.TEXT and self._text_dragging:
-            if not self._temp_rubberband:
-                return
-            scene_pos = self.mapToScene(event.pos())
-            start = self._text_drag_start
-            if start is None:
-                return
-            left = min(start.x(), scene_pos.x())
-            top = min(start.y(), scene_pos.y())
-            w = abs(scene_pos.x() - start.x())
-            h = abs(scene_pos.y() - start.y())
-            try:
-                self._temp_rubberband.setRect(QRectF(left, top, w, h))
-            except Exception:
-                pass
-            event.accept()
-            return
-        super().mouseMoveEvent(event)
-
-    def keyPressEvent(self, event):
-        # Support Delete key to remove selected text items from the canvas
-        if event.key() == Qt.Key.Key_Delete:
-            # Collect selected text items
-            to_remove = [it for it in self._text_items if it.isSelected()]
-            if to_remove:
-                # Group by layer and begin a transaction per layer
-                layers = {}
-                for item in to_remove:
-                    layer_id = self._text_item_layer_map.get(item)
-                    layers.setdefault(layer_id, []).append(item)
-
-                for layer_id, items in layers.items():
-                    try:
-                        if self.scene and layer_id is not None:
-                            if (
-                                layer_id
-                                not in self.scene._history_transactions
-                            ):
-                                self.scene._begin_layer_history_transaction(
-                                    layer_id, "text"
-                                )
-                    except Exception:
-                        pass
-
-                    for item in items:
-                        self._remove_text_item(item, manage_transaction=False)
-
-                    try:
-                        if self.scene and layer_id is not None:
-                            self.scene._commit_layer_history_transaction(
-                                layer_id, "text"
-                            )
-                    except Exception:
-                        pass
-                return
-        super().keyPressEvent(event)
-
     def _do_pan_update(self):
         self.update_active_grid_area_position()
         self.updateImagePositions()
@@ -1120,105 +995,6 @@ class CustomGraphicsView(
         if self._pending_pan_event:
             self._pending_pan_event = False
             self._pan_update_timer.start(1)
-
-    def showEvent(self, event):
-        super().showEvent(event)
-
-        # If this is the first time showing (initial load)
-        if not self._initialized:
-            # Set restoration flag to prevent resize compensation during initial load
-            self._is_restoring_state = True
-
-            # Reset grid compensation on load to prevent accumulated drift
-            self._grid_compensation_offset = QPointF(0, 0)
-
-            # Load offset first - this ONLY sets the canvas_offset to the saved value
-            self.load_canvas_offset()
-
-            # Store the loaded offset to restore it after any operations
-            loaded_offset = QPointF(
-                self.canvas_offset.x(), self.canvas_offset.y()
-            )
-
-            # Clear any cached positions since we're starting fresh
-            if self.scene and hasattr(self.scene, "original_item_positions"):
-                self.scene.original_item_positions.clear()
-
-            # Set up the scene (grid, etc.) - DO NOT let these change the offset
-            self.do_draw(True)
-            self.toggle_drag_mode()
-            self.set_canvas_color(self.scene)
-
-            # Restore the offset after do_draw
-            self.canvas_offset = loaded_offset
-
-            # Show the active grid area using loaded offset (this also positions it)
-            self.show_active_grid_area()
-
-            # Restore the offset after show_active_grid_area
-            self.canvas_offset = loaded_offset
-
-            # Update viewport size tracking without adjusting offset
-            self._last_viewport_size = self.viewport().size()
-
-            # Ensure layers are created/initialized at their saved positions
-            # This method loads positions from DB and applies them correctly
-            if hasattr(self.scene, "_refresh_layer_display"):
-                self.scene._refresh_layer_display()
-
-            # FORCE the offset back to loaded value after layer initialization
-            self.canvas_offset = loaded_offset
-
-            # Restore text items on load
-            try:
-                self._restore_text_items_from_db()
-            except Exception:
-                self.logger.exception(
-                    "Failed to restore text items on showEvent"
-                )
-
-            # Final offset restoration
-            self.canvas_offset = loaded_offset
-
-            self._initialized = True
-
-            # Align canvas items to the viewport now that restoration is complete
-            # (this will calculate center_pos if it wasn't loaded from settings)
-            self.align_canvas_items_to_viewport()
-
-            # Use a longer delay to allow the window to fully settle (including main window showEvent)
-            # before re-enabling resize compensation. The main window's showEvent can fire up to 1 second
-            # after the canvas showEvent completes, causing resize events that shouldn't apply compensation.
-            QTimer.singleShot(1500, self._finish_state_restoration)
-        else:
-            # Already initialized - this is a subsequent show (e.g., switching back to canvas tab)
-            # Check if viewport size changed while we were hidden
-            current_viewport_size = self.viewport().size()
-            if current_viewport_size != self._last_viewport_size:
-                self.logger.info(
-                    f"[SHOW] Viewport size changed while hidden: {self._last_viewport_size} -> {current_viewport_size}"
-                )
-
-                # Calculate the shift that occurred while hidden
-                old_center_x = self._last_viewport_size.width() / 2
-                old_center_y = self._last_viewport_size.height() / 2
-                new_center_x = current_viewport_size.width() / 2
-                new_center_y = current_viewport_size.height() / 2
-
-                center_shift_x = new_center_x - old_center_x
-                center_shift_y = new_center_y - old_center_y
-
-                # Apply the compensation for the resize that happened while hidden
-                if not self._is_restoring_state:
-                    self._apply_viewport_compensation(
-                        center_shift_x, center_shift_y
-                    )
-
-                # Update tracked size
-                self._last_viewport_size = current_viewport_size
-
-                # Redraw grid
-                self.draw_grid()
 
     def _finish_state_restoration(self):
         """Called after a delay to finish state restoration and re-enable resize compensation."""
@@ -1238,55 +1014,6 @@ class CustomGraphicsView(
             f"Canvas state restoration complete - final offset: ({final_offset.x()}, {final_offset.y()})"
         )
         self.scene.show_event()
-
-    def resizeEvent(self, event):
-        """Handle viewport resize to keep canvas centered without changing offset values.
-
-        When the viewport resizes, the visual center shifts but the canvas offset
-        (which represents the user's pan position) should remain unchanged. We compensate
-        by adjusting the stored absolute positions of items to account for the viewport
-        center change.
-        """
-        super().resizeEvent(event)
-
-        # Skip compensation during initial state restoration
-        if self._is_restoring_state or not self._initialized:
-            self.logger.info(
-                f"[RESIZE] Skipping compensation - _is_restoring_state={self._is_restoring_state}, _initialized={self._initialized}"
-            )
-            self._last_viewport_size = self.viewport().size()
-            return
-
-        self.logger.info(
-            f"[RESIZE] Processing resize - old_size={self._last_viewport_size}, new_size={self.viewport().size()}"
-        )
-
-        # Calculate the change in viewport center
-        old_size = self._last_viewport_size
-        new_size = self.viewport().size()
-
-        # If size hasn't actually changed, no need to update
-        if old_size == new_size:
-            return
-
-        # Calculate the shift in viewport center
-        old_center_x = old_size.width() / 2
-        old_center_y = old_size.height() / 2
-        new_center_x = new_size.width() / 2
-        new_center_y = new_size.height() / 2
-
-        center_shift_x = new_center_x - old_center_x
-        center_shift_y = new_center_y - old_center_y
-
-        # Apply the compensation by adjusting the stored absolute positions
-        # This keeps the canvas_offset unchanged while shifting the visual positions
-        self._apply_viewport_compensation(center_shift_x, center_shift_y)
-
-        # Update the tracked viewport size for next resize
-        self._last_viewport_size = new_size
-
-        # Redraw the grid with new viewport size
-        self.draw_grid()
 
     def _apply_viewport_compensation(self, shift_x: float, shift_y: float):
         """Apply viewport center compensation by adjusting the grid compensation offset.
@@ -1359,47 +1086,6 @@ class CustomGraphicsView(
         except Exception:
             pass
 
-    def toggle_drag_mode(self):
-        self.setDragMode(QGraphicsView.DragMode.NoDrag)
-
-    def update_active_grid_area_position(self):
-        # Skip update during drag to prevent snap-back
-        if self.scene and getattr(self.scene, "is_dragging", False):
-            self.logger.info(
-                "[ACTIVE GRID] Skipping position update - is_dragging is True"
-            )
-            return
-
-        if self.active_grid_area:
-            self.logger.info(
-                f"[ACTIVE GRID] update_active_grid_area_position called - current scenePos: {self.active_grid_area.scenePos().x()}, {self.active_grid_area.scenePos().y()}"
-            )
-            self.logger.info(
-                f"[ACTIVE GRID] Settings pos: {self.active_grid_settings.pos_x}, {self.active_grid_settings.pos_y}"
-            )
-
-            manager = CanvasPositionManager()
-            view_state = ViewState(
-                canvas_offset=QPointF(
-                    self.canvas_offset_x, self.canvas_offset_y
-                ),
-                grid_compensation=self._grid_compensation_offset,
-            )
-
-            # Convert absolute position to display position
-            abs_pos = QPointF(*self.active_grid_settings.pos)
-            display_pos = manager.absolute_to_display(abs_pos, view_state)
-
-            self.logger.info(
-                f"[ACTIVE GRID] Setting position to display_pos: {display_pos.x()}, {display_pos.y()}"
-            )
-            self.active_grid_area.setPos(display_pos)
-
-            actual_pos = self.active_grid_area.scenePos()
-            self.logger.info(
-                f"[ACTIVE GRID] After setPos, actual scenePos: {actual_pos.x()}, {actual_pos.y()}"
-            )
-
     def updateImagePositions(
         self, original_item_positions: Dict[str, QPointF] = None
     ):
@@ -1452,287 +1138,11 @@ class CustomGraphicsView(
 
         self.do_draw(force_draw=True)
 
-    def get_cached_cursor(self, tool, size):
-        key = (tool, size)
-        if key not in self._cursor_cache:
-            if tool in (CanvasToolName.BRUSH, CanvasToolName.ERASER):
-                # You may want to use different colors for eraser
-                cursor = circle_cursor(
-                    Qt.GlobalColor.white, Qt.GlobalColor.transparent, size
-                )
-                self._cursor_cache[key] = cursor
-        return self._cursor_cache.get(key)
-
-    def _update_cursor(self, event=None, current_tool=None, apply_cursor=True):
-        # event: QEvent or similar, current_tool: CanvasToolName
-        # apply_cursor: bool
-        if current_tool is None:
-            current_tool = self.current_tool
-        cursor = None
-        if apply_cursor:
-            try:
-                if (
-                    event
-                    and hasattr(event, "button")
-                    and event.button() == Qt.MouseButton.MiddleButton
-                ):
-                    cursor = Qt.CursorShape.ClosedHandCursor
-                elif current_tool in (
-                    CanvasToolName.BRUSH,
-                    CanvasToolName.ERASER,
-                ):
-                    size = getattr(self, "brush_settings", None)
-                    size = size.size if size else 32
-                    cursor = self.get_cached_cursor(current_tool, size)
-                elif current_tool is CanvasToolName.TEXT:
-                    cursor = Qt.CursorShape.IBeamCursor
-                elif current_tool in (
-                    CanvasToolName.ACTIVE_GRID_AREA,
-                    CanvasToolName.MOVE,
-                ):
-                    if (
-                        event
-                        and hasattr(event, "buttons")
-                        and event.buttons() == Qt.MouseButton.LeftButton
-                    ):
-                        cursor = Qt.CursorShape.ClosedHandCursor
-                    else:
-                        cursor = Qt.CursorShape.OpenHandCursor
-                elif current_tool is CanvasToolName.NONE:
-                    cursor = Qt.CursorShape.ArrowCursor
-            except Exception:
-                self.logger.exception("Failed to determine cursor")
-
-        # Apply cursor if determined
-        try:
-            if cursor is not None:
-                self.setCursor(cursor)
-        except Exception:
-            pass
-
-    def _find_text_item_at(self, pos):
-        if not self.scene:
-            return None
-        items = self.scene.items(pos)
-        for item in items:
-            if isinstance(item, QGraphicsTextItem):
-                return item
-        return None
-
-    def _add_text_item_inline(self, pos: QPointF):
-        """Create a new QGraphicsTextItem at scene position and start editing inline."""
-        if not self.scene:
-            return
-
-        text_item = DraggableTextItem(self)
-        text_item.setPlainText("")
-        text_item.setTextInteractionFlags(Qt.TextEditorInteraction)
-        text_item.setFlag(QGraphicsTextItem.ItemIsMovable, True)
-        text_item.setFlag(QGraphicsTextItem.ItemIsSelectable, True)
-        text_item.setFlag(QGraphicsTextItem.ItemIsFocusable, True)
-        text_item.setPos(pos)
-        text_item.setZValue(2000)  # Above images (which use ~1000)
-        text_item.setDefaultTextColor(QColor("white"))
-        text_item.setFont(self._get_default_text_font())
-        text_item.setFlag(QGraphicsTextItem.ItemSendsGeometryChanges, True)
-        text_item.itemChange = self._make_text_item_change_handler(text_item)
-        text_item.focusOutEvent = self._make_text_focus_out_handler(text_item)
-        text_item.keyPressEvent = self._make_text_key_press_handler(text_item)
-
-        self.scene.addItem(text_item)
-        self._text_items.append(text_item)
-        # Associate with currently selected layer
-        layer_id = self._get_current_selected_layer_id()
-        self._text_item_layer_map[text_item] = layer_id
-
-        text_item.setFocus()
-        self._editing_text_item = text_item
-        # Bind inspector
-        if self._text_inspector:
-            self._text_inspector.bind_to(text_item)
-
-        self._save_text_items_to_db()
-
-    def _edit_text_item(self, item):
-        # Only allow editing if text tool is active
-        if self.current_tool is CanvasToolName.TEXT:
-            item.setTextInteractionFlags(Qt.TextEditorInteraction)
-            item.setFlag(QGraphicsTextItem.ItemIsMovable, True)
-            item.setFlag(QGraphicsTextItem.ItemIsSelectable, True)
-            item.setFocus()
-            self._editing_text_item = item
-            # Bind inspector to this item
-            if self._text_inspector:
-                self._text_inspector.bind_to(item)
-
-    def _make_text_focus_out_handler(self, item):
-        def handler(event):
-            # If focus moved into the inspector widget (or its children), keep
-            # the inspector bound so clicking controls doesn't cause the
-            # inspector to disappear.
-            try:
-                fw = QApplication.focusWidget()
-                if self._text_inspector is not None and fw is not None:
-                    try:
-                        if (
-                            self._text_inspector.isAncestorOf(fw)
-                            or fw is self._text_inspector
-                        ):
-                            # Don't unbind; leave the text interaction flags alone
-                            QGraphicsTextItem.focusOutEvent(item, event)
-                            return
-                    except Exception:
-                        # If any failure occurs checking ancestry, fall back to
-                        # default behavior below
-                        pass
-
-            except Exception:
-                pass
-
-            item.setTextInteractionFlags(Qt.NoTextInteraction)
-            self._editing_text_item = None
-            self._save_text_items_to_db()
-            # Unbind inspector when editing finishes
-            if self._text_inspector:
-                self._text_inspector.bind_to(None)
-            QGraphicsTextItem.focusOutEvent(item, event)
-
-        return handler
-
-    def _make_text_key_press_handler(self, item):
-        def handler(event):
-            if event.key() == Qt.Key.Key_Delete:
-                self._remove_text_item(item)
-            else:
-                QGraphicsTextItem.keyPressEvent(item, event)
-
-        return handler
-
-    def _make_text_item_change_handler(self, item):
-        def handler(change, value):
-            if change == QGraphicsTextItem.ItemPositionChange:
-                self._save_text_items_to_db()
-            return QGraphicsTextItem.itemChange(item, change, value)
-
-        return handler
-
-    def _remove_text_item(
-        self, item, *, manage_transaction: bool = True
-    ) -> None:
-        layer_id = self._text_item_layer_map.get(item)
-        if manage_transaction:
-            try:
-                if self.scene and layer_id is not None:
-                    if layer_id not in self.scene._history_transactions:
-                        self.scene._begin_layer_history_transaction(
-                            layer_id, "text"
-                        )
-            except Exception:
-                pass
-
-        try:
-            if hasattr(item, "scene") and item.scene():
-                item.scene().removeItem(item)
-        except Exception:
-            pass
-
-        if item in self._text_items:
-            self._text_items.remove(item)
-        if item in self._text_item_layer_map:
-            del self._text_item_layer_map[item]
-
-        editing = getattr(self, "_editing_text_item", None)
-        if editing is item or getattr(item, "text_item", None) is editing:
-            self._editing_text_item = None
-        if self._text_inspector:
-            try:
-                self._text_inspector.bind_to(None)
-            except Exception:
-                pass
-
-        self._save_text_items_to_db()
-
-        if manage_transaction:
-            try:
-                if self.scene and layer_id is not None:
-                    self.scene._commit_layer_history_transaction(
-                        layer_id, "text"
-                    )
-            except Exception:
-                pass
-
     def _get_default_text_font(self):
         font = QFont()
         font.setPointSize(18)
         font.setFamily("Arial")
         return font
-
-    def _save_text_items_to_db(self):
-        # Save all text items to the database (via application_settings or similar)
-        # Group text items by associated layer and save per-layer
-        layer_buckets: Dict[Optional[int], list] = {}
-        for item in self._text_items:
-            layer_id = self._text_item_layer_map.get(item)
-            if layer_id not in layer_buckets:
-                layer_buckets[layer_id] = []
-            # Two kinds of items: inline QGraphicsTextItem or ResizableTextItem
-            try:
-                if isinstance(item, ResizableTextItem):
-                    d = item.to_persist_dict()
-                    layer_buckets[layer_id].append(d)
-                elif isinstance(item, QGraphicsTextItem):
-                    abs_x = int(item.pos().x() + self.canvas_offset_x)
-                    abs_y = int(item.pos().y() + self.canvas_offset_y)
-                    layer_buckets[layer_id].append(
-                        {
-                            "type": "inline",
-                            "text": item.toPlainText(),
-                            "x": abs_x,
-                            "y": abs_y,
-                            "color": item.defaultTextColor().name(),
-                            "font": item.font().toString(),
-                        }
-                    )
-                else:
-                    # Unknown item type: try best-effort extraction
-                    abs_x = int(item.pos().x() + self.canvas_offset_x)
-                    abs_y = int(item.pos().y() + self.canvas_offset_y)
-                    text = getattr(item, "toPlainText", lambda: "")()
-                    color = "white"
-                    try:
-                        color = item.defaultTextColor().name()
-                    except Exception:
-                        pass
-                    font = ""
-                    try:
-                        font = item.font().toString()
-                    except Exception:
-                        pass
-                    layer_buckets[layer_id].append(
-                        {
-                            "type": "inline",
-                            "text": text,
-                            "x": abs_x,
-                            "y": abs_y,
-                            "color": color,
-                            "font": font,
-                        }
-                    )
-            except Exception:
-                self.logger.exception("Failed serializing text item for DB")
-
-        # Persist each layer's text items JSON into DrawingPadSettings.text_items
-        for layer_id, items in layer_buckets.items():
-            try:
-                json_text = json.dumps(items)
-                # Use update_drawing_pad_settings with explicit layer_id
-                self.update_drawing_pad_settings(
-                    layer_id=layer_id, text_items=json_text
-                )
-            except Exception:
-                self.logger.exception(
-                    "Failed to save text items for layer %s", layer_id
-                )
 
     def update_drawing_pad_settings(self, **kwargs):
         # Extract layer_id if provided in kwargs
@@ -1749,136 +1159,3 @@ class CustomGraphicsView(
                 super().update_drawing_pad_settings(
                     layer_id=layer_item.id, **kwargs
                 )
-
-    def _restore_text_items_from_db(self):
-        # Restore text items from per-layer DrawingPadSettings.text_items
-        self._clear_text_items()
-        try:
-            # iterate through layers and load their text_items JSON
-            for layer in CanvasLayer.objects.order_by("order").all():
-                settings = DrawingPadSettings.objects.filter_by_first(
-                    layer_id=layer.id
-                )
-                if not settings:
-                    continue
-                raw = getattr(settings, "text_items", None)
-                if not raw:
-                    continue
-                try:
-                    data_list = json.loads(raw)
-                except Exception:
-                    data_list = []
-
-                for data in data_list:
-                    text = data.get("text", "")
-                    x = data.get("x", 0)
-                    y = data.get("y", 0)
-                    color = QColor(data.get("color", "white"))
-                    font = QFont()
-                    try:
-                        font.fromString(data.get("font", ""))
-                    except Exception:
-                        font = self._get_default_text_font()
-                    # Distinguish between inline and area types
-                    item_type = data.get("type", "inline")
-                    if item_type == "area":
-                        # Restore a ResizableTextItem with provided w/h
-                        w = data.get("w", 100)
-                        h = data.get("h", 40)
-                        display_x = x - int(self.canvas_offset_x)
-                        display_y = y - int(self.canvas_offset_y)
-                        rect = QRectF(display_x, display_y, w, h)
-                        area = ResizableTextItem(self, rect)
-                        area.text_item.setPlainText(text)
-                        area.text_item.setDefaultTextColor(color)
-                        area.text_item.setFont(font)
-                        area.setZValue(2000)
-                        # Bind handlers to the text child so focus/keys persist
-                        area.text_item.focusOutEvent = (
-                            self._make_text_focus_out_handler(area.text_item)
-                        )
-                        area.text_item.keyPressEvent = (
-                            self._make_text_key_press_handler(area.text_item)
-                        )
-                        area.text_item.itemChange = (
-                            self._make_text_item_change_handler(area.text_item)
-                        )
-                        self.scene.addItem(area)
-                        self._text_items.append(area)
-                        self._text_item_layer_map[area] = layer.id
-                    else:
-                        text_item = DraggableTextItem(self)
-                        text_item.setPlainText(text)
-                        # Stored x/y are absolute coordinates; convert to display
-                        # position by subtracting the current canvas offset.
-                        display_x = x - int(self.canvas_offset_x)
-                        display_y = y - int(self.canvas_offset_y)
-                        text_item.setPos(QPointF(display_x, display_y))
-                        text_item.setDefaultTextColor(color)
-                        text_item.setFont(font)
-                        text_item.setFlag(
-                            QGraphicsTextItem.ItemIsMovable, True
-                        )
-                        text_item.setFlag(
-                            QGraphicsTextItem.ItemIsSelectable, True
-                        )
-                        text_item.setFlag(
-                            QGraphicsTextItem.ItemIsFocusable, True
-                        )
-                        text_item.setFlag(
-                            QGraphicsTextItem.ItemSendsGeometryChanges, True
-                        )
-                        text_item.setZValue(2000)
-                        text_item.focusOutEvent = (
-                            self._make_text_focus_out_handler(text_item)
-                        )
-                        text_item.keyPressEvent = (
-                            self._make_text_key_press_handler(text_item)
-                        )
-                        text_item.itemChange = (
-                            self._make_text_item_change_handler(text_item)
-                        )
-                        self.scene.addItem(text_item)
-                        self._text_items.append(text_item)
-                        self._text_item_layer_map[text_item] = layer.id
-        except Exception:
-            self.logger.exception("Failed to restore text items from DB")
-
-    # (per-layer restore implementation above is the authoritative one)
-
-    def _clear_text_items(self):
-        for item in self._text_items:
-            self.scene.removeItem(item)
-        self._text_items.clear()
-        self._text_item_layer_map.clear()
-
-    def _set_text_items_interaction(self, enable: bool):
-        # Enable/disable moving/editing for all text items
-        for item in self._text_items:
-            if isinstance(item, ResizableTextItem):
-                item.set_interaction_enabled(enable)
-                continue
-
-            if enable:
-                item.setFlag(
-                    QGraphicsTextItem.GraphicsItemFlag.ItemIsMovable, True
-                )
-                item.setFlag(
-                    QGraphicsTextItem.GraphicsItemFlag.ItemIsSelectable, True
-                )
-                item.setTextInteractionFlags(
-                    Qt.TextInteractionFlag.TextEditorInteraction
-                )
-            else:
-                item.setFlag(
-                    QGraphicsTextItem.GraphicsItemFlag.ItemIsMovable, False
-                )
-                item.setFlag(
-                    QGraphicsTextItem.GraphicsItemFlag.ItemIsSelectable, False
-                )
-                try:
-                    item.setTextInteractionFlags(
-                        Qt.TextInteractionFlag.NoTextInteraction
-                    )
-                except AttributeError:
-                    pass
