@@ -21,7 +21,7 @@ from airunner.components.llm.tools.code_validator import (
 )
 from airunner.components.llm.tools.code_quality_manager import (
     CodeQualityManager,
-    QualityCheckResult,
+    CodeQualityResult,
 )
 from airunner.components.llm.tools.test_runner import (
     TestRunner,
@@ -50,6 +50,8 @@ from airunner.components.llm.tools import (
     code_tools,
     research_tools,
     qa_tools,
+    # Phase 3: Code generation tools
+    code_generation_tools,
 )
 from airunner.components.calendar.tools import (
     calendar_tools as langchain_calendar_tools,
@@ -66,7 +68,7 @@ __all__ = [
     "ValidationResult",
     "ValidationIssue",
     "CodeQualityManager",
-    "QualityCheckResult",
+    "CodeQualityResult",
     "TestRunner",
     "TestResult",
     "MultiFileCodeSession",
