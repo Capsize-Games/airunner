@@ -89,9 +89,25 @@ from airunner.components.art.gui.widgets.canvas.mixins.pan_offset_mixin import (
 from airunner.components.art.gui.widgets.canvas.mixins.zoom_mixin import (
     ZoomMixin,
 )
+from airunner.components.art.gui.widgets.canvas.mixins.initialization_mixin import (
+    InitializationMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.recentering_mixin import (
+    RecenteringMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.context_menu_mixin import (
+    ContextMenuMixin,
+)
+from airunner.components.art.gui.widgets.canvas.mixins.position_management_mixin import (
+    PositionManagementMixin,
+)
 
 
 class CustomGraphicsView(
+    InitializationMixin,
+    RecenteringMixin,
+    ContextMenuMixin,
+    PositionManagementMixin,
     LayerItemManagementMixin,
     ActiveGridAreaMixin,
     PanOffsetMixin,
@@ -135,90 +151,10 @@ class CustomGraphicsView(
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        # state for text-area drag/creation
-        self._text_dragging = False
-        self._text_drag_start = None
-        self._temp_rubberband = None
-        self.setMouseTracking(True)
-        self._initialized = False
-        self._scene: Optional[CustomScene] = None
-        self._canvas_color: str = "#000000"
-        self.current_background_color: Optional[QColor] = None
-        self.active_grid_area: Optional[ActiveGridArea] = None
-        self.do_draw_layers: bool = True
-        self.initialized: bool = False
-        self.drawing: bool = False
-        self.pixmaps: Dict = {}
-        self.line_group: Optional[QGraphicsItemGroup] = None
-        self._scene_is_active: bool = False
-        self.last_pos: QPoint = self.zero_point
-        self.zoom_handler: ZoomHandler = ZoomHandler()
-        self._canvas_offset = QPointF(0, 0)
-        self._grid_compensation_offset = QPointF(
-            0, 0
-        )  # Tracks viewport compensation for grid alignment
-        self.settings = get_qsettings()
-        self._middle_mouse_pressed: bool = False
-        self.grid_item = None
-        self._text_items = []  # Store references to QGraphicsTextItem
-        self._editing_text_item = None
-        self._is_restoring_state = (
-            False  # Flag to disable resize compensation during restoration
-        )
-        self.center_pos: QPointF = QPointF(0, 0)
-
-        # Add settings to handle negative coordinates properly
-        self.setAlignment(
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
-        )  # Set once here
-        self._last_viewport_size = self.viewport().size()  # Track last size
-        # Use SmartViewportUpdate to ensure proper repaints when items mutate in place
-        self.setViewportUpdateMode(
-            QGraphicsView.ViewportUpdateMode.SmartViewportUpdate
-        )
-
-        # Use setOptimizationFlags directly instead of the enum that doesn't exist in your PySide6 version
-        self.setOptimizationFlags(
-            QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing
-            | QGraphicsView.OptimizationFlag.DontSavePainterState
-        )
-        self.setFrameShape(QGraphicsView.Shape.NoFrame)
-
-        # register signal handlers
-        signal_handlers = {
-            SignalCode.APPLICATION_TOOL_CHANGED_SIGNAL: self.on_tool_changed_signal,
-            SignalCode.CANVAS_ZOOM_LEVEL_CHANGED: self.on_zoom_level_changed_signal,
-            SignalCode.SET_CANVAS_COLOR_SIGNAL: self.set_canvas_color,
-            SignalCode.UPDATE_SCENE_SIGNAL: self.update_scene,
-            SignalCode.CANVAS_CLEAR_LINES_SIGNAL: self.clear_lines,
-            SignalCode.SCENE_DO_DRAW_SIGNAL: self.on_canvas_do_draw_signal,
-            SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.on_main_window_loaded_signal,
-            SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
-            SignalCode.MASK_GENERATOR_WORKER_RESPONSE_SIGNAL: self.on_mask_generator_worker_response_signal,
-            SignalCode.RECENTER_GRID_SIGNAL: self.on_recenter_grid_signal,
-            SignalCode.CANVAS_IMAGE_UPDATED_SIGNAL: self.on_canvas_image_updated_signal,
-            SignalCode.CANVAS_UPDATE_IMAGE_POSITIONS: self.updateImagePositions,
-        }
-        for k, v in signal_handlers.items():
-            self.register(k, v)
-
-        self._pan_update_timer = QTimer()
-        self._pan_update_timer.setSingleShot(True)
-        self._pan_update_timer.timeout.connect(self._do_pan_update)
-        self._pending_pan_event = False
-
-        self._cursor_cache = {}
-        self._current_cursor = None
-
-        # text inspector UI
-        try:
-            self._text_inspector = TextInspector(self)
-            self._text_inspector.setVisible(False)
-        except Exception:
-            self._text_inspector = None
-
-        # mapping of text item -> layer id
-        self._text_item_layer_map = {}
+        self._initialize_attributes()
+        self._configure_view_settings()
+        self._register_signal_handlers()
+        self._setup_pan_timer()
 
     @property
     def canvas_offset(self) -> QPointF:
@@ -415,141 +351,6 @@ class CustomGraphicsView(
         # return int(round(snapped_gx)), int(round(snapped_gy))
         return target_x, target_y
 
-    def original_item_positions(self) -> Dict[str, QPointF]:
-        """Get the absolute positions of all layer items from the database.
-
-        This method reads saved positions - it does NOT recalculate or modify them.
-        Use recenter_layers() if you want to explicitly reposition layers.
-        """
-        layers = CanvasLayer.objects.order_by("order").all()
-        original_item_positions = {}
-        for index, layer in enumerate(layers):
-            results = DrawingPadSettings.objects.filter_by(layer_id=layer.id)
-            if len(results) == 0:
-                continue
-
-            drawingpad_settings = results[0]
-            scene_item = self.scene._layer_items.get(layer.id)
-            if scene_item is None:
-                # Layer may not have been materialized yet; skip safely
-                continue
-
-            # Read the saved absolute position from the database
-            # Do NOT recalculate - preserve what was saved
-            if (
-                drawingpad_settings.x_pos is not None
-                and drawingpad_settings.y_pos is not None
-            ):
-                pos_x = drawingpad_settings.x_pos
-                pos_y = drawingpad_settings.y_pos
-            else:
-                # If no saved position exists, use center of viewport as fallback
-                item_rect = scene_item.boundingRect()
-                image_width = item_rect.width()
-                image_height = item_rect.height()
-                pos_x, pos_y = self.get_recentered_position(
-                    int(image_width), int(image_height)
-                )
-                # Save this calculated position for future use
-                DrawingPadSettings.objects.update(
-                    drawingpad_settings.id,
-                    x_pos=pos_x,
-                    y_pos=pos_y,
-                )
-
-            original_item_positions[scene_item] = QPointF(pos_x, pos_y)
-        return original_item_positions
-
-    def on_recenter_grid_signal(self):
-        self.canvas_offset = QPointF(0, 0)
-        self._grid_compensation_offset = QPointF(
-            0, 0
-        )  # Reset grid compensation when recentering
-
-        """Center the grid and all layer images in the viewport."""
-        if not self.scene:
-            return
-
-        # Update active grid area absolute position in settings
-        pos_x, pos_y = self.get_recentered_position(
-            self.application_settings.working_width,
-            self.application_settings.working_height,
-        )
-        self.center_pos = QPointF(pos_x, pos_y)
-        self.update_active_grid_settings(
-            pos_x=pos_x,
-            pos_y=pos_y,
-        )
-
-        self.save_canvas_offset()
-
-        self.api.art.canvas.update_grid_info(
-            {
-                "offset_x": self.canvas_offset_x,
-                "offset_y": self.canvas_offset_y,
-            }
-        )
-
-        # Update display positions
-        self.update_active_grid_area_position()
-
-        # Recalculate and save new centered positions
-        # Handle BOTH old single-item system and new layer system
-        new_positions = {}
-
-        # OLD SYSTEM: Recenter the single DrawingPad item if it exists
-        if self.scene.item:
-            self.logger.info(
-                "[RECENTER] Processing old single-item system (DrawingPad)"
-            )
-            item_rect = self.scene.item.boundingRect()
-            image_width = item_rect.width()
-            image_height = item_rect.height()
-            pos_x, pos_y = self.get_recentered_position(
-                int(image_width), int(image_height)
-            )
-
-            # Save to database
-            self.update_drawing_pad_settings(x_pos=pos_x, y_pos=pos_y)
-
-            # Add to positions dict
-            new_positions[self.scene.item] = QPointF(pos_x, pos_y)
-            self.logger.info(
-                f"[RECENTER] DrawingPad item: saved to DB and dict - position x={pos_x}, y={pos_y}"
-            )
-
-        # NEW SYSTEM: Recenter layer items
-        layer_positions = self.recenter_layer_positions()
-        new_positions.update(layer_positions)
-
-        self.logger.info(
-            f"[RECENTER] Total items to recenter: {len(new_positions)}"
-        )
-
-        # CRITICAL: Clear caches AFTER saving to DB but BEFORE updating scene
-        # This ensures scene.update_image_position() uses fresh DB values if
-        # it needs to fall back to _get_layer_specific_settings()
-
-        # Clear the scene's position cache
-        if hasattr(self.scene, "original_item_positions"):
-            self.scene.original_item_positions.clear()
-
-        # Clear layer-specific settings cache
-        shared_instance = SettingsMixinSharedInstance()
-        keys_to_clear = [
-            key
-            for key in shared_instance._settings_cache_by_key.keys()
-            if key.startswith(f"{DrawingPadSettings.__name__}_layer_")
-        ]
-        for key in keys_to_clear:
-            shared_instance._settings_cache_by_key.pop(key, None)
-
-        # Now update scene with the new positions
-        self.updateImagePositions(new_positions)
-
-        # Force complete redraw
-        self.do_draw(force_draw=True)
-
     def on_mask_generator_worker_response_signal(self, message: dict):
         mask = message["mask"]
         if mask is not None:
@@ -627,59 +428,6 @@ class CustomGraphicsView(
             return
         if item.scene() == self.scene:
             self.scene.removeItem(item)
-
-    def contextMenuEvent(self, event):
-        """Show a delete context menu for images and text items under cursor."""
-        try:
-            scene_pos = self.mapToScene(event.pos())
-        except Exception:
-            return
-
-        try:
-            items = self.scene.items(scene_pos)
-        except Exception:
-            items = []
-
-        if not items:
-            return
-
-        try:
-            menu = QMenu()
-            delete_action = menu.addAction(self.tr("Delete"))
-            chosen = menu.exec_(event.globalPos())
-
-            if chosen == delete_action:
-                # Find first deletable item (skip grid and active grid area)
-                deletable = None
-                for cand in items:
-                    if not isinstance(
-                        cand, (GridGraphicsItem, ActiveGridArea)
-                    ):
-                        deletable = cand
-                        break
-
-                if deletable is None:
-                    return
-
-                target = deletable
-
-                # Text item deletion
-                if target in getattr(self, "_text_items", []):
-                    self._remove_text_item(target)
-                # Pixmap item deletion (images)
-                elif isinstance(target, QGraphicsPixmapItem):
-                    self._remove_layer_image_item(target)
-                # Other items: just remove from scene
-                else:
-                    getattr(target, "layer_id", None)
-                    self._remove_layer_image_item(target)
-                    try:
-                        if target.scene():
-                            target.scene().removeItem(target)
-                    except Exception:
-                        pass
-        except Exception:
-            pass
 
     def set_canvas_color(
         self,
