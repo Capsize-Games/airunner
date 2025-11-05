@@ -61,6 +61,7 @@ from airunner.settings import (
     AIRUNNER_VULNERABILITY_REPORT_LINK,
     AIRUNNER_ART_ENABLED,
 )
+from airunner.utils.application import create_worker
 from airunner.utils.settings import get_qsettings
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.application.data.shortcut_keys import ShortcutKeys
@@ -310,14 +311,7 @@ class MainWindow(
             sys.path.append(plugins_path)
         self._updating_settings = True
         self._updating_settings = False
-        self._worker_manager = None
-        try:
-            self.worker_manager = WorkerManager(
-                logger=getattr(self, "logger", None)
-            )
-            self.worker_manager.initialize_workers()
-        except Exception:
-            self.worker_manager = None
+        self.worker_manager = create_worker(WorkerManager)
         self.model_load_balancer = ModelLoadBalancer(
             self.worker_manager,
             logger=getattr(self, "logger", None),

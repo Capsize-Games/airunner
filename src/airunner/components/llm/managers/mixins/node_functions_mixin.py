@@ -261,6 +261,76 @@ Provide a clear, conversational answer using only the information above."""
 
         return "end"
 
+    def _route_after_tools(self, state: "WorkflowState") -> str:
+        """Route after tools execute - decide if model needs to respond.
+
+        Some tools (like update_mood) are status-only and don't need a response.
+        Other tools (like scrape_website) return data that needs interpretation.
+
+        Args:
+            state: Workflow state
+
+        Returns:
+            Routing decision: "model" or "end"
+        """
+        # Get the last tool messages to check what tools executed
+        tool_messages = self._get_tool_messages(state["messages"])
+
+        if not tool_messages:
+            return "end"
+
+        # Tools that don't need a follow-up response (status/action tools)
+        NO_RESPONSE_TOOLS = {
+            "update_mood",
+            "clear_conversation",
+            "emit_signal",
+            "toggle_tts",
+            "clear_canvas",
+            "quit_application",
+            "clear_chat_history",
+            "delete_conversation",
+            "switch_conversation",
+            "create_new_conversation",
+            "update_conversation_title",
+        }
+
+        # Check the most recent tool message to see what tool was called
+        last_tool_msg = tool_messages[-1]
+
+        # Get the corresponding AI message with tool_calls
+        ai_messages = [
+            msg for msg in state["messages"] if isinstance(msg, AIMessage)
+        ]
+        if not ai_messages:
+            return "end"
+
+        last_ai_msg = ai_messages[-1]
+        if (
+            not hasattr(last_ai_msg, "tool_calls")
+            or not last_ai_msg.tool_calls
+        ):
+            return "end"
+
+        # Check if any of the called tools need a response
+        for tool_call in last_ai_msg.tool_calls:
+            tool_name = tool_call.get("name", "")
+            self.logger.info(f"[ROUTE DEBUG] Checking tool: {tool_name}")
+            if tool_name not in NO_RESPONSE_TOOLS:
+                # Tool needs model to process results
+                self.logger.info(
+                    f"[ROUTE DEBUG] Tool '{tool_name}' needs model response - routing back to model"
+                )
+                self.logger.info(
+                    f"[ROUTE DEBUG] Tool result: {last_tool_msg.content if hasattr(last_tool_msg, 'content') else 'No content'}"
+                )
+                return "model"
+
+        # All tools were status-only
+        self.logger.info(
+            "[ROUTE DEBUG] All tools were status-only - ending workflow"
+        )
+        return "end"
+
     def _log_routing_debug(
         self, last_message: BaseMessage, messages: List[BaseMessage]
     ):
@@ -485,6 +555,22 @@ Provide a clear, conversational answer using only the information above."""
         Returns:
             Updated state with new AI message
         """
+        # Debug: Log the number of messages and their types
+        messages = state["messages"]
+        self.logger.info(
+            f"[CALL MODEL DEBUG] Total messages in state: {len(messages)}"
+        )
+        for i, msg in enumerate(messages[-5:]):  # Show last 5 messages
+            msg_type = type(msg).__name__
+            content_preview = (
+                str(msg.content)[:100]
+                if hasattr(msg, "content")
+                else "No content"
+            )
+            self.logger.info(
+                f"[CALL MODEL DEBUG] Message {i}: {msg_type} - {content_preview}"
+            )
+
         generation_kwargs = state.get("generation_kwargs", {})
 
         # Trim messages
@@ -675,6 +761,7 @@ Provide a clear, conversational answer using only the information above."""
         """
         streamed_content: List[str] = []
         last_chunk_message: Optional[BaseMessage] = None
+        collected_tool_calls: List = []  # Collect tool_calls from ALL chunks
 
         try:
             for chunk in self._chat_model.stream(
@@ -686,18 +773,41 @@ Provide a clear, conversational answer using only the information above."""
                 chunk_message = getattr(chunk, "message", chunk)
                 text = getattr(chunk_message, "content", "") or ""
 
+                print(
+                    f"[STREAM CHUNK DEBUG] chunk type: {type(chunk)}",
+                    flush=True,
+                )
+                print(
+                    f"[STREAM CHUNK DEBUG] chunk_message type: {type(chunk_message)}",
+                    flush=True,
+                )
+                print(
+                    f"[STREAM CHUNK DEBUG] chunk_message.tool_calls: {getattr(chunk_message, 'tool_calls', 'NO ATTR')}",
+                    flush=True,
+                )
+
                 # Always capture last chunk (might have tool_calls with no content)
                 last_chunk_message = chunk_message
 
-                # Skip content processing if empty
-                if not text:
+                # Collect tool_calls from ANY chunk that has them
+                chunk_tool_calls = getattr(chunk_message, "tool_calls", None)
+                if chunk_tool_calls:
+                    print(
+                        f"[TOOL CALLS COLLECTION] Found {len(chunk_tool_calls)} tool calls in chunk",
+                        flush=True,
+                    )
+                    collected_tool_calls.extend(chunk_tool_calls)
+
+                # Only skip if content is empty AND no tool_calls
+                if not text and not chunk_tool_calls:
                     continue
 
                 streamed_content.append(text)
 
-            if streamed_content:
+            # Return message if we have content or tool_calls
+            if streamed_content or last_chunk_message:
                 return self._create_streamed_message(
-                    streamed_content, last_chunk_message
+                    streamed_content, last_chunk_message, collected_tool_calls
                 )
 
         except Exception as exc:
@@ -711,24 +821,48 @@ Provide a clear, conversational answer using only the information above."""
         self,
         streamed_content: List[str],
         last_chunk_message: Optional[BaseMessage],
+        collected_tool_calls: Optional[List] = None,
     ) -> AIMessage:
         """Create AIMessage from streamed content.
 
         Args:
             streamed_content: List of content chunks
             last_chunk_message: Last chunk message
+            collected_tool_calls: Tool calls collected from all chunks
 
         Returns:
             Complete AIMessage
         """
         additional_kwargs = {}
-        tool_calls = None
+        tool_calls = collected_tool_calls or []  # Use collected tool_calls
 
         if last_chunk_message is not None:
             additional_kwargs = getattr(
                 last_chunk_message, "additional_kwargs", {}
             )
-            tool_calls = getattr(last_chunk_message, "tool_calls", None)
+            # Don't override collected_tool_calls with last chunk's tool_calls
+            if not collected_tool_calls:
+                tool_calls = (
+                    getattr(last_chunk_message, "tool_calls", None) or []
+                )
+
+            print(
+                f"[CREATE MESSAGE DEBUG] last_chunk_message type: {type(last_chunk_message)}",
+                flush=True,
+            )
+            print(
+                f"[CREATE MESSAGE DEBUG] collected_tool_calls: {collected_tool_calls}",
+                flush=True,
+            )
+            print(
+                f"[CREATE MESSAGE DEBUG] final tool_calls: {tool_calls}",
+                flush=True,
+            )
+        else:
+            print(
+                "[CREATE MESSAGE DEBUG] last_chunk_message is None!",
+                flush=True,
+            )
 
         complete_content = "".join(streamed_content)
 

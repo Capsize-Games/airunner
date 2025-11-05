@@ -88,99 +88,52 @@ def search_web(
     name="scrape_website",
     category=ToolCategory.SEARCH,
     description=(
-        "Scrape content from a website URL and extract the text. "
-        "Removes scripts, styles, navigation, and footer elements. "
-        "Optionally use CSS selectors to target specific content. "
-        "Use this to read articles, documentation, or web page content."
+        "Scrape and extract clean text content from a website URL. "
+        "Automatically removes boilerplate, navigation, ads, and footer elements. "
+        "Returns only the main content of the page. "
+        "Use this to read articles, blog posts, documentation, or any web page content."
     ),
     return_direct=False,
     requires_api=False,
 )
 def scrape_website(
-    url: Annotated[str, "Website URL to scrape content from"],
-    selector: Annotated[
+    url: Annotated[
         str,
-        "Optional CSS selector to target specific elements (e.g., '.article-content', '#main')",
-    ] = "",
+        "Website URL to scrape content from (must include http:// or https://)",
+    ],
 ) -> str:
-    """Scrape content from a website.
+    """Scrape and extract clean content from a website.
 
-    Extract text content from web pages for analysis or storage.
-    Can optionally use CSS selectors to target specific elements.
+    Uses Trafilatura for intelligent content extraction that automatically
+    identifies and extracts the main content while removing navigation,
+    ads, footers, and other boilerplate elements.
 
     Args:
-        url: Website URL to scrape
-        selector: Optional CSS selector to target specific content
+        url: Website URL to scrape (e.g., "https://example.com/article")
 
     Returns:
-        Scraped content or error message
+        Extracted and summarized content, or error message if scraping fails
     """
-    logger.info(f"Scraping: {url} (selector: {selector or 'none'})")
+    logger.info(f"Scraping: {url}")
 
     try:
-        import requests
-        from bs4 import BeautifulSoup
+        from airunner.components.tools.web_content_extractor import (
+            WebContentExtractor,
+        )
 
-        # Set headers to mimic a browser
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            )
-        }
+        # Use WebContentExtractor which uses Trafilatura for smart extraction
+        # This automatically handles content detection, boilerplate removal, and summarization
+        content = WebContentExtractor.fetch_and_extract(url, use_cache=True)
 
-        # Fetch the page with timeout
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-
-        # Parse HTML
-        soup = BeautifulSoup(response.content, "html.parser")
-
-        # Remove script and style elements
-        for element in soup(["script", "style", "nav", "footer"]):
-            element.decompose()
-
-        # Extract content based on selector
-        if selector:
-            elements = soup.select(selector)
-            if elements:
-                text = "\n\n".join(
-                    elem.get_text(strip=True) for elem in elements
-                )
-            else:
-                return f"No elements found matching selector: {selector}"
+        if content:
+            logger.info(f"✓ Extracted {len(content)} characters from {url}")
+            return content
         else:
-            # Try common content containers first
-            main_content = (
-                soup.find("main")
-                or soup.find("article")
-                or soup.find("div", class_="content")
-                or soup.find("div", id="content")
-                or soup.body
+            return (
+                f"Could not extract content from {url}. "
+                "The page may be empty, require JavaScript, or be blocking scrapers."
             )
-            if main_content:
-                text = main_content.get_text(separator="\n", strip=True)
-            else:
-                text = soup.get_text(separator="\n", strip=True)
 
-        # Clean up whitespace
-        lines = [line.strip() for line in text.split("\n") if line.strip()]
-        clean_text = "\n".join(lines)
-
-        # Limit output length
-        max_length = 5000
-        if len(clean_text) > max_length:
-            clean_text = clean_text[:max_length] + "\n\n[Content truncated...]"
-
-        logger.info(f"✓ Scraped {len(clean_text)} characters from {url}")
-        return clean_text
-
-    except requests.exceptions.Timeout:
-        return f"Error: Request timed out for {url}"
-    except requests.exceptions.ConnectionError:
-        return f"Error: Could not connect to {url}"
-    except requests.exceptions.HTTPError as e:
-        return f"Error: HTTP {e.response.status_code} for {url}"
     except Exception as e:
-        logger.error(f"Web scraping error: {e}", exc_info=True)
-        return f"Error scraping website: {str(e)}"
+        logger.error(f"Web scraping error for {url}: {e}", exc_info=True)
+        return f"Error scraping {url}: {str(e)}"

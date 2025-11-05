@@ -59,6 +59,7 @@ class StreamingMixin:
         config = self._create_config()
 
         math_context = self._get_math_context()
+        last_yielded_count = 0  # Track how many messages we've yielded
 
         with math_context:
             for event in self._compiled_workflow.stream(
@@ -70,14 +71,43 @@ class StreamingMixin:
                 if self._interrupted:
                     break
 
-                # Yield the last AI message if available
+                # Yield only NEW AI messages (not previously yielded)
+                # Note: We don't filter by content because tool_calls may have empty content
                 if self._has_ai_message(event):
-                    last_message = event["messages"][-1]
-                    if (
-                        isinstance(last_message, AIMessage)
-                        and last_message.content
-                    ):
-                        yield last_message
+                    messages = event["messages"]
+
+                    # Only yield AIMessages we haven't yielded yet
+                    # Count how many AIMessages are in the list
+                    ai_message_count = sum(
+                        1 for msg in messages if isinstance(msg, AIMessage)
+                    )
+
+                    print(
+                        f"[STREAM DEBUG] Total messages: {len(messages)}, AI messages: {ai_message_count}, Already yielded: {last_yielded_count}",
+                        flush=True,
+                    )
+
+                    # If there are more AIMessages than we've yielded, yield the new ones
+                    if ai_message_count > last_yielded_count:
+                        # Get all AIMessages
+                        ai_messages = [
+                            msg
+                            for msg in messages
+                            if isinstance(msg, AIMessage)
+                        ]
+                        # Yield only the ones we haven't yielded yet
+                        for i in range(last_yielded_count, ai_message_count):
+                            content_preview = (
+                                ai_messages[i].content[:100]
+                                if ai_messages[i].content
+                                else "(empty)"
+                            )
+                            print(
+                                f"[STREAM DEBUG] Yielding AI message #{i+1}: {content_preview}",
+                                flush=True,
+                            )
+                            yield ai_messages[i]
+                        last_yielded_count = ai_message_count
 
     def _create_initial_state(
         self, user_input: str, generation_kwargs: Optional[Dict]

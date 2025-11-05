@@ -28,9 +28,18 @@ class RAGPropertiesMixin:
             Configured SentenceSplitter instance
         """
         if self._text_splitter is None:
+            # Get RAG settings with safe defaults
+            rag_settings = getattr(self, "rag_settings", None)
+            chunk_size = 512  # default
+            chunk_overlap = 50  # default
+
+            if rag_settings is not None:
+                chunk_size = getattr(rag_settings, "chunk_size", 512)
+                chunk_overlap = getattr(rag_settings, "chunk_overlap", 50)
+
             self._text_splitter = SentenceSplitter(
-                chunk_size=self.knowledge_settings.chunk_size,
-                chunk_overlap=self.knowledge_settings.chunk_overlap,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
             )
         return self._text_splitter
 

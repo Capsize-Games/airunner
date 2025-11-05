@@ -68,7 +68,7 @@ def create_agent(
         description: Description of agent purpose (optional)
         tools: List of tool names available to agent (optional)
         template: Template category - coding, research, creative, calendar,
-            or custom (default: "custom")
+            or custom. Defaults to "custom"
 
     Returns:
         Success message with agent ID or error message
@@ -282,7 +282,7 @@ def list_agents(
     status and template type.
 
     Args:
-        active_only: Only show active agents (default: True)
+        active_only: Only show active agents. Defaults to True
         template: Filter by template type (optional)
 
     Returns:

@@ -33,7 +33,7 @@ def execute_python(code: str, timeout: int = 5) -> str:
 
     Args:
         code: The Python code to execute
-        timeout: Maximum execution time in seconds (default: 5)
+        timeout: Maximum execution time in seconds. Defaults to 5
 
     Returns:
         Execution result with stdout, stderr, and exit code
@@ -94,7 +94,7 @@ def format_code(code: str, line_length: int = 79) -> str:
 
     Args:
         code: The Python code to format
-        line_length: Maximum line length (default: 79)
+        line_length: Maximum line length. Defaults to 79
 
     Returns:
         Formatted code or error message

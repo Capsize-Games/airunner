@@ -179,6 +179,13 @@ class GenerationMixin:
         if final_messages:
             final_content = final_messages[-1].content or ""
             if final_content:
+                # If the model is using ReAct format, extract only the response
+                # before "Action:" to avoid showing tool calls to the user
+                if "\nAction:" in final_content:
+                    # Extract everything before the first "Action:"
+                    response_part = final_content.split("\nAction:")[0].strip()
+                    if response_part:
+                        return response_part
                 return final_content
 
         return ""
@@ -289,7 +296,29 @@ class GenerationMixin:
                         "Stream interrupted - breaking out of generation"
                     )
                     break
-                result_messages.append(message)
+                # Only keep messages that are final responses (no tool_calls)
+                # Tool-calling messages are intermediate workflow states
+                has_tool_calls = getattr(message, "tool_calls", None)
+                content_preview = (
+                    message.content[:100]
+                    if hasattr(message, "content") and message.content
+                    else "(empty)"
+                )
+                print(
+                    f"[GENERATION MIXIN] Received message - content: '{content_preview}', has_tool_calls: {bool(has_tool_calls)}",
+                    flush=True,
+                )
+                if not has_tool_calls:
+                    print(
+                        f"[GENERATION MIXIN] ✓ Appending final message (no tool calls)",
+                        flush=True,
+                    )
+                    result_messages.append(message)
+                else:
+                    print(
+                        f"[GENERATION MIXIN] ✗ Skipping intermediate message (has tool calls)",
+                        flush=True,
+                    )
 
             # Convert streamed messages to result format
             result = {"messages": result_messages}

@@ -25,6 +25,10 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
     model, ensuring conversation state is properly saved and can be restored.
     """
 
+    # CLASS-LEVEL storage for checkpoint state (shared across all instances)
+    # This ensures checkpoint state persists even when new instances are created
+    _checkpoint_state: Dict[str, Any] = {}
+
     def __init__(self, conversation_id: Optional[int] = None):
         """Initialize the database checkpoint saver.
 
@@ -107,6 +111,18 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                     self.logger.info(
                         f"✅ Saved checkpoint with {len(messages)} messages to conversation {self.message_history.conversation_id}"
                     )
+
+                    # Store full checkpoint state (including ToolMessages)
+                    # Use "default" as thread_id to match what LangGraph uses
+                    thread_id = "default"
+                    self._checkpoint_state[thread_id] = {
+                        "messages": messages,  # Full message list with ToolMessages
+                        "checkpoint": checkpoint,
+                        "metadata": metadata,
+                    }
+                    self.logger.info(
+                        f"💾 Stored full checkpoint state with {len(messages)} messages for thread {thread_id}"
+                    )
                 else:
                     self.logger.warning(
                         f"⚠️ Skipping checkpoint save - no changes detected ({len(messages)} messages)"
@@ -139,11 +155,30 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             Checkpoint tuple or None if not found
         """
         try:
-            # Load messages from database
+            # First, try to get from in-memory checkpoint state
+            thread_id = config.get("configurable", {}).get("thread_id")
+            if thread_id and thread_id in self._checkpoint_state:
+                state = self._checkpoint_state[thread_id]
+                self.logger.info(
+                    f"📥 Loaded checkpoint from memory for thread {thread_id} with {len(state['messages'])} messages (includes ToolMessages)"
+                )
+                return CheckpointTuple(
+                    config=config,
+                    checkpoint=state["checkpoint"],
+                    metadata=state["metadata"],
+                    parent_config=None,
+                )
+
+            # Fallback: Load from database (may not have ToolMessages)
             messages = self.message_history.messages
 
             if not messages:
+                self.logger.info("📥 No checkpoint found - starting fresh")
                 return None
+
+            self.logger.info(
+                f"📥 Loaded checkpoint from DATABASE for thread {thread_id} with {len(messages)} messages (ToolMessages filtered out)"
+            )
 
             # Build checkpoint with proper UUID
             checkpoint = Checkpoint(

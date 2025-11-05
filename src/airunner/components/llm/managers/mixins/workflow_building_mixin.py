@@ -27,6 +27,16 @@ class WorkflowBuildingMixin:
 
     def _build_and_compile_workflow(self):
         """Build and compile the LangGraph workflow."""
+        # CRITICAL: Inject WorkflowState into function globals for LangGraph's get_type_hints()
+        # This is needed because LangGraph introspects type hints at runtime
+        from airunner.components.llm.managers.workflow_manager import (
+            WorkflowState,
+        )
+
+        self._route_after_model.__func__.__globals__["WorkflowState"] = (
+            WorkflowState
+        )
+
         if self._use_mode_routing:
             self.logger.info("Building workflow with mode-based routing")
             self._build_mode_based_workflow()
@@ -201,5 +211,15 @@ class WorkflowBuildingMixin:
                 "end": END,
             },
         )
-        workflow.add_edge("tools", "model")
+        # After tools execute, conditionally route:
+        # - "model" if tool returned data needing interpretation
+        # - "end" if tool was status-only (like update_mood)
+        workflow.add_conditional_edges(
+            "tools",
+            self._route_after_tools,
+            {
+                "model": "model",
+                "end": END,
+            },
+        )
         workflow.add_edge("force_response", END)
