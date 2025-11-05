@@ -304,25 +304,38 @@ class SignalMediator(metaclass=SingletonMeta):
             )
 
         if request_id and request_id in self._pending_requests:
-            logger.info(f"ROUTING response for request_id={request_id}")
+            # CRITICAL: Only route to callbacks if this is an actual RESPONSE
+            # (has "response" key), not just the REQUEST signal echo.
+            # Request signals have request_id but no response data.
+            # Response signals have BOTH request_id and response data.
+            is_response = "response" in data
 
-            # Route response to pending request queue
-            with self._request_lock:
-                if request_id in self._pending_requests:
-                    self._pending_requests[request_id].put(data)
-                    logger.info(f"Added to queue for {request_id}")
+            if is_response:
+                logger.info(f"ROUTING response for request_id={request_id}")
 
-            # Also call registered callback if exists
-            with self._request_lock:
-                if request_id in self._request_callbacks:
-                    try:
-                        logger.info(f"Calling callback for {request_id}")
-                        self._request_callbacks[request_id](data)
-                        logger.info(f"Callback completed for {request_id}")
-                    except Exception as e:
-                        logger.error(
-                            f"Error in request callback: {e}", exc_info=True
-                        )
+                # Route response to pending request queue
+                with self._request_lock:
+                    if request_id in self._pending_requests:
+                        self._pending_requests[request_id].put(data)
+                        logger.info(f"Added to queue for {request_id}")
+
+                # Also call registered callback if exists
+                with self._request_lock:
+                    if request_id in self._request_callbacks:
+                        try:
+                            logger.info(f"Calling callback for {request_id}")
+                            self._request_callbacks[request_id](data)
+                            logger.info(f"Callback completed for {request_id}")
+                        except Exception as e:
+                            logger.error(
+                                f"Error in request callback: {e}",
+                                exc_info=True,
+                            )
+            else:
+                logger.debug(
+                    f"Skipping callback for request_id={request_id} - "
+                    "this is a REQUEST signal, not a RESPONSE"
+                )
 
         if self.backend:
             # Delegate emission to the custom backend

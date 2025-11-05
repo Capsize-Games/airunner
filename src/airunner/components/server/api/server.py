@@ -151,18 +151,15 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         stream = data.get("stream", True)
         llm_request_data = data.get("llm_request", {})
 
-        # DEBUG: Log incoming request data (using print to bypass logger issues)
-        print(
-            f"[SERVER DEBUG] Incoming request data keys: {list(data.keys())}",
-            flush=True,
-        )
+        # DEBUG: Log incoming request data
+        logger.debug(f"Incoming request data keys: {list(data.keys())}")
+        logger.debug(f"stream value: {stream} (type: {type(stream)})")
         if "tool_categories" in data:
-            print(
-                f"[SERVER DEBUG] tool_categories in request: {data['tool_categories']}",
-                flush=True,
+            logger.debug(
+                f"tool_categories in request: {data['tool_categories']}"
             )
         else:
-            print(f"[SERVER DEBUG] NO tool_categories in request!", flush=True)
+            logger.debug("NO tool_categories in request!")
 
         # Handle top-level LLM parameters (for convenience)
         # Map common parameter names to LLMRequest fields
@@ -187,10 +184,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 llm_request_data[llm_param] = data[client_param]
 
         # DEBUG: Show what got mapped
-        print(
-            f"[SERVER DEBUG] llm_request_data after mapping: {llm_request_data}",
-            flush=True,
-        )
+        logger.debug(f"llm_request_data after mapping: {llm_request_data}")
 
         # Parse action type
         try:
@@ -208,12 +202,16 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # Generate unique request ID for correlation
         request_id = str(uuid.uuid4())
 
+        logger.debug(f"stream={stream}, about to branch...")
+
         if stream:
+            logger.debug("Taking STREAM path")
             # Stream NDJSON responses
             self._handle_llm_stream(
                 prompt, system_prompt, action, llm_request, request_id
             )
         else:
+            logger.debug("Taking NON-STREAM path")
             # Return single JSON response
             self._handle_llm_non_stream(
                 prompt, system_prompt, action, llm_request, request_id
@@ -305,9 +303,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         # Send LLM request with request_id and callback
         api = get_api()
-        print(
-            f"[SERVER DEBUG] Sending to API with llm_request.max_new_tokens={llm_request.max_new_tokens}",
-            flush=True,
+        logger.debug(
+            f"Sending to API with llm_request.max_new_tokens={llm_request.max_new_tokens}"
         )
         api.llm.send_request(
             prompt=prompt,
@@ -343,7 +340,11 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         request_id: str,
     ):
         """Handle non-streaming LLM response as single JSON object."""
+        logger.debug(
+            f"_handle_llm_non_stream ENTERED with request_id={request_id}"
+        )
         self._set_headers(200)
+        logger.debug("_handle_llm_non_stream Headers set")
 
         # Collect all response chunks
         complete_message = []
@@ -351,43 +352,44 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         def collect_callback(data: dict):
             """Callback to collect response chunks."""
-            print(
-                f"[HTTP Callback {id(collect_callback)}] CALLED with data keys: {list(data.keys())}"
+            logger.debug(
+                f"HTTP Callback {id(collect_callback)} CALLED with data keys: {list(data.keys())}"
             )
             response = data.get("response")
-            print(
-                f"[HTTP Callback] Response type: {type(response)}, is_end: {response.is_end_of_message if response else None}"
+            logger.debug(
+                f"HTTP Callback Response type: {type(response)}, is_end: {response.is_end_of_message if response else None}"
             )
             logger.info(
-                f"[HTTP Callback] Received response: message_len={len(response.message) if response else 0}, is_end={response.is_end_of_message if response else None}"
+                f"HTTP Callback Received response: message_len={len(response.message) if response else 0}, is_end={response.is_end_of_message if response else None}"
             )
             if response:
                 complete_message.append(response.message)
-                print(
-                    f"[HTTP Callback] Complete message so far: {len(complete_message)} chunks"
+                logger.debug(
+                    f"HTTP Callback Complete message so far: {len(complete_message)} chunks"
                 )
                 if response.is_end_of_message:
-                    print(
-                        f"[HTTP Callback] END OF MESSAGE - setting event {id(complete_event)}"
+                    logger.debug(
+                        f"HTTP Callback END OF MESSAGE - setting event {id(complete_event)}"
                     )
                     logger.info(
-                        f"[HTTP Callback] End of message detected, setting event"
+                        "HTTP Callback End of message detected, setting event"
                     )
                     complete_event.set()
-                    print(
-                        f"[HTTP Callback] Event set: {complete_event.is_set()}"
+                    logger.debug(
+                        f"HTTP Callback Event set: {complete_event.is_set()}"
                     )
                 else:
                     logger.debug(
-                        f"[HTTP Callback] Not end yet, waiting for more..."
+                        "HTTP Callback Not end yet, waiting for more..."
                     )
 
-        print(
-            f"[HTTP Server] Registering callback {id(collect_callback)} for request {request_id}"
+        logger.debug(
+            f"HTTP Server Registering callback {id(collect_callback)} for request {request_id}"
         )
-        print(f"[HTTP Server] Event object: {id(complete_event)}")
+        logger.debug(f"HTTP Server Event object: {id(complete_event)}")
 
         # Send LLM request with request_id and callback
+        logger.debug("HTTP Server About to call api.llm.send_request...")
         api = get_api()
         api.llm.send_request(
             prompt=prompt,
@@ -396,9 +398,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             request_id=request_id,
             callback=collect_callback,
         )
+        logger.debug("HTTP Server api.llm.send_request completed")
 
-        print(
-            f"[HTTP Server] Waiting for event {id(complete_event)} with 300s timeout..."
+        logger.debug(
+            f"HTTP Server Waiting for event {id(complete_event)} with 300s timeout..."
         )
 
         # Wait for completion (with timeout)
