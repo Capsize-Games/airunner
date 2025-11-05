@@ -93,7 +93,7 @@ def run_eval_tests(verbose: bool = False) -> int:
     Returns:
         Exit code from pytest
     """
-    test_path = Path("src/airunner/components/llm/tests/eval")
+    test_path = Path("src/airunner/components/eval/tests")
 
     if not test_path.exists():
         print(f"Error: Eval tests directory not found at {test_path}")
