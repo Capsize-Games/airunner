@@ -267,18 +267,31 @@ class App(MediatorMixin, SettingsMixin, QObject):
     def _initialize_headless_workers(self):
         """Initialize essential workers for headless mode.
 
-        Only initializes workers needed for API functionality:
-        - LLMGenerateWorker: Handles LLM text generation requests
+        Creates WorkerManager which handles signal routing to all workers
+        and ModelLoadBalancer for model lifecycle management.
         """
         try:
             from airunner.utils.application.create_worker import (
                 create_worker,
             )
-            from airunner.components.llm.workers.llm_generate_worker import (
-                LLMGenerateWorker,
+            from airunner.components.application.gui.windows.main.worker_manager import (
+                WorkerManager,
+            )
+            from airunner.components.application.gui.windows.main.model_load_balancer import (
+                ModelLoadBalancer,
             )
 
-            self._llm_generate_worker = create_worker(LLMGenerateWorker)
+            # Create WorkerManager - it registers LLM_TEXT_GENERATE_REQUEST_SIGNAL
+            # and lazily creates workers (LLMGenerateWorker, SDWorker, etc.) as needed
+            self._worker_manager = create_worker(WorkerManager)
+
+            # Create ModelLoadBalancer to manage model loading/unloading
+            self._model_load_balancer = ModelLoadBalancer(
+                self._worker_manager,
+                logger=getattr(self, "logger", None),
+                api=self,
+            )
+
             logging.info("Headless workers initialized (LLM)")
         except Exception as e:
             logging.error(
@@ -691,7 +704,6 @@ class App(MediatorMixin, SettingsMixin, QObject):
             from airunner.components.application.gui.windows.main.main_window import (
                 MainWindow,
             )
-
 
             window_class = MainWindow
 
