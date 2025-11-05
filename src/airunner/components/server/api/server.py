@@ -231,28 +231,21 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # Start with defaults
         llm_request = LLMRequest()
 
-        import sys
-
-        sys.stderr.write(
-            f"\n[SERVER] Creating LLMRequest from params: {params}\n"
-        )
-        sys.stderr.flush()
+        logger.debug(f"Creating LLMRequest from params: {params}")
 
         # Override with provided parameters
         for key, value in params.items():
             if hasattr(llm_request, key):
                 setattr(llm_request, key, value)
-                sys.stderr.write(f"[SERVER] Set LLMRequest.{key} = {value}\n")
-                sys.stderr.flush()
+                logger.debug(f"Set LLMRequest.{key} = {value}")
             else:
                 logger.warning(
                     f"Ignoring unknown LLMRequest parameter: {key}={value}"
                 )
 
-        sys.stderr.write(
-            f"[SERVER] Final LLMRequest.max_new_tokens = {llm_request.max_new_tokens}\n"
+        logger.debug(
+            f"Final LLMRequest.max_new_tokens = {llm_request.max_new_tokens}"
         )
-        sys.stderr.flush()
         return llm_request
 
     def _handle_llm_stream(
