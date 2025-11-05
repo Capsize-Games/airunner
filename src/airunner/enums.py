@@ -45,6 +45,7 @@ class CodeOperationType(Enum):
     LIST = "list"  # List files in directory
     RENAME = "rename"  # Rename/move file
     DELETE = "delete"  # Delete file
+    FORMAT = "format"  # Format code (black, isort, etc.)
 
 
 class SignalCode(Enum):
