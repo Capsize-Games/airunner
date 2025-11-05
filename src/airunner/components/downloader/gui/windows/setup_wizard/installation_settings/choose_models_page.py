@@ -1,9 +1,6 @@
 from PySide6.QtWidgets import (
     QCheckBox,
     QVBoxLayout,
-    QHBoxLayout,
-    QGroupBox,
-    QLabel,
     QScrollArea,
     QWidget,
 )
@@ -111,7 +108,7 @@ class ChooseModelsPage(BaseWizard):
         # For each version, create a header with "Core files" and "Controlnet" checkboxes and a scroll area for models
         for version in sorted(version_map.keys()):
             # Section header (group box)
-            from PySide6.QtWidgets import QGroupBox, QLabel, QHBoxLayout
+            from PySide6.QtWidgets import QGroupBox
 
             # Create a version group and a master checkbox that controls the whole section
             version_group = QGroupBox(self)
@@ -245,6 +242,55 @@ class ChooseModelsPage(BaseWizard):
                     version_group
                 )
 
+        # Add FLUX version group (no ControlNet support yet, just core files)
+        from PySide6.QtWidgets import QGroupBox
+
+        flux_group = QGroupBox(self)
+        flux_layout = QVBoxLayout(flux_group)
+
+        flux_master_flag = "sd_FLUX"
+        self.models_enabled[flux_master_flag] = True
+        flux_group.setTitle("FLUX")
+        flux_group.setCheckable(True)
+        flux_group.setChecked(True)
+
+        # Core files checkbox for FLUX
+        flux_core_chk = QCheckBox("Core files", self)
+        flux_core_flag = "core_FLUX"
+        self.models_enabled[flux_core_flag] = True
+        flux_core_chk.setChecked(True)
+        flux_core_chk.toggled.connect(
+            lambda val, flag=flux_core_flag: self._core_version_toggled(
+                flag, val
+            )
+        )
+        flux_layout.addWidget(flux_core_chk)
+
+        # Wire the FLUX group's toggled signal
+        def _on_flux_master_toggled(
+            val,
+            core_w=flux_core_chk,
+            flag=flux_master_flag,
+        ):
+            core_w.setEnabled(bool(val))
+            self.models_enabled[flag] = bool(val)
+            flux_core_flag_key = "core_FLUX"
+            if not val:
+                self.models_enabled[flux_core_flag_key] = False
+                core_w.setChecked(False)
+            else:
+                self.models_enabled.setdefault(flux_core_flag_key, True)
+            self.update_total_size_label()
+
+        flux_group.toggled.connect(_on_flux_master_toggled)
+
+        # Add the FLUX group to the top-level inner scroll area's layout
+        try:
+            top_inner_layout.addWidget(flux_group)
+        except Exception:
+            # fallback: add directly if top scroll area wasn't created
+            self.ui.stable_diffusion_layout.layout().addWidget(flux_group)
+
         # final spacer inside the stable diffusion group
         spacer = QSpacerItem(
             20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding
@@ -322,6 +368,8 @@ class ChooseModelsPage(BaseWizard):
         whisper_size = 144.5 * 1024
         speecht5_size = 654.4 * 1024
         embedding_model_size = 1.3 * 1024 * 1024
+        # FLUX models are ~23GB total (transformer ~10GB, text encoders ~10GB, vae ~3GB)
+        flux_core_size = 23 * 1024 * 1024
 
         total_bytes = 0
 
@@ -331,6 +379,10 @@ class ChooseModelsPage(BaseWizard):
                 total_bytes += 1.2 * 1024 * 1024
             if self.models_enabled.get("feature_extractor", False):
                 total_bytes += 1.7 * 1024 * 1024
+
+            # FLUX core files
+            if self.models_enabled.get("core_FLUX", False):
+                total_bytes += flux_core_size
 
             # controlnet models grouped by version
             from collections import defaultdict

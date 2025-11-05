@@ -1,0 +1,65 @@
+name: Eval Tests
+
+on:
+  pull_request:
+    branches: [ master, llm-refactor ]
+  push:
+    branches: [ master, llm-refactor ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eval-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender-dev
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-timeout
+      
+      - name: Run eval tests
+        run: |
+          pytest src/airunner/components/eval/tests/ \
+            -v \
+            -m eval \
+            --timeout=300 \
+            --tb=short
+        env:
+          AIRUNNER_HEADLESS: "1"
+          AIRUNNER_HTTP_PORT: "8188"
+          AIRUNNER_HTTP_HOST: "127.0.0.1"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-test-results-${{ matrix.python-version }}
+          path: |
+            pytest-report.xml
+            pytest-coverage.txt

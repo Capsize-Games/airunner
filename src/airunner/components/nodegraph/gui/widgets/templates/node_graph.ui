@@ -62,69 +62,7 @@
       <property name="verticalSpacing">
        <number>0</number>
       </property>
-      <item row="0" column="4">
-       <widget class="QPushButton" name="new_button">
-        <property name="toolTip">
-         <string>New workflow</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../../../gui/resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/file-plus.svg</normaloff>:/dark/icons/feather/dark/file-plus.svg</iconset>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="8">
-       <widget class="QPushButton" name="delete_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="toolTip">
-         <string>Delete workflow</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../../../gui/resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <widget class="QPushButton" name="stop_button">
-        <property name="cursor">
-         <cursorShape>PointingHandCursor</cursorShape>
-        </property>
-        <property name="toolTip">
-         <string>Stop workflow</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../../../gui/resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/stop-circle.svg</normaloff>:/dark/icons/feather/dark/stop-circle.svg</iconset>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="6">
-       <widget class="QPushButton" name="clear_button">
-        <property name="toolTip">
-         <string>Clear workflow</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="../../../../../gui/resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/x-circle.svg</normaloff>:/dark/icons/feather/dark/x-circle.svg</iconset>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
+      <item row="0" column="1">
        <widget class="QPushButton" name="play_button">
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
@@ -141,7 +79,7 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="7">
+      <item row="0" column="8">
        <widget class="QPushButton" name="load_button">
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
@@ -158,7 +96,37 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="5">
+      <item row="0" column="2">
+       <widget class="QPushButton" name="pause_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Pause workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../../../gui/resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/pause-circle.svg</normaloff>:/dark/icons/feather/dark/pause-circle.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>729</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="0" column="6">
        <widget class="QPushButton" name="save_button">
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
@@ -175,35 +143,70 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="3">
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>729</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item row="0" column="1">
-       <widget class="QPushButton" name="pause_button">
+      <item row="0" column="9">
+       <widget class="QPushButton" name="delete_button">
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
         </property>
         <property name="toolTip">
-         <string>Pause workflow</string>
+         <string>Delete workflow</string>
         </property>
         <property name="text">
          <string/>
         </property>
         <property name="icon">
          <iconset resource="../../../../../gui/resources/feather.qrc">
-          <normaloff>:/dark/icons/feather/dark/pause-circle.svg</normaloff>:/dark/icons/feather/dark/pause-circle.svg</iconset>
+          <normaloff>:/dark/icons/feather/dark/trash-2.svg</normaloff>:/dark/icons/feather/dark/trash-2.svg</iconset>
         </property>
        </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QPushButton" name="stop_button">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="toolTip">
+         <string>Stop workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../../../gui/resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/stop-circle.svg</normaloff>:/dark/icons/feather/dark/stop-circle.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="7">
+       <widget class="QPushButton" name="clear_button">
+        <property name="toolTip">
+         <string>Clear workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../../../gui/resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/x-circle.svg</normaloff>:/dark/icons/feather/dark/x-circle.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="5">
+       <widget class="QPushButton" name="new_button">
+        <property name="toolTip">
+         <string>New workflow</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../../../../gui/resources/feather.qrc">
+          <normaloff>:/dark/icons/feather/dark/file-plus.svg</normaloff>:/dark/icons/feather/dark/file-plus.svg</iconset>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QComboBox" name="mode_combobox"/>
       </item>
      </layout>
     </widget>

@@ -19,6 +19,7 @@ class LLMResponse:
         name: Optional name associated with the response (e.g., assistant name).
         action: The type of action this response represents.
         sequence_number: Sequential number to track message order.
+        request_id: Optional request ID for correlation with HTTP API requests.
     """
 
     message: str = ""
@@ -28,3 +29,4 @@ class LLMResponse:
     action: LLMActionType = LLMActionType.CHAT
     node_id: Optional[str] = None
     sequence_number: int = 0
+    request_id: Optional[str] = None

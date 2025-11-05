@@ -15,8 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QProgressBar, QPushButton,
-    QSizePolicy, QSpacerItem, QSplitter, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QProgressBar,
+    QPushButton, QSizePolicy, QSpacerItem, QSplitter,
+    QWidget)
 
 from airunner.components.nodegraph.gui.widgets.variables_panel import VariablesPanelWidget
 import airunner.feather_rc
@@ -43,79 +44,84 @@ class Ui_node_graph_widget(object):
         self.gridLayout_3.setHorizontalSpacing(5)
         self.gridLayout_3.setVerticalSpacing(0)
         self.gridLayout_3.setContentsMargins(10, 10, 10, 10)
-        self.new_button = QPushButton(self.nodegraph_toolbar)
-        self.new_button.setObjectName(u"new_button")
-        icon = QIcon()
-        icon.addFile(u":/dark/icons/feather/dark/file-plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.new_button.setIcon(icon)
-
-        self.gridLayout_3.addWidget(self.new_button, 0, 4, 1, 1)
-
-        self.delete_button = QPushButton(self.nodegraph_toolbar)
-        self.delete_button.setObjectName(u"delete_button")
-        self.delete_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon1 = QIcon()
-        icon1.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.delete_button.setIcon(icon1)
-
-        self.gridLayout_3.addWidget(self.delete_button, 0, 8, 1, 1)
-
-        self.stop_button = QPushButton(self.nodegraph_toolbar)
-        self.stop_button.setObjectName(u"stop_button")
-        self.stop_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon2 = QIcon()
-        icon2.addFile(u":/dark/icons/feather/dark/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.stop_button.setIcon(icon2)
-
-        self.gridLayout_3.addWidget(self.stop_button, 0, 2, 1, 1)
-
-        self.clear_button = QPushButton(self.nodegraph_toolbar)
-        self.clear_button.setObjectName(u"clear_button")
-        icon3 = QIcon()
-        icon3.addFile(u":/dark/icons/feather/dark/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.clear_button.setIcon(icon3)
-
-        self.gridLayout_3.addWidget(self.clear_button, 0, 6, 1, 1)
-
         self.play_button = QPushButton(self.nodegraph_toolbar)
         self.play_button.setObjectName(u"play_button")
         self.play_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon4 = QIcon()
-        icon4.addFile(u":/dark/icons/feather/dark/play.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.play_button.setIcon(icon4)
+        icon = QIcon()
+        icon.addFile(u":/dark/icons/feather/dark/play.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.play_button.setIcon(icon)
 
-        self.gridLayout_3.addWidget(self.play_button, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.play_button, 0, 1, 1, 1)
 
         self.load_button = QPushButton(self.nodegraph_toolbar)
         self.load_button.setObjectName(u"load_button")
         self.load_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon5 = QIcon()
-        icon5.addFile(u":/dark/icons/feather/dark/folder.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.load_button.setIcon(icon5)
+        icon1 = QIcon()
+        icon1.addFile(u":/dark/icons/feather/dark/folder.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.load_button.setIcon(icon1)
 
-        self.gridLayout_3.addWidget(self.load_button, 0, 7, 1, 1)
-
-        self.save_button = QPushButton(self.nodegraph_toolbar)
-        self.save_button.setObjectName(u"save_button")
-        self.save_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon6 = QIcon()
-        icon6.addFile(u":/dark/icons/feather/dark/save.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.save_button.setIcon(icon6)
-
-        self.gridLayout_3.addWidget(self.save_button, 0, 5, 1, 1)
-
-        self.horizontalSpacer = QSpacerItem(729, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.gridLayout_3.addItem(self.horizontalSpacer, 0, 3, 1, 1)
+        self.gridLayout_3.addWidget(self.load_button, 0, 8, 1, 1)
 
         self.pause_button = QPushButton(self.nodegraph_toolbar)
         self.pause_button.setObjectName(u"pause_button")
         self.pause_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        icon7 = QIcon()
-        icon7.addFile(u":/dark/icons/feather/dark/pause-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pause_button.setIcon(icon7)
+        icon2 = QIcon()
+        icon2.addFile(u":/dark/icons/feather/dark/pause-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.pause_button.setIcon(icon2)
 
-        self.gridLayout_3.addWidget(self.pause_button, 0, 1, 1, 1)
+        self.gridLayout_3.addWidget(self.pause_button, 0, 2, 1, 1)
+
+        self.horizontalSpacer = QSpacerItem(729, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.gridLayout_3.addItem(self.horizontalSpacer, 0, 4, 1, 1)
+
+        self.save_button = QPushButton(self.nodegraph_toolbar)
+        self.save_button.setObjectName(u"save_button")
+        self.save_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon3 = QIcon()
+        icon3.addFile(u":/dark/icons/feather/dark/save.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.save_button.setIcon(icon3)
+
+        self.gridLayout_3.addWidget(self.save_button, 0, 6, 1, 1)
+
+        self.delete_button = QPushButton(self.nodegraph_toolbar)
+        self.delete_button.setObjectName(u"delete_button")
+        self.delete_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon4 = QIcon()
+        icon4.addFile(u":/dark/icons/feather/dark/trash-2.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.delete_button.setIcon(icon4)
+
+        self.gridLayout_3.addWidget(self.delete_button, 0, 9, 1, 1)
+
+        self.stop_button = QPushButton(self.nodegraph_toolbar)
+        self.stop_button.setObjectName(u"stop_button")
+        self.stop_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        icon5 = QIcon()
+        icon5.addFile(u":/dark/icons/feather/dark/stop-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.stop_button.setIcon(icon5)
+
+        self.gridLayout_3.addWidget(self.stop_button, 0, 3, 1, 1)
+
+        self.clear_button = QPushButton(self.nodegraph_toolbar)
+        self.clear_button.setObjectName(u"clear_button")
+        icon6 = QIcon()
+        icon6.addFile(u":/dark/icons/feather/dark/x-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.clear_button.setIcon(icon6)
+
+        self.gridLayout_3.addWidget(self.clear_button, 0, 7, 1, 1)
+
+        self.new_button = QPushButton(self.nodegraph_toolbar)
+        self.new_button.setObjectName(u"new_button")
+        icon7 = QIcon()
+        icon7.addFile(u":/dark/icons/feather/dark/file-plus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.new_button.setIcon(icon7)
+
+        self.gridLayout_3.addWidget(self.new_button, 0, 5, 1, 1)
+
+        self.mode_combobox = QComboBox(self.nodegraph_toolbar)
+        self.mode_combobox.setObjectName(u"mode_combobox")
+
+        self.gridLayout_3.addWidget(self.mode_combobox, 0, 0, 1, 1)
 
 
         self.gridLayout_5.addWidget(self.nodegraph_toolbar, 0, 0, 1, 1)
@@ -171,9 +177,21 @@ class Ui_node_graph_widget(object):
     def retranslateUi(self, node_graph_widget):
         node_graph_widget.setWindowTitle(QCoreApplication.translate("node_graph_widget", u"Form", None))
 #if QT_CONFIG(tooltip)
-        self.new_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"New workflow", None))
+        self.play_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"Run workflow", None))
 #endif // QT_CONFIG(tooltip)
-        self.new_button.setText("")
+        self.play_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.load_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"Load workflow", None))
+#endif // QT_CONFIG(tooltip)
+        self.load_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.pause_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"Pause workflow", None))
+#endif // QT_CONFIG(tooltip)
+        self.pause_button.setText("")
+#if QT_CONFIG(tooltip)
+        self.save_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"Save workflow", None))
+#endif // QT_CONFIG(tooltip)
+        self.save_button.setText("")
 #if QT_CONFIG(tooltip)
         self.delete_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"Delete workflow", None))
 #endif // QT_CONFIG(tooltip)
@@ -187,20 +205,8 @@ class Ui_node_graph_widget(object):
 #endif // QT_CONFIG(tooltip)
         self.clear_button.setText("")
 #if QT_CONFIG(tooltip)
-        self.play_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"Run workflow", None))
+        self.new_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"New workflow", None))
 #endif // QT_CONFIG(tooltip)
-        self.play_button.setText("")
-#if QT_CONFIG(tooltip)
-        self.load_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"Load workflow", None))
-#endif // QT_CONFIG(tooltip)
-        self.load_button.setText("")
-#if QT_CONFIG(tooltip)
-        self.save_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"Save workflow", None))
-#endif // QT_CONFIG(tooltip)
-        self.save_button.setText("")
-#if QT_CONFIG(tooltip)
-        self.pause_button.setToolTip(QCoreApplication.translate("node_graph_widget", u"Pause workflow", None))
-#endif // QT_CONFIG(tooltip)
-        self.pause_button.setText("")
+        self.new_button.setText("")
     # retranslateUi
 

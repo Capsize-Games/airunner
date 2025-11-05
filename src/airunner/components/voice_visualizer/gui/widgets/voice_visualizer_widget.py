@@ -24,7 +24,7 @@ The widget automatically queues uniform changes when the shader is not ready
 and applies them once the shader becomes active.
 """
 
-from typing import List, Tuple, Dict, Any
+from typing import List, Dict, Any
 from PySide6.QtCore import QTimer
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.voice_visualizer.gui.widgets.voice_visualizer_component import (
@@ -114,7 +114,7 @@ class VoiceVisualizerWidget(VoiceVisualizerComponent, BaseWidget):
                 ):
                     self._shader_monitor_timer.start(100)
                 return True
-        except Exception as e:
+        except Exception:
             return False
 
     def set_intensity(self, intensity: float) -> bool:
@@ -223,7 +223,7 @@ class VoiceVisualizerWidget(VoiceVisualizerComponent, BaseWidget):
                 ):
                     self._shader_monitor_timer.start(100)
             return True
-        except Exception as e:
+        except Exception:
             return False
 
     def set_mid_color(self, r: float, g: float, b: float) -> bool:
@@ -262,7 +262,7 @@ class VoiceVisualizerWidget(VoiceVisualizerComponent, BaseWidget):
                 ):
                     self._shader_monitor_timer.start(100)
             return True
-        except Exception as e:
+        except Exception:
             return False
 
     def set_treble_color(self, r: float, g: float, b: float) -> bool:
@@ -301,7 +301,7 @@ class VoiceVisualizerWidget(VoiceVisualizerComponent, BaseWidget):
                 ):
                     self._shader_monitor_timer.start(100)
             return True
-        except Exception as e:
+        except Exception:
             return False
 
     # Post-processing Effects

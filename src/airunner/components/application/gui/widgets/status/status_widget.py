@@ -1,7 +1,6 @@
 from typing import Optional, Dict
 import torch
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QApplication
 from airunner.enums import SignalCode, ModelStatus, ModelType, StatusColors
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.application.gui.widgets.status.templates.status_ui import (
@@ -183,7 +182,6 @@ class StatusWidget(BaseWidget):
         if element_name != "":
             getattr(self.ui, element_name).setStyleSheet(styles)
             getattr(self.ui, element_name).setToolTip(tool_tip)
-        QApplication.processEvents()
 
     def set_sd_status_text(self):
         if self.version != self.generator_settings.version:
@@ -230,4 +228,3 @@ class StatusWidget(BaseWidget):
             self.ui.system_message.setStyleSheet("QLabel { color: #ff0000; }")
         else:
             self.ui.system_message.setStyleSheet("QLabel { color: #ffffff; }")
-        QApplication.processEvents()

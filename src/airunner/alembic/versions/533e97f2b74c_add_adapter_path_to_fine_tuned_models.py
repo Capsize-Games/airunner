@@ -29,6 +29,13 @@ def upgrade() -> None:
         sa.text("DROP TABLE IF EXISTS _alembic_tmp_fine_tuned_models")
     )
 
+    # Check if fine_tuned_models table exists before trying to modify it
+    inspector = sa.inspect(connection)
+    if "fine_tuned_models" not in inspector.get_table_names():
+        # Table doesn't exist yet, skip this migration
+        # (it will be dropped by a later migration anyway)
+        return
+
     # Handle duplicate names by appending numbers
     # Find duplicates and rename them
     result = connection.execute(

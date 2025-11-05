@@ -26,10 +26,6 @@ from airunner.components.application.managers.base_model_manager import (
 )
 
 
-class BaseDiffusersModelManager:
-    pass
-
-
 class SDXLModelManager(StableDiffusionModelManager, ModelManagerInterface):
     def __init__(self, *args, **kwargs):
         self._refiner = None

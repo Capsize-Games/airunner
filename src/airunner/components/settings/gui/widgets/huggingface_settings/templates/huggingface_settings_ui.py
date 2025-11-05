@@ -16,7 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QGridLayout, QGroupBox,
-    QLineEdit, QSizePolicy, QSpacerItem, QWidget)
+    QLabel, QLineEdit, QSizePolicy, QSpacerItem,
+    QWidget)
 
 class Ui_huggingface_settings_widget(object):
     def setupUi(self, huggingface_settings_widget):
@@ -39,6 +40,13 @@ class Ui_huggingface_settings_widget(object):
 
         self.gridLayout.addWidget(self.api_key, 0, 0, 1, 1)
 
+        self.api_key_link = QLabel(self.groupBox)
+        self.api_key_link.setObjectName(u"api_key_link")
+        self.api_key_link.setTextFormat(Qt.TextFormat.RichText)
+        self.api_key_link.setOpenExternalLinks(True)
+
+        self.gridLayout.addWidget(self.api_key_link, 1, 0, 1, 1)
+
 
         self.gridLayout_2.addWidget(self.groupBox, 1, 0, 1, 1)
 
@@ -58,5 +66,6 @@ class Ui_huggingface_settings_widget(object):
         huggingface_settings_widget.setWindowTitle(QCoreApplication.translate("huggingface_settings_widget", u"Form", None))
         self.allow.setText(QCoreApplication.translate("huggingface_settings_widget", u"Allow Huggingface connection", None))
         self.groupBox.setTitle(QCoreApplication.translate("huggingface_settings_widget", u"Huggingface Read API key", None))
+        self.api_key_link.setText(QCoreApplication.translate("huggingface_settings_widget", u"<a href=\"https://huggingface.co/settings/tokens\">Get your HuggingFace API key here</a>", None))
     # retranslateUi
 

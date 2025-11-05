@@ -47,7 +47,6 @@ class TTSGeneratorWorker(Worker):
         self._signal_handlers = {
             SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
             SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL: self.on_unblock_tts_generator_signal,
-            SignalCode.TTS_ENABLE_SIGNAL: self.on_enable_tts_signal,
             SignalCode.TTS_DISABLE_SIGNAL: self.on_disable_tts_signal,
             SignalCode.LLM_TEXT_STREAMED_SIGNAL: self.on_llm_text_streamed_signal,
             SignalCode.TTS_MODEL_CHANGED: self._reload_tts_model_manager,

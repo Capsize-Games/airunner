@@ -1,4 +1,6 @@
-from airunner.components.llm.managers.storage.chat_store.database import DatabaseChatStore
+from airunner.components.llm.managers.storage.chat_store.database import (
+    DatabaseChatStore,
+)
 
 
 __all__ = [

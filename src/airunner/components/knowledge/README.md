@@ -1,8 +1,8 @@
-# Knowledge Management System
+# Knowledge/Memory System
 
 ## Overview
 
-The knowledge management system provides persistent, continuously-growing memory beyond conversation history. It separates **style** (learned via LoRA) from **facts** (stored in RAG-indexed knowledge bases).
+The knowledge management system provides persistent, multi-level memory for the LLM, combining database storage, RAG-based semantic search, and GUI management. It implements a human-like memory architecture with short-term, recall, and periodic memory levels.
 
 ## Architecture
 
@@ -11,32 +11,138 @@ The knowledge management system provides persistent, continuously-growing memory
 │         Tier 1: Working Memory (RAM)            │
 │  - Current conversation context                 │
 │  - Recently accessed facts (LRU cache)          │
+│  - Vector store for semantic recall             │
 └─────────────────────────────────────────────────┘
                       ↓
 ┌─────────────────────────────────────────────────┐
 │      Tier 2: Short-Term Memory (Database)       │
-│  - Recent conversations (7-30 days)             │
-│  - User session data                            │
+│  - Recent facts (chronological)                 │
+│  - Current session knowledge                    │
+│  - KnowledgeFact model with tags & confidence   │
 └─────────────────────────────────────────────────┘
                       ↓
 ┌─────────────────────────────────────────────────┐
-│       Tier 3: Long-Term Memory (RAG+Files)      │
-│  - User knowledge base (facts about user)       │
-│  - Document library (books, articles)           │
-│  - Web knowledge cache                          │
+│     Tier 3: Recall Memory (RAG Semantic Search) │
+│  - Semantic similarity search via embeddings    │
+│  - LangChain InMemoryVectorStore                │
+│  - All enabled facts indexed                    │
 └─────────────────────────────────────────────────┘
                       ↓
 ┌─────────────────────────────────────────────────┐
-│     Tier 4: Foundational Memory (LoRA)          │
+│    Tier 4: Periodic Memory (Summaries)          │
+│  - Weekly/Monthly/Yearly summaries              │
+│  - Key topics and trends                        │
+│  - ConversationSummary model                    │
+└─────────────────────────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────────┐
+│       Tier 5: Document Library (RAG+Files)      │
+│  - Broad document search (search engine-like)   │
+│  - Ebooks, PDFs, markdown, ZIM files            │
+│  - Document model with indexing                 │
+└─────────────────────────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────────┐
+│     Tier 6: Foundational Memory (LoRA)          │
 │  - Writing styles                               │
 │  - Response patterns                            │
 │  - Domain vocabularies                          │
 └─────────────────────────────────────────────────┘
 ```
 
-## Components
+## New Multi-Level Memory System
 
-### UserKnowledgeManager
+### Database Models (`data/models.py`)
+
+**KnowledgeFact**: Stores individual facts with:
+- Text content
+- Category (e.g., "preference", "personal_info", "health")
+- Tags (JSON array for flexible categorization)
+- Confidence score (0.0-1.0)
+- Verification status
+- Usage tracking (access_count, last_accessed)
+- Source conversation ID
+- Metadata (JSON)
+
+**ConversationSummary**: Stores periodic summaries:
+- Summary text
+- Key topics (JSON array)
+- Period type (daily, weekly, monthly, yearly)
+- Start/end dates
+- Conversation count
+
+### Memory Manager (`knowledge_memory_manager.py`)
+
+**CRUD Operations**:
+- `add_fact()`: Create new fact
+- `update_fact()`: Modify existing fact
+- `delete_fact()`: Remove fact
+- `get_fact()`: Retrieve single fact
+- `get_all_facts()`: Query facts with filters
+
+**RAG Integration**:
+- `recall_facts()`: Semantic similarity search using vector store
+- `refresh_vector_store()`: Rebuild vector index
+- Uses LangChain InMemoryVectorStore with embeddings
+
+**Context Building**:
+- `get_context_for_conversation()`: Combines:
+  - Recent facts (chronological)
+  - Recalled facts (semantic similarity)
+  - Periodic summaries (time-based context)
+
+**Periodic Summaries**:
+- `create_summary()`: Generate summary for period
+- `get_periodic_summaries()`: Retrieve summaries by type
+
+### GUI Widgets
+
+**KnowledgeManagerWidget** (`gui/widgets/knowledge_manager_widget.py`):
+- Table view of all facts
+- Search box for text search
+- Category filter dropdown
+- Tag filter input
+- Create/Edit/Delete operations
+- Real-time filtering
+
+**KnowledgeEditorWidget** (`gui/widgets/knowledge_editor_widget.py`):
+- Form for creating/editing facts
+- Category dropdown (with common presets)
+- Tags input (comma-separated)
+- Confidence slider (0-100%)
+- Verified and Enabled checkboxes
+
+### LangChain Tools
+
+**record_knowledge_tool** (in `tool_manager.py`):
+```python
+record_knowledge(
+    fact: str,
+    category: str = "",
+    tags: str = "",
+    confidence: float = 0.8
+)
+```
+
+**recall_knowledge_tool** (in `tool_manager.py`):
+```python
+recall_knowledge(query: str, k: int = 5)
+```
+
+**search_knowledge_base_documents_tool** (in `tool_manager.py`):
+```python
+search_knowledge_base_documents(query: str, k: int = 10)
+```
+Broad search across ALL documents (like a search engine) to find relevant documents before loading them into RAG.
+
+## Legacy System (UserKnowledgeManager)
+
+> ⚠️ **DEPRECATED**: `UserKnowledgeManager` is deprecated as of version 2.0.0 and will be removed in version 3.0.0.
+> 
+> **Migration Required**: Use `KnowledgeMemoryManager` instead (see above). Run `airunner-migrate-knowledge` to migrate your data.
+> 
+> See [CHANGELOG.md](../../CHANGELOG.md#migration-guide-userknowledgemanager--knowledgememorymanager) for migration guide.
+
 **Purpose:** Continuously extract and store facts about the user from conversations.
 
 **Features:**
@@ -48,11 +154,11 @@ The knowledge management system provides persistent, continuously-growing memory
 - Category-based organization (identity, preferences, work, etc.)
 - Manual editing support (edit JSON directly)
 
-**Usage:**
+**Usage (DEPRECATED - Use KnowledgeMemoryManager instead):**
 ```python
 from airunner.components.knowledge.user_knowledge_manager import UserKnowledgeManager
 
-km = UserKnowledgeManager()
+km = UserKnowledgeManager()  # Will show deprecation warning
 
 # Extract facts from conversation (handles corrections automatically)
 facts = km.extract_facts_from_text(

@@ -4,7 +4,9 @@ from PySide6.QtGui import QMovie
 from PySide6.QtCore import QSize
 
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.llm.gui.widgets.templates.loading_ui import Ui_loading_message
+from airunner.components.llm.gui.widgets.templates.loading_ui import (
+    Ui_loading_message,
+)
 
 
 class LoadingWidget(BaseWidget):

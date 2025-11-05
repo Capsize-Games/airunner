@@ -14,7 +14,6 @@ if os.environ.get("DEV_ENV", "1") == "1":
         # environment variables will be read directly from the OS
         pass
 
-from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.settings import (
     AIRUNNER_LLM_PERFORM_CONVERSATION_SUMMARY,
     AIRUNNER_LLM_USE_WEATHER_PROMPT,
@@ -61,16 +60,25 @@ class LLMSettings:
         True  # Enable RAG retrieval for facts (hybrid mode)
     )
 
-    # Add missing attributes for test compatibility
+    # Model source selection
     use_local_llm: bool = True
     use_openrouter: bool = False
+    use_ollama: bool = False
     use_openai: bool = False
+
+    # Ollama settings
+    ollama_model: str = "llama2"
+    ollama_base_url: str = "http://localhost:11434"
+
+    # OpenAI settings
+    openai_model: str = "gpt-4"
 
     @property
     def use_api(self) -> bool:
         return bool(
             getattr(self, "use_openrouter", False)
             or getattr(self, "use_openai", False)
+            or getattr(self, "use_ollama", False)
         )
 
 

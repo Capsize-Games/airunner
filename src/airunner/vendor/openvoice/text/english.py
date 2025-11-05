@@ -20,7 +20,6 @@ import re
 import inflect
 from unidecode import unidecode
 import eng_to_ipa as ipa
-import uuid
 
 _inflect = inflect.engine()
 _comma_number_re = re.compile(r"([0-9][0-9\,]+[0-9])")

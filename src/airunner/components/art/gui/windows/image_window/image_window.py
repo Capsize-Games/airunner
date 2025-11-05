@@ -2,7 +2,6 @@ import numpy as np
 from PIL import Image
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 from PySide6.QtGui import QPixmap, QImage
-from PySide6.QtCore import Qt
 
 
 class ImageWindow(QWidget):

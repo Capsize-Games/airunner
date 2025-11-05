@@ -1,11 +1,13 @@
 from typing import Optional
-from PySide6.QtCore import QPoint, QRectF
+from PySide6.QtCore import QPoint, QPointF, QRectF
 from PySide6.QtGui import QPainter, QImage
 from PySide6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 
 from airunner.enums import CanvasToolName
 from airunner.utils.application.mediator_mixin import MediatorMixin
-from airunner.utils.application import snap_to_grid
+from airunner.components.art.utils.canvas_position_manager import (
+    CanvasPositionManager,
+)
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
@@ -58,7 +60,20 @@ class DraggablePixmap(
         except ValueError:
             return None
 
-    def _resolve_layer_id(self) -> Optional[int]:
+    def _resolve_layer_id(
+        self,
+        layer_id: Optional[int] = None,
+        model_class_: Optional[type] = None,
+    ) -> Optional[int]:
+        """Override to handle layer context for draggable pixmaps.
+
+        Args:
+            layer_id: Explicit layer ID (ignored if layer context is disabled)
+            model_class_: Model class for fallback (ignored if layer context is disabled)
+
+        Returns:
+            Resolved layer ID or None
+        """
         if not self._use_layer_context:
             return None
         if self._layer_id_override is not None:
@@ -166,18 +181,17 @@ class DraggablePixmap(
             # Only snap the axes that are close to grid lines
             if snap_x or snap_y:
                 # Get the potential snapped position
-                snapped_x, snapped_y = snap_to_grid(
-                    self.grid_settings,
-                    abs_x,
-                    abs_y,
-                    False,  # Use rounding for better visual centering
+                manager = CanvasPositionManager()
+                abs_pos = QPointF(abs_x, abs_y)
+                snapped = manager.snap_to_grid(
+                    abs_pos, self.grid_settings.cell_size
                 )
 
                 # Only apply snapping to the axes that should be snapped
                 if snap_x:
-                    x = snapped_x - self.canvas_offset_x
+                    x = snapped.x() - self.canvas_offset_x
                 if snap_y:
-                    y = snapped_y - self.canvas_offset_y
+                    y = snapped.y() - self.canvas_offset_y
 
         self.update_position(x, y, False)  # Don't save during dragging
 

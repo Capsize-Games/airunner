@@ -10,8 +10,14 @@ The following code ensures that we only use PySide6 if it is available.
 If it is not available, we use a placeholder class instead.
 """
 
+
 class OptionalQObject(QObject):
-    pass
+    """Guard against PySide6 double-initialization errors in MRO."""
+
+    def __init__(self, *args, **kwargs):
+        if not hasattr(self, "_qobject_initialized"):
+            super().__init__(*args, **kwargs)
+            self._qobject_initialized = True
 
 
 from airunner.enums import (
@@ -22,12 +28,18 @@ from airunner.enums import (
 )
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.application import get_torch_device
-from airunner.components.application.gui.windows.main.settings_mixin import SettingsMixin
-from airunner.components.application.managers.model_device_manager import DeviceManagerMixin
-from airunner.components.application.managers.model_status_manager import StatusManagerMixin
+from airunner.components.application.gui.windows.main.settings_mixin import (
+    SettingsMixin,
+)
+from airunner.components.application.managers.model_device_manager import (
+    DeviceManagerMixin,
+)
+from airunner.components.application.managers.model_status_manager import (
+    StatusManagerMixin,
+)
 
 try:
-    from flash_attn import flash_attn_varlen_func, flash_attn_func
+    from flash_attn import flash_attn_func
 except ImportError:
     flass_attn_varlen_func = None
     flash_attn_func = None

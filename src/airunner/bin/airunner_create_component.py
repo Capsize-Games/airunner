@@ -3,7 +3,6 @@ CLI tool to scaffold a new component directory in src/airunner/components/.
 Usage: airunner-create-component <component_name>
 """
 
-import os
 import sys
 from pathlib import Path
 

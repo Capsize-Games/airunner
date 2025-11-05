@@ -9,3 +9,5 @@ class RAGSettings(BaseModel):
     id = Column(Integer, primary_key=True, autoincrement=True)
     model_service = Column(String, default=ModelService.LOCAL.value)
     model_path = Column(String, default="")
+    chunk_size = Column(Integer, default=512)
+    chunk_overlap = Column(Integer, default=50)

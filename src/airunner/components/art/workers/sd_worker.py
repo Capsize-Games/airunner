@@ -8,6 +8,9 @@ from airunner.components.art.managers.stablediffusion.stable_diffusion_model_man
 from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
     SDXLModelManager,
 )
+from airunner.components.art.managers.stablediffusion.flux_model_manager import (
+    FluxModelManager,
+)
 
 from airunner.enums import (
     QueueType,
@@ -36,15 +39,14 @@ class SDWorker(Worker):
     def __init__(self):
         self._sd: Optional[StableDiffusionModelManager] = None
         self._sdxl: Optional[SDXLModelManager] = None
+        self._flux: Optional[FluxModelManager] = None
         self._x4_upscaler: Optional[X4UpscaleManager] = None
         self._safety_checker = None
         self._model_manager = None
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE
         self.signal_handlers = {
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
-            SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
-            SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
             SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
             SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
@@ -59,6 +61,7 @@ class SDWorker(Worker):
             SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL: self.delete_missing_embeddings,
             SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_load_safety_checker,
             SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.on_unload_safety_checker,
+            SignalCode.ART_MODEL_DOWNLOAD_REQUIRED: self.on_art_model_download_required,
         }
         self._current_model = None
         self._current_version = None
@@ -98,6 +101,11 @@ class SDWorker(Worker):
                 StableDiffusionVersion.SDXL_HYPER,
             ):
                 self._model_manager = self.sdxl
+            elif version in (
+                StableDiffusionVersion.FLUX_DEV,
+                StableDiffusionVersion.FLUX_SCHNELL,
+            ):
+                self._model_manager = self.flux
             elif version is StableDiffusionVersion.X4_UPSCALER:
                 self._model_manager = self.x4_upscaler
             else:
@@ -121,6 +129,12 @@ class SDWorker(Worker):
         if self._sdxl is None:
             self._sdxl = SDXLModelManager()
         return self._sdxl
+
+    @property
+    def flux(self):
+        if self._flux is None:
+            self._flux = FluxModelManager()
+        return self._flux
 
     @property
     def x4_upscaler(self):
@@ -371,7 +385,10 @@ class SDWorker(Worker):
 
     def on_change_scheduler_signal(self, data: Dict):
         if self.model_manager:
-            self.model_manager.load_scheduler(data["scheduler"])
+            scheduler_name = data["scheduler"]
+            self.update_generator_settings(scheduler=scheduler_name)
+            # Reload the scheduler in the pipeline
+            self.model_manager._load_scheduler(scheduler_name)
 
     def on_model_status_changed_signal(self, message: Dict):
         if self.model_manager and message["model"] == ModelType.SD:
@@ -449,4 +466,41 @@ class SDWorker(Worker):
                 "message": message,
             },
         )
-        self.emit_signal(SignalCode.TOGGLE_SD_SIGNAL, {"enabled": False})
+
+    def on_art_model_download_required(self, data: Dict):
+        """Handle art model download requirement by showing download dialog.
+
+        Args:
+            data: Download info with repo_id, model_path, missing_files, etc.
+        """
+
+        repo_id = data.get("repo_id")
+        data.get("model_path")
+        missing_files = data.get("missing_files", [])
+        version = data.get("version", "")
+
+        self.logger.info(
+            f"Showing download dialog for {repo_id} ({len(missing_files)} missing files)"
+        )
+
+        # Determine model type for download worker
+        model_type = "art"
+        if "flux" in version.lower():
+            model_type = "flux"
+        elif "sdxl" in version.lower():
+            model_type = "sdxl"
+        elif "sd" in version.lower():
+            model_type = "sd"
+
+        # Emit signal to start download
+        self.emit_signal(
+            SignalCode.START_HUGGINGFACE_DOWNLOAD,
+            {
+                "repo_id": repo_id,
+                "model_type": model_type,
+                "output_dir": None,  # Will use model_path from repo_id
+            },
+        )
+
+        # Show download dialog (will be shown by UI layer)
+        # The dialog will connect to the download worker signals

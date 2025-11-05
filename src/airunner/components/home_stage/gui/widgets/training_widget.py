@@ -35,7 +35,6 @@ from airunner.components.llm.training_presets import (
     TrainingScenario,
     TrainingPreset,
     get_preset,
-    TRAINING_PRESETS,
 )
 
 

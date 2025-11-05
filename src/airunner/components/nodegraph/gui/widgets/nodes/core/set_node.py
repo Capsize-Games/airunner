@@ -380,7 +380,7 @@ class SetNode(BaseCoreNode):
         if hasattr(self, "view"):
             # Create a rect for the label
             rect = self.view.boundingRect()
-            width = rect.width()
+            rect.width()
             height = rect.height()
 
             painter.save()

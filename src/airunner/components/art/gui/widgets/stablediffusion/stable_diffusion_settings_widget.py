@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
 )
 
 from airunner.components.art.data.ai_models import AIModels
-from airunner.components.art.data.generator_settings import GeneratorSettings
 from airunner.enums import (
     SignalCode,
     GeneratorSection,

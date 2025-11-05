@@ -182,6 +182,24 @@ class StableDiffusionGeneratorForm(BaseWidget):
 
     @Slot()
     def on_generate_button_clicked(self):
+        # Validate if generation can proceed
+        from airunner.components.model_management import ModelResourceManager
+        from PySide6.QtWidgets import QMessageBox
+
+        resource_manager = ModelResourceManager()
+        can_generate, reason = resource_manager.can_perform_operation(
+            "text_to_image", self.generator_settings.model_name
+        )
+
+        if not can_generate:
+            QMessageBox.warning(
+                self,
+                "Application Busy",
+                f"Cannot generate image:\n\n{reason}\n\n"
+                f"Please wait for the current operation to complete.",
+            )
+            return
+
         self.handle_generate_button_clicked()
 
     @Slot()
@@ -420,21 +438,19 @@ class StableDiffusionGeneratorForm(BaseWidget):
         self.ui.prompt.setPlainText(prompt)
         self.ui.secondary_prompt.setPlainText(secondary_prompt)
 
-        # Ensure infinite images is off so finalize will be called
+        # Ensure infinite images is off
         if self.ui.infinite_images_button.isChecked():
             self.ui.infinite_images_button.blockSignals(True)
             self.ui.infinite_images_button.setChecked(False)
             self.ui.infinite_images_button.blockSignals(False)
             self.update_generator_settings(generate_infinite_images=False)
 
-        # Stash prompts so we pass them directly into generation
-        self._pending_llm_image = {
+        # Generate directly - ModelResourceManager will handle model swapping
+        gen_data = {
             "prompt": prompt,
             "second_prompt": secondary_prompt,
         }
-
-        # Now unload non-Stable Diffusion models and proceed to generation in callback
-        self.api.art.unload_non_sd(callback=self.unload_llm_callback)
+        self.handle_generate_button_clicked(gen_data)
 
     # Defer actual generation to unload_llm_callback so we can inject finalize
 
@@ -454,16 +470,11 @@ class StableDiffusionGeneratorForm(BaseWidget):
     def finalize_image_generated_by_llm(self, _data):
         """
         Callback function to be called after the image has been generated.
+
+        ModelResourceManager will automatically handle model swapping as needed
+        when the LLM is used next, so we can directly call the finalize method.
         """
-        self.api.art.toggle_sd(
-            enabled=False,
-            callback=lambda _d: self.api.art.load_non_sd(
-                # Reload only the LLM explicitly. TTS/STT should reload only
-                # if they had been enabled prior to switching to art mode.
-                {"models": [ModelType.LLM]},
-                callback=self.api.llm.finalize_image_generated_by_llm,
-            ),
-        )
+        self.api.llm.finalize_image_generated_by_llm(_data)
 
     ##########################################################################
     # End LLM Generated Image handlers

@@ -7,20 +7,20 @@ Follows project standards: docstrings, type hints, logging.
 import logging
 from typing import Any
 import torch
-from airunner.utils.memory import is_ampere_or_newer
-from airunner.settings import (
-    AIRUNNER_MEM_USE_LAST_CHANNELS,
-    AIRUNNER_MEM_USE_ENABLE_VAE_SLICING,
-    AIRUNNER_MEM_USE_ATTENTION_SLICING,
-    AIRUNNER_MEM_USE_TILED_VAE,
-    AIRUNNER_MEM_USE_ACCELERATED_TRANSFORMERS,
-    AIRUNNER_MEM_USE_ENABLE_SEQUENTIAL_CPU_OFFLOAD,
-    AIRUNNER_MEM_ENABLE_MODEL_CPU_OFFLOAD,
-    AIRUNNER_MEM_USE_TOME_SD,
-    AIRUNNER_MEM_TOME_SD_RATIO,
+from airunner.components.model_management.hardware_profiler import (
+    HardwareProfiler,
 )
 
 logger = logging.getLogger(__name__)
+_hardware_profiler = None
+
+
+def get_hardware_profiler() -> HardwareProfiler:
+    """Get singleton hardware profiler instance."""
+    global _hardware_profiler
+    if _hardware_profiler is None:
+        _hardware_profiler = HardwareProfiler()
+    return _hardware_profiler
 
 
 def apply_last_channels(pipe: Any, enabled: bool) -> None:

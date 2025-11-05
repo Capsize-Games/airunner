@@ -210,6 +210,47 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="video_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Video Generation</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/video.svg</normaloff>:/light/icons/feather/light/video.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="workflow_editor_button">
             <property name="minimumSize">
              <size>
@@ -288,6 +329,53 @@
             <property name="icon">
              <iconset resource="../../../../../../gui/resources/feather.qrc">
               <normaloff>:/light/icons/feather/light/file-text.svg</normaloff>:/light/icons/feather/light/file-text.svg</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="calendar_button">
+            <property name="minimumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>35</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="toolTip">
+             <string>Calendar</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="../../../../../../gui/resources/feather.qrc">
+              <normaloff>:/light/icons/feather/light/calendar.svg</normaloff>:/light/icons/feather/light/calendar.svg</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -699,6 +787,28 @@
                </item>
               </layout>
              </widget>
+             <widget class="QWidget" name="calendar_tab">
+              <attribute name="title">
+               <string>Calendar</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_calendar">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="CalendarTab" name="calendar_widget" native="true"/>
+               </item>
+              </layout>
+             </widget>
              <widget class="QWidget" name="visualizer_tab">
               <attribute name="title">
                <string>Visualizer</string>
@@ -718,6 +828,28 @@
                </property>
                <item row="0" column="0">
                 <widget class="VoiceVisualizerWidget" name="visualizer" native="true"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="video_tab">
+              <attribute name="title">
+               <string>Video</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_video">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="VideoWidget" name="video_widget" native="true"/>
                </item>
               </layout>
              </widget>
@@ -1342,6 +1474,12 @@
    <container>1</container>
   </customwidget>
   <customwidget>
+   <class>CalendarTab</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/calendar/gui/calendar_tab</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
    <class>DocumentsWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/documents/gui/widgets/documents</header>
@@ -1357,6 +1495,12 @@
    <class>VoiceVisualizerWidget</class>
    <extends>QWidget</extends>
    <header>airunner/components/voice_visualizer/gui/widgets/voice_visualizer_widget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VideoWidget</class>
+   <extends>QWidget</extends>
+   <header>airunner/components/video/gui/widgets/video_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

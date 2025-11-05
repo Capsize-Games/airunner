@@ -4,7 +4,11 @@ import os
 import torch
 
 from airunner.components.llm.utils.language import detect_language
-from airunner.components.tts.managers.exceptions import FileMissing, OpenVoiceError
+from airunner.components.tts.managers.exceptions import (
+    FileMissing,
+    OpenVoiceError,
+)
+from airunner.components.art.utils.model_file_checker import ModelFileChecker
 from airunner.settings import AIRUNNER_BASE_PATH
 
 torch.hub.set_dir(
@@ -28,6 +32,7 @@ from airunner.enums import (
     ModelType,
     ModelStatus,
     AvailableLanguage,
+    SignalCode,
 )
 from airunner.components.tts.managers.tts_model_manager import TTSModelManager
 from airunner.components.tts.managers.tts_request import TTSRequest
@@ -263,11 +268,21 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         if response is not None:
             self.api.tts.add_to_stream(response)
 
-    def load(self, _target_model=None):
+    def load(self, _target_model=None, retry: bool = False):
         """
         Load and initialize the OpenVoice model.
         """
         self.logger.debug("Initializing OpenVoice")
+
+        # Check for missing files and trigger download if needed
+        if not retry:
+            should_download, download_info = self._check_and_trigger_download()
+            if should_download:
+                self.logger.info(
+                    "OpenVoice model files missing, download triggered"
+                )
+                return False
+
         self.unload()
         self.change_model_status(ModelType.TTS, ModelStatus.LOADING)
         self._initialize()
@@ -287,13 +302,11 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
         """
         Placeholder for unblocking TTS generator signal.
         """
-        pass
 
     def interrupt_process_signal(self):
         """
         Placeholder for interrupting the TTS process.
         """
-        pass
 
     def _initialize(self):
         """
@@ -333,3 +346,38 @@ class OpenVoiceModelManager(TTSModelManager, metaclass=ABCMeta):
 
         if self._target_se is None:
             raise OpenVoiceError("Target speaker extraction returned None.")
+
+    def _check_and_trigger_download(self):
+        """Check for missing model files and trigger download if needed.
+
+        Returns:
+            Tuple of (should_download, download_info)
+        """
+        # Check for the primary MeloTTS model (English by default)
+        # In a full implementation, this should check based on self.language
+        model_id = "myshell-ai/MeloTTS-English"
+        model_path = os.path.join(self.path_settings.tts_model_path, model_id)
+
+        should_download, download_info = (
+            ModelFileChecker.should_trigger_download(
+                model_path=model_path,
+                model_type="tts_openvoice",
+                model_id=model_id,
+            )
+        )
+
+        if should_download:
+            self.logger.info(
+                f"OpenVoice model files missing: {download_info.get('missing_files', [])}"
+            )
+            self.emit_signal(
+                SignalCode.START_HUGGINGFACE_DOWNLOAD,
+                {
+                    "repo_id": download_info["repo_id"],
+                    "model_path": model_path,
+                    "model_type": "tts_openvoice",
+                    "callback": lambda: self.load(retry=True),
+                },
+            )
+
+        return should_download, download_info
