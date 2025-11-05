@@ -194,7 +194,7 @@ setup(
         "optimum==1.25.1",
         "numpy==2.2.5",
         "pillow==12.0.0",
-        "alembic==1.15.2",
+        "alembic==1.17.1",
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
         "setuptools==80.9.0",
