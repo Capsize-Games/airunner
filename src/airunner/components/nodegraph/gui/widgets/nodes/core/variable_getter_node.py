@@ -231,7 +231,7 @@ class VariableGetterNode(BaseCoreNode):
 
                 # Create a rect for the value label
                 rect = self.view.boundingRect()
-                width = rect.width()
+                rect.width()
                 height = rect.height()
 
                 # Prepare painter

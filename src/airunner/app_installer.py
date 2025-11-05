@@ -127,7 +127,7 @@ class AppInstaller(QObject, SettingsMixin, MediatorMixin):
 
         self.download_wizard = DownloadWizardWindow()
         self.download_wizard.show()
-        result = self.app.exec()
+        self.app.exec()
         return
 
     @staticmethod

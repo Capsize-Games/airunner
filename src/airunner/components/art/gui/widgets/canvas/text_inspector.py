@@ -1,4 +1,3 @@
-from typing import Optional
 from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -7,7 +6,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QColorDialog,
 )
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QFont
 
 
 class TextInspector(QWidget):

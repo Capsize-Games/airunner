@@ -16,7 +16,6 @@ class AudioProcessorWorker(Worker):
         self._stt = None
         self.signal_handlers = {
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.update_properties,
-            SignalCode.STT_LOAD_SIGNAL: self.on_stt_load_signal,
             SignalCode.STT_UNLOAD_SIGNAL: self.on_stt_unload_signal,
             SignalCode.AUDIO_CAPTURE_WORKER_RESPONSE_SIGNAL: self.on_stt_process_audio_signal,
         }

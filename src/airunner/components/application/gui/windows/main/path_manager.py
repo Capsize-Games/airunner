@@ -6,7 +6,6 @@ import requests
 from bs4 import BeautifulSoup
 from PySide6.QtWidgets import QInputDialog
 from PySide6.QtCore import QProcess
-from airunner.components.llm.managers.agent.actions.show_path import show_path
 
 
 class PathManager:
@@ -19,12 +18,6 @@ class PathManager:
         self.logger = logger
         if self.logger:
             self.logger.debug("PathManager initialized.")
-
-    def show_settings_path(self, name, default_path=None):
-        path = getattr(self.path_settings, name)
-        if self.logger:
-            self.logger.debug(f"Showing settings path: {name} -> {path}")
-        show_path(default_path if default_path and path == "" else path)
 
     def set_path_settings(self, main_window, key, val):
         if self.logger:

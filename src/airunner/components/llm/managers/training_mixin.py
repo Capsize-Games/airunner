@@ -17,7 +17,6 @@ from peft import (
 )
 
 from airunner.components.llm.training_presets import (
-    TrainingPreset,
     TrainingScenario,
     get_preset,
 )

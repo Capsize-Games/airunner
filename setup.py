@@ -11,7 +11,7 @@ extras_require = {
         "controlnet_aux==0.0.10",
         "safetensors==0.6.2",
         "compel==2.1.1",
-        "transformers==4.56.1",
+        "transformers==4.57.1",
         "datasets==4.0.0",
         "peft==0.17.1",
     ],
@@ -26,12 +26,18 @@ extras_require = {
     ],
     "dev": [  # Development dependencies
         "pytest",
+        "pytest-timeout",
+        "responses>=0.25.0",
         "python-dotenv==1.0.1",
         "coverage==7.8.0",
         "black==25.1.0",
         "pyinstaller==6.12.0",
         "flake8==7.2.0",
         "mypy==1.16.0",
+        "autoflake==2.3.1",
+        "pandas>=2.0.0",  # For eval dataset loading (parquet)
+        "pyarrow>=14.0.0",  # For parquet file support
+        "tqdm>=4.0.0",  # For progress bars in headless downloads
     ],
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",
@@ -50,24 +56,28 @@ extras_require = {
         "lingua-language-detector==2.1.0",
         "markdown==3.8",
         "libzim==3.7.0",
-    ],
-    "agents": [
-        "llama-index==0.13.6",
-        "llama-index-readers-file==0.5.3",
-        "llama-index-readers-web==0.5.1",
-        "llama-index-llms-huggingface==0.6.0",
-        "llama-index-llms-groq==0.4.0",
-        "llama-index-embeddings-mistralai==0.4.0",
-        "llama-index-vector-stores-faiss==0.5.0",
-        "llama-index-embeddings-huggingface==0.6.0",
-        "llama-index-llms-openrouter==0.4.0",
-        "langchain-community==0.3.29",
+        # Mistral native function calling and Mistral3 tokenization
+        "mistral_common>=1.8.5",
+        # llama-index (for RAG only)
+        "llama-index-core>=0.13",
+        "llama-index-readers-file>=0.5.0",
+        "llama-index-embeddings-huggingface>=0.6.0",
+        # LangChain/LangGraph (for agent system)
+        "langchain==1.0.0",
+        "langchain-core==1.0.0",
+        "langchain-community>=0.4.0",
+        "langchain-huggingface>=0.1.0",
+        "langgraph==1.0.0",
+        "langsmith>=0.1.0",
+        # Optional LangChain backends (commented out by default)
+        # "langchain-openai>=0.2.0",  # For OpenRouter/OpenAI
+        "langchain-ollama==1.0.0",  # For Ollama
+        # "langchain-anthropic>=0.3.0",  # For Anthropic Claude
+        # Document processing
         "EbookLib==0.19",
         "html2text==2025.4.15",
         "rake_nltk==1.0.6",
-    ],
-    "ollama": [
-        "llama-index-llms-ollama==0.7.1",
+        "markdownify>=0.13.1",
     ],
     "llm_weather": [  # LLM dependencies for weather (requires llm dependencies)
         "requests-cache==1.2.1",
@@ -173,7 +183,7 @@ setup(
     packages=find_packages("src"),
     python_requires=">=3.13.3",
     install_requires=[
-        "pip==25.2",
+        "pip==25.3",
         "torch",
         "torchvision",
         "torchaudio",
@@ -183,13 +193,16 @@ setup(
         "tokenizers==0.22.0",
         "optimum==1.25.1",
         "numpy==2.2.5",
-        "pillow==10.4.0",
+        "pillow==12.0.0",
         "alembic==1.15.2",
         "aiosqlite==0.21.0",
         "sqlalchemy==2.0.38",
-        "setuptools==78.1.1",
+        "setuptools==80.9.0",
         "etils[epath]==1.12.2",
         "jinja2==3.1.6",
+        "pyyaml==6.0.2",
+        "fastapi==0.115.0",
+        "uvicorn[standard]==0.34.0",
     ],
     extras_require=extras_require,
     package_data={
@@ -211,6 +224,7 @@ setup(
         "console_scripts": [
             "airunner=airunner.launcher:main",
             "airunner-setup=airunner.installer:main",
+            "airunner-headless=airunner.bin.airunner_headless:main",
             "airunner-build-ui=airunner.bin.build_ui:main",
             "airunner-compile-translations=airunner.bin.compile_translations:main",
             "airunner-tests=airunner.bin.run_tests:main",
@@ -222,6 +236,11 @@ setup(
             "airunner-create-theme=airunner.bin.airunner_create_theme:main",
             "airunner-create-component=airunner.bin.airunner_create_component:main",
             "airunner-train-diffusers=airunner.bin.train_diffusers:main",
+            "airunner-daemon=airunner.services.daemon:main",
+            "airunner-service=airunner.bin.airunner_service:main",
+            "airunner-quality-report=airunner.bin.code_quality_report:main",
+            "airunner-remove-unused-imports=airunner.bin.remove_unused_imports:main",
+            "airunner-migrate-knowledge=airunner.bin.airunner_migrate_knowledge:main",
         ],
     },
 )

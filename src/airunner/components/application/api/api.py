@@ -152,13 +152,13 @@ class API(App):
             ),
         }
         self._initialized = True
-        self.llm = LLMAPIService(emit_signal=self.emit_signal)
-        self.art = ARTAPIService(emit_signal=self.emit_signal)
-        self.document = DocumentEditorService(emit_signal=self.emit_signal)
-        self.tts = TTSAPIService(emit_signal=self.emit_signal)
-        self.stt = STTAPIService(emit_signal=self.emit_signal)
-        self.video = VideoAPIService(emit_signal=self.emit_signal)
-        self.nodegraph = NodegraphAPIService(emit_signal=self.emit_signal)
+        self.llm = LLMAPIService()
+        self.art = ARTAPIService()
+        self.document = DocumentEditorService()
+        self.tts = TTSAPIService()
+        self.stt = STTAPIService()
+        self.video = VideoAPIService()
+        self.nodegraph = NodegraphAPIService()
         self.sounddevice_manager = SoundDeviceManager()
 
         # Extract the initialize_app flag and pass the rest to the parent App class

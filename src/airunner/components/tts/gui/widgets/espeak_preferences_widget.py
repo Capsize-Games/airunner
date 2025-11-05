@@ -55,7 +55,7 @@ class EspeakPreferencesWidget(BaseWidget):
 
         gender = settings.gender
         voice = settings.voice
-        iso_codes = [country.alpha_2 for country in pycountry.countries]
+        [country.alpha_2 for country in pycountry.countries]
 
         engine = pyttsx3.init()
         voices = engine.getProperty("voices")
@@ -99,4 +99,3 @@ class EspeakPreferencesWidget(BaseWidget):
     def load_settings(self):
         """Load the Espeak settings into the widget."""
         # Populate the widget with settings (e.g., rate, pitch, volume)
-        pass

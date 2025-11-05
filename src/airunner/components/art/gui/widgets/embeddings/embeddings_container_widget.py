@@ -260,7 +260,7 @@ class EmbeddingsContainerWidget(BaseWidget):
                 self.ui.scrollAreaWidgetContents.layout().removeWidget(
                     self.spacer
                 )
-            except RuntimeError as _e:
+            except RuntimeError:
                 pass
         for i in reversed(
             range(self.ui.scrollAreaWidgetContents.layout().count())

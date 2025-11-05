@@ -41,3 +41,9 @@ class LLMGeneratorSettings(BaseModel):
     length_penalty = Column(Integer, default=900)
     model_service = Column(String, default=ModelService.LOCAL.value)
     model_path = Column(String, default="")
+    auto_extract_knowledge = Column(Boolean, default=True)
+
+    # Mode-based routing settings
+    use_mode_routing = Column(Boolean, default=False)
+    mode_override = Column(String, nullable=True)
+    enable_trajectory_logging = Column(Boolean, default=False)

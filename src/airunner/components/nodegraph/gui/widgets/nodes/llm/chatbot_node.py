@@ -10,7 +10,6 @@ from airunner.settings import (
     AIRUNNER_DEFAULT_CHATBOT_SYSTEM_PROMPT,
     AIRUNNER_DEFAULT_LLM_HF_PATH,
 )
-from airunner.enums import Gender
 
 
 class ChatbotNode(BaseLLMNode):

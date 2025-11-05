@@ -838,3 +838,170 @@ QWizardPage QPushButton:pressed {
 #footer_container {
     border-top: 1px solid @darkprimary-color !important;
 }
+
+/* Calendar Widget Styles */
+QCalendarWidget {
+    background-color: @dark-color;
+    color: @light-color;
+}
+
+QCalendarWidget QWidget {
+    alternate-background-color: @dark-color;
+    background-color: @dark-color;
+}
+
+QCalendarWidget QToolButton {
+    color: @light-color;
+    background-color: @dark-color;
+    border: 1px solid @line-color-light;
+    border-radius: 0;
+    padding: 5px;
+    margin: 2px;
+}
+
+QCalendarWidget QToolButton:hover {
+    background-color: @darkerprimary-color;
+    border: 1px solid @primary-color;
+}
+
+QCalendarWidget QToolButton:pressed {
+    background-color: @darkprimary-color;
+}
+
+QCalendarWidget QToolButton::menu-indicator {
+    image: none;
+}
+
+QCalendarWidget QAbstractItemView {
+    background-color: @dark-color;
+    color: @light-color;
+    selection-background-color: @primary-color;
+    selection-color: @light-color;
+    outline: none;
+}
+
+QCalendarWidget QAbstractItemView:enabled {
+    color: @light-color;
+    background-color: @dark-color;
+}
+
+QCalendarWidget QAbstractItemView:disabled {
+    color: @dim-color;
+}
+
+QCalendarWidget QTableView {
+    border: 1px solid @line-color-light;
+    gridline-color: @line-color-dark;
+}
+
+/* Navigation bar at top of calendar */
+QCalendarWidget QWidget#qt_calendar_navigationbar {
+    background-color: @dark-color;
+    border-bottom: 1px solid @line-color-light;
+}
+
+/* Month/Year buttons */
+QCalendarWidget QToolButton#qt_calendar_prevmonth,
+QCalendarWidget QToolButton#qt_calendar_nextmonth {
+    qproperty-icon: none;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+}
+
+QCalendarWidget QToolButton#qt_calendar_monthbutton,
+QCalendarWidget QToolButton#qt_calendar_yearbutton {
+    color: @light-color;
+    font-weight: bold;
+    padding: 5px 10px;
+}
+
+/* Calendar header (day names) */
+QCalendarWidget QWidget {
+    color: @light-color;
+}
+
+/* Weekend days */
+QCalendarWidget QAbstractItemView:enabled[weekday="6"],
+QCalendarWidget QAbstractItemView:enabled[weekday="0"] {
+    color: @primary-color;
+}
+
+/* Selected date */
+QCalendarWidget QAbstractItemView:enabled QTableView::item:selected {
+    background-color: @primary-color;
+    color: @light-color;
+}
+
+QCalendarWidget QAbstractItemView:enabled QTableView::item:hover {
+    background-color: @darkerprimary-color;
+}
+
+/* Calendar Widget Container Styles */
+#calendar QListWidget {
+    background-color: @dark-color;
+    border: 1px solid @line-color-light;
+    outline: none;
+}
+
+#calendar QListWidget::item {
+    padding: 8px;
+    border-bottom: 1px solid @line-color-dark;
+    color: @light-color;
+}
+
+#calendar QListWidget::item:selected {
+    background-color: @darkerprimary-color;
+    color: @light-color;
+}
+
+#calendar QListWidget::item:hover {
+    background-color: @darkerprimary-color;
+}
+
+#calendar QPushButton {
+    border: 1px solid @primary-color;
+    padding: 6px 12px;
+    color: @primary-color;
+    background-color: @dark-color;
+    border-radius: 0;
+}
+
+#calendar QPushButton:hover {
+    background-color: @darkerprimary-color;
+    border: 1px solid @darkprimary-color;
+}
+
+#calendar QPushButton:pressed {
+    background-color: @darkprimary-color;
+}
+
+#calendar QPushButton:disabled {
+    color: @dim-color;
+    border-color: @dim-color;
+}
+
+#calendar QSplitter::handle {
+    background-color: @line-color-dark;
+    width: 2px;
+}
+
+#calendar QSplitter::handle:hover {
+    background-color: @primary-color;
+}
+
+#calendar QLabel#title {
+    color: @light-color;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px;
+}
+
+#calendar QLabel#events_label {
+    color: @light-color;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 5px;
+}
+

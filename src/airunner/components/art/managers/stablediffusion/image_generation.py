@@ -5,7 +5,7 @@ Follows project standards: docstrings, type hints, logging.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from airunner.utils.image import export_images

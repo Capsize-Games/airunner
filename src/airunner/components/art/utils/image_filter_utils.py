@@ -127,12 +127,12 @@ def build_filter_kwargs(
             try:
                 value = int(value)
             except (ValueError, TypeError):
-                pass
+                LOG.warning(f"Failed to convert {fv.name}={value} to int")
         elif fv.value_type == "float":
             try:
                 value = float(value)
             except (ValueError, TypeError):
-                pass
+                LOG.warning(f"Failed to convert {fv.name}={value} to float")
         elif fv.value_type == "bool":
             value = value == "True" if isinstance(value, str) else bool(value)
 
@@ -142,6 +142,45 @@ def build_filter_kwargs(
 
         kwargs[fv.name] = value
 
+    return kwargs
+
+    LOG.info(
+        f"build_filter_kwargs called with {len(filter_values)} filter values"
+    )
+    LOG.info(f"Overrides: {overrides}")
+
+    for fv in filter_values:
+        # Start with the database value
+        value = fv.value
+        LOG.info(
+            f"  Processing {fv.name}: raw value={value} (type={type(value)}), value_type={fv.value_type}"
+        )
+
+        # Apply type conversion
+        if fv.value_type == "int":
+            try:
+                value = int(value)
+                LOG.info(f"    Converted to int: {value}")
+            except (ValueError, TypeError) as e:
+                LOG.warning(f"    Failed to convert to int: {e}")
+        elif fv.value_type == "float":
+            try:
+                value = float(value)
+                LOG.info(f"    Converted to float: {value}")
+            except (ValueError, TypeError) as e:
+                LOG.warning(f"    Failed to convert to float: {e}")
+        elif fv.value_type == "bool":
+            value = value == "True" if isinstance(value, str) else bool(value)
+            LOG.info(f"    Converted to bool: {value}")
+
+        # Apply override if provided
+        if fv.name in overrides:
+            value = overrides[fv.name]
+            LOG.info(f"    Override applied: {value} (type={type(value)})")
+
+        kwargs[fv.name] = value
+
+    LOG.info(f"Final kwargs: {kwargs}")
     return kwargs
 
 

@@ -322,7 +322,6 @@ class Gemma3Manager(LLMModelManager):
             data: Optional data with history clearing parameters.
         """
         # No history to clear
-        pass
 
     @property
     def context_window(self) -> int:

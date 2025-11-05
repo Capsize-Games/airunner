@@ -5,10 +5,9 @@ fine-tuning, LoRA, and textual inversion trainers.
 """
 
 import logging
-import math
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import torch
 from torch.utils.data import DataLoader

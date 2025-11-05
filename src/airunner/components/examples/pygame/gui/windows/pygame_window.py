@@ -209,7 +209,6 @@ class PygameManager(ABC):
         This method should process events but not contain a loop.
         It will be called by the Qt timer.
         """
-        pass
 
     def update(self):
         """
@@ -217,7 +216,6 @@ class PygameManager(ABC):
         This method should be overridden by subclasses to provide
         specific functionality for updating the game state.
         """
-        pass
 
     def render(self):
         """
@@ -225,7 +223,6 @@ class PygameManager(ABC):
         This method should be overridden by subclasses to provide
         specific functionality for rendering the game state.
         """
-        pass
 
     def handle_pygame_event(self, event):
         """
@@ -233,7 +230,6 @@ class PygameManager(ABC):
         This method should be overridden by subclasses to provide
         specific functionality for handling pygame events.
         """
-        pass
 
     @abstractmethod
     def quit(self):
@@ -263,7 +259,6 @@ class PygameManager(ABC):
         Initialize the display for the pygame window.
         """
         # We don't set the caption since we're running in a PySide6 window
-        pass
 
     def resize(self, width, height):
         """

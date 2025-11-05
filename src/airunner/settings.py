@@ -154,6 +154,7 @@ AIRUNNER_BASE_PATH = os.environ.get(
     "AIRUNNER_BASE_PATH", os.path.expanduser("~/.local/share/airunner")
 )
 AIRUNNER_USER_DATA_PATH = AIRUNNER_BASE_PATH
+MODELS_DIR = os.path.join(AIRUNNER_BASE_PATH, "models")
 AIRUNNER_PHOTO_REALISTIC_PROMPT = os.environ.get(
     "AIRUNNER_PHOTO_REALISTIC_PROMPT",
     (
@@ -416,3 +417,4 @@ SLASH_COMMANDS = {
     "s": LLMActionType.SEARCH,
     "w": LLMActionType.WORKFLOW,
 }
+
