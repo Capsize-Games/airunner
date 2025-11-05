@@ -1,56 +1,72 @@
-import gc
-import random
-import os
-import json
-import torch
-from typing import Optional, Dict, Any, Union, Type, List
+from typing import Optional, Dict, Any, List
 
-from peft import PeftModel
-from transformers.utils.quantization_config import (
-    BitsAndBytesConfig,
-    GPTQConfig,
+from transformers import (
+    AutoModelForCausalLM,
 )
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.streamers import TextIteratorStreamer
-from llama_index.core.chat_engine.types import AgentChatResponse
 
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
-from airunner.components.llm.data.conversation import Conversation
-from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 from airunner.components.application.managers.base_model_manager import (
     BaseModelManager,
+)
+from airunner.components.llm.managers.tool_manager import ToolManager
+from airunner.components.llm.managers.workflow_manager import WorkflowManager
+from airunner.components.llm.managers.quantization_mixin import (
+    QuantizationMixin,
+)
+from airunner.components.llm.managers.mixins import (
+    AdapterLoaderMixin,
+    ComponentLoaderMixin,
+    ConversationManagementMixin,
+    GenerationMixin,
+    ModelLoaderMixin,
+    PropertyMixin,
+    QuantizationConfigMixin,
+    SpecializedModelMixin,
+    StatusManagementMixin,
+    SystemPromptMixin,
+    TokenizerLoaderMixin,
+    ValidationMixin,
+)
+from airunner.components.llm.managers.training_mixin import TrainingMixin
+from airunner.components.llm.managers.agent.rag_mixin import RAGMixin
+from airunner.components.model_management.model_resource_manager import (
+    ModelResourceManager,
 )
 from airunner.enums import (
     ModelType,
     ModelStatus,
-    LLMActionType,
-    SignalCode,
-)
-from airunner.settings import (
-    AIRUNNER_MAX_SEED,
-    AIRUNNER_LOCAL_FILES_ONLY,
 )
 from airunner.utils.memory import clear_memory
-from airunner.utils.settings.get_qsettings import get_qsettings
-from airunner.components.llm.managers.agent.agents import (
-    LocalAgent,
-    OpenRouterQObject,
-)
-from airunner.components.llm.managers.training_mixin import TrainingMixin
-from airunner.components.llm.managers.llm_request import LLMRequest
-from airunner.components.llm.managers.llm_response import LLMResponse
 from airunner.components.llm.managers.llm_settings import LLMSettings
 
 
-class LLMModelManager(BaseModelManager, TrainingMixin):
+class LLMModelManager(
+    BaseModelManager,
+    AdapterLoaderMixin,
+    ComponentLoaderMixin,
+    ConversationManagementMixin,
+    GenerationMixin,
+    ModelLoaderMixin,
+    PropertyMixin,
+    QuantizationConfigMixin,
+    SpecializedModelMixin,
+    StatusManagementMixin,
+    SystemPromptMixin,
+    TokenizerLoaderMixin,
+    ValidationMixin,
+    RAGMixin,
+    QuantizationMixin,
+    TrainingMixin,
+):
     """
     Handler for Large Language Model operations in AI Runner.
 
     This class manages the lifecycle of LLM models, including loading, unloading,
-    and generating responses. It supports both local LLMs and API-based LLMs,
-    and integrates with various agent types.
+    and generating responses. It supports local HuggingFace models, OpenRouter,
+    Ollama, and OpenAI (future) through LangChain/LangGraph integration.
 
     Attributes:
         model_type: Type of model being handled (LLM).
@@ -61,729 +77,275 @@ class LLMModelManager(BaseModelManager, TrainingMixin):
     model_type: ModelType = ModelType.LLM
     model_class: str = "llm"
 
-    # Model components
     _model: Optional[AutoModelForCausalLM] = None
     _streamer: Optional[TextIteratorStreamer] = None
     _tokenizer: Optional[object] = None
     _current_model_path: Optional[str] = None
 
-    # Agent components
-    _chat_agent: Optional[Union[Type[LocalAgent], OpenRouterQObject]] = None
-    _agent_executor: Optional[object] = None
-    _service_context_model: Optional[object] = None
+    _chat_model: Optional[Any] = None
+    _tool_manager: Optional[ToolManager] = None
+    _workflow_manager: Optional[WorkflowManager] = None
 
-    # Agent configuration
-    _use_query_engine: bool = False
-    _use_chat_engine: bool = True
-    _user_evaluation: str = ""
-    _restrict_tools_to_additional: bool = True
-    _return_agent_code: bool = False
-
-    # RAG components
-    _rag_tokenizer: Optional[object] = None
-    _rag_retriever: Optional[object] = None
-
-    # Other components
-    _vocoder: Optional[object] = None
-    _generator: Optional[object] = None
     _history: Optional[List] = []
+    _interrupted: bool = False
+    _current_request_id: Optional[str] = None
 
-    # Settings
     llm_settings: LLMSettings
 
     def __init__(
         self,
-        local_agent_class: Optional[Type[LocalAgent]] = None,
         *args,
         **kwargs,
     ):
-        """
-        Initialize the LLM handler.
-
-        Args:
-            local_agent_class: Class to use for local agent implementation.
-                              Defaults to LocalAgent if None.
-            *args: Variable length argument list passed to parent classes.
-            **kwargs: Arbitrary keyword arguments passed to parent classes.
-        """
-        self.local_agent_class_ = local_agent_class or LocalAgent
         super().__init__(*args, **kwargs)
-        # Initialize the instance status *after* the base class init
+        # Explicitly initialize RAGMixin since it's in the inheritance chain
+        # This ensures all private attributes (_retriever, _embedding, etc.) are created
+        RAGMixin.__init__(self)
         self._model_status = {ModelType.LLM: ModelStatus.UNLOADED}
         self.llm_settings = LLMSettings()
         self._pending_conversation_message = None
         self._conversation_history_manager = ConversationHistoryManager()
+        self._current_model_path = None
+        self._hw_profiler = None
+        self._current_request_id = None
 
-    @property
-    def agent(self):
-        return self._chat_agent
-
-    @property
-    def is_mistral(self) -> bool:
-        """
-        Check if the current model is a Mistral model.
-
-        Returns:
-            bool: True if the model is a Mistral model, False otherwise.
-        """
-        if not self._current_model_path:
-            return False
-        path = self._current_model_path.lower()
-        return "mistral" in path
-
-    @property
-    def is_llama_instruct(self) -> bool:
-        """
-        Check if the current model is a LLaMA instruct model.
-
-        Returns:
-            bool: True if the model is a LLaMA instruct model, False otherwise.
-        """
-        if not self._current_model_path:
-            return False
-        path = self._current_model_path.lower()
-        return "instruct" in path and "llama" in path
-
-    @property
-    def _quantization_config(
-        self,
-    ) -> Optional[Union[BitsAndBytesConfig, GPTQConfig]]:
-        """
-        Get the appropriate quantization configuration based on dtype settings.
-
-        Returns:
-            Optional[Union[BitsAndBytesConfig, GPTQConfig]]: Configuration for model quantization,
-            or None if no quantization is specified.
-        """
-        config = None
-        if self.llm_dtype == "8bit":
-            config = BitsAndBytesConfig(
-                llm_int8_threshold=6.0,
-                llm_int8_has_fp16_weight=False,
-                bnb_4bit_compute_dtype=torch.bfloat16,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-            )
-        elif self.llm_dtype == "4bit":
-            config = BitsAndBytesConfig(
-                load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16
-            )
-        elif self.llm_dtype == "2bit":
-            config = GPTQConfig(
-                bits=2, dataset="c4", tokenizer=self._tokenizer
-            )
-        return config
-
-    @property
-    def use_cache(self) -> bool:
-        """
-        Determine whether to use model caching based on settings.
-
-        Returns:
-            bool: True if cache should be used, False otherwise.
-        """
-        if self.llm_generator_settings.override_parameters:
-            return self.llm_generator_settings.use_cache
-        return self.chatbot.use_cache
-
-    @property
-    def model_version(self) -> str:
-        """
-        Get the model version to use based on settings.
-
-        Returns:
-            str: The model version identifier.
-        """
-        model_version = self.chatbot.model_version
-        if self.llm_generator_settings.override_parameters:
-            model_version = self.llm_generator_settings.model_version
-        return model_version
-
-    @property
-    def model_name(self) -> str:
-        return "causallm/w4ffl35/Ministral-8B-Instruct-2410-doublequant"
-
-    @property
-    def model_path(self) -> str:
-        """
-        Get the filesystem path to the model files.
-
-        Returns:
-            str: Absolute path to the model directory.
-        """
-        return os.path.expanduser(
-            os.path.join(
-                self.path_settings.base_path,
-                "text",
-                "models",
-                "llm",
-                self.model_name,
-            )
-        )
+    def _load_local_llm_components(self) -> None:
+        """Load tokenizer and model for local LLM."""
+        if self.llm_settings.use_local_llm:
+            self._load_tokenizer()
+            self._load_model()
 
     def load(self) -> None:
         """
         Load the LLM model and associated components.
 
         This method handles the complete loading process, including:
+        - Validating model path is configured
+        - Checking if model exists (trigger download if needed)
         - Checking if the model is already loaded
-        - Loading the tokenizer and model if using a local LLM
-        - Loading the appropriate chat agent
+        - Loading the tokenizer and model (for local LLM)
+        - Creating the appropriate ChatModel via factory
+        - Loading the tool manager
+        - Loading the workflow manager
         - Updating the model status based on loading results
         """
-        # Skip if already loading or loaded
         if self.model_status[ModelType.LLM] in (
             ModelStatus.LOADING,
             ModelStatus.LOADED,
         ):
             return
 
-        # Set status to LOADING before calling unload to avoid recursion/hang
+        if not self._validate_model_path():
+            return
+
+        if not self._check_and_download_model():
+            return
+
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
         self.unload()
         self._current_model_path = self.model_path
 
-        # Load components based on settings
-        self._load_tokenizer()
-        self._load_model()
-        self._load_agent()
+        resource_manager = ModelResourceManager()
+        prepare_result = resource_manager.prepare_model_loading(
+            model_id=self.model_path,
+            model_type="llm",
+        )
+
+        if not prepare_result["can_load"]:
+            self.logger.error(
+                f"Cannot load model: {prepare_result.get('reason', 'Unknown reason')}"
+            )
+            self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+            return
+
+        if self.llm_settings.use_local_llm:
+            self._send_quantization_info()
+
+        self._load_local_llm_components()
+        self._load_chat_model()
+        self._load_tool_manager()
+        self._load_workflow_manager()
         self._update_model_status()
 
-    def _update_model_status(self):
-        # Update status based on loading results
-        if self._model and self._tokenizer and self._chat_agent:
-            self.change_model_status(ModelType.LLM, ModelStatus.LOADED)
-            self.emit_signal(SignalCode.TOGGLE_LLM_SIGNAL, {"enabled": True})
-            # If there was a pending conversation load, process it now
-            if getattr(self, "_pending_conversation_message", None):
-                self.logger.info(
-                    "Processing pending conversation load after agent became available."
-                )
-                self._chat_agent.on_load_conversation(
-                    self._pending_conversation_message
-                )
-                self._pending_conversation_message = None
-        else:
-            if not self._model:
-                self.logger.error("Model failed to load")
-            if not self._chat_agent:
-                self.logger.error("Chat agent failed to load")
-            self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+        # Mark model as loaded
+        resource_manager.model_loaded(self.model_path)
 
     def unload(self) -> None:
-        """
-        Unload all LLM components from memory.
-
-        This method properly releases resources by:
-        - Unloading the model, tokenizer, and agent
-        - Clearing GPU memory
-        - Updating the model status
-        """
-        # Skip if already unloading or unloaded
+        """Unload all LLM components and clear GPU memory."""
         if self.model_status[ModelType.LLM] in (
             ModelStatus.LOADING,
             ModelStatus.UNLOADED,
         ):
             return
 
-        self.logger.debug("Unloading LLM")
         self.change_model_status(ModelType.LLM, ModelStatus.LOADING)
+        self._unload_components()
 
-        # Unload agent first (includes RAG/embeddings)
-        try:
-            self._unload_agent()
-            # Clear memory immediately after agent unload (includes RAG embeddings)
-            clear_memory(self.device)
-        except Exception as e:
-            self.logger.error(
-                f"Exception during unloading agent: {e}", exc_info=True
-            )
+        resource_manager = ModelResourceManager()
+        resource_manager.cleanup_model(
+            model_id=self._current_model_path or self.model_path,
+            model_type="llm",
+        )
 
-        # Unload tokenizer and model
-        for unload_func, name in [
-            (self._unload_tokenizer, "tokenizer"),
-            (self._unload_model, "model"),
-        ]:
-            try:
-                unload_func()
-            except Exception as e:
-                self.logger.error(
-                    f"Exception during unloading {name}: {e}", exc_info=True
-                )
-
-        # Clear GPU memory aggressively after model unload
         clear_memory(self.device)
-
-        # Final clear to ensure everything is released
-        clear_memory(self.device)
-
         self.change_model_status(ModelType.LLM, ModelStatus.UNLOADED)
 
     def handle_request(
         self,
         data: Dict,
         extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
-    ) -> AgentChatResponse:
-        """
-        Handle an incoming request for LLM generation.
+    ) -> Dict[str, Any]:
+        """Handle an incoming request for LLM generation."""
+        self.logger.info(f"handle_request called on instance {id(self)}")
 
-        Args:
-            data: Dictionary containing request parameters, including:
-                - request_data.prompt: The text prompt to process
-                - request_data.action: The type of action to perform
-                - request_data.llm_request: Configuration for the request
-            extra_context: Dictionary of context keyed by unique identifier (e.g., URL, file path).
+        # Store request_id for use in response correlation
+        self._current_request_id = data.get("request_id")
 
-        Returns:
-            AgentChatResponse: The generated response from the LLM.
-        """
-        self.logger.debug("Handling request")
+        # CRITICAL: Clear ALL interrupt flags at the start of a new request
+        # This ensures that a new user message can be processed even if
+        # the previous generation was interrupted
+        self._interrupted = False
+        if self._chat_model and hasattr(self._chat_model, "set_interrupted"):
+            self._chat_model.set_interrupted(False)
+        if self._workflow_manager and hasattr(
+            self._workflow_manager, "set_interrupted"
+        ):
+            self._workflow_manager.set_interrupted(False)
+
         self._do_set_seed()
         self.load()
+
+        # Check if use_memory=False - if so, clear conversation history
+        llm_request = data["request_data"].get("llm_request")
+        if llm_request and not llm_request.use_memory:
+            self.logger.info(
+                "use_memory=False - clearing conversation history for this request"
+            )
+            if self._workflow_manager:
+                self._workflow_manager.clear_memory()
+
+        # Check if tool_categories specified - if so, filter tools
+        tools_filtered = False
+        print(f"[LLM MANAGER DEBUG] llm_request={llm_request}", flush=True)
+        if llm_request:
+            print(
+                f"[LLM MANAGER DEBUG] llm_request.tool_categories={llm_request.tool_categories}",
+                flush=True,
+            )
+        if llm_request and llm_request.tool_categories is not None:
+            print(
+                f"[LLM MANAGER DEBUG] APPLYING TOOL FILTER with {llm_request.tool_categories}",
+                flush=True,
+            )
+            self.logger.info(
+                f"Applying tool filter with categories: {llm_request.tool_categories}"
+            )
+            self._apply_tool_filter(llm_request.tool_categories)
+            tools_filtered = True
+        else:
+            print(
+                f"[LLM MANAGER DEBUG] NOT APPLYING FILTER - tool_categories is None or empty list",
+                flush=True,
+            )
+            self.logger.info("No tool filtering - using all tools")
 
         return self._do_generate(
             prompt=data["request_data"]["prompt"],
             action=data["request_data"]["action"],
             llm_request=data["request_data"]["llm_request"],
             extra_context=extra_context,
+            skip_tool_setup=tools_filtered,  # Pass flag to prevent tool override
         )
+
+    def _apply_tool_filter(self, tool_categories: List[str]) -> None:
+        """Apply tool category filter to workflow manager.
+
+        Args:
+            tool_categories: List of allowed category names. Empty list = no tools.
+                           None = all tools (handled by caller).
+        """
+        if not self._workflow_manager or not self._tool_manager:
+            self.logger.warning(
+                "Cannot apply tool filter - workflow_manager or tool_manager not initialized"
+            )
+            return
+
+        if not tool_categories:
+            # Empty list = disable all tools
+            self.logger.info(
+                "tool_categories=[] - disabling all tools for this request"
+            )
+            self._workflow_manager.update_tools([])
+            self.logger.info(
+                "Tools disabled successfully - workflow rebuilt with 0 tools"
+            )
+            return
+
+        # Filter tools by category
+        from airunner.components.llm.core.tool_registry import ToolCategory
+
+        allowed_categories = set()
+        for cat_name in tool_categories:
+            try:
+                # Convert string to ToolCategory enum
+                category = ToolCategory(cat_name.lower())
+                allowed_categories.add(category)
+            except ValueError:
+                self.logger.warning(
+                    f"Unknown tool category: {cat_name}. "
+                    f"Valid categories: {[c.value for c in ToolCategory]}"
+                )
+
+        if not allowed_categories:
+            self.logger.warning(
+                "No valid tool categories specified - using all tools"
+            )
+            return
+
+        filtered_tools = self._tool_manager.get_tools_by_categories(
+            list(allowed_categories)
+        )
+        self.logger.info(
+            f"Filtered to {len(filtered_tools)} tools from categories: {tool_categories}"
+        )
+        self._workflow_manager.update_tools(filtered_tools)
+
+    def _restore_all_tools(self) -> None:
+        """Restore all tools to workflow manager (called after filtered request)."""
+        if self._workflow_manager and self._tool_manager:
+            all_tools = self._tool_manager.get_all_tools()
+            self._workflow_manager.update_tools(all_tools)
 
     def do_interrupt(self) -> None:
-        """
-        Interrupt the ongoing chat process.
+        """Interrupt ongoing generation."""
+        self.logger.info(f"do_interrupt called on instance {id(self)}")
+        self._interrupted = True
 
-        This can be called to stop a generation that is in progress.
-        """
-        if self._chat_agent:
-            self._chat_agent.interrupt_process()
-
-    def on_conversation_deleted(self, data: Dict) -> None:
-        """
-        Handle conversation deletion event.
-
-        Args:
-            data: Information about the deleted conversation.
-        """
-        if self._chat_agent:
-            self._chat_agent.on_conversation_deleted(data)
-
-    def clear_history(self, data: Optional[Dict] = None) -> None:
-        """
-        Clear the chat history and set up a new conversation.
-
-        Args:
-            data: Optional data containing conversation ID or other parameters.
-                 If not provided, a new conversation will be created.
-        """
-        self.logger.debug("Clearing chat history")
-
-        # Initialize data dict if none provided
-        if data is None:
-            data = {}
-
-        conversation_id = data.get("conversation_id", None)
-
-        # Create new conversation if needed
-        conversation = None
-        if not conversation_id:
-            conversation = Conversation.create()
-            data["conversation_id"] = conversation.id
-            self.update_llm_generator_settings(
-                current_conversation_id=conversation.id
-            )
-        else:
-            conversation = Conversation.objects.get(conversation_id)
-
-        # Update settings to use the current conversations
-        if conversation:
-            Conversation.make_current(conversation.id)
-
-        # Clear history in the chat agent
-        if self._chat_agent:
-            self._chat_agent.clear_history(data)
-
-    def add_chatbot_response_to_history(self, message: str) -> None:
-        """
-        Add a chatbot-generated response to the chat history.
-
-        Args:
-            message: The response message to add to history.
-        """
-        if self._chat_agent:
-            self._chat_agent.add_chatbot_response_to_history(message)
-        else:
-            self.logger.warning("Cannot add response - chat agent not loaded")
-
-    def load_conversation(self, message: Dict) -> None:
-        """
-        Load an existing conversation into the chat agent and UI immediately.
-
-        Args:
-            message: Data containing the conversation to load.
-                     Expected to have 'conversation_id'.
-        """
-        conversation_id = message.get("conversation_id")
-        self.logger.debug(
-            f"Attempting to load conversation ID: {conversation_id}"
-        )
-
-        if self._chat_agent is not None:
+        if self._chat_model and hasattr(self._chat_model, "set_interrupted"):
             self.logger.info(
-                f"Chat agent is loaded. Passing conversation {conversation_id} to agent."
+                f"Setting interrupt on chat_model {id(self._chat_model)}"
             )
-            self._chat_agent.on_load_conversation(message)
-            # Clear any pending message as the agent has handled it.
-            self._pending_conversation_message = None
+            self._chat_model.set_interrupted(True)
         else:
             self.logger.warning(
-                f"Chat agent not loaded. Will use ConversationHistoryManager for conversation ID: {conversation_id}. "
-                f"UI should display this. Agent will be updated if it loads later."
+                f"Chat model not available or missing set_interrupted: {self._chat_model}"
             )
-            # Store the message so that if the agent loads later, it can sync its state.
-            self._pending_conversation_message = message
-            # The UI will independently use ConversationHistoryManager to display history.
-            # No direct action needed here for UI update as it's decoupled.
 
-    def reload_rag_engine(self) -> None:
-        """
-        Reload the Retrieval-Augmented Generation engine.
-
-        This is useful when the underlying documents or settings have changed.
-        """
-        if self._chat_agent:
-            self._chat_agent.reload_rag_engine()
+        if self._workflow_manager and hasattr(
+            self._workflow_manager, "set_interrupted"
+        ):
+            self.logger.info(
+                f"Setting interrupt on workflow_manager {id(self._workflow_manager)}"
+            )
+            self._workflow_manager.set_interrupted(True)
         else:
             self.logger.warning(
-                "Cannot reload RAG engine - chat agent not loaded"
+                f"Workflow manager not available: {self._workflow_manager}"
             )
 
     def on_section_changed(self) -> None:
-        """
-        Handle section change events by resetting the current tab in the chat agent.
-        """
-        if self._chat_agent:
-            self._chat_agent.current_tab = None
-        else:
-            self.logger.warning(
-                "Cannot update section - chat agent not loaded"
-            )
+        """Handle section change events."""
+        self.logger.info("Section changed, clearing history")
+        self.clear_history()
 
-    def _load_tokenizer(self) -> None:
-        """
-        Load the tokenizer for the selected model.
-
-        Sets self._tokenizer to the loaded tokenizer instance or None if loading fails.
-        """
-        # Skip if already loaded
-        if self._tokenizer is not None:
-            return
-
-        self.logger.debug(f"Loading tokenizer from {self.model_path}")
-        try:
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                device_map=self.device,
-                trust_remote_code=False,
-                torch_dtype=self.torch_dtype,
-            )
-            self.logger.debug("Tokenizer loaded")
-
-            # Configure tokenizer settings
-            if self._tokenizer:
-                self._tokenizer.use_default_system_prompt = False
-        except Exception as e:
-            self.logger.error(f"Error loading tokenizer: {e}")
-            self._tokenizer = None
-            self.logger.error("Tokenizer failed to load")
-
-    def _load_model(self) -> None:
-        """
-        Load the LLM model for the selected version.
-
-        Sets self._model to the loaded model instance or None if loading fails.
-        Also attempts to load adapters if available.
-        """
-        # Skip if already loaded
-        if self._model is not None:
-            return
-
-        self.logger.debug(f"Loading local LLM model from {self.model_path}")
-        try:
-            # Load the base model
-            self._model = AutoModelForCausalLM.from_pretrained(
-                self.model_path,
-                local_files_only=AIRUNNER_LOCAL_FILES_ONLY,
-                use_cache=self.use_cache,
-                trust_remote_code=False,
-                torch_dtype=self.torch_dtype,
-                device_map=self.device,
-                attn_implementation=self.attn_implementation,
-            )
-
-            if PeftModel is not None:
-                # Load enabled adapters from QSettings
-                try:
-                    qs = get_qsettings()
-                    enabled_adapters_json = qs.value(
-                        "llm_settings/enabled_adapters", "[]"
-                    )
-                    self.logger.info(
-                        f"Reading enabled adapters from QSettings: {enabled_adapters_json}"
-                    )
-                    enabled_adapter_names = json.loads(enabled_adapters_json)
-                    self.logger.info(
-                        f"Parsed enabled adapter names: {enabled_adapter_names}"
-                    )
-
-                    if enabled_adapter_names:
-                        # Query database for adapter paths
-                        adapters = FineTunedModel.objects.all()
-                        enabled_adapters = [
-                            a
-                            for a in adapters
-                            if a.name in enabled_adapter_names
-                        ]
-                        self.logger.info(
-                            f"Found {len(enabled_adapters)} adapters in database matching enabled names"
-                        )
-
-                        loaded_count = 0
-                        for adapter in enabled_adapters:
-                            if adapter.adapter_path and os.path.exists(
-                                adapter.adapter_path
-                            ):
-                                self.logger.info(
-                                    f"Loading adapter '{adapter.name}' from {adapter.adapter_path}"
-                                )
-                                # Check model type before loading
-                                is_peft_before = isinstance(
-                                    self._model, PeftModel
-                                )
-                                self.logger.debug(
-                                    f"Model is PEFT model before loading: {is_peft_before}"
-                                )
-
-                                self._model = PeftModel.from_pretrained(
-                                    self._model, adapter.adapter_path
-                                )
-
-                                # Verify adapter loaded and log details
-                                is_peft_after = isinstance(
-                                    self._model, PeftModel
-                                )
-                                self.logger.debug(
-                                    f"Model is PEFT model after loading: {is_peft_after}"
-                                )
-
-                                if hasattr(self._model, "active_adapters"):
-                                    self.logger.info(
-                                        f"Active adapters: {self._model.active_adapters}"
-                                    )
-                                if hasattr(self._model, "peft_config"):
-                                    self.logger.info(
-                                        f"PEFT config keys: {list(self._model.peft_config.keys())}"
-                                    )
-
-                                # Ensure adapter is in inference mode (not training mode)
-                                self._model.eval()
-                                loaded_count += 1
-                                self.logger.info(
-                                    f"✓ Successfully loaded adapter '{adapter.name}' (inference mode)"
-                                )
-                            else:
-                                self.logger.warning(
-                                    f"Adapter '{adapter.name}' path does not exist: {adapter.adapter_path}"
-                                )
-
-                        self.logger.info(
-                            f"Loaded {loaded_count}/{len(enabled_adapter_names)} enabled adapters"
-                        )
-                    else:
-                        self.logger.info("No adapters enabled in settings")
-
-                except json.JSONDecodeError as e:
-                    self.logger.error(
-                        f"Error parsing enabled adapters JSON: {e}"
-                    )
-                except Exception as e:
-                    self.logger.error(
-                        f"Error loading adapters (continuing with base model): {e}"
-                    )
-
-        except Exception as e:
-            self.logger.error(f"Error loading model: {e}")
-            self._model = None
-
-    def _load_agent(self) -> None:
-        """
-        Load the appropriate chat agent based on settings.
-
-        Sets self._chat_agent to the loaded agent instance or None if loading fails.
-        """
-        # Skip if already loaded
-        if self._chat_agent is not None:
-            return
-
-        self.logger.info("Loading local chat agent")
-        self._chat_agent = self.local_agent_class_(
-            model=self._model,
-            tokenizer=self._tokenizer,
-            default_tool_choice=None,
-            llm_settings=self.llm_settings,
-        )
-
-        self.logger.info("Chat agent loaded")
-
-    def _unload_model(self) -> None:
-        """
-        Unload the LLM model from memory.
-
-        Sets self._model to None after unloading.
-        """
-        self.logger.debug("Unloading model")
-        try:
-            if self._model is not None:
-                del self._model
-                self._model = None
-                # Force garbage collection
-                gc.collect()
-        except AttributeError as e:
-            self.logger.warning(f"Error unloading model: {e}")
-            self._model = None
-
-    def _unload_tokenizer(self) -> None:
-        """
-        Unload the tokenizer from memory.
-
-        Sets self._tokenizer to None after unloading.
-        """
-        self.logger.debug("Unloading tokenizer")
-        try:
-            if self._tokenizer is not None:
-                del self._tokenizer
-                self._tokenizer = None
-        except AttributeError as e:
-            self.logger.warning(f"Error unloading tokenizer: {e}")
-            self._tokenizer = None
-
-    def _unload_agent(self) -> None:
-        """
-        Unload the chat agent from memory.
-
-        Calls the agent's unload method if available, then sets self._chat_agent to None.
-        """
-        if self._chat_agent is not None:
-            self.logger.debug("Unloading chat agent")
-            try:
-                self._chat_agent.unload()
-                del self._chat_agent
-                self._chat_agent = None
-            except AttributeError as e:
-                self.logger.warning(f"Error unloading chat agent: {e}")
-                self._chat_agent = None
-
-    def _do_generate(
-        self,
-        prompt: str,
-        action: LLMActionType,
-        system_prompt: Optional[str] = None,
-        rag_system_prompt: Optional[str] = None,
-        llm_request: Optional[Any] = None,
-        do_tts_reply: bool = True,
-        extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
-    ) -> AgentChatResponse:
-        """
-        Generate a response using the loaded LLM.
-
-        This method handles the core generation process, including:
-        - Checking if model reload is needed
-        - Calling the appropriate chat agent method
-        - Sending final message signals
-
-        Args:
-            prompt: The text prompt for generation.
-            action: The type of action to perform.
-            system_prompt: Optional system prompt to override defaults.
-            rag_system_prompt: Optional system prompt for RAG operations.
-            llm_request: Optional request configuration.
-            do_tts_reply: Whether to convert the reply to speech.
-            extra_context: Dictionary of context keyed by unique identifier (e.g., URL, file path).
-
-        Returns:
-            AgentChatResponse: The generated response.
-        """
-        self.logger.debug("Generating response")
-
-        # Reload model if path changed
-        if self._current_model_path != self.model_path:
-            self.unload()
-            self.load()
-
-        # Use code defaults (not database) for better repetition handling
-        llm_request = llm_request or LLMRequest()
-
-        # Always pass the raw prompt and action to the agent; let the agent handle slash commands/tool routing
-        response = self._chat_agent.chat(
-            prompt,
-            action=action,
-            system_prompt=system_prompt,
-            rag_system_prompt=rag_system_prompt,
-            llm_request=llm_request,
-            extra_context=extra_context,
-        )
-
-        if action is LLMActionType.CHAT:
-            self._send_final_message(llm_request)
-
-        return response
-
-    def _send_final_message(
-        self, llm_request: Optional[LLMRequest] = None
-    ) -> None:
-        """
-        Send a signal indicating the end of a message stream.
-
-        This helps clients know when a complete response has been delivered.
-        """
-        self.logger.debug("Sending final message")
-        self.api.llm.send_llm_text_streamed_signal(
-            LLMResponse(
-                node_id=llm_request.node_id if llm_request else None,
-                is_end_of_message=True,
-            )
-        )
-
-    def _do_set_seed(self) -> None:
-        """
-        Set random seeds for deterministic generation.
-
-        This ensures reproducible results when using the same seed.
-        """
-        self.logger.debug("Setting seed")
-
-        # Get seed from settings
-        if self.llm_generator_settings.override_parameters:
-            seed = self.llm_generator_settings.seed
-            random_seed = self.llm_generator_settings.random_seed
-        else:
-            seed = self.chatbot.seed
-            random_seed = self.chatbot.random_seed
-
-        # Generate random seed if needed
-        if random_seed:
-            seed = random.randint(-AIRUNNER_MAX_SEED, AIRUNNER_MAX_SEED)
-
-        # Set seeds for all relevant components
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        random.seed(seed)
-
-        # Configure deterministic behavior
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-        # Set tokenizer seed if available
-        if self._tokenizer:
-            self._tokenizer.seed = seed
+    # Specialized model methods

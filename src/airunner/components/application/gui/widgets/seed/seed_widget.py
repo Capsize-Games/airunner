@@ -53,7 +53,7 @@ class SeedWidget(BaseWidget):
             )
             self.ui.lineEdit.setText(str(seed))
             self.ui.lineEdit.blockSignals(False)
-        except RuntimeError as _e:
+        except RuntimeError:
             pass
 
     def action_clicked_button_random_seed(self, value):

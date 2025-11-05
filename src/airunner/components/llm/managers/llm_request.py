@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from llama_cloud import MessageRole
 
@@ -55,6 +55,9 @@ class LLMRequest:
     do_tts_reply: bool = True
     node_id: Optional[str] = None
     use_memory: bool = True
+    tool_categories: Optional[List[str]] = (
+        None  # Restrict to specific tool categories (e.g., ["math", "conversation"])
+    )
     role: MessageRole = MessageRole.USER
 
     def to_dict(self) -> Dict:
@@ -95,6 +98,7 @@ class LLMRequest:
 
         data.pop("node_id")
         data.pop("use_memory")
+        data.pop("tool_categories")
         data.pop("role")
 
         return data
@@ -150,7 +154,8 @@ class LLMRequest:
             num_beams=num_beams,
             num_return_sequences=num_return_sequences,
             repetition_penalty=repetition_penalty / 100.0,
-            temperature=temperature / 10000.0,
+            temperature=temperature
+            / 1000.0,  # Fixed: was /10000.0 causing 0.1 instead of 1.0
             top_k=top_k,  # Ensure top_k is correctly passed through
             top_p=top_p / 1000.0,
             use_cache=use_cache,
@@ -319,12 +324,14 @@ class LLMRequest:
             LLMActionType.WORKFLOW_INTERACTION,
         ):
             # Commands/Decisions: Precise, deterministic
+            # NOTE: High max_new_tokens allows complete tool calls + explanations
+            # and multi-step reasoning without truncation
             return cls(
                 do_sample=False,  # Deterministic
                 temperature=0.1,  # Very precise
                 repetition_penalty=1.0,  # No penalty needed
                 no_repeat_ngram_size=0,  # Allow any patterns
-                max_new_tokens=100,  # Short, focused
+                max_new_tokens=4096,  # Increased for complex reasoning tasks
                 top_k=5,  # Very focused
                 top_p=0.95,
             )

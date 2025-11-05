@@ -380,7 +380,7 @@ class NodeGraph(QtCore.QObject):
                     try:
                         self.import_session(local_file)
                         continue
-                    except Exception as e:
+                    except Exception:
                         not_supported_urls.append(url)
 
                 url_str = url.toString()
@@ -391,7 +391,7 @@ class NodeGraph(QtCore.QObject):
                         ext = uri_search.group(2)
                         try:
                             self.import_session("{}{}".format(path, ext))
-                        except Exception as e:
+                        except Exception:
                             not_supported_urls.append(url)
 
             if not_supported_urls:
@@ -1423,7 +1423,7 @@ class NodeGraph(QtCore.QObject):
         assert isinstance(
             node, NodeObject
         ), "node must be a instance of a NodeObject."
-        node_id = node.id
+        node.id
         if push_undo:
             self._undo_stack.beginMacro(
                 'delete node: "{}"'.format(node.name())
@@ -2517,7 +2517,7 @@ class NodeGraph(QtCore.QObject):
 
         # build new sub graph.
         node_factory = copy.deepcopy(self.node_factory)
-        layout_direction = self.layout_direction()
+        self.layout_direction()
         kwargs = {
             "layout_direction": self.layout_direction(),
             "pipe_style": self.pipe_style(),

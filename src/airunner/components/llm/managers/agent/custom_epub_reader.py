@@ -4,7 +4,7 @@ Custom EPUB reader for EPUBs with numbered page structure
 
 import os
 import zipfile
-from typing import Dict, List, Optional
+from typing import List, Optional
 from bs4 import BeautifulSoup
 from llama_index.core import Document
 from llama_index.core.readers.base import BaseReader

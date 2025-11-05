@@ -4,7 +4,7 @@ Layer composition utilities for combining visible layers into composite images.
 
 from typing import List, Optional, Tuple, Any
 import logging
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from airunner.components.art.data.canvas_layer import CanvasLayer
 from airunner.utils.image import convert_binary_to_image

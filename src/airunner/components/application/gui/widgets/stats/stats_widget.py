@@ -4,12 +4,16 @@ import subprocess
 import psutil
 import torch
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QTableWidgetItem, QApplication
+from PySide6.QtWidgets import QTableWidgetItem
 from airunner.enums import SignalCode
 from airunner.gui.styles.styles_mixin import StylesMixin
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.application.gui.widgets.stats.templates.stats_ui import Ui_stats_widget
-from airunner.components.application.gui.windows.main.pipeline_mixin import PipelineMixin
+from airunner.components.application.gui.widgets.stats.templates.stats_ui import (
+    Ui_stats_widget,
+)
+from airunner.components.application.gui.windows.main.pipeline_mixin import (
+    PipelineMixin,
+)
 from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 
 
@@ -119,7 +123,7 @@ class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
         try:
             process = psutil.Process(os.getpid())
             memory_info = process.memory_info()
-        except Exception as _e:
+        except Exception:
             return
         used = memory_info.rss / (1024.0**3)  # Resident Set Size
         total = psutil.virtual_memory().total / (1024.0**3)
@@ -148,7 +152,6 @@ class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
         self.ui.memory_stats.item(row_count - 1, 3).setForeground(
             Qt.GlobalColor.green
         )
-        QApplication.processEvents()
 
     @staticmethod
     def set_color(_row, _col, status):
@@ -162,4 +165,3 @@ class StatsWidget(BaseWidget, PipelineMixin, StylesMixin):
         """
         self.console_history.append(data["message"])
         self.ui.console.append(data["message"])
-        QApplication.processEvents()

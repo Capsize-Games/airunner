@@ -6,15 +6,9 @@ import logging
 from typing import Optional, Any
 from dataclasses import dataclass
 
-from PIL.Image import Image
-from typing import Dict, List, Optional
-from dataclasses import dataclass, asdict
+from typing import Optional
+from dataclasses import dataclass
 
-from airunner.settings import AIRUNNER_DEFAULT_SCHEDULER
-from airunner.enums import ImagePreset, QualityEffects
-from airunner.components.art.managers.stablediffusion.image_request import (
-    ImageRequest,
-)
 
 logger = logging.getLogger(__name__)
 

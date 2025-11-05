@@ -1,0 +1,94 @@
+{
+    "name": "Sequential Tool Chain",
+    "description": "Chain multiple tools together in sequence, passing outputs as inputs to next tool",
+    "category": "tools",
+    "tags": [
+        "tools",
+        "chain",
+        "sequence",
+        "pipeline"
+    ],
+    "author": "AI Runner",
+    "version": "1.0",
+    "variables": {
+        "temperature": 0.5
+    },
+    "nodes": [
+        {
+            "node_identifier": "ai_runner.nodes.InputNode",
+            "name": "initial_input",
+            "pos_x": 100,
+            "pos_y": 200,
+            "properties": {
+                "label": "Input",
+                "description": "Initial input for tool chain"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.ToolNode",
+            "name": "tool_1",
+            "pos_x": 300,
+            "pos_y": 200,
+            "properties": {
+                "tool_name": "search_web",
+                "description": "First tool: Search the web"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.ToolNode",
+            "name": "tool_2",
+            "pos_x": 500,
+            "pos_y": 200,
+            "properties": {
+                "tool_name": "extract_text",
+                "description": "Second tool: Extract text from results"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.ToolNode",
+            "name": "tool_3",
+            "pos_x": 700,
+            "pos_y": 200,
+            "properties": {
+                "tool_name": "summarize",
+                "description": "Third tool: Summarize extracted text"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.OutputNode",
+            "name": "chain_result",
+            "pos_x": 900,
+            "pos_y": 200,
+            "properties": {
+                "label": "Result",
+                "description": "Final output from tool chain"
+            }
+        }
+    ],
+    "connections": [
+        {
+            "output_node_name": "initial_input",
+            "output_port": "output",
+            "input_node_name": "tool_1",
+            "input_port": "input"
+        },
+        {
+            "output_node_name": "tool_1",
+            "output_port": "output",
+            "input_node_name": "tool_2",
+            "input_port": "input"
+        },
+        {
+            "output_node_name": "tool_2",
+            "output_port": "output",
+            "input_node_name": "tool_3",
+            "input_port": "input"
+        },
+        {
+            "output_node_name": "tool_3",
+            "output_port": "output",
+            "input_node_name": "chain_result",
+            "input_port": "input"
+        }
+    ]
+}

@@ -3,11 +3,10 @@ import urllib.parse
 import posixpath
 from http.server import SimpleHTTPRequestHandler
 from socketserver import ThreadingTCPServer
-from PySide6.QtCore import QThread, QFileSystemWatcher, QTimer
+from PySide6.QtCore import QThread
 import jinja2
 import mimetypes
 import json
-import ssl
 import logging
 import functools
 
@@ -85,10 +84,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         if self.lna_enabled:
             self._send_lna_cors_headers()
-        self.send_header(
-            "Strict-Transport-Security",
-            "max-age=63072000; includeSubDomains; preload",
-        )
+        # Security headers (HSTS removed since we're using HTTP for localhost)
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")
@@ -107,7 +103,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             self._add_no_cache_headers = False
         # Add permissive CORS for font resources and MathJax assets so the
         # QWebEngineView won't block font loads when origin differs by host
-        # (e.g. requests coming from https://127.0.0.1 vs https://localhost).
+        # (e.g. requests coming from http://127.0.0.1 vs http://localhost).
         try:
             parsed = urllib.parse.urlparse(self.path)
             path = parsed.path or ""
@@ -122,7 +118,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                 # Restrict to the exact server origin to avoid overly-permissive CORS
                 self.send_header(
                     "Access-Control-Allow-Origin",
-                    f"https://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}",
+                    f"http://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}",
                 )
                 self.send_header(
                     "Access-Control-Allow-Methods",
@@ -187,7 +183,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                     template = env.get_template(template_rel)
                     # Provide static_base_path for template rendering
                     context = {
-                        "static_base_path": f"https://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}"
+                        "static_base_path": f"http://{LOCAL_SERVER_HOST}:{LOCAL_SERVER_PORT}"
                     }
                     rendered = template.render(**context)
                     self.send_response(200)
@@ -223,7 +219,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         # Check if this is a static file within a project directory (e.g. game/css/file.css, game/js/file.js)
         path_parts = rel_path_no_query.split("/")
         if len(path_parts) >= 3:  # e.g. ["game", "css", "file.css"]
-            project_name = path_parts[0]
+            path_parts[0]
             static_type = path_parts[1]  # "css", "js", "images", etc.
             if static_type in [
                 "css",
@@ -547,29 +543,7 @@ class LocalHttpServerThread(QThread):
 
     def run(self):
         import logging
-        from airunner.settings import AIRUNNER_BASE_PATH
 
-        # Determine cert/key paths as in launcher.py
-        cert_dir = os.path.join(AIRUNNER_BASE_PATH, "certs")
-        cert_file = os.environ.get(
-            "AIRUNNER_SSL_CERT", os.path.join(cert_dir, "cert.pem")
-        )
-        key_file = os.environ.get(
-            "AIRUNNER_SSL_KEY", os.path.join(cert_dir, "key.pem")
-        )
-        # Use explicit overrides if provided
-        if self.certfile:
-            cert_file = self.certfile
-        if self.keyfile:
-            key_file = self.keyfile
-        # Validate cert/key existence
-        if not (os.path.exists(cert_file) and os.path.exists(key_file)):
-            logging.error(
-                f"SSL certificate or key not found. Expected cert: {cert_file}, key: {key_file}. Cannot start HTTPS server."
-            )
-            raise RuntimeError(
-                "SSL certificate or key not found. Cannot start HTTPS server."
-            )
         static_dirs = [
             os.path.abspath(
                 os.path.join(os.path.dirname(__file__), "../../static")
@@ -597,28 +571,9 @@ class LocalHttpServerThread(QThread):
         self._server = ReusableTCPServer(
             (LOCAL_SERVER_HOST, self.port), handler_class
         )
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        # Enforce minimum TLS version 1.2 for security
-        if hasattr(context, "minimum_version"):
-            context.minimum_version = ssl.TLSVersion.TLSv1_2
-        else:
-            # Fallback for older Python: explicitly disable TLSv1 and TLSv1_1
-            context.options |= getattr(ssl, "OP_NO_TLSv1", 0)
-            context.options |= getattr(ssl, "OP_NO_TLSv1_1", 0)
-            # If neither minimum_version nor options are available, raise error
-            if not (
-                getattr(ssl, "OP_NO_TLSv1", None)
-                and getattr(ssl, "OP_NO_TLSv1_1", None)
-            ):
-                raise RuntimeError(
-                    "Python SSLContext does not support disabling TLSv1/TLSv1_1. Upgrade your Python/SSL."
-                )
-        context.load_cert_chain(certfile=cert_file, keyfile=key_file)
-        self._server.socket = context.wrap_socket(
-            self._server.socket, server_side=True
-        )
+        # Use plain HTTP for local-only communication (no SSL overhead or certificate issues)
         logging.info(
-            f"Local HTTPS server running with HTTPS on port {self.port} (cert: {cert_file}, key: {key_file})"
+            f"Local HTTP server running on http://{LOCAL_SERVER_HOST}:{self.port}"
         )
         self._server.serve_forever()
 

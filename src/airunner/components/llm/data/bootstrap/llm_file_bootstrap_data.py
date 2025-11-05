@@ -1,4 +1,61 @@
 LLM_FILE_BOOTSTRAP_DATA = {
+    "meta-llama/Llama-3.1-8B-Instruct": {
+        "path_settings": "llm_causallm_model_path",
+        "files": [
+            "config.json",
+            "generation_config.json",
+            "model-00001-of-00004.safetensors",
+            "model-00002-of-00004.safetensors",
+            "model-00003-of-00004.safetensors",
+            "model-00004-of-00004.safetensors",
+            "model.safetensors.index.json",
+            "special_tokens_map.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+        ],
+    },
+    "Qwen/Qwen2.5-7B-Instruct": {
+        "path_settings": "llm_causallm_model_path",
+        "files": [
+            "config.json",
+            "generation_config.json",
+            "model-00001-of-00004.safetensors",
+            "model-00002-of-00004.safetensors",
+            "model-00003-of-00004.safetensors",
+            "model-00004-of-00004.safetensors",
+            "model.safetensors.index.json",
+            "merges.txt",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "vocab.json",
+        ],
+    },
+    "CohereForAI/c4ai-command-r-08-2024": {
+        "path_settings": "llm_causallm_model_path",
+        "files": [
+            "config.json",
+            "generation_config.json",
+            "model-00001-of-00005.safetensors",
+            "model-00002-of-00005.safetensors",
+            "model-00003-of-00005.safetensors",
+            "model-00004-of-00005.safetensors",
+            "model-00005-of-00005.safetensors",
+            "model.safetensors.index.json",
+            "special_tokens_map.json",
+            "tokenizer.json",
+            "tokenizer_config.json",
+        ],
+    },
+    "mistralai/Ministral-8B-Instruct-2410": {
+        "path_settings": "llm_causallm_model_path",
+        "files": [
+            "config.json",
+            "consolidated.safetensors",
+            "generation_config.json",
+            "params.json",
+            "tekken.json",
+        ],
+    },
     "w4ffl35/Ministral-8B-Instruct-2410-doublequant": {
         "path_settings": "llm_causallm_model_path",
         "files": [

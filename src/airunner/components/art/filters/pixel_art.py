@@ -35,13 +35,20 @@ class PixelFilter(BaseFilter):
         Returns:
             The pixel art PIL Image.
         """
-        # Retrieve filter parameters with defaults
-        number_of_colors = getattr(self, "number_of_colors", 24)
-        base_size = getattr(self, "base_size", 256)
-        smoothing = getattr(self, "smoothing", 0)
+        # Retrieve filter parameters with defaults and ensure they're integers
+        number_of_colors = int(getattr(self, "number_of_colors", 24))
+        base_size = int(getattr(self, "base_size", 256))
+        smoothing = int(getattr(self, "smoothing", 0))
 
-        # Ensure number_of_colors is an integer divisible by 2
-        number_of_colors = int(number_of_colors) // 2 * 2
+        # Ensure number_of_colors is divisible by 2
+        number_of_colors = number_of_colors // 2 * 2
+
+        # Validate number_of_colors
+        if number_of_colors < 2:
+            self.logger.warning(
+                f"Invalid number_of_colors ({number_of_colors}), using default 24"
+            )
+            number_of_colors = 24
 
         # Quantize the image (reduce colors) if needed
         if self.current_number_of_colors != number_of_colors or do_reset:
@@ -49,8 +56,9 @@ class PixelFilter(BaseFilter):
                 self.current_number_of_colors = number_of_colors
                 quantized = image.quantize(number_of_colors)
                 self.image = quantized.convert("RGBA")
-            except ValueError:
-                self.logger.debug("Bad number of colors")
+            except ValueError as e:
+                self.logger.error(f"Quantization failed: {e}")
+                return image
 
         image = self.image
 

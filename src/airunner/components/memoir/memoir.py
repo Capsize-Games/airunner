@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
 from tqdm import tqdm
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any
 
 # Mock objects for demonstration if transformers is not installed.
 # In a real scenario, you would import these from the transformers library.

@@ -1,0 +1,132 @@
+{
+    "name": "Agent Loop Workflow",
+    "description": "Autonomous agent workflow with reasoning, action selection, tool execution, and observation feedback loop",
+    "category": "agent",
+    "tags": [
+        "agent",
+        "reasoning",
+        "tools",
+        "loop",
+        "autonomous"
+    ],
+    "author": "AI Runner",
+    "version": "1.0",
+    "variables": {
+        "max_iterations": 5,
+        "temperature": 0.7,
+        "agent_name": "research_expert"
+    },
+    "nodes": [
+        {
+            "node_identifier": "ai_runner.nodes.InputNode",
+            "name": "task_input",
+            "pos_x": 100,
+            "pos_y": 300,
+            "properties": {
+                "label": "Task",
+                "description": "The task for the agent to accomplish"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.AgentReasoningNode",
+            "name": "reasoning",
+            "pos_x": 300,
+            "pos_y": 300,
+            "properties": {
+                "agent_name": "{{agent_name}}",
+                "description": "Agent analyzes task and plans next action"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.ActionSelectionNode",
+            "name": "select_action",
+            "pos_x": 500,
+            "pos_y": 300,
+            "properties": {
+                "description": "Select best tool/action for current step"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.ToolExecutionNode",
+            "name": "execute_tool",
+            "pos_x": 700,
+            "pos_y": 300,
+            "properties": {
+                "description": "Execute selected tool with parameters"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.ObservationNode",
+            "name": "observation",
+            "pos_x": 900,
+            "pos_y": 300,
+            "properties": {
+                "description": "Observe tool execution result"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.LoopConditionNode",
+            "name": "check_completion",
+            "pos_x": 700,
+            "pos_y": 100,
+            "properties": {
+                "max_iterations": "{{max_iterations}}",
+                "description": "Check if task is complete or max iterations reached"
+            }
+        },
+        {
+            "node_identifier": "ai_runner.nodes.OutputNode",
+            "name": "final_result",
+            "pos_x": 900,
+            "pos_y": 100,
+            "properties": {
+                "label": "Result",
+                "description": "Final agent result"
+            }
+        }
+    ],
+    "connections": [
+        {
+            "output_node_name": "task_input",
+            "output_port": "output",
+            "input_node_name": "reasoning",
+            "input_port": "task"
+        },
+        {
+            "output_node_name": "reasoning",
+            "output_port": "plan",
+            "input_node_name": "select_action",
+            "input_port": "input"
+        },
+        {
+            "output_node_name": "select_action",
+            "output_port": "action",
+            "input_node_name": "execute_tool",
+            "input_port": "tool"
+        },
+        {
+            "output_node_name": "execute_tool",
+            "output_port": "result",
+            "input_node_name": "observation",
+            "input_port": "input"
+        },
+        {
+            "output_node_name": "observation",
+            "output_port": "output",
+            "input_node_name": "check_completion",
+            "input_port": "observation"
+        },
+        {
+            "output_node_name": "check_completion",
+            "output_port": "continue",
+            "input_node_name": "reasoning",
+            "input_port": "previous_observation"
+        },
+        {
+            "output_node_name": "check_completion",
+            "output_port": "complete",
+            "input_node_name": "final_result",
+            "input_port": "input"
+        }
+    ]
+}

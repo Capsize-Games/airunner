@@ -180,7 +180,6 @@ class ExampleGame(PygameAdapter):
         """Process all pending Pygame events"""
         # We now rely on handle_pygame_event being called directly from PygameWidget
         # This is important: we don't call pygame.event.get() here to avoid duplicate events
-        pass
 
     def update(self):
         """Update game state"""

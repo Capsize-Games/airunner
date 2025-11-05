@@ -1,6 +1,7 @@
 from typing import Optional, Dict
 import glob
 import logging
+import os
 import os.path
 import signal
 import traceback
@@ -10,6 +11,10 @@ from PySide6.QtCore import QObject, QTimer
 from PySide6.QtGui import QGuiApplication, Qt, QWindow
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTranslator, QLocale
+
+# CRITICAL: Set PyTorch CUDA memory allocator config BEFORE importing torch
+# This prevents fragmentation issues when loading large quantized models
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 from airunner.components.settings.data.language_settings import (
     LanguageSettings,
@@ -37,7 +42,6 @@ from airunner.settings import (
 )
 from airunner.components.server.local_http_server import LocalHttpServerThread
 from airunner.components.splash_screen.splash_screen import SplashScreen
-import os
 import subprocess
 import sys
 from airunner.settings import LOCAL_SERVER_PORT
@@ -93,9 +97,19 @@ class App(MediatorMixin, SettingsMixin, QObject):
         initialize_gui: bool = True,  # New flag to control GUI initialization
     ):
         """
-        Initialize the application and run as a GUI application or a socket server.
-        :param main_window_class: The main window class to use for the application.
+        Initialize the application.
+
+        Args:
+            no_splash: Skip splash screen display (GUI mode only)
+            main_window_class: Custom main window class (GUI mode only)
+            window_class_params: Parameters for main window (GUI mode only)
+            initialize_gui: If False, run in headless mode (no GUI)
         """
+        # Check environment variable for headless mode
+        headless_env = os.environ.get("AIRUNNER_HEADLESS", "0") == "1"
+        if headless_env:
+            initialize_gui = False
+
         self.main_window_class_ = main_window_class
         self.window_class_params = window_class_params or {}
         self.no_splash = no_splash
@@ -103,6 +117,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self.splash = None
         self.initialize_gui = initialize_gui  # Store the flag
         self.http_server_thread = None
+        self.api_server_thread = None  # New: API server for headless mode
+        self.is_running = False
 
         """
         Mediator and Settings mixins are initialized here, enabling the application
@@ -116,41 +132,252 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self._ensure_mathjax()
 
         # Start HTTPS server for static assets (MathJax and content widgets)
-        static_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "static")
-        )
-        # Find all components/**/gui/static directories
-        components_static_dirs = glob.glob(
-            os.path.join(
-                os.path.dirname(__file__), "components", "**", "gui", "static"
-            ),
-            recursive=True,
-        )
-        # Add user web dir if it exists
-        static_search_dirs = [static_dir] + components_static_dirs
-        if os.path.isdir(self.user_web_dir):
-            static_search_dirs.append(self.user_web_dir)
-        mathjax_dir = os.path.join(
-            static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
-        )
-        if self.initialize_gui and os.path.isdir(mathjax_dir):
-            logging.info("Starting local HTTPS server for static assets.")
-            self.http_server_thread = LocalHttpServerThread(
-                directory=static_dir,
-                additional_directories=static_search_dirs[1:],
-                port=LOCAL_SERVER_PORT,
-                lna_enabled=LNA_ENABLED,  # Pass LNA mode to server
+        # Only needed in GUI mode
+        if self.initialize_gui:
+            static_dir = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "static")
             )
-            self.http_server_thread.start()
-            self.start()
-            self.set_translations()
-            self.run()
-        elif self.initialize_gui:
+            # Find all components/**/gui/static directories
             print(
-                f"ERROR: MathJax directory not found: {mathjax_dir}\nPlease run the MathJax setup script or follow the manual instructions in the README."
+                flush=True,
             )
-            raise RuntimeError(
-                "MathJax is required for LaTeX rendering. See README.md for setup instructions."
+            components_static_dirs = glob.glob(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "components",
+                    "**",
+                    "gui",
+                    "static",
+                ),
+                recursive=True,
+            )
+            print(
+                flush=True,
+            )
+            # Add user web dir if it exists
+            static_search_dirs = [static_dir] + components_static_dirs
+            if os.path.isdir(self.user_web_dir):
+                static_search_dirs.append(self.user_web_dir)
+            mathjax_dir = os.path.join(
+                static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
+            )
+            if os.path.isdir(mathjax_dir):
+                logging.info("Starting local HTTPS server for static assets.")
+                print(
+                    flush=True,
+                )
+                self.http_server_thread = LocalHttpServerThread(
+                    directory=static_dir,
+                    additional_directories=static_search_dirs[1:],
+                    port=LOCAL_SERVER_PORT,
+                    lna_enabled=LNA_ENABLED,  # Pass LNA mode to server
+                )
+                print(
+                    flush=True,
+                )
+                self.http_server_thread.start()
+                self.start()
+                print(
+                    flush=True,
+                )
+                self.set_translations()
+                self.run()
+            else:
+                print(
+                    f"ERROR: MathJax directory not found: {mathjax_dir}\nPlease run the MathJax setup script or follow the manual instructions in the README."
+                )
+                raise RuntimeError(
+                    "MathJax is required for LaTeX rendering. See README.md for setup instructions."
+                )
+        else:
+            # Headless mode - just initialize core systems
+            logging.info("Running in headless mode (no GUI)")
+            self._init_headless_services()
+            # Note: Call run() after __init__ to start headless event loop
+            self.is_running = True
+
+        # Initialize knowledge extraction system (works in both GUI and headless modes)
+        self._initialize_knowledge_system()
+
+    def _init_headless_services(self):
+        """Initialize services for headless mode (no GUI).
+
+        Creates minimal Qt event loop and starts HTTP API server.
+        """
+        # Create QCoreApplication for Qt event loop (needed by workers)
+        # This is minimal Qt without any GUI components
+        from PySide6.QtCore import QCoreApplication
+
+        self.app = QCoreApplication.instance()
+        if self.app is None:
+            self.app = QCoreApplication([])
+        self.app.api = self
+        logging.info("Qt Core event loop initialized (headless mode)")
+
+        # Initialize workers BEFORE starting HTTP server
+        # so they're ready to handle requests immediately
+        self._initialize_headless_workers()
+
+        # Start API server for /llm, /art, /stt, /tts endpoints
+        # Skip if we're being created from within an HTTP request handler
+        # (server is already running in that case)
+        if os.environ.get("AIRUNNER_SERVER_RUNNING") != "1":
+            from airunner.components.server.api.api_server_thread import (
+                APIServerThread,
+            )
+
+            host = os.environ.get("AIRUNNER_HTTP_HOST", "0.0.0.0")
+            port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8080"))
+
+            logging.info(f"Starting API server on {host}:{port}")
+            self.api_server_thread = APIServerThread(host=host, port=port)
+            self.api_server_thread.start()
+            logging.info(
+                f"API server started - /health, /llm, /art endpoints available"
+            )
+            # Mark that server is now running
+            os.environ["AIRUNNER_SERVER_RUNNING"] = "1"
+        else:
+            logging.info(
+                "API server already running - skipping initialization"
+            )
+
+    def _initialize_knowledge_system(self):
+        """Initialize the automatic knowledge extraction system."""
+        # Skip if knowledge system is disabled (e.g., in headless mode)
+        if os.environ.get("AIRUNNER_KNOWLEDGE_ON", "1") == "0":
+            logging.info("Knowledge system disabled")
+            return
+
+        try:
+            from airunner.components.knowledge import (
+                initialize_knowledge_system,
+            )
+
+            initialize_knowledge_system()
+            logging.info("Knowledge extraction system initialized")
+
+            # Run one-time knowledge migration if needed
+            self._run_knowledge_migration_if_needed()
+        except Exception as e:
+            logging.error(
+                f"Failed to initialize knowledge system: {e}", exc_info=True
+            )
+
+    def _initialize_headless_workers(self):
+        """Initialize essential workers for headless mode.
+
+        Only initializes workers needed for API functionality:
+        - LLMGenerateWorker: Handles LLM text generation requests
+        """
+        try:
+            from airunner.utils.application.create_worker import (
+                create_worker,
+            )
+            from airunner.components.llm.workers.llm_generate_worker import (
+                LLMGenerateWorker,
+            )
+
+            self._llm_generate_worker = create_worker(LLMGenerateWorker)
+            logging.info("Headless workers initialized (LLM)")
+        except Exception as e:
+            logging.error(
+                f"Failed to initialize headless workers: {e}", exc_info=True
+            )
+
+    def _run_knowledge_migration_if_needed(self):
+        """Run one-time migration from JSON to database if not already done.
+
+        Uses database-level locking to prevent race conditions when multiple
+        instances start simultaneously.
+        """
+        try:
+            from pathlib import Path
+            from airunner.settings import AIRUNNER_USER_DATA_PATH
+            from airunner.components.data.session_manager import session_scope
+
+            # Use database transaction to check and set migration flag atomically
+            with session_scope() as session:
+                # Lock the settings row to prevent concurrent migrations
+                settings = (
+                    session.query(ApplicationSettings)
+                    .filter_by(id=1)
+                    .with_for_update()  # Database-level lock
+                    .first()
+                )
+
+                if not settings:
+                    logging.error("Application settings not found")
+                    return
+
+                # Check if migration already completed (within transaction)
+                if settings.knowledge_migrated:
+                    logging.debug("Knowledge migration already completed")
+                    return
+
+                # Check if legacy JSON file exists
+                knowledge_dir = Path(AIRUNNER_USER_DATA_PATH) / "knowledge"
+                json_path = knowledge_dir / "user_facts.json"
+
+                if not json_path.exists():
+                    # No legacy data to migrate
+                    logging.info(
+                        "No legacy knowledge data found, skipping migration"
+                    )
+                    settings.knowledge_migrated = True
+                    session.commit()
+                    return
+
+                # Run migration (outside transaction to avoid long locks)
+                logging.info(
+                    "Running one-time knowledge migration from JSON to database..."
+                )
+
+            # Migration runs outside the locked transaction
+            from airunner.bin.airunner_migrate_knowledge import (
+                KnowledgeMigrator,
+            )
+
+            migrator = KnowledgeMigrator(json_path=json_path)
+            stats = migrator.migrate_all(dry_run=False, skip_backup=False)
+
+            # Only mark complete if migration was successful
+            if stats["errors"] > 0:
+                logging.error(
+                    f"Knowledge migration completed with {stats['errors']} errors. "
+                    f"Migration NOT marked complete - will retry on next startup."
+                )
+                return
+
+            logging.info(
+                f"Knowledge migration successful: {stats['migrated']} facts migrated"
+            )
+
+            # Mark migration as complete (only if no errors)
+            self._mark_migration_complete()
+
+        except Exception as e:
+            logging.error(
+                f"Failed to run knowledge migration: {e}. "
+                f"Migration NOT marked complete - will retry on next startup.",
+                exc_info=True,
+            )
+
+    def _mark_migration_complete(self):
+        """Mark knowledge migration as complete in settings."""
+        try:
+            from airunner.components.data.session_manager import session_scope
+
+            with session_scope() as session:
+                settings = (
+                    session.query(ApplicationSettings).filter_by(id=1).first()
+                )
+                if settings:
+                    settings.knowledge_migrated = True
+                    session.commit()
+        except Exception as e:
+            logging.error(
+                f"Failed to mark migration complete: {e}", exc_info=True
             )
 
     def on_update_locale_signal(self, data: dict):
@@ -325,6 +552,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
         Override this method to run the application in a different mode.
         """
         if not self.initialize_gui:
+            # Headless mode - keep server running
+            self.run_headless()
             return
 
         if not self.no_splash and not self.splash:
@@ -332,6 +561,34 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         QTimer.singleShot(50, self._post_splash_startup)
         sys.exit(self.app.exec())
+
+    def run_headless(self):
+        """Run in headless mode without GUI.
+
+        Uses Qt event loop to process worker signals while server runs.
+        """
+        from PySide6.QtCore import QTimer
+
+        # Workers are already initialized in _init_headless_services()
+        # No need to initialize again here
+
+        logging.info("AI Runner headless mode - server running")
+        logging.info("Press Ctrl+C to stop")
+
+        # Qt event loop blocks Python signal handlers, so we need to
+        # periodically allow Python to process signals
+        # This timer does nothing but allows KeyboardInterrupt to be caught
+        timer = QTimer()
+        timer.start(500)  # Wake up every 500ms
+        timer.timeout.connect(lambda: None)
+
+        try:
+            # Run Qt event loop (processes worker signals)
+            sys.exit(self.app.exec())
+        except KeyboardInterrupt:
+            logging.info("Interrupted by user")
+            self.cleanup()
+            sys.exit(0)
 
     def _post_splash_startup(self):
         self.show_main_application(self.app)
@@ -435,6 +692,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 MainWindow,
             )
 
+
             window_class = MainWindow
 
         if self.splash:
@@ -450,6 +708,18 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 for attr in dir(window.ui):
                     widget = getattr(window.ui, attr)
                     if isinstance(widget, QWebEngineView):
+                        # Check if a custom page has already been set
+                        current_page = widget.page()
+                        if (
+                            current_page
+                            and type(current_page).__name__ != "QWebEnginePage"
+                        ):
+                            # A custom page is already set, don't override it
+                            print(
+                                f"[App] Skipping page override for {attr}, already has custom page: {type(current_page)}"
+                            )
+                            continue
+
                         settings = widget.settings()
                         settings.setAttribute(
                             QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows,
@@ -458,6 +728,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
                         settings.setAttribute(
                             QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls,
                             True,
+                        )
+                        print(
+                            f"[App] Setting CapturingWebEnginePage for {attr}"
                         )
                         widget.setPage(CapturingWebEnginePage(widget))
         except Exception as e:
@@ -470,9 +743,46 @@ class App(MediatorMixin, SettingsMixin, QObject):
             )
 
     def quit(self):
+        """Stop HTTP server and cleanup resources."""
         if self.http_server_thread:
             self.http_server_thread.stop()
             self.http_server_thread.wait()
+
+        if self.api_server_thread:
+            self.api_server_thread.stop()
+            # API server thread is daemon, no need to join
+
+    def cleanup(self):
+        """
+        Cleanup resources when shutting down.
+        Safe to call in both GUI and headless mode.
+        """
+        logging.info("Cleaning up App resources...")
+
+        try:
+            # Mark as not running first to stop loops
+            self.is_running = False
+
+            # Stop HTTP server if running
+            if hasattr(self, "api_server_thread") and self.api_server_thread:
+                logging.info("Stopping API server...")
+                try:
+                    self.api_server_thread.shutdown()
+                    self.api_server_thread.join(timeout=2.0)
+                    logging.info("API server stopped")
+                except Exception as e:
+                    logging.warning(f"Error stopping API server: {e}")
+
+            # Emit shutdown signal for components to cleanup
+            try:
+                self.emit_signal(SignalCode.APPLICATION_SHUTDOWN_SIGNAL, {})
+            except Exception as e:
+                logging.warning(f"Error emitting shutdown signal: {e}")
+
+            logging.info("App cleanup complete")
+
+        except Exception as e:
+            logging.error(f"Error during App cleanup: {e}", exc_info=True)
 
     def _ensure_mathjax(self):
         # Only run setup if MathJax is not present

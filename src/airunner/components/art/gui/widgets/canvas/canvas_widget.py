@@ -157,22 +157,47 @@ class CanvasWidget(BaseWidget):
     _offset_y = 0
 
     @property
-    def offset_x(self):
+    def offset_x(self) -> int:
+        """Get the current X offset of the canvas.
+
+        Returns:
+            The X offset in pixels.
+        """
         return self._offset_x
 
     @offset_x.setter
-    def offset_x(self, value):
+    def offset_x(self, value: int) -> None:
+        """Set the X offset of the canvas.
+
+        Args:
+            value: The X offset in pixels.
+        """
         self._offset_x = value
 
     @property
-    def offset_y(self):
+    def offset_y(self) -> int:
+        """Get the current Y offset of the canvas.
+
+        Returns:
+            The Y offset in pixels.
+        """
         return self._offset_y
 
     @offset_y.setter
-    def offset_y(self, value):
+    def offset_y(self, value: int) -> None:
+        """Set the Y offset of the canvas.
+
+        Args:
+            value: The Y offset in pixels.
+        """
         self._offset_y = value
 
-    def update_grid_info(self, data: Dict):
+    def update_grid_info(self, data: Dict) -> None:
+        """Update the grid info display with position and zoom level.
+
+        Args:
+            data: Dictionary containing offset_x, offset_y, and optionally zoom level.
+        """
         self.offset_x = data.get("offset_x", self.offset_x)
         self.offset_y = data.get("offset_y", self.offset_y)
         zoom_level = round(self.grid_settings.zoom_level * 100, 2)
@@ -181,7 +206,12 @@ class CanvasWidget(BaseWidget):
         )
 
     @property
-    def current_tool(self):
+    def current_tool(self) -> Optional[CanvasToolName]:
+        """Get the currently active canvas tool.
+
+        Returns:
+            The active CanvasToolName, or None if no tool is active.
+        """
         return (
             None
             if self.application_settings.current_tool is None
@@ -189,7 +219,12 @@ class CanvasWidget(BaseWidget):
         )
 
     @property
-    def image_pivot_point(self):
+    def image_pivot_point(self) -> QPoint:
+        """Get the current image pivot point.
+
+        Returns:
+            QPoint representing the pivot point coordinates.
+        """
         settings = self.application_settings
         try:
             return QPoint(settings.pivot_point_x, settings.pivot_point_y)
@@ -198,7 +233,12 @@ class CanvasWidget(BaseWidget):
         return QPoint(0, 0)
 
     @image_pivot_point.setter
-    def image_pivot_point(self, value):
+    def image_pivot_point(self, value: QPoint) -> None:
+        """Set the image pivot point.
+
+        Args:
+            value: QPoint representing the new pivot point coordinates.
+        """
         settings = self.application_settings
         settings.pivot_point_x = value.x()
         settings.pivot_point_y = value.y()
@@ -206,71 +246,107 @@ class CanvasWidget(BaseWidget):
         self.update_application_settings(pivot_point_y=value.y())
 
     @Slot(bool)
-    def on_prompt_editor_button_clicked(self, val: bool):
+    def on_prompt_editor_button_clicked(self, val: bool) -> None:
+        """Handle prompt editor button toggle.
+
+        Args:
+            val: True if button is checked, False otherwise.
+        """
         self._toggle_splitter_section(val, 0, self.ui.splitter)
 
     @Slot(bool)
-    def on_art_tools_button_clicked(self, val: bool):
+    def on_art_tools_button_clicked(self, val: bool) -> None:
+        """Handle art tools button toggle.
+
+        Args:
+            val: True if button is checked, False otherwise.
+        """
         self._toggle_splitter_section(val, 2, self.ui.splitter, 300)
 
-    def on_splitter_changed_sizes(self):
+    def on_splitter_changed_sizes(self) -> None:
+        """Handle splitter size changes by updating button states."""
         self.set_prompt_editor_button_checked()
         self.set_art_tools_button_checked()
 
-    def set_prompt_editor_button_checked(self):
+    def set_prompt_editor_button_checked(self) -> None:
+        """Update prompt editor button checked state based on splitter size."""
         self.ui.prompt_editor_button.blockSignals(True)
         self.ui.prompt_editor_button.setChecked(
             self.ui.splitter.sizes()[0] > 0
         )
         self.ui.prompt_editor_button.blockSignals(False)
 
-    def set_art_tools_button_checked(self):
+    def set_art_tools_button_checked(self) -> None:
+        """Update art tools button checked state based on splitter size."""
         self.ui.art_tools_button.blockSignals(True)
         self.ui.art_tools_button.setChecked(self.ui.splitter.sizes()[2] > 0)
         self.ui.art_tools_button.blockSignals(False)
 
     @Slot()
-    def on_brush_color_button_clicked(self):
+    def on_brush_color_button_clicked(self) -> None:
+        """Handle brush color button click to open color picker."""
         self.color_button_clicked()
 
     @Slot(bool)
-    def on_text_button_toggled(self, val: bool):
+    def on_text_button_toggled(self, val: bool) -> None:
+        """Handle text tool button toggle.
+
+        Args:
+            val: True if button is checked, False otherwise.
+        """
         self.api.art.canvas.toggle_tool(CanvasToolName.TEXT, val)
 
     @Slot()
-    def on_recenter_button_clicked(self):
+    def on_recenter_button_clicked(self) -> None:
+        """Handle recenter button click to recenter the grid."""
         self.api.art.canvas.recenter_grid()
 
     @Slot()
-    def on_undo_button_clicked(self):
+    def on_undo_button_clicked(self) -> None:
+        """Handle undo button click to undo last action."""
         self.api.art.canvas.undo()
 
     @Slot()
-    def on_redo_button_clicked(self):
+    def on_redo_button_clicked(self) -> None:
+        """Handle redo button click to redo last undone action."""
         self.api.art.canvas.redo()
 
     @Slot()
-    def on_new_button_clicked(self):
+    def on_new_button_clicked(self) -> None:
+        """Handle new button click to create a new canvas document."""
         self._reset_canvas_document()
 
     @Slot(bool)
-    def on_grid_button_toggled(self, val: bool):
+    def on_grid_button_toggled(self, val: bool) -> None:
+        """Handle grid button toggle to show/hide grid.
+
+        Args:
+            val: True if grid should be shown, False otherwise.
+        """
         self.api.art.canvas.toggle_grid(val)
 
     @Slot(bool)
-    def on_snap_to_grid_button_toggled(self, val: bool):
+    def on_snap_to_grid_button_toggled(self, val: bool) -> None:
+        """Handle snap to grid button toggle.
+
+        Args:
+            val: True if snap to grid should be enabled, False otherwise.
+        """
         self.api.art.canvas.toggle_grid_snap(val)
 
     @Slot()
-    def on_import_button_clicked(self):
+    def on_import_button_clicked(self) -> None:
+        """Handle import button click to import an image."""
         self.api.art.canvas.import_image()
 
     @Slot()
-    def on_export_button_clicked(self):
+    def on_export_button_clicked(self) -> None:
+        """Handle export button click to export the canvas."""
         self.api.art.canvas.export_image()
 
     @Slot()
-    def on_open_art_document_clicked(self):
+    def on_open_art_document_clicked(self) -> None:
+        """Handle open art document button click to load a saved document."""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open Document",
@@ -304,7 +380,8 @@ class CanvasWidget(BaseWidget):
                 self.logger.error(exc)
 
     @Slot()
-    def on_save_art_document_clicked(self):
+    def on_save_art_document_clicked(self) -> None:
+        """Handle save art document button click to save the current document."""
         document = self._serialize_canvas_document()
         file_path, _ = QFileDialog.getSaveFileName(
             self,
@@ -332,7 +409,8 @@ class CanvasWidget(BaseWidget):
                 self.logger.exception(exc)
 
     @Slot()
-    def on_filter_button_clicked(self):
+    def on_filter_button_clicked(self) -> None:
+        """Handle filter button click to open the filter list window."""
         try:
             # Keep the dialog attached to the widget so it is not garbage
             # collected immediately by Python.
@@ -357,50 +435,96 @@ class CanvasWidget(BaseWidget):
             self.logger.exception("Failed to open FilterListWindow: %s", exc)
 
     @Slot(bool)
-    def on_brush_button_toggled(self, val: bool):
+    def on_brush_button_toggled(self, val: bool) -> None:
+        """Handle brush tool button toggle.
+
+        Args:
+            val: True if brush tool should be activated, False otherwise.
+        """
         self.api.art.canvas.toggle_tool(CanvasToolName.BRUSH, val)
 
     @Slot(bool)
-    def on_eraser_button_toggled(self, val: bool):
+    def on_eraser_button_toggled(self, val: bool) -> None:
+        """Handle eraser tool button toggle.
+
+        Args:
+            val: True if eraser tool should be activated, False otherwise.
+        """
         self.api.art.canvas.toggle_tool(CanvasToolName.ERASER, val)
         self._update_cursor()
 
     @Slot(bool)
-    def on_active_grid_area_button_toggled(self, val: bool):
+    def on_active_grid_area_button_toggled(self, val: bool) -> None:
+        """Handle active grid area tool button toggle.
+
+        Args:
+            val: True if active grid area tool should be activated, False otherwise.
+        """
         self.api.art.canvas.toggle_tool(CanvasToolName.ACTIVE_GRID_AREA, val)
 
     @Slot(bool)
-    def on_move_button_toggled(self, val: bool):
+    def on_move_button_toggled(self, val: bool) -> None:
+        """Handle move tool button toggle.
+
+        Args:
+            val: True if move tool should be activated, False otherwise.
+        """
         self.api.art.canvas.toggle_tool(CanvasToolName.MOVE, val)
 
-    def on_toggle_tool_signal(self, message: Dict):
-        tool = message.get("tool", None)
-        active = message.get("active", False)
-        settings_data = {}
-        settings_data["current_tool"] = tool.value if active else None
-        self.update_application_settings(**settings_data)
-        # self.api.art.canvas.tool_changed(tool, active)
-        self._update_action_buttons(tool, active)
-        self._update_cursor()
+    def on_toggle_tool_signal(self, message: Dict) -> None:
+        """Handle tool toggle signal from other components.
 
-    def save_state(self):
+        Args:
+            message: Dictionary containing tool and active state information.
+        """
+        if (
+            hasattr(self, "_processing_tool_change")
+            and self._processing_tool_change
+        ):
+            return
+
+        self._processing_tool_change = True
+        try:
+            tool = message.get("tool", None)
+            active = message.get("active", False)
+            settings_data = {"current_tool": tool.value if active else None}
+            self.update_application_settings(**settings_data)
+            self.api.art.canvas.tool_changed(tool, active)
+            self._update_action_buttons(tool, active)
+            self._update_cursor()
+        finally:
+            self._processing_tool_change = False
+
+    def save_state(self) -> None:
+        """Save the current widget state including splitter positions."""
         self._save_splitter_state()
 
-    def on_toggle_grid_signal(self, message: Dict):
+    def on_toggle_grid_signal(self, message: Dict) -> None:
+        """Handle grid toggle signal to show/hide the grid.
+
+        Args:
+            message: Dictionary containing show_grid boolean.
+        """
         val = message.get("show_grid", True)
         self.ui.grid_button.blockSignals(True)
         self.ui.grid_button.setChecked(val)
         self.ui.grid_button.blockSignals(False)
         self.update_grid_settings(show_grid=val)
 
-    def on_toggle_grid_snap_signal(self, message: Dict):
+    def on_toggle_grid_snap_signal(self, message: Dict) -> None:
+        """Handle grid snap toggle signal.
+
+        Args:
+            message: Dictionary containing snap_to_grid boolean.
+        """
         val = message.get("snap_to_grid", True)
         self.ui.snap_to_grid_button.blockSignals(True)
         self.ui.snap_to_grid_button.setChecked(val)
         self.ui.snap_to_grid_button.blockSignals(False)
         self.update_grid_settings(snap_to_grid=val)
 
-    def color_button_clicked(self):
+    def color_button_clicked(self) -> None:
+        """Open color picker dialog and update brush color."""
         color = QColorDialog.getColor()
         if color.isValid():
             self.brush_settings.primary_color = color.name()
@@ -408,7 +532,8 @@ class CanvasWidget(BaseWidget):
             self.set_button_color()
             self.api.art.canvas.brush_color_changed(color.name())
 
-    def set_button_color(self):
+    def set_button_color(self) -> None:
+        """Update the brush color button's background color."""
         color = self.brush_settings.primary_color
         self.ui.brush_color_button.setStyleSheet(f"background-color: {color};")
 
@@ -438,7 +563,12 @@ class CanvasWidget(BaseWidget):
         self.ui.grid_button.blockSignals(False)
         self.ui.move_button.blockSignals(False)
 
-    def showEvent(self, event):
+    def showEvent(self, event: Any) -> None:
+        """Handle widget show event to initialize splitter and cursor.
+
+        Args:
+            event: The show event.
+        """
         super().showEvent(event)
         if not self._default_splitter_settings_applied and self.isVisible():
             self._apply_default_splitter_settings()
@@ -451,7 +581,12 @@ class CanvasWidget(BaseWidget):
             self._initialized = True
             self._update_cursor()
 
-    def on_canvas_update_cursor_signal(self, message: Dict):
+    def on_canvas_update_cursor_signal(self, message: Dict) -> None:
+        """Handle cursor update signal.
+
+        Args:
+            message: Dictionary containing cursor update information.
+        """
         self._update_cursor(message)
 
     def _apply_default_splitter_settings(self):
@@ -527,10 +662,20 @@ class CanvasWidget(BaseWidget):
                 self.setCursor(cursor)
             self._current_cursor = cursor
 
-    def toggle_grid(self, _val):
+    def toggle_grid(self, _val: bool) -> None:
+        """Toggle grid visibility and redraw canvas.
+
+        Args:
+            _val: Grid visibility state (unused, triggers redraw).
+        """
         self.do_draw()
 
-    def do_draw(self, force_draw: bool = False):
+    def do_draw(self, force_draw: bool = False) -> None:
+        """Request canvas redraw.
+
+        Args:
+            force_draw: If True, force redraw even if already drawing.
+        """
         self.api.art.canvas.do_draw(force_draw)
         self.ui.canvas_container_size = (
             self.ui.canvas_container.viewport().size()

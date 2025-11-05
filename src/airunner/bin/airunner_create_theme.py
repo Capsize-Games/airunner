@@ -2,13 +2,10 @@
 """
 Entrypoint for airunner-create-theme
 """
-import sys
-from pathlib import Path
 
 
 def main():
     # Inline the logic from the previous script
-    import os
     import sys
     from pathlib import Path
 

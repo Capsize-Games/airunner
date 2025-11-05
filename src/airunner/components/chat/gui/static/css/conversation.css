@@ -142,6 +142,8 @@ body {
     color: var(--light-color);
     margin: 0;
     padding: 10px 12px 0 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 .message .timestamp {
@@ -268,6 +270,68 @@ mjx-container {
 
 mjx-container[display="true"] {
     margin: 1em 0 !important;
+}
+
+/* Tool status indicators */
+.tool-status {
+    margin: 8px 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    background: var(--line-color);
+    border-left: 3px solid var(--primary-color);
+}
+
+.tool-status-active {
+    background: rgba(var(--primary-color-rgb, 59, 130, 246), 0.1);
+}
+
+.tool-status-done {
+    background: rgba(var(--success-color-rgb, 34, 197, 94), 0.1);
+    border-left-color: var(--success-color, #22c55e);
+}
+
+.tool-status-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 2px 0;
+}
+
+.tool-status-completed {
+    opacity: 1;
+}
+
+.tool-spinner {
+    font-size: 1.1em;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.tool-checkmark {
+    font-size: 1.1em;
+}
+
+.tool-text {
+    color: var(--light-color);
+    flex: 1;
+}
+
+.tool-details {
+    font-style: italic;
+    opacity: 0.8;
+    font-size: 0.95em;
 }
 
 /* Scrollbar styling */

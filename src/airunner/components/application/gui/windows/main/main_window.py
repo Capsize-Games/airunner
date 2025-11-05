@@ -57,16 +57,12 @@ from airunner.settings import (
     AIRUNNER_STATUS_NORMAL_COLOR_DARK,
     AIRUNNER_NSFW_CONTENT_DETECTED_MESSAGE,
     AIRUNNER_DISCORD_URL,
-    AIRUNNER_BASE_PATH,
     AIRUNNER_BUG_REPORT_LINK,
     AIRUNNER_VULNERABILITY_REPORT_LINK,
     AIRUNNER_ART_ENABLED,
 )
+from airunner.utils.application import create_worker
 from airunner.utils.settings import get_qsettings
-from airunner.components.llm.managers.agent.actions.bash_execute import (
-    bash_execute,
-)
-from airunner.components.llm.managers.agent.actions.show_path import show_path
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.application.data.shortcut_keys import ShortcutKeys
 from airunner.components.art.data.image_filter import ImageFilter
@@ -110,6 +106,56 @@ from airunner.components.plugins.plugin_loader import PluginLoader
 from airunner.components.application.gui.windows.main.nsfw_warning_dialog import (
     show_nsfw_warning_dialog,
 )
+
+
+# Utility functions moved from deleted agent.actions
+def bash_execute(command: str) -> str:
+    """
+    Execute a bash command and return the output.
+
+    Args:
+        command: The bash command to execute
+
+    Returns:
+        The command output or error message
+    """
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            command, shell=True, capture_output=True, text=True, timeout=30
+        )
+        return result.stdout if result.returncode == 0 else result.stderr
+    except subprocess.TimeoutExpired:
+        return "Command timed out after 30 seconds"
+    except Exception as e:
+        return f"Error executing command: {str(e)}"
+
+
+def show_path(path: str) -> None:
+    """
+    Open the given path in the system file manager.
+
+    Args:
+        path: The file or directory path to show
+    """
+    import subprocess
+    import platform
+    import os
+
+    if not os.path.exists(path):
+        return
+
+    system = platform.system()
+    try:
+        if system == "Windows":
+            os.startfile(path)
+        elif system == "Darwin":  # macOS
+            subprocess.run(["open", path])
+        else:  # Linux
+            subprocess.run(["xdg-open", path])
+    except Exception:
+        pass  # Silently fail if we can't open the path
 
 
 class MainWindow(
@@ -172,11 +218,13 @@ class MainWindow(
         ("save", "actionSave_As"),
         ("image", "art_editor_button"),
         ("file-text", "document_editor_button"),
+        ("calendar", "calendar_button"),
         ("codesandbox", "workflow_editor_button"),
         ("settings", "settings_button"),
         ("message-square", "chat_button"),
         ("home", "home_button"),
         ("radio", "visualizer_button"),
+        ("video", "video_button"),
         ("arrow-down-circle", "actionDownload_Model"),
         ("book", "knowledgebase_button"),
         ("file-text", "menuDocuments"),
@@ -229,14 +277,10 @@ class MainWindow(
             SignalCode.SD_SAVE_PROMPT_SIGNAL: self.on_save_stablediffusion_prompt_signal,
             SignalCode.QUIT_APPLICATION: self.handle_quit_application_signal,
             SignalCode.SD_NSFW_CONTENT_DETECTED_SIGNAL: self.on_nsfw_content_detected_signal,
-            SignalCode.BASH_EXECUTE_SIGNAL: self.on_bash_execute_signal,
             SignalCode.WRITE_FILE: self.on_write_file_signal,
             SignalCode.TOGGLE_FULLSCREEN_SIGNAL: self.on_toggle_fullscreen_signal,
             SignalCode.TOGGLE_TTS_SIGNAL: self.on_toggle_tts,
-            SignalCode.TOGGLE_SD_SIGNAL: self.on_toggle_sd,
             SignalCode.TOGGLE_LLM_SIGNAL: self.on_toggle_llm,
-            SignalCode.UNLOAD_NON_SD_MODELS: self.on_unload_non_sd_models,
-            SignalCode.LOAD_NON_SD_MODELS: self.on_load_non_sd_models,
             SignalCode.APPLICATION_RESET_SETTINGS_SIGNAL: self._action_reset_settings,
             SignalCode.APPLICATION_RESET_PATHS_SIGNAL: self.on_reset_paths_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,
@@ -249,8 +293,8 @@ class MainWindow(
             SignalCode.RETRANSLATE_UI_SIGNAL: self.on_retranslate_ui_signal,
             SignalCode.APPLICATION_STATUS_ERROR_SIGNAL: self.on_status_error_signal,
         }
-        self.logger.debug("Starting AI Runnner")
         super().__init__()
+        self.logger.debug("Starting AI Runnner")
         enable_wayland_window_decorations(self)
         self.update_application_settings(
             sd_enabled=False,
@@ -267,14 +311,7 @@ class MainWindow(
             sys.path.append(plugins_path)
         self._updating_settings = True
         self._updating_settings = False
-        self._worker_manager = None
-        try:
-            self.worker_manager = WorkerManager(
-                logger=getattr(self, "logger", None)
-            )
-            self.worker_manager.initialize_workers()
-        except Exception as e:
-            self.worker_manager = None
+        self.worker_manager = create_worker(WorkerManager)
         self.model_load_balancer = ModelLoadBalancer(
             self.worker_manager,
             logger=getattr(self, "logger", None),
@@ -414,10 +451,12 @@ class MainWindow(
 
     @Slot()
     def on_actionBrowse_AI_Runner_Path_triggered(self):
-        path = self.path_settings.base_path
-        if path == "":
-            path = AIRUNNER_BASE_PATH
-        show_path(path)
+        # Note: show_path functionality removed with old agent system
+        # path = self.path_settings.base_path
+        # if path == "":
+        #     path = AIRUNNER_BASE_PATH
+        # TODO: Implement file browser opening if needed
+        pass
 
     @Slot()
     def on_actionDownload_Model_triggered(self):
@@ -607,8 +646,10 @@ class MainWindow(
             "home_button": self.ui.home_tab,
             "art_editor_button": self.ui.art_tab,
             "document_editor_button": self.ui.document_editor_tab,
+            "calendar_button": self.ui.calendar_tab,
             "workflow_editor_button": self.ui.agent_workflow_tab,
             "visualizer_button": self.ui.visualizer_tab,
+            "video_button": self.ui.video_tab,
         }
 
     def _restore_tab(self):
@@ -630,6 +671,7 @@ class MainWindow(
             1: "art_editor_button",
             2: "workflow_editor_button",
             3: "document_editor_button",
+            4: "calendar_button",
         }
 
         if saved_index in buttons:
@@ -666,8 +708,16 @@ class MainWindow(
         self._set_current_button_and_tab("document_editor_button")
 
     @Slot(bool)
+    def on_calendar_button_toggled(self, val: bool):
+        self._set_current_button_and_tab("calendar_button")
+
+    @Slot(bool)
     def on_workflow_editor_button_toggled(self, val: bool):
         self._set_current_button_and_tab("workflow_editor_button")
+
+    @Slot(bool)
+    def on_video_button_toggled(self, val: bool):
+        self._set_current_button_and_tab("video_button")
 
     @Slot(bool)
     def on_settings_button_clicked(self, val: bool):
@@ -839,17 +889,6 @@ class MainWindow(
             message = args[1]
         with open("output.txt", "w") as f:
             f.write(message)
-
-    @staticmethod
-    def on_bash_execute_signal(data: Dict) -> str:
-        """
-        Takes a message from the LLM and strips bash commands from it.
-        Passes bash command to the bash_execute function.
-        :param data: Dict
-        :return:
-        """
-        args = data["args"]
-        return bash_execute(args[0])
 
     def on_theme_changed_signal(self, data: Dict):
         template = data.get("template", TemplateName.SYSTEM_DEFAULT)
@@ -1071,8 +1110,10 @@ class MainWindow(
         self.close()
 
     def show_settings_path(self, name, default_path=None):
-        path = getattr(self.path_settings, name)
-        show_path(default_path if default_path and path == "" else path)
+        # Note: show_path functionality removed with old agent system
+        # path = getattr(self.path_settings, name)
+        # TODO: Implement file browser opening if needed
+        pass
 
     def toggle_nsfw_filter(self):
         self.set_nsfw_filter_tooltip()
@@ -1088,26 +1129,6 @@ class MainWindow(
         else:
             self.showFullScreen()
 
-    def on_unload_non_sd_models(self, data: Dict = None):
-        """
-        Unload all non-SD models and load Stable Diffusion using the load balancer.
-        """
-        self.model_load_balancer.switch_to_art_mode()
-        callback = data.get("callback", None) if data else None
-        if callback:
-            callback()
-
-    def on_load_non_sd_models(self, data: Dict = None):
-        """
-        Reload previously unloaded non-SD models using the load balancer.
-        Optionally accepts 'models' list in data to load additional specific models.
-        """
-        models = data.get("models", None) if data else None
-        self.model_load_balancer.switch_to_non_art_mode(models)
-        callback = data.get("callback", None) if data else None
-        if callback:
-            callback(data)
-
     def on_toggle_llm(self, data: Dict = None, val=None):
         if val is None:
             val = data.get(
@@ -1120,18 +1141,6 @@ class MainWindow(
             SignalCode.LLM_LOAD_SIGNAL,
             SignalCode.LLM_UNLOAD_SIGNAL,
             "llm_enabled",
-            data,
-        )
-
-    def on_toggle_sd(self, data: Dict):
-        val = data.get("enabled", False)
-        self._update_action_button(
-            ModelType.SD,
-            self.ui.actionToggle_Stable_Diffusion,
-            val,
-            SignalCode.SD_LOAD_SIGNAL,
-            SignalCode.SD_UNLOAD_SIGNAL,
-            "sd_enabled",
             data,
         )
 

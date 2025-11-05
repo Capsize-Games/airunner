@@ -38,6 +38,21 @@ from airunner.components.art.data.image_to_image_settings import (
 from airunner.components.art.data.outpaint_settings import OutpaintSettings
 from airunner.components.art.data.brush_settings import BrushSettings
 from airunner.components.art.data.metadata_settings import MetadataSettings
+from airunner.components.calendar.data.event import Event
+from airunner.components.calendar.data.reminder import Reminder
+from airunner.components.calendar.data.recurring_event import RecurringEvent
+from airunner.components.agents.data.agent_config import AgentConfig
+from airunner.components.llm.data.llm_tool import LLMTool
+from airunner.components.knowledge.data.models import (
+    KnowledgeFact,
+    ConversationSummary,
+)
+
+# Import required for Alembic model detection - do not remove
+from airunner.components.knowledge.data.knowledge_relationship import (
+    KnowledgeRelationship,  # noqa: F401
+)
+from airunner.components.video.data.video_project import VideoProject
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

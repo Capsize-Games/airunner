@@ -18,7 +18,7 @@ def log_method_entry_exit(method):
             logging.debug(f"Entering {method_name}")
         try:
             result = method(self, *args, **kwargs)
-        except Exception as e:
+        except Exception:
             if logger:
                 logger.debug(f"Exiting {method_name}")
             else:

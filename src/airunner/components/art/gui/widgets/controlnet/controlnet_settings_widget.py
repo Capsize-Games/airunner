@@ -1,4 +1,3 @@
-import os
 
 from airunner.components.art.data.controlnet_model import ControlnetModel
 from airunner.enums import SignalCode, StableDiffusionVersion

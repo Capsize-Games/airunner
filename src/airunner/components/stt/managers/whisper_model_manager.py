@@ -12,7 +12,10 @@ from transformers.models.whisper.feature_extraction_whisper import (
 )
 from PySide6.QtCore import QThread, QMutex, QObject, Signal
 
-from airunner.components.application.managers.base_model_manager import BaseModelManager
+from airunner.components.application.managers.base_model_manager import (
+    BaseModelManager,
+)
+from airunner.components.art.utils.model_file_checker import ModelFileChecker
 from airunner.enums import SignalCode, ModelType, ModelStatus
 from airunner.components.application.exceptions import NaNException
 from airunner.settings import (
@@ -162,6 +165,16 @@ class WhisperModelManager(BaseModelManager):
         if self.stt_is_loading or self.stt_is_loaded:
             return
         self.logger.debug("Loading Whisper (text-to-speech)")
+
+        # Check for missing files and trigger download if needed
+        if not retry:
+            should_download, download_info = self._check_and_trigger_download()
+            if should_download:
+                self.logger.info(
+                    "Whisper model files missing, download triggered"
+                )
+                return False
+
         self.unload()
         self.change_model_status(ModelType.STT, ModelStatus.LOADING)
         self._load_model()
@@ -333,6 +346,39 @@ class WhisperModelManager(BaseModelManager):
         Emit the transcription so that other handlers can use it
         """
         self.api.stt.audio_processor_response(transcription)
+
+    def _check_and_trigger_download(self):
+        """Check for missing model files and trigger download if needed.
+
+        Returns:
+            Tuple of (should_download, download_info)
+        """
+        model_path = self.model_path
+        model_id = AIRUNNER_DEFAULT_STT_HF_PATH
+
+        should_download, download_info = (
+            ModelFileChecker.should_trigger_download(
+                model_path=model_path,
+                model_type="stt",
+                model_id=model_id,
+            )
+        )
+
+        if should_download:
+            self.logger.info(
+                f"Whisper model files missing: {download_info.get('missing_files', [])}"
+            )
+            self.emit_signal(
+                SignalCode.START_HUGGINGFACE_DOWNLOAD,
+                {
+                    "repo_id": download_info["repo_id"],
+                    "model_path": model_path,
+                    "model_type": "stt",
+                    "callback": lambda: self.load(retry=True),
+                },
+            )
+
+        return should_download, download_info
 
     def process_transcription(self, generated_ids) -> str:
         # Move to CPU only for decoding

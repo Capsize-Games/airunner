@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /home/joe/Projects/airunner/src/airunner/gui/resources/icons/feather/copy_icons.sh
+# Script to convert light SVG icons to dark versions
 
 # Create dark directory if it doesn't exist
 mkdir -p ./dark
