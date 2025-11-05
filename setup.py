@@ -4,7 +4,7 @@ extras_require = {
     # These are optional dependencies that will change the
     # behavior of the application or add new features if installed.
     "nvidia": [  # NVIDIA dependencies:
-        "nvidia-cuda-runtime-cu12",  # This package provides CUDA 12 runtime
+        "nvidia-cuda-runtime",  # CUDA runtime (replaces deprecated cu12/cu13 variants)
     ],
     "huggingface": [
         "diffusers==0.35.1",
@@ -22,7 +22,7 @@ extras_require = {
     ],
     "linux": [  # Linux-specific dependencies
         # "faiss-gpu==1.7.2", # If faiss-gpu is from NVIDIA or a custom index, it needs similar handling
-        "tensorrt==10.13.3.9",
+        # "tensorrt==10.13.3.9",  # Temporarily disabled - depends on deprecated nvidia-cuda-runtime-cu13
     ],
     "dev": [  # Development dependencies
         "pytest",
@@ -62,6 +62,7 @@ extras_require = {
         "llama-index-core>=0.13",
         "llama-index-readers-file>=0.5.0",
         "llama-index-embeddings-huggingface>=0.6.0",
+        "llama-cloud>=0.1.0",
         # LangChain/LangGraph (for agent system)
         "langchain==1.0.0",
         "langchain-core==1.0.0",
@@ -135,7 +136,7 @@ extras_require = {
         "networkx==3.4.2",
     ],
     "search": [
-        "duckduckgo-search>=8.0.2 ",
+        "duckduckgo-search>=8.1.0",
         "aiohttp>=3.11.0",
         "google-api-python-client>=2.170.0",
         "wikipedia>=1.4.0",

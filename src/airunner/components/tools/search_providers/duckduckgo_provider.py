@@ -3,7 +3,7 @@
 from typing import List, Dict, Optional
 
 import aiohttp
-from ddgs import DDGS
+from duckduckgo_search import DDGS
 
 from airunner.components.tools.search_providers.base_provider import (
     BaseSearchProvider,
