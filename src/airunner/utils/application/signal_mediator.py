@@ -1,9 +1,11 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable as CallableType
 import inspect
 from typing import Callable
 from PySide6.QtCore import QObject, Signal as BaseSignal, Slot
 from airunner.enums import SignalCode
 import weakref
+import threading
+import queue
 
 
 class SingletonMeta(type):
@@ -212,6 +214,11 @@ class Signal(QObject):
 class SignalMediator(metaclass=SingletonMeta):
     """
     Responsible for mediating signals between classes.
+
+    Supports request-response correlation for HTTP API requests:
+    - Tracks pending requests by request_id
+    - Routes responses back to request callbacks
+    - Supports both signal-based and callback-based patterns
     """
 
     def __init__(self, backend: Optional[object] = None):
@@ -221,6 +228,11 @@ class SignalMediator(metaclass=SingletonMeta):
         """
         self.backend = backend
         self.signals = {} if backend is None else None
+
+        # Request-response correlation support
+        self._pending_requests: Dict[str, queue.Queue] = {}
+        self._request_lock = threading.Lock()
+        self._request_callbacks: Dict[str, CallableType] = {}
 
     def register(self, code: SignalCode, slot_function: Callable):
         """
@@ -273,6 +285,60 @@ class SignalMediator(metaclass=SingletonMeta):
         Emit a signal to be received by a function.
         """
         data = {} if data is None else data
+
+        # Check if this is a response to a pending request
+        request_id = data.get("request_id")
+
+        # DEBUG: Log request correlation attempts
+        if request_id:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.debug(
+                f"[SignalMediator] Signal {code} with request_id={request_id}"
+            )
+            logger.debug(
+                f"[SignalMediator] Pending requests: {list(self._pending_requests.keys())}"
+            )
+            logger.debug(
+                f"[SignalMediator] Callbacks: {list(self._request_callbacks.keys())}"
+            )
+            logger.debug(
+                f"[SignalMediator] Match check: {request_id in self._pending_requests}"
+            )
+
+        if request_id and request_id in self._pending_requests:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"[SignalMediator] ROUTING response for request_id={request_id}"
+            )
+
+            # Route response to pending request queue
+            with self._request_lock:
+                if request_id in self._pending_requests:
+                    self._pending_requests[request_id].put(data)
+                    logger.info(
+                        f"[SignalMediator] Added to queue for {request_id}"
+                    )
+
+            # Also call registered callback if exists
+            with self._request_lock:
+                if request_id in self._request_callbacks:
+                    try:
+                        logger.info(
+                            f"[SignalMediator] Calling callback for {request_id}"
+                        )
+                        self._request_callbacks[request_id](data)
+                        logger.info(
+                            f"[SignalMediator] Callback completed for {request_id}"
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"Error in request callback: {e}", exc_info=True
+                        )
+
         if self.backend:
             # Delegate emission to the custom backend
             self.backend.emit_signal(code, data)
@@ -280,5 +346,59 @@ class SignalMediator(metaclass=SingletonMeta):
             for signal in self.signals[code]:
                 try:
                     signal.signal.emit(data)
-                except RuntimeError as e:
+                except RuntimeError:
                     pass
+
+    def register_pending_request(
+        self, request_id: str, callback: Optional[CallableType] = None
+    ):
+        """Register a pending request for response correlation.
+
+        Args:
+            request_id: Unique identifier for the request
+            callback: Optional callback to invoke when response arrives
+
+        Returns:
+            Queue that will receive responses for this request
+        """
+        with self._request_lock:
+            response_queue = queue.Queue()
+            self._pending_requests[request_id] = response_queue
+
+            if callback:
+                self._request_callbacks[request_id] = callback
+
+            return response_queue
+
+    def unregister_pending_request(self, request_id: str):
+        """Unregister a pending request after completion or timeout.
+
+        Args:
+            request_id: Unique identifier for the request
+        """
+        with self._request_lock:
+            self._pending_requests.pop(request_id, None)
+            self._request_callbacks.pop(request_id, None)
+
+    def wait_for_response(
+        self, request_id: str, timeout: Optional[float] = None
+    ) -> Optional[Dict]:
+        """Wait for a response to a pending request.
+
+        Args:
+            request_id: Unique identifier for the request
+            timeout: Optional timeout in seconds (None = block forever)
+
+        Returns:
+            Response data dict or None if timeout
+        """
+        with self._request_lock:
+            response_queue = self._pending_requests.get(request_id)
+
+        if not response_queue:
+            return None
+
+        try:
+            return response_queue.get(timeout=timeout)
+        except queue.Empty:
+            return None

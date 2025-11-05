@@ -35,6 +35,7 @@ class ModelAction(Enum):
 
 
 class SignalCode(Enum):
+    DOWNLOAD_LOG_UPDATE = "download_log_update_signal"
     DOCUMENT_PREFERENCES_CHANGED = "document_preferences_changed_signal"
     NEW_DOCUMENT = "new_document_signal"
     SAVE_STATE = "save_state_signal"
@@ -64,6 +65,7 @@ class SignalCode(Enum):
     APPLICATION_CLEAR_STATUS_MESSAGE_SIGNAL = "clear_status_message_signal"
     APPLICATION_RESET_SETTINGS_SIGNAL = "reset_settings_signal"
     APPLICATION_RESET_PATHS_SIGNAL = "reset_paths_signal"
+    APPLICATION_QUIT_SIGNAL = "application_quit_signal"
     APPLICATION_STOP_SD_PROGRESS_BAR_SIGNAL = (
         "stop_image_generator_progress_bar_signal"
     )
@@ -74,6 +76,10 @@ class SignalCode(Enum):
     LLM_FINE_TUNE_PROGRESS = "llm_fine_tune_progress"
     LLM_FINE_TUNE_COMPLETE = "llm_fine_tune_complete"
     LLM_FINE_TUNE_CANCEL = "llm_fine_tune_cancel"
+    LLM_START_QUANTIZATION = "llm_start_quantization"
+    LLM_QUANTIZATION_PROGRESS = "llm_quantization_progress"
+    LLM_QUANTIZATION_COMPLETE = "llm_quantization_complete"
+    LLM_QUANTIZATION_FAILED = "llm_quantization_failed"
     APPLICATION_TOOL_CHANGED_SIGNAL = "tool_changed_signal"
     APPLICATION_ACTIVE_GRID_AREA_UPDATED = "active_grid_area_updated"
     GENERATE_MASK = "generate_mask"
@@ -125,6 +131,7 @@ class SignalCode(Enum):
     LLM_TEXT_STREAMED_SIGNAL = "llm_text_streamed_signal"
     LLM_TEXT_GENERATE_REQUEST_SIGNAL = "llm_text_generate_request_signal"
     LLM_TOKEN_SIGNAL = "llm_token_signal"
+    LLM_TOOL_STATUS_SIGNAL = "llm_tool_status_signal"
     LORA_UPDATE_SIGNAL = "update_lora_signal"
     LORA_UPDATED_SIGNAL = "lora_updated_signal"
     LORA_DELETE_SIGNAL = "delete_lora_signal"
@@ -160,7 +167,6 @@ class SignalCode(Enum):
     QUIT_APPLICATION = "quit"
     TOGGLE_FULLSCREEN_SIGNAL = "fullscreen_signal"
     TOGGLE_TTS_SIGNAL = "toggle_tts_signal"
-    TOGGLE_SD_SIGNAL = "toggle_sd_signal"
     TOGGLE_LLM_SIGNAL = "toggle_llm_signal"
     START_AUTO_IMAGE_GENERATION_SIGNAL = "start_auto_image_generation_signal"
     STOP_AUTO_IMAGE_GENERATION_SIGNAL = "stop_auto_image_generation_signal"
@@ -169,9 +175,23 @@ class SignalCode(Enum):
     WRITE_FILE = "write_file_signal"
     ADD_CHATBOT_MESSAGE_SIGNAL = "add_chatbot_message_signal"
     DOWNLOAD_PROGRESS = "download_progress"
+    UPDATE_DOWNLOAD_PROGRESS = "update_download_progress"
+    UPDATE_FILE_DOWNLOAD_PROGRESS = "update_file_download_progress"
     UPDATE_DOWNLOAD_LOG = "update_download_log"
     CLEAR_DOWNLOAD_STATUS_BAR = "clear_download_status_bar"
     SET_DOWNLOAD_STATUS_LABEL = "set_download_status_label"
+    LLM_MODEL_DOWNLOAD_REQUIRED = "llm_model_download_required"
+    HUGGINGFACE_DOWNLOAD_WORKER_READY = "huggingface_download_worker_ready"
+    HUGGINGFACE_DOWNLOAD_COMPLETE = "huggingface_download_complete"
+    HUGGINGFACE_DOWNLOAD_FAILED = "huggingface_download_failed"
+    CANCEL_HUGGINGFACE_DOWNLOAD = "cancel_huggingface_download"
+    START_HUGGINGFACE_DOWNLOAD = "start_huggingface_download"
+    CIVITAI_DOWNLOAD_WORKER_READY = "civitai_download_worker_ready"
+    CIVITAI_DOWNLOAD_COMPLETE = "civitai_download_complete"
+    CIVITAI_DOWNLOAD_FAILED = "civitai_download_failed"
+    CANCEL_CIVITAI_DOWNLOAD = "cancel_civitai_download"
+    FLUX_MODEL_DOWNLOAD_REQUIRED = "flux_model_download_required"
+    ART_MODEL_DOWNLOAD_REQUIRED = "art_model_download_required"
     CHANGE_SCHEDULER_SIGNAL = "change_scheduler_signal"
     LOG_LOGGED_SIGNAL = "log_logged_signal"
     MODEL_STATUS_CHANGED_SIGNAL = "model_status_changed_signal"
@@ -200,6 +220,44 @@ class SignalCode(Enum):
     BOT_MOOD_UPDATED = "bot_mood_updated_signal"
     CHATBOT_CHANGED = "chatbot_changed_signal"
     CONVERSATION_DELETED = "conversation_deleted_signal"
+    CONVERSATION_TITLE_UPDATED = "conversation_title_updated_signal"
+    LOAD_CONVERSATION_SIGNAL = "load_conversation_signal"
+    NEW_CONVERSATION_SIGNAL = "new_conversation_signal"
+
+    # Tool management signals
+    LLM_TOOL_CREATED = "llm_tool_created_signal"
+    LLM_TOOL_UPDATED = "llm_tool_updated_signal"
+    LLM_TOOL_DELETED = "llm_tool_deleted_signal"
+    LLM_TOOLS_RELOAD_REQUESTED = "llm_tools_reload_requested_signal"
+
+    # Code editor signals
+    OPEN_CODE_EDITOR = "open_code_editor_signal"
+    CODE_SAVED = "code_saved_signal"
+
+    # Knowledge base signals
+    RAG_DOCUMENT_ADDED = "rag_document_added_signal"
+
+    # Knowledge/memory management signals
+    KNOWLEDGE_FACT_ADDED = "knowledge_fact_added_signal"
+    KNOWLEDGE_FACT_UPDATED = "knowledge_fact_updated_signal"
+    KNOWLEDGE_FACT_DELETED = "knowledge_fact_deleted_signal"
+    KNOWLEDGE_FACTS_RELOAD_REQUESTED = (
+        "knowledge_facts_reload_requested_signal"
+    )
+    KNOWLEDGE_EXTRACT_FROM_CONVERSATION = (
+        "knowledge_extract_from_conversation_signal"
+    )
+    KNOWLEDGE_EXTRACTION_COMPLETE = "knowledge_extraction_complete_signal"
+    KNOWLEDGE_EXTRACT_ENTITIES = "knowledge_extract_entities_signal"
+    KNOWLEDGE_ENTITY_EXTRACTION_COMPLETE = (
+        "knowledge_entity_extraction_complete_signal"
+    )
+
+    # Autonomous control signals
+    SCHEDULE_TASK_SIGNAL = "schedule_task_signal"
+    SET_APPLICATION_MODE_SIGNAL = "set_application_mode_signal"
+    REQUEST_USER_INPUT_SIGNAL = "request_user_input_signal"
+    AGENT_ACTION_PROPOSAL_SIGNAL = "agent_action_proposal_signal"
 
     KEYBOARD_SHORTCUTS_UPDATED = "keyboard_shortcuts_updated_signal"
     LORA_STATUS_CHANGED = "lora_status_changed"
@@ -209,9 +267,6 @@ class SignalCode(Enum):
     MASK_UPDATED = "mask_updated"
     HISTORY_UPDATED = "history_updated"
     CANVAS_IMAGE_UPDATED_SIGNAL = "canvas_image_updated_signal"
-
-    UNLOAD_NON_SD_MODELS = "unload_non_sd_models"
-    LOAD_NON_SD_MODELS = "load_non_sd_models"
 
     SD_PIPELINE_LOADED_SIGNAL = "sd_pipeline_loaded_signal"
     MISSING_REQUIRED_MODELS = "missing_required_models"
@@ -253,6 +308,10 @@ class SignalCode(Enum):
     VIDEO_UNLOAD_SIGNAL = "video_unload_signal"
     VIDEO_GENERATE_SIGNAL = "video_generate_signal"
     VIDEO_GENERATED_SIGNAL = "video_generated_signal"
+    VIDEO_GENERATION_STARTED_SIGNAL = "video_generation_started_signal"
+    VIDEO_GENERATION_FAILED_SIGNAL = "video_generation_failed_signal"
+    VIDEO_MODEL_CHANGED_SIGNAL = "video_model_changed_signal"
+    VIDEO_MODEL_DOWNLOAD_REQUIRED = "video_model_download_required"
     INTERRUPT_VIDEO_GENERATION_SIGNAL = "interrupt_video_generation_signal"
     VIDEO_PROGRESS_SIGNAL = "video_progress_signal"
     VIDEO_FRAME_UPDATE_SIGNAL = "video_frame_update_signal"
@@ -408,6 +467,8 @@ class StableDiffusionVersion(Enum):
     SDXL_HYPER = "SDXL Hyper"
     SD1_5 = "SD 1.5"
     X4_UPSCALER = "x4-upscaler"
+    FLUX_DEV = "FLUX.1-dev"
+    FLUX_SCHNELL = "FLUX.1-schnell"
 
 
 class Language(Enum):
@@ -474,6 +535,9 @@ class ModelType(Enum):
     LLM = "LLM Model"
     LLM_TOKENIZER = "LLM Tokenizer"
     VIDEO = "Video Model"
+    HUNYUAN_VIDEO = "HunyuanVideo"
+    COGVIDEOX = "CogVideoX"
+    ANIMATEDIFF = "AnimateDiff"
 
 
 class HandlerState(Enum):
@@ -582,7 +646,6 @@ AVAILABLE_LANGUAGES = {
 
 class ModelService(enum.Enum):
     LOCAL = "local"
-    HUGGINGFACE = "huggingface"
     OPENROUTER = "openrouter"
     OLLAMA = "ollama"
 

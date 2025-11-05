@@ -714,7 +714,6 @@ class DocumentEditorContainerWidget(BaseWidget):
                     return
                 if resp == QMessageBox.StandardButton.Yes:
                     # Attempt to save using existing helper; if user cancels save-as, abort close
-                    prev_tab_count = self.ui.documents.count()
                     self._save_tab(widget)
 
         # Remove the tab and schedule the widget for deletion

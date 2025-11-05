@@ -9,7 +9,7 @@ ModelLoadBalancer: Orchestrates model loading/unloading for VRAM/resource manage
 TDD: See tests/model_load_balancer/test_model_load_balancer.py
 """
 
-from typing import Dict, List, Optional
+from typing import List, Optional
 from airunner.enums import ModelType, SignalCode, ModelStatus
 from airunner.utils.memory.gpu_memory_stats import gpu_memory_stats
 from airunner.utils.application.mediator_mixin import MediatorMixin

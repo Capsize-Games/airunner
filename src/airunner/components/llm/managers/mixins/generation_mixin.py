@@ -1,0 +1,387 @@
+"""Text generation functionality for LLM models.
+
+This mixin handles:
+- Workflow setup for generation
+- Streaming token callbacks
+- Interrupt handling
+- Error handling during generation
+- Response extraction
+- Main generation orchestration
+"""
+
+import random
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
+
+import torch
+from langchain_core.messages import AIMessage
+
+from airunner.components.llm.managers.llm_request import LLMRequest
+from airunner.components.llm.managers.llm_response import LLMResponse
+from airunner.enums import LLMActionType
+
+if TYPE_CHECKING:
+    pass
+
+
+class GenerationMixin:
+    """Mixin for LLM text generation functionality."""
+
+    def _setup_generation_workflow(
+        self,
+        action: LLMActionType,
+        system_prompt: Optional[str],
+        skip_tool_setup: bool = False,
+        llm_request: Optional[Any] = None,
+    ) -> str:
+        """Configure workflow with system prompt and tools for the action.
+
+        Args:
+            action: The LLM action type
+            system_prompt: Optional system prompt override
+            skip_tool_setup: If True, skip tool setup (already filtered)
+            llm_request: Optional LLM request object for context-aware prompts
+
+        Returns:
+            The action-specific system prompt
+        """
+        if system_prompt:
+            action_system_prompt = system_prompt
+        else:
+            # Use context-aware system prompt based on tool categories
+            tool_categories = (
+                llm_request.tool_categories if llm_request else None
+            )
+            action_system_prompt = self.get_system_prompt_with_context(
+                action, tool_categories
+            )
+
+        if self._workflow_manager:
+            self._workflow_manager.update_system_prompt(action_system_prompt)
+
+            # Only setup tools if not already filtered
+            if not skip_tool_setup and self._tool_manager:
+                action_tools = self._tool_manager.get_tools_for_action(action)
+                self._workflow_manager.update_tools(action_tools)
+            elif skip_tool_setup:
+                # Tools were already filtered, don't override
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.info(
+                    "Skipping tool setup - tools already filtered by tool_categories"
+                )
+
+        return action_system_prompt
+
+    def _create_streaming_callback(
+        self,
+        llm_request: Optional[Any],
+        complete_response: List[str],
+        sequence_counter: List[int],
+    ):
+        """Create callback function for streaming tokens.
+
+        Args:
+            llm_request: The LLM request object
+            complete_response: List with single string for response accumulation
+            sequence_counter: List with single int for sequence tracking
+
+        Returns:
+            Callback function that handles streaming tokens
+        """
+
+        def handle_streaming_token(token_text: str) -> None:
+            """Forward streaming tokens to the GUI and accumulate response."""
+            if not token_text:
+                return
+            complete_response[0] += token_text
+            sequence_counter[0] += 1
+            self.api.llm.send_llm_text_streamed_signal(
+                LLMResponse(
+                    node_id=llm_request.node_id if llm_request else None,
+                    message=token_text,
+                    is_end_of_message=False,
+                    is_first_message=(sequence_counter[0] == 1),
+                    sequence_number=sequence_counter[0],
+                    request_id=getattr(self, "_current_request_id", None),
+                )
+            )
+
+        return handle_streaming_token
+
+    def _handle_interrupted_generation(
+        self, llm_request: Optional[Any], sequence_counter: int
+    ) -> str:
+        """Handle interrupted generation.
+
+        Args:
+            llm_request: The LLM request object
+            sequence_counter: Current sequence number
+
+        Returns:
+            Interruption message
+        """
+        self.logger.info("Generation interrupted by user")
+        interrupt_msg = "\n\n[Generation interrupted]"
+        self.api.llm.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                message=interrupt_msg,
+                is_end_of_message=True,
+                sequence_number=sequence_counter + 1,
+                request_id=getattr(self, "_current_request_id", None),
+            )
+        )
+        return interrupt_msg
+
+    def _handle_generation_error(
+        self, exc: Exception, llm_request: Optional[Any]
+    ) -> str:
+        """Handle generation error.
+
+        Args:
+            exc: The exception that occurred
+            llm_request: The LLM request object
+
+        Returns:
+            Error message
+        """
+        self.logger.error(f"Error during generation: {exc}", exc_info=True)
+        error_message = f"Error: {exc}"
+        self.api.llm.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                message=error_message,
+                is_end_of_message=False,
+                request_id=getattr(self, "_current_request_id", None),
+            )
+        )
+        return error_message
+
+    def _extract_final_response(self, result: Dict[str, Any]) -> str:
+        """Extract final response from generation result.
+
+        Args:
+            result: Generation result dictionary
+
+        Returns:
+            Final response content or empty string
+        """
+        if not result or "messages" not in result:
+            return ""
+
+        final_messages = [
+            message
+            for message in result["messages"]
+            if isinstance(message, AIMessage)
+        ]
+
+        if final_messages:
+            final_content = final_messages[-1].content or ""
+            if final_content:
+                # If the model is using ReAct format, extract only the response
+                # before "Action:" to avoid showing tool calls to the user
+                if "\nAction:" in final_content:
+                    # Extract everything before the first "Action:"
+                    response_part = final_content.split("\nAction:")[0].strip()
+                    if response_part:
+                        return response_part
+                return final_content
+
+        return ""
+
+    def _do_generate(
+        self,
+        prompt: str,
+        action: LLMActionType,
+        system_prompt: Optional[str] = None,
+        rag_system_prompt: Optional[str] = None,
+        llm_request: Optional[Any] = None,
+        do_tts_reply: bool = True,
+        extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
+        skip_tool_setup: bool = False,
+    ) -> Dict[str, Any]:
+        """Generate a response using the loaded LLM.
+
+        Args:
+            prompt: The input prompt
+            action: The LLM action type
+            system_prompt: Optional system prompt override
+            rag_system_prompt: Optional RAG system prompt
+            llm_request: Optional LLM request object
+            do_tts_reply: Whether to enable TTS reply
+            extra_context: Optional extra context dictionary
+            skip_tool_setup: If True, skip tool setup (already filtered)
+
+        Returns:
+            Dictionary with 'response' key containing generated text
+        """
+        if self._current_model_path != self.model_path:
+            self.logger.warning(
+                f"Model path mismatch detected: "
+                f"current='{self._current_model_path}' vs "
+                f"settings='{self.model_path}'. "
+                f"Reloading model..."
+            )
+            self.unload()
+            self.load()
+
+        llm_request = llm_request or LLMRequest()
+        self._setup_generation_workflow(
+            action, system_prompt, skip_tool_setup, llm_request
+        )
+
+        complete_response = [""]
+        sequence_counter = [0]
+        self._interrupted = False
+
+        if not self._workflow_manager:
+            self.logger.error("Workflow manager is not initialized")
+            return {"response": "Error: workflow unavailable"}
+
+        callback = self._create_streaming_callback(
+            llm_request, complete_response, sequence_counter
+        )
+        self._workflow_manager.set_token_callback(callback)
+
+        # Reset workflow manager's interrupted flag before generation
+        if hasattr(self._workflow_manager, "set_interrupted"):
+            self._workflow_manager.set_interrupted(False)
+
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+
+            # CRITICAL: Use stream() instead of invoke() to allow interrupts
+            # invoke() is completely blocking and ignores interrupt flags
+            # stream() checks interrupt flag on each token
+
+            # Prepare generation kwargs from LLMRequest
+            generation_kwargs = llm_request.to_dict() if llm_request else {}
+            print(
+                f"[GENERATION MIXIN DEBUG] llm_request.max_new_tokens={llm_request.max_new_tokens if llm_request else 'NO REQUEST'}",
+                flush=True,
+            )
+            print(
+                f"[GENERATION MIXIN DEBUG] generation_kwargs keys: {list(generation_kwargs.keys())}",
+                flush=True,
+            )
+            print(
+                f"[GENERATION MIXIN DEBUG] generation_kwargs.get('max_new_tokens')={generation_kwargs.get('max_new_tokens', 'NOT SET')}",
+                flush=True,
+            )
+            # Remove non-generation parameters
+            for key in [
+                "do_tts_reply",
+                "use_cache",
+                "node_id",
+                "use_memory",
+                "role",
+            ]:
+                generation_kwargs.pop(key, None)
+
+            print(
+                f"[GENERATION MIXIN DEBUG] After cleanup, generation_kwargs.get('max_new_tokens')={generation_kwargs.get('max_new_tokens', 'NOT SET')}",
+                flush=True,
+            )
+
+            result_messages = []
+            for message in self._workflow_manager.stream(
+                prompt, generation_kwargs
+            ):
+                # Check interrupt flag during streaming
+                if self._interrupted:
+                    self.logger.info(
+                        "Stream interrupted - breaking out of generation"
+                    )
+                    break
+                # Only keep messages that are final responses (no tool_calls)
+                # Tool-calling messages are intermediate workflow states
+                has_tool_calls = getattr(message, "tool_calls", None)
+                content_preview = (
+                    message.content[:100]
+                    if hasattr(message, "content") and message.content
+                    else "(empty)"
+                )
+                print(
+                    f"[GENERATION MIXIN] Received message - content: '{content_preview}', has_tool_calls: {bool(has_tool_calls)}",
+                    flush=True,
+                )
+                if not has_tool_calls:
+                    print(
+                        f"[GENERATION MIXIN] ✓ Appending final message (no tool calls)",
+                        flush=True,
+                    )
+                    result_messages.append(message)
+                else:
+                    print(
+                        f"[GENERATION MIXIN] ✗ Skipping intermediate message (has tool calls)",
+                        flush=True,
+                    )
+
+            # Convert streamed messages to result format
+            result = {"messages": result_messages}
+
+            if self._interrupted:
+                interrupt_msg = self._handle_interrupted_generation(
+                    llm_request, sequence_counter[0]
+                )
+                complete_response[0] += interrupt_msg
+                result = {"messages": []}
+        except Exception as exc:
+            error_msg = self._handle_generation_error(exc, llm_request)
+            complete_response[0] = error_msg
+            result = {"messages": []}
+        finally:
+            self._workflow_manager.set_token_callback(None)
+            self._interrupted = False
+            if hasattr(self._workflow_manager, "set_interrupted"):
+                self._workflow_manager.set_interrupted(False)
+
+        final_response = self._extract_final_response(result)
+        if final_response:
+            complete_response[0] = final_response
+
+        sequence_counter[0] += 1
+        self.api.llm.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                is_end_of_message=True,
+                sequence_number=sequence_counter[0],
+                request_id=getattr(self, "_current_request_id", None),
+            )
+        )
+
+        return {"response": complete_response[0]}
+
+    def _send_final_message(
+        self, llm_request: Optional[LLMRequest] = None
+    ) -> None:
+        """Send a signal indicating the end of a message stream.
+
+        Args:
+            llm_request: Optional LLM request object
+        """
+        self.api.llm.send_llm_text_streamed_signal(
+            LLMResponse(
+                node_id=llm_request.node_id if llm_request else None,
+                is_end_of_message=True,
+                request_id=getattr(self, "_current_request_id", None),
+            )
+        )
+
+    def _do_set_seed(self) -> None:
+        """Set random seeds for deterministic generation."""
+        if self.llm_generator_settings.override_parameters:
+            seed = self.llm_generator_settings.seed
+            random_seed = self.llm_generator_settings.random_seed
+        else:
+            seed = self.chatbot.seed
+            random_seed = self.chatbot.random_seed
+
+        if not random_seed:
+            torch.manual_seed(seed)
+            random.seed(seed)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(seed)

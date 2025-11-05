@@ -5,7 +5,7 @@ Follows project standards: docstrings, type hints, logging.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Optional
 from airunner.components.art.managers.stablediffusion.prompt_weight_bridge import (
     PromptWeightBridge,
 )

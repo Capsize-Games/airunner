@@ -1,10 +1,5 @@
-from airunner.components.art.data.canvas_layer import CanvasLayer
-from airunner.components.art.data.drawingpad_settings import DrawingPadSettings
 from airunner.components.nodegraph.gui.widgets.nodes.art.base_art_node import (
     BaseArtNode,
-)
-from airunner.utils.image.convert_image_to_binary import (
-    convert_image_to_binary,
 )
 
 

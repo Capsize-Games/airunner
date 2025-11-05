@@ -45,6 +45,13 @@ color_balance_data = {
 
 
 def upgrade() -> None:
+    # First, get the color_balance filter
+    color_balance_filter = ImageFilter.objects.first(
+        ImageFilter.name == "color_balance"
+    )
+    if not color_balance_filter:
+        return
+
     image_filter_values = color_balance_data
     image_filter_values["cyan_red"]["min_value"] = -1.0
     image_filter_values["cyan_red"]["max_value"] = 1.0
@@ -55,16 +62,22 @@ def upgrade() -> None:
     image_filter_values["yellow_blue"]["min_value"] = -1.0
     image_filter_values["yellow_blue"]["max_value"] = 1.0
 
-    for k, v in image_filter_values.items():
-        item = ImageFilterValue.objects.first(ImageFilter.name == k)
-        if not item:
-            return
+    # BUG FIX: Query by parameter name AND filter_id, not by ImageFilter.name
+    for param_name, param_data in image_filter_values.items():
+        # Find the specific parameter for THIS filter
+        filter_values = ImageFilterValue.objects.filter_by(
+            image_filter_id=color_balance_filter.id, name=param_name
+        )
+        if not filter_values:
+            continue
+
+        item = filter_values[0]
         ImageFilterValue.objects.update(
             item.id,
-            value=v["value"],
-            value_type=v["value_type"],
-            min_value=v["min_value"],
-            max_value=v["max_value"],
+            value=param_data["value"],
+            value_type=param_data["value_type"],
+            min_value=param_data["min_value"],
+            max_value=param_data["max_value"],
         )
 
 

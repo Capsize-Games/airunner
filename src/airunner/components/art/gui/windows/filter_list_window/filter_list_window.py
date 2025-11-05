@@ -1,4 +1,3 @@
-from typing import Dict
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -12,14 +11,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPalette, QColor
 
 import logging
 
 from airunner.components.art.data.image_filter import ImageFilter
-from airunner.components.art.utils.image_filter_utils import (
-    build_filter_object_from_model,
-)
 
 
 class FilterListWindow(QDialog):

@@ -1,7 +1,5 @@
-import os
 import types
 
-import pytest
 
 from airunner.components.art.managers.stablediffusion import model_loader
 
@@ -68,8 +66,6 @@ def test_unload_functions_noop(monkeypatch):
 
 
 def test_load_compel_proc_and_unload(monkeypatch):
-    fake_compel = types.SimpleNamespace()
-
     class C:
         def __init__(self, **kwargs):
             pass

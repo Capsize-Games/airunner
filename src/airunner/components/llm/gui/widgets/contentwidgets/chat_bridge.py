@@ -5,11 +5,17 @@ class ChatBridge(QObject):
     appendMessage = Signal(dict)
     clearMessages = Signal()
     setMessages = Signal(list)
+    updateLastMessageContent = Signal(
+        str
+    )  # Update last message content during streaming
     scrollRequested = Signal()
     contentHeightChanged = Signal(int)
     deleteMessageRequested = Signal(object)  # Accepts int or str
     copyMessageRequested = Signal(object)
     newChatRequested = Signal()
+    toolStatusUpdate = Signal(
+        str, str, str, str, str
+    )  # tool_id, tool_name, query, status, details
 
     @Slot(list)
     def set_messages(self, messages):
@@ -18,6 +24,15 @@ class ChatBridge(QObject):
     @Slot(dict)
     def append_message(self, msg):
         self.appendMessage.emit(msg)
+
+    @Slot(str)
+    def update_last_message_content(self, content):
+        """Update the content of the last message (for streaming).
+
+        Args:
+            content: New content for the last message
+        """
+        self.updateLastMessageContent.emit(content)
 
     @Slot()
     def clear_messages(self):
@@ -44,3 +59,16 @@ class ChatBridge(QObject):
     @Slot()
     def newChat(self):
         self.newChatRequested.emit()
+
+    @Slot(str, str, str, str, str)
+    def updateToolStatus(self, tool_id, tool_name, query, status, details):
+        """Emit tool status update to JavaScript.
+
+        Args:
+            tool_id: Unique ID for this tool execution
+            tool_name: Name of the tool
+            query: The query/prompt sent to the tool
+            status: "starting" or "completed"
+            details: Optional details (e.g., URLs)
+        """
+        self.toolStatusUpdate.emit(tool_id, tool_name, query, status, details)

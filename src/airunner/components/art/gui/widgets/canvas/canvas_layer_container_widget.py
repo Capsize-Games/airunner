@@ -60,9 +60,12 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         self.layers = CanvasLayer.objects.order_by("order").all()
         if not self.layers or len(self.layers) == 0:
             layer = self.create_layer(order=0, name="Layer 1")
-            # Initialize default settings for the first layer
-            self._initialize_layer_default_settings(layer.id)
-            self.layers = [layer]
+            # Initialize default settings for the first layer if created successfully
+            if layer:
+                self._initialize_layer_default_settings(layer.id)
+                self.layers = [layer]
+            else:
+                self.layers = []
 
         # Add layers to the grid layout (display in reverse order so
         # highest-order layers appear at the top)
@@ -100,6 +103,11 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         if "order" not in kwargs:
             kwargs["order"] = len(self.layers)
         layer = self.api.art.canvas.create_new_layer(**kwargs)
+
+        # Check if layer was created successfully
+        if not layer:
+            return None
+
         layer = CanvasLayer.objects.get(layer.id)
 
         # Initialize default settings for the new layer
@@ -118,6 +126,8 @@ class CanvasLayerContainerWidget(BaseWidget, PipelineMixin):
         self.clear_selected_layers()
         self.select_layer(layer.id, self.layer_widgets[layer.id])
         self.emit_signal(SignalCode.LAYERS_SHOW_SIGNAL)
+
+        return layer
 
     @Slot()
     def on_merge_visible_layers_clicked(self):

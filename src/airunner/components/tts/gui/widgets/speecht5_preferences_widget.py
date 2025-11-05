@@ -43,4 +43,3 @@ class SpeechT5PreferencesWidget(BaseWidget):
     def load_settings(self):
         """Load the SpeechT5 settings into the widget."""
         # Populate the widget with settings (e.g., pitch, voice)
-        pass

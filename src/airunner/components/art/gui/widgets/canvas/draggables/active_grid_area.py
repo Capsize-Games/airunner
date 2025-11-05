@@ -3,7 +3,7 @@ from typing import Optional
 from PIL.ImageQt import QImage
 
 from PySide6.QtCore import QRect, QPointF
-from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QPainter, Qt
+from PySide6.QtGui import QBrush, QColor, QPen, QPainter, Qt
 from PySide6.QtWidgets import QGraphicsItem
 
 from airunner.enums import SignalCode, CanvasToolName
@@ -37,13 +37,14 @@ class ActiveGridArea(DraggablePixmap):
         self.mouse_press_pos = None
         self._current_snapped_pos: tuple[int, int] = (0, 0)
 
-        super().__init__(QPixmap(), use_layer_context=False)
+        super().__init__(None, use_layer_context=False)
         self.render_fill()
         painter = self.draw_border()
         super().paint(painter, None, None)
-        # Keep ItemIsMovable enabled to receive mouse events
-        # We override mouse handlers to do manual positioning
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        # Don't use ItemIsMovable - we handle positioning manually
+        # ItemIsMovable causes Qt to apply its own position changes which
+        # conflicts with our manual positioning in mouseMoveEvent/mouseReleaseEvent
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
         self.register(
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL, self.render_fill
         )
@@ -246,6 +247,13 @@ class ActiveGridArea(DraggablePixmap):
         else:
             current_display_pos = self.pos()
 
+        self.logger.info(
+            f"[ACTIVE GRID DRAG] Mouse release - current_display_pos: {current_display_pos.x()}, {current_display_pos.y()}"
+        )
+        self.logger.info(
+            f"[ACTIVE GRID DRAG] Before save - scenePos: {self.scenePos().x()}, {self.scenePos().y()}"
+        )
+
         # Create ViewState from view
         view_state = ViewState(
             canvas_offset=QPointF(
@@ -262,6 +270,9 @@ class ActiveGridArea(DraggablePixmap):
 
         # Convert current display position to absolute position
         abs_pos = manager.display_to_absolute(current_display_pos, view_state)
+        self.logger.info(
+            f"[ACTIVE GRID DRAG] Calculated abs_pos: {abs_pos.x()}, {abs_pos.y()}"
+        )
 
         # Snap to grid in absolute space if enabled
         if self.grid_settings.snap_to_grid:
@@ -273,8 +284,20 @@ class ActiveGridArea(DraggablePixmap):
             # Update display position to snapped absolute position
             display_pos = manager.absolute_to_display(abs_pos, view_state)
             self.setPos(display_pos)
+            self.logger.info(
+                f"[ACTIVE GRID DRAG] Snap enabled - final abs_pos: {abs_pos.x()}, {abs_pos.y()}, display_pos: {display_pos.x()}, {display_pos.y()}"
+            )
+        else:
+            # When snap is disabled, keep the current display position as-is
+            # The abs_pos calculated above is already correct
+            self.logger.info(
+                f"[ACTIVE GRID DRAG] Snap disabled - using abs_pos: {abs_pos.x()}, {abs_pos.y()}"
+            )
 
         self.save_position(abs_pos)
+        self.logger.info(
+            f"[ACTIVE GRID DRAG] After save_position - scenePos: {self.scenePos().x()}, {self.scenePos().y()}"
+        )
         event.accept()
 
         # Clear drag flag after delay to ensure signal processing completes
@@ -288,23 +311,43 @@ class ActiveGridArea(DraggablePixmap):
 
     def save_position(self, abs_pos: QPointF):
         """Save the absolute position to database."""
+        self.logger.info(
+            f"[ACTIVE GRID DRAG] save_position called with abs_pos: {abs_pos.x()}, {abs_pos.y()}"
+        )
+        self.logger.info(
+            f"[ACTIVE GRID DRAG] Current in-memory settings: pos_x={self.active_grid_settings.pos_x}, pos_y={self.active_grid_settings.pos_y}"
+        )
+
         # Only save if position changed
         if (
             int(abs_pos.x()) != self.active_grid_settings.pos_x
             or int(abs_pos.y()) != self.active_grid_settings.pos_y
         ):
-            # Update DB settings
+            self.logger.info(
+                f"[ACTIVE GRID DRAG] Position changed, updating..."
+            )
+
+            # CRITICAL: Update the in-memory settings object FIRST
+            # This ensures any signal handlers that run will see the new values
+            self.active_grid_settings.pos_x = int(abs_pos.x())
+            self.active_grid_settings.pos_y = int(abs_pos.y())
+            self.logger.info(
+                f"[ACTIVE GRID DRAG] Updated in-memory settings to: pos_x={self.active_grid_settings.pos_x}, pos_y={self.active_grid_settings.pos_y}"
+            )
+
+            # Then update DB settings (this may emit signals)
             self.update_active_grid_settings(
                 pos_x=int(abs_pos.x()),
                 pos_y=int(abs_pos.y()),
             )
-
-            # Update the in-memory settings object immediately
-            self.active_grid_settings.pos_x = int(abs_pos.x())
-            self.active_grid_settings.pos_y = int(abs_pos.y())
+            self.logger.info(f"[ACTIVE GRID DRAG] Database update complete")
 
             # Trigger mask regeneration and update signal
             self.api.art.canvas.generate_mask()
             # NOTE: Don't call active_grid_area_updated() here as it triggers
             # a full refresh that repositions everything, causing snap-back
             # self.api.art.active_grid_area_updated()
+        else:
+            self.logger.info(
+                f"[ACTIVE GRID DRAG] Position unchanged, skipping save"
+            )

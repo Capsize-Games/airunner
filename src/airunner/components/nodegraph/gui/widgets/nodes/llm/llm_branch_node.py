@@ -299,7 +299,7 @@ CONDITION: {condition}"""
         Trigger the next execution step based on the condition result.
         """
         # Get execution data
-        condition = self._exec_data.get("condition")
+        self._exec_data.get("condition")
         timeout = self._exec_data.get("timeout")
         start_time = self._exec_data.get("start_time")
 

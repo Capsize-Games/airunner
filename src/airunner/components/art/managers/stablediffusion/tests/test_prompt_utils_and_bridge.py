@@ -1,4 +1,3 @@
-import types
 
 from airunner.components.art.managers.stablediffusion import (
     prompt_utils,

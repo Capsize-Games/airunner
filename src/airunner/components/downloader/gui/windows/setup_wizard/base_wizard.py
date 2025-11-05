@@ -31,4 +31,3 @@ class BaseWizard(
         Override this function to initialize form based on specific page in question.
         :return:
         """
-        pass

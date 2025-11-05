@@ -1,6 +1,3 @@
-from alembic import op
-import sqlalchemy as sa
-from typing import List, Optional
 
 
 def create_foreign_key(

@@ -720,12 +720,16 @@ class TextualInversionTrainer(BaseTrainer):
 
 
 if __name__ == "__main__":
-    # Test configuration
+    # Test configuration - uses temp directory for testing
+    import tempfile
+
+    temp_dir = tempfile.mkdtemp(prefix="airunner_ti_test_")
+
     config = TrainingConfig(
-        model_path="/home/joe/Projects/airunner/models/realDream_sdxl1.safetensors",
-        dataset_path="/home/joe/Projects/airunner/training_data/joe",
-        output_dir="/home/joe/Projects/airunner/test_textual_inversion_output",
-        placeholder_token="<joe>",
+        model_path=os.path.join(temp_dir, "models", "test_model.safetensors"),
+        dataset_path=os.path.join(temp_dir, "training_data", "test_subject"),
+        output_dir=os.path.join(temp_dir, "output"),
+        placeholder_token="<test>",
         initializer_token="person",
         resolution=1024,
         train_batch_size=1,
@@ -736,6 +740,9 @@ if __name__ == "__main__":
         checkpointing_steps=50,
         seed=42,
     )
+
+    print(f"Test configuration will use temporary directory: {temp_dir}")
+    print("Note: Ensure test model and dataset exist before running!")
 
     trainer = TextualInversionTrainer(config)
     trainer.train()

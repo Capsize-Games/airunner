@@ -7,13 +7,10 @@ from typing import Optional, List
 
 
 class LLMAPIService(APIServiceBase):
-    def __init__(self, emit_signal=None):
-        super().__init__(emit_signal)
-        self._emit_signal = emit_signal
+    """LLM API service providing signal-based LLM operations."""
 
-    def emit_signal(self, code, data=None):
-        if self._emit_signal:
-            self._emit_signal(code, data)
+    def __init__(self):
+        super().__init__()
 
     def chatbot_changed(self):
         self.emit_signal(SignalCode.CHATBOT_CHANGED)
@@ -26,10 +23,31 @@ class LLMAPIService(APIServiceBase):
         action: LLMActionType = LLMActionType.CHAT,
         do_tts_reply: bool = True,
         node_id: Optional[str] = None,
+        request_id: Optional[str] = None,
+        callback: Optional[callable] = None,
     ):
+        """Send an LLM generation request.
+
+        Args:
+            prompt: The user's input text
+            command: Optional command string
+            llm_request: Optional LLM parameters
+            action: The action type (CHAT, CODE, etc.)
+            do_tts_reply: Whether to convert reply to speech
+            node_id: Optional node identifier
+            request_id: Optional unique request identifier for correlation
+            callback: Optional callback function for responses
+        """
         # Use action-optimized defaults if no explicit request provided
         llm_request = llm_request or LLMRequest.for_action(action)
         llm_request.do_tts_reply = do_tts_reply
+
+        # DEBUG: Log max_new_tokens value
+        print(
+            f"[LLM API DEBUG] llm_request.max_new_tokens={llm_request.max_new_tokens}, action={action}",
+            flush=True,
+        )
+
         data = {
             "llm_request": True,
             "request_data": {
@@ -42,6 +60,19 @@ class LLMAPIService(APIServiceBase):
         }
         if node_id is not None:
             data["node_id"] = node_id
+
+        if request_id is not None:
+            data["request_id"] = request_id
+
+            # Register pending request if callback provided
+            if callback:
+                from airunner.utils.application.signal_mediator import (
+                    SignalMediator,
+                )
+
+                mediator = SignalMediator()
+                mediator.register_pending_request(request_id, callback)
+
         self.emit_signal(SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL, data)
 
     def clear_history(self, **kwargs):
@@ -98,6 +129,8 @@ class LLMAPIService(APIServiceBase):
         # )
 
     def send_llm_text_streamed_signal(self, response: LLMResponse):
-        self.emit_signal(
-            SignalCode.LLM_TEXT_STREAMED_SIGNAL, {"response": response}
-        )
+        # Include request_id at top level for SignalMediator correlation
+        data = {"response": response}
+        if response.request_id:
+            data["request_id"] = response.request_id
+        self.emit_signal(SignalCode.LLM_TEXT_STREAMED_SIGNAL, data)

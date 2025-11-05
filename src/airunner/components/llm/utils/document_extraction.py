@@ -195,7 +195,7 @@ def extract_text_from_pdf(path: str) -> Optional[str]:
             return _clean_text(combined_text)
 
         return None
-    except Exception as e:
+    except Exception:
         # Log error but don't fail completely
         return None
 

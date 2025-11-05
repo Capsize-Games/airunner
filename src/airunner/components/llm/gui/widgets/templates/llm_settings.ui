@@ -649,6 +649,97 @@
             </item>
            </layout>
           </item>
+          <item row="9" column="0">
+           <layout class="QGridLayout" name="gridLayout_mode_routing">
+            <property name="horizontalSpacing">
+             <number>0</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>10</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="use_mode_routing">
+              <property name="text">
+               <string>Enable Mode-Based Routing</string>
+              </property>
+              <property name="toolTip">
+               <string>Use specialized agents for author, code, research, and QA tasks</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QCheckBox" name="enable_trajectory_logging">
+              <property name="text">
+               <string>Log Trajectories (Debug)</string>
+              </property>
+              <property name="toolTip">
+               <string>Enable detailed logging of agent trajectories for debugging</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0" colspan="2">
+             <layout class="QHBoxLayout" name="horizontalLayout_mode_override">
+              <item>
+               <widget class="QLabel" name="label_mode_override">
+                <property name="text">
+                 <string>Force Mode:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="mode_override">
+                <property name="toolTip">
+                 <string>Override automatic mode detection (leave empty for automatic)</string>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Auto (Default)</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Author</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Code</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Research</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>QA</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>General</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_mode">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
           <item row="11" column="0">
            <widget class="QPushButton" name="pushButton">
             <property name="font">
@@ -803,7 +894,7 @@
       </font>
      </property>
      <property name="title">
-      <string>Model service</string>
+      <string>Provider</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <property name="leftMargin">
@@ -824,8 +915,8 @@
      </layout>
     </widget>
    </item>
-      <item row="3" column="0">
-    <widget class="QGroupBox" name="remote_model_path">
+   <item row="3" column="0">
+    <widget class="QGroupBox" name="model_selection_group">
      <property name="font">
       <font>
        <pointsize>10</pointsize>
@@ -833,7 +924,7 @@
       </font>
      </property>
      <property name="title">
-      <string>Custom path</string>
+      <string>Model</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <property name="leftMargin">
@@ -849,14 +940,127 @@
        <number>9</number>
       </property>
       <item>
-       <widget class="QLineEdit" name="model_path"/>
-      </item>
-      <item>
-       <widget class="QProgressBar" name="progressBar">
-        <property name="value">
-         <number>24</number>
+       <widget class="QComboBox" name="model_dropdown">
+        <property name="editable">
+         <bool>true</bool>
         </property>
        </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="model_path">
+        <property name="placeholderText">
+         <string>Model path or identifier</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="quantization_layout">
+        <item>
+         <widget class="QLabel" name="quantization_label">
+          <property name="font">
+           <font>
+            <pointsize>9</pointsize>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Quantization:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="quantization_dropdown">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>9</pointsize>
+            <bold>false</bold>
+           </font>
+          </property>
+          <item>
+           <property name="text">
+            <string>2-bit (50% VRAM, -15% quality)</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>4-bit (balanced, recommended)</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>8-bit (200% VRAM, best quality)</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="model_info_label">
+        <property name="font">
+         <font>
+          <pointsize>9</pointsize>
+          <bold>false</bold>
+          <italic>true</italic>
+         </font>
+        </property>
+        <property name="text">
+         <string>VRAM: -- GB | Context: -- tokens | Tool Calling: --</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="download_model_button">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Download Model from HuggingFace</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="start_quantize_button">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Start Manual Quantization</string>
+        </property>
+        <property name="toolTip">
+         <string>Manually quantize model to disk (creates separate files). Automatic quantization during loading is recommended instead.</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="delete_buttons_layout">
+        <item>
+         <widget class="QPushButton" name="delete_safetensors_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Delete Original Files</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="delete_quantized_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Delete Quantized</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -1020,34 +1224,18 @@
    </hints>
   </connection>
   <connection>
-   <sender>model_service</sender>
-   <signal>currentTextChanged(QString)</signal>
+   <sender>quantization_dropdown</sender>
+   <signal>currentIndexChanged(int)</signal>
    <receiver>llm_settings_widget</receiver>
-   <slot>on_model_service_currentTextChanged(QString)</slot>
+   <slot>on_quantization_changed(int)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>281</x>
-     <y>94</y>
+     <x>290</x>
+     <y>150</y>
     </hint>
     <hint type="destinationlabel">
-     <x>191</x>
-     <y>-12</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>model_path</sender>
-   <signal>textChanged(QString)</signal>
-   <receiver>llm_settings_widget</receiver>
-   <slot>on_model_path_textChanged(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>47</x>
-     <y>161</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>388</x>
-     <y>-13</y>
+     <x>290</x>
+     <y>371</y>
     </hint>
    </hints>
   </connection>
@@ -1086,7 +1274,6 @@
   <slot>enable_manual_tools()</slot>
   <slot>enable_automatic_tools()</slot>
   <slot>toggle_use_cache(bool)</slot>
-  <slot>on_model_service_currentTextChanged(QString)</slot>
-  <slot>on_model_path_textChanged(QString)</slot>
+  <slot>on_quantization_changed(int)</slot>
  </slots>
 </ui>

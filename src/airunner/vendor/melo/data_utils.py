@@ -13,7 +13,7 @@ from airunner.vendor.melo.utils import load_filepaths_and_text
 from airunner.vendor.melo.utils import (
     load_wav_to_torch_librosa as load_wav_to_torch,
 )
-from airunner.vendor.melo.text import cleaned_text_to_sequence, get_bert
+from airunner.vendor.melo.text import cleaned_text_to_sequence
 from airunner.vendor.melo import commons
 
 """Multi speaker version"""

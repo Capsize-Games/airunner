@@ -278,8 +278,10 @@ class InstallWorker(
                                 self.parent.update_download_log(
                                     {"message": msg}
                                 )
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                self.logger.exception(
+                                    f"Failed to update download log: {e}"
+                                )
                     self.hf_downloader.download_model(
                         requested_path=model["path"],
                         requested_file_name=filename,
@@ -289,6 +291,10 @@ class InstallWorker(
                     total_success += 1
                 except Exception as e:
                     total_failed += 1
+                    self.logger.exception(
+                        f"Failed to download model file: {filename} "
+                        f"for model path: {model.get('path', '<no-path>')}: {e}"
+                    )
 
         # Download Upscaler x4 files if enabled
         try:
@@ -1650,7 +1656,7 @@ class InstallPage(BaseWizard):
                     pass
             else:
                 pass
-        except Exception as e:
+        except Exception:
             pass
 
         # Also try to enable the Back button if it was disabled
@@ -1663,7 +1669,7 @@ class InstallPage(BaseWizard):
                 )
                 if back_button:
                     back_button.setEnabled(True)
-        except Exception as e:
+        except Exception:
             pass
 
     def _check_completion_fallback(self):

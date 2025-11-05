@@ -26,8 +26,6 @@ from PySide6.QtCore import (
     QRect,
     QSize,
     QRegularExpression,
-    QFile,
-    QTextStream,
     QFileInfo,
     QTimer,
     Slot,

@@ -2,7 +2,6 @@ from PIL import Image, ImageFilter
 import numpy as np
 
 from airunner.components.art.filters.base_filter import BaseFilter
-from airunner.components.art.filters.box_blur import BoxBlur
 
 
 class FilmFilter(BaseFilter):
