@@ -6,6 +6,9 @@ from airunner.enums import SignalCode
 import weakref
 import threading
 import queue
+from airunner.utils.application.get_logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class SingletonMeta(type):
@@ -291,49 +294,31 @@ class SignalMediator(metaclass=SingletonMeta):
 
         # DEBUG: Log request correlation attempts
         if request_id:
-            import logging
-
-            logger = logging.getLogger(__name__)
+            logger.debug(f"Signal {code} with request_id={request_id}")
             logger.debug(
-                f"[SignalMediator] Signal {code} with request_id={request_id}"
+                f"Pending requests: {list(self._pending_requests.keys())}"
             )
+            logger.debug(f"Callbacks: {list(self._request_callbacks.keys())}")
             logger.debug(
-                f"[SignalMediator] Pending requests: {list(self._pending_requests.keys())}"
-            )
-            logger.debug(
-                f"[SignalMediator] Callbacks: {list(self._request_callbacks.keys())}"
-            )
-            logger.debug(
-                f"[SignalMediator] Match check: {request_id in self._pending_requests}"
+                f"Match check: {request_id in self._pending_requests}"
             )
 
         if request_id and request_id in self._pending_requests:
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.info(
-                f"[SignalMediator] ROUTING response for request_id={request_id}"
-            )
+            logger.info(f"ROUTING response for request_id={request_id}")
 
             # Route response to pending request queue
             with self._request_lock:
                 if request_id in self._pending_requests:
                     self._pending_requests[request_id].put(data)
-                    logger.info(
-                        f"[SignalMediator] Added to queue for {request_id}"
-                    )
+                    logger.info(f"Added to queue for {request_id}")
 
             # Also call registered callback if exists
             with self._request_lock:
                 if request_id in self._request_callbacks:
                     try:
-                        logger.info(
-                            f"[SignalMediator] Calling callback for {request_id}"
-                        )
+                        logger.info(f"Calling callback for {request_id}")
                         self._request_callbacks[request_id](data)
-                        logger.info(
-                            f"[SignalMediator] Callback completed for {request_id}"
-                        )
+                        logger.info(f"Callback completed for {request_id}")
                     except Exception as e:
                         logger.error(
                             f"Error in request callback: {e}", exc_info=True
