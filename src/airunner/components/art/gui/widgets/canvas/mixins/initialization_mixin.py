@@ -74,6 +74,7 @@ class InitializationMixin:
 
         # Text items
         self._text_items = []
+        self._text_item_layer_map = {}
         self._editing_text_item = None
 
         # Resize and restoration state
