@@ -3,7 +3,6 @@
 from typing import Dict, List, Optional, Any
 import logging
 from airunner.components.agents.agent_registry import AgentRegistry
-from airunner.components.agents.expert_agent import ExpertAgent
 
 
 class AgentRouter:

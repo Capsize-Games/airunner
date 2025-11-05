@@ -4,11 +4,10 @@ Provides a combo box with integrated search functionality, similar to
 VSCode's quick pick interface.
 """
 
-from typing import List, Optional, Callable
+from typing import List, Optional
 from PySide6.QtWidgets import (
     QComboBox,
     QCompleter,
-    QLineEdit,
 )
 from PySide6.QtCore import Qt, Signal, QSortFilterProxyModel
 from PySide6.QtGui import QStandardItemModel, QStandardItem

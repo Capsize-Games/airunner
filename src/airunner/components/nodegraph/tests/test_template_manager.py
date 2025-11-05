@@ -1,7 +1,6 @@
 """Tests for workflow template manager."""
 
 import pytest
-import json
 import tempfile
 from pathlib import Path
 

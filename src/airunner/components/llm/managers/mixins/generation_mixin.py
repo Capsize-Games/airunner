@@ -27,29 +27,49 @@ class GenerationMixin:
     """Mixin for LLM text generation functionality."""
 
     def _setup_generation_workflow(
-        self, action: LLMActionType, system_prompt: Optional[str]
+        self,
+        action: LLMActionType,
+        system_prompt: Optional[str],
+        skip_tool_setup: bool = False,
+        llm_request: Optional[Any] = None,
     ) -> str:
         """Configure workflow with system prompt and tools for the action.
 
         Args:
             action: The LLM action type
             system_prompt: Optional system prompt override
+            skip_tool_setup: If True, skip tool setup (already filtered)
+            llm_request: Optional LLM request object for context-aware prompts
 
         Returns:
             The action-specific system prompt
         """
-        action_system_prompt = (
-            system_prompt
-            if system_prompt
-            else self.get_system_prompt_for_action(action)
-        )
+        if system_prompt:
+            action_system_prompt = system_prompt
+        else:
+            # Use context-aware system prompt based on tool categories
+            tool_categories = (
+                llm_request.tool_categories if llm_request else None
+            )
+            action_system_prompt = self.get_system_prompt_with_context(
+                action, tool_categories
+            )
 
         if self._workflow_manager:
             self._workflow_manager.update_system_prompt(action_system_prompt)
 
-            if self._tool_manager:
+            # Only setup tools if not already filtered
+            if not skip_tool_setup and self._tool_manager:
                 action_tools = self._tool_manager.get_tools_for_action(action)
                 self._workflow_manager.update_tools(action_tools)
+            elif skip_tool_setup:
+                # Tools were already filtered, don't override
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.info(
+                    "Skipping tool setup - tools already filtered by tool_categories"
+                )
 
         return action_system_prompt
 
@@ -83,6 +103,7 @@ class GenerationMixin:
                     is_end_of_message=False,
                     is_first_message=(sequence_counter[0] == 1),
                     sequence_number=sequence_counter[0],
+                    request_id=getattr(self, "_current_request_id", None),
                 )
             )
 
@@ -108,6 +129,7 @@ class GenerationMixin:
                 message=interrupt_msg,
                 is_end_of_message=True,
                 sequence_number=sequence_counter + 1,
+                request_id=getattr(self, "_current_request_id", None),
             )
         )
         return interrupt_msg
@@ -131,6 +153,7 @@ class GenerationMixin:
                 node_id=llm_request.node_id if llm_request else None,
                 message=error_message,
                 is_end_of_message=False,
+                request_id=getattr(self, "_current_request_id", None),
             )
         )
         return error_message
@@ -156,6 +179,13 @@ class GenerationMixin:
         if final_messages:
             final_content = final_messages[-1].content or ""
             if final_content:
+                # If the model is using ReAct format, extract only the response
+                # before "Action:" to avoid showing tool calls to the user
+                if "\nAction:" in final_content:
+                    # Extract everything before the first "Action:"
+                    response_part = final_content.split("\nAction:")[0].strip()
+                    if response_part:
+                        return response_part
                 return final_content
 
         return ""
@@ -169,6 +199,7 @@ class GenerationMixin:
         llm_request: Optional[Any] = None,
         do_tts_reply: bool = True,
         extra_context: Optional[Dict[str, Dict[str, Any]]] = None,
+        skip_tool_setup: bool = False,
     ) -> Dict[str, Any]:
         """Generate a response using the loaded LLM.
 
@@ -180,6 +211,7 @@ class GenerationMixin:
             llm_request: Optional LLM request object
             do_tts_reply: Whether to enable TTS reply
             extra_context: Optional extra context dictionary
+            skip_tool_setup: If True, skip tool setup (already filtered)
 
         Returns:
             Dictionary with 'response' key containing generated text
@@ -195,7 +227,9 @@ class GenerationMixin:
             self.load()
 
         llm_request = llm_request or LLMRequest()
-        self._setup_generation_workflow(action, system_prompt)
+        self._setup_generation_workflow(
+            action, system_prompt, skip_tool_setup, llm_request
+        )
 
         complete_response = [""]
         sequence_counter = [0]
@@ -225,6 +259,18 @@ class GenerationMixin:
 
             # Prepare generation kwargs from LLMRequest
             generation_kwargs = llm_request.to_dict() if llm_request else {}
+            print(
+                f"[GENERATION MIXIN DEBUG] llm_request.max_new_tokens={llm_request.max_new_tokens if llm_request else 'NO REQUEST'}",
+                flush=True,
+            )
+            print(
+                f"[GENERATION MIXIN DEBUG] generation_kwargs keys: {list(generation_kwargs.keys())}",
+                flush=True,
+            )
+            print(
+                f"[GENERATION MIXIN DEBUG] generation_kwargs.get('max_new_tokens')={generation_kwargs.get('max_new_tokens', 'NOT SET')}",
+                flush=True,
+            )
             # Remove non-generation parameters
             for key in [
                 "do_tts_reply",
@@ -234,6 +280,11 @@ class GenerationMixin:
                 "role",
             ]:
                 generation_kwargs.pop(key, None)
+
+            print(
+                f"[GENERATION MIXIN DEBUG] After cleanup, generation_kwargs.get('max_new_tokens')={generation_kwargs.get('max_new_tokens', 'NOT SET')}",
+                flush=True,
+            )
 
             result_messages = []
             for message in self._workflow_manager.stream(
@@ -245,7 +296,29 @@ class GenerationMixin:
                         "Stream interrupted - breaking out of generation"
                     )
                     break
-                result_messages.append(message)
+                # Only keep messages that are final responses (no tool_calls)
+                # Tool-calling messages are intermediate workflow states
+                has_tool_calls = getattr(message, "tool_calls", None)
+                content_preview = (
+                    message.content[:100]
+                    if hasattr(message, "content") and message.content
+                    else "(empty)"
+                )
+                print(
+                    f"[GENERATION MIXIN] Received message - content: '{content_preview}', has_tool_calls: {bool(has_tool_calls)}",
+                    flush=True,
+                )
+                if not has_tool_calls:
+                    print(
+                        f"[GENERATION MIXIN] ✓ Appending final message (no tool calls)",
+                        flush=True,
+                    )
+                    result_messages.append(message)
+                else:
+                    print(
+                        f"[GENERATION MIXIN] ✗ Skipping intermediate message (has tool calls)",
+                        flush=True,
+                    )
 
             # Convert streamed messages to result format
             result = {"messages": result_messages}
@@ -276,6 +349,7 @@ class GenerationMixin:
                 node_id=llm_request.node_id if llm_request else None,
                 is_end_of_message=True,
                 sequence_number=sequence_counter[0],
+                request_id=getattr(self, "_current_request_id", None),
             )
         )
 
@@ -293,6 +367,7 @@ class GenerationMixin:
             LLMResponse(
                 node_id=llm_request.node_id if llm_request else None,
                 is_end_of_message=True,
+                request_id=getattr(self, "_current_request_id", None),
             )
         )
 

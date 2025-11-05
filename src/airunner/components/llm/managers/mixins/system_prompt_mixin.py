@@ -3,18 +3,112 @@
 This mixin provides:
 - Base system prompt construction
 - Action-specific prompt customization
-- Personality integration
+- Personality integration (disabled for precision tools)
 - Timestamp inclusion
-- Mood system integration
+- Mood system integration (disabled for precision tools)
+- Context-aware prompt selection (precision vs conversational)
 """
 
 from datetime import datetime
+from typing import Optional, List
 
 from airunner.enums import LLMActionType
+from airunner.components.llm.core.tool_registry import ToolCategory
+
+
+# Math-focused system prompt for mathematical computation
+MATH_SYSTEM_PROMPT = """You are a mathematics expert solving problems systematically.
+
+**AVAILABLE TOOLS:**
+- sympy_compute(code): Symbolic mathematics (algebra, calculus, exact solutions)
+- numpy_compute(code): Numerical methods (matrices, approximations)
+- python_compute(code): General calculations (standard math libraries)
+- polya_reasoning(problem, step, context): Structured problem-solving guidance
+
+**CRITICAL RULES:**
+1. Work step-by-step through problems
+2. Use tools for complex calculations to ensure accuracy
+3. Store results in 'result' variable when using compute tools
+4. After tool execution, incorporate the result into your solution
+5. Provide final answer clearly marked (e.g., \\boxed{answer} or #### answer)
+6. Focus ONLY on the mathematical problem - no conversational topics
+
+**EXAMPLE:**
+Problem: Find sqrt(50)
+Tool: {"tool": "sympy_compute", "arguments": {"code": "import sympy as sp\\nresult = sp.sqrt(50).simplify()"}}
+Result: 5*sqrt(2)
+Answer: \\boxed{5\\sqrt{2}}"""
+
+# Precision-focused system prompt for general technical tools
+PRECISION_SYSTEM_PROMPT = """You are a precise technical assistant focused on accuracy.
+
+CRITICAL: Provide exact, deterministic answers. Do not add creative flair or personality.
+Focus entirely on solving the problem correctly using the available tools when needed."""
 
 
 class SystemPromptMixin:
     """Mixin for LLM system prompt generation."""
+
+    def _get_prompt_mode(self, tool_categories: Optional[List] = None) -> str:
+        """Determine which system prompt mode to use based on tool categories.
+
+        Args:
+            tool_categories: List of ToolCategory values being used
+
+        Returns:
+            'math', 'precision', or 'conversational'
+        """
+        if not tool_categories:
+            return "conversational"
+
+        # Convert string names to ToolCategory if needed
+        category_values = []
+        for cat in tool_categories:
+            if isinstance(cat, str):
+                # Try to match by value
+                for tc in ToolCategory:
+                    if tc.value == cat:
+                        category_values.append(tc)
+                        break
+            else:
+                category_values.append(cat)
+
+        # Determine mode based on categories
+        if ToolCategory.MATH in category_values:
+            return "math"
+        elif any(cat in {ToolCategory.ANALYSIS} for cat in category_values):
+            return "precision"
+        else:
+            return "conversational"
+
+    def get_system_prompt_with_context(
+        self,
+        action: LLMActionType,
+        tool_categories: Optional[List] = None,
+    ) -> str:
+        """Generate system prompt based on context and tool categories.
+
+        Automatically switches between:
+        - Math mode: For mathematical problem-solving with computation tools
+        - Precision mode: For technical/analytical tasks
+        - Conversational mode: For general interaction with personality
+
+        Args:
+            action: The type of action being performed
+            tool_categories: Optional list of tool categories being used
+
+        Returns:
+            Appropriate system prompt for the context
+        """
+        mode = self._get_prompt_mode(tool_categories)
+
+        if mode == "math":
+            return MATH_SYSTEM_PROMPT
+        elif mode == "precision":
+            return PRECISION_SYSTEM_PROMPT
+        else:
+            # Conversational mode - use personality-based prompt
+            return self.get_system_prompt_for_action(action)
 
     @property
     def system_prompt(self) -> str:

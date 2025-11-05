@@ -5,7 +5,6 @@ Following the pattern from /home/joe/Projects/agent/eval_tests/test_dev_onboardi
 """
 
 import pytest
-from langchain_ollama import ChatOllama
 from langsmith import testing as t
 from openevals.llm import create_llm_as_judge
 

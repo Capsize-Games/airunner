@@ -7,7 +7,7 @@ Provides an improved UI for selecting LLM providers and models with:
 - Quick access to Manage Models dialog
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,

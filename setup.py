@@ -26,6 +26,8 @@ extras_require = {
     ],
     "dev": [  # Development dependencies
         "pytest",
+        "pytest-timeout",
+        "responses>=0.25.0",
         "python-dotenv==1.0.1",
         "coverage==7.8.0",
         "black==25.1.0",
@@ -33,6 +35,9 @@ extras_require = {
         "flake8==7.2.0",
         "mypy==1.16.0",
         "autoflake==2.3.1",
+        "pandas>=2.0.0",  # For eval dataset loading (parquet)
+        "pyarrow>=14.0.0",  # For parquet file support
+        "tqdm>=4.0.0",  # For progress bars in headless downloads
     ],
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",
@@ -219,6 +224,7 @@ setup(
         "console_scripts": [
             "airunner=airunner.launcher:main",
             "airunner-setup=airunner.installer:main",
+            "airunner-headless=airunner.bin.airunner_headless:main",
             "airunner-build-ui=airunner.bin.build_ui:main",
             "airunner-compile-translations=airunner.bin.compile_translations:main",
             "airunner-tests=airunner.bin.run_tests:main",
