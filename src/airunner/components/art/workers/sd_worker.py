@@ -46,9 +46,7 @@ class SDWorker(Worker):
         self._version: StableDiffusionVersion = StableDiffusionVersion.NONE
         self.signal_handlers = {
             SignalCode.SD_CANCEL_SIGNAL: self.on_sd_cancel_signal,
-            SignalCode.START_AUTO_IMAGE_GENERATION_SIGNAL: self.on_start_auto_image_generation_signal,
             SignalCode.STOP_AUTO_IMAGE_GENERATION_SIGNAL: self.on_stop_auto_image_generation_signal,
-            SignalCode.DO_GENERATE_SIGNAL: self.on_do_generate_signal,
             SignalCode.INTERRUPT_IMAGE_GENERATION_SIGNAL: self.on_interrupt_image_generation_signal,
             SignalCode.CHANGE_SCHEDULER_SIGNAL: self.on_change_scheduler_signal,
             SignalCode.MODEL_STATUS_CHANGED_SIGNAL: self.on_model_status_changed_signal,

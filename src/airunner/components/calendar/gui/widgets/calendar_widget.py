@@ -2,25 +2,19 @@
 
 from datetime import datetime, timedelta
 from typing import List, Optional
-from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QCalendarWidget,
-    QListWidget,
-    QListWidgetItem,
-    QPushButton,
-    QLabel,
-    QSplitter,
-)
-from PySide6.QtCore import Qt, QDate, Signal
+from PySide6.QtWidgets import QListWidgetItem, QMessageBox, QToolButton
+from PySide6.QtCore import Qt, QDate, Signal, Slot, QTimer
 from PySide6.QtGui import QTextCharFormat, QColor
 from airunner.components.calendar.data.event import Event
 from airunner.components.data.session_manager import session_scope
 from airunner.components.calendar.gui.widgets.event_dialog import EventDialog
+from airunner.components.application.gui.widgets.base_widget import BaseWidget
+from airunner.components.calendar.gui.widgets.templates.calendar_ui import (
+    Ui_calendar,
+)
 
 
-class CalendarWidget(QWidget):
+class CalendarWidget(BaseWidget):
     """Main calendar widget with month view and event list.
 
     Displays a calendar with events highlighted and provides
@@ -32,101 +26,89 @@ class CalendarWidget(QWidget):
         event_deleted: Emitted when event is removed
     """
 
+    widget_class_ = Ui_calendar
     event_created = Signal(int)  # event_id
     event_updated = Signal(int)  # event_id
     event_deleted = Signal(int)  # event_id
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    icons = [
+        ("refresh-ccw", "refresh_button"),
+        ("plus-square", "new_event_button"),
+        ("edit", "edit_event_button"),
+        ("trash", "delete_event_button"),
+    ]
+
+    def __init__(self, *args, **kwargs):
         """Initialize calendar widget.
 
         Args:
-            parent: Parent widget
+            *args: Variable length argument list
+            **kwargs: Arbitrary keyword arguments
         """
-        super().__init__(parent)
+        super().__init__(*args, **kwargs)
         self.selected_date: Optional[datetime] = None
         self.events_cache: List[Event] = []
-        self.setup_ui()
+        self.setup_connections()
         self.load_events()
         self.update_calendar_highlights()
 
-    def setup_ui(self) -> None:
-        """Set up the user interface."""
-        layout = QVBoxLayout(self)
+        # Set calendar navigation icons after a short delay to ensure buttons exist
+        QTimer.singleShot(0, self.setup_calendar_icons)
 
-        # Title
-        title = QLabel("Calendar")
-        title.setStyleSheet("font-size: 18px; font-weight: bold;")
-        layout.addWidget(title)
-
-        # Main splitter
-        splitter = QSplitter(Qt.Horizontal)
-
-        # Left side - Calendar
-        calendar_container = QWidget()
-        calendar_layout = QVBoxLayout(calendar_container)
-
-        self.calendar = QCalendarWidget()
-        self.calendar.setGridVisible(True)
-        self.calendar.clicked.connect(self.on_date_selected)
-        calendar_layout.addWidget(self.calendar)
-
-        # Calendar controls
-        controls_layout = QHBoxLayout()
-
-        self.today_button = QPushButton("Today")
-        self.today_button.clicked.connect(self.go_to_today)
-        controls_layout.addWidget(self.today_button)
-
-        self.refresh_button = QPushButton("Refresh")
-        self.refresh_button.clicked.connect(self.refresh_events)
-        controls_layout.addWidget(self.refresh_button)
-
-        controls_layout.addStretch()
-        calendar_layout.addLayout(controls_layout)
-
-        splitter.addWidget(calendar_container)
-
-        # Right side - Events list
-        events_container = QWidget()
-        events_layout = QVBoxLayout(events_container)
-
-        self.events_label = QLabel("Events")
-        self.events_label.setStyleSheet("font-size: 14px; font-weight: bold;")
-        events_layout.addWidget(self.events_label)
-
-        self.events_list = QListWidget()
-        self.events_list.itemDoubleClicked.connect(
-            self.on_event_double_clicked
+    def setup_calendar_icons(self) -> None:
+        """Set icons for calendar navigation buttons after widget is initialized."""
+        # QCalendarWidget uses QToolButton for navigation
+        prev_button = self.ui.calendar_widget.findChild(
+            QToolButton, "qt_calendar_prevmonth"
         )
-        events_layout.addWidget(self.events_list)
+        next_button = self.ui.calendar_widget.findChild(
+            QToolButton, "qt_calendar_nextmonth"
+        )
 
-        # Event controls
-        event_controls = QHBoxLayout()
+        if prev_button:
+            prev_button.setObjectName("prev_month_button")
+            prev_button.setText("")  # Remove text, just show icon
 
-        self.new_event_button = QPushButton("New Event")
-        self.new_event_button.clicked.connect(self.create_new_event)
-        event_controls.addWidget(self.new_event_button)
+            # Add to icon manager's cache for theme-aware icon handling
+            if self.icon_manager:
+                self.icon_manager.icon_cache["prev_month_button"] = {
+                    "icon_name": "chevron-left",
+                    "widget": prev_button,
+                }
 
-        self.edit_event_button = QPushButton("Edit")
-        self.edit_event_button.clicked.connect(self.edit_selected_event)
-        self.edit_event_button.setEnabled(False)
-        event_controls.addWidget(self.edit_event_button)
+        if next_button:
+            next_button.setObjectName("next_month_button")
+            next_button.setText("")  # Remove text, just show icon
 
-        self.delete_event_button = QPushButton("Delete")
-        self.delete_event_button.clicked.connect(self.delete_selected_event)
-        self.delete_event_button.setEnabled(False)
-        event_controls.addWidget(self.delete_event_button)
+            # Add to icon manager's cache for theme-aware icon handling
+            if self.icon_manager:
+                self.icon_manager.icon_cache["next_month_button"] = {
+                    "icon_name": "chevron-right",
+                    "widget": next_button,
+                }
 
-        events_layout.addLayout(event_controls)
+        # Now set the icons using the icon manager's theme logic
+        if self.icon_manager:
+            self.icon_manager.set_icons()
 
-        splitter.addWidget(events_container)
-        splitter.setSizes([300, 400])
+    def setup_connections(self) -> None:
+        """Set up signal/slot connections for UI elements."""
+        # Calendar connections
+        self.ui.calendar_widget.clicked.connect(self.on_date_selected)
 
-        layout.addWidget(splitter)
+        # Button connections
+        self.ui.today_button.clicked.connect(self.go_to_today)
+        self.ui.refresh_button.clicked.connect(self.refresh_events)
+        self.ui.new_event_button.clicked.connect(self.create_new_event)
+        self.ui.edit_event_button.clicked.connect(self.edit_selected_event)
+        self.ui.delete_event_button.clicked.connect(self.delete_selected_event)
 
-        # Connect events list selection
-        self.events_list.itemSelectionChanged.connect(
+        # Events list connection
+        self.ui.events_list.itemSelectionChanged.connect(
             self.on_events_selection_changed
+        )
+        self.ui.events_list.itemDoubleClicked.connect(
+            self.on_event_double_clicked
         )
 
     def load_events(self) -> None:
@@ -140,7 +122,7 @@ class CalendarWidget(QWidget):
         """Highlight dates that have events."""
         # Clear existing highlights
         fmt = QTextCharFormat()
-        self.calendar.setDateTextFormat(QDate(), fmt)
+        self.ui.calendar_widget.setDateTextFormat(QDate(), fmt)
 
         # Highlight dates with events
         event_fmt = QTextCharFormat()
@@ -152,8 +134,9 @@ class CalendarWidget(QWidget):
                 event.start_time.month,
                 event.start_time.day,
             )
-            self.calendar.setDateTextFormat(qdate, event_fmt)
+            self.ui.calendar_widget.setDateTextFormat(qdate, event_fmt)
 
+    @Slot(QDate)
     def on_date_selected(self, date: QDate) -> None:
         """Handle date selection in calendar.
 
@@ -165,7 +148,7 @@ class CalendarWidget(QWidget):
 
     def update_events_list(self) -> None:
         """Update the events list for selected date."""
-        self.events_list.clear()
+        self.ui.events_list.clear()
 
         if not self.selected_date:
             return
@@ -183,7 +166,7 @@ class CalendarWidget(QWidget):
         ]
 
         # Update label
-        self.events_label.setText(
+        self.ui.events_label.setText(
             f"Events on {self.selected_date.strftime('%B %d, %Y')} "
             f"({len(day_events)})"
         )
@@ -199,14 +182,16 @@ class CalendarWidget(QWidget):
 
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, event.id)
-            self.events_list.addItem(item)
+            self.ui.events_list.addItem(item)
 
+    @Slot()
     def on_events_selection_changed(self) -> None:
         """Handle events list selection change."""
-        has_selection = len(self.events_list.selectedItems()) > 0
-        self.edit_event_button.setEnabled(has_selection)
-        self.delete_event_button.setEnabled(has_selection)
+        has_selection = len(self.ui.events_list.selectedItems()) > 0
+        self.ui.edit_event_button.setEnabled(has_selection)
+        self.ui.delete_event_button.setEnabled(has_selection)
 
+    @Slot()
     def create_new_event(self) -> None:
         """Open dialog to create new event."""
         dialog = EventDialog(self)
@@ -235,6 +220,7 @@ class CalendarWidget(QWidget):
         self.refresh_events()
         self.event_created.emit(event_id)
 
+    @Slot(QListWidgetItem)
     def on_event_double_clicked(self, item: QListWidgetItem) -> None:
         """Handle double-click on event item.
 
@@ -243,9 +229,10 @@ class CalendarWidget(QWidget):
         """
         self.edit_selected_event()
 
+    @Slot()
     def edit_selected_event(self) -> None:
         """Open dialog to edit selected event."""
-        items = self.events_list.selectedItems()
+        items = self.ui.events_list.selectedItems()
         if not items:
             return
 
@@ -273,17 +260,16 @@ class CalendarWidget(QWidget):
         self.refresh_events()
         self.event_updated.emit(event_id)
 
+    @Slot()
     def delete_selected_event(self) -> None:
         """Delete selected event."""
-        items = self.events_list.selectedItems()
+        items = self.ui.events_list.selectedItems()
         if not items:
             return
 
         event_id = items[0].data(Qt.UserRole)
 
         # Confirm deletion
-        from PySide6.QtWidgets import QMessageBox
-
         reply = QMessageBox.question(
             self,
             "Confirm Deletion",
@@ -302,12 +288,14 @@ class CalendarWidget(QWidget):
             self.refresh_events()
             self.event_deleted.emit(event_id)
 
+    @Slot()
     def go_to_today(self) -> None:
         """Navigate calendar to today's date."""
         today = QDate.currentDate()
-        self.calendar.setSelectedDate(today)
+        self.ui.calendar_widget.setSelectedDate(today)
         self.on_date_selected(today)
 
+    @Slot()
     def refresh_events(self) -> None:
         """Reload events from database and refresh display."""
         self.load_events()

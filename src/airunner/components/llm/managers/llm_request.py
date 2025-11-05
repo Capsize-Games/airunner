@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from llama_cloud import MessageRole
 
@@ -55,6 +55,9 @@ class LLMRequest:
     do_tts_reply: bool = True
     node_id: Optional[str] = None
     use_memory: bool = True
+    tool_categories: Optional[List[str]] = (
+        None  # Restrict to specific tool categories (e.g., ["math", "conversation"])
+    )
     role: MessageRole = MessageRole.USER
 
     def to_dict(self) -> Dict:
@@ -95,6 +98,7 @@ class LLMRequest:
 
         data.pop("node_id")
         data.pop("use_memory")
+        data.pop("tool_categories")
         data.pop("role")
 
         return data
@@ -327,7 +331,7 @@ class LLMRequest:
                 temperature=0.1,  # Very precise
                 repetition_penalty=1.0,  # No penalty needed
                 no_repeat_ngram_size=0,  # Allow any patterns
-                max_new_tokens=2048,  # Allow full responses without truncation
+                max_new_tokens=4096,  # Increased for complex reasoning tasks
                 top_k=5,  # Very focused
                 top_p=0.95,
             )

@@ -4,12 +4,10 @@ import pytest
 import tempfile
 import shutil
 from pathlib import Path
-from unittest.mock import MagicMock
 
 # Qt imports must come before airunner imports
 try:
     from PySide6.QtWidgets import QApplication, QDialog
-    from PySide6.QtCore import Qt
     import sys
 
     # Create QApplication if it doesn't exist

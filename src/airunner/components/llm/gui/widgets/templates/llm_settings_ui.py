@@ -287,6 +287,48 @@ class Ui_llm_settings_widget(object):
 
         self.gridLayout_12.addLayout(self.gridLayout_3, 8, 0, 1, 1)
 
+        self.gridLayout_mode_routing = QGridLayout()
+        self.gridLayout_mode_routing.setObjectName(u"gridLayout_mode_routing")
+        self.gridLayout_mode_routing.setHorizontalSpacing(0)
+        self.gridLayout_mode_routing.setVerticalSpacing(10)
+        self.use_mode_routing = QCheckBox(self.override_parameters)
+        self.use_mode_routing.setObjectName(u"use_mode_routing")
+
+        self.gridLayout_mode_routing.addWidget(self.use_mode_routing, 0, 0, 1, 1)
+
+        self.enable_trajectory_logging = QCheckBox(self.override_parameters)
+        self.enable_trajectory_logging.setObjectName(u"enable_trajectory_logging")
+
+        self.gridLayout_mode_routing.addWidget(self.enable_trajectory_logging, 0, 1, 1, 1)
+
+        self.horizontalLayout_mode_override = QHBoxLayout()
+        self.horizontalLayout_mode_override.setObjectName(u"horizontalLayout_mode_override")
+        self.label_mode_override = QLabel(self.override_parameters)
+        self.label_mode_override.setObjectName(u"label_mode_override")
+
+        self.horizontalLayout_mode_override.addWidget(self.label_mode_override)
+
+        self.mode_override = QComboBox(self.override_parameters)
+        self.mode_override.addItem("")
+        self.mode_override.addItem("")
+        self.mode_override.addItem("")
+        self.mode_override.addItem("")
+        self.mode_override.addItem("")
+        self.mode_override.addItem("")
+        self.mode_override.setObjectName(u"mode_override")
+
+        self.horizontalLayout_mode_override.addWidget(self.mode_override)
+
+        self.horizontalSpacer_mode = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_mode_override.addItem(self.horizontalSpacer_mode)
+
+
+        self.gridLayout_mode_routing.addLayout(self.horizontalLayout_mode_override, 1, 0, 1, 2)
+
+
+        self.gridLayout_12.addLayout(self.gridLayout_mode_routing, 9, 0, 1, 1)
+
         self.pushButton = QPushButton(self.override_parameters)
         self.pushButton.setObjectName(u"pushButton")
         font1 = QFont()
@@ -523,6 +565,25 @@ class Ui_llm_settings_widget(object):
         self.early_stopping.setText(QCoreApplication.translate("llm_settings_widget", u"Early stopping", None))
         self.use_cache.setText(QCoreApplication.translate("llm_settings_widget", u"Use Cache", None))
         self.do_sample.setText(QCoreApplication.translate("llm_settings_widget", u"Do sample", None))
+        self.use_mode_routing.setText(QCoreApplication.translate("llm_settings_widget", u"Enable Mode-Based Routing", None))
+#if QT_CONFIG(tooltip)
+        self.use_mode_routing.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Use specialized agents for author, code, research, and QA tasks", None))
+#endif // QT_CONFIG(tooltip)
+        self.enable_trajectory_logging.setText(QCoreApplication.translate("llm_settings_widget", u"Log Trajectories (Debug)", None))
+#if QT_CONFIG(tooltip)
+        self.enable_trajectory_logging.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Enable detailed logging of agent trajectories for debugging", None))
+#endif // QT_CONFIG(tooltip)
+        self.label_mode_override.setText(QCoreApplication.translate("llm_settings_widget", u"Force Mode:", None))
+        self.mode_override.setItemText(0, QCoreApplication.translate("llm_settings_widget", u"Auto (Default)", None))
+        self.mode_override.setItemText(1, QCoreApplication.translate("llm_settings_widget", u"Author", None))
+        self.mode_override.setItemText(2, QCoreApplication.translate("llm_settings_widget", u"Code", None))
+        self.mode_override.setItemText(3, QCoreApplication.translate("llm_settings_widget", u"Research", None))
+        self.mode_override.setItemText(4, QCoreApplication.translate("llm_settings_widget", u"QA", None))
+        self.mode_override.setItemText(5, QCoreApplication.translate("llm_settings_widget", u"General", None))
+
+#if QT_CONFIG(tooltip)
+        self.mode_override.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Override automatic mode detection (leave empty for automatic)", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton.setText(QCoreApplication.translate("llm_settings_widget", u"Reset Settings to Default", None))
         self.repetition_penalty.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.repetition_penalty", None))
         self.repetition_penalty.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Repetition Penalty", None))

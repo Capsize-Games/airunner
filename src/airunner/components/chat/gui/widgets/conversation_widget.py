@@ -198,11 +198,6 @@ class ConversationWidget(BaseWidget):
 
     def clear_conversation(self) -> None:
         """Clear all conversation state and UI."""
-        import traceback
-
-        self.logger.debug(
-            f"[CONVERSATION] clear_conversation called from:\n{''.join(traceback.format_stack()[-4:-1])}"
-        )
         self._conversation = None
         self._conversation_id = None
         self.conversation_history = []

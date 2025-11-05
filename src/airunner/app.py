@@ -105,6 +105,11 @@ class App(MediatorMixin, SettingsMixin, QObject):
             window_class_params: Parameters for main window (GUI mode only)
             initialize_gui: If False, run in headless mode (no GUI)
         """
+        # Check environment variable for headless mode
+        headless_env = os.environ.get("AIRUNNER_HEADLESS", "0") == "1"
+        if headless_env:
+            initialize_gui = False
+
         self.main_window_class_ = main_window_class
         self.window_class_params = window_class_params or {}
         self.no_splash = no_splash
@@ -112,6 +117,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         self.splash = None
         self.initialize_gui = initialize_gui  # Store the flag
         self.http_server_thread = None
+        self.api_server_thread = None  # New: API server for headless mode
         self.is_running = False
 
         """
@@ -132,6 +138,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 os.path.join(os.path.dirname(__file__), "static")
             )
             # Find all components/**/gui/static directories
+            print(
+                flush=True,
+            )
             components_static_dirs = glob.glob(
                 os.path.join(
                     os.path.dirname(__file__),
@@ -142,6 +151,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 ),
                 recursive=True,
             )
+            print(
+                flush=True,
+            )
             # Add user web dir if it exists
             static_search_dirs = [static_dir] + components_static_dirs
             if os.path.isdir(self.user_web_dir):
@@ -151,14 +163,23 @@ class App(MediatorMixin, SettingsMixin, QObject):
             )
             if os.path.isdir(mathjax_dir):
                 logging.info("Starting local HTTPS server for static assets.")
+                print(
+                    flush=True,
+                )
                 self.http_server_thread = LocalHttpServerThread(
                     directory=static_dir,
                     additional_directories=static_search_dirs[1:],
                     port=LOCAL_SERVER_PORT,
                     lna_enabled=LNA_ENABLED,  # Pass LNA mode to server
                 )
+                print(
+                    flush=True,
+                )
                 self.http_server_thread.start()
                 self.start()
+                print(
+                    flush=True,
+                )
                 self.set_translations()
                 self.run()
             else:
@@ -171,13 +192,63 @@ class App(MediatorMixin, SettingsMixin, QObject):
         else:
             # Headless mode - just initialize core systems
             logging.info("Running in headless mode (no GUI)")
+            self._init_headless_services()
+            # Note: Call run() after __init__ to start headless event loop
             self.is_running = True
 
         # Initialize knowledge extraction system (works in both GUI and headless modes)
         self._initialize_knowledge_system()
 
+    def _init_headless_services(self):
+        """Initialize services for headless mode (no GUI).
+
+        Creates minimal Qt event loop and starts HTTP API server.
+        """
+        # Create QCoreApplication for Qt event loop (needed by workers)
+        # This is minimal Qt without any GUI components
+        from PySide6.QtCore import QCoreApplication
+
+        self.app = QCoreApplication.instance()
+        if self.app is None:
+            self.app = QCoreApplication([])
+        self.app.api = self
+        logging.info("Qt Core event loop initialized (headless mode)")
+
+        # Initialize workers BEFORE starting HTTP server
+        # so they're ready to handle requests immediately
+        self._initialize_headless_workers()
+
+        # Start API server for /llm, /art, /stt, /tts endpoints
+        # Skip if we're being created from within an HTTP request handler
+        # (server is already running in that case)
+        if os.environ.get("AIRUNNER_SERVER_RUNNING") != "1":
+            from airunner.components.server.api.api_server_thread import (
+                APIServerThread,
+            )
+
+            host = os.environ.get("AIRUNNER_HTTP_HOST", "0.0.0.0")
+            port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8080"))
+
+            logging.info(f"Starting API server on {host}:{port}")
+            self.api_server_thread = APIServerThread(host=host, port=port)
+            self.api_server_thread.start()
+            logging.info(
+                f"API server started - /health, /llm, /art endpoints available"
+            )
+            # Mark that server is now running
+            os.environ["AIRUNNER_SERVER_RUNNING"] = "1"
+        else:
+            logging.info(
+                "API server already running - skipping initialization"
+            )
+
     def _initialize_knowledge_system(self):
         """Initialize the automatic knowledge extraction system."""
+        # Skip if knowledge system is disabled (e.g., in headless mode)
+        if os.environ.get("AIRUNNER_KNOWLEDGE_ON", "1") == "0":
+            logging.info("Knowledge system disabled")
+            return
+
         try:
             from airunner.components.knowledge import (
                 initialize_knowledge_system,
@@ -191,6 +262,27 @@ class App(MediatorMixin, SettingsMixin, QObject):
         except Exception as e:
             logging.error(
                 f"Failed to initialize knowledge system: {e}", exc_info=True
+            )
+
+    def _initialize_headless_workers(self):
+        """Initialize essential workers for headless mode.
+
+        Only initializes workers needed for API functionality:
+        - LLMGenerateWorker: Handles LLM text generation requests
+        """
+        try:
+            from airunner.utils.application.create_worker import (
+                create_worker,
+            )
+            from airunner.components.llm.workers.llm_generate_worker import (
+                LLMGenerateWorker,
+            )
+
+            self._llm_generate_worker = create_worker(LLMGenerateWorker)
+            logging.info("Headless workers initialized (LLM)")
+        except Exception as e:
+            logging.error(
+                f"Failed to initialize headless workers: {e}", exc_info=True
             )
 
     def _run_knowledge_migration_if_needed(self):
@@ -460,6 +552,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
         Override this method to run the application in a different mode.
         """
         if not self.initialize_gui:
+            # Headless mode - keep server running
+            self.run_headless()
             return
 
         if not self.no_splash and not self.splash:
@@ -467,6 +561,34 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
         QTimer.singleShot(50, self._post_splash_startup)
         sys.exit(self.app.exec())
+
+    def run_headless(self):
+        """Run in headless mode without GUI.
+
+        Uses Qt event loop to process worker signals while server runs.
+        """
+        from PySide6.QtCore import QTimer
+
+        # Workers are already initialized in _init_headless_services()
+        # No need to initialize again here
+
+        logging.info("AI Runner headless mode - server running")
+        logging.info("Press Ctrl+C to stop")
+
+        # Qt event loop blocks Python signal handlers, so we need to
+        # periodically allow Python to process signals
+        # This timer does nothing but allows KeyboardInterrupt to be caught
+        timer = QTimer()
+        timer.start(500)  # Wake up every 500ms
+        timer.timeout.connect(lambda: None)
+
+        try:
+            # Run Qt event loop (processes worker signals)
+            sys.exit(self.app.exec())
+        except KeyboardInterrupt:
+            logging.info("Interrupted by user")
+            self.cleanup()
+            sys.exit(0)
 
     def _post_splash_startup(self):
         self.show_main_application(self.app)
@@ -570,6 +692,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 MainWindow,
             )
 
+
             window_class = MainWindow
 
         if self.splash:
@@ -625,6 +748,10 @@ class App(MediatorMixin, SettingsMixin, QObject):
             self.http_server_thread.stop()
             self.http_server_thread.wait()
 
+        if self.api_server_thread:
+            self.api_server_thread.stop()
+            # API server thread is daemon, no need to join
+
     def cleanup(self):
         """
         Cleanup resources when shutting down.
@@ -633,14 +760,24 @@ class App(MediatorMixin, SettingsMixin, QObject):
         logging.info("Cleaning up App resources...")
 
         try:
+            # Mark as not running first to stop loops
+            self.is_running = False
+
             # Stop HTTP server if running
-            self.quit()
+            if hasattr(self, "api_server_thread") and self.api_server_thread:
+                logging.info("Stopping API server...")
+                try:
+                    self.api_server_thread.shutdown()
+                    self.api_server_thread.join(timeout=2.0)
+                    logging.info("API server stopped")
+                except Exception as e:
+                    logging.warning(f"Error stopping API server: {e}")
 
             # Emit shutdown signal for components to cleanup
-            self.emit_signal(SignalCode.APPLICATION_SHUTDOWN_SIGNAL, {})
-
-            # Mark as not running
-            self.is_running = False
+            try:
+                self.emit_signal(SignalCode.APPLICATION_SHUTDOWN_SIGNAL, {})
+            except Exception as e:
+                logging.warning(f"Error emitting shutdown signal: {e}")
 
             logging.info("App cleanup complete")
 
