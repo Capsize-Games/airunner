@@ -23,7 +23,6 @@ class TTSVocalizerWorker(Worker):
         self.signal_handlers = {
             SignalCode.INTERRUPT_PROCESS_SIGNAL: self.on_interrupt_process_signal,
             SignalCode.UNBLOCK_TTS_GENERATOR_SIGNAL: self.on_unblock_tts_generator_signal,
-            SignalCode.TTS_GENERATOR_WORKER_ADD_TO_STREAM_SIGNAL: self.on_tts_generator_worker_add_to_stream_signal,
             SignalCode.APPLICATION_SETTINGS_CHANGED_SIGNAL: self.on_application_settings_changed_signal,
             SignalCode.PLAYBACK_DEVICE_CHANGED: self.on_playback_device_changed_signal,
         }

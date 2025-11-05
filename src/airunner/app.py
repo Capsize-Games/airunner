@@ -138,6 +138,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 os.path.join(os.path.dirname(__file__), "static")
             )
             # Find all components/**/gui/static directories
+            print(
+                flush=True,
+            )
             components_static_dirs = glob.glob(
                 os.path.join(
                     os.path.dirname(__file__),
@@ -148,6 +151,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 ),
                 recursive=True,
             )
+            print(
+                flush=True,
+            )
             # Add user web dir if it exists
             static_search_dirs = [static_dir] + components_static_dirs
             if os.path.isdir(self.user_web_dir):
@@ -157,14 +163,23 @@ class App(MediatorMixin, SettingsMixin, QObject):
             )
             if os.path.isdir(mathjax_dir):
                 logging.info("Starting local HTTPS server for static assets.")
+                print(
+                    flush=True,
+                )
                 self.http_server_thread = LocalHttpServerThread(
                     directory=static_dir,
                     additional_directories=static_search_dirs[1:],
                     port=LOCAL_SERVER_PORT,
                     lna_enabled=LNA_ENABLED,  # Pass LNA mode to server
                 )
+                print(
+                    flush=True,
+                )
                 self.http_server_thread.start()
                 self.start()
+                print(
+                    flush=True,
+                )
                 self.set_translations()
                 self.run()
             else:
@@ -676,6 +691,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             from airunner.components.application.gui.windows.main.main_window import (
                 MainWindow,
             )
+
 
             window_class = MainWindow
 

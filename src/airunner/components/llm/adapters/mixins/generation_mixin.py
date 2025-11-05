@@ -61,9 +61,11 @@ class GenerationMixin:
         )
         response_text = self._decode_response(outputs, inputs)
 
-        tool_calls = self._parse_tool_calls_if_enabled(response_text, kwargs)
+        tool_calls, cleaned_text = self._parse_tool_calls_if_enabled(
+            response_text, kwargs
+        )
 
-        message = AIMessage(content=response_text, tool_calls=tool_calls or [])
+        message = AIMessage(content=cleaned_text, tool_calls=tool_calls or [])
         generation = ChatGeneration(message=message)
 
         return ChatResult(generations=[generation])
@@ -177,34 +179,38 @@ class GenerationMixin:
             kwargs: Generation parameters
 
         Returns:
-            List of tool calls or None
+            Tuple of (tool_calls list or None, cleaned response text)
         """
         if not self.tools or kwargs.get("disable_tool_parsing", False):
-            return None
+            return None, response_text
 
         if self.tool_calling_mode == "native" and self.use_mistral_native:
-            tool_calls, _ = self._parse_mistral_tool_calls(response_text)
+            tool_calls, cleaned_text = self._parse_mistral_tool_calls(
+                response_text
+            )
             if tool_calls:
                 self.logger.debug(
                     f"Mistral native extracted {len(tool_calls)} tool call(s)"
                 )
-            return tool_calls
+            return tool_calls, cleaned_text
 
         elif self.tool_calling_mode == "json" and self.use_json_mode:
-            tool_calls, _ = self._parse_json_mode_tool_calls(response_text)
+            tool_calls, cleaned_text = self._parse_json_mode_tool_calls(
+                response_text
+            )
             if tool_calls:
                 self.logger.debug(
                     f"JSON mode extracted {len(tool_calls)} tool call(s)"
                 )
-            return tool_calls
+            return tool_calls, cleaned_text
 
         else:
-            tool_calls, _ = self._parse_tool_calls(response_text)
+            tool_calls, cleaned_text = self._parse_tool_calls(response_text)
             if tool_calls:
                 self.logger.debug(
                     f"ReAct extracted {len(tool_calls)} tool call(s)"
                 )
-            return tool_calls
+            return tool_calls, cleaned_text
 
     def _stream(
         self,
@@ -238,15 +244,82 @@ class GenerationMixin:
         thread = self._start_generation_thread(generation_kwargs)
         full_response = []
 
+        # Collect all streamed tokens
+        # If tools are enabled, buffer everything to yield a single complete message
+        # Otherwise stream chunks in real-time
+        should_buffer = bool(self.tools)
+
+        token_count = 0
         try:
-            yield from self._stream_tokens(
+            for chunk in self._stream_tokens(
                 streamer, run_manager, full_response
-            )
+            ):
+                token_count += 1
+                if not should_buffer:
+                    print(
+                        f"[STREAM YIELD DEBUG] Yielding content chunk during loop (token #{token_count})",
+                        flush=True,
+                    )
+                    yield chunk
+                else:
+                    if (
+                        token_count % 100 == 0
+                    ):  # Log every 100 tokens to reduce spam
+                        print(
+                            f"[STREAM YIELD DEBUG] Buffered {token_count} tokens so far...",
+                            flush=True,
+                        )
         finally:
+            print(
+                f"[STREAM YIELD DEBUG] Stream ended - total tokens buffered: {token_count}",
+                flush=True,
+            )
             thread.join()
 
-        # Parse tool calls from complete response
-        yield from self._handle_stream_tool_calls(full_response, kwargs)
+        # Always yield a final complete message
+        response_text = "".join(full_response)
+
+        if self.tools:
+            print(
+                f"[STREAM YIELD DEBUG] Tools enabled, preparing final chunk",
+                flush=True,
+            )
+            # Parse tool calls and get cleaned text
+            self._log_stream_completion(response_text, kwargs)
+            tool_calls = self._parse_stream_tool_calls(response_text, kwargs)
+            _, cleaned_text = self._parse_tool_calls_if_enabled(
+                response_text, kwargs
+            )
+
+            # Yield single complete message with both content and tool_calls
+            message = AIMessageChunk(
+                content=cleaned_text, tool_calls=tool_calls or []
+            )
+            chunk = ChatGenerationChunk(message=message)
+
+            print(
+                f"[STREAM DEBUG] Yielding complete message - content: '{cleaned_text}', tool_calls: {len(tool_calls or [])}",
+                flush=True,
+            )
+            if tool_calls:
+                print(f"[STREAM DEBUG] Tool calls: {tool_calls}", flush=True)
+
+            print(
+                f"[STREAM YIELD DEBUG] About to yield tool chunk", flush=True
+            )
+            yield chunk
+            print(
+                f"[STREAM YIELD DEBUG] Finished yielding tool chunk",
+                flush=True,
+            )
+        elif full_response:
+            print(
+                f"[STREAM YIELD DEBUG] No tools, yielding final content chunk",
+                flush=True,
+            )
+            # No tools - yield final complete message
+            message = AIMessageChunk(content=response_text)
+            yield ChatGenerationChunk(message=message)
 
     def _create_streamer(self):
         """Create text iterator streamer.
@@ -352,6 +425,8 @@ class GenerationMixin:
         Yields:
             ChatGenerationChunk objects
         """
+        # Use the proper iterator protocol - don't access queue directly
+        # This ensures TextIteratorStreamer handles EOS, tokenization, etc. correctly
         for text in streamer:
             if self._interrupted:
                 self.logger.info("Stream interrupted - breaking immediately")
@@ -390,6 +465,10 @@ class GenerationMixin:
             ChatGenerationChunk with tool calls if found
         """
         if not self.tools or not full_response:
+            print(
+                "[STREAM TOOL DEBUG] Skipping tool call handling - no tools or empty response",
+                flush=True,
+            )
             return
 
         response_text = "".join(full_response)
@@ -398,7 +477,22 @@ class GenerationMixin:
         tool_calls = self._parse_stream_tool_calls(response_text, kwargs)
 
         if tool_calls:
-            yield self._create_tool_call_chunk(tool_calls)
+            print(
+                f"[STREAM TOOL DEBUG] Yielding tool_call_chunk with {len(tool_calls)} tool calls",
+                flush=True,
+            )
+            chunk = self._create_tool_call_chunk(tool_calls)
+            print(f"[STREAM TOOL DEBUG] Chunk created: {chunk}", flush=True)
+            print(
+                f"[STREAM TOOL DEBUG] Chunk.message.tool_calls: {chunk.message.tool_calls}",
+                flush=True,
+            )
+            yield chunk
+        else:
+            print(
+                "[STREAM TOOL DEBUG] No tool calls found after parsing",
+                flush=True,
+            )
 
     def _log_stream_completion(self, response_text, kwargs):
         """Log stream completion debug information.

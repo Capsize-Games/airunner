@@ -100,15 +100,15 @@ class LLMGenerateWorker(
         """Create conversation and interaction signal handlers."""
         return {
             SignalCode.LLM_CLEAR_HISTORY_SIGNAL: self.on_llm_clear_history_signal,
-            SignalCode.LLM_TEXT_GENERATE_REQUEST_SIGNAL: self.on_llm_request_signal,
             SignalCode.ADD_CHATBOT_MESSAGE_SIGNAL: self.on_llm_add_chatbot_response_to_history,
             SignalCode.LOAD_CONVERSATION: self.on_llm_load_conversation,
             SignalCode.INTERRUPT_PROCESS_SIGNAL: self.llm_on_interrupt_process_signal,
             SignalCode.QUIT_APPLICATION: self.on_quit_application_signal,
             SignalCode.CONVERSATION_DELETED: self.on_conversation_deleted_signal,
             SignalCode.SECTION_CHANGED: self.on_section_changed_signal,
-        } @ property
+        }
 
+    @property
     def use_openrouter(self) -> bool:
         """Check if using OpenRouter model service.
 

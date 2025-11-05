@@ -116,6 +116,8 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             import datetime
 
             # Skip ToolMessages - they're internal workflow state
+            # The model will see them during workflow execution via checkpoints,
+            # but they don't need to be in the persistent conversation history
             if message.__class__.__name__ == "ToolMessage":
                 self.logger.debug(
                     "Skipping ToolMessage - internal workflow state"
@@ -123,6 +125,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
                 return
 
             # Skip AIMessages with tool_calls - they're internal workflow instructions
+            # (These are the "thinking" steps where model decides to call a tool)
             if (
                 isinstance(message, AIMessage)
                 and hasattr(message, "tool_calls")

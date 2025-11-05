@@ -421,10 +421,74 @@ class ToolCallingMixin:
             Tuple of (tool_calls list or None, cleaned response text)
         """
         tool_calls = []
-        json_pattern = r"```json\s*(\{[^`]+\})\s*```"
-        matches = re.findall(json_pattern, response_text, re.DOTALL)
+        cleaned_text = response_text
 
-        for match in matches:
+        # First try to parse ReAct format: Action: tool_name\nAction Input: {...}
+        # Note: Observation is added by LangGraph after tool execution, we don't parse it here
+        react_pattern = (
+            r"Action:\s*(\w+)(?:\([^)]*\))?\s*\nAction Input:\s*(\{[^}]+\})"
+        )
+        react_matches = re.findall(react_pattern, response_text, re.DOTALL)
+
+        print(
+            f"[TOOL PARSING DEBUG] Found {len(react_matches)} ReAct tool calls",
+            flush=True,
+        )
+
+        for tool_name, json_input in react_matches:
+            try:
+                args = json.loads(json_input)
+                tool_calls.append(
+                    {
+                        "name": tool_name,
+                        "args": args,
+                        "id": f"call_{len(tool_calls)}",
+                        "type": "tool_call",
+                    }
+                )
+                print(
+                    f"[TOOL PARSING DEBUG] Parsed tool: {tool_name} with args: {args}",
+                    flush=True,
+                )
+            except json.JSONDecodeError as e:
+                print(
+                    f"[TOOL PARSING DEBUG] Failed to parse JSON: {e}",
+                    flush=True,
+                )
+                continue
+
+        # Strip out ReAct format blocks from the response
+        if react_matches:
+            print(
+                f"[TOOL PARSING DEBUG] Original text length: {len(response_text)}",
+                flush=True,
+            )
+            # Remove Action: and Action Input: lines
+            cleaned_text = re.sub(
+                react_pattern, "", response_text, flags=re.DOTALL
+            ).strip()
+            print(
+                f"[TOOL PARSING DEBUG] After Action removal: {len(cleaned_text)} chars",
+                flush=True,
+            )
+            # Also remove any Observation: placeholder lines (LLM sometimes generates these)
+            cleaned_text = re.sub(
+                r"\n?Observation:\s*\[.*?\]", "", cleaned_text, flags=re.DOTALL
+            ).strip()
+            print(
+                f"[TOOL PARSING DEBUG] After Observation removal: {len(cleaned_text)} chars",
+                flush=True,
+            )
+            print(
+                f"[TOOL PARSING DEBUG] Cleaned text: '{cleaned_text}'",
+                flush=True,
+            )
+
+        # Also try JSON code blocks as fallback
+        json_pattern = r"```json\s*(\{[^`]+\})\s*```"
+        json_matches = re.findall(json_pattern, cleaned_text, re.DOTALL)
+
+        for match in json_matches:
             try:
                 tool_data = json.loads(match)
                 if "tool" in tool_data or "name" in tool_data:
@@ -432,8 +496,9 @@ class ToolCallingMixin:
             except json.JSONDecodeError:
                 continue
 
-        cleaned_text = re.sub(
-            json_pattern, "", response_text, flags=re.DOTALL
-        ).strip()
+        if json_matches:
+            cleaned_text = re.sub(
+                json_pattern, "", cleaned_text, flags=re.DOTALL
+            ).strip()
 
         return (tool_calls if tool_calls else None, cleaned_text)

@@ -57,28 +57,32 @@ class ToolManager(
     def get_all_tools(self) -> List[Callable]:
         """Get all available tools.
 
-        NOTE: This method returns old mixin-based tools only.
-        Tools from ToolRegistry are automatically available via the
-        @tool decorator system and don't need to be returned here.
+        Returns tools from both:
+        1. Old mixin-based tools (not yet migrated)
+        2. New ToolRegistry decorated tools
 
         Returns:
-            List of tool functions from remaining mixins
+            List of all tool functions
         """
+        from airunner.components.llm.core.tool_registry import ToolRegistry
+
+        # Start with old mixin-based tools that haven't been migrated yet
+        # NOTE: Tools commented out have been migrated to ToolRegistry
         tools = [
             # Core conversation tools
             self.clear_conversation_tool(),
             self.update_mood_tool(),
-            # Image generation tools
-            self.generate_image_tool(),
-            self.clear_canvas_tool(),
-            self.open_image_tool(),
+            # Image generation tools (migrated to ToolRegistry - commented out)
+            # self.generate_image_tool(),
+            # self.clear_canvas_tool(),
+            # self.open_image_tool(),
             # File system tools
             self.list_files_tool(),
-            self.read_file_tool(),
+            # self.read_file_tool(),  # Migrated to ToolRegistry
             # System tools
             self.emit_signal_tool(),
-            self.quit_application_tool(),
-            self.toggle_tts_tool(),
+            # self.quit_application_tool(),  # Migrated to ToolRegistry
+            # self.toggle_tts_tool(),  # Migrated to ToolRegistry
             # Conversation management tools
             self.list_conversations_tool(),
             self.get_conversation_tool(),
@@ -98,6 +102,16 @@ class ToolManager(
             self.monitor_system_health_tool(),
             self.log_agent_decision_tool(),
         ]
+
+        # Add new ToolRegistry decorated tools
+        # Add .name attribute to make them compatible with tests
+        for tool_info in ToolRegistry.all().values():
+            func = tool_info.func
+            # Add .name and .description attributes like LangChain tools
+            func.name = tool_info.name
+            func.description = tool_info.description
+            func.return_direct = tool_info.return_direct
+            tools.append(func)
 
         # Add any custom tools from database
         tools.extend(self._load_custom_tools())
@@ -193,33 +207,39 @@ class ToolManager(
             List of tool functions appropriate for the action
         """
         # Common tools available for all actions
-        common_tools = [
-            self.store_user_data_tool(),
-            self.get_user_data_tool(),
-            self.update_mood_tool(),
-        ]
+        # Use _get_tool_by_name to retrieve from ToolRegistry or mixin fallback
+        common_tools = []
+        for tool_name in ["store_user_data", "get_user_data", "update_mood"]:
+            tool = self._get_tool_by_name(tool_name)
+            if tool:
+                common_tools.append(tool)
 
         if action == LLMActionType.CHAT:
             # Chat mode: no image/RAG tools, just conversation tools
-            return common_tools + [
-                self.clear_conversation_tool(),
-                self.toggle_tts_tool(),
-            ]
+            additional_tools = []
+            for tool_name in ["clear_conversation", "toggle_tts"]:
+                tool = self._get_tool_by_name(tool_name)
+                if tool:
+                    additional_tools.append(tool)
+            return common_tools + additional_tools
 
         elif action == LLMActionType.GENERATE_IMAGE:
             # Image mode: focus on image generation tools
-            return common_tools + [
-                self.generate_image_tool(),
-                self.clear_canvas_tool(),
-                self.open_image_tool(),
-            ]
+            additional_tools = []
+            for tool_name in ["generate_image", "clear_canvas", "open_image"]:
+                tool = self._get_tool_by_name(tool_name)
+                if tool:
+                    additional_tools.append(tool)
+            return common_tools + additional_tools
 
         elif action == LLMActionType.PERFORM_RAG_SEARCH:
             # RAG mode: focus on search tools
-            return common_tools + [
-                self.rag_search_tool(),
-                self.search_web_tool(),
-            ]
+            additional_tools = []
+            for tool_name in ["rag_search", "search_web"]:
+                tool = self._get_tool_by_name(tool_name)
+                if tool:
+                    additional_tools.append(tool)
+            return common_tools + additional_tools
 
         elif action == LLMActionType.APPLICATION_COMMAND:
             # Auto mode: all tools available
@@ -307,16 +327,12 @@ class ToolManager(
         # Fallback to OLD mixin-based tools
         # Map tool names to their getter methods
         tool_getters = {
-            "store_user_data": self.store_user_data_tool,
-            "get_user_data": self.get_user_data_tool,
             "update_mood": self.update_mood_tool,
             "clear_conversation": self.clear_conversation_tool,
             "toggle_tts": self.toggle_tts_tool,
             "generate_image": self.generate_image_tool,
             "clear_canvas": self.clear_canvas_tool,
             "open_image": self.open_image_tool,
-            "rag_search": self.rag_search_tool,
-            "search_web": self.search_web_tool,
         }
 
         getter = tool_getters.get(name)
