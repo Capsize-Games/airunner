@@ -20,23 +20,33 @@ import sys
 from pathlib import Path
 
 
-def run_command(cmd: list[str], description: str) -> int:
+def run_command(cmd: list[str], description: str, env: dict = None) -> int:
     """
     Run a command and return the exit code.
 
     Args:
         cmd: Command and arguments to run
         description: Description of what's being run
+        env: Optional environment variables to set
 
     Returns:
         Exit code from the command
     """
+    import os
+
     print(f"\n{'=' * 80}")
     print(f"Running: {description}")
     print(f"{'=' * 80}")
     print(f"Command: {' '.join(cmd)}\n")
 
-    result = subprocess.run(cmd)
+    process_env = os.environ.copy()
+    if env:
+        process_env.update(env)
+        for key, value in env.items():
+            print(f"Environment: {key}={value}")
+        print()
+
+    result = subprocess.run(cmd, env=process_env)
     return result.returncode
 
 
@@ -83,12 +93,16 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
     return run_command(cmd, description)
 
 
-def run_eval_tests(verbose: bool = False) -> int:
+def run_eval_tests(
+    verbose: bool = False, model: str = None, skip_slow: bool = False
+) -> int:
     """
     Run evaluation framework tests.
 
     Args:
         verbose: Whether to show verbose output
+        model: Optional model name to use for testing (e.g., 'qwen2.5-coder:32b')
+        skip_slow: Skip slow integration tests, run only fast tests
 
     Returns:
         Exit code from pytest
@@ -113,7 +127,17 @@ def run_eval_tests(verbose: bool = False) -> int:
         ]
     )
 
-    return run_command(cmd, "Evaluation framework tests")
+    # Add marker filters
+    if skip_slow:
+        cmd.extend(["-m", "not slow"])
+
+    # Set environment variable for model if specified
+    env = {}
+    if model:
+        env["AIRUNNER_EVAL_MODEL"] = model
+        print(f"Using model: {model}")
+
+    return run_command(cmd, "Evaluation framework tests", env=env)
 
 
 def main():
@@ -125,6 +149,8 @@ def main():
 Examples:
   %(prog)s --unit                    Run all unit tests
   %(prog)s --eval                    Run eval tests only
+  %(prog)s --eval --model qwen2.5-coder:32b    Test with specific model
+  %(prog)s --eval --skip-slow        Run only fast eval tests
   %(prog)s --all                     Run all tests
   %(prog)s --unit --component llm    Run LLM component tests only
   %(prog)s --unit -v                 Run unit tests with verbose output
@@ -155,6 +181,18 @@ Examples:
         "-v", "--verbose", action="store_true", help="Show verbose output"
     )
 
+    parser.add_argument(
+        "--model",
+        type=str,
+        help="Model to use for eval tests (e.g., 'qwen2.5-coder:32b', 'gpt-4')",
+    )
+
+    parser.add_argument(
+        "--skip-slow",
+        action="store_true",
+        help="Skip slow integration tests in eval suite",
+    )
+
     args = parser.parse_args()
 
     # Default to running unit tests if no flags specified
@@ -174,7 +212,11 @@ Examples:
     if args.eval or args.all:
         if args.component:
             print("\nWarning: --component flag ignored for eval tests")
-        exit_code = run_eval_tests(verbose=args.verbose)
+        exit_code = run_eval_tests(
+            verbose=args.verbose,
+            model=args.model,
+            skip_slow=args.skip_slow,
+        )
         exit_codes.append(exit_code)
 
     # Print summary
