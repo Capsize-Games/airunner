@@ -18,6 +18,7 @@ from airunner.components.llm.managers.quantization_mixin import (
 )
 from airunner.components.llm.managers.mixins import (
     AdapterLoaderMixin,
+    BatchProcessingMixin,
     ComponentLoaderMixin,
     ConversationManagementMixin,
     GenerationMixin,
@@ -46,6 +47,7 @@ from airunner.components.llm.managers.llm_settings import LLMSettings
 class LLMModelManager(
     BaseModelManager,
     AdapterLoaderMixin,
+    BatchProcessingMixin,
     ComponentLoaderMixin,
     ConversationManagementMixin,
     GenerationMixin,

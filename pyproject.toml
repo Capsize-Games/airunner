@@ -6,6 +6,7 @@ line-length = 79
 markers = [
     "gui: tests that require Qt GUI components (may cause thread issues when run in bulk)",
     "slow: tests that take a long time to run",
+    "fast: tests that use mocked responses and run quickly",
     "asyncio: asynchronous test marker",
     "integration: integration test marker",
     "gpu: tests that require GPU hardware",

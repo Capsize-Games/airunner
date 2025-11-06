@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 from airunner.components.art.gui.widgets.canvas.simple_event import SimpleEvent
-from line_profiler import profile
 
 from airunner.components.art.data.canvas_layer import CanvasLayer
 
@@ -361,7 +360,6 @@ class CustomScene(
         elif self.settings_key == "drawing_pad_settings":
             self.update_drawing_pad_settings(**{key: value})
 
-    @profile
     def _create_image(
         self,
         image: Image.Image,
