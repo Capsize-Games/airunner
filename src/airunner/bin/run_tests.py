@@ -143,10 +143,12 @@ def run_eval_tests(
     if skip_slow:
         cmd.extend(["-m", "not slow"])
 
-    # Set environment variable for model if specified
+    # Pass model argument to pytest if specified
     env = {}
     if model:
         env["AIRUNNER_TEST_MODEL_PATH"] = model
+        # Also pass to pytest as --model flag
+        cmd.extend(["--model", model])
         print(f"Using model: {model}")
 
     description = (
