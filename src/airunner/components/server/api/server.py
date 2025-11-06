@@ -638,36 +638,61 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         This endpoint clears the LLM's conversation history, useful for
         tests to prevent contamination between test runs.
 
-        This clears both:
-        1. In-memory workflow state
+        This clears:
+        1. In-memory workflow state and checkpoints
         2. Persisted conversation in database
+        3. Creates a FRESH conversation with new ID to prevent checkpoint restoration
         """
         try:
             api = get_api()
-            # Clear conversation memory via workflow manager
-            if hasattr(api.llm, "model_manager") and api.llm.model_manager:
-                workflow_manager = getattr(
-                    api.llm.model_manager, "_workflow_manager", None
-                )
-                if workflow_manager and hasattr(
-                    workflow_manager, "clear_memory"
-                ):
-                    workflow_manager.clear_memory()
-                    logger.info("LLM conversation memory cleared")
 
-            # CRITICAL: Also clear the database conversation to prevent
-            # checkpoints from being restored
+            # CRITICAL: Create a brand NEW conversation to avoid checkpoint contamination
+            # Simply clearing isn't enough - LangGraph checkpoints persist in class-level state
             from airunner.components.llm.data.conversation import Conversation
+            import datetime
 
             try:
-                # Clear all current conversation messages in database
-                current_convos = Conversation.objects.filter_by(current=True)
-                for convo in current_convos:
-                    convo.value = []  # Clear message history
-                    Conversation.objects.update(convo.id, value=[])
-                    logger.info(f"Cleared database conversation ID {convo.id}")
+                # Mark all conversations as non-current
+                Conversation.objects.update_by(
+                    {"current": True}, current=False
+                )
+
+                # Create a completely fresh conversation
+                new_convo = Conversation(
+                    title=f"Test {datetime.datetime.now().isoformat()}",
+                    value=[],
+                    current=True,
+                    chatbot_name="Test",
+                    user_name="Test User",
+                )
+                new_convo.save()
+                new_conv_id = new_convo.id
+
+                logger.info(
+                    f"Created new conversation ID {new_conv_id} for fresh start"
+                )
+
+                # Update workflow manager to use new conversation
+                if hasattr(api.llm, "model_manager") and api.llm.model_manager:
+                    workflow_manager = getattr(
+                        api.llm.model_manager, "_workflow_manager", None
+                    )
+                    if workflow_manager:
+                        # Set new conversation ID - this will rebuild workflow with fresh state
+                        if hasattr(workflow_manager, "set_conversation_id"):
+                            workflow_manager.set_conversation_id(new_conv_id)
+                            logger.info(
+                                f"Workflow manager using new conversation {new_conv_id}"
+                            )
+                        # Also clear memory to be thorough
+                        if hasattr(workflow_manager, "clear_memory"):
+                            workflow_manager.clear_memory()
+                            logger.info("LLM conversation memory cleared")
+
             except Exception as db_err:
-                logger.error(f"Error clearing database conversation: {db_err}")
+                logger.error(
+                    f"Error creating new conversation: {db_err}", exc_info=True
+                )
 
             self._set_headers(200)
             self.wfile.write(
