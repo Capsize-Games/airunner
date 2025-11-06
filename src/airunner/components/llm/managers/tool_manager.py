@@ -305,7 +305,7 @@ class ToolManager(
         return filtered_tools
 
     def _get_tool_by_name(self, name: str) -> Optional[Callable]:
-        """Get tool function by name.
+        """Get a tool function by name from either ToolRegistry or mixins.
 
         Args:
             name: Tool function name
@@ -322,7 +322,12 @@ class ToolManager(
                 f"[TOOL MANAGER DEBUG] Found NEW tool in registry: {name}",
                 flush=True,
             )
-            return tool_info.func
+            # CRITICAL: Add attributes to make it compatible with LangChain
+            func = tool_info.func
+            func.name = tool_info.name
+            func.description = tool_info.description
+            func.return_direct = tool_info.return_direct
+            return func
 
         # Fallback to OLD mixin-based tools
         # Map tool names to their getter methods
