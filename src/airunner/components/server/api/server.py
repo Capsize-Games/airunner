@@ -645,8 +645,16 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         2. Persisted conversation in database
         3. Creates a FRESH conversation with new ID to prevent checkpoint restoration
         """
+        print("[RESET_MEMORY] Endpoint called!")
+        import sys
+
+        sys.stdout.flush()
         try:
+            print("[RESET_MEMORY] Getting API...")
+            sys.stdout.flush()
             api = get_api()
+            print(f"[RESET_MEMORY] API: {api}")
+            sys.stdout.flush()
 
             # CRITICAL: Create a brand NEW conversation to avoid checkpoint contamination
             # Simply clearing isn't enough - LangGraph checkpoints persist in class-level state
@@ -679,17 +687,32 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                     workflow_manager = getattr(
                         api.llm.model_manager, "_workflow_manager", None
                     )
+                    print(
+                        f"[RESET_MEMORY DEBUG] workflow_manager exists: {workflow_manager is not None}"
+                    )
                     if workflow_manager:
-                        # Set new conversation ID - this will rebuild workflow with fresh state
+                        # CRITICAL: Clear memory FIRST to wipe checkpoint cache
+                        # BEFORE setting new conversation ID (which rebuilds workflow)
+                        print(
+                            "[RESET_MEMORY DEBUG] About to call clear_memory()"
+                        )
+                        if hasattr(workflow_manager, "clear_memory"):
+                            workflow_manager.clear_memory()
+                            logger.info("LLM conversation memory cleared")
+                            print("[RESET_MEMORY DEBUG] clear_memory() called")
+
+                        # NOW set new conversation ID - rebuilds workflow with clean state
+                        print(
+                            "[RESET_MEMORY DEBUG] About to call set_conversation_id()"
+                        )
                         if hasattr(workflow_manager, "set_conversation_id"):
                             workflow_manager.set_conversation_id(new_conv_id)
                             logger.info(
                                 f"Workflow manager using new conversation {new_conv_id}"
                             )
-                        # Also clear memory to be thorough
-                        if hasattr(workflow_manager, "clear_memory"):
-                            workflow_manager.clear_memory()
-                            logger.info("LLM conversation memory cleared")
+                            print(
+                                f"[RESET_MEMORY DEBUG] set_conversation_id({new_conv_id}) called"
+                            )
 
             except Exception as db_err:
                 logger.error(
