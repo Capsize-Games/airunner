@@ -19,5 +19,6 @@ markers = [
 testpaths = ["src"]
 # Disable parallel execution to prevent worker cleanup issues
 # Use serial execution for now until worker cleanup is fixed
-# Show output in real-time and capture=no for immediate feedback
-addopts = "--maxfail=100 --timeout=30 --capture=no -v"
+# -s disables output capturing for real-time feedback
+# -v shows verbose test names
+addopts = "--maxfail=100 --timeout=30 -s -v"
