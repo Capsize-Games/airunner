@@ -350,6 +350,15 @@ class LLMGenerateWorker(
             self.logger.info("Skipping message - worker interrupted")
             return
 
+        print(
+            f"[LLM WORKER] handle_message called with keys: {list(message.keys())}",
+            flush=True,
+        )
+        print(
+            f"[LLM WORKER] request_id in message: {message.get('request_id')}",
+            flush=True,
+        )
+
         manager = self.model_manager
         manager.handle_request(message, self.context_manager.all_contexts())
 

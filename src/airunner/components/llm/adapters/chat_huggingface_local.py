@@ -110,9 +110,28 @@ class ChatHuggingFaceLocal(
             self.use_mistral_native = True
             return
 
+        # Check if model supports JSON mode via provider config
+        from airunner.components.llm.config.provider_config import (
+            LLMProviderConfig,
+        )
+
+        # Try to match model_path to known model configs
+        for model_key, model_config in LLMProviderConfig.LOCAL_MODELS.items():
+            repo_id = model_config.get("repo_id", "")
+            if repo_id and repo_id.lower() in model_path_lower:
+                configured_mode = model_config.get("tool_calling_mode")
+                if configured_mode in ("json", "native"):
+                    self.tool_calling_mode = configured_mode
+                    if configured_mode == "json":
+                        self.use_json_mode = True
+                    print(
+                        f"ℹ Using {configured_mode} tool calling mode for {repo_id}"
+                    )
+                    return
+
         self.tool_calling_mode = "react"
         print(
-            f"ℹ Using LangChain standard tool calling (model: {self.model_path})"
+            f"ℹ Using ReAct fallback tool calling (model: {self.model_path})"
         )
 
     @property

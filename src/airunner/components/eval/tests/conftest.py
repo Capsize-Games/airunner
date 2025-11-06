@@ -67,6 +67,12 @@ def setup_test_environment(request):
     os.environ["AIRUNNER_DATABASE_URL"] = db_url
     os.environ["AIRUNNER_ENVIRONMENT"] = "test"
 
+    # Force session_manager to use the test database
+    # This must happen AFTER setting the environment variable
+    from airunner.components.data.session_manager import reset_engine
+
+    reset_engine()
+
     # Set model path from --model flag if provided
     model_path = request.config.getoption("--model")
     if model_path:

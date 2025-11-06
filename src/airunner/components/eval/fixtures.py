@@ -12,16 +12,27 @@ Usage:
 
 import logging
 import os
+import socket
 import subprocess
 import sys
 import time
+from typing import Generator
+
 import pytest
 import requests
-from typing import Generator
+
 from airunner.components.eval.client import AIRunnerClient
 
 
 logger = logging.getLogger(__name__)
+
+
+def _find_available_port(host: str) -> int:
+    """Find an available TCP port on the given host."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((host, 0))
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return sock.getsockname()[1]
 
 
 def _start_server_process(port: int, host: str):
@@ -105,10 +116,18 @@ def airunner_server() -> Generator[subprocess.Popen, None, None]:
     Raises:
         RuntimeError: If server fails to start within timeout
     """
-    port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8188"))
     host = os.environ.get("AIRUNNER_HTTP_HOST", "127.0.0.1")
+    port_env = os.environ.get("AIRUNNER_HTTP_PORT")
+    if port_env:
+        port = int(port_env)
+    else:
+        port = _find_available_port(host)
+        os.environ["AIRUNNER_HTTP_PORT"] = str(port)
+
     base_url = f"http://{host}:{port}"
-    timeout = 30
+    timeout = (
+        120  # Increased from 30 to 120 seconds to allow model loading time
+    )
 
     process, server_log = _start_server_process(port, host)
 

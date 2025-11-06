@@ -33,6 +33,21 @@ class ComponentLoaderMixin:
 
         try:
             self.logger.info("Creating ChatModel via factory")
+            print(
+                f"[CHAT MODEL] Calling ChatModelFactory.create_from_settings",
+                flush=True,
+            )
+            print(
+                f"[CHAT MODEL] llm_settings: {self.llm_settings}", flush=True
+            )
+            print(
+                f"[CHAT MODEL] tokenizer: {self._tokenizer is not None}",
+                flush=True,
+            )
+            print(
+                f"[CHAT MODEL] model_path: {self._current_model_path}",
+                flush=True,
+            )
 
             self._chat_model = ChatModelFactory.create_from_settings(
                 llm_settings=self.llm_settings,
@@ -42,6 +57,10 @@ class ComponentLoaderMixin:
                 model_path=self._current_model_path,
             )
 
+            print(
+                f"[CHAT MODEL] Factory returned: {self._chat_model}",
+                flush=True,
+            )
             self.logger.info(
                 f"ChatModel created: {type(self._chat_model).__name__}"
             )
@@ -55,6 +74,15 @@ class ComponentLoaderMixin:
                 self._setup_rag()
 
         except Exception as e:
+            print(
+                f"[CHAT MODEL] EXCEPTION: {type(e).__name__}: {e}", flush=True
+            )
+            import traceback
+
+            print(
+                f"[CHAT MODEL] Traceback:\n{traceback.format_exc()}",
+                flush=True,
+            )
             self.logger.error(f"Error creating ChatModel: {e}", exc_info=True)
             self._chat_model = None
 

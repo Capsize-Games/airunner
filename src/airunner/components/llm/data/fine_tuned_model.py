@@ -63,10 +63,12 @@ class FineTunedModel(BaseModel):
             # Attempt to create missing tables (common in fresh installs)
             try:
                 # Import engine and Base metadata and attempt to create tables
-                from airunner.components.data.session_manager import engine
+                from airunner.components.data.session_manager import (
+                    _get_engine,
+                )
                 from airunner.components.data.models.base import Base
 
-                Base.metadata.create_all(bind=engine)
+                Base.metadata.create_all(bind=_get_engine())
 
                 # Try again after creating tables
                 existing = cls.objects.filter_by_first(name=name)

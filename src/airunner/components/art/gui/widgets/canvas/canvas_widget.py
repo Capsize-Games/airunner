@@ -14,7 +14,7 @@ from PySide6.QtWidgets import QApplication
 from airunner.gui.cursors.circle_brush import circle_cursor
 from airunner.enums import SignalCode, CanvasToolName
 from airunner.components.application.gui.widgets.base_widget import BaseWidget
-from airunner.components.data.session_manager import Session
+from airunner.components.data.session_manager import _get_session
 from airunner.components.art.gui.widgets.canvas.templates.canvas_ui import (
     Ui_canvas,
 )
@@ -794,7 +794,7 @@ class CanvasWidget(BaseWidget):
         # been rolled back" errors when creating new rows with UNIQUE
         # constraints (e.g. layer names).
         try:
-            Session.remove()
+            _get_session().remove()
         except Exception:
             # Non-fatal; continue to begin operation regardless
             pass
@@ -839,7 +839,7 @@ class CanvasWidget(BaseWidget):
 
         if layers_data:
             try:
-                Session.remove()
+                _get_session().remove()
             except Exception:
                 pass
             self.api.art.canvas.begin_layer_operation("create")
@@ -866,7 +866,7 @@ class CanvasWidget(BaseWidget):
                 raise
         else:
             try:
-                Session.remove()
+                _get_session().remove()
             except Exception:
                 pass
             self.api.art.canvas.begin_layer_operation("create")
@@ -973,7 +973,7 @@ class CanvasWidget(BaseWidget):
     def _create_default_canvas_layer(self) -> Optional[CanvasLayer]:
         # Ensure any previous scoped session state is cleared
         try:
-            Session.remove()
+            _get_session().remove()
         except Exception:
             pass
 

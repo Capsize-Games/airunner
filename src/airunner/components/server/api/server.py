@@ -68,8 +68,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             self._handle_llm_batch(data)
         elif path == "/admin/reset_memory":
             self._handle_reset_memory()
+        elif path == "/admin/reset_database":
+            self._handle_reset_database()
         elif path == "/art":
-            self._handle_art(data)
+            self._handle_stub("STT not implemented")
         elif path == "/stt":
             self._handle_stub("STT not implemented")
         elif path == "/tts":
@@ -700,6 +702,55 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             )
         except Exception as e:
             logger.error(f"Error resetting memory: {e}", exc_info=True)
+            self._set_headers(500)
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def _handle_reset_database(self):
+        """Reset test database by clearing all test-related tables.
+
+        This endpoint is specifically for test isolation - it clears
+        tables that accumulate test data (like Events) to prevent
+        contamination between test runs.
+
+        ONLY clears tables when AIRUNNER_ENVIRONMENT=test to prevent
+        accidental data loss in production.
+        """
+        import os
+
+        try:
+            # SAFETY: Only allow in test environment
+            if os.environ.get("AIRUNNER_ENVIRONMENT") != "test":
+                self._set_headers(403)
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "error": "reset_database only allowed in test environment"
+                        }
+                    ).encode("utf-8")
+                )
+                return
+
+            # Clear test data tables
+            from airunner.components.calendar.data.event import Event
+            from airunner.components.data.session_manager import session_scope
+
+            deleted_counts = {}
+            with session_scope() as session:
+                # Clear calendar events
+                event_count = session.query(Event).delete()
+                deleted_counts["events"] = event_count
+                session.commit()
+
+            logger.info(f"Test database cleared: {deleted_counts}")
+
+            self._set_headers(200)
+            self.wfile.write(
+                json.dumps(
+                    {"status": "database_cleared", "deleted": deleted_counts}
+                ).encode("utf-8")
+            )
+        except Exception as e:
+            logger.error(f"Error resetting database: {e}", exc_info=True)
             self._set_headers(500)
             self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
 

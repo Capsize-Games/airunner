@@ -32,32 +32,38 @@ def cleanup_calendar_data(airunner_client_function_scope):
     """
     print("\n[FIXTURE] Cleaning calendar data and resetting LLM memory...")
 
-    # Cleanup BEFORE test - clear database and LLM memory
-    with session_scope() as session:
-        deleted_count = session.query(Event).delete()
-        session.commit()
-        print(
-            f"[FIXTURE] Deleted {deleted_count} calendar events from database"
-        )
-
-    # Reset LLM conversation memory via /admin endpoint
+    # Cleanup BEFORE test - use /admin/reset_database to clear from server subprocess
     try:
         import requests
 
         base_url = airunner_client_function_scope.base_url
-        response = requests.post(f"{base_url}/admin/reset_memory", timeout=5)
-        print(f"[FIXTURE] LLM memory reset: {response.json()}")
+
+        # Clear database via server endpoint (works across subprocess boundary)
+        db_response = requests.post(
+            f"{base_url}/admin/reset_database", timeout=5
+        )
+        print(f"[FIXTURE] Database reset: {db_response.json()}")
+
+        # Clear LLM conversation memory
+        mem_response = requests.post(
+            f"{base_url}/admin/reset_memory", timeout=5
+        )
+        print(f"[FIXTURE] LLM memory reset: {mem_response.json()}")
     except Exception as e:
-        print(f"[FIXTURE] WARNING: Could not reset LLM memory: {e}")
+        print(f"[FIXTURE] WARNING: Could not reset database/memory: {e}")
 
     print("[FIXTURE] Setup complete, starting test...\n")
     yield
 
-    # Cleanup AFTER test
+    # Cleanup AFTER test - use endpoint for consistency
     print("\n[FIXTURE] Test complete, cleaning up...")
-    with session_scope() as session:
-        session.query(Event).delete()
-        session.commit()
+    try:
+        import requests
+
+        base_url = airunner_client_function_scope.base_url
+        requests.post(f"{base_url}/admin/reset_database", timeout=5)
+    except Exception:
+        pass  # Ignore cleanup errors
 
 
 @pytest.mark.eval
