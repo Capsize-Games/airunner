@@ -250,3 +250,22 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         current = self.get_tuple(config)
         if current:
             yield current
+
+    def clear_checkpoints(self) -> None:
+        """Clear all checkpoint state.
+
+        This removes all in-memory checkpoint state from the class-level
+        _checkpoint_state dictionary, forcing a fresh start for the workflow.
+
+        CRITICAL: This is needed to prevent checkpoint contamination between
+        tests or when resetting conversation memory.
+        """
+        # Clear the class-level checkpoint state dictionary
+        DatabaseCheckpointSaver._checkpoint_state.clear()
+        self.logger.info("Cleared all LangGraph checkpoint state")
+
+        # Also clear message history for completeness
+        self.message_history.clear()
+        self.logger.info(
+            f"Cleared message history for conversation {self.conversation_id}"
+        )
