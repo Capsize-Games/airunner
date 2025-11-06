@@ -637,6 +637,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         This endpoint clears the LLM's conversation history, useful for
         tests to prevent contamination between test runs.
+
+        This clears both:
+        1. In-memory workflow state
+        2. Persisted conversation in database
         """
         try:
             api = get_api()
@@ -650,6 +654,20 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 ):
                     workflow_manager.clear_memory()
                     logger.info("LLM conversation memory cleared")
+
+            # CRITICAL: Also clear the database conversation to prevent
+            # checkpoints from being restored
+            from airunner.components.llm.data.conversation import Conversation
+
+            try:
+                # Clear all current conversation messages in database
+                current_convos = Conversation.objects.filter_by(current=True)
+                for convo in current_convos:
+                    convo.value = []  # Clear message history
+                    Conversation.objects.update(convo.id, value=[])
+                    logger.info(f"Cleared database conversation ID {convo.id}")
+            except Exception as db_err:
+                logger.error(f"Error clearing database conversation: {db_err}")
 
             self._set_headers(200)
             self.wfile.write(
