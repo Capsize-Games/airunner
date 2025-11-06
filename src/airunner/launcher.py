@@ -18,7 +18,7 @@ from airunner.components.settings.data.airunner_settings import (
 from airunner.components.settings.data.path_settings import PathSettings
 from airunner.settings import AIRUNNER_BASE_PATH, LOCAL_SERVER_HOST
 from airunner.setup_database import setup_database
-from airunner.components.data.session_manager import Session
+from airunner.components.data.session_manager import _get_session
 from airunner.components.settings.data.path_settings import PathSettings
 from airunner.components.settings.data.application_settings import (
     ApplicationSettings,
@@ -238,6 +238,7 @@ def _configure_test_mode():
     1. Creates default settings if they don't exist
     2. Sets model path from AIRUNNER_TEST_MODEL_PATH env var if provided
     """
+    Session = _get_session()
     with Session() as session:
         # Create default path settings if not exists
         if not session.query(PathSettings).first():

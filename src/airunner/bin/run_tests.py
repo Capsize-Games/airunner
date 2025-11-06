@@ -12,12 +12,55 @@ Usage:
     python run_tests.py --all               # Run all tests
     python run_tests.py --unit --verbose    # Run unit tests with verbose output
     python run_tests.py --component llm     # Run tests for specific component
+
+Note: Eval tests use pytest fixtures to automatically manage the headless server.
+      The server will start/stop automatically when tests run.
 """
 
 import argparse
 import subprocess
 import sys
+import time
 from pathlib import Path
+
+
+def kill_stale_servers():
+    """
+    Kill any stale airunner-headless processes from previous runs.
+
+    This ensures we start with a clean state. Pytest fixtures will
+    start a fresh server for the test session.
+    """
+    print("\n" + "=" * 80)
+    print("Cleaning up stale server processes...")
+    print("=" * 80)
+
+    # Find airunner-headless processes
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "airunner-headless"],
+            capture_output=True,
+            text=True,
+        )
+
+        if result.stdout.strip():
+            pids = result.stdout.strip().split("\n")
+            print(f"Found {len(pids)} stale process(es): {', '.join(pids)}")
+
+            # Kill each process
+            for pid in pids:
+                subprocess.run(["kill", "-9", pid])
+                print(f"Killed process {pid}")
+
+            # Give processes time to die
+            time.sleep(2)
+            print("✅ Cleaned up stale processes")
+        else:
+            print("No stale processes found")
+    except Exception as e:
+        print(f"Warning: Error checking for processes: {e}")
+
+    print()
 
 
 def run_command(cmd: list[str], description: str, env: dict = None) -> int:
@@ -236,6 +279,11 @@ Examples:
     if args.eval or args.all:
         if args.component:
             print("\nWarning: --component flag ignored for eval tests")
+
+        # Clean up any stale server processes from previous runs
+        # Pytest fixtures will start a fresh server automatically
+        kill_stale_servers()
+
         exit_code = run_eval_tests(
             verbose=args.verbose,
             model=args.model,
