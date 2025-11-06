@@ -64,6 +64,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             return
         if path == "/llm" or path == "/llm/generate":
             self._handle_llm(data)
+        elif path == "/llm/generate_batch":
+            self._handle_llm_batch(data)
         elif path == "/art":
             self._handle_art(data)
         elif path == "/stt":
@@ -149,18 +151,15 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         stream = data.get("stream", True)
         llm_request_data = data.get("llm_request", {})
 
-        # DEBUG: Log incoming request data (using print to bypass logger issues)
-        print(
-            f"[SERVER DEBUG] Incoming request data keys: {list(data.keys())}",
-            flush=True,
-        )
+        # DEBUG: Log incoming request data
+        logger.debug(f"Incoming request data keys: {list(data.keys())}")
+        logger.debug(f"stream value: {stream} (type: {type(stream)})")
         if "tool_categories" in data:
-            print(
-                f"[SERVER DEBUG] tool_categories in request: {data['tool_categories']}",
-                flush=True,
+            logger.debug(
+                f"tool_categories in request: {data['tool_categories']}"
             )
         else:
-            print(f"[SERVER DEBUG] NO tool_categories in request!", flush=True)
+            logger.debug("NO tool_categories in request!")
 
         # Handle top-level LLM parameters (for convenience)
         # Map common parameter names to LLMRequest fields
@@ -185,10 +184,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 llm_request_data[llm_param] = data[client_param]
 
         # DEBUG: Show what got mapped
-        print(
-            f"[SERVER DEBUG] llm_request_data after mapping: {llm_request_data}",
-            flush=True,
-        )
+        logger.debug(f"llm_request_data after mapping: {llm_request_data}")
 
         # Parse action type
         try:
@@ -206,12 +202,16 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # Generate unique request ID for correlation
         request_id = str(uuid.uuid4())
 
+        logger.debug(f"stream={stream}, about to branch...")
+
         if stream:
+            logger.debug("Taking STREAM path")
             # Stream NDJSON responses
             self._handle_llm_stream(
                 prompt, system_prompt, action, llm_request, request_id
             )
         else:
+            logger.debug("Taking NON-STREAM path")
             # Return single JSON response
             self._handle_llm_non_stream(
                 prompt, system_prompt, action, llm_request, request_id
@@ -229,28 +229,21 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # Start with defaults
         llm_request = LLMRequest()
 
-        import sys
-
-        sys.stderr.write(
-            f"\n[SERVER] Creating LLMRequest from params: {params}\n"
-        )
-        sys.stderr.flush()
+        logger.debug(f"Creating LLMRequest from params: {params}")
 
         # Override with provided parameters
         for key, value in params.items():
             if hasattr(llm_request, key):
                 setattr(llm_request, key, value)
-                sys.stderr.write(f"[SERVER] Set LLMRequest.{key} = {value}\n")
-                sys.stderr.flush()
+                logger.debug(f"Set LLMRequest.{key} = {value}")
             else:
                 logger.warning(
                     f"Ignoring unknown LLMRequest parameter: {key}={value}"
                 )
 
-        sys.stderr.write(
-            f"[SERVER] Final LLMRequest.max_new_tokens = {llm_request.max_new_tokens}\n"
+        logger.debug(
+            f"Final LLMRequest.max_new_tokens = {llm_request.max_new_tokens}"
         )
-        sys.stderr.flush()
         return llm_request
 
     def _handle_llm_stream(
@@ -310,9 +303,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         # Send LLM request with request_id and callback
         api = get_api()
-        print(
-            f"[SERVER DEBUG] Sending to API with llm_request.max_new_tokens={llm_request.max_new_tokens}",
-            flush=True,
+        logger.debug(
+            f"Sending to API with llm_request.max_new_tokens={llm_request.max_new_tokens}"
         )
         api.llm.send_request(
             prompt=prompt,
@@ -348,7 +340,11 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         request_id: str,
     ):
         """Handle non-streaming LLM response as single JSON object."""
+        logger.debug(
+            f"_handle_llm_non_stream ENTERED with request_id={request_id}"
+        )
         self._set_headers(200)
+        logger.debug("_handle_llm_non_stream Headers set")
 
         # Collect all response chunks
         complete_message = []
@@ -356,43 +352,44 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         def collect_callback(data: dict):
             """Callback to collect response chunks."""
-            print(
-                f"[HTTP Callback {id(collect_callback)}] CALLED with data keys: {list(data.keys())}"
+            logger.debug(
+                f"HTTP Callback {id(collect_callback)} CALLED with data keys: {list(data.keys())}"
             )
             response = data.get("response")
-            print(
-                f"[HTTP Callback] Response type: {type(response)}, is_end: {response.is_end_of_message if response else None}"
+            logger.debug(
+                f"HTTP Callback Response type: {type(response)}, is_end: {response.is_end_of_message if response else None}"
             )
             logger.info(
-                f"[HTTP Callback] Received response: message_len={len(response.message) if response else 0}, is_end={response.is_end_of_message if response else None}"
+                f"HTTP Callback Received response: message_len={len(response.message) if response else 0}, is_end={response.is_end_of_message if response else None}"
             )
             if response:
                 complete_message.append(response.message)
-                print(
-                    f"[HTTP Callback] Complete message so far: {len(complete_message)} chunks"
+                logger.debug(
+                    f"HTTP Callback Complete message so far: {len(complete_message)} chunks"
                 )
                 if response.is_end_of_message:
-                    print(
-                        f"[HTTP Callback] END OF MESSAGE - setting event {id(complete_event)}"
+                    logger.debug(
+                        f"HTTP Callback END OF MESSAGE - setting event {id(complete_event)}"
                     )
                     logger.info(
-                        f"[HTTP Callback] End of message detected, setting event"
+                        "HTTP Callback End of message detected, setting event"
                     )
                     complete_event.set()
-                    print(
-                        f"[HTTP Callback] Event set: {complete_event.is_set()}"
+                    logger.debug(
+                        f"HTTP Callback Event set: {complete_event.is_set()}"
                     )
                 else:
                     logger.debug(
-                        f"[HTTP Callback] Not end yet, waiting for more..."
+                        "HTTP Callback Not end yet, waiting for more..."
                     )
 
-        print(
-            f"[HTTP Server] Registering callback {id(collect_callback)} for request {request_id}"
+        logger.debug(
+            f"HTTP Server Registering callback {id(collect_callback)} for request {request_id}"
         )
-        print(f"[HTTP Server] Event object: {id(complete_event)}")
+        logger.debug(f"HTTP Server Event object: {id(complete_event)}")
 
         # Send LLM request with request_id and callback
+        logger.debug("HTTP Server About to call api.llm.send_request...")
         api = get_api()
         api.llm.send_request(
             prompt=prompt,
@@ -401,9 +398,10 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             request_id=request_id,
             callback=collect_callback,
         )
+        logger.debug("HTTP Server api.llm.send_request completed")
 
-        print(
-            f"[HTTP Server] Waiting for event {id(complete_event)} with 300s timeout..."
+        logger.debug(
+            f"HTTP Server Waiting for event {id(complete_event)} with 300s timeout..."
         )
 
         # Wait for completion (with timeout)
@@ -429,6 +427,180 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "sequence_number": 0,
                 "error": True,
             }
+
+        self.wfile.write(json.dumps(response_data).encode("utf-8"))
+
+    def _handle_llm_batch(self, data):
+        """Handle batch LLM generation request.
+
+        Expected JSON format:
+        {
+            "prompts": ["prompt1", "prompt2", ...],
+            "system_prompt": "...",  // optional, applied to all
+            "action": "CHAT",  // optional
+            "stream": false,  // batch doesn't support streaming
+            "async": false,  // if true, returns batch_id immediately
+            "llm_request": {...}  // optional params for all requests
+        }
+        """
+        prompts = data.get("prompts")
+        if not prompts or not isinstance(prompts, list):
+            self._set_headers(400)
+            self.wfile.write(
+                json.dumps(
+                    {"error": "Missing or invalid 'prompts' field"}
+                ).encode("utf-8")
+            )
+            return
+
+        system_prompt = data.get("system_prompt")
+        action_str = data.get("action", "CHAT")
+        is_async = data.get("async", False)
+        llm_request_data = data.get("llm_request", {})
+
+        # Handle top-level LLM parameters
+        param_mapping = {
+            "temperature": "temperature",
+            "max_tokens": "max_new_tokens",
+            "top_p": "top_p",
+            "top_k": "top_k",
+            "repetition_penalty": "repetition_penalty",
+            "use_memory": "use_memory",
+            "tool_categories": "tool_categories",
+        }
+
+        for client_param, llm_param in param_mapping.items():
+            if client_param in data and client_param not in [
+                "prompts",
+                "system_prompt",
+                "action",
+                "stream",
+                "async",
+                "llm_request",
+            ]:
+                llm_request_data[llm_param] = data[client_param]
+
+        # Parse action type
+        try:
+            action = (
+                LLMActionType[action_str]
+                if isinstance(action_str, str)
+                else action_str
+            )
+        except KeyError:
+            action = LLMActionType.CHAT
+
+        # Create LLMRequest
+        llm_request = self._create_llm_request(llm_request_data)
+
+        if is_async:
+            # Async mode: return batch_id immediately
+            batch_id = str(uuid.uuid4())
+            # TODO: Store batch state for polling
+            self._set_headers(202)  # Accepted
+            response_data = {
+                "batch_id": batch_id,
+                "status": "processing",
+                "total": len(prompts),
+            }
+            self.wfile.write(json.dumps(response_data).encode("utf-8"))
+        else:
+            # Sync mode: process all and return responses
+            self._handle_llm_batch_sync(
+                prompts, system_prompt, action, llm_request
+            )
+
+    def _handle_llm_batch_sync(
+        self,
+        prompts: list,
+        system_prompt: Optional[str],
+        action: LLMActionType,
+        llm_request: LLMRequest,
+    ):
+        """Handle synchronous batch LLM generation."""
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import time
+
+        self._set_headers(200)
+
+        responses = []
+        total = len(prompts)
+
+        def process_single_prompt(index, prompt):
+            """Process a single prompt and return (index, result)."""
+            start_time = time.time()
+            request_id = str(uuid.uuid4())
+            complete_message = []
+            complete_event = threading.Event()
+
+            def collect_callback(data: dict):
+                response = data.get("response")
+                if response:
+                    complete_message.append(response.message)
+                    if response.is_end_of_message:
+                        complete_event.set()
+
+            api = get_api()
+            api.llm.send_request(
+                prompt=prompt,
+                action=action,
+                llm_request=llm_request,
+                request_id=request_id,
+                callback=collect_callback,
+            )
+
+            # Wait for completion
+            if complete_event.wait(timeout=300):
+                text = "".join(complete_message)
+                success = True
+                error = None
+            else:
+                text = ""
+                success = False
+                error = "Request timeout"
+
+            return {
+                "index": index,
+                "prompt": prompt,
+                "text": text,
+                "success": success,
+                "error": error,
+                "duration": time.time() - start_time,
+            }
+
+        # Process prompts in parallel
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {
+                executor.submit(process_single_prompt, i, prompt): i
+                for i, prompt in enumerate(prompts)
+            }
+
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    responses.append(result)
+                except Exception as e:
+                    index = futures[future]
+                    responses.append(
+                        {
+                            "index": index,
+                            "prompt": prompts[index],
+                            "text": "",
+                            "success": False,
+                            "error": str(e),
+                            "duration": 0.0,
+                        }
+                    )
+
+        # Sort by original order
+        responses.sort(key=lambda x: x["index"])
+
+        response_data = {
+            "responses": responses,
+            "total": total,
+            "successful": sum(1 for r in responses if r["success"]),
+            "failed": sum(1 for r in responses if not r["success"]),
+        }
 
         self.wfile.write(json.dumps(response_data).encode("utf-8"))
 

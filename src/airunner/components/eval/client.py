@@ -233,3 +233,137 @@ class AIRunnerClient:
                 except json.JSONDecodeError as e:
                     self.logger.warning(f"Failed to parse NDJSON chunk: {e}")
                     continue
+
+    def generate_batch(
+        self,
+        prompts: List[str],
+        model: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """Generate LLM completions for multiple prompts in parallel.
+
+        This method submits multiple prompts for batch processing,
+        which can significantly speed up eval testing by processing
+        requests in parallel (for API-based models).
+
+        Args:
+            prompts: List of prompt texts to generate from
+            model: Model name to use (optional, uses server default)
+            max_tokens: Maximum tokens to generate (optional)
+            temperature: Sampling temperature (optional)
+            **kwargs: Additional LLM parameters to pass to server
+
+        Returns:
+            List of response dicts (one per prompt) with 'text' field
+
+        Raises:
+            AIRunnerClientError: If request fails
+
+        Example:
+            >>> prompts = ["What is 2+2?", "What is 3+3?"]
+            >>> responses = client.generate_batch(prompts)
+            >>> for response in responses:
+            ...     print(response["text"])
+        """
+        request_data = {
+            "prompts": prompts,
+            "stream": False,
+        }
+
+        if model is not None:
+            request_data["model"] = model
+        if max_tokens is not None:
+            request_data["max_tokens"] = max_tokens
+        if temperature is not None:
+            request_data["temperature"] = temperature
+
+        request_data.update(kwargs)
+
+        try:
+            response = requests.post(
+                f"{self.base_url}/llm/generate_batch",
+                json=request_data,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get("responses", [])
+        except requests.RequestException as e:
+            raise AIRunnerClientError(f"Batch generate request failed: {e}")
+
+    def generate_batch_async(
+        self,
+        prompts: List[str],
+        model: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        **kwargs: Any,
+    ) -> str:
+        """Submit batch generation request asynchronously.
+
+        Returns immediately with a batch_id that can be used to
+        poll for results.
+
+        Args:
+            prompts: List of prompt texts to generate from
+            model: Model name to use (optional, uses server default)
+            max_tokens: Maximum tokens to generate (optional)
+            temperature: Sampling temperature (optional)
+            **kwargs: Additional LLM parameters to pass to server
+
+        Returns:
+            Batch ID string for polling results
+
+        Raises:
+            AIRunnerClientError: If request fails
+        """
+        request_data = {
+            "prompts": prompts,
+            "stream": False,
+            "async": True,
+        }
+
+        if model is not None:
+            request_data["model"] = model
+        if max_tokens is not None:
+            request_data["max_tokens"] = max_tokens
+        if temperature is not None:
+            request_data["temperature"] = temperature
+
+        request_data.update(kwargs)
+
+        try:
+            response = requests.post(
+                f"{self.base_url}/llm/generate_batch",
+                json=request_data,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get("batch_id", "")
+        except requests.RequestException as e:
+            raise AIRunnerClientError(f"Async batch request failed: {e}")
+
+    def get_batch_results(self, batch_id: str) -> Dict[str, Any]:
+        """Get results for an async batch generation.
+
+        Args:
+            batch_id: The batch ID returned from generate_batch_async
+
+        Returns:
+            Dict with 'status' and 'responses' fields
+
+        Raises:
+            AIRunnerClientError: If request fails
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/llm/batch/{batch_id}",
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise AIRunnerClientError(f"Get batch results failed: {e}")

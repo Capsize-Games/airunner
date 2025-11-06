@@ -4,6 +4,9 @@ from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.enums import LLMActionType
 from airunner.components.llm.managers.llm_response import LLMResponse
 from typing import Optional, List
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class LLMAPIService(APIServiceBase):
@@ -43,9 +46,8 @@ class LLMAPIService(APIServiceBase):
         llm_request.do_tts_reply = do_tts_reply
 
         # DEBUG: Log max_new_tokens value
-        print(
-            f"[LLM API DEBUG] llm_request.max_new_tokens={llm_request.max_new_tokens}, action={action}",
-            flush=True,
+        logger.debug(
+            f"llm_request.max_new_tokens={llm_request.max_new_tokens}, action={action}"
         )
 
         data = {

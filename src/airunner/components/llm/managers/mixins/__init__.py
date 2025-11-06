@@ -51,6 +51,9 @@ from airunner.components.llm.managers.mixins.node_functions_mixin import (
 from airunner.components.llm.managers.mixins.streaming_mixin import (
     StreamingMixin,
 )
+from airunner.components.llm.managers.mixins.batch_processing_mixin import (
+    BatchProcessingMixin,
+)
 
 __all__ = [
     "AdapterLoaderMixin",
@@ -70,4 +73,5 @@ __all__ = [
     "WorkflowBuildingMixin",
     "NodeFunctionsMixin",
     "StreamingMixin",
+    "BatchProcessingMixin",
 ]

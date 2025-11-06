@@ -16,7 +16,7 @@ main.onefile-build
 settings.pickle
 .run
 *egg-info*
-venv
+.venv
 src/airunner/extensions/
 src/airunner/scripts/weights
 gfpgan
