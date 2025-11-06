@@ -66,6 +66,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             self._handle_llm(data)
         elif path == "/llm/generate_batch":
             self._handle_llm_batch(data)
+        elif path == "/admin/reset_memory":
+            self._handle_reset_memory()
         elif path == "/art":
             self._handle_art(data)
         elif path == "/stt":
@@ -629,6 +631,34 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
     def _handle_stub(self, msg):
         self._set_headers(200)
         self.wfile.write(json.dumps({"result": msg}).encode("utf-8"))
+
+    def _handle_reset_memory(self):
+        """Reset LLM conversation memory.
+
+        This endpoint clears the LLM's conversation history, useful for
+        tests to prevent contamination between test runs.
+        """
+        try:
+            api = get_api()
+            # Clear conversation memory via workflow manager
+            if hasattr(api.llm, "model_manager") and api.llm.model_manager:
+                workflow_manager = getattr(
+                    api.llm.model_manager, "_workflow_manager", None
+                )
+                if workflow_manager and hasattr(
+                    workflow_manager, "clear_memory"
+                ):
+                    workflow_manager.clear_memory()
+                    logger.info("LLM conversation memory cleared")
+
+            self._set_headers(200)
+            self.wfile.write(
+                json.dumps({"status": "memory_cleared"}).encode("utf-8")
+            )
+        except Exception as e:
+            logger.error(f"Error resetting memory: {e}", exc_info=True)
+            self._set_headers(500)
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
 
 
 # Usage: pass AIRunnerAPIRequestHandler to your HTTP server for /llm, /art, /stt, /tts endpoints.

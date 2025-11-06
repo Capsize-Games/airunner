@@ -24,10 +24,29 @@ pytestmark = [
 
 
 @pytest.fixture(autouse=True)
-def cleanup_calendar_data():
-    """Clean up calendar data after each test."""
+def cleanup_calendar_data(airunner_client_function_scope):
+    """Clean up calendar data and LLM memory before AND after each test.
+
+    This prevents test contamination where the LLM remembers events
+    from previous tests and hallucinates about them.
+    """
+    # Cleanup BEFORE test - clear database and LLM memory
+    with session_scope() as session:
+        session.query(Event).delete()
+        session.commit()
+
+    # Reset LLM conversation memory via /admin endpoint
+    try:
+        import requests
+
+        base_url = airunner_client_function_scope.base_url
+        requests.post(f"{base_url}/admin/reset_memory", timeout=5)
+    except Exception as e:
+        logger.warning(f"Could not reset LLM memory: {e}")
+
     yield
-    # Cleanup after test
+
+    # Cleanup AFTER test
     with session_scope() as session:
         session.query(Event).delete()
         session.commit()
