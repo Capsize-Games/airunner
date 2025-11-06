@@ -94,7 +94,10 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
 
 
 def run_eval_tests(
-    verbose: bool = False, model: str = None, skip_slow: bool = False
+    verbose: bool = False,
+    model: str = None,
+    skip_slow: bool = False,
+    test_file: str = None,
 ) -> int:
     """
     Run evaluation framework tests.
@@ -103,6 +106,7 @@ def run_eval_tests(
         verbose: Whether to show verbose output
         model: Model path to use for testing (e.g., '/path/to/Qwen2.5-7B-Instruct')
         skip_slow: Skip slow integration tests, run only fast tests
+        test_file: Optional specific test file to run (e.g., 'test_calendar_tool_eval.py')
 
     Returns:
         Exit code from pytest
@@ -113,7 +117,15 @@ def run_eval_tests(
         print(f"Error: Eval tests directory not found at {test_path}")
         return 1
 
-    cmd = ["pytest", str(test_path)]
+    # If specific test file provided, use it
+    if test_file:
+        test_target = test_path / test_file
+        if not test_target.exists():
+            print(f"Error: Test file not found at {test_target}")
+            return 1
+        cmd = ["pytest", str(test_target)]
+    else:
+        cmd = ["pytest", str(test_path)]
 
     if verbose:
         cmd.append("-v")
@@ -137,7 +149,10 @@ def run_eval_tests(
         env["AIRUNNER_TEST_MODEL_PATH"] = model
         print(f"Using model: {model}")
 
-    return run_command(cmd, "Evaluation framework tests", env=env)
+    description = (
+        f"Evaluation framework tests{' - ' + test_file if test_file else ''}"
+    )
+    return run_command(cmd, description, env=env)
 
 
 def main():
@@ -150,6 +165,7 @@ Examples:
   %(prog)s --unit                    Run all unit tests
   %(prog)s --eval                    Run eval tests only
   %(prog)s --eval --model /path/to/model    Test with specific model
+  %(prog)s --eval --file test_calendar_tool_eval.py --model /path/to/model    Run specific eval test file
   %(prog)s --eval --skip-slow        Run only fast eval tests
   %(prog)s --all                     Run all tests
   %(prog)s --unit --component llm    Run LLM component tests only
@@ -193,6 +209,12 @@ Examples:
         help="Skip slow integration tests in eval suite",
     )
 
+    parser.add_argument(
+        "--file",
+        type=str,
+        help="Run specific test file (e.g., 'test_calendar_tool_eval.py')",
+    )
+
     args = parser.parse_args()
 
     # Default to running unit tests if no flags specified
@@ -216,6 +238,7 @@ Examples:
             verbose=args.verbose,
             model=args.model,
             skip_slow=args.skip_slow,
+            test_file=args.file,
         )
         exit_codes.append(exit_code)
 
