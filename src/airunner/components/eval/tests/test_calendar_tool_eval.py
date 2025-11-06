@@ -30,23 +30,31 @@ def cleanup_calendar_data(airunner_client_function_scope):
     This prevents test contamination where the LLM remembers events
     from previous tests and hallucinates about them.
     """
+    print("\n[FIXTURE] Cleaning calendar data and resetting LLM memory...")
+
     # Cleanup BEFORE test - clear database and LLM memory
     with session_scope() as session:
-        session.query(Event).delete()
+        deleted_count = session.query(Event).delete()
         session.commit()
+        print(
+            f"[FIXTURE] Deleted {deleted_count} calendar events from database"
+        )
 
     # Reset LLM conversation memory via /admin endpoint
     try:
         import requests
 
         base_url = airunner_client_function_scope.base_url
-        requests.post(f"{base_url}/admin/reset_memory", timeout=5)
+        response = requests.post(f"{base_url}/admin/reset_memory", timeout=5)
+        print(f"[FIXTURE] LLM memory reset: {response.json()}")
     except Exception as e:
-        logger.warning(f"Could not reset LLM memory: {e}")
+        print(f"[FIXTURE] WARNING: Could not reset LLM memory: {e}")
 
+    print("[FIXTURE] Setup complete, starting test...\n")
     yield
 
     # Cleanup AFTER test
+    print("\n[FIXTURE] Test complete, cleaning up...")
     with session_scope() as session:
         session.query(Event).delete()
         session.commit()
