@@ -115,27 +115,54 @@ def list_calendar_events(
     try:
         from airunner.components.calendar.data.event import Event
         from airunner.components.data.session_manager import session_scope
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         with session_scope() as session:
+            # DEBUG: First check what events exist in database
+            all_events = session.query(Event).all()
+            logger.info(
+                f"[CALENDAR DEBUG] Total events in database: {len(all_events)}"
+            )
+            for evt in all_events:
+                logger.info(
+                    f"[CALENDAR DEBUG]   - {evt.title}: {evt.start_time}"
+                )
+
             query = session.query(Event)
 
             # Apply filters
             if start_date:
                 start_dt = datetime.fromisoformat(start_date)
+                logger.info(
+                    f"[CALENDAR DEBUG] Filtering start_time >= {start_dt}"
+                )
                 query = query.filter(Event.start_time >= start_dt)
             else:
                 # Default to upcoming events
-                query = query.filter(Event.start_time >= datetime.now())
+                now = datetime.now()
+                logger.info(
+                    f"[CALENDAR DEBUG] No start_date, filtering start_time >= {now}"
+                )
+                query = query.filter(Event.start_time >= now)
 
             if end_date:
                 end_dt = datetime.fromisoformat(end_date)
+                logger.info(f"[CALENDAR DEBUG] Filtering end_time <= {end_dt}")
                 query = query.filter(Event.end_time <= end_dt)
 
             if category:
+                logger.info(
+                    f"[CALENDAR DEBUG] Filtering category == {category}"
+                )
                 query = query.filter(Event.category == category)
 
             # Order by start time and limit
             events = query.order_by(Event.start_time).limit(limit).all()
+            logger.info(
+                f"[CALENDAR DEBUG] Query returned {len(events)} events"
+            )
 
             if not events:
                 return "No events found matching the criteria."
@@ -154,6 +181,11 @@ def list_calendar_events(
 
             return "\n".join(result_lines)
     except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).error(
+            f"[CALENDAR DEBUG] Error listing events: {e}", exc_info=True
+        )
         return f"Error listing events: {str(e)}"
 
 
