@@ -114,8 +114,23 @@ class WorkflowManager(
         self._build_and_compile_workflow()
 
     def clear_memory(self):
-        """Clear the conversation memory/history."""
+        """Clear the conversation memory/history and checkpoint state.
+
+        This clears:
+        1. Message history in database
+        2. LangGraph checkpoint state (in-memory)
+        3. Rebuilds workflow with fresh state
+
+        CRITICAL: Must clear checkpoints to prevent state contamination
+        between tests or conversation resets.
+        """
+        # Clear message history
         self._memory.message_history.clear()
+
+        # CRITICAL: Clear LangGraph checkpoint state
+        if hasattr(self._memory, "clear_checkpoints"):
+            self._memory.clear_checkpoints()
+
         # Rebuild workflow with fresh memory
         self._build_and_compile_workflow()
 
