@@ -20,6 +20,7 @@ class LLMResponse:
         action: The type of action this response represents.
         sequence_number: Sequential number to track message order.
         request_id: Optional request ID for correlation with HTTP API requests.
+        tools: Optional list of tool names that were executed during generation.
     """
 
     message: str = ""
@@ -30,3 +31,4 @@ class LLMResponse:
     node_id: Optional[str] = None
     sequence_number: int = 0
     request_id: Optional[str] = None
+    tools: Optional[list] = None

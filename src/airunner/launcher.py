@@ -18,6 +18,14 @@ from airunner.components.settings.data.airunner_settings import (
 from airunner.components.settings.data.path_settings import PathSettings
 from airunner.settings import AIRUNNER_BASE_PATH, LOCAL_SERVER_HOST
 from airunner.setup_database import setup_database
+from airunner.components.data.session_manager import Session
+from airunner.components.settings.data.path_settings import PathSettings
+from airunner.components.settings.data.application_settings import (
+    ApplicationSettings,
+)
+from airunner.components.llm.data.llm_generator_settings import (
+    LLMGeneratorSettings,
+)
 
 COMPONENTS_PATH = os.path.join(os.path.dirname(__file__), "components")
 
@@ -223,12 +231,55 @@ def generate_local_certs_if_needed(base_path):
     return cert_file, key_file
 
 
+def _configure_test_mode():
+    """Configure database settings for test mode.
+
+    When running tests, this function:
+    1. Creates default settings if they don't exist
+    2. Sets model path from AIRUNNER_TEST_MODEL_PATH env var if provided
+    """
+    with Session() as session:
+        # Create default path settings if not exists
+        if not session.query(PathSettings).first():
+            path_settings = PathSettings()
+            session.add(path_settings)
+
+        # Create default application settings if not exists
+        if not session.query(ApplicationSettings).first():
+            app_settings = ApplicationSettings()
+            session.add(app_settings)
+
+        # Create or update LLM settings with test model path
+        llm_settings = session.query(LLMGeneratorSettings).first()
+        if not llm_settings:
+            llm_settings = LLMGeneratorSettings()
+            session.add(llm_settings)
+
+        # Set model path from environment variable if provided
+        test_model_path = os.environ.get("AIRUNNER_TEST_MODEL_PATH")
+        if test_model_path:
+            llm_settings.model_path = test_model_path
+            logging.info(f"Test mode: Using model path: {test_model_path}")
+        else:
+            logging.warning(
+                "Test mode: AIRUNNER_TEST_MODEL_PATH not set. "
+                "Tests requiring LLM will fail. "
+                "Use pytest --model=/path/to/model or set environment variable."
+            )
+
+        session.commit()
+
+
 def main():
     # Build UI files first
     build_ui_if_needed()
 
     # --- Ensure database and tables are created before any DB access ---
     setup_database()
+
+    # --- Configure test mode if running tests ---
+    if os.environ.get("AIRUNNER_ENVIRONMENT") == "test":
+        _configure_test_mode()
 
     # Register component settings after UI build but before main app starts
     try:

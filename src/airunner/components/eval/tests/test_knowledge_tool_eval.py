@@ -25,7 +25,7 @@ class TestKnowledgeToolEval:
     """Eval tests for natural language knowledge tool triggering."""
 
     @patch(
-        "airunner.components.llm.tools.knowledge_tools.KnowledgeMemoryManager"
+        "airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager"
     )
     def test_record_knowledge_basic(
         self, mock_knowledge_manager, airunner_client_function_scope
@@ -74,7 +74,7 @@ class TestKnowledgeToolEval:
         )
 
     @patch(
-        "airunner.components.llm.tools.knowledge_tools.KnowledgeMemoryManager"
+        "airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager"
     )
     def test_record_knowledge_variations(
         self, mock_knowledge_manager, airunner_client_function_scope
@@ -127,7 +127,7 @@ class TestKnowledgeToolEval:
             ), f"Expected knowledge/record tool for prompt: {prompt}, got tools: {tools}"
 
     @patch(
-        "airunner.components.llm.tools.knowledge_tools.KnowledgeMemoryManager"
+        "airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager"
     )
     def test_recall_knowledge_basic(
         self, mock_knowledge_manager, airunner_client_function_scope
@@ -182,7 +182,7 @@ class TestKnowledgeToolEval:
         )
 
     @patch(
-        "airunner.components.llm.tools.knowledge_tools.KnowledgeMemoryManager"
+        "airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager"
     )
     def test_recall_knowledge_variations(
         self, mock_knowledge_manager, airunner_client_function_scope
@@ -239,7 +239,7 @@ class TestKnowledgeToolEval:
             ), f"Expected knowledge/recall/search tool for prompt: {prompt}, got tools: {tools}"
 
     @patch(
-        "airunner.components.llm.tools.knowledge_tools.KnowledgeMemoryManager"
+        "airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager"
     )
     def test_recall_knowledge_by_category_basic(
         self, mock_knowledge_manager, airunner_client_function_scope
@@ -293,7 +293,7 @@ class TestKnowledgeToolEval:
         ), f"Expected knowledge/recall/category tool in tools, got: {tools}"
 
     @patch(
-        "airunner.components.llm.tools.knowledge_tools.KnowledgeMemoryManager"
+        "airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager"
     )
     def test_record_and_recall_workflow(
         self, mock_knowledge_manager, airunner_client_function_scope
@@ -368,7 +368,7 @@ class TestKnowledgeToolErrorHandling:
     """Test that agent handles knowledge tool errors gracefully."""
 
     @patch(
-        "airunner.components.llm.tools.knowledge_tools.KnowledgeMemoryManager"
+        "airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager"
     )
     def test_recall_no_knowledge(
         self, mock_knowledge_manager, airunner_client_function_scope
@@ -412,7 +412,7 @@ class TestKnowledgeToolErrorHandling:
         ), f"Expected knowledge/recall/search tool in tools, got: {tools}"
 
     @patch(
-        "airunner.components.llm.tools.knowledge_tools.KnowledgeMemoryManager"
+        "airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager"
     )
     def test_record_knowledge_error(
         self, mock_knowledge_manager, airunner_client_function_scope
@@ -449,7 +449,7 @@ class TestKnowledgeToolErrorHandling:
         )
 
     @patch(
-        "airunner.components.llm.tools.knowledge_tools.KnowledgeMemoryManager"
+        "airunner.components.knowledge.knowledge_memory_manager.KnowledgeMemoryManager"
     )
     def test_recall_by_invalid_category(
         self, mock_knowledge_manager, airunner_client_function_scope

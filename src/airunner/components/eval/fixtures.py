@@ -31,6 +31,16 @@ def _start_server_process(port: int, host: str):
     env["AIRUNNER_HTTP_PORT"] = str(port)
     env["AIRUNNER_HTTP_HOST"] = host
 
+    # Pass test-related environment variables to subprocess
+    test_env_vars = [
+        "AIRUNNER_DATABASE_URL",
+        "AIRUNNER_ENVIRONMENT",
+        "AIRUNNER_TEST_MODEL_PATH",
+    ]
+    for var in test_env_vars:
+        if var in os.environ:
+            env[var] = os.environ[var]
+
     logger.info(f"Starting headless server on {host}:{port}")
     server_log = open("/tmp/airunner_test_server.log", "w")
 

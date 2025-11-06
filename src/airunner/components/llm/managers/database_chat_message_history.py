@@ -12,6 +12,7 @@ from langchain_core.messages import (
 )
 
 from airunner.components.llm.data.conversation import Conversation
+from airunner.utils.application.get_logger import get_logger
 
 
 class DatabaseChatMessageHistory(BaseChatMessageHistory):
@@ -29,7 +30,7 @@ class DatabaseChatMessageHistory(BaseChatMessageHistory):
             conversation_id: Optional conversation ID to load. If None, will use
                            or create the current conversation.
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(self.__class__.__name__)
         self.conversation_id = conversation_id
         self._conversation = None
         self._load_conversation()

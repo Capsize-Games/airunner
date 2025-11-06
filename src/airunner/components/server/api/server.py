@@ -348,6 +348,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         # Collect all response chunks
         complete_message = []
+        executed_tools = []  # Track tools executed
         complete_event = threading.Event()
 
         def collect_callback(data: dict):
@@ -364,6 +365,13 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             )
             if response:
                 complete_message.append(response.message)
+                # Extract tools from response object if this is the final message
+                if (
+                    response.is_end_of_message
+                    and hasattr(response, "tools")
+                    and response.tools
+                ):
+                    executed_tools.extend(response.tools)
                 logger.debug(
                     f"HTTP Callback Complete message so far: {len(complete_message)} chunks"
                 )
@@ -417,6 +425,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "action": (
                     action.value if hasattr(action, "value") else str(action)
                 ),
+                "tools": executed_tools,  # Include list of executed tools
             }
         else:
             # Timeout
@@ -426,6 +435,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "is_end_of_message": True,
                 "sequence_number": 0,
                 "error": True,
+                "tools": [],
             }
 
         self.wfile.write(json.dumps(response_data).encode("utf-8"))
