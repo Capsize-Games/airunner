@@ -140,8 +140,21 @@ class WorkflowManager(
         Args:
             conversation_id: Conversation ID to use for storing messages
         """
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         self._conversation_id = conversation_id
         self._thread_id = str(conversation_id)
+
+        # CRITICAL: Clear class-level checkpoint state BEFORE creating new memory
+        # The _checkpoint_state dict is class-level and persists across instances
+        logger.info(
+            f"🔴 Clearing class-level checkpoint state (had {len(DatabaseCheckpointSaver._checkpoint_state)} keys)"
+        )
+        DatabaseCheckpointSaver._checkpoint_state.clear()
+        logger.info("🟢 Checkpoint state cleared")
+
         self._memory = DatabaseCheckpointSaver(conversation_id)
         self._build_and_compile_workflow()
 

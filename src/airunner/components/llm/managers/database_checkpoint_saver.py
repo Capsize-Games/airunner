@@ -113,8 +113,13 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                     )
 
                     # Store full checkpoint state (including ToolMessages)
-                    # Use "default" as thread_id to match what LangGraph uses
-                    thread_id = "default"
+                    # CRITICAL: Use conversation_id as thread_id for isolation
+                    # Each conversation needs its own checkpoint namespace to prevent contamination
+                    thread_id = (
+                        str(self.conversation_id)
+                        if self.conversation_id
+                        else "default"
+                    )
                     self._checkpoint_state[thread_id] = {
                         "messages": messages,  # Full message list with ToolMessages
                         "checkpoint": checkpoint,
