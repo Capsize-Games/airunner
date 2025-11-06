@@ -265,6 +265,7 @@ class LLMModelManager(
         Args:
             tool_categories: List of allowed category names. Empty list = no tools.
                            None = all tools (handled by caller).
+                           Supports aliases like "USER_DATA" -> "SYSTEM", "KNOWLEDGE" -> "RAG"
         """
         if not self._workflow_manager or not self._tool_manager:
             self.logger.warning(
@@ -286,16 +287,36 @@ class LLMModelManager(
         # Filter tools by category
         from airunner.components.llm.core.tool_registry import ToolCategory
 
+        # Category alias mapping for common names
+        CATEGORY_ALIASES = {
+            "user_data": "system",  # USER_DATA -> SYSTEM (user data tools in SYSTEM)
+            "knowledge": "rag",  # KNOWLEDGE -> RAG (knowledge tools in RAG)
+            "agent": "system",  # AGENT -> SYSTEM (agent tools in SYSTEM)
+            "agents": "system",  # AGENTS -> SYSTEM
+        }
+
         allowed_categories = set()
         for cat_name in tool_categories:
+            cat_lower = cat_name.lower()
+
+            # Check if this is an alias
+            if cat_lower in CATEGORY_ALIASES:
+                actual_cat = CATEGORY_ALIASES[cat_lower]
+                self.logger.info(
+                    f"Mapped alias '{cat_name}' to category '{actual_cat}'"
+                )
+                cat_lower = actual_cat
+
             try:
                 # Convert string to ToolCategory enum
-                category = ToolCategory(cat_name.lower())
+                category = ToolCategory(cat_lower)
                 allowed_categories.add(category)
+                self.logger.info(f"Added category: {category.value}")
             except ValueError:
                 self.logger.warning(
                     f"Unknown tool category: {cat_name}. "
-                    f"Valid categories: {[c.value for c in ToolCategory]}"
+                    f"Valid categories: {[c.value for c in ToolCategory]}. "
+                    f"Valid aliases: {list(CATEGORY_ALIASES.keys())}"
                 )
 
         if not allowed_categories:
