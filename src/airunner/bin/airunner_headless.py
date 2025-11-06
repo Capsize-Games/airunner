@@ -43,7 +43,6 @@ import os
 os.environ["AIRUNNER_HEADLESS"] = "1"
 
 
-
 def main():
     """Main entry point for headless AI Runner server."""
     parser = argparse.ArgumentParser(
@@ -121,6 +120,17 @@ def main():
     logging.info("=" * 60)
 
     try:
+        # Setup database (run migrations)
+        from airunner.setup_database import setup_database
+
+        setup_database()
+
+        # Configure test mode if running tests
+        if os.environ.get("AIRUNNER_ENVIRONMENT") == "test":
+            from airunner.launcher import _configure_test_mode
+
+            _configure_test_mode()
+
         # Create API instance (which inherits from App)
         # This initializes the app, workers, and HTTP server
         from airunner.components.application.api.api import API

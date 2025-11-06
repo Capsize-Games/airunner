@@ -101,7 +101,7 @@ def run_eval_tests(
 
     Args:
         verbose: Whether to show verbose output
-        model: Optional model name to use for testing (e.g., 'qwen2.5-coder:32b')
+        model: Model path to use for testing (e.g., '/path/to/Qwen2.5-7B-Instruct')
         skip_slow: Skip slow integration tests, run only fast tests
 
     Returns:
@@ -134,7 +134,7 @@ def run_eval_tests(
     # Set environment variable for model if specified
     env = {}
     if model:
-        env["AIRUNNER_EVAL_MODEL"] = model
+        env["AIRUNNER_TEST_MODEL_PATH"] = model
         print(f"Using model: {model}")
 
     return run_command(cmd, "Evaluation framework tests", env=env)
@@ -149,7 +149,7 @@ def main():
 Examples:
   %(prog)s --unit                    Run all unit tests
   %(prog)s --eval                    Run eval tests only
-  %(prog)s --eval --model qwen2.5-coder:32b    Test with specific model
+  %(prog)s --eval --model /path/to/model    Test with specific model
   %(prog)s --eval --skip-slow        Run only fast eval tests
   %(prog)s --all                     Run all tests
   %(prog)s --unit --component llm    Run LLM component tests only
@@ -184,7 +184,7 @@ Examples:
     parser.add_argument(
         "--model",
         type=str,
-        help="Model to use for eval tests (e.g., 'qwen2.5-coder:32b', 'gpt-4')",
+        help="Model path to use for eval tests (e.g., '/home/user/.local/share/airunner/text/models/llm/causallm/Qwen2.5-7B-Instruct')",
     )
 
     parser.add_argument(

@@ -20,6 +20,9 @@ class ToolExecutionMixin:
         self.logger = logging.getLogger(__name__)
         self._tools = []
         self._conversation_id: Optional[int] = None
+        self._executed_tools: list[str] = (
+            []
+        )  # Track tools called in current invocation
 
     def _execute_tools_with_status(
         self, state: "WorkflowState"
@@ -72,6 +75,9 @@ class ToolExecutionMixin:
             tool_name = tool_call.get("name", "unknown")
             tool_args = tool_call.get("args", {})
             tool_id = tool_call.get("id", "")
+
+            # Track this tool execution
+            self._executed_tools.append(tool_name)
 
             query = self._extract_query_from_args(tool_args)
 

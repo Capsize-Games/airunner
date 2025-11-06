@@ -343,6 +343,11 @@ class GenerationMixin:
         if final_response:
             complete_response[0] = final_response
 
+        # Get list of tools that were executed during workflow
+        executed_tools = []
+        if hasattr(self._workflow_manager, "get_executed_tools"):
+            executed_tools = self._workflow_manager.get_executed_tools()
+
         sequence_counter[0] += 1
         self.api.llm.send_llm_text_streamed_signal(
             LLMResponse(
@@ -353,7 +358,10 @@ class GenerationMixin:
             )
         )
 
-        return {"response": complete_response[0]}
+        return {
+            "response": complete_response[0],
+            "tools": executed_tools,  # Include list of executed tools
+        }
 
     def _send_final_message(
         self, llm_request: Optional[LLMRequest] = None
@@ -363,11 +371,17 @@ class GenerationMixin:
         Args:
             llm_request: Optional LLM request object
         """
+        # Get executed tools from workflow manager
+        executed_tools = []
+        if hasattr(self, "_workflow_manager") and self._workflow_manager:
+            executed_tools = self._workflow_manager.get_executed_tools()
+
         self.api.llm.send_llm_text_streamed_signal(
             LLMResponse(
                 node_id=llm_request.node_id if llm_request else None,
                 is_end_of_message=True,
                 request_id=getattr(self, "_current_request_id", None),
+                tools=executed_tools,
             )
         )
 
