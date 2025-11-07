@@ -18,6 +18,9 @@ from airunner.components.art.utils.image_filter_utils import FilterValueData
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
 
+# Module-level logger for module functions
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
 
 class FilterParameterWidget(QWidget):
     """Widget for a single filter parameter with appropriate input control."""
@@ -219,7 +222,7 @@ def create_filter_parameter_widgets(
             widget = FilterParameterWidget(fv, on_value_changed, parent)
             widgets.append(widget)
         except Exception:
-            self.logger.exception(
+            logger.exception(
                 f"Failed to create parameter widget for {fv.name}"
             )
 

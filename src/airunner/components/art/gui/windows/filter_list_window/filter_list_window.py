@@ -1,4 +1,3 @@
-from multiprocessing.util import get_logger
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -14,6 +13,7 @@ from PySide6.QtCore import Qt
 
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class FilterListWindow(QDialog):
@@ -73,7 +73,6 @@ class FilterListWindow(QDialog):
     def _load_filters(self):
         self._list.clear()
         filters = ImageFilter.objects.all() or []
-        logger = self.logger.getLogger(__name__)
         for f in filters:
             # Create an empty list item and a widget containing a real QCheckBox
             item = QListWidgetItem()
@@ -89,7 +88,7 @@ class FilterListWindow(QDialog):
             # QListWidget's itemChanged which may not trigger QCheckBox styling.
             def _on_checkbox_toggled(checked: bool, fid=f.id):
                 try:
-                    logger.debug(
+                    self.logger.debug(
                         "Updating ImageFilter id=%s auto_apply=%s",
                         fid,
                         checked,
@@ -97,9 +96,9 @@ class FilterListWindow(QDialog):
                     success = ImageFilter.objects.update(
                         fid, auto_apply=bool(checked)
                     )
-                    logger.debug("ImageFilter update success=%s", success)
+                    self.logger.debug("ImageFilter update success=%s", success)
                 except Exception:
-                    logger.exception(
+                    self.logger.exception(
                         "Failed to update ImageFilter(id=%s) auto_apply", fid
                     )
 
@@ -132,7 +131,7 @@ class FilterListWindow(QDialog):
             # are for auto-applying to future generated images. The DB update
             # above is sufficient.
         except Exception:
-            self.logger.getLogger(__name__).exception(
+            self.logger.exception(
                 "Error handling itemChanged for ImageFilter id=%s", fid
             )
 
