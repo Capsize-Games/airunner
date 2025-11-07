@@ -1,6 +1,5 @@
 from typing import Optional, Dict
 import glob
-import logging
 import os
 import os.path
 import signal
@@ -11,6 +10,8 @@ from PySide6.QtCore import QObject, QTimer
 from PySide6.QtGui import QGuiApplication, Qt, QWindow
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTranslator, QLocale
+
+from airunner.utils.application import get_logger
 
 # CRITICAL: Set PyTorch CUDA memory allocator config BEFORE importing torch
 # This prevents fragmentation issues when loading large quantized models
@@ -37,6 +38,7 @@ from airunner.components.settings.data.application_settings import (
 from airunner.settings import (
     AIRUNNER_DISABLE_SETUP_WIZARD,
     AIRUNNER_DISCORD_URL,
+    AIRUNNER_LOG_LEVEL,
     MATHJAX_VERSION,
     QTWEBENGINE_REMOTE_DEBUGGING,  # Add this import
 )
@@ -105,6 +107,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             window_class_params: Parameters for main window (GUI mode only)
             initialize_gui: If False, run in headless mode (no GUI)
         """
+        self.logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
         # Check environment variable for headless mode
         headless_env = os.environ.get("AIRUNNER_HEADLESS", "0") == "1"
         if headless_env:
@@ -162,7 +165,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 static_dir, "mathjax", f"MathJax-{MATHJAX_VERSION}", "es5"
             )
             if os.path.isdir(mathjax_dir):
-                logging.info("Starting local HTTPS server for static assets.")
+                self.logger.info(
+                    "Starting local HTTPS server for static assets."
+                )
                 print(
                     flush=True,
                 )
@@ -191,7 +196,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 )
         else:
             # Headless mode - just initialize core systems
-            logging.info("Running in headless mode (no GUI)")
+            self.logger.info("Running in headless mode (no GUI)")
             self._init_headless_services()
             # Note: Call run() after __init__ to start headless event loop
             self.is_running = True
@@ -212,7 +217,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         if self.app is None:
             self.app = QCoreApplication([])
         self.app.api = self
-        logging.info("Qt Core event loop initialized (headless mode)")
+        self.logger.info("Qt Core event loop initialized (headless mode)")
 
         # Initialize workers BEFORE starting HTTP server
         # so they're ready to handle requests immediately
@@ -229,16 +234,16 @@ class App(MediatorMixin, SettingsMixin, QObject):
             host = os.environ.get("AIRUNNER_HTTP_HOST", "0.0.0.0")
             port = int(os.environ.get("AIRUNNER_HTTP_PORT", "8080"))
 
-            logging.info(f"Starting API server on {host}:{port}")
+            self.logger.info(f"Starting API server on {host}:{port}")
             self.api_server_thread = APIServerThread(host=host, port=port)
             self.api_server_thread.start()
-            logging.info(
+            self.logger.info(
                 f"API server started - /health, /llm, /art endpoints available"
             )
             # Mark that server is now running
             os.environ["AIRUNNER_SERVER_RUNNING"] = "1"
         else:
-            logging.info(
+            self.logger.info(
                 "API server already running - skipping initialization"
             )
 
@@ -246,7 +251,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         """Initialize the automatic knowledge extraction system."""
         # Skip if knowledge system is disabled (e.g., in headless mode)
         if os.environ.get("AIRUNNER_KNOWLEDGE_ON", "1") == "0":
-            logging.info("Knowledge system disabled")
+            self.logger.info("Knowledge system disabled")
             return
 
         try:
@@ -255,12 +260,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
             )
 
             initialize_knowledge_system()
-            logging.info("Knowledge extraction system initialized")
+            self.logger.info("Knowledge extraction system initialized")
 
             # Run one-time knowledge migration if needed
             self._run_knowledge_migration_if_needed()
         except Exception as e:
-            logging.error(
+            self.logger.error(
                 f"Failed to initialize knowledge system: {e}", exc_info=True
             )
 
@@ -285,6 +290,11 @@ class App(MediatorMixin, SettingsMixin, QObject):
             # and lazily creates workers (LLMGenerateWorker, SDWorker, etc.) as needed
             self._worker_manager = create_worker(WorkerManager)
 
+            # CRITICAL: Eagerly initialize LLM worker so it's ready to receive signals
+            # The worker must be created BEFORE any LLM requests are sent
+            _ = self._worker_manager.llm_generate_worker
+            self.logger.info("LLM worker initialized and ready")
+
             # Create ModelLoadBalancer to manage model loading/unloading
             self._model_load_balancer = ModelLoadBalancer(
                 self._worker_manager,
@@ -292,9 +302,9 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 api=self,
             )
 
-            logging.info("Headless workers initialized (LLM)")
+            self.logger.info("Headless workers initialized (LLM)")
         except Exception as e:
-            logging.error(
+            self.logger.error(
                 f"Failed to initialize headless workers: {e}", exc_info=True
             )
 
@@ -320,12 +330,12 @@ class App(MediatorMixin, SettingsMixin, QObject):
                 )
 
                 if not settings:
-                    logging.error("Application settings not found")
+                    self.logger.error("Application settings not found")
                     return
 
                 # Check if migration already completed (within transaction)
                 if settings.knowledge_migrated:
-                    logging.debug("Knowledge migration already completed")
+                    self.logger.debug("Knowledge migration already completed")
                     return
 
                 # Check if legacy JSON file exists
@@ -334,7 +344,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
                 if not json_path.exists():
                     # No legacy data to migrate
-                    logging.info(
+                    self.logger.info(
                         "No legacy knowledge data found, skipping migration"
                     )
                     settings.knowledge_migrated = True
@@ -342,7 +352,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
                     return
 
                 # Run migration (outside transaction to avoid long locks)
-                logging.info(
+                self.logger.info(
                     "Running one-time knowledge migration from JSON to database..."
                 )
 
@@ -356,13 +366,13 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
             # Only mark complete if migration was successful
             if stats["errors"] > 0:
-                logging.error(
+                self.logger.error(
                     f"Knowledge migration completed with {stats['errors']} errors. "
                     f"Migration NOT marked complete - will retry on next startup."
                 )
                 return
 
-            logging.info(
+            self.logger.info(
                 f"Knowledge migration successful: {stats['migrated']} facts migrated"
             )
 
@@ -370,7 +380,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             self._mark_migration_complete()
 
         except Exception as e:
-            logging.error(
+            self.logger.error(
                 f"Failed to run knowledge migration: {e}. "
                 f"Migration NOT marked complete - will retry on next startup.",
                 exc_info=True,
@@ -389,7 +399,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
                     settings.knowledge_migrated = True
                     session.commit()
         except Exception as e:
-            logging.error(
+            self.logger.error(
                 f"Failed to mark migration complete: {e}", exc_info=True
             )
 
@@ -585,8 +595,8 @@ class App(MediatorMixin, SettingsMixin, QObject):
         # Workers are already initialized in _init_headless_services()
         # No need to initialize again here
 
-        logging.info("AI Runner headless mode - server running")
-        logging.info("Press Ctrl+C to stop")
+        self.logger.info("AI Runner headless mode - server running")
+        self.logger.info("Press Ctrl+C to stop")
 
         # Qt event loop blocks Python signal handlers, so we need to
         # periodically allow Python to process signals
@@ -599,7 +609,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
             # Run Qt event loop (processes worker signals)
             sys.exit(self.app.exec())
         except KeyboardInterrupt:
-            logging.info("Interrupted by user")
+            self.logger.info("Interrupted by user")
             self.cleanup()
             sys.exit(0)
 
@@ -769,7 +779,7 @@ class App(MediatorMixin, SettingsMixin, QObject):
         Cleanup resources when shutting down.
         Safe to call in both GUI and headless mode.
         """
-        logging.info("Cleaning up App resources...")
+        self.logger.info("Cleaning up App resources...")
 
         try:
             # Mark as not running first to stop loops
@@ -777,24 +787,24 @@ class App(MediatorMixin, SettingsMixin, QObject):
 
             # Stop HTTP server if running
             if hasattr(self, "api_server_thread") and self.api_server_thread:
-                logging.info("Stopping API server...")
+                self.logger.info("Stopping API server...")
                 try:
                     self.api_server_thread.shutdown()
                     self.api_server_thread.join(timeout=2.0)
-                    logging.info("API server stopped")
+                    self.logger.info("API server stopped")
                 except Exception as e:
-                    logging.warning(f"Error stopping API server: {e}")
+                    self.logger.warning(f"Error stopping API server: {e}")
 
             # Emit shutdown signal for components to cleanup
             try:
                 self.emit_signal(SignalCode.APPLICATION_SHUTDOWN_SIGNAL, {})
             except Exception as e:
-                logging.warning(f"Error emitting shutdown signal: {e}")
+                self.logger.warning(f"Error emitting shutdown signal: {e}")
 
-            logging.info("App cleanup complete")
+            self.logger.info("App cleanup complete")
 
         except Exception as e:
-            logging.error(f"Error during App cleanup: {e}", exc_info=True)
+            self.logger.error(f"Error during App cleanup: {e}", exc_info=True)
 
     def _ensure_mathjax(self):
         # Only run setup if MathJax is not present

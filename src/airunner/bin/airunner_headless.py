@@ -35,9 +35,11 @@ Examples:
 """
 
 import argparse
-import logging
 import sys
 import os
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 # CRITICAL: Set headless mode BEFORE importing App
 os.environ["AIRUNNER_HEADLESS"] = "1"
@@ -65,21 +67,10 @@ def main():
         help="Port to listen on (default: 8188)",
     )
 
-    parser.add_argument(
-        "--log-level",
-        type=str,
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Logging level (default: INFO)",
-    )
-
     args = parser.parse_args()
 
     # Configure logging
-    logging.basicConfig(
-        level=getattr(logging, args.log_level),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
+    logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
 
     # Set environment variables from args
     os.environ["AIRUNNER_HTTP_HOST"] = args.host
@@ -95,13 +86,13 @@ def main():
     # Disable knowledge system in headless mode (has GUI dependencies)
     os.environ.setdefault("AIRUNNER_KNOWLEDGE_ON", "0")
 
-    logging.info("=" * 60)
-    logging.info("AI Runner Headless Server")
-    logging.info("=" * 60)
-    logging.info(f"Host: {args.host}")
-    logging.info(f"Port: {args.port}")
-    logging.info(f"Log Level: {args.log_level}")
-    logging.info("=" * 60)
+    logger.info("=" * 60)
+    logger.info("AI Runner Headless Server")
+    logger.info("=" * 60)
+    logger.info(f"Host: {args.host}")
+    logger.info(f"Port: {args.port}")
+    logger.info(f"Log Level: {AIRUNNER_LOG_LEVEL}")
+    logger.info("=" * 60)
 
     # Show enabled services
     services = []
@@ -114,10 +105,10 @@ def main():
     if os.environ.get("AIRUNNER_STT_ON") == "1":
         services.append("STT")
 
-    logging.info(
+    logger.info(
         f"Enabled services: {', '.join(services) if services else 'None'}"
     )
-    logging.info("=" * 60)
+    logger.info("=" * 60)
 
     try:
         # Setup database (run migrations)
@@ -142,14 +133,14 @@ def main():
 
         server._api = api
 
-        logging.info("Starting headless server...")
+        logger.info("Starting headless server...")
         api.run()
 
     except KeyboardInterrupt:
-        logging.info("Shutdown requested")
+        logger.info("Shutdown requested")
         sys.exit(0)
     except Exception as e:
-        logging.error(f"Fatal error: {e}", exc_info=True)
+        logger.error(f"Fatal error: {e}", exc_info=True)
         sys.exit(1)
 
 

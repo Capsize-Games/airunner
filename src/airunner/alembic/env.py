@@ -5,7 +5,8 @@ from pathlib import Path
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
-from airunner.settings import AIRUNNER_DB_URL
+from airunner.settings import AIRUNNER_DB_URL, AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 config = context.config
 config.set_main_option("sqlalchemy.url", AIRUNNER_DB_URL)
@@ -56,6 +57,8 @@ from airunner.components.knowledge.data.knowledge_relationship import (
     KnowledgeRelationship,  # noqa: F401
 )
 from airunner.components.video.data.video_project import VideoProject
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -126,8 +129,8 @@ def run_migrations_online():
 
 
 if context.is_offline_mode():
-    print("Running migrations offline...")
+    logger.info("Running migrations offline...")
     run_migrations_offline()
 else:
-    print("Running migrations online...")
+    logger.info("Running migrations online...")
     run_migrations_online()

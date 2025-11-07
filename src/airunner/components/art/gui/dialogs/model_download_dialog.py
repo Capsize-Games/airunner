@@ -5,7 +5,6 @@ Provider-agnostic download dialog that works with HuggingFace, CivitAI,
 and other model providers. Reuses the nice progress UI from the LLM downloader.
 """
 
-import logging
 from typing import Dict
 
 from PySide6.QtWidgets import (
@@ -32,7 +31,6 @@ from airunner.enums import SignalCode
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.settings.get_qsettings import get_qsettings
 
-logger = logging.getLogger(__name__)
 
 
 class ModelDownloadDialog(MediatorMixin, SettingsMixin, QDialog):
@@ -283,7 +281,7 @@ class ModelDownloadDialog(MediatorMixin, SettingsMixin, QDialog):
         layout.addWidget(button_box)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            logger.info(
+            self.logger.info(
                 "API key configured, but cannot retry download from here"
             )
             self.reject()

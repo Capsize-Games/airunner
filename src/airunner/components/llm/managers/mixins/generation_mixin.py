@@ -64,10 +64,7 @@ class GenerationMixin:
                 self._workflow_manager.update_tools(action_tools)
             elif skip_tool_setup:
                 # Tools were already filtered, don't override
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.info(
+                self.logger.info(
                     "Skipping tool setup - tools already filtered by tool_categories"
                 )
 
@@ -146,8 +143,20 @@ class GenerationMixin:
         Returns:
             Error message
         """
+        import traceback
+
         self.logger.error(f"Error during generation: {exc}", exc_info=True)
-        error_message = f"Error: {exc}"
+        # Print full traceback for debugging
+        print(f"[ERROR HANDLER] Exception type: {type(exc)}", flush=True)
+        print(f"[ERROR HANDLER] Exception message: {str(exc)}", flush=True)
+        print(f"[ERROR HANDLER] Full traceback:", flush=True)
+        traceback.print_exc()
+        # Ensure we capture the full exception message
+        error_message = f"Error: {str(exc) if exc else 'Unknown error'}"
+        print(
+            f"[ERROR HANDLER] Error message to send: {error_message}",
+            flush=True,
+        )
         self.api.llm.send_llm_text_streamed_signal(
             LLMResponse(
                 node_id=llm_request.node_id if llm_request else None,
@@ -167,16 +176,21 @@ class GenerationMixin:
         Returns:
             Final response content or empty string
         """
-        if not result or "messages" not in result:
-            return ""
+        final_messages = (
+            []
+            if not result or "messages" not in result
+            else [
+                message
+                for message in result["messages"]
+                if isinstance(message, AIMessage)
+            ]
+        )
 
-        final_messages = [
-            message
-            for message in result["messages"]
-            if isinstance(message, AIMessage)
-        ]
+        self.logger.info("=" * 100)
+        self.logger.info("extract final response: %s", final_messages)
+        self.logger.info("self.logger: %s", self.logger)
 
-        if final_messages:
+        if len(final_messages) > 0:
             final_content = final_messages[-1].content or ""
             if final_content:
                 # If the model is using ReAct format, extract only the response
@@ -187,6 +201,8 @@ class GenerationMixin:
                     if response_part:
                         return response_part
                 return final_content
+
+        self.logger.info("No final AIMessage found in generation result")
 
         return ""
 
@@ -259,17 +275,24 @@ class GenerationMixin:
 
             # Prepare generation kwargs from LLMRequest
             generation_kwargs = llm_request.to_dict() if llm_request else {}
-            print(
-                f"[GENERATION MIXIN DEBUG] llm_request.max_new_tokens={llm_request.max_new_tokens if llm_request else 'NO REQUEST'}",
-                flush=True,
+
+            # Map max_tokens to max_new_tokens for HuggingFace compatibility
+            if "max_tokens" in generation_kwargs:
+                generation_kwargs["max_new_tokens"] = generation_kwargs.pop(
+                    "max_tokens"
+                )
+
+            self.logger.debug(
+                "llm_request.max_new_tokens=%s",
+                llm_request.max_new_tokens if llm_request else "NO REQUEST",
             )
-            print(
-                f"[GENERATION MIXIN DEBUG] generation_kwargs keys: {list(generation_kwargs.keys())}",
-                flush=True,
+            self.logger.debug(
+                "generation_kwargs keys: %s",
+                list(generation_kwargs.keys()),
             )
-            print(
-                f"[GENERATION MIXIN DEBUG] generation_kwargs.get('max_new_tokens')={generation_kwargs.get('max_new_tokens', 'NOT SET')}",
-                flush=True,
+            self.logger.debug(
+                "generation_kwargs.get('max_new_tokens')=%s",
+                generation_kwargs.get("max_new_tokens", "NOT SET"),
             )
             # Remove non-generation parameters
             for key in [
@@ -281,9 +304,9 @@ class GenerationMixin:
             ]:
                 generation_kwargs.pop(key, None)
 
-            print(
-                f"[GENERATION MIXIN DEBUG] After cleanup, generation_kwargs.get('max_new_tokens')={generation_kwargs.get('max_new_tokens', 'NOT SET')}",
-                flush=True,
+            self.logger.debug(
+                "After cleanup, generation_kwargs.get('max_new_tokens')=%s",
+                generation_kwargs.get("max_new_tokens", "NOT SET"),
             )
 
             result_messages = []
@@ -347,6 +370,15 @@ class GenerationMixin:
         executed_tools = []
         if hasattr(self._workflow_manager, "get_executed_tools"):
             executed_tools = self._workflow_manager.get_executed_tools()
+            print(
+                f"[GENERATION MIXIN] get_executed_tools() returned: {executed_tools}",
+                flush=True,
+            )
+        else:
+            print(
+                "[GENERATION MIXIN] workflow_manager has no get_executed_tools method",
+                flush=True,
+            )
 
         sequence_counter[0] += 1
         self.api.llm.send_llm_text_streamed_signal(
@@ -355,6 +387,7 @@ class GenerationMixin:
                 is_end_of_message=True,
                 sequence_number=sequence_counter[0],
                 request_id=getattr(self, "_current_request_id", None),
+                tools=executed_tools,  # Include the tools here!
             )
         )
 

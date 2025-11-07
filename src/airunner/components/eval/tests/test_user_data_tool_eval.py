@@ -119,11 +119,13 @@ class TestUserDataToolEval:
                 if isinstance(response, str)
                 else response.get("text", "").lower()
             )
+            tools_used = result.get("tools", [])
 
-            # Verify LLM acknowledges the information
-            assert any(
+            # Verify LLM called store_user_data tool OR acknowledges the information
+            # This handles both native function calling and natural language responses
+            assert "store_user_data" in tools_used or any(
                 word in response_text for word in expected_words
-            ), f"Expected acknowledgment for '{prompt}', got: {response_text}"
+            ), f"Expected tool call or acknowledgment for '{prompt}', got: {response_text}, tools: {tools_used}"
 
     @patch("airunner.components.llm.tools.user_data_tools.User")
     def test_get_user_data_basic(
@@ -208,12 +210,15 @@ class TestUserDataToolEval:
                 if isinstance(response, str)
                 else response.get("text", "").lower()
             )
+            tools_used = result.get("tools", [])
 
-            # Check for either natural language response OR ReAct format tool call
+            # Check for either:
+            # 1. Tool was called (native function calling)
+            # 2. Response contains expected keywords (natural language or ReAct format)
             # This supports both native function calling and text-based ReAct models
-            assert any(
+            assert "get_user_data" in tools_used or any(
                 word in response_text for word in expected_words
-            ), f"Expected response about '{prompt}', got: {response_text}"
+            ), f"Expected tool call or response about '{prompt}', got: {response_text}, tools: {tools_used}"
 
     @patch("airunner.components.llm.tools.user_data_tools.User")
     def test_store_and_retrieve_workflow(

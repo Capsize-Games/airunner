@@ -3,8 +3,6 @@ Speech-to-Text endpoints.
 
 Integrates with STTAPIService for audio transcription.
 """
-
-import logging
 import asyncio
 from typing import Optional, List
 from fastapi import (
@@ -18,7 +16,10 @@ from fastapi import (
 )
 from pydantic import BaseModel
 
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
 
 

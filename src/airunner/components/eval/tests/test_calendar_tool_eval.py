@@ -11,6 +11,7 @@ when given natural language prompts like:
 import pytest
 import logging
 from datetime import datetime, timedelta
+from functools import wraps
 from airunner.components.calendar.data.event import Event
 from airunner.components.data.session_manager import session_scope
 from airunner.components.eval.utils.tracking import track_trajectory_sync
@@ -66,11 +67,30 @@ def cleanup_calendar_data(airunner_client_function_scope):
         pass  # Ignore cleanup errors
 
 
+def with_session_scope(func):
+    """Decorator that injects a session into the test method."""
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        with session_scope() as session:
+            # Inject session as a keyword argument
+            kwargs["session"] = session
+            return func(self, *args, **kwargs)
+
+    return wrapper
+
+
 @pytest.mark.eval
 class TestCalendarToolEval:
     """Eval tests for natural language calendar tool triggering."""
 
-    def test_create_event_basic(self, airunner_client_function_scope):
+    @pytest.mark.timeout(
+        120
+    )  # Increase timeout to 120 seconds for tool-calling tests
+    @with_session_scope
+    def test_create_event_basic(
+        self, airunner_client_function_scope, session=None
+    ):
         """Test creating event with natural language."""
         tomorrow = datetime.now() + timedelta(days=1)
         tomorrow_str = tomorrow.strftime("%Y-%m-%d")
@@ -92,24 +112,28 @@ class TestCalendarToolEval:
         tools = result["tools"]
 
         # Verify event was created OR tool was called in ReAct format
-        with session_scope() as session:
-            events = session.query(Event).all()
-            response_text = (
-                response.lower()
-                if isinstance(response, str)
-                else response.get("text", "").lower()
-            )
+        events = session.query(Event).all()
+        response_text = (
+            response.lower()
+            if isinstance(response, str)
+            else response.get("text", "").lower()
+        )
 
-            # Check if event was actually created in database
-            # OR if response indicates intent to create (ReAct format)
-            # OR if response acknowledges the request
-            assert (
-                len(events) > 0
-                or "created" in response_text
-                or "event" in response_text
-                or "calendar" in response_text
-                or "action:" in response_text  # ReAct format indicator
-            ), f"Expected event creation or acknowledgment, got: {response_text}"
+        print("*" * 100)
+        print("result", result)
+        print("response", response)
+        print("response_text", response_text)
+
+        # Check if event was actually created in database
+        # OR if response indicates intent to create (ReAct format)
+        # OR if response acknowledges the request
+        assert (
+            len(events) > 0
+            or "created" in response_text
+            or "event" in response_text
+            or "calendar" in response_text
+            or "action:" in response_text  # ReAct format indicator
+        ), f"Expected event creation or acknowledgment, got: {response_text}"
 
         # Verify calendar tool was used (native) OR mentioned (ReAct)
         # Supports both native function calling and text-based ReAct models

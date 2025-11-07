@@ -1,12 +1,13 @@
 """Utilities for persisting model metadata after download."""
 
 import os
-import logging
 from typing import Any, Dict
 
 from airunner.components.data.session_manager import session_scope
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def _extract_base_model_from_path(file_path: str) -> str:

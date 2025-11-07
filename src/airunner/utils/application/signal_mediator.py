@@ -265,24 +265,6 @@ class SignalMediator(metaclass=SingletonMeta):
         if code not in self.signals:
             return
 
-            # Remove any Signal wrappers whose callback matches the given function
-            remaining = []
-            for s in self.signals.get(code, []):
-                try:
-                    if hasattr(s, "matches") and s.matches(slot_function):
-                        # skip this one (i.e. remove)
-                        continue
-                except Exception:
-                    pass
-                remaining.append(s)
-
-            if remaining:
-                self.signals[code] = remaining
-            else:
-                # No remaining handlers for this code
-                if code in self.signals:
-                    del self.signals[code]
-
     def emit_signal(self, code: SignalCode, data: Optional[Dict] = None):
         """
         Emit a signal to be received by a function.
@@ -294,14 +276,6 @@ class SignalMediator(metaclass=SingletonMeta):
 
         # DEBUG: Log request correlation attempts
         if request_id:
-            print(
-                f"[SIGNAL DEBUG] Signal {code} with request_id={request_id}",
-                flush=True,
-            )
-            print(
-                f"[SIGNAL DEBUG] is_response check: 'response' in data = {'response' in data}",
-                flush=True,
-            )
             logger.debug(f"Signal {code} with request_id={request_id}")
             logger.debug(
                 f"Pending requests: {list(self._pending_requests.keys())}"
@@ -318,16 +292,7 @@ class SignalMediator(metaclass=SingletonMeta):
             # Response signals have BOTH request_id and response data.
             is_response = "response" in data
 
-            print(
-                f"[SIGNAL DEBUG] is_response={is_response} for request_id={request_id}",
-                flush=True,
-            )
-
             if is_response:
-                print(
-                    f"[SIGNAL DEBUG] ROUTING response for request_id={request_id}",
-                    flush=True,
-                )
                 logger.info(f"ROUTING response for request_id={request_id}")
 
                 # Route response to pending request queue
@@ -344,19 +309,11 @@ class SignalMediator(metaclass=SingletonMeta):
                             self._request_callbacks[request_id](data)
                             logger.info(f"Callback completed for {request_id}")
                         except Exception as e:
-                            print(
-                                f"[SIGNAL DEBUG] ERROR in callback: {e}",
-                                flush=True,
-                            )
                             logger.error(
                                 f"Error in request callback: {e}",
                                 exc_info=True,
                             )
             else:
-                print(
-                    f"[SIGNAL DEBUG] Skipping callback - REQUEST signal, not RESPONSE",
-                    flush=True,
-                )
                 logger.debug(
                     f"Skipping callback for request_id={request_id} - "
                     "this is a REQUEST signal, not a RESPONSE"

@@ -2,14 +2,11 @@
 """Quick test to verify headless worker initialization."""
 import os
 import sys
-import logging
 
 # Set headless mode
 os.environ["AIRUNNER_HEADLESS"] = "1"
 os.environ["AIRUNNER_HTTP_PORT"] = "8188"
 os.environ["AIRUNNER_KNOWLEDGE_ON"] = "0"
-
-logging.basicConfig(level=logging.INFO)
 
 # Test imports
 try:

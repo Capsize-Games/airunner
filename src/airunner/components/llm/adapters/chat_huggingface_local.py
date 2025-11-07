@@ -118,7 +118,14 @@ class ChatHuggingFaceLocal(
         # Try to match model_path to known model configs
         for model_key, model_config in LLMProviderConfig.LOCAL_MODELS.items():
             repo_id = model_config.get("repo_id", "")
-            if repo_id and repo_id.lower() in model_path_lower:
+            if not repo_id:
+                continue
+
+            # Extract model name from repo_id (e.g., "Qwen2.5-7B-Instruct" from "Qwen/Qwen2.5-7B-Instruct")
+            model_name = repo_id.split("/")[-1].lower()
+
+            # Match if model name appears in path (handles both "Qwen/Qwen2.5-7B-Instruct" and ".../Qwen2.5-7B-Instruct-4bit")
+            if model_name in model_path_lower:
                 configured_mode = model_config.get("tool_calling_mode")
                 if configured_mode in ("json", "native"):
                     self.tool_calling_mode = configured_mode

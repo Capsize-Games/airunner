@@ -3,17 +3,17 @@ Art generation endpoints (Stable Diffusion).
 
 Integrates with ARTAPIService and JobTracker for asynchronous image generation.
 """
-
-import logging
 import io
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.utils.job_tracker import JobTracker, JobStatus as JobState
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
 
 
