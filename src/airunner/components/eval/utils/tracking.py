@@ -181,6 +181,12 @@ def track_trajectory_sync(
         **kwargs,
     )
 
+    print(f"[TRACKING] Response keys: {list(response.keys())}", flush=True)
+    print(
+        f"[TRACKING] Response tools: {response.get('tools', 'KEY_NOT_FOUND')}",
+        flush=True,
+    )
+
     response_text = response.get("text", "")
     trajectory = response.get("trajectory", [])
     tool_calls = response.get("tool_calls", [])

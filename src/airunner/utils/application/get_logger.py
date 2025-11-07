@@ -108,33 +108,64 @@ class Logger:
     def debug(self, message: str, *args, **kwargs):
         extra = kwargs.pop("extra", {}) or {}
         extra.setdefault("caller", self._find_caller())
-        self._logger.debug(message, *args, extra=extra, **kwargs)
+        try:
+            self._logger.debug(message, *args, extra=extra, **kwargs)
+        except (TypeError, ValueError) as e:
+            # Fallback: log the message without formatting
+            self._logger.debug(
+                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
+            )
 
     def error(self, message: str, *args, **kwargs):
         extra = kwargs.pop("extra", {}) or {}
         extra.setdefault("caller", self._find_caller())
-        self._logger.error(message, *args, extra=extra, **kwargs)
+        try:
+            self._logger.error(message, *args, extra=extra, **kwargs)
+        except (TypeError, ValueError) as e:
+            self._logger.error(
+                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
+            )
 
     def exception(self, message: str, *args, **kwargs):
         # Use the logger's exception method so exc_info=True is set
         extra = kwargs.pop("extra", {}) or {}
         extra.setdefault("caller", self._find_caller())
-        self._logger.exception(message, *args, extra=extra, **kwargs)
+        try:
+            self._logger.exception(message, *args, extra=extra, **kwargs)
+        except (TypeError, ValueError) as e:
+            self._logger.exception(
+                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
+            )
 
     def info(self, message: str, *args, **kwargs):
         extra = kwargs.pop("extra", {}) or {}
         extra.setdefault("caller", self._find_caller())
-        self._logger.info(message, *args, extra=extra, **kwargs)
+        try:
+            self._logger.info(message, *args, extra=extra, **kwargs)
+        except (TypeError, ValueError) as e:
+            self._logger.info(
+                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
+            )
 
     def warning(self, message: str, *args, **kwargs):
         extra = kwargs.pop("extra", {}) or {}
         extra.setdefault("caller", self._find_caller())
-        self._logger.warning(message, *args, extra=extra, **kwargs)
+        try:
+            self._logger.warning(message, *args, extra=extra, **kwargs)
+        except (TypeError, ValueError) as e:
+            self._logger.warning(
+                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
+            )
 
     def critical(self, message: str, *args, **kwargs):
         extra = kwargs.pop("extra", {}) or {}
         extra.setdefault("caller", self._find_caller())
-        self._logger.critical(message, *args, extra=extra, **kwargs)
+        try:
+            self._logger.critical(message, *args, extra=extra, **kwargs)
+        except (TypeError, ValueError) as e:
+            self._logger.critical(
+                f"[LOGGING ERROR: {e}] {message} {args}", extra=extra
+            )
 
 
 def get_logger(name: str, level: int = logging.DEBUG) -> Logger:

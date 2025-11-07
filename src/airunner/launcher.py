@@ -5,7 +5,6 @@ This script is used as the entry point for the `airunner` command.
 """
 
 import sys
-import logging
 import importlib.util
 import os
 import subprocess
@@ -16,7 +15,7 @@ from airunner.components.settings.data.airunner_settings import (
     AIRunnerSettings,
 )
 from airunner.components.settings.data.path_settings import PathSettings
-from airunner.settings import AIRUNNER_BASE_PATH, LOCAL_SERVER_HOST
+from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL, LOCAL_SERVER_HOST
 from airunner.setup_database import setup_database
 from airunner.components.data.session_manager import _get_session
 from airunner.components.settings.data.path_settings import PathSettings
@@ -26,8 +25,11 @@ from airunner.components.settings.data.application_settings import (
 from airunner.components.llm.data.llm_generator_settings import (
     LLMGeneratorSettings,
 )
+from airunner.utils.application import get_logger
 
 COMPONENTS_PATH = os.path.join(os.path.dirname(__file__), "components")
+
+logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
 
 
 def deep_merge(defaults, current):
@@ -61,7 +63,7 @@ def build_ui_if_needed():
             with open(ui_build_marker, "w") as marker:
                 marker.write("UI files built successfully.")
         except Exception as e:
-            logging.warning(f"UI build step failed: {e}")
+            logger.warning(f"UI build step failed: {e}")
 
 
 # Optimize component settings registration by caching results
@@ -134,10 +136,10 @@ def register_component_settings():
                                 {"name": name}, data=merged
                             )
                 except Exception as e:
-                    logging.warning(
+                    logger.warning(
                         f"Failed to create/update default settings for {attr}: {e}\n{traceback.format_exc()}"
                     )
-    logging.info(
+    logger.info(
         f"register_component_settings: found {found_count} settings classes, created {created_count} new entries."
     )
 
@@ -260,9 +262,9 @@ def _configure_test_mode():
         test_model_path = os.environ.get("AIRUNNER_TEST_MODEL_PATH")
         if test_model_path:
             llm_settings.model_path = test_model_path
-            logging.info(f"Test mode: Using model path: {test_model_path}")
+            logger.info(f"Test mode: Using model path: {test_model_path}")
         else:
-            logging.warning(
+            logger.warning(
                 "Test mode: AIRUNNER_TEST_MODEL_PATH not set. "
                 "Tests requiring LLM will fail. "
                 "Use pytest --model=/path/to/model or set environment variable."
@@ -286,7 +288,7 @@ def main():
     try:
         register_component_settings()
     except Exception as e:
-        logging.error(f"Failed to register component settings: {e}")
+        logger.error(f"Failed to register component settings: {e}")
         traceback.print_exc()
 
     # --- SSL certificate auto-generation ---

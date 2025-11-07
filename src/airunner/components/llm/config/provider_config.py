@@ -61,12 +61,12 @@ class LLMProviderConfig:
             "repo_id": "Qwen/Qwen2.5-7B-Instruct",
             "model_type": "llm",
             "function_calling": True,
-            "tool_calling_mode": "json",  # Structured JSON output
+            "tool_calling_mode": "json",  # Structured JSON output (Hermes-style compatible)
             "context_length": 32768,
             "vram_2bit_gb": 4,
             "vram_4bit_gb": 7,
             "vram_8bit_gb": 14,
-            "description": "Qwen 2.5 7B with structured JSON tool calling",
+            "description": "Qwen 2.5 7B with Hermes-style JSON tool calling",
         },
         "llama-4-maverick-17b": {
             "name": "Llama-4-Maverick-17B-128E-Instruct",

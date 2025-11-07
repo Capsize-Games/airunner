@@ -1,9 +1,10 @@
 """Creative expert agent for content generation."""
 
 from typing import Dict, List, Optional, Any
-import logging
 from datetime import datetime
 from airunner.components.agents.expert_agent import ExpertAgent
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class CreativeExpertAgent(ExpertAgent):
@@ -22,7 +23,7 @@ class CreativeExpertAgent(ExpertAgent):
             name="creative_expert",
             description="Specialized agent for creative content generation",
         )
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._register_capabilities()
 
     def _register_capabilities(self) -> None:

@@ -5,7 +5,6 @@ for settings management without a monolithic class.
 """
 
 from typing import List, Dict, Optional, Any
-import logging
 from PySide6.QtWidgets import QApplication
 from airunner.enums import SignalCode
 from airunner.utils.application.get_logger import get_logger
@@ -56,10 +55,9 @@ class SettingsMixin(
 
     def __init__(self, *args, **kwargs):
         """Initialize settings mixin with layer tracking."""
-        super().__init__(*args, **kwargs)
+        self.logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
 
-        # Cache logger instance to avoid repeated creation
-        self._logger = get_logger("AI Runner", AIRUNNER_LOG_LEVEL)
+        super().__init__(*args, **kwargs)
 
         # Initialize layer selection tracking
         self._selected_layer_ids = set()
@@ -83,15 +81,6 @@ class SettingsMixin(
         app = QApplication.instance()
         if app:
             self.api = getattr(app, "api", None)
-
-    @property
-    def logger(self) -> logging.Logger:
-        """Get logger instance.
-
-        Returns:
-            Cached logger instance.
-        """
-        return self._logger
 
     @property
     def settings_mixin_shared_instance(self) -> SettingsMixinSharedInstance:

@@ -285,11 +285,15 @@ class LLMGenerateWorker(
         Args:
             message: Request message dictionary
         """
+        self.logger.info(
+            f"[LLM WORKER] Received LLM request signal: {list(message.keys())}"
+        )
         if self._interrupted:
             self.logger.info("Clearing interrupt flag - new message received")
             self._interrupted = False
 
         self.add_to_queue(message)
+        self.logger.info(f"[LLM WORKER] Added request to queue")
 
     def llm_on_interrupt_process_signal(self) -> None:
         """Handle interrupt signal - stop ongoing generation and clear queue."""

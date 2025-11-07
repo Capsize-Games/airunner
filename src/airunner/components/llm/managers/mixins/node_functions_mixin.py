@@ -340,28 +340,24 @@ Provide a clear, conversational answer using only the information above."""
             last_message: Last message in state
             messages: All messages in state
         """
-        print(
-            f"[WORKFLOW DEBUG] Last message type: {type(last_message).__name__}",
-            flush=True,
+        self.logger.debug(
+            f"Last message type: {type(last_message).__name__}",
         )
-        print(
-            f"[WORKFLOW DEBUG] Has tool_calls attribute: {hasattr(last_message, 'tool_calls')}",
-            flush=True,
+        self.logger.debug(
+            f"Has tool_calls attribute: {hasattr(last_message, 'tool_calls')}",
         )
 
         if hasattr(last_message, "tool_calls"):
-            print(
-                f"[WORKFLOW DEBUG] tool_calls value: {last_message.tool_calls}",
-                flush=True,
+            self.logger.debug(
+                f"tool_calls value: {last_message.tool_calls}",
             )
 
         if hasattr(last_message, "content"):
             content_preview = (
                 last_message.content[:300] if last_message.content else "None"
             )
-            print(
-                f"[WORKFLOW DEBUG] Message content preview: {content_preview}",
-                flush=True,
+            self.logger.debug(
+                f"Message content preview: {content_preview}",
             )
 
         # Log message history
@@ -626,12 +622,9 @@ Provide a clear, conversational answer using only the information above."""
         )
 
         # Debug logging
-        print(
-            f"[WORKFLOW DEBUG] Full system prompt being sent to model:",
-            flush=True,
-        )
-        print(f"{escaped_system_prompt[:1000]}...", flush=True)
-        print(f"[WORKFLOW DEBUG] End of system prompt\n", flush=True)
+        self.logger.debug("Full system prompt being sent to model:")
+        self.logger.debug("%s...", escaped_system_prompt[:1000])
+        self.logger.debug("End of system prompt\n")
 
         # Build prompt template
         prompt = ChatPromptTemplate.from_messages(
@@ -668,9 +661,9 @@ Provide a clear, conversational answer using only the information above."""
                     "{", "{{"
                 ).replace("}", "}}")
                 system_prompt = f"{system_prompt}\n\n{compact_tools_escaped}"
-                print(
-                    f"[WORKFLOW DEBUG] Appended tool instructions ({len(self._tools)} tools) to system prompt",
-                    flush=True,
+                self.logger.debug(
+                    "Appended tool instructions (%s tools) to system prompt",
+                    len(self._tools),
                 )
         return system_prompt
 

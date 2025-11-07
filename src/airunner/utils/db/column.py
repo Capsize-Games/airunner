@@ -2,7 +2,11 @@ from typing import Optional, Any
 from alembic import op
 import sqlalchemy as sa
 from typing import List
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.utils.db.engine import get_inspector
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def get_columns(cls) -> List[str]:
@@ -20,7 +24,7 @@ def add_column(cls, col: str):
     if not column_exists(cls, col) and col in available_columns:
         op.add_column(cls.__tablename__, getattr(cls, col))
     else:
-        print(f"Column '{col}' already exists, skipping add.")
+        logger.warning(f"Column '{col}' already exists, skipping add.")
 
 
 def add_columns(cls, cols: List[str]):
@@ -44,12 +48,12 @@ def drop_column(cls, col: str):
                             fk["name"], type_="foreignkey"
                         )
                     else:
-                        print(
+                        logger.warning(
                             f"Skipping unnamed foreign key constraint on column '{col}' (cannot drop by name)"
                         )
             batch_op.drop_column(col)
     else:
-        print(f"Column '{col}' does not exist, skipping drop.")
+        logger.warning(f"Column '{col}' does not exist, skipping drop.")
 
 
 def drop_columns(cls, cols: List[str]):
@@ -65,7 +69,7 @@ def alter_column(
     # check if column already equals new column
     if getattr(cls, col_a.name).type == col_b.type:
         msg = f"Column '{col_a}' already has the same type as '{col_b}', skipping modify."
-        print(msg)
+        logger.warning(msg)
         return
 
     with op.batch_alter_table(cls.__tablename__, recreate="auto") as batch_op:
@@ -125,7 +129,9 @@ def drop_column_with_fk(cls, column_name: str, fk_name: str) -> None:
                 batch_op.drop_constraint(fk_name, type_="foreignkey")
             batch_op.drop_column(column_name)
     else:
-        print(f"Column '{column_name}' does not exist, skipping drop.")
+        logger.warning(
+            f"Column '{column_name}' does not exist, skipping drop."
+        )
 
 
 def safe_alter_column(
@@ -137,7 +143,9 @@ def safe_alter_column(
     existing_server_default: Optional[Any] = None,
 ):
     if not column_exists(cls, column_name):
-        print(f"Column '{column_name}' does not exist, skipping alter.")
+        logger.warning(
+            f"Column '{column_name}' does not exist, skipping alter."
+        )
         return
 
     options = dict(
@@ -159,7 +167,7 @@ def safe_alter_column(
         ) as batch_op:
             batch_op.alter_column(column_name, **options)
     except sa.exc.OperationalError as e:
-        print(f"Error altering column '{column_name}'", e)
+        logger.error(f"Error altering column '{column_name}'", e)
 
 
 def safe_alter_columns(cls, columns: List[sa.Column]):
@@ -218,17 +226,17 @@ def create_unique_constraint(
     try:
         with op.batch_alter_table(table_name, recreate="always") as batch_op:
             batch_op.create_unique_constraint(constraint_name, columns)
-        print(
+        logger.info(
             f"Unique constraint '{constraint_name}' "
             f"created on table '{table_name}' for columns {columns}."
         )
     except sa.exc.OperationalError as e:
-        print(
+        logger.error(
             f"Error creating unique constraint '{constraint_name}' on table '{table_name}':",
             e,
         )
     except NotImplementedError as e:
-        print(f"SQLite limitation: {e}")
+        logger.error(f"SQLite limitation: {e}")
 
 
 def drop_constraint(
@@ -245,13 +253,13 @@ def drop_constraint(
     try:
         with op.batch_alter_table(table_name, recreate="always") as batch_op:
             batch_op.drop_constraint(constraint_name, type_=constraint_type)
-        print(
+        logger.info(
             f"Constraint '{constraint_name}' of type '{constraint_type}' dropped from table '{table_name}'."
         )
     except sa.exc.OperationalError as e:
-        print(
+        logger.error(
             f"Error dropping constraint '{constraint_name}' from table '{table_name}':",
             e,
         )
     except NotImplementedError as e:
-        print(f"SQLite limitation: {e}")
+        logger.error(f"SQLite limitation: {e}")

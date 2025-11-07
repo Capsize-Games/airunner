@@ -108,6 +108,9 @@ class WorkflowManager(
         self._interrupted = False
         self._use_mode_routing = use_mode_routing
         self._mode_override = mode_override
+        self._executed_tools: list[str] = (
+            []
+        )  # Track tools called in current invocation
 
         # Initialize model and build workflow
         self._initialize_model()
@@ -148,14 +151,16 @@ class WorkflowManager(
         self._thread_id = str(conversation_id)
 
         self._memory = DatabaseCheckpointSaver(conversation_id)
-        
+
         # CRITICAL: Clear checkpoint state after creating new memory instance
         # The class-level _checkpoint_state dict persists across instances
         # and must be cleared to prevent contamination from previous conversations
         if hasattr(self._memory, "clear_checkpoints"):
             self._memory.clear_checkpoints()
-            logger.info(f"Cleared checkpoint state for conversation {conversation_id}")
-        
+            logger.info(
+                f"Cleared checkpoint state for conversation {conversation_id}"
+            )
+
         self._build_and_compile_workflow()
 
     def update_system_prompt(self, system_prompt: str):
@@ -164,9 +169,8 @@ class WorkflowManager(
         Args:
             system_prompt: New system prompt
         """
-        print(
-            f"[WORKFLOW DEBUG] Updating system prompt to: {system_prompt[:200]}...",
-            flush=True,
+        self.logger.debug(
+            f"Updating system prompt to: {system_prompt[:200]}...",
         )
         self._system_prompt = system_prompt
         self._build_and_compile_workflow()

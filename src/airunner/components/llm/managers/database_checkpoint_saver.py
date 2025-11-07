@@ -149,6 +149,17 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             return config
 
     def get_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
+        """Fetch a checkpoint tuple using the given configuration.
+
+        Args:
+            config: Configuration specifying which checkpoint to retrieve.
+
+        Returns:
+            The requested checkpoint tuple, or None if not found.
+        """
+        return self.get(config)
+
+    def get(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
         """Retrieve a checkpoint from the database.
 
         Args:
@@ -160,11 +171,23 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         try:
             # First, try to get from in-memory checkpoint state
             thread_id = config.get("configurable", {}).get("thread_id")
+
+            # DEBUG: Write to file
+            import sys
+
+            with open("/tmp/checkpoint_debug.log", "a") as f:
+                f.write(
+                    f"[GET] thread_id={thread_id}, conv_id={self.conversation_id}, "
+                    f"checkpoint_keys={list(self._checkpoint_state.keys())}\n"
+                )
+                sys.stdout.flush()
+
             if thread_id and thread_id in self._checkpoint_state:
                 state = self._checkpoint_state[thread_id]
-                self.logger.info(
-                    f"📥 Loaded checkpoint from memory for thread {thread_id} with {len(state['messages'])} messages (includes ToolMessages)"
-                )
+                with open("/tmp/checkpoint_debug.log", "a") as f:
+                    f.write(
+                        f"[GET] ✅ FOUND in memory: {len(state['messages'])} messages\n"
+                    )
                 return CheckpointTuple(
                     config=config,
                     checkpoint=state["checkpoint"],
@@ -174,14 +197,20 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
 
             # Fallback: Load from database (may not have ToolMessages)
             messages = self.message_history.messages
+            with open("/tmp/checkpoint_debug.log", "a") as f:
+                f.write(
+                    f"[GET] DB has {len(messages)} messages for conv {self.conversation_id}\n"
+                )
 
             if not messages:
-                self.logger.info("📥 No checkpoint found - starting fresh")
+                with open("/tmp/checkpoint_debug.log", "a") as f:
+                    f.write(f"[GET] ❌ No messages - starting fresh\n")
                 return None
 
-            self.logger.info(
-                f"📥 Loaded checkpoint from DATABASE for thread {thread_id} with {len(messages)} messages (ToolMessages filtered out)"
-            )
+            with open("/tmp/checkpoint_debug.log", "a") as f:
+                f.write(
+                    f"[GET] ✅ Building checkpoint from DB: {len(messages)} messages\n"
+                )
 
             # Build checkpoint with proper UUID
             checkpoint = Checkpoint(

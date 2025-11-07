@@ -1,8 +1,9 @@
 """Router for directing tasks to appropriate expert agents."""
 
 from typing import Dict, List, Optional, Any
-import logging
 from airunner.components.agents.agent_registry import AgentRegistry
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class AgentRouter:
@@ -20,7 +21,7 @@ class AgentRouter:
             registry: AgentRegistry instance
         """
         self.registry = registry
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     async def route_task(
         self,

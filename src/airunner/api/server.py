@@ -5,7 +5,6 @@ Provides REST and WebSocket endpoints for remote access to AI Runner's
 capabilities including LLM, art generation, TTS, and STT.
 """
 
-import logging
 from typing import Optional, Any
 from contextlib import asynccontextmanager
 
@@ -13,8 +12,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 @asynccontextmanager
