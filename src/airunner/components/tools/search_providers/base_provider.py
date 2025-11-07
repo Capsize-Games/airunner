@@ -1,10 +1,12 @@
 """Base search provider interface for search tools."""
 
-import logging
 from abc import ABC, abstractmethod
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional
 
 import aiohttp
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class BaseSearchProvider(ABC):
@@ -62,6 +64,8 @@ class BaseSearchProvider(ABC):
         """
 
     @property
-    def logger(self) -> logging.Logger:
+    def logger(self) -> Any:
         """Get logger for this provider."""
-        return logging.getLogger(self.__class__.__name__)
+        if self._logger is None:
+            self._logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+        return self._logger

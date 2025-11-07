@@ -3,14 +3,15 @@ Layer composition utilities for combining visible layers into composite images.
 """
 
 from typing import List, Optional, Tuple, Any
-import logging
 from PIL import Image
 
 from airunner.components.art.data.canvas_layer import CanvasLayer
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.utils.image import convert_binary_to_image
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class LayerCompositor:

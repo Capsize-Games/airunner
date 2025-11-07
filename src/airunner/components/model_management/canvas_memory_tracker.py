@@ -4,8 +4,10 @@ Canvas history memory tracking for model resource management.
 Estimates VRAM and RAM usage by canvas undo/redo history.
 """
 
-import logging
 from typing import TYPE_CHECKING
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 if TYPE_CHECKING:
     from airunner.components.art.gui.widgets.canvas.custom_scene import (
@@ -17,7 +19,7 @@ class CanvasMemoryTracker:
     """Track memory usage of canvas history."""
 
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def estimate_history_memory(
         self, scene: "CustomScene"

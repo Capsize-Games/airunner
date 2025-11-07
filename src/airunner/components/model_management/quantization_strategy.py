@@ -1,4 +1,3 @@
-import logging
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
@@ -6,6 +5,8 @@ from typing import Optional
 from airunner.components.model_management.hardware_profiler import (
     HardwareProfile,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class QuantizationLevel(Enum):
@@ -33,7 +34,7 @@ class QuantizationStrategy:
     """Selects optimal quantization based on model size and available memory."""
 
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def select_quantization(
         self,

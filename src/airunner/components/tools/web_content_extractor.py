@@ -5,12 +5,13 @@ from pathlib import Path
 import twisted.internet._signals
 import scrapy.utils.ossignal
 import trafilatura
-import logging
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 
 from airunner.components.settings.data.path_settings import PathSettings
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 # Patch signals for subprocesses
@@ -44,7 +45,7 @@ except Exception:
     CACHE_DIR = Path(__file__).parent / ".webcache"
     CACHE_DIR.mkdir(exist_ok=True)
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 __all__ = ["WebContentExtractor"]
 

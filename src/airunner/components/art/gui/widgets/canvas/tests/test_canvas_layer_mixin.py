@@ -60,7 +60,6 @@ class TestCanvasLayerMixin:
 
         # Create mock Qt objects before the test
         mock_qimage = MagicMock()
-        mock_pixmap = MagicMock()
         mock_item = MagicMock()
 
         with patch.object(CanvasLayer.objects, "get", return_value=mock_layer):
@@ -70,7 +69,7 @@ class TestCanvasLayerMixin:
                 return_value=mock_drawing_pad,
             ):
                 with patch(
-                    "airunner.utils.image.convert_binary_to_image"
+                    "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.convert_binary_to_image"
                 ) as mock_convert:
                     # Mock successful image conversion
                     mock_pil_image = Image.new("RGB", (100, 100))
@@ -81,26 +80,20 @@ class TestCanvasLayerMixin:
                         "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.pil_to_qimage",
                         return_value=mock_qimage,
                     ):
-                        # Mock Qt widgets to prevent actual Qt object creation
+                        # Mock LayerImageItem to prevent actual Qt object creation
                         with patch(
-                            "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.QPixmap.fromImage",
-                            return_value=mock_pixmap,
+                            "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.LayerImageItem",
+                            return_value=mock_item,
                         ):
-                            with patch(
-                                "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.QGraphicsPixmapItem",
-                                return_value=mock_item,
-                            ):
-                                # Execute
-                                layer_mixin._create_new_layer_item(
-                                    layer_id, sample_layer_data
-                                )
+                            # Execute
+                            layer_mixin._create_new_layer_item(
+                                layer_id, sample_layer_data
+                            )
 
-                                # Verify
-                                mock_convert.assert_called_once_with(
-                                    sample_image
-                                )
-                                layer_mixin.addItem.assert_called_once()
-                                assert layer_id in layer_mixin._layer_items
+                            # Verify
+                            mock_convert.assert_called_once_with(sample_image)
+                            layer_mixin.addItem.assert_called_once()
+                            assert layer_id in layer_mixin._layer_items
 
     def test_create_new_layer_item_missing_layer(
         self, layer_mixin, sample_layer_data
@@ -175,7 +168,7 @@ class TestCanvasLayerMixin:
                 return_value=mock_drawing_pad,
             ):
                 with patch(
-                    "airunner.utils.image.convert_binary_to_image",
+                    "airunner.components.art.gui.widgets.canvas.mixins.canvas_layer_mixin.convert_binary_to_image",
                     return_value=None,
                 ):
                     # Execute

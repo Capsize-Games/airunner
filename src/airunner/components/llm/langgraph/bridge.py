@@ -4,7 +4,6 @@ This module provides wrappers that allow LangGraph nodes to use
 existing LlamaIndex components (RAG, chat engines, tools).
 """
 
-import logging
 from typing import Any, Dict, List, Optional, Callable
 from llama_index.core import VectorStoreIndex
 from llama_index.core.chat_engine.types import BaseChatEngine
@@ -12,9 +11,11 @@ from airunner.components.llm.core.tool_registry import (
     ToolRegistry,
     ToolCategory,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class LlamaIndexBridge:

@@ -3,10 +3,12 @@
 Handles tool execution with status tracking and signal emission.
 """
 
-import logging
 import re
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 if TYPE_CHECKING:
     from airunner.components.llm.managers.workflow_manager import WorkflowState
@@ -17,9 +19,12 @@ class ToolExecutionMixin:
 
     def __init__(self):
         """Initialize tool execution mixin."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._tools = []
         self._conversation_id: Optional[int] = None
+        self._executed_tools: list[str] = (
+            []
+        )  # Track tools called in current invocation
 
     def _execute_tools_with_status(
         self, state: "WorkflowState"
@@ -72,6 +77,9 @@ class ToolExecutionMixin:
             tool_name = tool_call.get("name", "unknown")
             tool_args = tool_call.get("args", {})
             tool_id = tool_call.get("id", "")
+
+            # Track this tool execution
+            self._executed_tools.append(tool_name)
 
             query = self._extract_query_from_args(tool_args)
 

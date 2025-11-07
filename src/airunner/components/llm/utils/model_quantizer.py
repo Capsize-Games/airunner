@@ -12,12 +12,12 @@ See:
 - src/airunner/components/application/workers/model_quantization_worker.py
 """
 
+import logging
 from pathlib import Path
 from typing import Optional, Literal, Callable
-import logging
 
-
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ModelQuantizer:
@@ -33,7 +33,7 @@ class ModelQuantizer:
 
     def __init__(self):
         """Initialize quantizer."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def quantize_model(
         self,

@@ -3,7 +3,6 @@
 This is the refactored version with functionality split into focused mixins.
 """
 
-import logging
 from typing import Any, Annotated, Optional, List, Callable
 from typing_extensions import TypedDict
 
@@ -34,6 +33,8 @@ from airunner.components.llm.managers.mixins.node_functions_mixin import (
 from airunner.components.llm.managers.mixins.streaming_mixin import (
     StreamingMixin,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class WorkflowState(TypedDict):
@@ -86,7 +87,7 @@ class WorkflowManager(
         # Initialize all mixins
         super().__init__()
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
         # Core configuration
         self._system_prompt = system_prompt
@@ -108,14 +109,32 @@ class WorkflowManager(
         self._interrupted = False
         self._use_mode_routing = use_mode_routing
         self._mode_override = mode_override
+        self._executed_tools: list[str] = (
+            []
+        )  # Track tools called in current invocation
 
         # Initialize model and build workflow
         self._initialize_model()
         self._build_and_compile_workflow()
 
     def clear_memory(self):
-        """Clear the conversation memory/history."""
+        """Clear the conversation memory/history and checkpoint state.
+
+        This clears:
+        1. Message history in database
+        2. LangGraph checkpoint state (in-memory)
+        3. Rebuilds workflow with fresh state
+
+        CRITICAL: Must clear checkpoints to prevent state contamination
+        between tests or conversation resets.
+        """
+        # Clear message history
         self._memory.message_history.clear()
+
+        # CRITICAL: Clear LangGraph checkpoint state
+        if hasattr(self._memory, "clear_checkpoints"):
+            self._memory.clear_checkpoints()
+
         # Rebuild workflow with fresh memory
         self._build_and_compile_workflow()
 
@@ -125,9 +144,21 @@ class WorkflowManager(
         Args:
             conversation_id: Conversation ID to use for storing messages
         """
+
         self._conversation_id = conversation_id
         self._thread_id = str(conversation_id)
+
         self._memory = DatabaseCheckpointSaver(conversation_id)
+
+        # CRITICAL: Clear checkpoint state after creating new memory instance
+        # The class-level _checkpoint_state dict persists across instances
+        # and must be cleared to prevent contamination from previous conversations
+        if hasattr(self._memory, "clear_checkpoints"):
+            self._memory.clear_checkpoints()
+            self.logger.info(
+                f"Cleared checkpoint state for conversation {conversation_id}"
+            )
+
         self._build_and_compile_workflow()
 
     def update_system_prompt(self, system_prompt: str):
@@ -136,9 +167,8 @@ class WorkflowManager(
         Args:
             system_prompt: New system prompt
         """
-        print(
-            f"[WORKFLOW DEBUG] Updating system prompt to: {system_prompt[:200]}...",
-            flush=True,
+        self.logger.debug(
+            f"Updating system prompt to: {system_prompt[:200]}...",
         )
         self._system_prompt = system_prompt
         self._build_and_compile_workflow()

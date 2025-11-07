@@ -2,6 +2,12 @@ from typing import Optional
 from alembic import op
 import sqlalchemy as sa
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
 
 def get_tables():
     conn = op.get_bind()
@@ -22,7 +28,9 @@ def add_table(cls):
             cls.__tablename__, *columns, *getattr(cls, "__table_args__", ())
         )
     else:
-        print(f"Table '{cls.__tablename__}' already exists, skipping add.")
+        logger.warning(
+            f"Table '{cls.__tablename__}' already exists, skipping add."
+        )
     return
 
 
@@ -38,7 +46,7 @@ def drop_table(cls: Optional[object] = None, table_name: Optional[str] = None):
     if table_exists(table_name):
         op.drop_table(table_name)
     else:
-        print(f"Table '{table_name}' does not exist, skipping drop.")
+        logger.warning(f"Table '{table_name}' does not exist, skipping drop.")
     return
 
 
@@ -64,9 +72,11 @@ def create_table_with_defaults(model):
             )
             set_default_values(model)
         except Exception as e:
-            print(f"Failed to create table {model.__tablename__}: {str(e)}")
+            logger.error(
+                f"Failed to create table {model.__tablename__}: {str(e)}"
+            )
     else:
-        print(f"{model.__tablename__} already exists, skipping")
+        logger.warning(f"{model.__tablename__} already exists, skipping")
 
 
 def set_default_values(model):

@@ -3,8 +3,10 @@
 Handles tool binding, compact schema generation, and tool configuration.
 """
 
-import logging
 from typing import List, Callable
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ToolManagementMixin:
@@ -12,7 +14,7 @@ class ToolManagementMixin:
 
     def __init__(self):
         """Initialize tool management mixin."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._tools: List[Callable] = []
         self._chat_model = None
         self._original_chat_model = None
@@ -36,10 +38,7 @@ class ToolManagementMixin:
 
         # Log tool calling mode for debugging
         tool_calling_mode = self._get_tool_calling_mode()
-        print(
-            f"[WORKFLOW DEBUG] Model tool_calling_mode: {tool_calling_mode}",
-            flush=True,
-        )
+        self.logger.debug("Model tool_calling_mode: %s", tool_calling_mode)
 
         # Try to bind tools for native function calling
         if hasattr(self._chat_model, "bind_tools"):
@@ -65,12 +64,9 @@ class ToolManagementMixin:
         try:
             self._chat_model = self._chat_model.bind_tools(self._tools)
             self.logger.info(
-                f"Successfully bound {len(self._tools)} tools to chat model"
+                "Successfully bound %s tools to chat model", len(self._tools)
             )
-            print(
-                f"[WORKFLOW DEBUG] Tools bound successfully via bind_tools()",
-                flush=True,
-            )
+            self.logger.debug("Tools bound successfully via bind_tools()")
 
             # NOTE: Tool instructions are added in _call_model() on each generation,
             # not here in init. This is because update_system_prompt() can overwrite
@@ -312,15 +308,9 @@ class ToolManagementMixin:
         Args:
             tools: List of LangChain tool callables
         """
-        print(
-            f"[WORKFLOW DEBUG] Updating tools: {len(tools)} tools provided",
-            flush=True,
-        )
+        self.logger.debug("Updating tools: %s tools provided", len(tools))
         for tool in tools:
-            print(
-                f"[WORKFLOW DEBUG]   - Tool: {getattr(tool, '__name__', str(tool))}",
-                flush=True,
-            )
+            self.logger.debug("Tool: %s", getattr(tool, "__name__", str(tool)))
         self._tools = tools
         self._initialize_model()  # Re-bind tools
         self._build_and_compile_workflow()

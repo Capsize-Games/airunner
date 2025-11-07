@@ -4,12 +4,14 @@ Handles image resizing, callbacks, seed setting, and other helpers.
 Follows project standards: docstrings, type hints, logging.
 """
 
-import logging
 from typing import Optional
 from PIL.Image import Image
 import PIL
 
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def resize_image(

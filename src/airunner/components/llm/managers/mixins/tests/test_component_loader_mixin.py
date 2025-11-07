@@ -200,7 +200,7 @@ class TestLoadWorkflowManager:
         loader._tool_manager = Mock()
 
         with patch(
-            "airunner.components.llm.managers.mixins.component_loader_mixin.WorkflowManager"
+            "airunner.components.llm.managers.workflow_manager.WorkflowManager"
         ) as mock_workflow_class:
             mock_instance = Mock()
             mock_workflow_class.return_value = mock_instance
@@ -224,7 +224,7 @@ class TestLoadWorkflowManager:
         loader._workflow_manager = existing_manager
 
         with patch(
-            "airunner.components.llm.managers.mixins.component_loader_mixin.WorkflowManager"
+            "airunner.components.llm.managers.workflow_manager.WorkflowManager"
         ) as mock_workflow_class:
             loader._load_workflow_manager()
 
@@ -251,7 +251,7 @@ class TestLoadWorkflowManager:
         loader._tool_manager = None
 
         with patch(
-            "airunner.components.llm.managers.mixins.component_loader_mixin.WorkflowManager"
+            "airunner.components.llm.managers.workflow_manager.WorkflowManager"
         ):
             loader._load_workflow_manager()
 
@@ -270,7 +270,7 @@ class TestLoadWorkflowManager:
         loader.tools = [Mock(name="tool1"), Mock(name="tool2")]
 
         with patch(
-            "airunner.components.llm.managers.mixins.component_loader_mixin.WorkflowManager"
+            "airunner.components.llm.managers.workflow_manager.WorkflowManager"
         ) as mock_workflow_class:
             loader._load_workflow_manager()
 
@@ -292,7 +292,7 @@ class TestLoadWorkflowManager:
         loader.tools = [Mock(name="tool1")]
 
         with patch(
-            "airunner.components.llm.managers.mixins.component_loader_mixin.WorkflowManager"
+            "airunner.components.llm.managers.workflow_manager.WorkflowManager"
         ) as mock_workflow_class:
             loader._load_workflow_manager()
 
@@ -312,7 +312,7 @@ class TestLoadWorkflowManager:
         loader.tools = []
 
         with patch(
-            "airunner.components.llm.managers.mixins.component_loader_mixin.WorkflowManager"
+            "airunner.components.llm.managers.workflow_manager.WorkflowManager"
         ) as mock_workflow_class:
             loader._load_workflow_manager()
 
@@ -330,7 +330,7 @@ class TestLoadWorkflowManager:
         loader._tool_manager = Mock()
 
         with patch(
-            "airunner.components.llm.managers.mixins.component_loader_mixin.WorkflowManager",
+            "airunner.components.llm.managers.workflow_manager.WorkflowManager",
             side_effect=Exception("WorkflowManager error"),
         ):
             loader._load_workflow_manager()

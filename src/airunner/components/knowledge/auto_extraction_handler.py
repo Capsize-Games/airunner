@@ -5,12 +5,13 @@ This module listens for completed LLM responses and triggers automatic
 knowledge extraction when enabled.
 """
 
-import logging
 from typing import Dict, Optional
 
 from airunner.components.application.gui.windows.main.settings_mixin import (
     SettingsMixin,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.enums import SignalCode
 
@@ -25,7 +26,7 @@ class AutoExtractionHandler(MediatorMixin, SettingsMixin):
 
     def __init__(self):
         super().__init__()
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
         # Track conversation state
         self._current_user_message: Optional[str] = None

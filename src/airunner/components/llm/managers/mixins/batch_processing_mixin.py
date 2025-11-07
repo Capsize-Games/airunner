@@ -4,7 +4,6 @@ Batch Processing Mixin for LLM Model Manager.
 Provides batched and parallel request processing capabilities.
 """
 
-import logging
 from typing import Dict, Any, Optional, Callable
 from concurrent.futures import Future
 
@@ -13,6 +12,8 @@ from airunner.components.llm.managers.batch_request_manager import (
     BatchRequest,
     BatchResponse,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class BatchProcessingMixin:
@@ -30,7 +31,7 @@ class BatchProcessingMixin:
         super().__init__(*args, **kwargs)
         self._batch_manager: Optional[BatchRequestManager] = None
         self._batch_enabled = False
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def enable_batch_processing(
         self,

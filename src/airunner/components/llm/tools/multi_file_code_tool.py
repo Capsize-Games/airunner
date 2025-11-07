@@ -7,7 +7,6 @@ Manages multiple CodeSession instances for concurrent file generation
 with coordinated streaming and completion.
 """
 
-import logging
 from typing import List, Dict, Optional, Callable
 from dataclasses import dataclass
 
@@ -20,8 +19,10 @@ from airunner.components.document_editor.workspace_manager import (
     WorkspaceManager,
 )
 from airunner.enums import CodeOperationType
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 @dataclass

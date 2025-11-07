@@ -1,9 +1,10 @@
 """Calendar expert agent for calendar and event management."""
 
 from typing import Dict, List, Optional, Any
-import logging
 from datetime import datetime
 from airunner.components.agents.expert_agent import ExpertAgent
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class CalendarExpertAgent(ExpertAgent):
@@ -22,7 +23,7 @@ class CalendarExpertAgent(ExpertAgent):
             name="calendar_expert",
             description="Specialized agent for calendar and event management",
         )
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._register_capabilities()
 
     def _register_capabilities(self) -> None:

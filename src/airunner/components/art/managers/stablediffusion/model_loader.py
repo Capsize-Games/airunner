@@ -1,7 +1,6 @@
 """Utilities for loading/unloading Stable Diffusion related resources."""
 
 import os
-import logging
 from typing import Any, Dict, Optional
 
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
@@ -11,9 +10,10 @@ from transformers import CLIPFeatureExtractor
 from controlnet_aux.processor import MODELS as controlnet_aux_models
 from airunner.components.art.data.lora import Lora
 from airunner.components.art.data.schedulers import Schedulers
-from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY, AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class SomeModelClass:  # legacy test helper
@@ -110,7 +110,7 @@ def load_feature_extractor(
 
 
 def load_scheduler(
-    scheduler_name: str, path_settings, version: str, logger: logging.Logger
+    scheduler_name: str, path_settings, version: str, logger: Any
 ) -> Optional[SchedulerMixin]:
     base_path = path_settings.base_path
     scheduler_path = os.path.expanduser(
@@ -149,7 +149,7 @@ def load_controlnet_model(
     controlnet_path: str,
     data_type,
     device,
-    logger: logging.Logger,
+    logger: Any,
 ):
     if not controlnet_enabled:
         return None
@@ -182,7 +182,7 @@ def load_controlnet_model(
 
 
 def load_lora_weights(
-    pipe, lora: Lora, lora_base_path: str, logger: logging.Logger
+    pipe, lora: Lora, lora_base_path: str, logger: Any
 ) -> bool:
     filename = os.path.basename(lora.path)
     adapter_name = os.path.splitext(filename)[0].replace(".", "_")
@@ -197,7 +197,7 @@ def load_lora_weights(
         return False
 
 
-def unload_safety_checker(pipe: Any, logger: logging.Logger) -> None:
+def unload_safety_checker(pipe: Any, logger: Any) -> None:
     """Unload the safety checker from the pipeline and free resources."""
     if pipe is not None and hasattr(pipe, "safety_checker"):
         try:
@@ -208,7 +208,7 @@ def unload_safety_checker(pipe: Any, logger: logging.Logger) -> None:
             logger.warning(f"Failed to unload safety checker: {e}")
 
 
-def unload_feature_extractor(pipe: Any, logger: logging.Logger) -> None:
+def unload_feature_extractor(pipe: Any, logger: Any) -> None:
     """Unload the feature extractor from the pipeline and free resources."""
     if pipe is not None and hasattr(pipe, "feature_extractor"):
         try:
@@ -219,7 +219,7 @@ def unload_feature_extractor(pipe: Any, logger: logging.Logger) -> None:
             logger.warning(f"Failed to unload feature extractor: {e}")
 
 
-def unload_lora(pipe: Any, logger: logging.Logger) -> None:
+def unload_lora(pipe: Any, logger: Any) -> None:
     """Unload all LORA weights from the pipeline."""
     try:
         if pipe is not None and hasattr(pipe, "unload_lora_weights"):
@@ -231,7 +231,7 @@ def unload_lora(pipe: Any, logger: logging.Logger) -> None:
 
 def load_compel_proc(
     compel_parameters: Dict[str, Any],
-    logger: logging.Logger,
+    logger: Any,
 ) -> Optional[Any]:
     """Load a Compel processor for prompt embedding."""
     try:
@@ -245,7 +245,7 @@ def load_compel_proc(
         return None
 
 
-def unload_compel_proc(compel_proc: Any, logger: logging.Logger) -> None:
+def unload_compel_proc(compel_proc: Any, logger: Any) -> None:
     """Unload the Compel processor and free resources."""
     try:
         del compel_proc
@@ -254,7 +254,7 @@ def unload_compel_proc(compel_proc: Any, logger: logging.Logger) -> None:
         logger.warning(f"Failed to unload Compel processor: {e}")
 
 
-def load_deep_cache_helper(pipe: Any, logger: logging.Logger) -> Optional[Any]:
+def load_deep_cache_helper(pipe: Any, logger: Any) -> Optional[Any]:
     """Load and enable DeepCacheSDHelper for the pipeline."""
     try:
         from DeepCache import DeepCacheSDHelper
@@ -270,7 +270,7 @@ def load_deep_cache_helper(pipe: Any, logger: logging.Logger) -> Optional[Any]:
 
 
 def unload_deep_cache_helper(
-    deep_cache_helper: Any, logger: logging.Logger
+    deep_cache_helper: Any, logger: Any
 ) -> None:
     """Disable and unload DeepCacheSDHelper."""
     try:
@@ -286,7 +286,7 @@ def load_controlnet_processor(
     controlnet_enabled: bool,
     controlnet_model: Any,
     controlnet_processor_path: str,
-    logger: logging.Logger,
+    logger: Any,
 ) -> Optional[Any]:
     """Load the ControlNet processor if enabled."""
     if not controlnet_enabled or not controlnet_model:
@@ -311,7 +311,7 @@ def load_controlnet_processor(
 
 
 def unload_controlnet_processor(
-    controlnet_processor: Any, logger: logging.Logger
+    controlnet_processor: Any, logger: Any
 ) -> None:
     """Unload the ControlNet processor."""
     try:
@@ -349,7 +349,7 @@ def load_embedding(path: str):
     return Emb(path)
 
 
-def unload_embeddings(pipe: Any, logger: logging.Logger) -> None:
+def unload_embeddings(pipe: Any, logger: Any) -> None:
     """No-op unload for embeddings to keep tests simple and idempotent."""
     try:
         if pipe is not None and hasattr(pipe, "embeddings"):

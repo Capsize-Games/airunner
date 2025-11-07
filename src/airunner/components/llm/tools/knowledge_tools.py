@@ -4,7 +4,6 @@ Knowledge management and memory tools.
 Tools for recording facts, recalling knowledge, and managing long-term memory.
 """
 
-import logging
 from typing import Annotated, Any
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
@@ -13,8 +12,10 @@ from airunner.components.knowledge.enums import (
     KnowledgeFactCategory,
     KnowledgeSource,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 @tool(

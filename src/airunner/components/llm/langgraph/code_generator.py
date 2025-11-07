@@ -4,13 +4,15 @@ This module generates executable Python code from LangGraph workflow definitions
 allowing visual graphs to be exported as standalone scripts.
 """
 
-import logging
 from typing import Dict, List, Any
 from pathlib import Path
 import textwrap
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class LangGraphCodeGenerator:

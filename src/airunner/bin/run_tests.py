@@ -12,12 +12,55 @@ Usage:
     python run_tests.py --all               # Run all tests
     python run_tests.py --unit --verbose    # Run unit tests with verbose output
     python run_tests.py --component llm     # Run tests for specific component
+
+Note: Eval tests use pytest fixtures to automatically manage the headless server.
+      The server will start/stop automatically when tests run.
 """
 
 import argparse
 import subprocess
 import sys
+import time
 from pathlib import Path
+
+
+def kill_stale_servers():
+    """
+    Kill any stale airunner-headless processes from previous runs.
+
+    This ensures we start with a clean state. Pytest fixtures will
+    start a fresh server for the test session.
+    """
+    print("\n" + "=" * 80)
+    print("Cleaning up stale server processes...")
+    print("=" * 80)
+
+    # Find airunner-headless processes
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "airunner-headless"],
+            capture_output=True,
+            text=True,
+        )
+
+        if result.stdout.strip():
+            pids = result.stdout.strip().split("\n")
+            print(f"Found {len(pids)} stale process(es): {', '.join(pids)}")
+
+            # Kill each process
+            for pid in pids:
+                subprocess.run(["kill", "-9", pid])
+                print(f"Killed process {pid}")
+
+            # Give processes time to die
+            time.sleep(2)
+            print("✅ Cleaned up stale processes")
+        else:
+            print("No stale processes found")
+    except Exception as e:
+        print(f"Warning: Error checking for processes: {e}")
+
+    print()
 
 
 def run_command(cmd: list[str], description: str, env: dict = None) -> int:
@@ -87,6 +130,7 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
         [
             "--color=yes",
             "-ra",  # Show summary of all test outcomes
+            "--ignore=src/airunner/components/eval",  # Exclude eval tests
         ]
     )
 
@@ -94,15 +138,19 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
 
 
 def run_eval_tests(
-    verbose: bool = False, model: str = None, skip_slow: bool = False
+    verbose: bool = False,
+    model: str = None,
+    skip_slow: bool = False,
+    test_file: str = None,
 ) -> int:
     """
     Run evaluation framework tests.
 
     Args:
         verbose: Whether to show verbose output
-        model: Optional model name to use for testing (e.g., 'qwen2.5-coder:32b')
+        model: Model path to use for testing (e.g., '/path/to/Qwen2.5-7B-Instruct')
         skip_slow: Skip slow integration tests, run only fast tests
+        test_file: Optional specific test file to run (e.g., 'test_calendar_tool_eval.py')
 
     Returns:
         Exit code from pytest
@@ -113,7 +161,15 @@ def run_eval_tests(
         print(f"Error: Eval tests directory not found at {test_path}")
         return 1
 
-    cmd = ["pytest", str(test_path)]
+    # If specific test file provided, use it
+    if test_file:
+        test_target = test_path / test_file
+        if not test_target.exists():
+            print(f"Error: Test file not found at {test_target}")
+            return 1
+        cmd = ["pytest", str(test_target)]
+    else:
+        cmd = ["pytest", str(test_path)]
 
     if verbose:
         cmd.append("-v")
@@ -131,13 +187,18 @@ def run_eval_tests(
     if skip_slow:
         cmd.extend(["-m", "not slow"])
 
-    # Set environment variable for model if specified
+    # Pass model argument to pytest if specified
     env = {}
     if model:
-        env["AIRUNNER_EVAL_MODEL"] = model
+        env["AIRUNNER_TEST_MODEL_PATH"] = model
+        # Also pass to pytest as --model flag
+        cmd.extend(["--model", model])
         print(f"Using model: {model}")
 
-    return run_command(cmd, "Evaluation framework tests", env=env)
+    description = (
+        f"Evaluation framework tests{' - ' + test_file if test_file else ''}"
+    )
+    return run_command(cmd, description, env=env)
 
 
 def main():
@@ -149,7 +210,8 @@ def main():
 Examples:
   %(prog)s --unit                    Run all unit tests
   %(prog)s --eval                    Run eval tests only
-  %(prog)s --eval --model qwen2.5-coder:32b    Test with specific model
+  %(prog)s --eval --model /path/to/model    Test with specific model
+  %(prog)s --eval --file test_calendar_tool_eval.py --model /path/to/model    Run specific eval test file
   %(prog)s --eval --skip-slow        Run only fast eval tests
   %(prog)s --all                     Run all tests
   %(prog)s --unit --component llm    Run LLM component tests only
@@ -184,13 +246,19 @@ Examples:
     parser.add_argument(
         "--model",
         type=str,
-        help="Model to use for eval tests (e.g., 'qwen2.5-coder:32b', 'gpt-4')",
+        help="Model path to use for eval tests (e.g., '/home/user/.local/share/airunner/text/models/llm/causallm/Qwen2.5-7B-Instruct')",
     )
 
     parser.add_argument(
         "--skip-slow",
         action="store_true",
         help="Skip slow integration tests in eval suite",
+    )
+
+    parser.add_argument(
+        "--file",
+        type=str,
+        help="Run specific test file (e.g., 'test_calendar_tool_eval.py')",
     )
 
     args = parser.parse_args()
@@ -212,10 +280,16 @@ Examples:
     if args.eval or args.all:
         if args.component:
             print("\nWarning: --component flag ignored for eval tests")
+
+        # Clean up any stale server processes from previous runs
+        # Pytest fixtures will start a fresh server automatically
+        kill_stale_servers()
+
         exit_code = run_eval_tests(
             verbose=args.verbose,
             model=args.model,
             skip_slow=args.skip_slow,
+            test_file=args.file,
         )
         exit_codes.append(exit_code)
 

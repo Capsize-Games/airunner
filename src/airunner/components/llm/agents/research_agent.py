@@ -9,7 +9,6 @@ This agent handles:
 - Citation management
 """
 
-import logging
 from typing import Any, Annotated, List, Callable
 from typing_extensions import TypedDict
 
@@ -22,8 +21,10 @@ from airunner.components.llm.core.tool_registry import (
     ToolRegistry,
     ToolCategory,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class ResearchState(TypedDict):
@@ -101,7 +102,7 @@ Always verify information and cite sources properly."""
         logger.info(f"Retrieved {len(research_tools)} RESEARCH tools")
 
         # Convert ToolInfo to actual callable functions
-        tools = [tool.function for tool in research_tools]
+        tools = [tool.func for tool in research_tools]
         return tools
 
     def _plan_research(self, state: ResearchState) -> dict:

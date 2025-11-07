@@ -4,7 +4,6 @@ Text-to-Speech endpoints.
 Integrates with TTSAPIService for speech synthesis.
 """
 
-import logging
 import asyncio
 import io
 from typing import Optional, List
@@ -12,7 +11,18 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+from airunner.components.model_management.model_registry import (
+    ModelRegistry,
+)
+from airunner.components.tts.data.tts_generator_settings import (
+    TTSGeneratorSettings,
+)
+from airunner.enums import SignalCode
+from airunner.utils.application.signal_mediator import SignalMediator
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
 
 
@@ -77,9 +87,6 @@ async def synthesize_speech(request: TTSRequest, req: Request):
         )
 
     try:
-        from airunner.enums import SignalCode
-        from airunner.utils.application.signal_mediator import SignalMediator
-
         # Create future for audio data
         audio_future = asyncio.Future()
 
@@ -142,13 +149,6 @@ async def list_models(req: Request):
         List of available models
     """
     try:
-        from airunner.components.model_management.model_registry import (
-            ModelRegistry,
-        )
-        from airunner.components.tts.data.tts_generator_settings import (
-            TTSGeneratorSettings,
-        )
-
         # Get current model from settings
         settings = TTSGeneratorSettings.objects.first()
         current_model = settings.model_version if settings else None

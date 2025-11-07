@@ -4,9 +4,6 @@ from torch import nn
 from torch.nn import functional as F
 
 from airunner.vendor.melo import commons
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class LayerNorm(nn.Module):

@@ -1,7 +1,6 @@
 """Shared filter parameter widget builder for nodes and windows."""
 
 from typing import Callable, Optional
-import logging
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -16,8 +15,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from airunner.components.art.utils.image_filter_utils import FilterValueData
-
-LOG = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class FilterParameterWidget(QWidget):
@@ -30,6 +29,7 @@ class FilterParameterWidget(QWidget):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.filter_value = filter_value
         self.on_value_changed = on_value_changed
         self._setup_ui()
@@ -54,7 +54,9 @@ class FilterParameterWidget(QWidget):
             self._create_numeric_control(layout)
         else:
             # Default to text for unknown types
-            LOG.warning(f"Unknown value type: {self.filter_value.value_type}")
+            self.logger.warning(
+                f"Unknown value type: {self.filter_value.value_type}"
+            )
 
     def _create_bool_control(self, layout: QVBoxLayout):
         """Create a checkbox for boolean values."""
@@ -217,6 +219,8 @@ def create_filter_parameter_widgets(
             widget = FilterParameterWidget(fv, on_value_changed, parent)
             widgets.append(widget)
         except Exception:
-            LOG.exception(f"Failed to create parameter widget for {fv.name}")
+            self.logger.exception(
+                f"Failed to create parameter widget for {fv.name}"
+            )
 
     return widgets

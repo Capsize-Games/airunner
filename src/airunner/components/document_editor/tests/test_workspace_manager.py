@@ -8,7 +8,6 @@ import os
 import tempfile
 import shutil
 import pytest
-from pathlib import Path
 
 from airunner.components.document_editor.workspace_manager import (
     WorkspaceManager,
@@ -160,7 +159,7 @@ def test_rename_file(workspace_manager):
     workspace_manager.write_file(original_path, content)
 
     # Rename
-    new_abs = workspace_manager.rename(original_path, new_path)
+    workspace_manager.rename(original_path, new_path)
 
     # Verify old path doesn't exist
     assert not workspace_manager.exists(original_path)

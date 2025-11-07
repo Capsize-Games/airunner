@@ -7,8 +7,6 @@ Manages the agent's comprehensive memory system including:
 - Periodic summaries (daily, weekly, monthly, yearly)
 - User knowledge CRUD operations
 """
-
-import logging
 from typing import List, Dict, Optional, Union
 from datetime import datetime, timedelta
 
@@ -19,9 +17,11 @@ from airunner.components.knowledge.data.models import (
     ConversationSummary,
 )
 from airunner.components.data.session_manager import session_scope
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class KnowledgeMemoryManager:

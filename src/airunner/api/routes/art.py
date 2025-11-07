@@ -4,16 +4,28 @@ Art generation endpoints (Stable Diffusion).
 Integrates with ARTAPIService and JobTracker for asynchronous image generation.
 """
 
-import logging
 import io
+import asyncio
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.utils.job_tracker import JobTracker, JobStatus as JobState
+from airunner.components.model_management.model_registry import (
+    ModelRegistry,
+)
+from airunner.components.art.data.stable_diffusion_generator_settings import (
+    StableDiffusionGeneratorSettings,
+)
+from airunner.components.art.api.art_services import ARTAPIService
+from airunner.enums import SignalCode
+from airunner.utils.application.signal_mediator import SignalMediator
+from airunner.enums import SignalCode
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
 
 
@@ -69,8 +81,6 @@ class ModelInfo(BaseModel):
 def get_art_service(request: Request):
     """Get ARTAPIService from FastAPI app state."""
     if hasattr(request.app.state, "airunner_app"):
-        from airunner.components.art.api.art_services import ARTAPIService
-
         return ARTAPIService()
     return None
 
@@ -101,9 +111,6 @@ async def generate_image(request: GenerationRequest, req: Request):
         )
 
     try:
-        from airunner.enums import SignalCode
-        from airunner.utils.application.signal_mediator import SignalMediator
-
         # Create job
         tracker = JobTracker()
         job_id = await tracker.create_job(
@@ -129,8 +136,6 @@ async def generate_image(request: GenerationRequest, req: Request):
             """Handle image generation completion."""
             logger.info(f"Image generated for job {job_id}")
             # Store image data in job result
-            import asyncio
-
             asyncio.create_task(
                 tracker.complete_job(job_id, {"image": data.get("image")})
             )
@@ -138,15 +143,11 @@ async def generate_image(request: GenerationRequest, req: Request):
         def on_generator_progress(data: dict):
             """Handle progress updates."""
             progress = data.get("progress", 0.0)
-            import asyncio
-
             asyncio.create_task(tracker.update_progress(job_id, progress))
 
         def on_error(data: dict):
             """Handle generation errors."""
             error = data.get("message", "Unknown error")
-            import asyncio
-
             asyncio.create_task(tracker.fail_job(job_id, error))
 
         # Register handlers
@@ -283,8 +284,6 @@ async def cancel_job(job_id: str, req: Request):
         raise HTTPException(status_code=400, detail="Job cannot be cancelled")
 
     # Emit interrupt signal
-    from airunner.enums import SignalCode
-
     art_service.emit_signal(SignalCode.INTERRUPT_PROCESS_SIGNAL, {})
 
     return {"status": "cancelled", "job_id": job_id}
@@ -302,13 +301,6 @@ async def list_models(req: Request):
         List of available models
     """
     try:
-        from airunner.components.model_management.model_registry import (
-            ModelRegistry,
-        )
-        from airunner.components.art.data.stable_diffusion_generator_settings import (
-            StableDiffusionGeneratorSettings,
-        )
-
         # Get current model from settings
         settings = StableDiffusionGeneratorSettings.objects.first()
         current_model = settings.model_version if settings else None
