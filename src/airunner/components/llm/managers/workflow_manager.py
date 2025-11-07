@@ -147,15 +147,15 @@ class WorkflowManager(
         self._conversation_id = conversation_id
         self._thread_id = str(conversation_id)
 
-        # CRITICAL: Clear class-level checkpoint state BEFORE creating new memory
-        # The _checkpoint_state dict is class-level and persists across instances
-        logger.info(
-            f"🔴 Clearing class-level checkpoint state (had {len(DatabaseCheckpointSaver._checkpoint_state)} keys)"
-        )
-        DatabaseCheckpointSaver._checkpoint_state.clear()
-        logger.info("🟢 Checkpoint state cleared")
-
         self._memory = DatabaseCheckpointSaver(conversation_id)
+        
+        # CRITICAL: Clear checkpoint state after creating new memory instance
+        # The class-level _checkpoint_state dict persists across instances
+        # and must be cleared to prevent contamination from previous conversations
+        if hasattr(self._memory, "clear_checkpoints"):
+            self._memory.clear_checkpoints()
+            logger.info(f"Cleared checkpoint state for conversation {conversation_id}")
+        
         self._build_and_compile_workflow()
 
     def update_system_prompt(self, system_prompt: str):
