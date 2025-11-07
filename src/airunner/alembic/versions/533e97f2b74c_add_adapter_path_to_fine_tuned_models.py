@@ -39,6 +39,10 @@ def upgrade() -> None:
     )
 
     # Handle duplicate names by appending numbers (in case table was created elsewhere)
+    # This cleanup is necessary because:
+    # 1. Migration 810df6adb9db creates the table without unique constraint
+    # 2. This migration adds the unique constraint but needs to ensure no duplicates exist first
+    # 3. If duplicates exist (from manual entries or previous issues), rename them to prevent constraint violation
     result = connection.execute(
         sa.text(
             """
