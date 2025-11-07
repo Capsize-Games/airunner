@@ -6,8 +6,7 @@ Provides high-level tools that use the code generation infrastructure
 AI-assisted code creation, editing, and validation.
 """
 
-import logging
-from typing import Optional, Dict, Any
+from typing import Optional
 from pathlib import Path
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
@@ -23,8 +22,10 @@ from airunner.components.document_editor.workspace_manager import (
     WorkspaceManager,
 )
 from airunner.enums import CodeOperationType
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 # Singleton instances for tools
 _workspace_manager: Optional[WorkspaceManager] = None
@@ -74,7 +75,7 @@ def _get_quality_manager(
 ) -> CodeQualityManager:
     """Get or create quality manager singleton."""
     global _quality_manager
-    workspace = _get_workspace_manager(workspace_path)
+    _get_workspace_manager(workspace_path)
     if _quality_manager is None:
         handler = _get_code_handler(workspace_path)
         validator = _get_validator(workspace_path)

@@ -1,7 +1,6 @@
 """Unit tests for MultiFileCodeTool and MultiFileCodeSession."""
 
 import pytest
-from pathlib import Path
 
 from airunner.components.llm.tools.multi_file_code_tool import (
     MultiFileCodeSession,

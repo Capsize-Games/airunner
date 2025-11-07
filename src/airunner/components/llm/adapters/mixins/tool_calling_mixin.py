@@ -21,15 +21,23 @@ class ToolCallingMixin:
         This should be called by the workflow manager to add tool descriptions
         to the system prompt, rather than injecting into message history.
 
-        For Mistral native mode, tools are encoded in the tokenization,
-        so we return empty string to avoid duplicate tool descriptions.
+        For Mistral native mode and JSON mode (with bind_tools), tools are encoded
+        in the tokenization or handled by LangChain's bind_tools(), so we return
+        empty string to avoid duplicate/conflicting tool descriptions.
+
+        For ReAct mode, we need to add manual tool instructions.
 
         Returns:
-            Formatted tool descriptions or empty string if no tools bound or using native
+            Formatted tool descriptions or empty string if using native/json modes
         """
-        if self.use_mistral_native:
+        # Skip tool instructions if using native modes (Mistral or JSON with bind_tools)
+        # In these modes, the chat template or bind_tools() handles tool formatting
+        if self.use_mistral_native or (
+            self.tool_calling_mode == "json" and self.use_json_mode
+        ):
             return ""
 
+        # For ReAct mode, we need manual tool instructions
         return self._format_tools_for_prompt() if self.tools else ""
 
     def _format_tools_for_prompt(self) -> str:

@@ -5,7 +5,6 @@ This script is used as the entry point for the `airunner` command.
 """
 
 import sys
-import logging
 import importlib.util
 import os
 import subprocess
@@ -16,10 +15,21 @@ from airunner.components.settings.data.airunner_settings import (
     AIRunnerSettings,
 )
 from airunner.components.settings.data.path_settings import PathSettings
-from airunner.settings import AIRUNNER_BASE_PATH, LOCAL_SERVER_HOST
+from airunner.settings import AIRUNNER_BASE_PATH, AIRUNNER_LOG_LEVEL, LOCAL_SERVER_HOST
 from airunner.setup_database import setup_database
+from airunner.components.data.session_manager import _get_session
+from airunner.components.settings.data.path_settings import PathSettings
+from airunner.components.settings.data.application_settings import (
+    ApplicationSettings,
+)
+from airunner.components.llm.data.llm_generator_settings import (
+    LLMGeneratorSettings,
+)
+from airunner.utils.application import get_logger
 
 COMPONENTS_PATH = os.path.join(os.path.dirname(__file__), "components")
+
+logger = get_logger(__name__, level=AIRUNNER_LOG_LEVEL)
 
 
 def deep_merge(defaults, current):
@@ -53,7 +63,7 @@ def build_ui_if_needed():
             with open(ui_build_marker, "w") as marker:
                 marker.write("UI files built successfully.")
         except Exception as e:
-            logging.warning(f"UI build step failed: {e}")
+            logger.warning(f"UI build step failed: {e}")
 
 
 # Optimize component settings registration by caching results
@@ -126,10 +136,10 @@ def register_component_settings():
                                 {"name": name}, data=merged
                             )
                 except Exception as e:
-                    logging.warning(
+                    logger.warning(
                         f"Failed to create/update default settings for {attr}: {e}\n{traceback.format_exc()}"
                     )
-    logging.info(
+    logger.info(
         f"register_component_settings: found {found_count} settings classes, created {created_count} new entries."
     )
 
@@ -223,6 +233,46 @@ def generate_local_certs_if_needed(base_path):
     return cert_file, key_file
 
 
+def _configure_test_mode():
+    """Configure database settings for test mode.
+
+    When running tests, this function:
+    1. Creates default settings if they don't exist
+    2. Sets model path from AIRUNNER_TEST_MODEL_PATH env var if provided
+    """
+    Session = _get_session()
+    with Session() as session:
+        # Create default path settings if not exists
+        if not session.query(PathSettings).first():
+            path_settings = PathSettings()
+            session.add(path_settings)
+
+        # Create default application settings if not exists
+        if not session.query(ApplicationSettings).first():
+            app_settings = ApplicationSettings()
+            session.add(app_settings)
+
+        # Create or update LLM settings with test model path
+        llm_settings = session.query(LLMGeneratorSettings).first()
+        if not llm_settings:
+            llm_settings = LLMGeneratorSettings()
+            session.add(llm_settings)
+
+        # Set model path from environment variable if provided
+        test_model_path = os.environ.get("AIRUNNER_TEST_MODEL_PATH")
+        if test_model_path:
+            llm_settings.model_path = test_model_path
+            logger.info(f"Test mode: Using model path: {test_model_path}")
+        else:
+            logger.warning(
+                "Test mode: AIRUNNER_TEST_MODEL_PATH not set. "
+                "Tests requiring LLM will fail. "
+                "Use pytest --model=/path/to/model or set environment variable."
+            )
+
+        session.commit()
+
+
 def main():
     # Build UI files first
     build_ui_if_needed()
@@ -230,11 +280,15 @@ def main():
     # --- Ensure database and tables are created before any DB access ---
     setup_database()
 
+    # --- Configure test mode if running tests ---
+    if os.environ.get("AIRUNNER_ENVIRONMENT") == "test":
+        _configure_test_mode()
+
     # Register component settings after UI build but before main app starts
     try:
         register_component_settings()
     except Exception as e:
-        logging.error(f"Failed to register component settings: {e}")
+        logger.error(f"Failed to register component settings: {e}")
         traceback.print_exc()
 
     # --- SSL certificate auto-generation ---

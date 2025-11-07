@@ -4,8 +4,6 @@ Conversation summary generator for knowledge system.
 Creates periodic summaries of conversations and extracted facts
 for long-term memory and context preservation.
 """
-
-import logging
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 
@@ -17,6 +15,8 @@ from airunner.components.knowledge.data.models import (
     ConversationSummary,
 )
 from airunner.components.data.session_manager import session_scope
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class SummaryPeriod:
@@ -40,7 +40,7 @@ class SummaryGenerator:
 
     def __init__(self):
         """Initialize summary generator."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.km = KnowledgeMemoryManager()
 
     def generate_summary(

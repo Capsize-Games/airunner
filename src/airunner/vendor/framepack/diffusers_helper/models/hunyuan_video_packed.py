@@ -8,7 +8,6 @@ import numpy as np
 from diffusers.loaders import FromOriginalModelMixin
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.loaders import PeftAdapterMixin
-from diffusers.utils import logging
 from diffusers.models.attention import FeedForward
 from diffusers.models.attention_processor import Attention
 from diffusers.models.embeddings import (
@@ -62,9 +61,6 @@ except:
     print("Sage Attn is not installed!")
     sageattn_varlen = None
     sageattn = None
-
-
-logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def pad_for_3d_conv(x, kernel_size):

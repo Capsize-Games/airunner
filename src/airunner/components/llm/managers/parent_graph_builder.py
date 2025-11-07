@@ -5,8 +5,7 @@ This module builds the top-level StateGraph that routes user queries
 to specialized subgraphs based on intent classification.
 """
 
-import logging
-from typing import Any, Optional, List, Callable, Annotated
+from typing import Any, Optional, Annotated
 from typing_extensions import TypedDict
 
 from langchain_core.messages import BaseMessage
@@ -17,8 +16,10 @@ from airunner.components.llm.managers.mode_router import (
     intent_classifier_node,
     route_by_intent,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class ParentState(TypedDict):

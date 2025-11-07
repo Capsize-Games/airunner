@@ -8,24 +8,18 @@ Preserves all data including text, category, confidence, source, timestamp, and 
 
 import sys
 import json
-import logging
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional
-
+import argparse
 from airunner.components.knowledge.data.models import KnowledgeFact
 from airunner.components.data.session_manager import session_scope
-from airunner.settings import AIRUNNER_USER_DATA_PATH
-
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL, AIRUNNER_USER_DATA_PATH
+from airunner.utils.application import get_logger
 
 
 class KnowledgeMigrationError(Exception):
     """Custom exception for migration errors."""
-
 
 
 class KnowledgeMigrator:
@@ -38,6 +32,7 @@ class KnowledgeMigrator:
         Args:
             json_path: Path to user_facts.json (default: auto-detect)
         """
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         if json_path:
             self.json_path = Path(json_path)
         else:
@@ -76,7 +71,7 @@ class KnowledgeMigrator:
                     raise KnowledgeMigrationError(
                         "JSON file must contain an array of facts"
                     )
-                logger.info(f"Found {len(data)} facts in JSON file")
+                self.logger.info(f"Found {len(data)} facts in JSON file")
                 return True
         except json.JSONDecodeError as e:
             raise KnowledgeMigrationError(f"Invalid JSON format: {e}") from e
@@ -99,7 +94,7 @@ class KnowledgeMigrator:
             import shutil
 
             shutil.copy2(self.json_path, self.backup_path)
-            logger.info(f"Created backup: {self.backup_path}")
+            self.logger.info(f"Created backup: {self.backup_path}")
             return self.backup_path
         except Exception as e:
             raise KnowledgeMigrationError(
@@ -123,10 +118,14 @@ class KnowledgeMigrator:
             # Validate each fact has required fields
             for i, fact in enumerate(facts):
                 if not isinstance(fact, dict):
-                    logger.warning(f"Skipping fact #{i}: not a dictionary")
+                    self.logger.warning(
+                        f"Skipping fact #{i}: not a dictionary"
+                    )
                     continue
                 if "text" not in fact:
-                    logger.warning(f"Skipping fact #{i}: missing 'text' field")
+                    self.logger.warning(
+                        f"Skipping fact #{i}: missing 'text' field"
+                    )
                     continue
 
             return facts
@@ -166,13 +165,13 @@ class KnowledgeMigrator:
         """
         text = fact_data.get("text", "").strip()
         if not text:
-            logger.warning("Skipping fact with empty text")
+            self.logger.warning("Skipping fact with empty text")
             self.skipped_count += 1
             return None
 
         # Check if already exists
         if self.fact_exists_in_db(text):
-            logger.debug(f"Fact already exists, skipping: {text[:50]}...")
+            self.logger.debug(f"Fact already exists, skipping: {text[:50]}...")
             self.skipped_count += 1
             return None
 
@@ -215,12 +214,12 @@ class KnowledgeMigrator:
                 session.expunge(db_fact)
 
                 self.migrated_count += 1
-                logger.debug(f"Migrated fact: {text[:50]}...")
+                self.logger.debug(f"Migrated fact: {text[:50]}...")
                 return db_fact
 
         except Exception as e:
             self.error_count += 1
-            logger.error(f"Error migrating fact '{text[:50]}...': {e}")
+            self.logger.error(f"Error migrating fact '{text[:50]}...': {e}")
             return None
 
     def migrate_all(
@@ -239,7 +238,7 @@ class KnowledgeMigrator:
         Raises:
             KnowledgeMigrationError: If migration fails
         """
-        logger.info("Starting knowledge migration...")
+        self.logger.info("Starting knowledge migration...")
 
         # Validate JSON file
         self.validate_json_file()
@@ -250,10 +249,10 @@ class KnowledgeMigrator:
 
         # Parse facts
         facts = self.parse_json_facts()
-        logger.info(f"Parsed {len(facts)} facts from JSON")
+        self.logger.info(f"Parsed {len(facts)} facts from JSON")
 
         if dry_run:
-            logger.info("DRY RUN - No changes will be made")
+            self.logger.info("DRY RUN - No changes will be made")
             # Just validate each fact
             for fact in facts:
                 if not isinstance(fact, dict):
@@ -277,24 +276,24 @@ class KnowledgeMigrator:
             "errors": self.error_count,
         }
 
-        logger.info("\n" + "=" * 50)
-        logger.info("Migration Summary:")
-        logger.info(f"  Total facts:     {stats['total']}")
-        logger.info(f"  Migrated:        {stats['migrated']}")
-        logger.info(f"  Skipped:         {stats['skipped']}")
-        logger.info(f"  Errors:          {stats['errors']}")
-        logger.info("=" * 50 + "\n")
+        self.logger.info("\n" + "=" * 50)
+        self.logger.info("Migration Summary:")
+        self.logger.info(f"  Total facts:     {stats['total']}")
+        self.logger.info(f"  Migrated:        {stats['migrated']}")
+        self.logger.info(f"  Skipped:         {stats['skipped']}")
+        self.logger.info(f"  Errors:          {stats['errors']}")
+        self.logger.info("=" * 50 + "\n")
 
         if not dry_run and stats["migrated"] > 0:
-            logger.info("✅ Migration completed successfully!")
-            logger.info(f"Backup saved to: {self.backup_path}")
+            self.logger.info("✅ Migration completed successfully!")
+            self.logger.info(f"Backup saved to: {self.backup_path}")
 
         return stats
 
 
 def main():
     """Main CLI entry point."""
-    import argparse
+    logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     parser = argparse.ArgumentParser(
         description="Migrate knowledge facts from JSON to database"
@@ -319,10 +318,6 @@ def main():
     )
 
     args = parser.parse_args()
-
-    # Set log level
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
 
     try:
         migrator = KnowledgeMigrator(json_path=args.json_path)

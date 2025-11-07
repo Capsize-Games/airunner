@@ -15,9 +15,11 @@ Example:
 """
 
 import json
-import logging
 import requests
 from typing import Dict, Any, Optional, Iterator, List
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class AIRunnerClientError(Exception):
@@ -55,7 +57,7 @@ class AIRunnerClient:
         """
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def health_check(self) -> Dict[str, Any]:
         """Check if the server is running and healthy.

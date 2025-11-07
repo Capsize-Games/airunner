@@ -5,7 +5,6 @@ Provides a UI for viewing, creating, editing, and managing LLM tools.
 Displays all tools (built-in and custom) in a table with CRUD operations.
 """
 
-import logging
 from typing import Dict
 
 from PySide6.QtCore import Slot, Qt
@@ -28,7 +27,6 @@ from airunner.enums import SignalCode
 from airunner.components.data.session_manager import session_scope
 
 
-logger = logging.getLogger(__name__)
 
 
 class LLMToolManagerWidget(BaseWidget):
@@ -192,7 +190,7 @@ class LLMToolManagerWidget(BaseWidget):
             db_tool = session.query(LLMTool).filter_by(id=tool.id).first()
             if db_tool:
                 db_tool.enabled = enabled
-                logger.info(
+                self.logger.info(
                     f"Tool {tool.name} {'enabled' if enabled else 'disabled'}"
                 )
                 self.emit_signal(
@@ -221,7 +219,7 @@ class LLMToolManagerWidget(BaseWidget):
                 db_tool = session.query(LLMTool).filter_by(id=tool.id).first()
                 if db_tool:
                     session.delete(db_tool)
-                    logger.info(f"Deleted tool {tool.name}")
+                    self.logger.info(f"Deleted tool {tool.name}")
                     self.emit_signal(
                         SignalCode.LLM_TOOL_DELETED, {"tool_id": tool.id}
                     )

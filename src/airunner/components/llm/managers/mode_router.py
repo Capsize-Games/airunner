@@ -5,14 +5,16 @@ This module implements intent classification to route user queries to
 specialized subgraphs based on detected mode (AUTHOR, CODE, RESEARCH, QA).
 """
 
-import logging
 from typing import Literal, Any
 from typing_extensions import TypedDict
 
 from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 # Mode type literal for type safety

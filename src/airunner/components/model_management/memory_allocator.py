@@ -1,4 +1,3 @@
-import logging
 from dataclasses import dataclass
 from typing import Dict, Optional
 
@@ -8,6 +7,8 @@ from airunner.components.model_management.hardware_profiler import (
 from airunner.components.model_management.quantization_strategy import (
     QuantizationConfig,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 @dataclass
@@ -24,7 +25,7 @@ class MemoryAllocator:
     """Manages VRAM and RAM allocation across loaded models."""
 
     def __init__(self, hardware: HardwareProfile):
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.hardware = hardware
         self._allocations: Dict[str, MemoryAllocation] = {}
         self._reserved_vram_gb = 1.5

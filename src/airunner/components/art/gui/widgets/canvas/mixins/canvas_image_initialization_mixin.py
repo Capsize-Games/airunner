@@ -75,7 +75,13 @@ class CanvasImageInitializationMixin:
         Args:
             image: Optional PIL Image to set. If None, uses current active image.
         """
-        view = self.views()[0]
+        views = self.views()
+        if not views:
+            # No view attached, just reinitialize the image
+            self.initialize_image(image)
+            return
+
+        view = views[0]
         current_viewport_rect = view.mapToScene(
             view.viewport().rect()
         ).boundingRect()

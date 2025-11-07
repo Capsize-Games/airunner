@@ -4,7 +4,6 @@ This module defines the shared TrainingConfig and BaseTrainer used by
 fine-tuning, LoRA, and textual inversion trainers.
 """
 
-import logging
 import os
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
@@ -12,8 +11,11 @@ from typing import List, Optional, Tuple
 import torch
 from torch.utils.data import DataLoader
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 @dataclass

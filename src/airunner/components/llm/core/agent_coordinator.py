@@ -4,8 +4,6 @@ Agent coordinator - simplified agent management.
 This replaces the overly complex BaseAgent with a clean, focused coordinator
 that delegates to specialized handlers.
 """
-
-import logging
 from typing import Optional, Any, Dict, List
 
 from llama_index.core.chat_engine.types import AgentChatResponse
@@ -43,7 +41,6 @@ class AgentCoordinator(MediatorMixin, SettingsMixin):
         memory: Optional[BaseMemory] = None,
         llm_settings: Optional[LLMSettings] = None,
         chat_engine: Optional[Any] = None,
-        logger: Optional[logging.Logger] = None,
     ):
         """
         Initialize agent coordinator.
@@ -53,7 +50,6 @@ class AgentCoordinator(MediatorMixin, SettingsMixin):
             memory: Conversation memory
             llm_settings: LLM configuration
             chat_engine: Chat engine for responses
-            logger: Logger instance
         """
         super().__init__()
 
@@ -61,7 +57,6 @@ class AgentCoordinator(MediatorMixin, SettingsMixin):
         self.memory = memory
         self.llm_settings = llm_settings or LLMSettings()
         self.chat_engine = chat_engine
-        self.logger = logger or logging.getLogger(__name__)
 
         # Initialize components
         self.tool_executor = ToolExecutor(

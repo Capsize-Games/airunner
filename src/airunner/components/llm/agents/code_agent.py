@@ -9,7 +9,6 @@ This agent handles:
 - File operations related to code
 """
 
-import logging
 from typing import Any, Annotated, List, Callable
 from typing_extensions import TypedDict
 
@@ -22,8 +21,10 @@ from airunner.components.llm.core.tool_registry import (
     ToolRegistry,
     ToolCategory,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class CodeState(TypedDict):
@@ -100,7 +101,7 @@ Always prioritize code safety and security. Never execute untrusted code without
         logger.info(f"Retrieved {len(code_tools)} CODE tools")
 
         # Convert ToolInfo to actual callable functions
-        tools = [tool.function for tool in code_tools]
+        tools = [tool.func for tool in code_tools]
         return tools
 
     def _analyze_code_request(self, state: CodeState) -> dict:

@@ -7,20 +7,26 @@ HTTP API endpoints for AI Runner: /llm, /art, /stt, /tts
 - /stt, /tts: POST, stubbed
 """
 
+import os
 import json
 import threading
 import uuid
 from http.server import BaseHTTPRequestHandler
 from typing import Optional
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
 )
 from airunner.enums import LLMActionType
+from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application.get_logger import get_logger
-
-# Module-level logger
-logger = get_logger(__name__)
+from airunner.components.application.api.api import API
+from airunner.components.calendar.data.event import Event
+from airunner.components.data.session_manager import session_scope
+from airunner.components.llm.data.conversation import Conversation
 
 # Lazy import to avoid circular dependency
 _api = None
@@ -30,13 +36,16 @@ def get_api():
     """Get or create the API singleton instance."""
     global _api
     if _api is None:
-        from airunner.components.application.api.api import API
-
         _api = API()
     return _api
 
 
 class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+        self._timeout: int = 30  # 5 minutes for long generations
+        super().__init__(*args, **kwargs)
+
     def _set_headers(self, status=200, content_type="application/json"):
         self.send_response(status)
         self.send_header("Content-type", content_type)
@@ -66,8 +75,12 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             self._handle_llm(data)
         elif path == "/llm/generate_batch":
             self._handle_llm_batch(data)
+        elif path == "/admin/reset_memory":
+            self._handle_reset_memory()
+        elif path == "/admin/reset_database":
+            self._handle_reset_database()
         elif path == "/art":
-            self._handle_art(data)
+            self._handle_stub("STT not implemented")
         elif path == "/stt":
             self._handle_stub("STT not implemented")
         elif path == "/tts":
@@ -152,14 +165,14 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         llm_request_data = data.get("llm_request", {})
 
         # DEBUG: Log incoming request data
-        logger.debug(f"Incoming request data keys: {list(data.keys())}")
-        logger.debug(f"stream value: {stream} (type: {type(stream)})")
+        self.logger.debug(f"Incoming request data keys: {list(data.keys())}")
+        self.logger.debug(f"stream value: {stream} (type: {type(stream)})")
         if "tool_categories" in data:
-            logger.debug(
+            self.logger.debug(
                 f"tool_categories in request: {data['tool_categories']}"
             )
         else:
-            logger.debug("NO tool_categories in request!")
+            self.logger.debug("NO tool_categories in request!")
 
         # Handle top-level LLM parameters (for convenience)
         # Map common parameter names to LLMRequest fields
@@ -184,7 +197,9 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 llm_request_data[llm_param] = data[client_param]
 
         # DEBUG: Show what got mapped
-        logger.debug(f"llm_request_data after mapping: {llm_request_data}")
+        self.logger.debug(
+            f"llm_request_data after mapping: {llm_request_data}"
+        )
 
         # Parse action type
         try:
@@ -202,16 +217,16 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # Generate unique request ID for correlation
         request_id = str(uuid.uuid4())
 
-        logger.debug(f"stream={stream}, about to branch...")
+        self.logger.debug(f"stream={stream}, about to branch...")
 
         if stream:
-            logger.debug("Taking STREAM path")
+            self.logger.debug("Taking STREAM path")
             # Stream NDJSON responses
             self._handle_llm_stream(
                 prompt, system_prompt, action, llm_request, request_id
             )
         else:
-            logger.debug("Taking NON-STREAM path")
+            self.logger.debug("Taking NON-STREAM path")
             # Return single JSON response
             self._handle_llm_non_stream(
                 prompt, system_prompt, action, llm_request, request_id
@@ -229,19 +244,19 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         # Start with defaults
         llm_request = LLMRequest()
 
-        logger.debug(f"Creating LLMRequest from params: {params}")
+        self.logger.debug(f"Creating LLMRequest from params: {params}")
 
         # Override with provided parameters
         for key, value in params.items():
             if hasattr(llm_request, key):
                 setattr(llm_request, key, value)
-                logger.debug(f"Set LLMRequest.{key} = {value}")
+                self.logger.debug(f"Set LLMRequest.{key} = {value}")
             else:
-                logger.warning(
+                self.logger.warning(
                     f"Ignoring unknown LLMRequest parameter: {key}={value}"
                 )
 
-        logger.debug(
+        self.logger.debug(
             f"Final LLMRequest.max_new_tokens = {llm_request.max_new_tokens}"
         )
         return llm_request
@@ -303,7 +318,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         # Send LLM request with request_id and callback
         api = get_api()
-        logger.debug(
+        self.logger.debug(
             f"Sending to API with llm_request.max_new_tokens={llm_request.max_new_tokens}"
         )
         api.llm.send_request(
@@ -316,7 +331,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
 
         # Wait for completion (with timeout)
         if not complete_event.wait(
-            timeout=300
+            timeout=self._timeout
         ):  # 5 minute timeout for longer generations
             # Timeout - send error response
             error_response = {
@@ -340,56 +355,71 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         request_id: str,
     ):
         """Handle non-streaming LLM response as single JSON object."""
-        logger.debug(
+        self.logger.debug(
             f"_handle_llm_non_stream ENTERED with request_id={request_id}"
         )
         self._set_headers(200)
-        logger.debug("_handle_llm_non_stream Headers set")
+        self.logger.debug("_handle_llm_non_stream Headers set")
 
         # Collect all response chunks
         complete_message = []
+        executed_tools = []  # Track tools executed
         complete_event = threading.Event()
 
         def collect_callback(data: dict):
             """Callback to collect response chunks."""
-            logger.debug(
+            self.logger.debug(
                 f"HTTP Callback {id(collect_callback)} CALLED with data keys: {list(data.keys())}"
             )
             response = data.get("response")
-            logger.debug(
+            self.logger.debug(
                 f"HTTP Callback Response type: {type(response)}, is_end: {response.is_end_of_message if response else None}"
             )
-            logger.info(
+            self.logger.info(
                 f"HTTP Callback Received response: message_len={len(response.message) if response else 0}, is_end={response.is_end_of_message if response else None}"
             )
             if response:
                 complete_message.append(response.message)
-                logger.debug(
+                # Extract tools from response object if this is the final message
+                if (
+                    response.is_end_of_message
+                    and hasattr(response, "tools")
+                    and response.tools
+                ):
+                    self.logger.info(
+                        f"HTTP Callback Tools found in response: {response.tools}"
+                    )
+                    executed_tools.extend(response.tools)
+                elif response.is_end_of_message:
+                    self.logger.warning(
+                        f"HTTP Callback End of message but no tools. has_tools_attr={hasattr(response, 'tools')}, tools_value={getattr(response, 'tools', None)}"
+                    )
+                self.logger.debug(
                     f"HTTP Callback Complete message so far: {len(complete_message)} chunks"
                 )
                 if response.is_end_of_message:
-                    logger.debug(
+                    self.logger.debug(
                         f"HTTP Callback END OF MESSAGE - setting event {id(complete_event)}"
                     )
-                    logger.info(
+                    self.logger.info(
                         "HTTP Callback End of message detected, setting event"
                     )
                     complete_event.set()
-                    logger.debug(
+                    self.logger.debug(
                         f"HTTP Callback Event set: {complete_event.is_set()}"
                     )
                 else:
-                    logger.debug(
+                    self.logger.debug(
                         "HTTP Callback Not end yet, waiting for more..."
                     )
 
-        logger.debug(
+        self.logger.debug(
             f"HTTP Server Registering callback {id(collect_callback)} for request {request_id}"
         )
-        logger.debug(f"HTTP Server Event object: {id(complete_event)}")
+        self.logger.debug(f"HTTP Server Event object: {id(complete_event)}")
 
         # Send LLM request with request_id and callback
-        logger.debug("HTTP Server About to call api.llm.send_request...")
+        self.logger.debug("HTTP Server About to call api.llm.send_request...")
         api = get_api()
         api.llm.send_request(
             prompt=prompt,
@@ -398,15 +428,15 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             request_id=request_id,
             callback=collect_callback,
         )
-        logger.debug("HTTP Server api.llm.send_request completed")
+        self.logger.debug("HTTP Server api.llm.send_request completed")
 
-        logger.debug(
-            f"HTTP Server Waiting for event {id(complete_event)} with 300s timeout..."
+        self.logger.debug(
+            f"HTTP Server Waiting for event {id(complete_event)} with {self._timeout}s timeout..."
         )
 
         # Wait for completion (with timeout)
         if complete_event.wait(
-            timeout=300
+            timeout=self._timeout
         ):  # 5 minute timeout for longer generations
             # Success - return complete message
             response_data = {
@@ -417,6 +447,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "action": (
                     action.value if hasattr(action, "value") else str(action)
                 ),
+                "tools": executed_tools,  # Include list of executed tools
             }
         else:
             # Timeout
@@ -426,6 +457,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
                 "is_end_of_message": True,
                 "sequence_number": 0,
                 "error": True,
+                "tools": [],
             }
 
         self.wfile.write(json.dumps(response_data).encode("utf-8"))
@@ -518,9 +550,6 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
         llm_request: LLMRequest,
     ):
         """Handle synchronous batch LLM generation."""
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        import time
-
         self._set_headers(200)
 
         responses = []
@@ -550,7 +579,7 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             )
 
             # Wait for completion
-            if complete_event.wait(timeout=300):
+            if complete_event.wait(timeout=self._timeout):
                 text = "".join(complete_message)
                 success = True
                 error = None
@@ -619,6 +648,124 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
     def _handle_stub(self, msg):
         self._set_headers(200)
         self.wfile.write(json.dumps({"result": msg}).encode("utf-8"))
+
+    def _handle_reset_memory(self):
+        """Reset LLM conversation memory.
+
+        This endpoint clears the LLM's conversation history, useful for
+        tests to prevent contamination between test runs.
+
+        This clears:
+        1. In-memory workflow state and checkpoints
+        2. Persisted conversation in database
+        3. Creates a FRESH conversation with new ID to prevent checkpoint restoration
+        """
+        self.logger.info("Endpoint called!")
+        sys.stdout.flush()
+        try:
+            self.logger.info("Getting API...")
+            sys.stdout.flush()
+            api = get_api()
+            self.logger.info(f"API: {api}")
+            sys.stdout.flush()
+
+            try:
+                # Mark all conversations as non-current
+                Conversation.objects.update_by(
+                    {"current": True}, current=False
+                )
+
+                # Create a completely fresh conversation
+                new_convo = Conversation.create()
+                new_conv_id = new_convo.id
+
+                self.logger.info(
+                    f"Created new conversation ID {new_conv_id} for fresh start"
+                )
+
+                # Update workflow manager to use new conversation
+                if hasattr(api.llm, "model_manager") and api.llm.model_manager:
+                    workflow_manager = getattr(
+                        api.llm.model_manager, "_workflow_manager", None
+                    )
+                    self.logger.info(
+                        f"workflow_manager exists: {workflow_manager is not None}"
+                    )
+                    if workflow_manager:
+                        # CRITICAL: Clear memory FIRST to wipe checkpoint cache
+                        # BEFORE setting new conversation ID (which rebuilds workflow)
+                        self.logger.info("About to call clear_memory()")
+                        if hasattr(workflow_manager, "clear_memory"):
+                            workflow_manager.clear_memory()
+                            self.logger.info("LLM conversation memory cleared")
+                            self.logger.info("clear_memory() called")
+
+                        # NOW set new conversation ID - rebuilds workflow with clean state
+                        self.logger.info("About to call set_conversation_id()")
+                        if hasattr(workflow_manager, "set_conversation_id"):
+                            workflow_manager.set_conversation_id(new_conv_id)
+                            self.logger.info(
+                                f"Workflow manager using new conversation {new_conv_id}"
+                            )
+                            self.logger.info(
+                                f"set_conversation_id({new_conv_id}) called"
+                            )
+
+            except Exception as db_err:
+                self.logger.error(
+                    f"Error creating new conversation: {db_err}", exc_info=True
+                )
+
+            self._set_headers(200)
+            self.wfile.write(
+                json.dumps({"status": "memory_cleared"}).encode("utf-8")
+            )
+        except Exception as e:
+            self.logger.error(f"Error resetting memory: {e}", exc_info=True)
+            self._set_headers(500)
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def _handle_reset_database(self):
+        """Reset test database by clearing all test-related tables.
+
+        This endpoint is specifically for test isolation - it clears
+        tables that accumulate test data (like Events) to prevent
+        contamination between test runs.
+
+        ONLY clears tables when AIRUNNER_ENVIRONMENT=test to prevent
+        accidental data loss in production.
+        """
+        try:
+            # SAFETY: Only allow in test environment
+            if os.environ.get("AIRUNNER_ENVIRONMENT") != "test":
+                self._set_headers(403)
+                self.wfile.write(
+                    json.dumps(
+                        {
+                            "error": "reset_database only allowed in test environment"
+                        }
+                    ).encode("utf-8")
+                )
+                return
+            deleted_counts = {}
+            with session_scope() as session:
+                # Clear calendar events
+                event_count = session.query(Event).delete()
+                deleted_counts["events"] = event_count
+                session.commit()
+
+            self.logger.info(f"Test database cleared: {deleted_counts}")
+
+            self._set_headers(200)
+            self.wfile.write(
+                json.dumps(
+                    {"status": "database_cleared", "deleted": deleted_counts}
+                ).encode("utf-8")
+            )
+        except Exception as e:
+            self.logger.error(f"Error resetting database: {e}", exc_info=True)
+            self._set_headers(500)
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
 
 
 # Usage: pass AIRunnerAPIRequestHandler to your HTTP server for /llm, /art, /stt, /tts endpoints.

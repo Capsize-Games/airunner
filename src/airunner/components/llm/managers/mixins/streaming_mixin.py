@@ -3,12 +3,14 @@
 Handles workflow execution via invoke and stream methods.
 """
 
-import logging
 import uuid
 from contextlib import nullcontext
 from typing import Optional, Dict, Any
 
 from langchain_core.messages import HumanMessage, AIMessage
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class StreamingMixin:
@@ -16,7 +18,7 @@ class StreamingMixin:
 
     def __init__(self):
         """Initialize streaming mixin."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._compiled_workflow = None
         self._thread_id = "default"
         self._interrupted = False
@@ -28,17 +30,24 @@ class StreamingMixin:
             user_input: User's message/prompt
 
         Returns:
-            Workflow result dictionary
+            Workflow result dictionary with 'messages' and 'tools' (list of executed tool names)
         """
+        # Reset executed tools list for this invocation
+        self._executed_tools = []
+
         input_messages = [HumanMessage(user_input)]
         config = self._create_config()
 
         math_context = self._get_math_context()
 
         with math_context:
-            return self._compiled_workflow.invoke(
+            result = self._compiled_workflow.invoke(
                 {"messages": input_messages}, config
             )
+
+        # Add executed tools list to result
+        result["tools"] = self._executed_tools.copy()
+        return result
 
     def stream(
         self, user_input: str, generation_kwargs: Optional[Dict] = None
@@ -53,6 +62,9 @@ class StreamingMixin:
         Yields:
             AIMessage instances as they are generated
         """
+        # Reset executed tools list for this invocation
+        self._executed_tools = []
+
         initial_state = self._create_initial_state(
             user_input, generation_kwargs
         )
@@ -178,9 +190,17 @@ class StreamingMixin:
             self.logger.info("Workflow interrupted flag set")
 
     def is_interrupted(self) -> bool:
-        """Check if generation has been interrupted.
+        """Get interrupted flag status.
 
         Returns:
-            True if interrupted
+            True if generation is interrupted
         """
         return self._interrupted
+
+    def get_executed_tools(self) -> list[str]:
+        """Get list of tools executed in the last invocation.
+
+        Returns:
+            List of tool names that were called
+        """
+        return self._executed_tools.copy()

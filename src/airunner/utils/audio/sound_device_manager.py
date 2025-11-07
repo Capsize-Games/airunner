@@ -1,7 +1,8 @@
 import sounddevice as sd
 from typing import Optional, Dict, Any
-import logging
 import numpy as np
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class SoundDeviceManager:
@@ -11,7 +12,7 @@ class SoundDeviceManager:
     """
 
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._in_stream = None
         self._out_stream = None
         self._selected_input_device = None

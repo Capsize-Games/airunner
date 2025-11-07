@@ -5,14 +5,15 @@ All tools for creating, editing, and managing images in AI Runner.
 """
 
 import json
-import logging
 from typing import Annotated, Any
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.components.llm.config.model_capabilities import ModelCapability
 from airunner.enums import ImagePreset
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def enhance_prompt_with_specialized_model(

@@ -3,10 +3,12 @@
 Handles LangGraph workflow construction and compilation.
 """
 
-import logging
 from typing import TYPE_CHECKING
 
 from langgraph.graph import START, END, StateGraph
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 if TYPE_CHECKING:
     from airunner.components.llm.managers.workflow_manager import WorkflowState
@@ -17,7 +19,7 @@ class WorkflowBuildingMixin:
 
     def __init__(self):
         """Initialize workflow building mixin."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._workflow = None
         self._compiled_workflow = None
         self._use_mode_routing = False

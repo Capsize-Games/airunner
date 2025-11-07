@@ -1,6 +1,5 @@
 """Tests for batch request processing."""
 
-import pytest
 from airunner.components.llm.managers.batch_request_manager import (
     BatchRequestManager,
     BatchRequest,

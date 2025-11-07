@@ -9,7 +9,6 @@ Example usage:
 """
 
 import asyncio
-import logging
 from typing import List, Dict, Optional
 from functools import lru_cache
 
@@ -18,6 +17,10 @@ from airunner.components.tools.search_providers import (
     BingProvider,
     ArxivProvider,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class AggregatedSearchTool:
@@ -87,8 +90,6 @@ class AggregatedSearchTool:
         Returns:
             List of provider names
         """
-        logger = logging.getLogger(__name__)
-
         if category == "all":
             # Use all available providers
             return ["duckduckgo", "bing", "arxiv"]
@@ -112,7 +113,6 @@ class AggregatedSearchTool:
         Returns:
             Dict mapping service name to list of result dicts
         """
-        logger = logging.getLogger(__name__)
         results = {}
 
         # Determine which providers to use

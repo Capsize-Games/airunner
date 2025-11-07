@@ -9,7 +9,6 @@ This agent handles:
 - Confidence scoring
 """
 
-import logging
 from typing import Any, Annotated, List, Callable
 from typing_extensions import TypedDict
 
@@ -22,8 +21,10 @@ from airunner.components.llm.core.tool_registry import (
     ToolRegistry,
     ToolCategory,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class QAState(TypedDict):
@@ -103,7 +104,7 @@ Always be honest about uncertainty and ask for clarification when needed."""
         logger.info(f"Retrieved {len(qa_tools)} QA tools")
 
         # Convert ToolInfo to actual callable functions
-        tools = [tool.function for tool in qa_tools]
+        tools = [tool.func for tool in qa_tools]
         return tools
 
     def _analyze_question(self, state: QAState) -> dict:

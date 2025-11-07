@@ -1,5 +1,8 @@
 import functools
-import logging
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def log_method_entry_exit(method):
@@ -15,19 +18,19 @@ def log_method_entry_exit(method):
         if logger:
             logger.debug(f"Entering {method_name}")
         else:
-            logging.debug(f"Entering {method_name}")
+            logger.debug(f"Entering {method_name}")
         try:
             result = method(self, *args, **kwargs)
         except Exception:
             if logger:
                 logger.debug(f"Exiting {method_name}")
             else:
-                logging.debug(f"Exiting {method_name}")
+                logger.debug(f"Exiting {method_name}")
             raise
         if logger:
             logger.debug(f"Exiting {method_name}")
         else:
-            logging.debug(f"Exiting {method_name}")
+            logger.debug(f"Exiting {method_name}")
         return result
 
     return wrapper

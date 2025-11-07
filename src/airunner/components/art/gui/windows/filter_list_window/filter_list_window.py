@@ -1,4 +1,4 @@
-
+from multiprocessing.util import get_logger
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -12,9 +12,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-import logging
-
 from airunner.components.art.data.image_filter import ImageFilter
+from airunner.settings import AIRUNNER_LOG_LEVEL
 
 
 class FilterListWindow(QDialog):
@@ -26,6 +25,7 @@ class FilterListWindow(QDialog):
     def __init__(self, parent=None):
         # Initialize QDialog with an optional parent and show it non-modally
         super().__init__(parent)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.setWindowTitle("Image Filters")
         # Provide a sensible default size so the window isn't tiny
         try:
@@ -73,7 +73,7 @@ class FilterListWindow(QDialog):
     def _load_filters(self):
         self._list.clear()
         filters = ImageFilter.objects.all() or []
-        logger = logging.getLogger(__name__)
+        logger = self.logger.getLogger(__name__)
         for f in filters:
             # Create an empty list item and a widget containing a real QCheckBox
             item = QListWidgetItem()
@@ -132,7 +132,7 @@ class FilterListWindow(QDialog):
             # are for auto-applying to future generated images. The DB update
             # above is sufficient.
         except Exception:
-            logging.getLogger(__name__).exception(
+            self.logger.getLogger(__name__).exception(
                 "Error handling itemChanged for ImageFilter id=%s", fid
             )
 

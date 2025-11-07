@@ -6,14 +6,16 @@ Service for discovering and running relevant tests after code changes.
 Finds test files related to modified code and executes them with pytest.
 """
 
-import logging
 import subprocess
 import re
-from typing import List, Optional, Dict, Any, Set
+from typing import List, Optional
 from pathlib import Path
 from dataclasses import dataclass
 
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 @dataclass

@@ -8,11 +8,12 @@ Provides tools for:
 - Research organization
 """
 
-import logging
 from typing import List
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 # Note: Web search and scraping tools are currently in web_tools.py

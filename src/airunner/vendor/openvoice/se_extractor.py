@@ -8,14 +8,17 @@ from glob import glob
 import numpy as np
 from pydub import AudioSegment
 import torchaudio
-import logging
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 model_size = "medium"
 model = None
 
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
+
 
 def split_audio_vad(audio_path, audio_name, target_dir, split_seconds=10.0):
-    logger = logging.getLogger("se_extractor")
     # Initialize Silero VAD model if not already done
     if not hasattr(split_audio_vad, "vad_model"):
         # Load Silero VAD model
@@ -112,7 +115,6 @@ def hash_numpy_array(audio_path):
 
 
 def get_se(audio_path, vc_model, target_dir="processed"):
-    logger = logging.getLogger("se_extractor")
     version = vc_model.version
 
     audio_name = f"{os.path.basename(audio_path).rsplit('.', 1)[0]}_{version}_{hash_numpy_array(audio_path)}"

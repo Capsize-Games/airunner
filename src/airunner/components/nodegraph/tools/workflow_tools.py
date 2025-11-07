@@ -148,7 +148,9 @@ def list_workflows() -> str:
 
         result = ["Available Workflows:", ""]
         for wf in workflows:
-            node_count = len(wf.nodes) if wf.nodes else 0
+            # Query nodes separately since dataclass doesn't have relationships
+            nodes = WorkflowNode.objects.filter_by(workflow_id=wf.id)
+            node_count = len(nodes) if nodes else 0
             result.append(f"ID: {wf.id}")
             result.append(f"  Name: {wf.name}")
             result.append(
@@ -186,6 +188,12 @@ def get_workflow(
         if not workflow:
             return f"Error: Workflow with ID {workflow_id} not found"
 
+        # Query nodes and connections separately since dataclass doesn't have relationships
+        nodes = WorkflowNode.objects.filter_by(workflow_id=workflow.id)
+        connections = WorkflowConnection.objects.filter_by(
+            workflow_id=workflow.id
+        )
+
         result = [
             f"Workflow: {workflow.name} (ID: {workflow.id})",
             f"Description: {workflow.description or '(no description)'}",
@@ -195,7 +203,7 @@ def get_workflow(
             "Nodes:",
         ]
 
-        for node in workflow.nodes:
+        for node in nodes:
             result.append(f"  - {node.name} ({node.node_identifier})")
             if node.properties:
                 result.append(f"    Properties: {node.properties}")
@@ -203,13 +211,13 @@ def get_workflow(
         result.append("")
         result.append("Connections:")
 
-        for conn in workflow.connections:
+        for conn in connections:
             output_node = next(
-                (n for n in workflow.nodes if n.id == conn.output_node_id),
+                (n for n in nodes if n.id == conn.output_node_id),
                 None,
             )
             input_node = next(
-                (n for n in workflow.nodes if n.id == conn.input_node_id),
+                (n for n in nodes if n.id == conn.input_node_id),
                 None,
             )
 
@@ -304,13 +312,20 @@ def modify_workflow(
 
         # Update description
         if update_description is not None:
-            workflow.description = update_description
-            Workflow.objects.update(workflow)
+            Workflow.objects.update(
+                workflow_id, description=update_description
+            )
             changes.append("updated description")
+
+        # Query nodes and connections separately since dataclass doesn't have relationships
+        nodes = WorkflowNode.objects.filter_by(workflow_id=workflow.id)
+        connections = WorkflowConnection.objects.filter_by(
+            workflow_id=workflow.id
+        )
 
         # Add nodes
         if add_nodes:
-            node_map = {n.name: n for n in workflow.nodes}
+            node_map = {n.name: n for n in nodes}
             for node_def in add_nodes:
                 node = WorkflowNode.objects.create(
                     workflow_id=workflow.id,
@@ -328,16 +343,14 @@ def modify_workflow(
         # Remove nodes
         if remove_node_names:
             for node_name in remove_node_names:
-                node = next(
-                    (n for n in workflow.nodes if n.name == node_name), None
-                )
+                node = next((n for n in nodes if n.name == node_name), None)
                 if node:
                     WorkflowNode.objects.delete(node.id)
             changes.append(f"removed {len(remove_node_names)} node(s)")
 
         # Add connections
         if add_connections:
-            node_map = {n.name: n for n in workflow.nodes}
+            node_map = {n.name: n for n in nodes}
             for conn_def in add_connections:
                 output_node = node_map.get(conn_def.get("output_node_name"))
                 input_node = node_map.get(conn_def.get("input_node_name"))
@@ -354,7 +367,7 @@ def modify_workflow(
 
         # Remove connections (by node names and ports)
         if remove_connections:
-            node_map = {n.name: n for n in workflow.nodes}
+            node_map = {n.name: n for n in nodes}
             for conn_def in remove_connections:
                 output_node = node_map.get(conn_def.get("output_node_name"))
                 input_node = node_map.get(conn_def.get("input_node_name"))
@@ -363,7 +376,7 @@ def modify_workflow(
                     conn = next(
                         (
                             c
-                            for c in workflow.connections
+                            for c in connections
                             if c.output_node_id == output_node.id
                             and c.output_port
                             == conn_def.get("output_port", "output")

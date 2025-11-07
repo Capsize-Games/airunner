@@ -2,12 +2,13 @@
 
 import importlib
 from typing import Any, Dict, List, Optional
-import logging
 
 from airunner.components.art.data.image_filter import ImageFilter
 from airunner.components.art.data.image_filter_value import ImageFilterValue
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-LOG = logging.getLogger(__name__)
+LOG = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class FilterValueData:

@@ -1,14 +1,10 @@
 import os
-import logging
 from typing import Dict, Optional, Callable
 import requests
 from PySide6.QtCore import Signal
 from airunner.enums import SignalCode
 from airunner.components.application.workers.worker import Worker
 from airunner.settings import DEFAULT_HF_ENDPOINT
-
-logger = logging.getLogger(__name__)
-
 
 class DownloadWorker(Worker):
     """Worker that downloads a single file and reports progress.
@@ -27,8 +23,7 @@ class DownloadWorker(Worker):
     running = False
     is_cancelled = False
 
-    @staticmethod
-    def get_size(url: str) -> int:
+    def get_size(self, url: str) -> int:
         """Return size in bytes for a URL or 0 if unknown."""
         try:
             response = requests.head(url, allow_redirects=True, timeout=30)
@@ -36,17 +31,17 @@ class DownloadWorker(Worker):
             try:
                 return int(content_length)
             except (ValueError, OverflowError):
-                logger.warning(
+                self.logger.warning(
                     "Invalid or oversized content-length: %s for %s",
                     content_length,
                     url,
                 )
                 return 0
         except OverflowError:  # extremely unlikely
-            logger.exception("OverflowError when getting size for %s", url)
+            self.logger.exception("OverflowError when getting size for %s", url)
             return 0
         except Exception:  # size retrieval failure is non-fatal
-            logger.exception("Failed to get size for %s", url)
+            self.logger.exception("Failed to get size for %s", url)
             return 0
 
     def cancel(self) -> None:
@@ -58,7 +53,7 @@ class DownloadWorker(Worker):
             try:
                 api.download_complete(file_name)
             except Exception:
-                logger.exception(
+                self.logger.exception(
                     "download_complete callback failed for %s", file_name
                 )
 
@@ -78,7 +73,7 @@ class DownloadWorker(Worker):
                     try:
                         callback(0, 0)
                     except Exception:
-                        logger.exception(
+                        self.logger.exception(
                             "Progress callback failed (empty request)"
                         )
                 self.finished.emit({})
@@ -118,7 +113,7 @@ class DownloadWorker(Worker):
                     try:
                         callback(progress_current, progress_total)
                     except Exception:
-                        logger.exception(
+                        self.logger.exception(
                             "Progress callback failed after skip for %s",
                             file_name_full,
                         )
@@ -204,7 +199,7 @@ class DownloadWorker(Worker):
                             try:
                                 f.write(chunk)
                             except OverflowError:
-                                logger.exception(
+                                self.logger.exception(
                                     "OverflowError when writing %s",
                                     file_name_full,
                                 )
@@ -225,7 +220,7 @@ class DownloadWorker(Worker):
                                     },
                                 )
                             except OverflowError:
-                                logger.warning(
+                                self.logger.warning(
                                     "OverflowError in progress signal for large file %s (written=%d, total=%d)",
                                     file_name_full,
                                     written,
@@ -268,7 +263,7 @@ class DownloadWorker(Worker):
                                         int(safe_written), int(safe_total)
                                     )
                                 except (OverflowError, ValueError):
-                                    logger.warning(
+                                    self.logger.warning(
                                         "OverflowError in progress callback for large file %s",
                                         file_name_full,
                                     )
@@ -287,14 +282,14 @@ class DownloadWorker(Worker):
                                         )
                                         callback(safe_written, safe_total)
                                     except Exception:
-                                        logger.exception(
+                                        self.logger.exception(
                                             "Progress callback failed even with aggressive scaling for %s",
                                             file_name_full,
                                         )
                                         callback = None  # type: ignore
                                 except Exception:
                                     # Log once and disable further callback attempts
-                                    logger.exception(
+                                    self.logger.exception(
                                         "Progress callback failed during download for %s",
                                         file_name_full,
                                     )
@@ -320,7 +315,7 @@ class DownloadWorker(Worker):
                     try:
                         callback(int(final_total), int(final_total))
                     except (OverflowError, ValueError):
-                        logger.warning(
+                        self.logger.warning(
                             "OverflowError in completion callback for large file %s",
                             file_name_full,
                         )
@@ -337,18 +332,18 @@ class DownloadWorker(Worker):
                             )
                             callback(safe_final, safe_final)
                         except Exception:
-                            logger.exception(
+                            self.logger.exception(
                                 "Completion callback failed even with aggressive scaling for %s",
                                 file_name_full,
                             )
                     except Exception:
-                        logger.exception(
+                        self.logger.exception(
                             "Download callback failed at completion for %s",
                             file_name_full,
                         )
                 self.finished.emit({})
             except Exception as e:  # network or IO error
-                logger.exception("Failed to download %s", url)
+                self.logger.exception("Failed to download %s", url)
                 self.failed.emit(e)
         finally:
             # Do not modify self.running here; allow Worker.run loop to continue

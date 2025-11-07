@@ -7,9 +7,7 @@ Provides high-level API for applying formatting, running validators, and executi
 on generated code files.
 """
 
-import logging
 from typing import List, Optional, Dict, Any
-from pathlib import Path
 from dataclasses import dataclass
 
 from airunner.components.llm.tools.code_operations_handler import (
@@ -24,8 +22,10 @@ from airunner.components.llm.tools.test_runner import (
     TestRunner,
     TestResult,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 @dataclass

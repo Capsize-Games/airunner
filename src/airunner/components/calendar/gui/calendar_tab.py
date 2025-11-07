@@ -72,7 +72,7 @@ class CalendarTab(QWidget):
         from datetime import date
 
         today = date.today()
-        self.calendar_widget.calendar.setSelectedDate(
+        self.calendar_widget.ui.calendar_widget.setSelectedDate(
             QDate(today.year, today.month, today.day)
         )
 

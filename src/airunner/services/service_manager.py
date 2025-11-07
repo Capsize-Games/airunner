@@ -10,10 +10,14 @@ import os
 import sys
 import platform
 import subprocess
-import logging
 from pathlib import Path
 from typing import Optional
 from enum import Enum
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class ServicePlatform(Enum):
@@ -52,7 +56,7 @@ class ServiceManager:
         Args:
             config_path: Path to daemon configuration file (daemon.yaml)
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger.getLogger(__name__)
         self.platform = self._detect_platform()
         self.config_path = config_path or self._default_config_path()
 
@@ -216,7 +220,7 @@ class ServiceHandlerBase:
     """Base class for platform-specific service handlers."""
 
     def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logger.getLogger(self.__class__.__name__)
 
     def install(self, config_path: Path, **kwargs) -> bool:
         """Install service on this platform."""

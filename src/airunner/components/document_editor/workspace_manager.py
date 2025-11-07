@@ -7,15 +7,17 @@ Provides safe, atomic file operations with backup support, path validation,
 and file locking to ensure data integrity during LLM-driven code generation.
 """
 
-from typing import Optional, List, Dict
+from typing import List, Dict
 import os
 import shutil
-from pathlib import Path
 import tempfile
-import logging
 import glob
-import difflib
-from threading import RLock  # Use RLock instead of Lock for reentrant locking
+from threading import RLock
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import (
+    get_logger,
+)  # Use RLock instead of Lock for reentrant locking
 
 try:
     import fcntl
@@ -25,7 +27,7 @@ except ImportError:
     fcntl = None
     _HAS_FCNTL = False
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class WorkspaceManager:

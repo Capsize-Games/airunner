@@ -181,7 +181,7 @@ def evaluate_response_quality(
         >>> assert metrics["relevance"] > 0.8
     """
     response_lower = response.lower()
-    prompt_lower = prompt.lower()
+    prompt.lower()
 
     # Relevance: Does response contain expected keywords?
     relevance = 1.0

@@ -9,7 +9,6 @@ from typing import (
     Sequence,
     Union,
 )
-import logging
 import os
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -25,6 +24,8 @@ from airunner.components.llm.adapters.mixins import (
     ToolCallingMixin,
     GenerationMixin,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ChatHuggingFaceLocal(
@@ -110,9 +111,35 @@ class ChatHuggingFaceLocal(
             self.use_mistral_native = True
             return
 
+        # Check if model supports JSON mode via provider config
+        from airunner.components.llm.config.provider_config import (
+            LLMProviderConfig,
+        )
+
+        # Try to match model_path to known model configs
+        for model_key, model_config in LLMProviderConfig.LOCAL_MODELS.items():
+            repo_id = model_config.get("repo_id", "")
+            if not repo_id:
+                continue
+
+            # Extract model name from repo_id (e.g., "Qwen2.5-7B-Instruct" from "Qwen/Qwen2.5-7B-Instruct")
+            model_name = repo_id.split("/")[-1].lower()
+
+            # Match if model name appears in path (handles both "Qwen/Qwen2.5-7B-Instruct" and ".../Qwen2.5-7B-Instruct-4bit")
+            if model_name in model_path_lower:
+                configured_mode = model_config.get("tool_calling_mode")
+                if configured_mode in ("json", "native"):
+                    self.tool_calling_mode = configured_mode
+                    if configured_mode == "json":
+                        self.use_json_mode = True
+                    print(
+                        f"ℹ Using {configured_mode} tool calling mode for {repo_id}"
+                    )
+                    return
+
         self.tool_calling_mode = "react"
         print(
-            f"ℹ Using LangChain standard tool calling (model: {self.model_path})"
+            f"ℹ Using ReAct fallback tool calling (model: {self.model_path})"
         )
 
     @property
@@ -123,7 +150,7 @@ class ChatHuggingFaceLocal(
             Logger instance for this class
         """
         if not hasattr(self, "_logger"):
-            self._logger = logging.getLogger(__name__)
+            self._logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         return self._logger
 
     def set_interrupted(self, value: bool) -> None:

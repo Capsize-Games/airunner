@@ -1,5 +1,4 @@
 from typing import Optional
-import logging
 import datetime
 import uuid
 from sqlalchemy import (
@@ -23,8 +22,11 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application.get_logger import get_logger
 
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 class Conversation(BaseModel):
     __tablename__ = "conversations"
@@ -113,7 +115,7 @@ class Conversation(BaseModel):
                 try:
                     chatbot = Chatbot.objects.get(prev_chatbot_id)
                 except Exception as e:
-                    get_logger(__name__).error(
+                    logger.error(
                         f"Error retrieving chatbot from previous conversation: {e}"
                     )
                     chatbot = None
@@ -121,7 +123,7 @@ class Conversation(BaseModel):
                 try:
                     chatbot = Chatbot.objects.first()
                 except Exception as e:
-                    get_logger(__name__).error(
+                    logger.error(
                         f"Error retrieving first chatbot: {e}"
                     )
                     chatbot = None
@@ -133,12 +135,12 @@ class Conversation(BaseModel):
                     )
                     Chatbot.make_current(chatbot.id)
                 except Exception as e:
-                    get_logger(__name__).error(
+                    logger.error(
                         f"Error creating default chatbot: {e}"
                     )
                     chatbot = None
             if not chatbot:
-                get_logger(__name__).error(
+                logger.error(
                     "All attempts to retrieve or create a Chatbot failed. Using in-memory fallback Chatbot."
                 )
                 chatbot = Chatbot(name="Fallback", botname="Computer")
@@ -153,7 +155,7 @@ class Conversation(BaseModel):
             chatbot_id = getattr(chatbot, "id", 0)
             chatbot_botname = getattr(chatbot, "botname", "Computer")
         if chatbot_id is None:
-            get_logger(__name__).error(
+            logger.error(
                 "Failed to create or retrieve a valid Chatbot. Conversation creation aborted."
             )
             return None
@@ -201,7 +203,6 @@ class Conversation(BaseModel):
             if conversation:
                 return Conversation(**conversation.to_dict())
         except Exception as e:
-            logger = logging.getLogger(__name__)
             logger.error(f"Error in most_recent(): {e}")
 
     @classmethod

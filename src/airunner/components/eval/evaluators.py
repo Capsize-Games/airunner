@@ -8,12 +8,13 @@ correctness, conciseness, helpfulness, etc.
 Based on the openevals pattern but adapted for AI Runner's architecture.
 """
 
-import logging
 from typing import Dict, Any, Optional
 from airunner.components.eval.client import AIRunnerClient
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 # Evaluation prompt templates
@@ -132,7 +133,7 @@ class LLMAsJudge:
         self.prompt_template = prompt_template
         self.feedback_key = feedback_key
         self.model = model
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def _format_evaluation_prompt(
         self, inputs: str, outputs: str, reference_outputs: str

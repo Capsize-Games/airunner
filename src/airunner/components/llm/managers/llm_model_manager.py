@@ -131,10 +131,18 @@ class LLMModelManager(
         - Loading the workflow manager
         - Updating the model status based on loading results
         """
+        print(
+            f"[LLM LOAD] load() called, current status: {self.model_status[ModelType.LLM]}",
+            flush=True,
+        )
         if self.model_status[ModelType.LLM] in (
             ModelStatus.LOADING,
             ModelStatus.LOADED,
         ):
+            print(
+                f"[LLM LOAD] Returning early - model already in state: {self.model_status[ModelType.LLM]}",
+                flush=True,
+            )
             return
 
         if not self._validate_model_path():
@@ -158,18 +166,46 @@ class LLMModelManager(
                 f"Cannot load model: {prepare_result.get('reason', 'Unknown reason')}"
             )
             self.change_model_status(ModelType.LLM, ModelStatus.FAILED)
+            print(
+                f"[LLM LOAD] Model cannot be loaded - resource conflict",
+                flush=True,
+            )
             return
 
         if self.llm_settings.use_local_llm:
             self._send_quantization_info()
 
         self._load_local_llm_components()
+
         self._load_chat_model()
+        print(
+            f"[LLM LOAD] Chat model loaded: {self._chat_model is not None}",
+            flush=True,
+        )
+
         self._load_tool_manager()
+        print(
+            f"[LLM LOAD] Tool manager loaded: {self._tool_manager is not None}",
+            flush=True,
+        )
+
         self._load_workflow_manager()
+        print(
+            f"[LLM LOAD] Workflow manager loaded: {self._workflow_manager is not None}",
+            flush=True,
+        )
+
         self._update_model_status()
+        print(
+            f"[LLM LOAD] Model status updated to: {self.model_status[ModelType.LLM]}",
+            flush=True,
+        )
 
         # Mark model as loaded
+        print(
+            f"[LLM LOAD] Marking model as loaded in resource manager",
+            flush=True,
+        )
         resource_manager.model_loaded(self.model_path)
 
     def unload(self) -> None:
@@ -228,7 +264,6 @@ class LLMModelManager(
 
         # Check if tool_categories specified - if so, filter tools
         tools_filtered = False
-        print(f"[LLM MANAGER DEBUG] llm_request={llm_request}", flush=True)
         if llm_request:
             print(
                 f"[LLM MANAGER DEBUG] llm_request.tool_categories={llm_request.tool_categories}",
@@ -265,10 +300,19 @@ class LLMModelManager(
         Args:
             tool_categories: List of allowed category names. Empty list = no tools.
                            None = all tools (handled by caller).
+                           Supports aliases like "USER_DATA" -> "SYSTEM", "KNOWLEDGE" -> "RAG"
         """
+        print(
+            f"[TOOL FILTER] ENTER _apply_tool_filter with categories: {tool_categories}",
+            flush=True,
+        )
         if not self._workflow_manager or not self._tool_manager:
             self.logger.warning(
                 "Cannot apply tool filter - workflow_manager or tool_manager not initialized"
+            )
+            print(
+                f"[TOOL FILTER] workflow_manager: {self._workflow_manager}, tool_manager: {self._tool_manager}",
+                flush=True,
             )
             return
 
@@ -286,16 +330,36 @@ class LLMModelManager(
         # Filter tools by category
         from airunner.components.llm.core.tool_registry import ToolCategory
 
+        # Category alias mapping for common names
+        CATEGORY_ALIASES = {
+            "user_data": "system",  # USER_DATA -> SYSTEM (user data tools in SYSTEM)
+            "knowledge": "rag",  # KNOWLEDGE -> RAG (knowledge tools in RAG)
+            "agent": "system",  # AGENT -> SYSTEM (agent tools in SYSTEM)
+            "agents": "system",  # AGENTS -> SYSTEM
+        }
+
         allowed_categories = set()
         for cat_name in tool_categories:
+            cat_lower = cat_name.lower()
+
+            # Check if this is an alias
+            if cat_lower in CATEGORY_ALIASES:
+                actual_cat = CATEGORY_ALIASES[cat_lower]
+                self.logger.info(
+                    f"Mapped alias '{cat_name}' to category '{actual_cat}'"
+                )
+                cat_lower = actual_cat
+
             try:
                 # Convert string to ToolCategory enum
-                category = ToolCategory(cat_name.lower())
+                category = ToolCategory(cat_lower)
                 allowed_categories.add(category)
+                self.logger.info(f"Added category: {category.value}")
             except ValueError:
                 self.logger.warning(
                     f"Unknown tool category: {cat_name}. "
-                    f"Valid categories: {[c.value for c in ToolCategory]}"
+                    f"Valid categories: {[c.value for c in ToolCategory]}. "
+                    f"Valid aliases: {list(CATEGORY_ALIASES.keys())}"
                 )
 
         if not allowed_categories:
@@ -304,11 +368,23 @@ class LLMModelManager(
             )
             return
 
+        print(
+            f"[TOOL FILTER] Getting tools by categories: {list(allowed_categories)}",
+            flush=True,
+        )
         filtered_tools = self._tool_manager.get_tools_by_categories(
             list(allowed_categories)
         )
+        print(
+            f"[TOOL FILTER] Got {len(filtered_tools)} filtered tools",
+            flush=True,
+        )
         self.logger.info(
             f"Filtered to {len(filtered_tools)} tools from categories: {tool_categories}"
+        )
+        print(
+            f"[TOOL FILTER] Calling update_tools with {len(filtered_tools)} tools",
+            flush=True,
         )
         self._workflow_manager.update_tools(filtered_tools)
 

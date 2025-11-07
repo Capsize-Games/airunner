@@ -1,6 +1,5 @@
 import os
 import json
-import logging
 from typing import Dict, Tuple, Optional, List, Any
 
 
@@ -8,6 +7,8 @@ from airunner.components.nodegraph.gui.widgets.nodes.core.variable_getter_node i
     VariableGetterNode,
 )
 from airunner.components.nodegraph.gui.widgets.nodes.io.print import PrintNode
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.vendor.nodegraphqt import NodesPaletteWidget
 from PySide6.QtWidgets import (
     QLineEdit,
@@ -175,9 +176,7 @@ class NodeGraphWidget(BaseWidget):
     @property
     def logger(self):
         if not hasattr(self, "_logger") or self._logger is None:
-            self._logger = logging.getLogger(
-                f"{self.__class__.__module__}.{self.__class__.__name__}"
-            )
+            self._logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         return self._logger
 
     @logger.setter

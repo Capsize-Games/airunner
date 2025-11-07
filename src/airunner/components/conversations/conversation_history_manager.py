@@ -1,9 +1,10 @@
 """Manages loading and formatting of conversation history."""
 
-import logging
 from typing import Any, Dict, List, Optional
 
 from airunner.components.llm.data.conversation import Conversation
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ConversationHistoryManager:
@@ -16,7 +17,7 @@ class ConversationHistoryManager:
 
     def __init__(self) -> None:
         """Initializes the ConversationHistoryManager."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def get_current_conversation(self) -> Optional[Conversation]:
         """Fetches the current conversation.

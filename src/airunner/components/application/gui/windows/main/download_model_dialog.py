@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThread
 import os
-import logging
 from typing import Any, Dict, Optional
 
 from airunner.components.application.workers.qt_civitai_workers import (
@@ -26,8 +25,8 @@ from airunner.components.application.workers.qt_civitai_workers import (
 from airunner.components.application.utils.model_persistence import (
     persist_trigger_words,
 )
-
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class DownloadModelDialog(QDialog):
@@ -67,6 +66,7 @@ class DownloadModelDialog(QDialog):
 
     def __init__(self, parent, path_settings, application_settings):
         super().__init__(parent)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.setWindowTitle("CivitAI Model Details")
         # Start at a sensible size so very long descriptions don't grow the
         # dialog off-screen. The dialog remains resizable so the user can
@@ -280,15 +280,15 @@ class DownloadModelDialog(QDialog):
                     except Exception:
                         # If wait isn't available, just continue — don't
                         # attempt to forcefully terminate the thread.
-                        logger.debug(
+                        self.logger.debug(
                             "Thread wait not available", exc_info=True
                         )
                 except Exception:
-                    logger.debug("Thread quit failed", exc_info=True)
+                    self.logger.debug("Thread quit failed", exc_info=True)
             except Exception:
                 # Protect against any unexpected errors while disconnecting
                 # or quitting the thread; we don't want this to crash the app.
-                logger.debug(
+                self.logger.debug(
                     "Error while cleaning up download thread", exc_info=True
                 )
 
@@ -324,11 +324,11 @@ class DownloadModelDialog(QDialog):
                     self._current_file_info,
                     save_path,
                 )
-                logger.info(
+                self.logger.info(
                     f"Successfully persisted trigger words for {save_path}"
                 )
             except Exception as e:
-                logger.error(
+                self.logger.error(
                     f"Failed to persist trigger words for {save_path}: {e}",
                     exc_info=True,
                 )
@@ -376,9 +376,11 @@ class DownloadModelDialog(QDialog):
                 try:
                     self._download_worker.cancel()
                 except Exception:
-                    logger.debug("Worker cancel call failed", exc_info=True)
+                    self.logger.debug(
+                        "Worker cancel call failed", exc_info=True
+                    )
         except Exception:
-            logger.debug("Cancel call failed", exc_info=True)
+            self.logger.debug("Cancel call failed", exc_info=True)
         # Perform cleanup (close dialog, stop thread). After cleanup, try to
         # remove any partial file the worker may have left behind.
         self._cleanup_download()
@@ -388,13 +390,13 @@ class DownloadModelDialog(QDialog):
                 try:
                     os.remove(sp)
                 except Exception:
-                    logger.debug(
+                    self.logger.debug(
                         "Failed to remove partial download %s",
                         sp,
                         exc_info=True,
                     )
         except Exception:
-            logger.debug("Post-cancel cleanup failed", exc_info=True)
+            self.logger.debug("Post-cancel cleanup failed", exc_info=True)
 
     def _start_download(self) -> None:
         selected = self.list_widget.currentItem()
@@ -512,9 +514,9 @@ class DownloadModelDialog(QDialog):
                 try:
                     self._download_worker.cancel()
                 except Exception:
-                    logger.debug("Worker cancel failed", exc_info=True)
+                    self.logger.debug("Worker cancel failed", exc_info=True)
         except Exception:
-            logger.debug("Error requesting worker cancel", exc_info=True)
+            self.logger.debug("Error requesting worker cancel", exc_info=True)
 
         # Immediately cleanup UI state so progress updates won't re-show
         # the dialog. We also attempt to remove any partial file right
@@ -532,13 +534,13 @@ class DownloadModelDialog(QDialog):
                 try:
                     os.remove(sp)
                 except Exception:
-                    logger.debug(
+                    self.logger.debug(
                         "Failed to remove partial download %s",
                         sp,
                         exc_info=True,
                     )
         except Exception:
-            logger.debug(
+            self.logger.debug(
                 "Post-cancel partial file removal failed", exc_info=True
             )
 
@@ -560,7 +562,7 @@ class DownloadModelDialog(QDialog):
                     if self._download_worker is not None:
                         self._download_worker.cancel()
                 except Exception:
-                    logger.debug(
+                    self.logger.debug(
                         "Failed to request worker cancel", exc_info=True
                     )
 
@@ -570,12 +572,12 @@ class DownloadModelDialog(QDialog):
                     try:
                         self._download_thread.wait(2000)
                     except Exception:
-                        logger.debug(
+                        self.logger.debug(
                             "Thread wait not available or interrupted",
                             exc_info=True,
                         )
                 except Exception:
-                    logger.debug("Thread quit failed", exc_info=True)
+                    self.logger.debug("Thread quit failed", exc_info=True)
 
                 # If still running, detach the thread from this dialog to avoid
                 # Qt complaining about destruction while running.
@@ -585,7 +587,7 @@ class DownloadModelDialog(QDialog):
                         # deleted when this dialog is destroyed.
                         self._download_thread.setParent(None)
                     except Exception:
-                        logger.debug(
+                        self.logger.debug(
                             "Failed to reparent download thread", exc_info=True
                         )
 
@@ -603,7 +605,9 @@ class DownloadModelDialog(QDialog):
                 self._download_thread = None
                 self._download_worker = None
         except Exception:
-            logger.debug("Error during dialog close handling", exc_info=True)
+            self.logger.debug(
+                "Error during dialog close handling", exc_info=True
+            )
 
         # Proceed with normal close
         try:

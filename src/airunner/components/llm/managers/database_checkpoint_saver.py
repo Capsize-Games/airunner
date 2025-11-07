@@ -1,6 +1,5 @@
 """Custom LangGraph checkpointer that persists to the Conversation database."""
 
-import logging
 import uuid
 from typing import Optional, Dict, Any, Iterator, Tuple
 from collections.abc import Sequence
@@ -16,6 +15,8 @@ from langchain_core.runnables import RunnableConfig
 from airunner.components.llm.managers.database_chat_message_history import (
     DatabaseChatMessageHistory,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class DatabaseCheckpointSaver(BaseCheckpointSaver):
@@ -37,7 +38,7 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                            the current conversation.
         """
         super().__init__()
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.conversation_id = conversation_id
         self.message_history = DatabaseChatMessageHistory(conversation_id)
 
@@ -113,12 +114,15 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                     )
 
                     # Store full checkpoint state (including ToolMessages)
-                    # Use "default" as thread_id to match what LangGraph uses
-                    thread_id = "default"
+                    # Update cache with ALL messages (including ToolMessages)
+                # CRITICAL: Use conversation_id as thread_id to prevent contamination
+                # between different conversations (e.g., in tests)
+                if messages:
+                    thread_id = str(self.message_history.conversation_id)
                     self._checkpoint_state[thread_id] = {
-                        "messages": messages,  # Full message list with ToolMessages
                         "checkpoint": checkpoint,
                         "metadata": metadata,
+                        "messages": messages,
                     }
                     self.logger.info(
                         f"💾 Stored full checkpoint state with {len(messages)} messages for thread {thread_id}"
@@ -146,6 +150,17 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
             return config
 
     def get_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
+        """Fetch a checkpoint tuple using the given configuration.
+
+        Args:
+            config: Configuration specifying which checkpoint to retrieve.
+
+        Returns:
+            The requested checkpoint tuple, or None if not found.
+        """
+        return self.get(config)
+
+    def get(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
         """Retrieve a checkpoint from the database.
 
         Args:
@@ -157,11 +172,23 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         try:
             # First, try to get from in-memory checkpoint state
             thread_id = config.get("configurable", {}).get("thread_id")
+
+            # DEBUG: Write to file
+            import sys
+
+            with open("/tmp/checkpoint_debug.log", "a") as f:
+                f.write(
+                    f"[GET] thread_id={thread_id}, conv_id={self.conversation_id}, "
+                    f"checkpoint_keys={list(self._checkpoint_state.keys())}\n"
+                )
+                sys.stdout.flush()
+
             if thread_id and thread_id in self._checkpoint_state:
                 state = self._checkpoint_state[thread_id]
-                self.logger.info(
-                    f"📥 Loaded checkpoint from memory for thread {thread_id} with {len(state['messages'])} messages (includes ToolMessages)"
-                )
+                with open("/tmp/checkpoint_debug.log", "a") as f:
+                    f.write(
+                        f"[GET] ✅ FOUND in memory: {len(state['messages'])} messages\n"
+                    )
                 return CheckpointTuple(
                     config=config,
                     checkpoint=state["checkpoint"],
@@ -171,14 +198,20 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
 
             # Fallback: Load from database (may not have ToolMessages)
             messages = self.message_history.messages
+            with open("/tmp/checkpoint_debug.log", "a") as f:
+                f.write(
+                    f"[GET] DB has {len(messages)} messages for conv {self.conversation_id}\n"
+                )
 
             if not messages:
-                self.logger.info("📥 No checkpoint found - starting fresh")
+                with open("/tmp/checkpoint_debug.log", "a") as f:
+                    f.write(f"[GET] ❌ No messages - starting fresh\n")
                 return None
 
-            self.logger.info(
-                f"📥 Loaded checkpoint from DATABASE for thread {thread_id} with {len(messages)} messages (ToolMessages filtered out)"
-            )
+            with open("/tmp/checkpoint_debug.log", "a") as f:
+                f.write(
+                    f"[GET] ✅ Building checkpoint from DB: {len(messages)} messages\n"
+                )
 
             # Build checkpoint with proper UUID
             checkpoint = Checkpoint(
@@ -250,3 +283,22 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
         current = self.get_tuple(config)
         if current:
             yield current
+
+    def clear_checkpoints(self) -> None:
+        """Clear all checkpoint state.
+
+        This removes all in-memory checkpoint state from the class-level
+        _checkpoint_state dictionary, forcing a fresh start for the workflow.
+
+        CRITICAL: This is needed to prevent checkpoint contamination between
+        tests or when resetting conversation memory.
+        """
+        # Clear the class-level checkpoint state dictionary
+        DatabaseCheckpointSaver._checkpoint_state.clear()
+        self.logger.info("Cleared all LangGraph checkpoint state")
+
+        # Also clear message history for completeness
+        self.message_history.clear()
+        self.logger.info(
+            f"Cleared message history for conversation {self.conversation_id}"
+        )

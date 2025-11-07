@@ -1,9 +1,10 @@
 """Code expert agent for code generation and analysis."""
 
 from typing import Dict, List, Optional, Any
-import logging
 from datetime import datetime
 from airunner.components.agents.expert_agent import ExpertAgent
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class CodeExpertAgent(ExpertAgent):
@@ -23,7 +24,7 @@ class CodeExpertAgent(ExpertAgent):
             name="code_expert",
             description="Specialized agent for code generation and analysis",
         )
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._register_capabilities()
 
     def _register_capabilities(self) -> None:
