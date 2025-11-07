@@ -7,9 +7,11 @@ any Qt/GUI dependencies.
 """
 
 import os
-import logging
 from pathlib import Path
 from typing import Optional, Callable
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 from .mixins import (
     DatasetCacheMixin,
@@ -17,7 +19,7 @@ from .mixins import (
     DatasetLoaderMixin,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def get_airunner_base_path() -> str:

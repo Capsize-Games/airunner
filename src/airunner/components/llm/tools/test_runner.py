@@ -9,7 +9,7 @@ Finds test files related to modified code and executes them with pytest.
 import logging
 import subprocess
 import re
-from typing import List, Optional, Dict, Any, Set
+from typing import List, Optional
 from pathlib import Path
 from dataclasses import dataclass
 

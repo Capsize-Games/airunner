@@ -5,7 +5,6 @@ This provides a bridge between the old agent architecture and the new
 decorator-based tool system, allowing gradual migration.
 """
 
-import logging
 from typing import List, Optional, Any
 
 from llama_index.core.tools import FunctionTool
@@ -13,6 +12,8 @@ from llama_index.core.tools import FunctionTool
 from airunner.components.llm.core.tool_executor import ToolExecutor
 from airunner.components.llm.core.tool_registry import ToolCategory
 from airunner.enums import LLMActionType
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ToolAdapter:
@@ -27,7 +28,7 @@ class ToolAdapter:
         self,
         agent: Any,
         api: Any,
-        logger: Optional[logging.Logger] = None,
+        logger: Optional[Any] = None,
     ):
         """
         Initialize tool adapter.
@@ -39,7 +40,7 @@ class ToolAdapter:
         """
         self.agent = agent
         self.api = api
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = logger or get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
         # Create tool executor with dependencies
         self.tool_executor = ToolExecutor(

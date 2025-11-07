@@ -4,7 +4,6 @@ This module provides the bridge between the visual NodeGraph interface
 and executable LangGraph workflows.
 """
 
-import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
 from airunner.components.nodegraph.gui.widgets.custom_node_graph import (
@@ -13,9 +12,11 @@ from airunner.components.nodegraph.gui.widgets.custom_node_graph import (
 from airunner.components.llm.langgraph.code_generator import (
     LangGraphCodeGenerator,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class LangGraphExporter:

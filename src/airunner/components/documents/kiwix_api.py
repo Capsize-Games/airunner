@@ -7,10 +7,12 @@ Provides KiwixAPI for listing available ZIM files from the Kiwix library.
 
 from typing import List, Dict, Optional
 import requests
-import logging
 import xml.etree.ElementTree as ET
 
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class KiwixAPI:

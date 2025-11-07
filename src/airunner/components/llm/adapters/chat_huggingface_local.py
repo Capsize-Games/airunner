@@ -9,7 +9,6 @@ from typing import (
     Sequence,
     Union,
 )
-import logging
 import os
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -25,6 +24,8 @@ from airunner.components.llm.adapters.mixins import (
     ToolCallingMixin,
     GenerationMixin,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ChatHuggingFaceLocal(
@@ -149,7 +150,7 @@ class ChatHuggingFaceLocal(
             Logger instance for this class
         """
         if not hasattr(self, "_logger"):
-            self._logger = logging.getLogger(__name__)
+            self._logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         return self._logger
 
     def set_interrupted(self, value: bool) -> None:

@@ -5,7 +5,6 @@ Handles batching and parallel processing of LLM requests to improve
 throughput for eval testing and high-load scenarios.
 """
 
-import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, Future
@@ -13,6 +12,9 @@ from dataclasses import dataclass, field
 from queue import Queue, Empty
 from typing import Dict, Any, Optional, Callable, List
 from uuid import uuid4
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 @dataclass
@@ -88,7 +90,7 @@ class BatchRequestManager:
         self.max_workers = max_workers
         self.enable_batching = enable_batching
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.request_queue: Queue[BatchRequest] = Queue()
         self.active_requests: Dict[str, BatchRequest] = {}
         self.executor = ThreadPoolExecutor(max_workers=max_workers)

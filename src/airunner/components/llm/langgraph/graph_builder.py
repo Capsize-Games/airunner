@@ -4,12 +4,14 @@ This module provides a high-level interface for constructing LangGraph
 workflows programmatically.
 """
 
-import logging
 from typing import Dict, List, Callable, Any, Optional
 from langgraph.graph import StateGraph, END
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class LangGraphBuilder:

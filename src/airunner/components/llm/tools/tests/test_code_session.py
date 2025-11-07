@@ -2,7 +2,6 @@
 
 import time
 import pytest
-from pathlib import Path
 
 from airunner.components.llm.tools.code_session import (
     CodeSession,

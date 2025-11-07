@@ -5,7 +5,6 @@ Automatically injects relevant facts from working memory into LLM prompts
 to provide context and improve response quality.
 """
 
-import logging
 from typing import Optional, List
 
 from airunner.components.knowledge.working_memory import WorkingMemory
@@ -13,6 +12,8 @@ from airunner.components.knowledge.summary_generator import (
     SummaryGenerator,
     SummaryPeriod,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ContextInjectionMixin:
@@ -32,7 +33,7 @@ class ContextInjectionMixin:
 
     def __init__(self):
         """Initialize context injection components."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.working_memory: Optional[WorkingMemory] = None
         self.summary_generator: Optional[SummaryGenerator] = None
         self._context_injection_enabled = True

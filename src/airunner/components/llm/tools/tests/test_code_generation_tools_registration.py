@@ -1,6 +1,5 @@
 """Test code generation tool registration."""
 
-import pytest
 from airunner.components.llm.core.tool_registry import (
     ToolRegistry,
     ToolCategory,

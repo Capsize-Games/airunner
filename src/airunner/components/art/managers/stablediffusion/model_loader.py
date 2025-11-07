@@ -1,7 +1,6 @@
 """Utilities for loading/unloading Stable Diffusion related resources."""
 
 import os
-import logging
 from typing import Any, Dict, Optional
 
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
@@ -11,9 +10,10 @@ from transformers import CLIPFeatureExtractor
 from controlnet_aux.processor import MODELS as controlnet_aux_models
 from airunner.components.art.data.lora import Lora
 from airunner.components.art.data.schedulers import Schedulers
-from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY
+from airunner.settings import AIRUNNER_LOCAL_FILES_ONLY, AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class SomeModelClass:  # legacy test helper

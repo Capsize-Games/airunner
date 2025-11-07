@@ -6,16 +6,17 @@ Provides export to JSON/CSV and bulk operations for knowledge facts.
 
 import json
 import csv
-import logging
 from datetime import datetime
 from typing import List, Optional
 from pathlib import Path
 
 from airunner.components.knowledge.data.models import KnowledgeFact
 from airunner.components.data.session_manager import session_scope
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class KnowledgeExporter:

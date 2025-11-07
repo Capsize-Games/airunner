@@ -5,7 +5,6 @@ Provides a UI for viewing, creating, editing, and managing knowledge facts.
 Displays all facts with search, filtering, and CRUD operations.
 """
 
-import logging
 from typing import Dict
 
 from PySide6.QtCore import Slot
@@ -26,9 +25,11 @@ from airunner.components.knowledge.gui.widgets.knowledge_editor_widget import (
 from airunner.components.knowledge.data.models import KnowledgeFact
 from airunner.enums import SignalCode
 from airunner.components.data.session_manager import session_scope
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class KnowledgeManagerWidget(BaseWidget):

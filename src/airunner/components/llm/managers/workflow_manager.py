@@ -3,7 +3,6 @@
 This is the refactored version with functionality split into focused mixins.
 """
 
-import logging
 from typing import Any, Annotated, Optional, List, Callable
 from typing_extensions import TypedDict
 
@@ -34,6 +33,8 @@ from airunner.components.llm.managers.mixins.node_functions_mixin import (
 from airunner.components.llm.managers.mixins.streaming_mixin import (
     StreamingMixin,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class WorkflowState(TypedDict):
@@ -86,7 +87,7 @@ class WorkflowManager(
         # Initialize all mixins
         super().__init__()
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
         # Core configuration
         self._system_prompt = system_prompt
@@ -143,9 +144,6 @@ class WorkflowManager(
         Args:
             conversation_id: Conversation ID to use for storing messages
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
 
         self._conversation_id = conversation_id
         self._thread_id = str(conversation_id)
@@ -157,7 +155,7 @@ class WorkflowManager(
         # and must be cleared to prevent contamination from previous conversations
         if hasattr(self._memory, "clear_checkpoints"):
             self._memory.clear_checkpoints()
-            logger.info(
+            self.logger.info(
                 f"Cleared checkpoint state for conversation {conversation_id}"
             )
 

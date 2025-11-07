@@ -10,7 +10,9 @@ This QObject exposes slots for JS to call, and emits signals to the ChatPromptWi
 """
 
 from PySide6.QtCore import QObject, Slot
-import logging
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ChatPromptBridge(QObject):
@@ -21,7 +23,7 @@ class ChatPromptBridge(QObject):
     def __init__(self, widget):
         super().__init__()
         self.widget = widget
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     @Slot(int)
     @Slot(str)

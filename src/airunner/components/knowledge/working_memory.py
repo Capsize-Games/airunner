@@ -5,7 +5,6 @@ Maintains a cache of recently extracted facts for quick access and
 context injection into LLM prompts.
 """
 
-import logging
 from collections import OrderedDict
 from typing import List, Optional
 
@@ -13,6 +12,8 @@ from airunner.components.knowledge.knowledge_memory_manager import (
     KnowledgeMemoryManager,
 )
 from airunner.components.knowledge.data.models import KnowledgeFact
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class WorkingMemory:
@@ -35,7 +36,7 @@ class WorkingMemory:
         Args:
             max_size: Maximum number of facts to cache (default 20)
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.max_size = max_size
         self.cache: OrderedDict[int, KnowledgeFact] = OrderedDict()
         self.km = KnowledgeMemoryManager()

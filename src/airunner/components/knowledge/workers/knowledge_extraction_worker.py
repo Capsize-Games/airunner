@@ -6,7 +6,6 @@ factual information when auto_extract_knowledge is enabled.
 """
 
 import json
-import logging
 from typing import Dict, List, Optional, Any
 
 from airunner.components.application.workers.worker import Worker
@@ -32,7 +31,6 @@ class KnowledgeExtractionWorker(Worker):
 
     def __init__(self):
         super().__init__()
-        self.logger = logging.getLogger(__name__)
         self.knowledge_manager = None
 
         # Register signal handlers

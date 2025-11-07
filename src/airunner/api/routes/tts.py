@@ -4,7 +4,6 @@ Text-to-Speech endpoints.
 Integrates with TTSAPIService for speech synthesis.
 """
 
-import logging
 import asyncio
 import io
 from typing import Optional, List
@@ -12,7 +11,10 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
 
 

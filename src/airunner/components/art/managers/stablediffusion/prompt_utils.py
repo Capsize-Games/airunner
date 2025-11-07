@@ -4,12 +4,12 @@ Handles prompt string formatting, prompt embedding, and compel integration.
 Follows project standards: docstrings, type hints, logging.
 """
 
-import logging
 from typing import Optional
 from airunner.components.art.managers.stablediffusion.prompt_weight_bridge import (
     PromptWeightBridge,
 )
 from airunner.settings import (
+    AIRUNNER_LOG_LEVEL,
     AIRUNNER_PHOTO_REALISTIC_PROMPT,
     AIRUNNER_ILLUSTRATION_PROMPT,
     AIRUNNER_PAINTING_PROMPT,
@@ -18,8 +18,9 @@ from airunner.settings import (
     AIRUNNER_PAINTING_NEGATIVE_PROMPT,
 )
 from airunner.enums import ImagePreset
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def format_prompt(

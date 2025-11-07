@@ -10,7 +10,7 @@ and editor tab updates.
 from typing import Optional, Callable
 import time
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from airunner.components.document_editor.workspace_manager import (
     WorkspaceManager,

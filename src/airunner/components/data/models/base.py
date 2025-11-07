@@ -1,13 +1,14 @@
 from functools import lru_cache
-import logging
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.inspection import inspect
 
 from airunner.components.data.session_manager import session_scope
 from airunner.components.data.models.base_manager import BaseManager
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 Base = declarative_base()
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class BaseModel(Base):

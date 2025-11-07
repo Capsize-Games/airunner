@@ -9,11 +9,8 @@ tools when given natural language prompts like:
 
 import pytest
 import logging
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock
 from airunner.components.eval.utils.tracking import track_trajectory_sync
-from airunner.components.eval.utils.trajectory_evaluator import (
-    trajectory_subsequence,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +44,8 @@ class TestUserDataToolEval:
         )
 
         response = result["response"]
-        trajectory = result["trajectory"]
-        tools = result["tools"]
+        result["trajectory"]
+        result["tools"]
 
         # NOTE: Current behavior - LLM acknowledges but doesn't call tools
         # This is a known limitation with text-based models that don't

@@ -7,7 +7,7 @@ AI-assisted code creation, editing, and validation.
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional
 from pathlib import Path
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
@@ -74,7 +74,7 @@ def _get_quality_manager(
 ) -> CodeQualityManager:
     """Get or create quality manager singleton."""
     global _quality_manager
-    workspace = _get_workspace_manager(workspace_path)
+    _get_workspace_manager(workspace_path)
     if _quality_manager is None:
         handler = _get_code_handler(workspace_path)
         validator = _get_validator(workspace_path)

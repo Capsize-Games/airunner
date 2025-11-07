@@ -1,6 +1,5 @@
 """LangChain message history implementation that persists to the Conversation database."""
 
-import logging
 from typing import List, Optional
 
 from langchain_core.chat_history import BaseChatMessageHistory

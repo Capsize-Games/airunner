@@ -5,11 +5,12 @@ Handles the execution of tools with automatic dependency injection
 of agent, API, and other required context.
 """
 
-import logging
 from typing import Any, Optional, Callable
 from llama_index.core.tools import FunctionTool
 
 from airunner.components.llm.core.tool_registry import ToolRegistry, ToolInfo
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ToolExecutor:
@@ -24,7 +25,7 @@ class ToolExecutor:
         self,
         agent: Optional[Any] = None,
         api: Optional[Any] = None,
-        logger: Optional[logging.Logger] = None,
+        logger: Optional[Any] = None,
     ):
         """
         Initialize tool executor.
@@ -36,7 +37,7 @@ class ToolExecutor:
         """
         self.agent = agent
         self.api = api
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = logger or get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def wrap_tool(self, tool_info: ToolInfo) -> Callable:
         """
