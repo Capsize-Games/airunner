@@ -113,11 +113,15 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                     )
 
                     # Store full checkpoint state (including ToolMessages)
-                    thread_id = "default"
+                    # Update cache with ALL messages (including ToolMessages)
+                # CRITICAL: Use conversation_id as thread_id to prevent contamination
+                # between different conversations (e.g., in tests)
+                if messages:
+                    thread_id = str(self.message_history.conversation_id)
                     self._checkpoint_state[thread_id] = {
-                        "messages": messages,  # Full message list with ToolMessages
                         "checkpoint": checkpoint,
                         "metadata": metadata,
+                        "messages": messages,
                     }
                     self.logger.info(
                         f"💾 Stored full checkpoint state with {len(messages)} messages for thread {thread_id}"
