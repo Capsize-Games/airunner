@@ -18,7 +18,7 @@ class StreamingMixin:
         """Initialize streaming mixin."""
         self.logger = logging.getLogger(__name__)
         self._compiled_workflow = None
-        # Don't initialize _thread_id here - WorkflowManager will set it
+        self._thread_id = "default"
         self._interrupted = False
 
     def invoke(self, user_input: str) -> Dict[str, Any]:
