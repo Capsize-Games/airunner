@@ -6,15 +6,16 @@ and saving new content to the knowledge base.
 """
 
 import os
-import logging
 from typing import Annotated, Any
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
 from airunner.components.documents.data.models.document import Document
 from airunner.components.data.session_manager import session_scope
 from airunner.enums import SignalCode
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 @tool(

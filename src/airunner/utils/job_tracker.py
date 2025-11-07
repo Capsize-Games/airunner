@@ -5,7 +5,6 @@ Used by art generation, TTS, and other long-running operations that need
 to report progress and return results asynchronously.
 """
 
-import logging
 import asyncio
 import uuid
 from typing import Dict, Optional, Any
@@ -13,8 +12,11 @@ from enum import Enum
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class JobStatus(Enum):

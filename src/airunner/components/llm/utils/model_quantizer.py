@@ -14,10 +14,12 @@ See:
 
 from pathlib import Path
 from typing import Optional, Literal, Callable
-import logging
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class ModelQuantizer:

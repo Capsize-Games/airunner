@@ -9,6 +9,12 @@ from datetime import datetime
 from typing import Annotated
 
 from airunner.components.llm.core.tool_registry import tool, ToolCategory
+from airunner.components.calendar.data.event import Event
+from airunner.components.data.session_manager import session_scope
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 @tool(
@@ -113,12 +119,6 @@ def list_calendar_events(
         Formatted list of events
     """
     try:
-        from airunner.components.calendar.data.event import Event
-        from airunner.components.data.session_manager import session_scope
-        import logging
-
-        logger = logging.getLogger(__name__)
-
         with session_scope() as session:
             # DEBUG: First check what events exist in database
             all_events = session.query(Event).all()
@@ -181,9 +181,7 @@ def list_calendar_events(
 
             return "\n".join(result_lines)
     except Exception as e:
-        import logging
-
-        logging.getLogger(__name__).error(
+        logger.error(
             f"[CALENDAR DEBUG] Error listing events: {e}", exc_info=True
         )
         return f"Error listing events: {str(e)}"

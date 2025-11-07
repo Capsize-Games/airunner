@@ -5,11 +5,14 @@ Runs an HTTP server with /health, /llm, /art, /stt, /tts endpoints
 without requiring Qt GUI components.
 """
 
-import logging
 import threading
 from http.server import HTTPServer
 from socketserver import ThreadingMixIn
 from airunner.components.server.api.server import AIRunnerAPIRequestHandler
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -43,26 +46,24 @@ class APIServerThread(threading.Thread):
             self.server = ThreadedHTTPServer(
                 (self.host, self.port), AIRunnerAPIRequestHandler
             )
-            logging.info(
+            logger.info(
                 f"API server listening on http://{self.host}:{self.port}"
             )
-            logging.info(
-                "Available endpoints: /health, /llm, /art, /stt, /tts"
-            )
+            logger.info("Available endpoints: /health, /llm, /art, /stt, /tts")
 
             # Serve requests until stopped
             while not self._stop_event.is_set():
                 self.server.handle_request()
 
         except Exception as e:
-            logging.error(f"API server error: {e}", exc_info=True)
+            logger.error(f"API server error: {e}", exc_info=True)
         finally:
             if self.server:
                 self.server.server_close()
 
     def stop(self):
         """Stop the server gracefully."""
-        logging.info("Stopping API server...")
+        logger.info("Stopping API server...")
         self._stop_event.set()
         if self.server:
             self.server.shutdown()

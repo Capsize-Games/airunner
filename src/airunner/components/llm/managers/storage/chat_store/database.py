@@ -9,6 +9,10 @@ from llama_index.core.base.llms.types import TextBlock, MessageRole
 
 from airunner.components.llm.data.conversation import Conversation
 from airunner.components.llm.utils import strip_names_from_message
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class SafeChatMessage(ChatMessage):
@@ -156,9 +160,8 @@ class DatabaseChatStore(BaseChatStore):
             try:
                 chat_msg = SafeChatMessage(role=role, blocks=sanitized_blocks)
             except Exception as e:
-                import logging
 
-                logging.getLogger(__name__).warning(
+                logger.warning(
                     f"Failed to construct SafeChatMessage at index {i}: {message} ({e})"
                 )
                 chat_msg = SafeChatMessage(

@@ -3,12 +3,14 @@
 Handles workflow execution via invoke and stream methods.
 """
 
-import logging
 import uuid
 from contextlib import nullcontext
 from typing import Optional, Dict, Any
 
 from langchain_core.messages import HumanMessage, AIMessage
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class StreamingMixin:
@@ -16,7 +18,7 @@ class StreamingMixin:
 
     def __init__(self):
         """Initialize streaming mixin."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._compiled_workflow = None
         self._thread_id = "default"
         self._interrupted = False

@@ -1,8 +1,11 @@
-import logging
 from pathlib import Path
 from typing import Optional, Dict
 import pyrosm
 import time
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def extract_geojson_from_pbf(
@@ -20,7 +23,6 @@ def extract_geojson_from_pbf(
     Returns:
         Dict[str, Optional[str]]: Dictionary with keys for each data type containing the paths to the generated GeoJSON files, or None if extraction failed.
     """
-    logger = logging.getLogger(__name__)
     pbf = Path(pbf_path)
     supported = [
         "buildings",
@@ -101,7 +103,6 @@ def download_and_extract(
     Returns:
         Dict[str, Optional[str]]: Dictionary with keys for each data type containing the paths to the generated GeoJSON files, or None if extraction failed.
     """
-    logger = logging.getLogger(__name__)
     from pathlib import Path
     import time
 

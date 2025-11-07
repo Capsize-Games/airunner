@@ -4,7 +4,6 @@ Handles LangGraph node implementations (_call_model, _force_response_node, _rout
 These are broken into focused helper methods for maintainability.
 """
 
-import logging
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -15,6 +14,9 @@ from langchain_core.messages import (
     trim_messages,
 )
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
 if TYPE_CHECKING:
     from airunner.components.llm.managers.workflow_manager import WorkflowState
 
@@ -24,7 +26,7 @@ class NodeFunctionsMixin:
 
     def __init__(self):
         """Initialize node functions mixin."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._system_prompt = ""
         self._chat_model = None
         self._tools = []

@@ -3,8 +3,10 @@
 Handles tool binding, compact schema generation, and tool configuration.
 """
 
-import logging
 from typing import List, Callable
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ToolManagementMixin:
@@ -12,7 +14,7 @@ class ToolManagementMixin:
 
     def __init__(self):
         """Initialize tool management mixin."""
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._tools: List[Callable] = []
         self._chat_model = None
         self._original_chat_model = None

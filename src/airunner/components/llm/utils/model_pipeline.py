@@ -13,15 +13,16 @@ import shutil
 from pathlib import Path
 from typing import Optional, Callable
 import json
-import logging
 
 from airunner.components.llm.utils.model_downloader import (
     HuggingFaceDownloader,
 )
 from airunner.components.llm.utils.model_quantizer import ModelQuantizer
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class ModelPipeline:
