@@ -101,7 +101,7 @@ Always prioritize code safety and security. Never execute untrusted code without
         logger.info(f"Retrieved {len(code_tools)} CODE tools")
 
         # Convert ToolInfo to actual callable functions
-        tools = [tool.function for tool in code_tools]
+        tools = [tool.func for tool in code_tools]
         return tools
 
     def _analyze_code_request(self, state: CodeState) -> dict:

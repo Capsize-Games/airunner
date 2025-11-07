@@ -251,25 +251,23 @@ def test_layer_position_persists_across_viewport_changes():
     # Get updated cached position (simulates stored DB value after compensation)
     updated_cached_pos = view.scene.original_item_positions.get(layer_item)
 
-    # The cached position should have been updated by viewport compensation
-    # to maintain visual stability, but canvas_offset should remain 0
+    # The cached position should NOT be updated by viewport compensation
+    # Grid compensation handles the visual shift without modifying stored positions
     assert view.canvas_offset.x() == 0.0
     assert view.canvas_offset.y() == 0.0
 
-    # Display position should have shifted by half the viewport size change
+    # Display position shift comes from grid_compensation, not position changes
     expected_shift_x = (new_size.width() - old_size.width()) / 2
     expected_shift_y = (new_size.height() - old_size.height()) / 2
 
-    # Updated cached position reflects the shift
+    # Verify grid_compensation was updated (not the cached positions)
+    assert abs(view._grid_compensation_offset.x() - expected_shift_x) < 1.0
+    assert abs(view._grid_compensation_offset.y() - expected_shift_y) < 1.0
+
+    # Cached position should remain unchanged (grid_compensation handles the shift)
     if updated_cached_pos:
-        assert (
-            abs(updated_cached_pos.x() - (stored_abs_x + expected_shift_x))
-            < 1.0
-        )
-        assert (
-            abs(updated_cached_pos.y() - (stored_abs_y + expected_shift_y))
-            < 1.0
-        )
+        assert abs(updated_cached_pos.x() - stored_abs_x) < 1.0
+        assert abs(updated_cached_pos.y() - stored_abs_y) < 1.0
 
 
 def test_scene_update_image_position_applies_offsets():

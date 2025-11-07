@@ -47,6 +47,7 @@ from airunner.components.llm.data.llm_tool import LLMTool
 from airunner.components.llm.data.fine_tuned_model import FineTunedModel
 from airunner.components.llm.data.target_files import TargetFiles
 from airunner.components.llm.data.target_directories import TargetDirectories
+from airunner.components.documents.data.models.document import Document
 from airunner.components.knowledge.data.models import (
     KnowledgeFact,
     ConversationSummary,

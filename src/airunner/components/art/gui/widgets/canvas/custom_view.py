@@ -241,7 +241,7 @@ class CustomGraphicsView(
         return self.property("canvas_type")
 
     @property
-    def __do_show_active_grid_area(self) -> bool:
+    def _do_show_active_grid_area(self) -> bool:
         """Check if active grid area should be shown for this canvas type.
 
         Returns:

@@ -11,9 +11,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import uvicorn
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.api.routes import health, llm, art, tts, stt
 
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -83,8 +85,6 @@ def create_app(
         logger.info(f"CORS enabled with origins: {allowed_origins}")
 
     # Register routers
-    from airunner.api.routes import health, llm, art, tts, stt
-
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(llm.router, prefix="/api/v1/llm", tags=["llm"])
     app.include_router(art.router, prefix="/api/v1/art", tags=["art"])
@@ -137,8 +137,6 @@ class APIServer:
 
     def start(self):
         """Start the API server (blocking call)."""
-        import uvicorn
-
         config = uvicorn.Config(
             self.app, host=self.host, port=self.port, log_level="info"
         )

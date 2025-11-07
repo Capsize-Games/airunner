@@ -13,6 +13,10 @@ from airunner.components.nodegraph.tools.workflow_tools import (
     switch_mode,
 )
 from airunner.components.nodegraph.data.workflow import Workflow
+from airunner.components.nodegraph.data.workflow_node import WorkflowNode
+from airunner.components.nodegraph.data.workflow_connection import (
+    WorkflowConnection,
+)
 
 
 class TestWorkflowTools:
@@ -23,7 +27,7 @@ class TestWorkflowTools:
         """Set up test environment."""
         # Clear database before each test
         for workflow in Workflow.objects.all():
-            Workflow.objects.delete_by_id(workflow.id)
+            Workflow.objects.delete(workflow.id)
 
     def test_create_workflow_basic(self):
         """Test creating a basic workflow."""
@@ -60,11 +64,17 @@ class TestWorkflowTools:
         assert "2 nodes and 1 connections" in result
 
         # Verify workflow was created
-        workflow = Workflow.objects.filter_by(name="test_workflow").first()
+        workflow = Workflow.objects.filter_by_first(name="test_workflow")
         assert workflow is not None
         assert workflow.description == "A test workflow"
-        assert len(workflow.nodes) == 2
-        assert len(workflow.connections) == 1
+
+        # Verify nodes and connections (query separately since dataclass doesn't have relationships)
+        nodes = WorkflowNode.objects.filter_by(workflow_id=workflow.id)
+        connections = WorkflowConnection.objects.filter_by(
+            workflow_id=workflow.id
+        )
+        assert len(nodes) == 2
+        assert len(connections) == 1
 
     def test_create_workflow_with_variables(self):
         """Test creating workflow with variables."""
@@ -88,9 +98,9 @@ class TestWorkflowTools:
 
         assert "Successfully created" in result
 
-        workflow = Workflow.objects.filter_by(
-            name="workflow_with_vars"
-        ).first()
+        workflows = Workflow.objects.filter_by(name="workflow_with_vars")
+        assert workflows and len(workflows) > 0
+        workflow = workflows[0]
         assert workflow.variables == variables
 
     def test_create_workflow_duplicate_name(self):
@@ -183,7 +193,7 @@ class TestWorkflowTools:
             connections=connections,
         )
 
-        workflow = Workflow.objects.filter_by(name="detail_test").first()
+        workflow = Workflow.objects.filter_by_first(name="detail_test")
         result = get_workflow(workflow.id)
 
         assert "Workflow: detail_test" in result
@@ -209,7 +219,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="to_delete").first()
+        workflow = Workflow.objects.filter_by_first(name="to_delete")
         workflow_id = workflow.id
 
         result = delete_workflow(workflow_id)
@@ -217,7 +227,7 @@ class TestWorkflowTools:
         assert "Successfully deleted workflow 'to_delete'" in result
 
         # Verify deletion
-        deleted = Workflow.objects.get_by_id(workflow_id)
+        deleted = Workflow.objects.get(workflow_id)
         assert deleted is None
 
     def test_delete_workflow_not_found(self):
@@ -235,7 +245,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="modify_test").first()
+        workflow = Workflow.objects.filter_by_first(name="modify_test")
 
         result = modify_workflow(
             workflow_id=workflow.id,
@@ -246,7 +256,7 @@ class TestWorkflowTools:
         assert "updated description" in result
 
         # Verify update
-        updated = Workflow.objects.get_by_id(workflow.id)
+        updated = Workflow.objects.get(workflow.id)
         assert updated.description == "Updated description"
 
     def test_modify_workflow_add_nodes(self):
@@ -258,8 +268,9 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="add_nodes_test").first()
-        initial_count = len(workflow.nodes)
+        workflow = Workflow.objects.filter_by_first(name="add_nodes_test")
+        initial_nodes = WorkflowNode.objects.filter_by(workflow_id=workflow.id)
+        initial_count = len(initial_nodes)
 
         new_nodes = [
             {
@@ -279,8 +290,8 @@ class TestWorkflowTools:
         assert "added 2 node(s)" in result
 
         # Verify nodes added
-        updated = Workflow.objects.get_by_id(workflow.id)
-        assert len(updated.nodes) == initial_count + 2
+        updated_nodes = WorkflowNode.objects.filter_by(workflow_id=workflow.id)
+        assert len(updated_nodes) == initial_count + 2
 
     def test_modify_workflow_remove_nodes(self):
         """Test removing nodes from workflow."""
@@ -295,7 +306,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="remove_nodes_test").first()
+        workflow = Workflow.objects.filter_by_first(name="remove_nodes_test")
 
         result = modify_workflow(
             workflow_id=workflow.id, remove_node_names=["n2", "n3"]
@@ -304,9 +315,9 @@ class TestWorkflowTools:
         assert "removed 2 node(s)" in result
 
         # Verify nodes removed
-        updated = Workflow.objects.get_by_id(workflow.id)
-        assert len(updated.nodes) == 1
-        assert updated.nodes[0].name == "n1"
+        updated_nodes = WorkflowNode.objects.filter_by(workflow_id=workflow.id)
+        assert len(updated_nodes) == 1
+        assert updated_nodes[0].name == "n1"
 
     def test_modify_workflow_add_connections(self):
         """Test adding connections to workflow."""
@@ -320,9 +331,8 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(
-            name="add_connections_test"
-        ).first()
+        workflows = Workflow.objects.filter_by(name="add_connections_test")
+        workflow = workflows[0] if workflows else None
 
         new_connections = [
             {
@@ -340,8 +350,10 @@ class TestWorkflowTools:
         assert "added 1 connection(s)" in result
 
         # Verify connection added
-        updated = Workflow.objects.get_by_id(workflow.id)
-        assert len(updated.connections) == 1
+        updated_connections = WorkflowConnection.objects.filter_by(
+            workflow_id=workflow.id
+        )
+        assert len(updated_connections) == 1
 
     def test_modify_workflow_no_changes(self):
         """Test modifying workflow with no changes."""
@@ -352,7 +364,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="no_changes_test").first()
+        workflow = Workflow.objects.filter_by_first(name="no_changes_test")
 
         result = modify_workflow(workflow_id=workflow.id)
 
@@ -367,7 +379,7 @@ class TestWorkflowTools:
             connections=[],
         )
 
-        workflow = Workflow.objects.filter_by(name="execute_test").first()
+        workflow = Workflow.objects.filter_by_first(name="execute_test")
 
         # Mock API
         mock_api = Mock()

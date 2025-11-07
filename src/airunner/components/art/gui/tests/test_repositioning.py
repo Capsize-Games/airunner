@@ -78,10 +78,18 @@ def test_update_active_grid_area_position_applies_offsets():
     aga = view.active_grid_area
     assert aga is not None
 
-    # show_active_grid_area sets display as absolute - canvas_offset
-    # (compensation applied later by update_active_grid_area_position)
-    expected_x = active.pos_x - view.canvas_offset.x()
-    expected_y = active.pos_y - view.canvas_offset.y()
+    # show_active_grid_area uses CanvasPositionManager.absolute_to_display which applies:
+    # display = absolute - canvas_offset + grid_compensation
+    expected_x = (
+        active.pos_x
+        - view.canvas_offset.x()
+        + view._grid_compensation_offset.x()
+    )
+    expected_y = (
+        active.pos_y
+        - view.canvas_offset.y()
+        + view._grid_compensation_offset.y()
+    )
 
     # scenePos may be floating; compare rounded ints
     pos = aga.scenePos()
@@ -378,10 +386,11 @@ def test_apply_viewport_compensation_updates_positions():
     assert view._grid_compensation_offset.x() == expected_comp_x
     assert view._grid_compensation_offset.y() == expected_comp_y
 
-    # Check item positions were updated
+    # Check item positions were NOT updated (grid_compensation handles the shift)
+    # Modifying original_item_positions would double-apply the compensation
     updated_pos = view.scene.original_item_positions[mock_item]
-    assert updated_pos.x() == initial_item_pos.x() + shift_x
-    assert updated_pos.y() == initial_item_pos.y() + shift_y
+    assert updated_pos.x() == initial_item_pos.x()
+    assert updated_pos.y() == initial_item_pos.y()
 
 
 def test_showEvent_loads_offset_and_preserves_it():

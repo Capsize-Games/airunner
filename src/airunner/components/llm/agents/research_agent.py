@@ -8,6 +8,7 @@ This agent handles:
 - Organizing research findings
 - Citation management
 """
+
 from typing import Any, Annotated, List, Callable
 from typing_extensions import TypedDict
 
@@ -101,7 +102,7 @@ Always verify information and cite sources properly."""
         logger.info(f"Retrieved {len(research_tools)} RESEARCH tools")
 
         # Convert ToolInfo to actual callable functions
-        tools = [tool.function for tool in research_tools]
+        tools = [tool.func for tool in research_tools]
         return tools
 
     def _plan_research(self, state: ResearchState) -> dict:

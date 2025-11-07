@@ -86,7 +86,7 @@ class GridDrawingMixin:
         Creates active grid area if needed, positions it based on saved settings,
         and registers signal handlers for position updates.
         """
-        if not self.__do_show_active_grid_area:
+        if not self._do_show_active_grid_area:
             # Ensure it's removed if disabled
             if self.active_grid_area:
                 self.remove_scene_item(self.active_grid_area)

@@ -34,7 +34,7 @@ class TestableGridDrawingMixin(GridDrawingMixin):
         self._grid_compensation_offset = QPointF(0, 0)
         self.canvas_offset = QPointF(0, 0)
         self.current_tool = CanvasToolName.BRUSH
-        self._GridDrawingMixin__do_show_active_grid_area = True
+        self._do_show_active_grid_area = True
         self._scene = None
 
     @property
@@ -277,7 +277,7 @@ class TestShowActiveGridArea:
     ):
         """Test that active grid area is removed when disabled."""
         mixin._scene = mock_scene
-        mixin._GridDrawingMixin__do_show_active_grid_area = False
+        mixin._do_show_active_grid_area = False
         mixin.active_grid_area = MagicMock()
 
         mixin.show_active_grid_area()
