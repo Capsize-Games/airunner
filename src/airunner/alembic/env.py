@@ -44,9 +44,13 @@ from airunner.components.calendar.data.reminder import Reminder
 from airunner.components.calendar.data.recurring_event import RecurringEvent
 from airunner.components.agents.data.agent_config import AgentConfig
 from airunner.components.llm.data.llm_tool import LLMTool
-from airunner.components.llm.data.fine_tuned_model import FineTunedModel
-from airunner.components.llm.data.target_files import TargetFiles
-from airunner.components.llm.data.target_directories import TargetDirectories
+from airunner.components.llm.data.fine_tuned_model import (
+    FineTunedModel,
+)  # noqa: F401
+from airunner.components.llm.data.target_files import TargetFiles  # noqa: F401
+from airunner.components.llm.data.target_directories import (
+    TargetDirectories,
+)  # noqa: F401
 from airunner.components.documents.data.models.document import Document
 from airunner.components.knowledge.data.models import (
     KnowledgeFact,

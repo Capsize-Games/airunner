@@ -39,7 +39,12 @@ for i in range(120):
         if response.status_code == 200:
             print("✓ Server is ready!")
             break
-    except:
+    except (
+        requests.RequestException,
+        requests.ConnectionError,
+        requests.Timeout,
+    ):
+        # Server not ready yet, continue waiting
         pass
 
     time.sleep(0.5)
