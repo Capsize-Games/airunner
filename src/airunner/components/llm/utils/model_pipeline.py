@@ -8,6 +8,7 @@ This module provides a unified interface for:
 4. Managing model registry
 """
 
+import logging
 import os
 import shutil
 from pathlib import Path

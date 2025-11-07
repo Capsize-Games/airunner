@@ -104,7 +104,7 @@ Always be honest about uncertainty and ask for clarification when needed."""
         logger.info(f"Retrieved {len(qa_tools)} QA tools")
 
         # Convert ToolInfo to actual callable functions
-        tools = [tool.function for tool in qa_tools]
+        tools = [tool.func for tool in qa_tools]
         return tools
 
     def _analyze_question(self, state: QAState) -> dict:

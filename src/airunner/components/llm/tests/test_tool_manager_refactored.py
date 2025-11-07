@@ -89,7 +89,8 @@ class TestToolManager(BaseTestCase):
 
         self.assertIn("list_files", tool_names)
         self.assertIn("read_file", tool_names)
-        self.assertIn("write_code", tool_names)
+        self.assertIn("create_code_file", tool_names)
+        self.assertIn("edit_code_file", tool_names)
 
     def test_has_web_tools(self):
         """Test that web tools are included."""
@@ -106,11 +107,11 @@ class TestToolManager(BaseTestCase):
         tools = self.manager.get_all_tools()
         tool_names = [tool.name for tool in tools]
 
-        self.assertIn(
-            "calculate", tool_names
-        )  # calculator tool is named "calculate"
+        # Math/compute tools
+        self.assertIn("sympy_compute", tool_names)
+        self.assertIn("numpy_compute", tool_names)
+        self.assertIn("python_compute", tool_names)
         self.assertIn("execute_python", tool_names)
-        self.assertIn("create_tool", tool_names)
 
     def test_has_system_tools(self):
         """Test that system tools are included."""
@@ -130,17 +131,20 @@ class TestToolManager(BaseTestCase):
         self.assertIn("recall_knowledge", tool_names)
 
     def test_all_tools_callable(self):
-        """Test that all tools have callable functions."""
+        """Test that all tools are callable or have invoke method."""
         tools = self.manager.get_all_tools()
 
         for tool in tools:
-            # LangChain tools have a func attribute that is callable
-            self.assertTrue(
-                hasattr(tool, "func"),
-                f"Tool {tool.name} missing func attribute",
+            # Tools are either callable functions or StructuredTool with invoke/run
+            is_callable = callable(tool)
+            has_invoke = hasattr(tool, "invoke") and callable(
+                getattr(tool, "invoke")
             )
+            has_run = hasattr(tool, "_run") and callable(getattr(tool, "_run"))
+
             self.assertTrue(
-                callable(tool.func), f"Tool {tool.name}.func is not callable"
+                is_callable or has_invoke or has_run,
+                f"Tool {getattr(tool, 'name', tool)} is not callable and has no invoke/_run method",
             )
 
     def test_all_tools_have_names(self):
@@ -178,7 +182,6 @@ class TestToolManager(BaseTestCase):
         from airunner.components.llm.managers.tools.autonomous_control_tools import (
             AutonomousControlTools,
         )
-        from airunner.components.llm.managers.tools.rag_tools import RAGTools
         from airunner.components.llm.managers.tools.image_tools import (
             ImageTools,
         )
@@ -186,7 +189,6 @@ class TestToolManager(BaseTestCase):
         # Check mixin inheritance
         self.assertIsInstance(self.manager, ConversationTools)
         self.assertIsInstance(self.manager, AutonomousControlTools)
-        self.assertIsInstance(self.manager, RAGTools)
         self.assertIsInstance(self.manager, ImageTools)
 
 

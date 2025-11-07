@@ -246,10 +246,10 @@ def test_canvas_memory_tracker():
     # Get summary
     summary = tracker.get_history_summary(scene)
     logger.info(f"  History summary:")
-    logger.info(f"    Total entries: {summary.total_entries}")
-    logger.info(f"    Total VRAM: {summary.total_vram_gb:.4f} GB")
-    logger.info(f"    Total RAM: {summary.total_ram_gb:.4f} GB")
-    logger.info(f"    Avg entry VRAM: {summary.avg_vram_per_entry_gb:.4f} GB")
+    logger.info(f"    Total entries: {summary['total_entries']}")
+    logger.info(f"    Total VRAM: {summary['vram_gb']:.4f} GB")
+    logger.info(f"    Total RAM: {summary['ram_gb']:.4f} GB")
+    logger.info(f"    VRAM (MB): {summary['vram_mb']:.2f} MB")
 
     logger.info("✓ Canvas memory tracker test passed!")
 

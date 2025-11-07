@@ -17,6 +17,24 @@ from pydantic import BaseModel
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.components.llm.api.llm_services import LLMAPIService
+from airunner.enums import SignalCode, LLMActionType
+from airunner.utils.application.signal_mediator import SignalMediator
+from airunner.components.llm.managers.llm_request import LLMRequest
+from airunner.components.llm.managers.llm_request import LLMRequest
+from airunner.components.llm.data.llm_generator_settings import (
+    LLMGeneratorSettings,
+)
+from airunner.components.model_management.model_registry import (
+    ModelRegistry,
+)
+from airunner.enums import SignalCode
+from airunner.utils.application.signal_mediator import SignalMediator
+from airunner.enums import SignalCode
+from airunner.enums import SignalCode, LLMActionType
+from airunner.utils.application.signal_mediator import SignalMediator
+from airunner.components.llm.api.llm_services import LLMAPIService
+from airunner.components.llm.managers.llm_request import LLMRequest
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
@@ -116,9 +134,6 @@ async def wait_for_llm_response(
     Raises:
         HTTPException: On timeout or error
     """
-    from airunner.enums import SignalCode, LLMActionType
-    from airunner.utils.application.signal_mediator import SignalMediator
-
     # Create future for response
     response_future = asyncio.Future()
     response_text = []
@@ -196,9 +211,6 @@ async def chat_completion(request: ChatCompletionRequest, req: Request):
 
     prompt = request.messages[-1].content
 
-    # Import LLMRequest for proper configuration
-    from airunner.components.llm.managers.llm_request import LLMRequest
-
     # Create LLM request with parameters from API request
     llm_request = LLMRequest.from_default()
     if request.max_tokens:
@@ -245,9 +257,6 @@ async def text_completion(request: CompletionRequest, req: Request):
             status_code=503, detail="LLM service not available"
         )
 
-    # Import LLMRequest for proper configuration
-    from airunner.components.llm.managers.llm_request import LLMRequest
-
     # Create LLM request with parameters
     llm_request = LLMRequest.from_default()
     llm_request.max_new_tokens = request.max_tokens
@@ -272,49 +281,27 @@ async def list_models(req: Request):
     Returns:
         List of available models
     """
-    from airunner.components.llm.data.llm_generator_settings import (
-        LLMGeneratorSettings,
-    )
-
-    try:
         # Get current model from settings
         settings = LLMGeneratorSettings.objects.first()
         current_model = settings.model_version if settings else None
 
         # Get available models from ModelRegistry if possible
         try:
-            from airunner.components.model_management.model_registry import (
-                ModelRegistry,
-            )
+        registry = ModelRegistry()
+        models = []
 
-            registry = ModelRegistry()
-            models = []
-
-            for model_id, model_spec in registry.models.items():
-                if model_spec.model_type.value == "llm":
-                    models.append(
-                        ModelInfo(
-                            id=model_id,
-                            name=model_spec.name,
-                            loaded=(model_id == current_model),
-                            size_mb=model_spec.size_mb,
-                        )
-                    )
-
-            return models
-
-        except ImportError:
-            # Fallback: just return current model
-            if current_model:
-                return [
+        for model_id, model_spec in registry.models.items():
+            if model_spec.model_type.value == "llm":
+                models.append(
                     ModelInfo(
-                        id=current_model,
-                        name=current_model,
-                        loaded=True,
-                        size_mb=None,
+                        id=model_id,
+                        name=model_spec.name,
+                        loaded=(model_id == current_model),
+                        size_mb=model_spec.size_mb,
                     )
-                ]
-            return []
+                )
+
+        return models
 
     except Exception as e:
         logger.error(f"Error listing models: {e}")
@@ -344,9 +331,6 @@ async def load_model(request: ModelLoadRequest, req: Request):
         )
 
     try:
-        from airunner.enums import SignalCode
-        from airunner.utils.application.signal_mediator import SignalMediator
-
         # Create future for load completion
         load_future = asyncio.Future()
 
@@ -409,7 +393,6 @@ async def unload_model(req: Request):
         )
 
     try:
-        from airunner.enums import SignalCode
 
         # Emit unload signal
         llm_service.emit_signal(SignalCode.LLM_UNLOAD_SIGNAL, {})
@@ -435,11 +418,6 @@ async def websocket_chat(websocket: WebSocket):
     logger.info("WebSocket connection established")
 
     try:
-        from airunner.enums import SignalCode, LLMActionType
-        from airunner.utils.application.signal_mediator import SignalMediator
-        from airunner.components.llm.api.llm_services import LLMAPIService
-        from airunner.components.llm.managers.llm_request import LLMRequest
-
         llm_service = LLMAPIService()
         mediator = SignalMediator()
 

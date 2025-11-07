@@ -37,7 +37,7 @@ def get_lat_lon(
     )
     res: Dict[str, Optional[Any]] = {"lat": None, "lon": None, "row": None}
     if not os.path.exists(path):
-        logger..error(f"ZCTA file not found: {path}")
+        logger.error(f"ZCTA file not found: {path}")
         return res
     try:
         df = pd.read_csv(path, sep="\t", dtype={"GEOID": str})
@@ -52,5 +52,5 @@ def get_lat_lon(
         res["lon"] = float(row_data["INTPTLONG"])
         res["row"] = row_data
     except Exception as e:
-        logger..exception(f"Error reading or parsing file {path}: {e}")
+        logger.exception(f"Error reading or parsing file {path}: {e}")
     return res

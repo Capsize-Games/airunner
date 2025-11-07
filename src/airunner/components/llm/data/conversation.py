@@ -203,7 +203,6 @@ class Conversation(BaseModel):
             if conversation:
                 return Conversation(**conversation.to_dict())
         except Exception as e:
-            logger = logging.getLogger(__name__)
             logger.error(f"Error in most_recent(): {e}")
 
     @classmethod

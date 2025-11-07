@@ -26,7 +26,7 @@ class ActiveGridAreaMixin:
     Dependencies:
         - self.scene: CustomScene instance
         - self.logger: Logging instance
-        - self.__do_show_active_grid_area: Bool property
+        - self._do_show_active_grid_area: Bool property
         - self.active_grid_settings: Settings for active grid
         - self.application_settings: Application settings
         - self.canvas_offset: QPointF canvas offset
@@ -44,7 +44,7 @@ class ActiveGridAreaMixin:
         Creates the active grid area if needed, positions it according to
         saved absolute coordinates, and configures mouse interaction.
         """
-        if not self.__do_show_active_grid_area:
+        if not self._do_show_active_grid_area:
             # Ensure it's removed if disabled
             if self.active_grid_area:
                 self.remove_scene_item(self.active_grid_area)

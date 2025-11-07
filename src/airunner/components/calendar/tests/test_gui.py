@@ -131,8 +131,8 @@ class TestCalendarWidget:
 
     def test_initialization(self, calendar_widget):
         """Test widget initialization."""
-        assert calendar_widget.calendar is not None
-        assert calendar_widget.events_list is not None
+        assert calendar_widget.ui.calendar_widget is not None
+        assert calendar_widget.ui.events_list is not None
         assert calendar_widget.events_cache is not None
 
     def test_load_events(self, calendar_widget):
@@ -161,7 +161,9 @@ class TestCalendarTab:
         today = date.today()
         calendar_tab.on_today_clicked()
 
-        selected = calendar_tab.calendar_widget.calendar.selectedDate()
+        selected = (
+            calendar_tab.calendar_widget.ui.calendar_widget.selectedDate()
+        )
         assert selected.year() == today.year
         assert selected.month() == today.month
         assert selected.day() == today.day

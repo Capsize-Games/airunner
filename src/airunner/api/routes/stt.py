@@ -18,6 +18,18 @@ from pydantic import BaseModel
 
 from airunner.settings import AIRUNNER_LOG_LEVEL
 from airunner.utils.application import get_logger
+from airunner.components.stt.api.stt_services import STTAPIService
+from airunner.enums import SignalCode
+from airunner.utils.application.signal_mediator import SignalMediator
+from airunner.components.model_management.model_registry import (
+    ModelRegistry,
+)
+from airunner.components.stt.data.stt_generator_settings import (
+    STTGeneratorSettings,
+)
+from airunner.enums import SignalCode
+from airunner.utils.application.signal_mediator import SignalMediator
+from airunner.components.stt.api.stt_services import STTAPIService
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 router = APIRouter()
@@ -51,8 +63,6 @@ class ModelInfo(BaseModel):
 def get_stt_service(request: Request):
     """Get STTAPIService from FastAPI app state."""
     if hasattr(request.app.state, "airunner_app"):
-        from airunner.components.stt.api.stt_services import STTAPIService
-
         return STTAPIService()
     return None
 
@@ -83,9 +93,6 @@ async def transcribe_audio(audio: UploadFile = File(...), req: Request = None):
         )
 
     try:
-        from airunner.enums import SignalCode
-        from airunner.utils.application.signal_mediator import SignalMediator
-
         # Read audio file
         audio_data = await audio.read()
 
@@ -154,13 +161,6 @@ async def list_models(req: Request):
         List of available models
     """
     try:
-        from airunner.components.model_management.model_registry import (
-            ModelRegistry,
-        )
-        from airunner.components.stt.data.stt_generator_settings import (
-            STTGeneratorSettings,
-        )
-
         # Get current model from settings
         settings = STTGeneratorSettings.objects.first()
         current_model = settings.model_version if settings else None
@@ -200,10 +200,6 @@ async def websocket_transcription(websocket: WebSocket):
     logger.info("STT WebSocket connection established")
 
     try:
-        from airunner.enums import SignalCode
-        from airunner.utils.application.signal_mediator import SignalMediator
-        from airunner.components.stt.api.stt_services import STTAPIService
-
         stt_service = STTAPIService()
         mediator = SignalMediator()
 

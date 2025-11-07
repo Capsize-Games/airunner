@@ -19,9 +19,7 @@ class PositionManagementMixin:
         - self.LayerImagePosition: Database model
     """
 
-    def original_item_positions(
-        self, layer_id: int
-    ) -> Optional[Dict[str, float]]:
+    def get_layer_position(self, layer_id: int) -> Optional[Dict[str, float]]:
         """Get original saved position for a layer from database.
 
         Args:

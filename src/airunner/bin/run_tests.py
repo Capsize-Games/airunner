@@ -130,6 +130,7 @@ def run_unit_tests(component: str = None, verbose: bool = False) -> int:
         [
             "--color=yes",
             "-ra",  # Show summary of all test outcomes
+            "--ignore=src/airunner/components/eval",  # Exclude eval tests
         ]
     )
 

@@ -96,7 +96,7 @@ Be encouraging and supportive while maintaining high quality standards."""
         logger.info(f"Retrieved {len(author_tools)} AUTHOR tools")
 
         # Convert ToolInfo to actual callable functions
-        tools = [tool.function for tool in author_tools]
+        tools = [tool.func for tool in author_tools]
         return tools
 
     def _analyze_writing_request(self, state: AuthorState) -> dict:

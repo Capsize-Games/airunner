@@ -9,7 +9,11 @@ import mimetypes
 import json
 import functools
 
-from airunner.settings import AIRUNNER_LOG_LEVEL, LOCAL_SERVER_PORT, LOCAL_SERVER_HOST
+from airunner.settings import (
+    AIRUNNER_LOG_LEVEL,
+    LOCAL_SERVER_PORT,
+    LOCAL_SERVER_HOST,
+)
 from airunner.utils.application import get_logger
 
 logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
@@ -544,8 +548,6 @@ class LocalHttpServerThread(QThread):
         self._server = None
 
     def run(self):
-        import logger
-
         static_dirs = [
             os.path.abspath(
                 os.path.join(os.path.dirname(__file__), "../../static")
