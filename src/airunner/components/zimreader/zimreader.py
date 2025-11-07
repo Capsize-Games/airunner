@@ -6,11 +6,13 @@ Provides ZIMReader for querying ZIM archives using libzim.
 """
 
 from typing import Optional, List
-import logging
 from libzim.reader import Archive, Entry
 from libzim.search import Query, Searcher
 
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class ZIMReader:

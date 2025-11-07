@@ -4,14 +4,15 @@ Handles memory-efficient settings and their application.
 Follows project standards: docstrings, type hints, logging.
 """
 
-import logging
 from typing import Any
 import torch
 from airunner.components.model_management.hardware_profiler import (
     HardwareProfiler,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 _hardware_profiler = None
 
 

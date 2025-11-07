@@ -7,10 +7,12 @@ from PySide6.QtCore import QThread
 import jinja2
 import mimetypes
 import json
-import logging
 import functools
 
-from airunner.settings import LOCAL_SERVER_PORT, LOCAL_SERVER_HOST
+from airunner.settings import AIRUNNER_LOG_LEVEL, LOCAL_SERVER_PORT, LOCAL_SERVER_HOST
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class ReusableTCPServer(ThreadingTCPServer):
@@ -130,7 +132,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                 )
         except Exception:
             # Never raise from end_headers; if header addition fails, continue
-            logging.debug(
+            logger.debug(
                 "Failed to add CORS headers for path: %s",
                 getattr(self, "path", None),
             )
@@ -243,7 +245,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                                 )
                                 != abs_directory
                             ):
-                                logging.warning(
+                                logger.warning(
                                     f"[SECURITY] Attempted escape from base directory: {abs_file_path} not in {abs_directory}"
                                 )
                                 self.send_error(403)
@@ -257,7 +259,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                         if not mime or not mime.startswith(
                             self.ALLOWED_MIME_PREFIXES
                         ):
-                            logging.warning(
+                            logger.warning(
                                 f"[SECURITY] Refused to serve file with MIME type: {mime} ({static_file_path})"
                             )
                             self.send_error(403)
@@ -294,7 +296,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             or rel_path.startswith("/")
             or os.path.isabs(rel_path)
         ):
-            logging.warning(
+            logger.warning(
                 f"[SECURITY] Directory traversal attempt: {self.path}"
             )
             self.send_error(403)
@@ -311,7 +313,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                     or normalized_rel_path.startswith("..")
                     or ".." in normalized_rel_path.split(os.sep)
                 ):
-                    logging.warning(
+                    logger.warning(
                         f"[SECURITY] Attempted directory traversal in template path: {normalized_rel_path}"
                     )
                     self.send_error(403)
@@ -324,7 +326,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                         os.path.commonpath([abs_directory, abs_target])
                         != abs_directory
                     ):
-                        logging.warning(
+                        logger.warning(
                             f"[SECURITY] Attempted escape from base directory: {abs_target} not in {abs_directory}"
                         )
                         self.send_error(403)
@@ -368,14 +370,14 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         abs_path = self.translate_path(self.path)
         ext = os.path.splitext(abs_path)[1].lower()
         if ext in self.DANGEROUS_EXTENSIONS:
-            logging.warning(
+            logger.warning(
                 f"[SECURITY] Refused to serve dangerous file type: {abs_path}"
             )
             self.send_error(403)
             return
         mime, _ = mimetypes.guess_type(abs_path)
         if not mime or not mime.startswith(self.ALLOWED_MIME_PREFIXES):
-            logging.warning(
+            logger.warning(
                 f"[SECURITY] Refused to serve file with MIME type: {mime} ({abs_path})"
             )
             self.send_error(403)
@@ -392,15 +394,15 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
         return self.do_GET()
 
     def do_POST(self):
-        logging.warning(f"[SECURITY] Blocked POST request: {self.path}")
+        logger.warning(f"[SECURITY] Blocked POST request: {self.path}")
         self.send_error(405)
 
     def do_PUT(self):
-        logging.warning(f"[SECURITY] Blocked PUT request: {self.path}")
+        logger.warning(f"[SECURITY] Blocked PUT request: {self.path}")
         self.send_error(405)
 
     def do_DELETE(self):
-        logging.warning(f"[SECURITY] Blocked DELETE request: {self.path}")
+        logger.warning(f"[SECURITY] Blocked DELETE request: {self.path}")
         self.send_error(405)
 
     def do_OPTIONS(self):
@@ -409,11 +411,11 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             self._send_lna_cors_headers()
             self.end_headers()
         else:
-            logging.warning(f"[SECURITY] Blocked OPTIONS request: {self.path}")
+            logger.warning(f"[SECURITY] Blocked OPTIONS request: {self.path}")
             self.send_error(403)
 
     def list_directory(self, path):
-        logging.warning(f"[SECURITY] Directory listing attempt: {path}")
+        logger.warning(f"[SECURITY] Directory listing attempt: {path}")
         self.send_error(403)
         return None
 
@@ -437,7 +439,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
             or ".." in safe_path.split(os.sep)
             or os.path.isabs(safe_path)
         ):
-            logging.warning(
+            logger.warning(
                 f"[SECURITY] Attempted directory traversal or absolute path: {path}"
             )
             return ""
@@ -454,7 +456,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                 or normalized_safe_path.startswith("..")
                 or ".." in normalized_safe_path.split(os.sep)
             ):
-                logging.warning(
+                logger.warning(
                     f"[SECURITY] Attempted directory traversal in static path: {normalized_safe_path}"
                 )
                 continue
@@ -465,7 +467,7 @@ class MultiDirectoryCORSRequestHandler(SimpleHTTPRequestHandler):
                     os.path.commonpath([abs_directory, abs_potential])
                     != abs_directory
                 ):
-                    logging.warning(
+                    logger.warning(
                         f"[SECURITY] Attempted escape from base directory: {abs_potential} not in {abs_directory}"
                     )
                     continue
@@ -542,7 +544,7 @@ class LocalHttpServerThread(QThread):
         self._server = None
 
     def run(self):
-        import logging
+        import logger
 
         static_dirs = [
             os.path.abspath(
@@ -572,7 +574,7 @@ class LocalHttpServerThread(QThread):
             (LOCAL_SERVER_HOST, self.port), handler_class
         )
         # Use plain HTTP for local-only communication (no SSL overhead or certificate issues)
-        logging.info(
+        logger.info(
             f"Local HTTP server running on http://{LOCAL_SERVER_HOST}:{self.port}"
         )
         self._server.serve_forever()

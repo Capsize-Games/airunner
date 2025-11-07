@@ -1,10 +1,12 @@
-import logging
 import platform
 from dataclasses import dataclass
 from typing import Optional
 
 import psutil
 import torch
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 @dataclass
@@ -26,7 +28,7 @@ class HardwareProfiler:
     """Detects and monitors system hardware resources."""
 
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def get_profile(self) -> HardwareProfile:
         """Get current hardware profile."""

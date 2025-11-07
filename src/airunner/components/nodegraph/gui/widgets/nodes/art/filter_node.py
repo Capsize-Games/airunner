@@ -1,7 +1,6 @@
 """Image Filter node - following ImageDisplayNode pattern."""
 
 from typing import Any, Dict, Optional
-import logging
 
 from PIL.Image import Image
 from PySide6.QtWidgets import QComboBox, QWidget, QVBoxLayout
@@ -9,6 +8,8 @@ from PySide6.QtWidgets import QComboBox, QWidget, QVBoxLayout
 from airunner.components.nodegraph.gui.widgets.nodes.art.base_art_node import (
     BaseArtNode,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.vendor.nodegraphqt import NodeBaseWidget
 from airunner.components.art.managers.stablediffusion.image_response import (
     ImageResponse,
@@ -23,7 +24,7 @@ from airunner.components.art.gui.widgets.filter_parameter_widget import (
     create_filter_parameter_widgets,
 )
 
-LOG = logging.getLogger(__name__)
+LOG = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class FilterComboWidget(NodeBaseWidget):

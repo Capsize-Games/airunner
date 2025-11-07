@@ -1,7 +1,9 @@
-import logging
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Optional, List
+
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class ModelProvider(Enum):
@@ -46,7 +48,7 @@ class ModelRegistry:
     """Registry of supported models with hardware requirements."""
 
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self._models: Dict[str, ModelMetadata] = {}
         self._initialize_registry()
 

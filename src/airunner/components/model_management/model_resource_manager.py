@@ -1,4 +1,3 @@
-import logging
 from typing import Dict, Tuple
 
 from airunner.components.model_management.types import (
@@ -23,6 +22,8 @@ from airunner.components.model_management.mixins import (
     ModelSelectionMixin,
     ModelLoadingMixin,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.utils.application.signal_mediator import SignalMediator
 
 
@@ -52,7 +53,7 @@ class ModelResourceManager(
         if hasattr(self, "_initialized"):
             return
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.signal_mediator = SignalMediator()
         self.hardware_profiler = HardwareProfiler()
         self.quantization_strategy = QuantizationStrategy()
