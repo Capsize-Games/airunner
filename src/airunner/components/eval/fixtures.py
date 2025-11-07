@@ -10,7 +10,6 @@ Usage:
         assert "4" in response["text"]
 """
 
-import logging
 import os
 import socket
 import subprocess
@@ -22,9 +21,11 @@ import pytest
 import requests
 
 from airunner.components.eval.client import AIRunnerClient
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def _find_available_port(host: str) -> int:

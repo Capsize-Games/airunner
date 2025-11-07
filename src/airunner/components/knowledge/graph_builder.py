@@ -4,7 +4,6 @@ Knowledge graph builder.
 Constructs NetworkX graph from knowledge facts and relationships.
 """
 
-import logging
 from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 
@@ -13,9 +12,11 @@ from airunner.components.knowledge.data.knowledge_relationship import (
     KnowledgeRelationship,
 )
 from airunner.components.data.session_manager import session_scope
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class KnowledgeGraphBuilder:

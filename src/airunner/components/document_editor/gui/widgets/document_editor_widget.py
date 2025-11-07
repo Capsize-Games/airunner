@@ -9,9 +9,10 @@ Follows project conventions for widget structure and documentation.
 """
 
 from typing import Dict, Optional
-import logging
 import os
 
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.utils.settings import get_qsettings
 
 try:
@@ -334,7 +335,7 @@ class DocumentEditorWidget(BaseWidget):
         self._autosave_timer = QTimer(self)
         self._autosave_timer.setSingleShot(True)
         self._autosave_timer.timeout.connect(self._perform_autosave)
-        self._logger = logging.getLogger(__name__)
+        self._logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         # Track modification state reliably via the document's signal
         self._modified = False
         try:

@@ -6,12 +6,13 @@ Combines multiple evaluation strategies to produce a comprehensive score.
 
 import re
 import math
-import logging
 from fractions import Fraction
 from typing import Optional, Tuple, Dict, Any, List
 from airunner.components.eval.benchmark_datasets import normalize_answer
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 def _convert_unicode_to_latex(s: str) -> str:

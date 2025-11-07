@@ -5,7 +5,6 @@ Adds export, bulk operations, and verification features to the existing
 knowledge manager widget.
 """
 
-import logging
 from typing import Set
 
 from PySide6.QtWidgets import (
@@ -22,9 +21,11 @@ from airunner.components.knowledge.knowledge_browser_utils import (
     KnowledgeExporter,
     KnowledgeBulkOperations,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class KnowledgeBrowserEnhancements:

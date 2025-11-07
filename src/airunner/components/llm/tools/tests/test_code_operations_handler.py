@@ -5,7 +5,6 @@ Test all code operation types (CREATE, READ, EDIT, PATCH, APPEND, RENAME, DELETE
 """
 
 import pytest
-from pathlib import Path
 
 from airunner.components.document_editor.workspace_manager import (
     WorkspaceManager,

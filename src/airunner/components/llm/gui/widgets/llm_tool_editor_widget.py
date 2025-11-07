@@ -5,7 +5,6 @@ Dialog for creating and editing LLM tools.
 Provides form fields for tool properties and code editor with validation.
 """
 
-import logging
 from typing import Optional
 
 from PySide6.QtCore import Slot
@@ -17,12 +16,14 @@ from airunner.components.llm.gui.widgets.templates.llm_tool_editor_ui import (
 )
 from airunner.components.llm.data.llm_tool import LLMTool
 from airunner.enums import SignalCode
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.settings.get_qsettings import get_qsettings
 from airunner.components.data.session_manager import session_scope
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class LLMToolEditorWidget(QDialog, MediatorMixin):

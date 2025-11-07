@@ -1,6 +1,5 @@
 """Custom LangGraph checkpointer that persists to the Conversation database."""
 
-import logging
 import uuid
 from typing import Optional, Dict, Any, Iterator, Tuple
 from collections.abc import Sequence
@@ -16,6 +15,8 @@ from langchain_core.runnables import RunnableConfig
 from airunner.components.llm.managers.database_chat_message_history import (
     DatabaseChatMessageHistory,
 )
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class DatabaseCheckpointSaver(BaseCheckpointSaver):
@@ -37,7 +38,7 @@ class DatabaseCheckpointSaver(BaseCheckpointSaver):
                            the current conversation.
         """
         super().__init__()
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
         self.conversation_id = conversation_id
         self.message_history = DatabaseChatMessageHistory(conversation_id)
 

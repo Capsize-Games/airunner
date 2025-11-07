@@ -6,7 +6,6 @@ places, organizations) and creates relationship links in the database.
 """
 
 import json
-import logging
 from typing import Dict, List, Optional
 
 from airunner.components.application.workers.worker import Worker
@@ -39,7 +38,6 @@ class EntityExtractionWorker(Worker):
 
     def __init__(self):
         super().__init__()
-        self.logger = logging.getLogger(__name__)
         self.knowledge_manager = None
 
         # Register signal handlers

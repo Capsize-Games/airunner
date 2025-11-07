@@ -5,7 +5,6 @@ Test validation of Python code with flake8 and mypy.
 """
 
 import pytest
-from pathlib import Path
 
 from airunner.components.llm.tools.code_validator import (
     CodeValidator,
@@ -107,7 +106,7 @@ result: int = add("1", "2")  # Type error: strings passed for ints
 """
 
     file_path = temp_py_file(content)
-    result = validator.validate_file(file_path)
+    validator.validate_file(file_path)
 
     # Should detect type errors if mypy is available
     if validator.enable_mypy:

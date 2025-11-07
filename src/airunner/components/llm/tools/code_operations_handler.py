@@ -8,9 +8,7 @@ and validation.
 """
 
 import logging
-import difflib
-from typing import Optional, List
-from pathlib import Path
+from typing import Optional
 
 from airunner.components.document_editor.workspace_manager import (
     WorkspaceManager,

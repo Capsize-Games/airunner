@@ -9,12 +9,13 @@ Handles the complete lifecycle of an LLM request:
 5. Process and stream responses
 """
 
-import logging
 from typing import Optional, Any
 from dataclasses import replace
 
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.enums import LLMActionType
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 
 
 class RequestProcessor:
@@ -28,7 +29,7 @@ class RequestProcessor:
     def __init__(
         self,
         default_settings: Optional[Any] = None,
-        logger: Optional[logging.Logger] = None,
+        logger: Optional[Any] = None,
     ):
         """
         Initialize request processor.
@@ -38,7 +39,7 @@ class RequestProcessor:
             logger: Logger instance
         """
         self.default_settings = default_settings
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = logger or get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def merge_settings(
         self,

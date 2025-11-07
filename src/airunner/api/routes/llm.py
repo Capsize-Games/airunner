@@ -4,7 +4,6 @@ LLM API routes for chat, completion, and model management.
 Integrates with LLMAPIService via signal-based architecture.
 """
 
-import logging
 import asyncio
 from typing import List, Optional
 from fastapi import (
@@ -16,7 +15,10 @@ from fastapi import (
 )
 from pydantic import BaseModel
 
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 router = APIRouter()
 

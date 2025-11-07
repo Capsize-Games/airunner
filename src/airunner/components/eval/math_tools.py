@@ -15,9 +15,11 @@ import contextvars
 import math
 from fractions import Fraction
 from typing import Dict, Any, Optional, Tuple
-import logging
 
-logger = logging.getLogger(__name__)
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
+
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 _executor_session_var: contextvars.ContextVar[str] = contextvars.ContextVar(
     "safe_python_executor_session",

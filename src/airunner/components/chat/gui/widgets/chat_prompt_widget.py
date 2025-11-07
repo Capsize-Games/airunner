@@ -1,4 +1,3 @@
-import logging
 from typing import Dict
 
 from PySide6.QtCore import Slot, Qt
@@ -19,12 +18,16 @@ from airunner.components.application.gui.widgets.base_widget import BaseWidget
 from airunner.components.conversations.conversation_history_manager import (
     ConversationHistoryManager,
 )
-from airunner.utils.application import create_worker
+from airunner.utils.application import create_worker, get_logger
 from airunner.components.llm.managers.llm_request import LLMRequest
 from airunner.components.llm.workers.llm_response_worker import (
     LLMResponseWorker,
 )
-from airunner.settings import AIRUNNER_ART_ENABLED, SLASH_COMMANDS
+from airunner.settings import (
+    AIRUNNER_ART_ENABLED,
+    AIRUNNER_LOG_LEVEL,
+    SLASH_COMMANDS,
+)
 
 
 class ChatPromptWidget(BaseWidget):
@@ -36,7 +39,7 @@ class ChatPromptWidget(BaseWidget):
         ("settings", "settings_button"),
         ("stop-circle", "stop_button"),
     ]
-    logger = logging.getLogger(__name__)
+    logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
     def __init__(self, *args, **kwargs):
         self.signal_handlers = {

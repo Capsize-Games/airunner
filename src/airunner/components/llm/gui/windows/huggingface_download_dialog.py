@@ -1,6 +1,5 @@
 """Dialog for showing HuggingFace model download progress."""
 
-import logging
 from typing import Dict
 
 from PySide6.QtWidgets import (
@@ -24,10 +23,12 @@ from airunner.components.settings.gui.widgets.huggingface_settings.huggingface_s
     HuggingfaceSettingsWidget,
 )
 from airunner.enums import SignalCode
+from airunner.settings import AIRUNNER_LOG_LEVEL
+from airunner.utils.application import get_logger
 from airunner.utils.application.mediator_mixin import MediatorMixin
 from airunner.utils.settings.get_qsettings import get_qsettings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, AIRUNNER_LOG_LEVEL)
 
 
 class HuggingFaceDownloadDialog(MediatorMixin, SettingsMixin, QDialog):
