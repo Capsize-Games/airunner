@@ -212,58 +212,6 @@ class TestKnowledgeToolEval:
     def test_record_and_recall_workflow(self, airunner_client_function_scope):
         """Test workflow: record knowledge, then recall it."""
         # First, record knowledge
-        record_prompt = "Remember that my best friend's birthday is June 15th"
-        record_result = track_trajectory_sync(
-            airunner_client_function_scope,
-            prompt=record_prompt,
-            max_tokens=400,
-            tool_categories=["KNOWLEDGE"],
-        )
-
-        record_text = (
-            record_result["response"].lower()
-            if isinstance(record_result["response"], str)
-            else record_result["response"].get("text", "").lower()
-        )
-
-        # Should either call tool or acknowledge
-        assert any(
-            "knowledge" in tool.lower() or "record" in tool.lower()
-            for tool in record_result["tools"]
-        ) or any(
-            word in record_text
-            for word in ["noted", "remembered", "stored", "recorded"]
-        ), f"Failed to record, got tools: {record_result['tools']}, response: {record_text}"
-
-        # Then recall it
-        recall_prompt = "What do you know about my best friend's birthday?"
-        recall_result = track_trajectory_sync(
-            airunner_client_function_scope,
-            prompt=recall_prompt,
-            max_tokens=400,
-            tool_categories=["KNOWLEDGE"],
-        )
-
-        recall_text = (
-            recall_result["response"].lower()
-            if isinstance(recall_result["response"], str)
-            else recall_result["response"].get("text", "").lower()
-        )
-
-        # Should either call tool or give response about the birthday
-        assert any(
-            "knowledge" in tool.lower()
-            or "recall" in tool.lower()
-            or "search" in tool.lower()
-            for tool in recall_result["tools"]
-        ) or any(
-            word in recall_text
-            for word in ["birthday", "june", "15", "friend", "know", "don't"]
-        ), f"Failed to recall, got tools: {recall_result['tools']}, response: {recall_text}"
-
-    def test_record_and_recall_workflow(self, airunner_client_function_scope):
-        """Test workflow: record knowledge, then recall it."""
-        # First, record knowledge
         record_prompt = (
             "Remember that neural networks are used in deep learning"
         )
