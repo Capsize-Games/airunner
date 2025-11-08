@@ -269,7 +269,21 @@ class LLMModelManager(
                 f"[LLM MANAGER DEBUG] llm_request.tool_categories={llm_request.tool_categories}",
                 flush=True,
             )
-        if llm_request and llm_request.tool_categories is not None:
+
+        # Handle Auto mode: intelligently select tool categories based on prompt
+        if llm_request and llm_request.tool_categories is None:
+            self.logger.info(
+                "Auto mode: Analyzing prompt to select relevant tool categories"
+            )
+            selected_categories = self._classify_prompt_for_tools(
+                data["request_data"]["prompt"]
+            )
+            self.logger.info(
+                f"Auto mode selected categories: {selected_categories}"
+            )
+            self._apply_tool_filter(selected_categories)
+            tools_filtered = True
+        elif llm_request and llm_request.tool_categories is not None:
             print(
                 f"[LLM MANAGER DEBUG] APPLYING TOOL FILTER with {llm_request.tool_categories}",
                 flush=True,
@@ -281,7 +295,7 @@ class LLMModelManager(
             tools_filtered = True
         else:
             print(
-                f"[LLM MANAGER DEBUG] NOT APPLYING FILTER - tool_categories is None or empty list",
+                f"[LLM MANAGER DEBUG] NOT APPLYING FILTER - tool_categories is None",
                 flush=True,
             )
             self.logger.info("No tool filtering - using all tools")
@@ -316,14 +330,28 @@ class LLMModelManager(
             )
             return
 
-        if not tool_categories:
-            # Empty list = disable all tools
+        if tool_categories is not None and len(tool_categories) == 0:
+            # Empty list means: disable ALL tools for this request
             self.logger.info(
                 "tool_categories=[] - disabling all tools for this request"
             )
             self._workflow_manager.update_tools([])
+            self._workflow_manager._build_and_compile_workflow()
             self.logger.info(
                 "Tools disabled successfully - workflow rebuilt with 0 tools"
+            )
+            return
+
+        if tool_categories is None:
+            # None means: enable ALL tools for this request
+            self.logger.info(
+                "tool_categories=None - enabling all tools for this request"
+            )
+            all_tools = self._tool_manager.get_all_tools()
+            self._workflow_manager.update_tools(all_tools)
+            self._workflow_manager._build_and_compile_workflow()
+            self.logger.info(
+                f"All tools enabled successfully - workflow rebuilt with {len(all_tools)} tools"
             )
             return
 
@@ -387,6 +415,146 @@ class LLMModelManager(
             flush=True,
         )
         self._workflow_manager.update_tools(filtered_tools)
+
+    def _classify_prompt_for_tools(self, prompt: str) -> list:
+        """
+        Analyze a prompt and intelligently select which tool categories are needed.
+
+        Uses keyword matching and pattern detection to quickly classify intent
+        without making an LLM call. This keeps Auto mode fast.
+
+        Args:
+            prompt: User's input text
+
+        Returns:
+            List of tool category strings (empty list if no tools needed)
+        """
+        prompt_lower = prompt.lower()
+        selected_categories = []
+
+        # Web/scraping keywords → Maps to "search" category
+        if any(
+            word in prompt_lower
+            for word in [
+                "scrape",
+                "fetch",
+                "download",
+                "crawl",
+                "extract from",
+                "get content",
+                "webpage",
+                "website",
+                "url",
+                "http",
+            ]
+        ):
+            selected_categories.append(
+                "search"
+            )  # Web scraping tools are in SEARCH category        # Math/calculation keywords - be more specific to avoid false positives
+        has_math_word = any(
+            word in prompt_lower
+            for word in [
+                "calculate",
+                "compute",
+                "solve",
+                " what is ",  # Space-bounded to avoid matching "what issue"
+                "how much",
+                "equation",
+                " math",
+                "addition",
+                "subtract",
+                "multiply",
+                "divide",
+                " sum ",  # Space-bounded to avoid matching "sum" in "summarize"
+                "total",
+            ]
+        )
+        # Only check for operators if there's no URL in the prompt
+        has_url = "http" in prompt_lower or "www." in prompt_lower
+        has_math_operator = not has_url and (
+            any(op in prompt_lower for op in ["+", "*", "/", "="])
+            or "-" in prompt_lower
+        )
+
+        if has_math_word or has_math_operator:
+            selected_categories.append("math")
+
+        # File operations keywords
+        if any(
+            word in prompt_lower
+            for word in [
+                "read file",
+                "write file",
+                "save to",
+                "open file",
+                "create file",
+                "delete file",
+                "list files",
+                "directory",
+            ]
+        ):
+            selected_categories.append("file")
+
+        # Time/date keywords
+        if any(
+            word in prompt_lower
+            for word in [
+                "time",
+                "date",
+                "today",
+                "tomorrow",
+                "yesterday",
+                "schedule",
+                "calendar",
+                "when is",
+                "what day",
+            ]
+        ):
+            selected_categories.append("time")
+
+        # Search/research keywords
+        if any(
+            word in prompt_lower
+            for word in [
+                "search",
+                "find",
+                "look up",
+                "research",
+                "information about",
+                "tell me about",
+                "what do you know",
+                "explain",
+            ]
+        ):
+            selected_categories.append("search")
+
+        # Conversation management keywords
+        if any(
+            word in prompt_lower
+            for word in [
+                "clear history",
+                "clear conversation",
+                "new conversation",
+                "switch conversation",
+                "list conversations",
+                "delete conversation",
+                "conversation history",
+            ]
+        ):
+            selected_categories.append("conversation")
+
+        # If no specific tools detected, return empty list (no tools needed)
+        # This makes simple chat like "hello" fast
+        if not selected_categories:
+            self.logger.info(
+                f"Auto mode: No tools needed for prompt: '{prompt[:50]}...'"
+            )
+            return []
+
+        self.logger.info(
+            f"Auto mode: Selected {len(selected_categories)} categories: {selected_categories}"
+        )
+        return selected_categories
 
     def _restore_all_tools(self) -> None:
         """Restore all tools to workflow manager (called after filtered request)."""

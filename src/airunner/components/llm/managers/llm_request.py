@@ -1,4 +1,4 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from typing import Optional, Dict, List
 
 from llama_cloud import MessageRole
@@ -55,9 +55,9 @@ class LLMRequest:
     do_tts_reply: bool = True
     node_id: Optional[str] = None
     use_memory: bool = True
-    tool_categories: Optional[List[str]] = (
-        None  # Restrict to specific tool categories (e.g., ["math", "conversation"])
-    )
+    tool_categories: Optional[List[str]] = field(
+        default_factory=list
+    )  # Default: no tools (empty list). Use None for all tools.
     role: MessageRole = MessageRole.USER
 
     def to_dict(self) -> Dict:
@@ -274,6 +274,7 @@ class LLMRequest:
                 max_new_tokens=500,  # Reasonable conversation length
                 top_k=50,
                 top_p=0.9,
+                tool_categories=[],  # No tools by default for chat - enable explicitly when needed
             )
 
         elif action == LLMActionType.CODE:
@@ -334,6 +335,7 @@ class LLMRequest:
                 max_new_tokens=4096,  # Increased for complex reasoning tasks
                 top_k=5,  # Very focused
                 top_p=0.95,
+                tool_categories=None,  # Enable all tools for commands/decisions
             )
 
         else:
