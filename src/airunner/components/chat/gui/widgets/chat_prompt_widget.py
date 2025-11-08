@@ -68,9 +68,11 @@ class ChatPromptWidget(BaseWidget):
         self.chat_loaded = False
         self.ui.action.blockSignals(True)
         self.ui.action.clear()
+        # Put Chat first as the default for simple conversations (no tools)
+        # Users can select Auto for tool access when needed
         action_map = [
-            ("Auto", LLMActionType.APPLICATION_COMMAND),
             ("Chat", LLMActionType.CHAT),
+            ("Auto", LLMActionType.APPLICATION_COMMAND),
             ("RAG", LLMActionType.PERFORM_RAG_SEARCH),
         ]
         if AIRUNNER_ART_ENABLED:
