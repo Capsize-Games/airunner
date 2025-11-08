@@ -178,6 +178,13 @@ class LayerItemManagementMixin:
                 y_pos=pos_y,
             )
 
+            # Invalidate cache so next read gets fresh value from DB
+            # This fixes the panning bug where stale cached positions were used
+            cache_key = f"DrawingPadSettings_layer_{layer.id}"
+            self.settings_mixin_shared_instance.invalidate_cached_setting_by_key(
+                cache_key
+            )
+
             new_positions[scene_item] = QPointF(pos_x, pos_y)
             self.logger.info(
                 f"[RECENTER] Layer {layer.id}: saved to DB and dict - position x={pos_x}, y={pos_y}, scene_item id={id(scene_item)}"

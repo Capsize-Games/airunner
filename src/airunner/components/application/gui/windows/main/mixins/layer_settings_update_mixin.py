@@ -247,8 +247,8 @@ class LayerSettingsUpdateMixin:
             layer_id: Layer ID.
         """
         cache_key = f"{model_class_.__name__}_layer_{layer_id}"
-        self.settings_mixin_shared_instance.set_cached_setting_by_key(
-            cache_key, None
+        self.settings_mixin_shared_instance.invalidate_cached_setting_by_key(
+            cache_key
         )
 
     def _notify_layer_updates(
