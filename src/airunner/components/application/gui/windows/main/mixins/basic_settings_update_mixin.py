@@ -188,6 +188,11 @@ class BasicSettingsUpdateMixin:
             updates: Dictionary of updates.
         """
         model_class_.objects.update(setting.id, **updates)
+
+        # CRITICAL: Invalidate the settings cache for this model class
+        # to ensure subsequent reads get the updated values from DB
+        self._invalidate_setting_cache(model_class_)
+
         for name, value in updates.items():
             self._notify_setting_updated(
                 model_class_.__tablename__, name, value
