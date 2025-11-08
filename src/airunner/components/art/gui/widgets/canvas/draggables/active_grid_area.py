@@ -327,20 +327,39 @@ class ActiveGridArea(DraggablePixmap):
                 f"[ACTIVE GRID DRAG] Position changed, updating..."
             )
 
-            # CRITICAL: Update the in-memory settings object FIRST
-            # This ensures any signal handlers that run will see the new values
-            self.active_grid_settings.pos_x = int(abs_pos.x())
-            self.active_grid_settings.pos_y = int(abs_pos.y())
-            self.logger.info(
-                f"[ACTIVE GRID DRAG] Updated in-memory settings to: pos_x={self.active_grid_settings.pos_x}, pos_y={self.active_grid_settings.pos_y}"
-            )
-
-            # Then update DB settings (this may emit signals)
+            # Update DB settings - this will also invalidate the cache
+            # so subsequent reads get the new values
             self.update_active_grid_settings(
                 pos_x=int(abs_pos.x()),
                 pos_y=int(abs_pos.y()),
             )
             self.logger.info(f"[ACTIVE GRID DRAG] Database update complete")
+
+            # Verify the update worked by reading back from DB
+            fresh_settings = self.active_grid_settings
+            self.logger.info(
+                f"[ACTIVE GRID DRAG] Verified new position from DB: pos_x={fresh_settings.pos_x}, pos_y={fresh_settings.pos_y}"
+            )
+
+            # Keep the view's center position in sync so startup alignment
+            # logic preserves the manually positioned grid on next launch.
+            view = None
+            if self.scene() and self.scene().views():
+                view = self.scene().views()[0]
+
+            if view is not None:
+                new_center = QPointF(
+                    float(fresh_settings.pos_x), float(fresh_settings.pos_y)
+                )
+                view.center_pos = new_center
+                view.save_canvas_offset()
+                self.logger.info(
+                    f"[ACTIVE GRID DRAG] Updated view center_pos to match drag: {new_center.x()}, {new_center.y()}"
+                )
+            else:
+                self.logger.warning(
+                    "[ACTIVE GRID DRAG] Unable to update view center_pos - no view available"
+                )
 
             # Trigger mask regeneration and update signal
             self.api.art.canvas.generate_mask()
