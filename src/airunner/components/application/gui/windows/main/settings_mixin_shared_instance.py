@@ -62,6 +62,10 @@ class SettingsMixinSharedInstance:
         """Remove a settings instance from cache."""
         self._settings_cache.pop(model_class, None)
 
+    def invalidate_cached_setting_by_key(self, key: str) -> None:
+        """Remove a settings instance from cache by string key."""
+        self._settings_cache_by_key.pop(key, None)
+
     def on_settings_updated(
         self, setting_name: Optional[str], column_name: Optional[str], val: Any
     ) -> None:
