@@ -247,13 +247,6 @@ class ActiveGridArea(DraggablePixmap):
         else:
             current_display_pos = self.pos()
 
-        self.logger.info(
-            f"[ACTIVE GRID DRAG] Mouse release - current_display_pos: {current_display_pos.x()}, {current_display_pos.y()}"
-        )
-        self.logger.info(
-            f"[ACTIVE GRID DRAG] Before save - scenePos: {self.scenePos().x()}, {self.scenePos().y()}"
-        )
-
         # Create ViewState from view
         view_state = ViewState(
             canvas_offset=QPointF(
@@ -270,9 +263,6 @@ class ActiveGridArea(DraggablePixmap):
 
         # Convert current display position to absolute position
         abs_pos = manager.display_to_absolute(current_display_pos, view_state)
-        self.logger.info(
-            f"[ACTIVE GRID DRAG] Calculated abs_pos: {abs_pos.x()}, {abs_pos.y()}"
-        )
 
         # Snap to grid in absolute space if enabled
         if self.grid_settings.snap_to_grid:
@@ -284,20 +274,8 @@ class ActiveGridArea(DraggablePixmap):
             # Update display position to snapped absolute position
             display_pos = manager.absolute_to_display(abs_pos, view_state)
             self.setPos(display_pos)
-            self.logger.info(
-                f"[ACTIVE GRID DRAG] Snap enabled - final abs_pos: {abs_pos.x()}, {abs_pos.y()}, display_pos: {display_pos.x()}, {display_pos.y()}"
-            )
-        else:
-            # When snap is disabled, keep the current display position as-is
-            # The abs_pos calculated above is already correct
-            self.logger.info(
-                f"[ACTIVE GRID DRAG] Snap disabled - using abs_pos: {abs_pos.x()}, {abs_pos.y()}"
-            )
 
         self.save_position(abs_pos)
-        self.logger.info(
-            f"[ACTIVE GRID DRAG] After save_position - scenePos: {self.scenePos().x()}, {self.scenePos().y()}"
-        )
         event.accept()
 
         # Clear drag flag after delay to ensure signal processing completes
@@ -311,43 +289,33 @@ class ActiveGridArea(DraggablePixmap):
 
     def save_position(self, abs_pos: QPointF):
         """Save the absolute position to database."""
-        self.logger.info(
-            f"[ACTIVE GRID DRAG] save_position called with abs_pos: {abs_pos.x()}, {abs_pos.y()}"
-        )
-        self.logger.info(
-            f"[ACTIVE GRID DRAG] Current in-memory settings: pos_x={self.active_grid_settings.pos_x}, pos_y={self.active_grid_settings.pos_y}"
-        )
-
         # Only save if position changed
         if (
             int(abs_pos.x()) != self.active_grid_settings.pos_x
             or int(abs_pos.y()) != self.active_grid_settings.pos_y
         ):
-            self.logger.info(
-                f"[ACTIVE GRID DRAG] Position changed, updating..."
-            )
-
-            # CRITICAL: Update the in-memory settings object FIRST
-            # This ensures any signal handlers that run will see the new values
-            self.active_grid_settings.pos_x = int(abs_pos.x())
-            self.active_grid_settings.pos_y = int(abs_pos.y())
-            self.logger.info(
-                f"[ACTIVE GRID DRAG] Updated in-memory settings to: pos_x={self.active_grid_settings.pos_x}, pos_y={self.active_grid_settings.pos_y}"
-            )
-
-            # Then update DB settings (this may emit signals)
+            # Update DB settings - this will also invalidate the cache
+            # so subsequent reads get the new values
             self.update_active_grid_settings(
                 pos_x=int(abs_pos.x()),
                 pos_y=int(abs_pos.y()),
             )
-            self.logger.info(f"[ACTIVE GRID DRAG] Database update complete")
+
+            # Verify the update worked by reading back from DB
+            fresh_settings = self.active_grid_settings
+
+            # Keep the view's center position in sync so startup alignment
+            # logic preserves the manually positioned grid on next launch.
+            view = None
+            if self.scene() and self.scene().views():
+                view = self.scene().views()[0]
+
+            if view is not None:
+                new_center = QPointF(
+                    float(fresh_settings.pos_x), float(fresh_settings.pos_y)
+                )
+                view.center_pos = new_center
+                view.save_canvas_offset()
 
             # Trigger mask regeneration and update signal
             self.api.art.canvas.generate_mask()
-            # NOTE: Don't call active_grid_area_updated() here as it triggers
-            # a full refresh that repositions everything, causing snap-back
-            # self.api.art.active_grid_area_updated()
-        else:
-            self.logger.info(
-                f"[ACTIVE GRID DRAG] Position unchanged, skipping save"
-            )
