@@ -120,18 +120,6 @@ class FluxGGUFLoadingMixin:
         self._pipe = pipeline_class(transformer=transformer, **components)
 
         # CRITICAL: Ensure VAE is in float32 for proper decoding
-        if hasattr(self._pipe, "vae") and self._pipe.vae is not None:
-            self._pipe.vae = self._pipe.vae.to(torch.float32)
-
-            original_decode = self._pipe.vae.decode
-
-            def _decode_with_upcast(latents, *args, **kwargs):
-                latents = latents.to(torch.float32)
-                return original_decode(latents, *args, **kwargs)
-
-            self._pipe.vae.decode = _decode_with_upcast  # type: ignore[assignment]
-            self.logger.info(
-                "✓ Upcast VAE to float32 and wrapped decode for FLUX"
-            )
+        self._force_vae_fp32()
 
         self.logger.info("✓ Loaded GGUF FLUX pipeline")

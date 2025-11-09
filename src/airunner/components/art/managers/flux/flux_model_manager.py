@@ -39,8 +39,6 @@ from diffusers import (
     FluxInpaintPipeline,
     FlowMatchEulerDiscreteScheduler,
 )
-from transformers import BitsAndBytesConfig
-
 from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
     BaseDiffusersModelManager,
 )
