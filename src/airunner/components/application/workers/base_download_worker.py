@@ -107,10 +107,14 @@ class BaseDownloadWorker(Worker):
         Args:
             message: Download request with provider-specific parameters
         """
+        self.logger.info(f"BaseDownloadWorker handling message: {message}")
         try:
             self._download_model(**message)
         except Exception as e:
             self.logger.error(f"Download failed: {e}")
+            import traceback
+
+            self.logger.error(traceback.format_exc())
             self.emit_signal(self._failed_signal, {"error": str(e)})
 
     def _update_file_progress(

@@ -42,6 +42,7 @@ extras_require = {
     "art": [  # Art generation dependencies
         "DeepCache==0.1.1",
         "tomesd==0.1.3",
+        "gguf==0.17.1",
     ],
     "llm": [  # LLM dependencies (also text-to-speech and speech-to-text)
         "bitsandbytes==0.45.5",

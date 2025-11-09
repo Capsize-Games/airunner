@@ -8,7 +8,7 @@ from airunner.components.art.managers.stablediffusion.stable_diffusion_model_man
 from airunner.components.art.managers.stablediffusion.sdxl_model_manager import (
     SDXLModelManager,
 )
-from airunner.components.art.managers.stablediffusion.flux_model_manager import (
+from airunner.components.art.managers.flux.flux_model_manager import (
     FluxModelManager,
 )
 
@@ -61,7 +61,6 @@ class SDWorker(Worker):
             SignalCode.EMBEDDING_DELETE_MISSING_SIGNAL: self.delete_missing_embeddings,
             SignalCode.SAFETY_CHECKER_LOAD_SIGNAL: self.on_load_safety_checker,
             SignalCode.SAFETY_CHECKER_UNLOAD_SIGNAL: self.on_unload_safety_checker,
-            SignalCode.ART_MODEL_DOWNLOAD_REQUIRED: self.on_art_model_download_required,
         }
         self._current_model = None
         self._current_version = None
@@ -432,6 +431,13 @@ class SDWorker(Worker):
 
     def _finalize_do_generate_signal(self, message: Dict):
         if self.model_manager:
+            # Don't try to generate if model isn't loaded yet (e.g., download in progress)
+            if not self.model_manager.model_is_loaded:
+                self.logger.info(
+                    "Model not loaded yet, skipping generation (download may be in progress)"
+                )
+                return
+
             try:
                 self.model_manager.handle_generate_signal(message)
             except (PipeNotLoadedException, TypeError) as e:
@@ -466,41 +472,3 @@ class SDWorker(Worker):
                 "message": message,
             },
         )
-
-    def on_art_model_download_required(self, data: Dict):
-        """Handle art model download requirement by showing download dialog.
-
-        Args:
-            data: Download info with repo_id, model_path, missing_files, etc.
-        """
-
-        repo_id = data.get("repo_id")
-        data.get("model_path")
-        missing_files = data.get("missing_files", [])
-        version = data.get("version", "")
-
-        self.logger.info(
-            f"Showing download dialog for {repo_id} ({len(missing_files)} missing files)"
-        )
-
-        # Determine model type for download worker
-        model_type = "art"
-        if "flux" in version.lower():
-            model_type = "flux"
-        elif "sdxl" in version.lower():
-            model_type = "sdxl"
-        elif "sd" in version.lower():
-            model_type = "sd"
-
-        # Emit signal to start download
-        self.emit_signal(
-            SignalCode.START_HUGGINGFACE_DOWNLOAD,
-            {
-                "repo_id": repo_id,
-                "model_type": model_type,
-                "output_dir": None,  # Will use model_path from repo_id
-            },
-        )
-
-        # Show download dialog (will be shown by UI layer)
-        # The dialog will connect to the download worker signals

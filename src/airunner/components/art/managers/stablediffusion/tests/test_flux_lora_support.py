@@ -16,7 +16,7 @@ class TestFluxLoRAInheritance:
     def test_flux_inherits_from_base_diffusers(self):
         """Verify FluxModelManager inherits from BaseDiffusersModelManager."""
         # Import inside test to avoid circular import issues
-        from airunner.components.art.managers.stablediffusion.flux_model_manager import (
+        from airunner.components.art.managers.flux.flux_model_manager import (
             FluxModelManager,
         )
         from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
@@ -27,7 +27,7 @@ class TestFluxLoRAInheritance:
 
     def test_flux_does_not_override_lora_methods(self):
         """Verify FluxModelManager doesn't override LoRA methods."""
-        from airunner.components.art.managers.stablediffusion.flux_model_manager import (
+        from airunner.components.art.managers.flux.flux_model_manager import (
             FluxModelManager,
         )
         from airunner.components.art.managers.stablediffusion.base_diffusers_model_manager import (
@@ -57,7 +57,7 @@ class TestFluxLoRAMethods:
 
     def test_flux_has_all_lora_methods(self):
         """Verify FluxModelManager has all LoRA methods."""
-        from airunner.components.art.managers.stablediffusion.flux_model_manager import (
+        from airunner.components.art.managers.flux.flux_model_manager import (
             FluxModelManager,
         )
 

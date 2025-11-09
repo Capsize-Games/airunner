@@ -13,7 +13,7 @@ import pytest
 import torch
 from unittest.mock import Mock, patch, MagicMock
 
-from airunner.components.art.managers.stablediffusion.flux_model_manager import (
+from airunner.components.art.managers.flux.flux_model_manager import (
     FluxModelManager,
 )
 from diffusers import FluxPipeline, FluxImg2ImgPipeline, FluxInpaintPipeline
@@ -137,9 +137,35 @@ class TestFluxModelManager:
         assert pipeline_class == FluxInpaintPipeline
 
     def test_use_from_single_file_false(self):
-        """Test FLUX uses from_pretrained, not from_single_file."""
+        """Test FLUX uses from_pretrained for non-GGUF models."""
+        from airunner.components.art.managers.stablediffusion.image_request import (
+            ImageRequest,
+        )
+
         manager = FluxModelManager()
+        # Set up image_request with no model path (will return False)
+        manager.image_request = ImageRequest()
         assert manager.use_from_single_file is False
+
+    def test_use_from_single_file_true_for_gguf(self):
+        """Test FLUX uses from_single_file for GGUF models."""
+        from airunner.components.art.managers.stablediffusion.image_request import (
+            ImageRequest,
+        )
+        from pathlib import Path
+
+        manager = FluxModelManager()
+        manager.image_request = ImageRequest()
+
+        # Mock model_path to return a GGUF file
+        with patch.object(
+            type(manager),
+            "model_path",
+            new_callable=lambda: property(
+                lambda self: Path("/path/to/model.gguf")
+            ),
+        ):
+            assert manager.use_from_single_file is True
 
     def test_use_compel_disabled(self):
         """Test Compel is disabled for FLUX (uses T5, not CLIP)."""
@@ -183,7 +209,12 @@ class TestFluxModelManager:
     )
     def test_prepare_pipe_data_sets_bfloat16(self, mock_torch):
         """Test _prepare_pipe_data sets bfloat16 dtype."""
+        from airunner.components.art.managers.stablediffusion.image_request import (
+            ImageRequest,
+        )
+
         manager = FluxModelManager()
+        manager.image_request = ImageRequest()
         mock_torch.bfloat16 = torch.bfloat16
 
         with patch.object(
@@ -362,6 +393,93 @@ class TestFluxModelManager:
         with patch.object(manager, "unload") as mock_unload:
             manager._unload_model()
             mock_unload.assert_called_once()
+
+    def test_load_gguf_transformer(self):
+        """Test _load_gguf_transformer loads transformer on CPU."""
+        from pathlib import Path
+
+        manager = FluxModelManager()
+        model_path = Path("/fake/path/model.gguf")
+        config_path = Path("/fake/path/config.json")
+
+        with patch.object(
+            FluxModelManager, "_load_gguf_transformer"
+        ) as mock_load:
+            mock_transformer = Mock()
+            mock_load.return_value = mock_transformer
+
+            result = manager._load_gguf_transformer(model_path, config_path)
+
+            mock_load.assert_called_once_with(model_path, config_path)
+            assert result == mock_transformer
+
+    def test_load_pipeline_components(self):
+        """Test _load_pipeline_components loads all components on CPU."""
+        from pathlib import Path
+
+        manager = FluxModelManager()
+        companion_dir = Path("/fake/path")
+
+        with patch.object(
+            FluxModelManager, "_load_pipeline_components"
+        ) as mock_load:
+            mock_components = {
+                "tokenizer": Mock(),
+                "tokenizer_2": Mock(),
+                "text_encoder": Mock(),
+                "text_encoder_2": Mock(),
+                "vae": Mock(),
+                "scheduler": Mock(),
+            }
+            mock_load.return_value = mock_components
+
+            result = manager._load_pipeline_components(companion_dir)
+
+            mock_load.assert_called_once_with(companion_dir)
+            assert "tokenizer" in result
+            assert "text_encoder" in result
+            assert "vae" in result
+            assert "scheduler" in result
+
+    def test_load_scheduler_already_correct(self):
+        """Test _load_scheduler skips loading if scheduler is already correct."""
+        manager = FluxModelManager()
+        mock_pipe = Mock()
+        mock_scheduler = Mock()
+        mock_scheduler.__class__.__name__ = "FlowMatchEulerDiscreteScheduler"
+        mock_pipe.scheduler = mock_scheduler
+        manager._pipe = mock_pipe
+        manager.logger = Mock()
+
+        manager._load_scheduler()
+
+        # Should log and return early without creating new scheduler
+        assert manager._pipe.scheduler == mock_scheduler
+
+    def test_load_scheduler_replaces_wrong_scheduler(self):
+        """Test _load_scheduler replaces incorrect scheduler."""
+        manager = FluxModelManager()
+        mock_pipe = Mock()
+        mock_wrong_scheduler = Mock()
+        mock_wrong_scheduler.__class__.__name__ = "WrongScheduler"
+        mock_wrong_scheduler.config = {}
+        mock_pipe.scheduler = mock_wrong_scheduler
+        manager._pipe = mock_pipe
+
+        with patch.object(manager, "change_model_status") as mock_status:
+            with patch(
+                "airunner.components.art.managers.stablediffusion.flux_model_manager.FlowMatchEulerDiscreteScheduler"
+            ) as mock_scheduler_class:
+                mock_new_scheduler = Mock()
+                mock_scheduler_class.from_config.return_value = (
+                    mock_new_scheduler
+                )
+
+                manager._load_scheduler()
+
+                # Should create and assign new scheduler
+                assert manager._pipe.scheduler == mock_new_scheduler
+                mock_scheduler_class.from_config.assert_called_once()
 
 
 if __name__ == "__main__":

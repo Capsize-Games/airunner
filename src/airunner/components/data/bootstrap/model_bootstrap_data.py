@@ -112,6 +112,17 @@ ai_art_models = [
         "model_type": "art",
         "is_default": True,
     },
+    {
+        "name": "FLUX.1 S (GGUF)",
+        "path": "black-forest-labs/FLUX.1-schnell",
+        "branch": "main",
+        "version": "Flux.1 S",
+        "category": "stablediffusion",
+        "pipeline_action": "txt2img",
+        "enabled": True,
+        "model_type": "art",
+        "is_default": False,
+    },
 ]
 
 llm_models = [

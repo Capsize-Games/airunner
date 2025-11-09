@@ -571,6 +571,7 @@ class BaseDiffusersModelManager(
         self.logger.info(
             f"Missing {len(missing_files)} files for {repo_id}, triggering download"
         )
+        self.logger.debug(f"Missing files: {missing_files}")
 
         # Emit signal to trigger download dialog
         self.emit_signal(

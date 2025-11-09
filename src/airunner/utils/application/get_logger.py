@@ -1,5 +1,6 @@
 import logging
 import inspect
+import os
 
 
 class Logger:
@@ -11,8 +12,6 @@ class Logger:
         # Remove all existing handlers
         if logger.hasHandlers():
             logger.handlers.clear()
-
-        handler = logging.StreamHandler()
 
         # Formatter: timestamp - logger name - level - Caller - message
         fmt = (
@@ -29,9 +28,33 @@ class Logger:
                         record.caller = "<unknown>::<unknown> - 0"
                 return super().format(record)
 
-        handler.setFormatter(SafeFormatter(fmt))
+        # Add console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(SafeFormatter(fmt))
+        logger.addHandler(console_handler)
 
-        logger.addHandler(handler)
+        # Add file handler if enabled
+        if os.environ.get("AIRUNNER_SAVE_LOG_TO_FILE", "1") == "1":
+            try:
+                log_file = os.environ.get(
+                    "AIRUNNER_LOG_FILE",
+                    os.path.join(
+                        os.path.expanduser("~/.local/share/airunner"),
+                        "airunner.log",
+                    ),
+                )
+                # Ensure log directory exists
+                log_dir = os.path.dirname(log_file)
+                if log_dir:
+                    os.makedirs(log_dir, exist_ok=True)
+
+                file_handler = logging.FileHandler(log_file, mode="a")
+                file_handler.setFormatter(SafeFormatter(fmt))
+                logger.addHandler(file_handler)
+            except Exception as e:
+                # If file logging fails, just log to console
+                console_handler.setFormatter(SafeFormatter(fmt))
+                logger.error(f"Failed to setup file logging: {e}")
 
         # Disable propagation to the root logger
         logger.propagate = False

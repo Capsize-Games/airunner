@@ -91,15 +91,21 @@ class ModelScannerWorker(Worker, PipelineMixin):
                                     model.is_default = False
                                     if (
                                         file_item.is_file()
-                                    ):  # ckpt or safetensors file
-                                        if file_item.name.endswith(
-                                            ".ckpt"
-                                        ) or file_item.name.endswith(
-                                            ".safetensors"
+                                    ):  # ckpt, safetensors, or gguf file
+                                        if (
+                                            file_item.name.endswith(".ckpt")
+                                            or file_item.name.endswith(
+                                                ".safetensors"
+                                            )
+                                            or file_item.name.endswith(".gguf")
                                         ):
-                                            name = file_item.name.replace(
-                                                ".ckpt", ""
-                                            ).replace(".safetensors", "")
+                                            name = (
+                                                file_item.name.replace(
+                                                    ".ckpt", ""
+                                                )
+                                                .replace(".safetensors", "")
+                                                .replace(".gguf", "")
+                                            )
                                             model.name = name
                                         else:
                                             model = None

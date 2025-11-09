@@ -219,6 +219,35 @@ class SDImageGenerationMixin:
                 if self.do_interrupt_image_generation:
                     raise InterruptedException()
                 results = self._pipe(**data)
+
+                # Debug: Check what we got from the pipeline
+                import numpy as np
+                from PIL import Image
+
+                if "images" in results and len(results["images"]) > 0:
+                    img = results["images"][0]
+                    if isinstance(img, Image.Image):
+                        img_array = np.array(img)
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Image type: PIL Image"
+                        )
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Image shape: {img_array.shape}"
+                        )
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Image dtype: {img_array.dtype}"
+                        )
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Image min: {img_array.min()}, max: {img_array.max()}"
+                        )
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Unique values: {len(np.unique(img_array))}"
+                        )
+                    else:
+                        self.logger.info(
+                            f"[PIPELINE DEBUG] Image type: {type(img)}"
+                        )
+
                 yield results
                 if not self.image_request.generate_infinite_images:
                     total += 1
