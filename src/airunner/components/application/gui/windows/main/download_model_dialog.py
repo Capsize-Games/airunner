@@ -209,8 +209,29 @@ class DownloadModelDialog(QDialog):
         self.layout.insertWidget(2, QLabel("Select a version to download:"))
         self.list_widget.clear()
         for v in data.get("modelVersions", []):
+            # Extract file size from the first suitable file
+            file_size_str = ""
+            files = v.get("files", [])
+            for f in files:
+                if f.get("downloadUrl") and any(
+                    f.get("name", "").endswith(ext)
+                    for ext in [".safetensors", ".ckpt", ".pt", ".gguf"]
+                ):
+                    size_kb = f.get("sizeKB", 0) or 0
+                    if size_kb > 0:
+                        # Format size in a human-readable way
+                        if size_kb < 1024:
+                            file_size_str = f" ({size_kb:.0f} KB)"
+                        elif size_kb < 1024 * 1024:
+                            file_size_str = f" ({size_kb / 1024:.1f} MB)"
+                        else:
+                            file_size_str = (
+                                f" ({size_kb / (1024 * 1024):.2f} GB)"
+                            )
+                    break
+
             item = QListWidgetItem(
-                f"Version {v.get('id')}: {v.get('name', '')}"
+                f"Version {v.get('id')}: {v.get('name', '')}{file_size_str}"
             )
             item.setData(Qt.ItemDataRole.UserRole, v)
             self.list_widget.addItem(item)
@@ -311,6 +332,17 @@ class DownloadModelDialog(QDialog):
         self._progress_dialog.setValue(percent)
 
     def _on_download_finished(self, save_path: str) -> None:
+        # Disconnect the progress dialog's canceled signal BEFORE cleanup
+        # to prevent auto-close from triggering file deletion
+        try:
+            if self._progress_dialog is not None:
+                try:
+                    self._progress_dialog.canceled.disconnect()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # Persist trigger words immediately (no popup, no delay)
         if (
             self._current_version_data
@@ -422,7 +454,7 @@ class DownloadModelDialog(QDialog):
         for f in files:
             if f.get("downloadUrl") and any(
                 f.get("name", "").endswith(ext)
-                for ext in [".safetensors", ".ckpt", ".pt"]
+                for ext in [".safetensors", ".ckpt", ".pt", ".gguf"]
             ):
                 file_url = f["downloadUrl"]
                 file_name = f.get("name")

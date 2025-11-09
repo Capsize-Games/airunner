@@ -90,10 +90,10 @@ if not AIRUNNER_DISABLE_FACEHUGGERSHIELD:
             os.path.join(os.path.expanduser("~"), "nltk_data/corpora"),
         ],
         nullscream_whitelist=[
-            "huggingface_hub.file_download",
-            "huggingface_hub.repocard_data",
-            "transformers.utils.hub.PushToHubMixin",
+            "huggingface_hub",
             "transformers",
+            "diffusers",
+            "sentencepiece",
         ],
         nullscream_blacklist=[],
     )

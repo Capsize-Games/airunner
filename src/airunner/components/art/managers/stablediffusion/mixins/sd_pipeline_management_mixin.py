@@ -11,6 +11,7 @@ from typing import Dict
 
 import torch
 from airunner.enums import GeneratorSection
+from airunner.settings import AIRUNNER_ADD_WATER_MARK
 from airunner.utils.memory import clear_memory
 
 
@@ -103,7 +104,7 @@ class SDPipelineManagementMixin:
             self._pipe = pipeline_class_.from_single_file(
                 self.model_path,
                 config=config_path,
-                add_watermarker=False,
+                add_watermarker=AIRUNNER_ADD_WATER_MARK,
                 **data,
             )
         else:

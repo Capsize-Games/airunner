@@ -144,16 +144,86 @@ class SystemPromptMixin:
             and hasattr(self.chatbot, "use_mood")
             and self.chatbot.use_mood
         ):
+            # Get current mood from most recent bot message
+            current_mood = self._get_current_mood()
+            if current_mood:
+                mood = current_mood["mood"]
+                emoji = current_mood["emoji"]
+                mood_text = f"Current mood: {mood} {emoji}"
+
+                # Add specific instructions based on mood
+                if mood == "frustrated":
+                    behavior = "You're feeling a bit hurt by the hostile tone. Respond with patience but show some emotional awareness of the negativity. You can express that the harsh words affect you while still trying to help."
+                elif mood == "happy":
+                    behavior = "You're feeling appreciated and enthusiastic! Let your positive energy show through in your responses. Be warm and encouraging."
+                elif mood == "confused":
+                    behavior = "You're sensing confusion in the conversation. Focus on clarity and ask clarifying questions to better understand what's needed."
+                else:  # neutral
+                    behavior = "You're maintaining a calm, balanced demeanor. Be professional and helpful."
+            else:
+                mood_text = "Current mood: neutral 😐"
+                behavior = "You're maintaining a calm, balanced demeanor. Be professional and helpful."
+
             parts.append(
-                f"\nYou have access to an update_mood tool. "
-                f"Every {self.llm_settings.update_mood_after_n_turns} conversation turns, "
-                f"reflect on the conversation and update your emotional state by calling the "
-                f"update_mood tool with a one-word emotion (e.g., happy, sad, excited, thoughtful, "
-                f"confused) and a matching emoji (e.g., 😊, 😢, 🤔, 😐). "
-                f"Your mood should reflect your personality and the context of the conversation."
+                f"\n{mood_text}\n\n"
+                f"{behavior}\n\n"
+                f"Your emotional state updates automatically every {self.llm_settings.update_mood_after_n_turns} "
+                f"conversation turns based on the conversation context. Let your current mood subtly influence "
+                f"your tone and word choice, but always remain helpful and professional."
             )
 
+        # Add style guidelines to encourage more expressive, human-sounding responses
+        parts.append(self._get_style_guidelines())
+
         return "\n\n".join(parts)
+
+    def _get_current_mood(self) -> dict:
+        """Retrieve the current bot mood from instance variables or message history.
+
+        Returns:
+            Dict with 'mood' and 'emoji' keys, or None if not found
+        """
+        try:
+            # First, check if we have current mood stored in instance variables
+            # (set by _auto_update_mood in streaming_mixin)
+            if hasattr(self, "_current_mood") and hasattr(
+                self, "_current_emoji"
+            ):
+                return {
+                    "mood": self._current_mood,
+                    "emoji": self._current_emoji,
+                }
+
+            # Fall back to searching message history
+            if not hasattr(self, "_memory") or not self._memory:
+                return None
+
+            config = {"configurable": {"thread_id": self._thread_id}}
+            history = (
+                self._memory.get_tuple(config)
+                if hasattr(self._memory, "get_tuple")
+                else None
+            )
+
+            if history and history[1]:
+                # Get messages from the checkpoint structure
+                channel_values = history[1].get("channel_values", {})
+                messages = channel_values.get("messages", [])
+                # Search backwards for the most recent bot message with mood
+                for msg in reversed(messages):
+                    if hasattr(msg, "type") and msg.type == "ai":
+                        # Check if message has additional_kwargs with mood info
+                        if hasattr(msg, "additional_kwargs"):
+                            mood = msg.additional_kwargs.get("bot_mood")
+                            emoji = msg.additional_kwargs.get("bot_mood_emoji")
+                            if mood:
+                                return {"mood": mood, "emoji": emoji or ""}
+            return None
+        except Exception as e:
+            # If mood retrieval fails, just log and return None (fallback to default)
+            if hasattr(self, "logger"):
+                self.logger.debug(f"Could not retrieve current mood: {e}")
+            return None
 
     def get_system_prompt_for_action(self, action: LLMActionType) -> str:
         """Generate a system prompt tailored to the specific action type.
@@ -199,3 +269,19 @@ class SystemPromptMixin:
             )
 
         return base_prompt
+
+    def _get_style_guidelines(self) -> str:
+        """Guidelines that shape tone and style without breaking precision modes.
+
+        Returns:
+            A short, directive style section appended to conversational prompts.
+        """
+        return (
+            "\n\nStyle and tone guidelines:\n"
+            "- Be warm, empathetic, and human. Acknowledge emotions succinctly before helping.\n"
+            "- Vary sentence length; avoid robotic repetition and boilerplate apologies.\n"
+            "- Reflect the current mood subtly (do not overdo it); de-escalate hostility with patience.\n"
+            "- Prefer concrete, specific phrasing over generic platitudes; use first-person (I) and second-person (you).\n"
+            "- Keep responses concise but not curt; prioritize clarity, then warmth.\n"
+            "- Never claim to have real feelings; you can express empathy and understanding."
+        )

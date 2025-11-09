@@ -46,6 +46,7 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             SignalCode.APPLICATION_MAIN_WINDOW_LOADED_SIGNAL: self.update_form,
         }
         super().__init__(*args, **kwargs)
+        self._version: str = ""
         self._versions: List[str] = []
         self._models: List[AIModels] = []
         self._current_action: str = ""
@@ -108,6 +109,12 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
 
         if self.generator_settings.model is None:
             self._update_model_id()
+
+        if (
+            self.generator_settings.version
+            == StableDiffusionVersion.FLUX_SCHNELL.value
+        ):
+            self.ui.groupBox_5.hide()
 
     @Slot(bool)
     def on_use_compel_toggled(self, val: bool):
@@ -391,6 +398,11 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             chosen_pipeline,
             chosen_model_id,
         )
+        (
+            self.ui.groupBox_5.hide()
+            if val == StableDiffusionVersion.FLUX_SCHNELL.value
+            else self.ui.groupBox_5.show()
+        )
         self._load_models_combobox()
         self.api.art.model_changed(
             model=chosen_model_id, version=val, pipeline=chosen_pipeline
@@ -439,10 +451,19 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             pipelines = self.get_pipelines(
                 category=ImageGenerator.STABLEDIFFUSION.value
             )
+            pipelines += self.get_pipelines(category=ImageGenerator.FLUX.value)
             self._versions = set(
                 [pipeline["version"] for pipeline in pipelines]
             )
         return list(self._versions)
+
+    @property
+    def version(self) -> str:
+        return self._version
+
+    @version.setter
+    def version(self, value: str):
+        self._version = value
 
     def _load_versions_combobox(self):
         self.ui.version.blockSignals(True)
@@ -479,12 +500,12 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
         if (
             self.generator_settings.pipeline_action != self.action
             or len(self._models) == 0
+            or self.generator_settings.version != self.version
         ):
             self.action = self.generator_settings.pipeline_action
+            self.version = self.generator_settings.version
 
             image_generator = ImageGenerator.STABLEDIFFUSION.value
-            pipeline = self.generator_settings.pipeline_action
-            version = self.generator_settings.version
 
             if (
                 self.generator_settings.pipeline_action
@@ -494,13 +515,13 @@ class StableDiffusionSettingsWidget(BaseWidget, PipelineMixin):
             else:
                 pipeline_actions = [GeneratorSection.TXT2IMG.value]
 
-                if pipeline == GeneratorSection.INPAINT.value:
+                if self.action == GeneratorSection.INPAINT.value:
                     pipeline_actions.append(GeneratorSection.INPAINT.value)
 
             self.models = AIModels.objects.filter(
                 AIModels.category == image_generator,
                 AIModels.pipeline_action.in_(pipeline_actions),
-                AIModels.version == version,
+                AIModels.version == self.version,
                 AIModels.enabled.is_(True),
                 AIModels.is_default.is_(False),
             )

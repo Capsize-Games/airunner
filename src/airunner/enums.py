@@ -463,6 +463,7 @@ class CanvasToolName(Enum):
 
 class ImageGenerator(Enum):
     STABLEDIFFUSION = "stablediffusion"
+    FLUX = "flux"
 
 
 class GeneratorSection(Enum):
@@ -482,7 +483,7 @@ class StableDiffusionVersion(Enum):
     SD1_5 = "SD 1.5"
     X4_UPSCALER = "x4-upscaler"
     FLUX_DEV = "FLUX.1-dev"
-    FLUX_SCHNELL = "FLUX.1-schnell"
+    FLUX_SCHNELL = "Flux.1 S"
 
 
 class Language(Enum):

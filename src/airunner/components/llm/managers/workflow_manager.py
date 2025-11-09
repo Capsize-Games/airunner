@@ -30,6 +30,9 @@ from airunner.components.llm.managers.mixins.workflow_building_mixin import (
 from airunner.components.llm.managers.mixins.node_functions_mixin import (
     NodeFunctionsMixin,
 )
+from airunner.components.llm.managers.mixins.system_prompt_mixin import (
+    SystemPromptMixin,
+)
 from airunner.components.llm.managers.mixins.streaming_mixin import (
     StreamingMixin,
 )
@@ -47,6 +50,7 @@ class WorkflowManager(
     ToolManagementMixin,
     ToolExecutionMixin,
     WorkflowBuildingMixin,
+    SystemPromptMixin,  # Added to provide dynamic system_prompt property for mood regeneration
     NodeFunctionsMixin,
     StreamingMixin,
 ):
@@ -69,6 +73,9 @@ class WorkflowManager(
         conversation_id: Optional[int] = None,
         use_mode_routing: bool = False,
         mode_override: Optional[str] = None,
+        llm_settings: Optional[Any] = None,
+        chatbot: Optional[Any] = None,
+        signal_emitter: Optional[Any] = None,
     ):
         """
         Initialize the workflow manager.
@@ -83,6 +90,9 @@ class WorkflowManager(
             use_mode_routing: Enable mode-based routing
                 (author/code/research/qa/general)
             mode_override: Force specific mode instead of auto-classification
+            llm_settings: LLM settings for configuration (e.g., mood tracking)
+            chatbot: Chatbot instance for settings (e.g., use_mood)
+            signal_emitter: Object with emit_signal method (e.g., LLMModelManager)
         """
         # Initialize all mixins
         super().__init__()
@@ -98,6 +108,11 @@ class WorkflowManager(
         self._token_counter = lambda msgs: count_tokens_approximately(msgs)
         self._conversation_id = conversation_id
         self._memory = DatabaseCheckpointSaver(conversation_id)
+
+        # Store settings for automatic mood tracking
+        self.llm_settings = llm_settings
+        self.chatbot = chatbot
+        self._signal_emitter = signal_emitter  # Store signal emitter
         self._thread_id = (
             str(conversation_id) if conversation_id else "default"
         )

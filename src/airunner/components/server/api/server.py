@@ -79,6 +79,8 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             self._handle_reset_memory()
         elif path == "/admin/reset_database":
             self._handle_reset_database()
+        elif path == "/admin/shutdown":
+            self._handle_shutdown()
         elif path == "/art":
             self._handle_stub("STT not implemented")
         elif path == "/stt":
@@ -764,6 +766,40 @@ class AIRunnerAPIRequestHandler(BaseHTTPRequestHandler):
             )
         except Exception as e:
             self.logger.error(f"Error resetting database: {e}", exc_info=True)
+            self._set_headers(500)
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def _handle_shutdown(self):
+        """Gracefully shutdown the headless server.
+
+        This endpoint allows clients to remotely shutdown the server.
+        The shutdown happens after sending the response to avoid
+        connection errors.
+        """
+        try:
+            self._set_headers(200)
+            self.wfile.write(
+                json.dumps({"status": "shutting_down"}).encode("utf-8")
+            )
+
+            # Schedule shutdown in a background thread to allow response to complete
+            def delayed_shutdown():
+                time.sleep(0.5)  # Let response finish sending
+                self.logger.info(
+                    "Shutdown requested via /admin/shutdown endpoint"
+                )
+                api = get_api()
+                if api:
+                    api.cleanup()
+                sys.exit(0)
+
+            shutdown_thread = threading.Thread(
+                target=delayed_shutdown, daemon=True
+            )
+            shutdown_thread.start()
+
+        except Exception as e:
+            self.logger.error(f"Error during shutdown: {e}", exc_info=True)
             self._set_headers(500)
             self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
 

@@ -54,6 +54,44 @@ class ToolManager(
         self.rag_manager = rag_manager
         super().__init__()
 
+    def _wrap_tool_with_dependencies(self, tool_info):
+        """Wrap a tool function with dependency injection for LangChain.
+
+        Injects `api` and `agent` parameters if the tool requires them.
+
+        Args:
+            tool_info: ToolInfo instance from registry
+
+        Returns:
+            Wrapped function with dependencies injected
+        """
+        from airunner.components.server.api.server import get_api
+
+        def wrapped(*args, **kwargs):
+            # Inject API if required
+            if tool_info.requires_api:
+                api = get_api()
+                if api is None:
+                    return (
+                        f"Error: API not available for tool {tool_info.name}"
+                    )
+                kwargs["api"] = api
+
+            # Inject agent if required (not yet implemented)
+            # if tool_info.requires_agent and self.agent:
+            #     kwargs["agent"] = self.agent
+
+            try:
+                return tool_info.func(*args, **kwargs)
+            except Exception as e:
+                import traceback
+
+                error_msg = f"Error executing {tool_info.name}: {str(e)}\n{traceback.format_exc()}"
+                self.logger.error(error_msg)
+                return f"Error: {str(e)}"
+
+        return wrapped
+
     def get_all_tools(self) -> List[Callable]:
         """Get all available tools.
 
@@ -71,7 +109,7 @@ class ToolManager(
         tools = [
             # Core conversation tools
             self.clear_conversation_tool(),
-            self.update_mood_tool(),
+            # self.update_mood_tool(),  # Migrated to ToolRegistry (mood_tools.py)
             # Image generation tools (migrated to ToolRegistry - commented out)
             # self.generate_image_tool(),
             # self.clear_canvas_tool(),
@@ -103,15 +141,15 @@ class ToolManager(
             self.log_agent_decision_tool(),
         ]
 
-        # Add new ToolRegistry decorated tools
-        # Add .name attribute to make them compatible with tests
+        # Add new ToolRegistry decorated tools with dependency injection
+        # Wrap tools to inject api and agent parameters
         for tool_info in ToolRegistry.all().values():
-            func = tool_info.func
+            wrapped_func = self._wrap_tool_with_dependencies(tool_info)
             # Add .name and .description attributes like LangChain tools
-            func.name = tool_info.name
-            func.description = tool_info.description
-            func.return_direct = tool_info.return_direct
-            tools.append(func)
+            wrapped_func.name = tool_info.name
+            wrapped_func.description = tool_info.description
+            wrapped_func.return_direct = tool_info.return_direct
+            tools.append(wrapped_func)
 
         # Add any custom tools from database
         tools.extend(self._load_custom_tools())

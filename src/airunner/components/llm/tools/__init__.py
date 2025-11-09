@@ -45,6 +45,7 @@ from airunner.components.llm.tools import (
     knowledge_tools,
     user_data_tools,
     agent_tools,
+    mood_tools,
     # Phase 2: Mode-specific tools
     author_tools,
     code_tools,
@@ -85,6 +86,7 @@ __all__ = [
     "knowledge_tools",
     "user_data_tools",
     "agent_tools",
+    "mood_tools",
     "langchain_calendar_tools",
     # Phase 2: Mode-specific tools
     "author_tools",

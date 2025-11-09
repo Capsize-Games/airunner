@@ -64,6 +64,9 @@ class GenerationMixin:
         tool_calls, cleaned_text = self._parse_tool_calls_if_enabled(
             response_text, kwargs
         )
+        # Deduplicate identical zero-arg tool calls
+        if tool_calls:
+            tool_calls = self._deduplicate_tool_calls(tool_calls)
 
         message = AIMessage(content=cleaned_text, tool_calls=tool_calls or [])
         generation = ChatGeneration(message=message)
@@ -291,6 +294,9 @@ class GenerationMixin:
                 response_text, kwargs
             )
 
+            if tool_calls:
+                tool_calls = self._deduplicate_tool_calls(tool_calls)
+
             # Yield single complete message with both content and tool_calls
             message = AIMessageChunk(
                 content=cleaned_text, tool_calls=tool_calls or []
@@ -305,21 +311,16 @@ class GenerationMixin:
                 print(f"[STREAM DEBUG] Tool calls: {tool_calls}", flush=True)
 
             print(
-                f"[STREAM YIELD DEBUG] About to yield tool chunk", flush=True
+                f"[STREAM YIELD DEBUG] About to yield tool chunk",
+                flush=True,
             )
             yield chunk
             print(
                 f"[STREAM YIELD DEBUG] Finished yielding tool chunk",
                 flush=True,
             )
-        elif full_response:
-            print(
-                f"[STREAM YIELD DEBUG] No tools, yielding final content chunk",
-                flush=True,
-            )
-            # No tools - yield final complete message
-            message = AIMessageChunk(content=response_text)
-            yield ChatGenerationChunk(message=message)
+        # DON'T yield final chunk if we already yielded chunks during the loop
+        # (this would cause duplication since node_functions_mixin appends all chunks)
 
     def _create_streamer(self):
         """Create text iterator streamer.
@@ -590,3 +591,30 @@ class GenerationMixin:
         )
         final_message.tool_calls = tool_calls
         return ChatGenerationChunk(message=final_message)
+
+    def _deduplicate_tool_calls(self, tool_calls: List[dict]) -> List[dict]:
+        """Remove duplicate consecutive tool calls with identical name/args.
+
+        Args:
+            tool_calls: Raw tool call list extracted from model output
+
+        Returns:
+            Filtered tool call list
+        """
+        seen = set()
+        deduped = []
+        for call in tool_calls:
+            signature = (
+                call.get("name"),
+                tuple(sorted(call.get("args", {}).items())),
+            )
+            if signature in seen:
+                continue
+            seen.add(signature)
+            deduped.append(call)
+        if len(deduped) != len(tool_calls):
+            print(
+                f"[TOOL DEDUP DEBUG] Reduced tool calls from {len(tool_calls)} to {len(deduped)}",
+                flush=True,
+            )
+        return deduped

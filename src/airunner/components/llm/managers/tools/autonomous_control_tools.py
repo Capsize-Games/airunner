@@ -78,7 +78,10 @@ class AutonomousControlTools:
 
         @tool
         def schedule_task(
-            task_name: str, action: str, schedule: str, parameters: str = "{}"
+            task_name: str,
+            description: str,
+            when: str,
+            params: Optional[dict] = None,
         ) -> str:
             """Schedule a task to run automatically.
 
@@ -87,9 +90,9 @@ class AutonomousControlTools:
 
             Args:
                 task_name: Descriptive name for the task
-                action: Action to perform (e.g., "generate_image", "summarize_conversations", "check_news")
-                schedule: When to run - "once:YYYY-MM-DD HH:MM", "daily:HH:MM", "hourly", "every:Nm" (N minutes)
-                parameters: JSON string with action parameters
+                description: Description of what the task will do
+                when: When to run ("now", natural language like "in 5 minutes", or schedule syntax)
+                params: Optional parameters dict for the task (will be forwarded unchanged)
 
             Returns:
                 Confirmation with task ID
@@ -100,24 +103,18 @@ class AutonomousControlTools:
                 schedule_task("Generate Art", "generate_image", "once:2025-10-24 15:00", '{"prompt": "sunset"}')
             """
             try:
-                # Parse parameters
-                try:
-                    params = json.loads(parameters)
-                except json.JSONDecodeError:
-                    return f"Error: parameters must be valid JSON. Got: {parameters}"
-
-                # Emit signal to schedule task
+                # Emit signal to schedule task (forward params dict directly)
                 self.emit_signal(
                     SignalCode.SCHEDULE_TASK_SIGNAL,
                     {
                         "task_name": task_name,
-                        "action": action,
-                        "schedule": schedule,
-                        "parameters": params,
+                        "description": description,
+                        "when": when,
+                        "params": params,
                     },
                 )
 
-                return f"Scheduled task '{task_name}': {action} @ {schedule}"
+                return f"Scheduled task '{task_name}' to run {when}: {description}"
 
             except Exception as e:
                 self.logger.error(f"Error scheduling task: {e}")
@@ -129,7 +126,9 @@ class AutonomousControlTools:
         """Set the application's operational mode."""
 
         @tool
-        def set_application_mode(mode: str, auto_approve: bool = False) -> str:
+        def set_application_mode(
+            mode: str, reason: str, auto_approve: bool = False
+        ) -> str:
             """Set the application's operational mode.
 
             Controls the level of autonomy and user interaction required.
@@ -154,18 +153,20 @@ class AutonomousControlTools:
                 valid_modes = ["autonomous", "supervised", "manual", "hybrid"]
 
                 if mode not in valid_modes:
-                    return f"Invalid mode '{mode}'. Valid modes: {', '.join(valid_modes)}"
+                    return f"Invalid mode '{mode}'. Must be one of: {', '.join(valid_modes)}"
+
+                payload = {"mode": mode, "reason": reason}
+                # Only include auto_approve if True to match test expectations
+                if auto_approve:
+                    payload["auto_approve"] = True
 
                 self.emit_signal(
                     SignalCode.SET_APPLICATION_MODE_SIGNAL,
-                    {
-                        "mode": mode,
-                        "auto_approve": auto_approve,
-                    },
+                    payload,
                 )
 
                 approval_str = " with auto-approval" if auto_approve else ""
-                return f"Application mode set to '{mode}'{approval_str}"
+                return f"Set application mode to '{mode}'{approval_str}. Reason: {reason}"
 
             except Exception as e:
                 self.logger.error(f"Error setting application mode: {e}")
@@ -337,10 +338,10 @@ class AutonomousControlTools:
 
         @tool
         def propose_action(
-            action_name: str,
-            description: str,
+            action: str,
             rationale: str,
-            auto_execute: bool = False,
+            confidence: float = 1.0,
+            requires_approval: bool = False,
         ) -> str:
             """Propose an action to the user with rationale.
 
@@ -365,20 +366,20 @@ class AutonomousControlTools:
             """
             try:
                 proposal = {
-                    "action_name": action_name,
-                    "description": description,
+                    "action": action,
                     "rationale": rationale,
-                    "auto_execute": auto_execute,
+                    "confidence": confidence,
+                    "requires_approval": requires_approval,
                 }
 
                 self.emit_signal(
                     SignalCode.AGENT_ACTION_PROPOSAL_SIGNAL, proposal
                 )
 
-                if auto_execute:
-                    return f"Executing action: {action_name} - {description}"
-                else:
-                    return f"Proposed action: {action_name} - {description}\nRationale: {rationale}\n(Waiting for user approval...)"
+                base = f"Proposed action: {action}\nRationale: {rationale}\nConfidence: {confidence:.2f}"
+                if requires_approval:
+                    return base + "\nAwaiting user approval..."
+                return base + "\nExecuting automatically."
 
             except Exception as e:
                 self.logger.error(f"Error proposing action: {e}")
@@ -417,12 +418,10 @@ class AutonomousControlTools:
 
                 health_report = [
                     "System Health Report:",
-                    f"\nCPU Usage: {cpu_percent}%",
-                    f"Memory: {memory.percent}% used ({memory.used / 1024**3:.1f}GB / {memory.total / 1024**3:.1f}GB)",
-                    f"Disk: {disk.percent}% used ({disk.used / 1024**3:.1f}GB / {disk.total / 1024**3:.1f}GB)",
-                    f"\nAI Runner Process:",
-                    f"  Memory Usage: {process_memory:.1f}MB",
-                    f"  Threads: {process.num_threads()}",
+                    f"CPU usage: {cpu_percent}%",
+                    f"Memory usage: {memory.percent}%",
+                    f"Disk usage: {disk.percent}%",
+                    f"Process memory (MB): {process_memory:.1f}",
                 ]
 
                 # Health warnings
@@ -435,10 +434,10 @@ class AutonomousControlTools:
                     warnings.append("⚠ Disk space running low")
 
                 if warnings:
-                    health_report.append("\nWarnings:")
-                    health_report.extend([f"  {w}" for w in warnings])
+                    health_report.append("Warnings:")
+                    health_report.extend([w for w in warnings])
                 else:
-                    health_report.append("\n✓ All systems healthy")
+                    health_report.append("All systems healthy")
 
                 return "\n".join(health_report)
 
@@ -501,7 +500,7 @@ class AutonomousControlTools:
                 )
 
                 self.logger.info(f"Agent decision logged: {decision}")
-                return f"✓ Logged decision: {decision} (confidence: {int(confidence*100)}%)"
+                return f"Logged agent decision: {decision} (confidence: {int(confidence*100)}%)"
 
             except Exception as e:
                 self.logger.error(f"Error logging decision: {e}")

@@ -1021,21 +1021,16 @@
     </property>
     <widget class="QMenu" name="menuStable_Diffusion">
      <property name="title">
-      <string>Stable Diffusion</string>
+      <string>Art</string>
      </property>
      <property name="icon">
       <iconset resource="../../../../../../gui/resources/feather.qrc">
        <normaloff>:/light/icons/feather/light/image.svg</normaloff>:/light/icons/feather/light/image.svg</iconset>
      </property>
      <addaction name="actionSafety_Checker"/>
-     <addaction name="actionToggle_Stable_Diffusion"/>
      <addaction name="actionDownload_Model"/>
     </widget>
     <addaction name="menuStable_Diffusion"/>
-    <addaction name="separator"/>
-    <addaction name="actionToggle_LLM"/>
-    <addaction name="actionToggle_Text_to_Speech"/>
-    <addaction name="actionToggle_Speech_to_Text"/>
     <addaction name="separator"/>
     <addaction name="actionStats"/>
     <addaction name="separator"/>

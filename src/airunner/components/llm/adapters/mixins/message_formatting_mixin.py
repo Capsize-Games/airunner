@@ -78,6 +78,9 @@ class MessageFormattingMixin:
     def _apply_chat_template(self, messages: List[BaseMessage]) -> str:
         """Apply tokenizer's chat template to messages.
 
+        For Qwen models with JSON mode tool calling, this will format tools
+        into the chat template according to the model's requirements.
+
         Args:
             messages: List of LangChain messages
 
@@ -97,8 +100,26 @@ class MessageFormattingMixin:
                     {"role": "assistant", "content": msg.content}
                 )
 
+        # Check if we have tools to pass to the template
+        template_kwargs = {
+            "tokenize": False,
+            "add_generation_prompt": True,
+        }
+
+        # Pass tools ONLY if available, non-empty, AND we're in a tool-supporting mode
+        # For JSON mode (Qwen), tools should be passed to the template
+        # BUT only if tools are actually bound to the model
+        if (
+            hasattr(self, "tools")
+            and self.tools
+            and len(self.tools) > 0
+            and hasattr(self, "tool_calling_mode")
+            and self.tool_calling_mode == "json"
+        ):
+            template_kwargs["tools"] = self.tools
+
         return self.tokenizer.apply_chat_template(
-            chat_messages, tokenize=False, add_generation_prompt=True
+            chat_messages, **template_kwargs
         )
 
     def _fallback_format(self, messages: List[BaseMessage]) -> str:
