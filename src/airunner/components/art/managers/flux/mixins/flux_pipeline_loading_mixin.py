@@ -36,6 +36,7 @@ class FluxPipelineLoadingMixin:
             return False
 
         self.logger.info("✓ Loaded quantized model from disk")
+        self._force_vae_fp32()
         return True
 
     def _load_pipeline_by_type(
@@ -131,6 +132,8 @@ class FluxPipelineLoadingMixin:
         except Exception as exc:
             self.logger.error("Failed to load FLUX model: %s", exc)
             raise
+
+        self._force_vae_fp32()
 
         if not str(model_path).lower().endswith(".gguf"):
             self._save_quantized_model(model_path)

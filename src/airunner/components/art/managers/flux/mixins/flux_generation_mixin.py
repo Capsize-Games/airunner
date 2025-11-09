@@ -1,8 +1,7 @@
 """FLUX generation preparation mixin."""
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import torch
-from transformers import BitsAndBytesConfig
 
 
 class FluxGenerationMixin:
