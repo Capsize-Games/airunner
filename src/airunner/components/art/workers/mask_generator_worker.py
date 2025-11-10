@@ -7,12 +7,6 @@ from airunner.components.application.workers.worker import Worker
 
 
 class MaskGeneratorWorker(Worker):
-    def __init__(self, *args, **kwargs):
-        self.signal_handlers = {
-            SignalCode.GENERATE_MASK: self.on_generate_mask_signal,
-        }
-        super().__init__(*args, **kwargs)
-
     @property
     def active_rect(self):
         pos = self.active_grid_settings.pos
